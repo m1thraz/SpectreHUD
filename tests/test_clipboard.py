@@ -79,9 +79,23 @@ class TestClipboardWatcher(unittest.TestCase):
         self.watcher.add_entry("test cmd 1")
         self.assertEqual(len(self.watcher.history), 1)
 
-        # Toggle pause
+        signals_received = []
+        self.watcher.logging_state_changed.connect(lambda active: signals_received.append(active))
+
+        # Toggle pause (active -> paused)
         is_paused = self.watcher.toggle_pause()
         self.assertTrue(is_paused)
+        self.assertEqual(signals_received[-1], False)
+
+        # Toggle pause again (paused -> active)
+        is_paused = self.watcher.toggle_pause()
+        self.assertFalse(is_paused)
+        self.assertEqual(signals_received[-1], True)
+
+        # Set paused explicitly
+        self.watcher.set_paused(True)
+        self.assertTrue(self.watcher.is_paused)
+        self.assertEqual(signals_received[-1], False)
 
         # Clear history
         self.watcher.clear_history()

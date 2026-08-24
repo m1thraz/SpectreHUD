@@ -411,6 +411,48 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 
+/* REC Indicator & Privacy Warning */
+QPushButton#RecIndicatorBtn {
+    background-color: rgba(248, 81, 73, 0.2);
+    border: 1px solid rgba(248, 81, 73, 0.7);
+    border-radius: 4px;
+    color: #ff7b72;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    letter-spacing: 0.5px;
+}
+
+QPushButton#RecIndicatorBtn:hover {
+    background-color: rgba(248, 81, 73, 0.35);
+    border-color: #ff7b72;
+}
+
+QPushButton#RecIndicatorBtn[paused="true"] {
+    background-color: rgba(110, 118, 129, 0.15);
+    border: 1px solid rgba(110, 118, 129, 0.4);
+    color: #8b949e;
+}
+
+QPushButton#RecIndicatorBtn[paused="true"]:hover {
+    background-color: rgba(110, 118, 129, 0.3);
+    color: #c9d1d9;
+}
+
+QFrame#PrivacyWarningBanner {
+    background-color: rgba(210, 153, 34, 0.12);
+    border: 1px solid rgba(210, 153, 34, 0.35);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin: 4px 0px;
+}
+
+QLabel#PrivacyWarningText {
+    color: #e3b341;
+    font-size: 11px;
+    font-weight: 500;
+}
+
 /* Minimal HUD Footer */
 QFrame#HudFooter {
     background-color: rgba(17, 22, 29, 0.7);

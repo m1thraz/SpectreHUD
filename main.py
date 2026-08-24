@@ -16,23 +16,31 @@ from ui.main_window import MainWindow
 
 logger = get_logger("app")
 
-def create_tray_icon_pixmap() -> QPixmap:
-    """Generates a clean programmatic icon if no image file exists."""
+def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
+    """Generates a clean programmatic icon with visual recording status."""
     pixmap = QPixmap(32, 32)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     
-    # Outer circle
-    painter.setBrush(QColor("#00e5ff"))
+    # Outer circle/box
+    bg_color = QColor("#00e5ff") if is_recording else QColor("#484f58")
+    painter.setBrush(bg_color)
     painter.setPen(Qt.PenStyle.NoPen)
     painter.drawRoundedRect(2, 2, 28, 28, 6, 6)
     
     # Symbol
-    painter.setPen(QColor("#0d1117"))
+    painter.setPen(QColor("#0d1117") if is_recording else QColor("#c9d1d9"))
     font = QFont("Segoe UI", 16, QFont.Weight.Bold)
     painter.setFont(font)
     painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "⚡")
+
+    # Visual Red Recording Dot in top-right corner if recording
+    if is_recording:
+        painter.setBrush(QColor("#f85149"))
+        painter.setPen(QColor("#ffffff"))
+        painter.drawEllipse(20, 2, 10, 10)
+
     painter.end()
     return pixmap
 
@@ -63,8 +71,8 @@ def main():
     hotkey_listener.start()
 
     # System Tray Icon
-    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap()), app)
-    tray_icon.setToolTip("SpectreHUD - CTF Cheatsheet & Loot Overlay")
+    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=True)), app)
+    tray_icon.setToolTip("SpectreHUD [🔴 REC: Aktiv] - CTF Cheatsheet & Loot Overlay")
     tray_menu = QMenu()
     
     act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
@@ -75,15 +83,27 @@ def main():
     act_snip.triggered.connect(window.trigger_screenshot)
     tray_menu.addAction(act_snip)
 
+    act_rec_toggle = QAction("🔴 Clipboard-Logger pausieren / fortsetzen (Ctrl+P)", tray_menu)
+    act_rec_toggle.triggered.connect(window._toggle_pause_history)
+    tray_menu.addAction(act_rec_toggle)
+
     tray_menu.addSeparator()
 
-    act_quit = QAction("Beenden", tray_menu)
+    act_quit = QAction("Beenden (Strg+Super+Q)", tray_menu)
     act_quit.triggered.connect(app.quit)
     tray_menu.addAction(act_quit)
 
     tray_icon.setContextMenu(tray_menu)
     tray_icon.activated.connect(lambda reason: window.toggle_visibility() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
     tray_icon.show()
+
+    def update_tray_state(is_active: bool):
+        tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active)))
+        status = "🔴 REC: Aktiv" if is_active else "⏸️ REC: Pausiert"
+        tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
+        act_rec_toggle.setText(f"{'⏸️' if is_active else '🔴'} Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
+
+    clipboard_watcher.logging_state_changed.connect(update_tray_state)
 
     # Clean exit
     exit_code = app.exec()

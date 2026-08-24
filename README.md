@@ -68,7 +68,8 @@
 - **`💾 Exportieren`**: Sichert alle Notizen der Box direkt in `[BoxName]/loot/loot.txt`.
 
 ### 7. Modus 3: Clipboard-Logger & Report-Generator (Ctrl + 3)
-- **Automatischer Background-Watcher:** Protokolliert alle im Terminal oder Browser kopierten Befehle und Ausgaben mit Zeitstempel und Target-Zuordnung.
+- **Visual Privacy Indicator (`🔴 REC`):** Der Logger zeigt im HUD-Header und im System-Tray stets transparent an, ob die Aufzeichnung aktiv (`🔴 REC`) oder pausiert (`⏸️ REC: Aus`) ist.
+- **1-Click / Shortcut Pause:** Mit **`Ctrl + P`** (oder Klick auf den REC-Badge) lässt sich das Clipboard-Logging jederzeit sofort pausieren, um private Kopien (z. B. aus Passwort-Managern) zu schützen.
 - **Duplicate-Filter:** Filtert aufeinanderfolgende Duplikate und leere/zu große Blöcke heraus.
 - **`➕ Zu Loot`**: Übernimmt historische Clipboard-Snippets mit 1 Klick ins Session-Loot.
 - **`💾 Report (.md)`**: Generiert auf Knopfdruck ein vollständiges, strukturiertes **CTF Write-Up / Report-Dokument** (`.md`) mit Header, Loot-Zusammenfassung, Screenshots und chronologischem Bash-Befehlsverlauf direkt in `[BoxName]/notes.md`.
@@ -82,6 +83,7 @@
 | `Strg + Super + <` | SpectreHUD global ein- / ausblenden |
 | `Strg + Super + Q` | **SpectreHUD komplett beenden (Global)** |
 | `Ctrl + Q` (im HUD) | **SpectreHUD komplett beenden** |
+| `Ctrl + P` (im HUD) | **Clipboard-Logger pausieren / fortsetzen (`🔴 REC`)** |
 | `Strg + Super + X` | Screenshot & Region-Snip global auslösen |
 | `Ctrl + S` (im HUD) | Screenshot & Region-Snip starten |
 | `Tab` | Durch die 3 Modi zirkulieren (`Cheatsheet` ➔ `Loot` ➔ `History`) |

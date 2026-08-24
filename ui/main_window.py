@@ -152,6 +152,14 @@ class MainWindow(QMainWindow):
         self.btn_screenshot.clicked.connect(self.trigger_screenshot)
         header_layout.addWidget(self.btn_screenshot)
 
+        # Prominent Clipboard Recording Indicator Button
+        self.btn_rec_indicator = QPushButton("🔴 REC")
+        self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
+        self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_rec_indicator.setToolTip("Clipboard-Logger ist AKTIV (schneidet alle Kopien mit).\nKlicken oder Ctrl+P zum Pausieren.")
+        self.btn_rec_indicator.clicked.connect(self._toggle_pause_history)
+        header_layout.addWidget(self.btn_rec_indicator)
+
         header_layout.addStretch()
 
         # Loot Mode Specific Actions
@@ -226,6 +234,18 @@ class MainWindow(QMainWindow):
         self.var_bar.add_snippet_clicked.connect(self._on_add_button_clicked)
         hud_layout.addWidget(self.var_bar)
 
+        # 4b. Privacy Warning Banner for History Mode
+        self.privacy_banner = QFrame()
+        self.privacy_banner.setObjectName("PrivacyWarningBanner")
+        banner_layout = QHBoxLayout(self.privacy_banner)
+        banner_layout.setContentsMargins(10, 4, 10, 4)
+        lbl_warn = QLabel("⚠️ Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf 🔴 REC).")
+        lbl_warn.setObjectName("PrivacyWarningText")
+        lbl_warn.setWordWrap(True)
+        banner_layout.addWidget(lbl_warn)
+        self.privacy_banner.setVisible(False)
+        hud_layout.addWidget(self.privacy_banner)
+
         # 5. Scrollable Content Area (Snippets, Loot Cards, or History Cards)
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -249,7 +269,7 @@ class MainWindow(QMainWindow):
 
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
-        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+S: Snip | Ctrl+Q: Exit | Esc: Verstecken")
+        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
         self.lbl_status.setObjectName("FooterText")
         footer_layout.addWidget(self.lbl_status)
 
@@ -262,11 +282,15 @@ class MainWindow(QMainWindow):
         hud_layout.addWidget(self.footer_frame)
         outer_layout.addWidget(self.hud_frame)
 
+        # Connect clipboard logging state listener
+        self.clipboard_watcher.logging_state_changed.connect(self._on_logging_state_changed)
+
     def _setup_shortcuts(self) -> None:
         QShortcut(QKeySequence("Esc"), self, activated=self.hide)
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_bar.set_focus)
         QShortcut(QKeySequence("Ctrl+N"), self, activated=self._on_add_button_clicked)
         QShortcut(QKeySequence("Ctrl+S"), self, activated=self.trigger_screenshot)
+        QShortcut(QKeySequence("Ctrl+P"), self, activated=self._toggle_pause_history)
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=QApplication.quit)
         QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
@@ -389,6 +413,7 @@ class MainWindow(QMainWindow):
         self.btn_export_report.setVisible(mode == "history")
         self.btn_pause_history.setVisible(mode == "history")
         self.btn_clear_history.setVisible(mode == "history")
+        self.privacy_banner.setVisible(mode == "history")
 
         if mode == "cheatsheet":
             self.search_bar.txt_search.setPlaceholderText("⚡ Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...")
@@ -733,13 +758,25 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Report generiert", msg)
 
     def _toggle_pause_history(self) -> None:
-        paused = self.clipboard_watcher.toggle_pause()
-        if paused:
-            self.btn_pause_history.setText("▶️ Fortsetzen")
-            self.btn_pause_history.setStyleSheet("color: #e3b341;")
-        else:
+        self.clipboard_watcher.toggle_pause()
+
+    def _on_logging_state_changed(self, is_active: bool) -> None:
+        """Updates REC button indicator, tooltips, and styles when recording state changes."""
+        if is_active:
+            self.btn_rec_indicator.setText("🔴 REC")
+            self.btn_rec_indicator.setProperty("paused", "false")
+            self.btn_rec_indicator.setToolTip("Clipboard-Logger ist AKTIV (schneidet alle Kopien mit).\nKlicken oder Ctrl+P zum Pausieren.")
             self.btn_pause_history.setText("⏸️ Pause")
             self.btn_pause_history.setStyleSheet("")
+        else:
+            self.btn_rec_indicator.setText("⏸️ REC: Aus")
+            self.btn_rec_indicator.setProperty("paused", "true")
+            self.btn_rec_indicator.setToolTip("Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Fortsetzen.")
+            self.btn_pause_history.setText("▶️ Fortsetzen")
+            self.btn_pause_history.setStyleSheet("color: #e3b341;")
+
+        self.btn_rec_indicator.style().unpolish(self.btn_rec_indicator)
+        self.btn_rec_indicator.style().polish(self.btn_rec_indicator)
 
     def _clear_history(self) -> None:
         reply = QMessageBox.question(

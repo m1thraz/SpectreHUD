@@ -19,6 +19,7 @@ class ClipboardWatcher(QObject):
     filters duplicates, and persists history.
     """
     entry_added = pyqtSignal(dict)
+    logging_state_changed = pyqtSignal(bool)
 
     def __init__(self, storage_file: Optional[Path] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -192,9 +193,18 @@ class ClipboardWatcher(QObject):
         return filtered
 
     def toggle_pause(self) -> bool:
-        """Toggles logging pause state."""
+        """Toggles logging pause state and emits signal."""
         self._is_paused = not self._is_paused
+        self.logging_state_changed.emit(not self._is_paused)
+        logger.info(f"Clipboard logging state toggled: {'PAUSED' if self._is_paused else 'ACTIVE'}")
         return self._is_paused
+
+    def set_paused(self, paused: bool) -> None:
+        """Explicitly sets logging pause state."""
+        if self._is_paused != paused:
+            self._is_paused = paused
+            self.logging_state_changed.emit(not self._is_paused)
+            logger.info(f"Clipboard logging state set: {'PAUSED' if self._is_paused else 'ACTIVE'}")
 
     @property
     def is_paused(self) -> bool:
