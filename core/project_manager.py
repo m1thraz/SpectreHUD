@@ -7,6 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+from core.logger import get_logger
+
+logger = get_logger("projects")
+
 DEFAULT_NOTES_TEMPLATE = """# 🎯 CTF Write-Up & Notes: {project_name}
 
 - **Target IP:** `{target_ip}`
@@ -54,7 +58,10 @@ class ProjectManager:
         if base_dir is None:
             base_dir = get_default_projects_dir()
         self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.base_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create base projects directory {self.base_dir}: {e}", exc_info=True)
         
         self.active_project = "Default"
         self._ensure_default_project()
@@ -75,9 +82,12 @@ class ProjectManager:
         if not self.base_dir.exists():
             return ["Default"]
         projects = []
-        for p in self.base_dir.iterdir():
-            if p.is_dir() and not p.name.startswith("."):
-                projects.append(p.name)
+        try:
+            for p in self.base_dir.iterdir():
+                if p.is_dir() and not p.name.startswith("."):
+                    projects.append(p.name)
+        except OSError as e:
+            logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
         return sorted(projects) if projects else ["Default"]
 
     def get_active_project(self) -> str:
@@ -96,12 +106,13 @@ class ProjectManager:
         """
         clean_name = self._sanitize_name(name)
         proj_dir = self.base_dir / clean_name
-        proj_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create subfolders
-        (proj_dir / "recon").mkdir(exist_ok=True)
-        (proj_dir / "exploit").mkdir(exist_ok=True)
-        (proj_dir / "loot").mkdir(exist_ok=True)
+        try:
+            proj_dir.mkdir(parents=True, exist_ok=True)
+            (proj_dir / "recon").mkdir(exist_ok=True)
+            (proj_dir / "exploit").mkdir(exist_ok=True)
+            (proj_dir / "loot").mkdir(exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create folder structure for project {clean_name}: {e}", exc_info=True)
 
         # Create notes.md if not exists
         notes_file = proj_dir / "notes.md"
@@ -113,7 +124,10 @@ class ProjectManager:
                 attacker_ip=attacker_ip or "TBD",
                 created_at=now_str
             )
-            notes_file.write_text(notes_content, encoding="utf-8")
+            try:
+                notes_file.write_text(notes_content, encoding="utf-8")
+            except OSError as e:
+                logger.error(f"Failed to create notes.md for {clean_name}: {e}", exc_info=True)
 
         # Create project_state.json if not exists
         state_file = proj_dir / "project_state.json"
@@ -129,8 +143,11 @@ class ProjectManager:
                 "loot": [],
                 "clipboard_history": []
             }
-            with open(state_file, "w", encoding="utf-8") as f:
-                json.dump(initial_state, f, indent=2, ensure_ascii=False)
+            try:
+                with open(state_file, "w", encoding="utf-8") as f:
+                    json.dump(initial_state, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.exception(f"Failed to write initial project_state.json for {clean_name}: {e}")
 
         return proj_dir
 
@@ -142,8 +159,10 @@ class ProjectManager:
             try:
                 with open(state_file, "r", encoding="utf-8") as f:
                     return json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted project_state.json for {pname}: {e}")
             except Exception as e:
-                print(f"[ProjectManager] Error loading state for {pname}: {e}")
+                logger.exception(f"Error loading state for {pname}: {e}")
 
         # Return default fallback state
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -163,7 +182,11 @@ class ProjectManager:
         """Persists state data for a project."""
         pname = self._sanitize_name(name or self.active_project)
         proj_dir = self.get_project_dir(pname)
-        proj_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            proj_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to ensure project dir {proj_dir}: {e}", exc_info=True)
+
         state_file = proj_dir / "project_state.json"
 
         if state is None:
@@ -175,8 +198,10 @@ class ProjectManager:
         try:
             with open(state_file, "w", encoding="utf-8") as f:
                 json.dump(state, f, indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"[ProjectManager] Error saving state for {pname}: {e}")
+            logger.exception(f"Unexpected error saving state for {pname}: {e}")
 
     def set_active_project(self, name: str) -> None:
         """Switches the active project context."""
@@ -191,7 +216,10 @@ class ProjectManager:
         """Opens the project folder in Windows Explorer or Linux file manager."""
         folder = self.get_project_dir(name)
         if not folder.exists():
-            folder.mkdir(parents=True, exist_ok=True)
+            try:
+                folder.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.error(f"Failed to create project folder before opening {folder}: {e}")
 
         try:
             if sys.platform == "win32":
@@ -202,5 +230,5 @@ class ProjectManager:
                 subprocess.Popen(["xdg-open", str(folder)])
             return True
         except Exception as e:
-            print(f"[ProjectManager] Error opening folder: {e}")
+            logger.error(f"Error opening project folder {folder} in system file manager: {e}", exc_info=True)
             return False

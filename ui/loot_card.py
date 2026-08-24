@@ -10,7 +10,11 @@ from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QPixmap
 from typing import Dict, Any
 from core.loot_manager import LOOT_TYPES
+from core.project_manager import get_default_projects_dir
+from core.logger import get_logger
 import pyperclip
+
+logger = get_logger("loot_card")
 
 class LootCard(QFrame):
     """Visual card displaying a single loot/note item or screenshot thumbnail with natural word wrapping."""
@@ -129,7 +133,7 @@ class LootCard(QFrame):
             m = re.search(r'\((loot/[^\)]+)\)', content)
             if m:
                 rel = m.group(1)
-                base_dir = Path.home() / "spectre_projects"
+                base_dir = get_default_projects_dir()
                 matches = list(base_dir.glob(f"**/{Path(rel).name}"))
                 if matches:
                     return matches[0]
@@ -144,7 +148,7 @@ class LootCard(QFrame):
             else:
                 subprocess.Popen(["xdg-open", str(img_path)])
         except Exception as e:
-            print(f"[LootCard] Error opening image: {e}")
+            logger.error(f"Error opening image {img_path}: {e}", exc_info=True)
 
     def _copy_content(self) -> None:
         """Copies entry content directly to clipboard."""

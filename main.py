@@ -11,7 +11,10 @@ from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.hotkey_listener import HotkeyListener
+from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
+
+logger = get_logger("app")
 
 def create_tray_icon_pixmap() -> QPixmap:
     """Generates a clean programmatic icon if no image file exists."""
@@ -34,6 +37,7 @@ def create_tray_icon_pixmap() -> QPixmap:
     return pixmap
 
 def main():
+    logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)
     app.setApplicationName("SpectreHUD")
     app.setQuitOnLastWindowClosed(False)
@@ -83,6 +87,7 @@ def main():
 
     # Clean exit
     exit_code = app.exec()
+    logger.info("SpectreHUD shutting down cleanly.")
     hotkey_listener.stop()
     sys.exit(exit_code)
 

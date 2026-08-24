@@ -7,6 +7,9 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.config import get_default_config_dir
+from core.logger import get_logger
+
+logger = get_logger("clipboard")
 
 MAX_CLIPBOARD_TEXT_SIZE = 64 * 1024  # 64 KB
 
@@ -22,11 +25,14 @@ class ClipboardWatcher(QObject):
         if storage_file is None:
             storage_file = get_default_config_dir() / "clipboard_history.json"
         self.storage_file = Path(storage_file)
-        self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create directory for clipboard storage {self.storage_file}: {e}", exc_info=True)
         
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
-        self._is_paused: bool = False
+        self._is_paused = False
         self._current_target_provider = None
         
         self.load_history()
@@ -59,12 +65,12 @@ class ClipboardWatcher(QObject):
             if self._current_target_provider:
                 try:
                     target_ip = self._current_target_provider() or ""
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Error resolving target_ip in clipboard provider: {e}")
 
             self.add_entry(text, target_ip=target_ip)
         except Exception as e:
-            print(f"[ClipboardWatcher] Error reading clipboard: {e}")
+            logger.error(f"Error reading clipboard content: {e}", exc_info=True)
 
     def add_entry(self, text: str, target_ip: str = "") -> Optional[Dict[str, Any]]:
         """Adds a new sanitized entry if not a consecutive duplicate."""
@@ -73,6 +79,7 @@ class ClipboardWatcher(QObject):
 
         # Ignore huge binary or dump pastes
         if len(text) > MAX_CLIPBOARD_TEXT_SIZE:
+            logger.debug(f"Ignored clipboard item larger than {MAX_CLIPBOARD_TEXT_SIZE} bytes.")
             return None
 
         # Deduplicate consecutive identical copies
@@ -113,8 +120,11 @@ class ClipboardWatcher(QObject):
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
                     self.history = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted clipboard history JSON at {self.storage_file}: {e}")
+                self.history = []
             except Exception as e:
-                print(f"[ClipboardWatcher] Error reading history: {e}")
+                logger.exception(f"Unexpected error reading clipboard history from {self.storage_file}: {e}")
                 self.history = []
         else:
             self.history = []
@@ -134,8 +144,10 @@ class ClipboardWatcher(QObject):
         try:
             with open(self.storage_file, "w", encoding="utf-8") as f:
                 json.dump(self.history, f, indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving clipboard history to {self.storage_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"[ClipboardWatcher] Error saving history: {e}")
+            logger.exception(f"Unexpected error saving clipboard history to {self.storage_file}: {e}")
 
     def delete_entry(self, entry_id: str) -> bool:
         """Removes an entry by ID."""
@@ -170,20 +182,17 @@ class ClipboardWatcher(QObject):
             return results
 
         q = search_query.strip().lower()
-        terms = q.split()
-
         filtered = []
         for e in results:
             text = e.get("text", "").lower()
-            ip = e.get("target_ip", "").lower()
-            combined = f"{text} {ip}"
-            if all(term in combined for term in terms):
+            target = e.get("target_ip", "").lower()
+            if q in text or q in target:
                 filtered.append(e)
 
         return filtered
 
     def toggle_pause(self) -> bool:
-        """Toggles clipboard monitoring pause state."""
+        """Toggles logging pause state."""
         self._is_paused = not self._is_paused
         return self._is_paused
 
@@ -192,50 +201,62 @@ class ClipboardWatcher(QObject):
         return self._is_paused
 
     def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None, loot_manager = None) -> str:
-        """Generates a complete, structured CTF Write-up & Command Log Report."""
+        """Generates a structured Markdown CTF writeup/report draft."""
         history_items = self.get_history(target_ip=target_ip)
         
+        target_display = target_ip if target_ip and target_ip != "all" else "Generisch / Multi-Target"
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         lines = [
-            f"# 🛡️ CTF Session Report & Write-Up Log",
-            f"**Datum & Uhrzeit:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
-            f"**Target IP:** `{target_ip if target_ip else 'Alle Targets'}`  ",
+            f"# 🛡️ CTF Session Report: {target_display}",
+            f"**Datum & Uhrzeit:** `{now_str}`  ",
+            f"**Ziel-IP:** `{target_display}`  ",
             "",
             "---",
             "",
-            "## 📋 1. Beute & Gesammelte Credentials (Loot Summary)",
+            "## 🏆 1. Session Loot & Credentials",
             ""
         ]
 
-        # Add Loot Section if loot_manager provided
+        # 1. Integrate Loot if available
         if loot_manager:
             loot_entries = loot_manager.get_entries(target_ip=target_ip)
             if loot_entries:
-                for item in loot_entries:
-                    lines.append(f"- **[{item.get('type', 'note').upper()}] {item.get('title')}:**")
-                    lines.append(f"  ```")
-                    lines.append(f"  {item.get('content')}")
-                    lines.append(f"  ```")
+                for entry in loot_entries:
+                    badge = entry.get("type", "note").upper()
+                    lines.append(f"### [{badge}] {entry.get('title')}")
+                    lines.append(f"- **Zeitstempel:** {entry.get('timestamp')}")
+                    if entry.get("target_ip"):
+                        lines.append(f"- **Target:** `{entry.get('target_ip')}`")
+                    lines.append("")
+                    lines.append("```")
+                    lines.append(entry.get("content", ""))
+                    lines.append("```")
+                    lines.append("")
             else:
-                lines.append("*Keine Loot-Einträge erfasst.*")
+                lines.append("*Keine Loot-Einträge für diese Session protokolliert.*")
+                lines.append("")
         else:
-            lines.append("*Kein Loot-Manager verknüpft.*")
+            lines.append("*Loot-Manager nicht verknüpft.*")
+            lines.append("")
 
         lines.extend([
-            "",
             "---",
             "",
-            "## 📜 2. Chronologischer Befehls- & Ausgabenverlauf (Command History)",
+            "## ⚡ 2. Chronologischer Befehlsverlauf (Terminal History)",
             ""
         ])
 
+        # 2. Integrate Commands/Outputs in chronological order (oldest first)
         if not history_items:
-            lines.append("*Keine Clipboard-Historie vorhanden.*")
+            lines.append("*Keine Clipboard-Historie aufgezeichnet.*")
+            lines.append("")
         else:
-            # Chronological order (oldest first for write-up flow)
-            for item in reversed(history_items):
-                ts = item.get("timestamp", "")
-                ip_badge = f" [Target: `{item.get('target_ip')}`]" if item.get("target_ip") else ""
-                lines.append(f"### 🕒 {ts}{ip_badge}")
+            chronological = list(reversed(history_items))
+            for i, item in enumerate(chronological, start=1):
+                ts = item.get("timestamp", "").split(" ")[-1]
+                target_tag = f" `[{item.get('target_ip')}]`" if item.get("target_ip") else ""
+                lines.append(f"#### {i}. `{ts}`{target_tag}")
                 lines.append("```bash")
                 lines.append(item.get("text", ""))
                 lines.append("```")
@@ -252,5 +273,9 @@ class ClipboardWatcher(QObject):
             ""
         ])
 
-        output_path.write_text("\n".join(lines), encoding="utf-8")
-        return f"Report erfolgreich generiert: {output_path.name}"
+        try:
+            output_path.write_text("\n".join(lines), encoding="utf-8")
+            return f"Report erfolgreich generiert: {output_path.name}"
+        except OSError as e:
+            logger.error(f"Failed to export report to {output_path}: {e}", exc_info=True)
+            return f"Fehler beim Generieren des Reports: {e}"

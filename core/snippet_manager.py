@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
+from core.logger import get_logger
+
+logger = get_logger("snippets")
 
 class SnippetManager:
     """Manages built-in and custom user command snippets."""
@@ -44,8 +47,10 @@ class SnippetManager:
                             if "category" not in snip:
                                 snip["category"] = cat_info["name"]
                             self.snippets.append(snip)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted default snippets JSON at {self.default_snippets_path}: {e}")
             except Exception as e:
-                print(f"Error reading default snippets: {e}")
+                logger.exception(f"Error reading default snippets from {self.default_snippets_path}: {e}")
 
         # 2. Load user custom snippets
         custom_category = {
@@ -63,8 +68,10 @@ class SnippetManager:
                         snip["is_custom"] = True
                         snip["category_id"] = snip.get("category_id", "custom_snippets")
                         user_snippets.append(snip)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
             except Exception as e:
-                print(f"Error reading user snippets: {e}")
+                logger.exception(f"Error reading user snippets from {self.user_snippets_path}: {e}")
 
         if not any(c["id"] == "custom_snippets" for c in self.categories):
             self.categories.append(custom_category)
@@ -78,8 +85,10 @@ class SnippetManager:
             custom_only = [s for s in self.snippets if s.get("is_custom", False)]
             with open(self.user_snippets_path, "w", encoding="utf-8") as f:
                 json.dump(custom_only, f, indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving user snippets to {self.user_snippets_path}: {e}", exc_info=True)
         except Exception as e:
-            print(f"Error saving user snippets: {e}")
+            logger.exception(f"Unexpected error saving user snippets: {e}")
 
     def add_custom_snippet(self, title: str, category: str, subcategory: str, template: str, description: str = "", tags: List[str] = None) -> Dict[str, Any]:
         """Creates and stores a new custom snippet."""

@@ -2,6 +2,9 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
+from core.logger import get_logger
+
+logger = get_logger("config")
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "target_ip": "10.10.10.10",
@@ -31,7 +34,11 @@ class ConfigManager:
         self.config_file = self.config_dir / "config.json"
         self.user_snippets_file = self.config_dir / "user_snippets.json"
         
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create config directory {self.config_dir}: {e}", exc_info=True)
+
         self.session_param_cache: Dict[str, str] = {}
         self.data = self.load_config()
 
@@ -57,8 +64,11 @@ class ConfigManager:
                     self.data = cfg
                     self.save_config()
                     return cfg
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
             except Exception as e:
-                print(f"Error loading config: {e}. Using defaults.")
+                logger.exception(f"Unexpected error loading config from {self.config_file}: {e}. Using defaults.")
+        
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg
         self.save_config()
@@ -68,8 +78,10 @@ class ConfigManager:
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving config to {self.config_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"Error saving config: {e}")
+            logger.exception(f"Unexpected error saving config to {self.config_file}: {e}")
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.data.get(key, default)

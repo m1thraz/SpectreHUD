@@ -2,6 +2,9 @@ import time
 import threading
 from typing import Optional
 from PyQt6.QtCore import QObject, pyqtSignal
+from core.logger import get_logger
+
+logger = get_logger("hotkeys")
 
 class HotkeyListener(QObject):
     """
@@ -101,9 +104,9 @@ class HotkeyListener(QObject):
             self._listener.daemon = True
             self._listener.start()
             self._running = True
-            print(f"[HotkeyListener] Registered robust global hotkeys: Strg+Super+< (Toggle), Strg+Super+X (Screenshot), Strg+Super+Q (Quit)")
+            logger.info("Registered global hotkeys: Strg+Super+< (Toggle), Strg+Super+X (Screenshot), Strg+Super+Q (Quit)")
         except Exception as e:
-            print(f"[HotkeyListener] Failed to start global hotkey listener: {e}")
+            logger.error(f"Failed to start global hotkey listener: {e}", exc_info=True)
 
     def _fire_trigger(self) -> None:
         """Debounces and emits toggle signal safely."""
@@ -131,7 +134,7 @@ class HotkeyListener(QObject):
         if self._listener:
             try:
                 self._listener.stop()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Error stopping hotkey listener: {e}")
             self._listener = None
         self._running = False

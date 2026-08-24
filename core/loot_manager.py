@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
+from core.logger import get_logger
+
+logger = get_logger("loot")
 
 LOOT_TYPES = [
     {"id": "credentials", "name": "🔑 Credentials / Logins", "icon": "🔑", "badge_class": "BadgeCreds"},
@@ -22,7 +25,11 @@ class LootManager:
         if storage_file is None:
             storage_file = get_default_config_dir() / "loot_sessions.json"
         self.storage_file = Path(storage_file)
-        self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create parent directory for loot storage {self.storage_file}: {e}", exc_info=True)
+
         self.entries: List[Dict[str, Any]] = []
         self.load_entries()
 
@@ -32,8 +39,11 @@ class LootManager:
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
                     self.entries = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Corrupted loot file at {self.storage_file}: {e}")
+                self.entries = []
             except Exception as e:
-                print(f"[LootManager] Error reading loot file: {e}")
+                logger.exception(f"Unexpected error reading loot file {self.storage_file}: {e}")
                 self.entries = []
         else:
             self.entries = []
@@ -52,8 +62,10 @@ class LootManager:
         try:
             with open(self.storage_file, "w", encoding="utf-8") as f:
                 json.dump(self.entries, f, indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving loot file to {self.storage_file}: {e}", exc_info=True)
         except Exception as e:
-            print(f"[LootManager] Error saving loot file: {e}")
+            logger.exception(f"Unexpected error saving loot file to {self.storage_file}: {e}")
 
     def add_entry(self, entry_type: str, title: str, content: str, target_ip: str = "") -> Dict[str, Any]:
         """Creates and stores a new loot entry."""
@@ -104,23 +116,18 @@ class LootManager:
             return results
 
         q = search_query.strip().lower()
-        terms = q.split()
-
         filtered = []
         for e in results:
             title = e.get("title", "").lower()
             content = e.get("content", "").lower()
-            ip = e.get("target_ip", "").lower()
-            etype = e.get("type", "").lower()
-
-            combined = f"{title} {content} {ip} {etype}"
-            if all(term in combined for term in terms):
+            target = e.get("target_ip", "").lower()
+            if q in title or q in content or q in target:
                 filtered.append(e)
 
         return filtered
 
     def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
-        """Returns counts for each loot type."""
+        """Returns count of entries grouped by loot type."""
         entries = self.get_entries(target_ip=target_ip)
         counts = {"all": len(entries)}
         for t in LOOT_TYPES:
@@ -128,15 +135,15 @@ class LootManager:
         return counts
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        """Exports entries to a clean structured markdown or text file."""
+        """Exports loot entries to a structured text / Markdown file."""
         entries = self.get_entries(target_ip=target_ip)
         if not entries:
-            return "Keine Einträge zum Exportieren vorhanden."
+            return "Keine Loot-Einträge zum Exportieren vorhanden."
 
         lines = [
             f"# 🎯 CTF Session Loot Export",
             f"Erstellt am: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Target IP: {target_ip if target_ip else 'Alle Targets'}",
+            f"Target: {target_ip if target_ip and target_ip != 'all' else 'Alle Targets'}",
             f"Gesamtanzahl Einträge: {len(entries)}",
             "",
             "---",
@@ -168,5 +175,9 @@ class LootManager:
             lines.append("")
 
         content = "\n".join(lines)
-        output_path.write_text(content, encoding="utf-8")
-        return f"Erfolgreich exportiert nach {output_path.name}"
+        try:
+            output_path.write_text(content, encoding="utf-8")
+            return f"Erfolgreich exportiert nach {output_path.name}"
+        except OSError as e:
+            logger.error(f"Failed to export loot to {output_path}: {e}", exc_info=True)
+            return f"Fehler beim Exportieren: {e}"

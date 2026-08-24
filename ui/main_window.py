@@ -23,6 +23,9 @@ from ui.add_snippet_dialog import AddSnippetDialog
 from ui.add_loot_dialog import AddLootDialog
 from ui.project_dialog import NewProjectDialog
 from ui.styles import CYBER_DARK_QSS
+from core.logger import get_logger
+
+logger = get_logger("main_window")
 
 class MainWindow(QMainWindow):
     """Sleek, frameless, translucent Spotlight-style HUD Overlay for Cheatsheets, Session Loot, History & Workspaces."""
