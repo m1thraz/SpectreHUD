@@ -40,13 +40,20 @@ DEFAULT_NOTES_TEMPLATE = """# 🎯 CTF Write-Up & Notes: {project_name}
 - 
 """
 
+def get_default_projects_dir() -> Path:
+    """Returns the default projects workspace directory, checking SPECTRE_PROJECTS_DIR env var first."""
+    env_dir = os.environ.get("SPECTRE_PROJECTS_DIR")
+    if env_dir:
+        return Path(env_dir)
+    return Path.home() / "spectre_projects"
+
 class ProjectManager:
     """Manages isolated CTF/Pentest workspaces on the filesystem."""
 
     def __init__(self, base_dir: Optional[Path] = None):
         if base_dir is None:
-            base_dir = Path.home() / "spectre_projects"
-        self.base_dir = base_dir
+            base_dir = get_default_projects_dir()
+        self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
         
         self.active_project = "Default"

@@ -1,3 +1,4 @@
+import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -8,10 +9,14 @@ class TestClipboardWatcher(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.storage_file = Path(self.temp_dir.name) / "test_clip.json"
+        self.temp_path = Path(self.temp_dir.name)
+        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
+        
+        self.storage_file = self.temp_path / "test_clip.json"
         self.watcher = ClipboardWatcher(storage_file=self.storage_file)
 
     def tearDown(self):
+        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_add_and_deduplicate(self):
@@ -50,7 +55,7 @@ class TestClipboardWatcher(unittest.TestCase):
 
     def test_export_report_markdown(self):
         # Setup loot manager
-        loot_file = Path(self.temp_dir.name) / "test_loot.json"
+        loot_file = self.temp_path / "test_loot.json"
         loot_mgr = LootManager(storage_file=loot_file)
         loot_mgr.add_entry("credentials", "SSH admin", "admin:SecretPass", "10.10.10.77")
         loot_mgr.add_entry("flag", "User Flag", "THM{flag_abc_123}", "10.10.10.77")
@@ -59,7 +64,7 @@ class TestClipboardWatcher(unittest.TestCase):
         self.watcher.add_entry("nmap -p 22,80 10.10.10.77", target_ip="10.10.10.77")
         self.watcher.add_entry("ssh admin@10.10.10.77", target_ip="10.10.10.77")
 
-        report_path = Path(self.temp_dir.name) / "ctf_report.md"
+        report_path = self.temp_path / "ctf_report.md"
         result = self.watcher.export_report_markdown(report_path, target_ip="10.10.10.77", loot_manager=loot_mgr)
 
         self.assertTrue(report_path.exists())

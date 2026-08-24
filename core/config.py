@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "target_ip": "10.10.10.10",
@@ -14,13 +14,20 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "theme": "cyber_dark"
 }
 
+def get_default_config_dir() -> Path:
+    """Returns the default config directory, checking SPECTRE_CONFIG_DIR env var first."""
+    env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
+    if env_dir:
+        return Path(env_dir)
+    return Path.home() / ".ctf_cheatsheet_widget"
+
 class ConfigManager:
-    """Manages application configuration, user state, and preferences."""
+    """Manages application configuration, user state, and preferences with full path parameterization."""
     
-    def __init__(self, config_dir: Path = None):
+    def __init__(self, config_dir: Optional[Path] = None):
         if config_dir is None:
-            config_dir = Path.home() / ".ctf_cheatsheet_widget"
-        self.config_dir = config_dir
+            config_dir = get_default_config_dir()
+        self.config_dir = Path(config_dir)
         self.config_file = self.config_dir / "config.json"
         self.user_snippets_file = self.config_dir / "user_snippets.json"
         

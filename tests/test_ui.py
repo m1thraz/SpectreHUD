@@ -20,6 +20,26 @@ class TestUI(unittest.TestCase):
         if cls.app is None:
             cls.app = QApplication([])
 
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_path = Path(self.temp_dir.name)
+        
+        # Set environment variables as fallback safety shield
+        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
+        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
+
+        self.config_dir = self.temp_path / "config"
+        self.custom_snippets_path = self.temp_path / "config" / "user_snippets.json"
+        self.projects_dir = self.temp_path / "projects"
+        self.loot_file = self.temp_path / "config" / "loot.json"
+        self.clip_file = self.temp_path / "config" / "clip.json"
+
+    def tearDown(self):
+        # Reset environment safety shield
+        os.environ.pop("SPECTRE_CONFIG_DIR", None)
+        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
+        self.temp_dir.cleanup()
+
     def test_net_detector(self):
         ip = NetDetector.detect_attacker_ip()
         if ip:
@@ -27,22 +47,18 @@ class TestUI(unittest.TestCase):
             self.assertIn(".", ip)
 
     def test_hud_3_modes_and_projects(self):
-        config_manager = ConfigManager()
-        snippet_manager = SnippetManager()
-        
-        temp_dir = tempfile.TemporaryDirectory()
-        base_proj_dir = Path(temp_dir.name) / "test_projects"
-        project_manager = ProjectManager(base_dir=base_proj_dir)
-
-        temp_loot = Path(temp_dir.name) / "test_ui_loot.json"
-        temp_clip = Path(temp_dir.name) / "test_ui_clip.json"
-
-        loot_manager = LootManager(storage_file=temp_loot)
-        clipboard_watcher = ClipboardWatcher(storage_file=temp_clip)
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
         window = MainWindow(
-            config_manager, snippet_manager, loot_manager, 
-            clipboard_watcher, project_manager
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager, 
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
         )
         
         # 1. Mode: Cheatsheet
@@ -78,7 +94,6 @@ class TestUI(unittest.TestCase):
         self.assertEqual(len(loot_manager.get_entries()), 1)
 
         window.close()
-        temp_dir.cleanup()
 
 if __name__ == "__main__":
     unittest.main()

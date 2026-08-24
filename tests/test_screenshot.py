@@ -20,16 +20,22 @@ class TestScreenshot(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.base_dir = Path(self.temp_dir.name) / "projects"
+        self.temp_path = Path(self.temp_dir.name)
+        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
+        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
+
+        self.base_dir = self.temp_path / "projects"
         self.pm = ProjectManager(base_dir=self.base_dir)
         self.pm.create_project("BoxAlpha", target_ip="10.10.10.77")
         self.pm.set_active_project("BoxAlpha")
 
-        self.loot_file = Path(self.temp_dir.name) / "loot.json"
+        self.loot_file = self.temp_path / "config" / "loot.json"
         self.loot_mgr = LootManager(storage_file=self.loot_file)
         self.sm = ScreenshotManager()
 
     def tearDown(self):
+        os.environ.pop("SPECTRE_CONFIG_DIR", None)
+        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         self.temp_dir.cleanup()
 
     def test_save_screenshot_and_loot_entry(self):
@@ -37,7 +43,6 @@ class TestScreenshot(unittest.TestCase):
         pixmap = QPixmap(100, 100)
         pixmap.fill(QColor("cyan"))
 
-        # Mock window
         from PyQt6.QtWidgets import QWidget
         dummy_win = QWidget()
 

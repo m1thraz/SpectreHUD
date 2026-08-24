@@ -1,8 +1,17 @@
 import unittest
+import tempfile
+from pathlib import Path
 from core.template_engine import TemplateEngine
 from core.config import ConfigManager
 
 class TestTemplateParams(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_config_dir = Path(self.temp_dir.name) / "config"
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
 
     def test_extract_all_placeholders(self):
         tmpl = "gobuster dir -u http://{{TARGET_IP}}:{{PORT}}/ -w {{WORDLIST}} -x {{EXTENSIONS}}"
@@ -34,7 +43,7 @@ class TestTemplateParams(unittest.TestCase):
         self.assertEqual(rendered, "hashcat -m 1000 -a 0 ntlm.txt /usr/share/wordlists/rockyou.txt")
 
     def test_session_param_cache(self):
-        cfg = ConfigManager()
+        cfg = ConfigManager(config_dir=self.temp_config_dir)
         cfg.set_cached_param("WORDLIST", "/usr/share/wordlists/rockyou.txt")
         self.assertEqual(cfg.get_cached_param("WORDLIST"), "/usr/share/wordlists/rockyou.txt")
         self.assertEqual(cfg.get_cached_param("NON_EXISTENT", "default"), "default")

@@ -1,3 +1,4 @@
+import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -7,10 +8,14 @@ class TestLootManager(unittest.TestCase):
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
-        self.storage_file = Path(self.temp_dir.name) / "test_loot.json"
+        self.temp_path = Path(self.temp_dir.name)
+        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
+        
+        self.storage_file = self.temp_path / "test_loot.json"
         self.loot_mgr = LootManager(storage_file=self.storage_file)
 
     def tearDown(self):
+        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_add_and_get_entry(self):
@@ -65,7 +70,7 @@ class TestLootManager(unittest.TestCase):
         self.loot_mgr.add_entry("credentials", "Web Admin", "admin:Secret!", "10.10.10.30")
         self.loot_mgr.add_entry("flag", "Root Flag", "THM{test_flag}", "10.10.10.30")
 
-        export_path = Path(self.temp_dir.name) / "loot_export.txt"
+        export_path = self.temp_path / "loot_export.txt"
         result = self.loot_mgr.export_loot(export_path, target_ip="10.10.10.30")
         
         self.assertTrue(export_path.exists())

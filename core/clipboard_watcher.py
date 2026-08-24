@@ -6,6 +6,8 @@ from typing import List, Dict, Any, Optional
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
+from core.config import get_default_config_dir
+
 MAX_CLIPBOARD_TEXT_SIZE = 64 * 1024  # 64 KB
 
 class ClipboardWatcher(QObject):
@@ -18,8 +20,8 @@ class ClipboardWatcher(QObject):
     def __init__(self, storage_file: Optional[Path] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
         if storage_file is None:
-            storage_file = Path.home() / ".ctf_cheatsheet_widget" / "clipboard_history.json"
-        self.storage_file = storage_file
+            storage_file = get_default_config_dir() / "clipboard_history.json"
+        self.storage_file = Path(storage_file)
         self.storage_file.parent.mkdir(parents=True, exist_ok=True)
         
         self.history: List[Dict[str, Any]] = []

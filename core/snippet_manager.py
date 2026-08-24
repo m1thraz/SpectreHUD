@@ -3,6 +3,8 @@ import uuid
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+from core.config import get_default_config_dir
+
 class SnippetManager:
     """Manages built-in and custom user command snippets."""
 
@@ -10,10 +12,10 @@ class SnippetManager:
         if default_snippets_path is None:
             default_snippets_path = Path(__file__).parent.parent / "data" / "default_snippets.json"
         if user_snippets_path is None:
-            user_snippets_path = Path.home() / ".ctf_cheatsheet_widget" / "user_snippets.json"
+            user_snippets_path = get_default_config_dir() / "user_snippets.json"
 
-        self.default_snippets_path = default_snippets_path
-        self.user_snippets_path = user_snippets_path
+        self.default_snippets_path = Path(default_snippets_path)
+        self.user_snippets_path = Path(user_snippets_path)
         self.categories: List[Dict[str, Any]] = []
         self.snippets: List[Dict[str, Any]] = []
         

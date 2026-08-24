@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+from core.config import get_default_config_dir
+
 LOOT_TYPES = [
     {"id": "credentials", "name": "🔑 Credentials / Logins", "icon": "🔑", "badge_class": "BadgeCreds"},
     {"id": "hash", "name": "🔐 Hashes", "icon": "🔐", "badge_class": "BadgeHash"},
@@ -18,8 +20,8 @@ class LootManager:
 
     def __init__(self, storage_file: Optional[Path] = None):
         if storage_file is None:
-            storage_file = Path.home() / ".ctf_cheatsheet_widget" / "loot_sessions.json"
-        self.storage_file = storage_file
+            storage_file = get_default_config_dir() / "loot_sessions.json"
+        self.storage_file = Path(storage_file)
         self.storage_file.parent.mkdir(parents=True, exist_ok=True)
         self.entries: List[Dict[str, Any]] = []
         self.load_entries()
