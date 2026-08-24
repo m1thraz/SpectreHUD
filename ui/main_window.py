@@ -152,11 +152,12 @@ class MainWindow(QMainWindow):
         self.btn_screenshot.clicked.connect(self.trigger_screenshot)
         header_layout.addWidget(self.btn_screenshot)
 
-        # Prominent Clipboard Recording Indicator Button
-        self.btn_rec_indicator = QPushButton("🔴 REC")
+        # Prominent Clipboard Recording Indicator Button (Default: PAUSED for privacy)
+        self.btn_rec_indicator = QPushButton("⏸️ REC: Aus")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
+        self.btn_rec_indicator.setProperty("paused", "true")
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_rec_indicator.setToolTip("Clipboard-Logger ist AKTIV (schneidet alle Kopien mit).\nKlicken oder Ctrl+P zum Pausieren.")
+        self.btn_rec_indicator.setToolTip("Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.")
         self.btn_rec_indicator.clicked.connect(self._toggle_pause_history)
         header_layout.addWidget(self.btn_rec_indicator)
 
@@ -185,9 +186,10 @@ class MainWindow(QMainWindow):
         self.btn_export_report.setVisible(False)
         header_layout.addWidget(self.btn_export_report)
 
-        self.btn_pause_history = QPushButton("⏸️ Pause")
+        self.btn_pause_history = QPushButton("▶️ Starten")
         self.btn_pause_history.setProperty("class", "SecondaryBtn")
-        self.btn_pause_history.setToolTip("Clipboard-Logging pausieren/fortsetzen")
+        self.btn_pause_history.setStyleSheet("color: #e3b341;")
+        self.btn_pause_history.setToolTip("Clipboard-Logging starten/pausieren")
         self.btn_pause_history.clicked.connect(self._toggle_pause_history)
         self.btn_pause_history.setVisible(False)
         header_layout.addWidget(self.btn_pause_history)

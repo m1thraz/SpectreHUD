@@ -70,9 +70,9 @@ def main():
     hotkey_listener.quit_requested.connect(app.quit)
     hotkey_listener.start()
 
-    # System Tray Icon
-    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=True)), app)
-    tray_icon.setToolTip("SpectreHUD [🔴 REC: Aktiv] - CTF Cheatsheet & Loot Overlay")
+    # System Tray Icon (Default: Paused for privacy)
+    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False)), app)
+    tray_icon.setToolTip("SpectreHUD [⏸️ REC: Pausiert] - CTF Cheatsheet & Loot Overlay")
     tray_menu = QMenu()
     
     act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
@@ -83,7 +83,7 @@ def main():
     act_snip.triggered.connect(window.trigger_screenshot)
     tray_menu.addAction(act_snip)
 
-    act_rec_toggle = QAction("🔴 Clipboard-Logger pausieren / fortsetzen (Ctrl+P)", tray_menu)
+    act_rec_toggle = QAction("🔴 Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
     act_rec_toggle.triggered.connect(window._toggle_pause_history)
     tray_menu.addAction(act_rec_toggle)
 

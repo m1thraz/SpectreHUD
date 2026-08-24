@@ -33,7 +33,7 @@ class ClipboardWatcher(QObject):
         
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
-        self._is_paused = False
+        self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
         self._current_target_provider = None
         
         self.load_history()
