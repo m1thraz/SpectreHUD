@@ -9,6 +9,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
+from core.project_manager import ProjectManager
 from core.hotkey_listener import HotkeyListener
 from ui.main_window import MainWindow
 
@@ -40,12 +41,13 @@ def main():
     # Initialize Managers
     config_manager = ConfigManager()
     snippet_manager = SnippetManager()
+    project_manager = ProjectManager()
     loot_manager = LootManager()
     clipboard_watcher = ClipboardWatcher()
     clipboard_watcher.start_listening()
 
     # Main Window
-    window = MainWindow(config_manager, snippet_manager, loot_manager, clipboard_watcher)
+    window = MainWindow(config_manager, snippet_manager, loot_manager, clipboard_watcher, project_manager)
     window.show()
 
     # Global Hotkey Listener

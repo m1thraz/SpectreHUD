@@ -117,6 +117,16 @@ class ClipboardWatcher(QObject):
         else:
             self.history = []
 
+    def set_history(self, history: List[Dict[str, Any]]) -> None:
+        """Replaces history with a new list (e.g. on project switch)."""
+        self.history = history or []
+        self._last_copied_text = self.history[0]["text"] if self.history else None
+        self.save_history()
+
+    def get_all_history(self) -> List[Dict[str, Any]]:
+        """Returns all history items raw."""
+        return self.history
+
     def save_history(self) -> None:
         """Saves history to disk."""
         try:

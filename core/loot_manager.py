@@ -35,6 +35,15 @@ class LootManager:
         else:
             self.entries = []
 
+    def set_entries(self, entries: List[Dict[str, Any]]) -> None:
+        """Replaces current entries with a new list (e.g. on project switch)."""
+        self.entries = entries or []
+        self.save_entries()
+
+    def get_all_entries(self) -> List[Dict[str, Any]]:
+        """Returns all entries raw."""
+        return self.entries
+
     def save_entries(self) -> None:
         """Persists loot entries to disk."""
         try:

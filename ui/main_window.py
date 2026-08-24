@@ -2,16 +2,17 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QScrollArea, QFrame, QLabel, QPushButton, QMessageBox, 
-    QFileDialog, QApplication
+    QFileDialog, QMenu, QApplication
 )
 from PyQt6.QtCore import Qt, QPoint, pyqtSlot
-from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
+from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent, QAction
 from typing import Dict, Any, List, Optional
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager, LOOT_TYPES
 from core.clipboard_watcher import ClipboardWatcher
+from core.project_manager import ProjectManager
 from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
 from ui.snippet_card import SnippetCard
@@ -19,21 +20,24 @@ from ui.loot_card import LootCard
 from ui.history_card import HistoryCard
 from ui.add_snippet_dialog import AddSnippetDialog
 from ui.add_loot_dialog import AddLootDialog
+from ui.project_dialog import NewProjectDialog
 from ui.styles import CYBER_DARK_QSS
 
 class MainWindow(QMainWindow):
-    """Sleek, frameless, translucent Spotlight-style HUD Overlay for Cheatsheets, Session Loot & Command History."""
+    """Sleek, frameless, translucent Spotlight-style HUD Overlay for Cheatsheets, Session Loot, History & Workspaces."""
 
     def __init__(
         self, 
         config_manager: ConfigManager, 
         snippet_manager: SnippetManager, 
         loot_manager: Optional[LootManager] = None,
-        clipboard_watcher: Optional[ClipboardWatcher] = None
+        clipboard_watcher: Optional[ClipboardWatcher] = None,
+        project_manager: Optional[ProjectManager] = None
     ):
         super().__init__()
         self.config = config_manager
         self.snippet_manager = snippet_manager
+        self.project_manager = project_manager if project_manager is not None else ProjectManager()
         self.loot_manager = loot_manager if loot_manager is not None else LootManager()
         self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
         
@@ -44,7 +48,7 @@ class MainWindow(QMainWindow):
         self.active_mode = "cheatsheet"  # 'cheatsheet', 'loot', or 'history'
         self.current_category_id = "all"
         self.current_loot_type = "all"
-        self.current_history_filter = "all"  # 'all', 'target_only', 'commands', 'outputs'
+        self.current_history_filter = "all"
         
         self.cards: List[QWidget] = []
         self.filter_buttons: Dict[str, QPushButton] = {}
@@ -53,14 +57,18 @@ class MainWindow(QMainWindow):
         self._init_window()
         self._init_ui()
         self._setup_shortcuts()
+        
+        # Load initial active project state
+        self._load_active_project_state()
+        
         self.refresh_filter_pills()
         self.refresh_content()
         self._center_on_screen()
 
     def _init_window(self) -> None:
         self.setWindowTitle("SpectreHUD")
-        self.resize(820, 590)
-        self.setMinimumSize(680, 450)
+        self.resize(830, 600)
+        self.setMinimumSize(680, 460)
         
         flags = (
             Qt.WindowType.FramelessWindowHint |
@@ -88,7 +96,7 @@ class MainWindow(QMainWindow):
         hud_layout.setContentsMargins(0, 0, 0, 0)
         hud_layout.setSpacing(0)
 
-        # 1. Top Header Row: SpectreHUD Brand + Mode Switcher Tabs + Actions
+        # 1. Top Header Row: Brand + Project Selector + Mode Switcher + Actions
         self.header_bar = QFrame()
         self.header_bar.setObjectName("HeaderBar")
         header_layout = QHBoxLayout(self.header_bar)
@@ -97,10 +105,20 @@ class MainWindow(QMainWindow):
 
         # SpectreHUD Brand Badge
         lbl_brand = QLabel("👻 SpectreHUD")
-        lbl_brand.setStyleSheet("color: #00e5ff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 6px;")
+        lbl_brand.setStyleSheet("color: #00e5ff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 4px;")
         header_layout.addWidget(lbl_brand)
 
-        # Mode Buttons
+        # Project / Box Selector Dropdown Button
+        active_proj = self.project_manager.get_active_project()
+        self.btn_project = QPushButton(f"📁 Box: {active_proj} ▾")
+        self.btn_project.setProperty("class", "ProjectSelectBtn")
+        self.btn_project.setToolTip("Aktives CTF-Projekt / Box wechseln")
+        self.btn_project.clicked.connect(self._show_project_menu)
+        header_layout.addWidget(self.btn_project)
+
+        header_layout.addSpacing(6)
+
+        # Mode Switcher Tabs
         self.btn_mode_cheatsheet = QPushButton("⚡ Cheatsheet")
         self.btn_mode_cheatsheet.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive")
@@ -216,7 +234,7 @@ class MainWindow(QMainWindow):
 
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
-        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Tab: Modus wechseln | Ctrl+N: Neu | Esc: Schließen")
+        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Tab: Modus | Ctrl+N: Neu | Esc: Schließen")
         self.lbl_status.setObjectName("FooterText")
         footer_layout.addWidget(self.lbl_status)
 
@@ -238,23 +256,113 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
 
+    def _show_project_menu(self) -> None:
+        """Displays project switcher popup menu."""
+        menu = QMenu(self)
+        active_proj = self.project_manager.get_active_project()
+        all_projects = self.project_manager.list_projects()
+
+        # Project list
+        for p in all_projects:
+            prefix = "✓ " if p == active_proj else "   "
+            act = QAction(f"{prefix}{p}", menu)
+            act.triggered.connect(lambda checked=False, pname=p: self._switch_to_project(pname))
+            menu.addAction(act)
+
+        menu.addSeparator()
+
+        # Action: New Project
+        act_new = QAction("➕ Neues Projekt / Box erstellen...", menu)
+        act_new.triggered.connect(self._open_new_project_dialog)
+        menu.addAction(act_new)
+
+        # Action: Open in Explorer
+        act_open_folder = QAction("📂 Projektordner im Explorer öffnen", menu)
+        act_open_folder.triggered.connect(lambda: self.project_manager.open_project_folder())
+        menu.addAction(act_open_folder)
+
+        # Show menu under project button
+        menu.exec(self.btn_project.mapToGlobal(QPoint(0, self.btn_project.height() + 4)))
+
+    def _open_new_project_dialog(self) -> None:
+        """Opens dialog to create a new project workspace."""
+        current_attacker = self.var_bar.txt_attacker.text().strip()
+        dlg = NewProjectDialog(default_attacker_ip=current_attacker, parent=self)
+        if dlg.exec():
+            data = dlg.get_data()
+            name = data["name"]
+            target_ip = data["target_ip"]
+            attacker_ip = data["attacker_ip"]
+            
+            # Create project workspace
+            self.project_manager.create_project(name, target_ip=target_ip, attacker_ip=attacker_ip)
+            self._switch_to_project(name)
+
+    def _save_current_project_state(self) -> None:
+        """Persists active workspace data (IPs, loot, clipboard history) into project_state.json."""
+        active_name = self.project_manager.get_active_project()
+        current_vars = self.var_bar.get_variables() if hasattr(self, 'var_bar') else {}
+        
+        state = {
+            "name": active_name,
+            "target_ip": current_vars.get("target_ip", ""),
+            "attacker_ip": current_vars.get("attacker_ip", ""),
+            "port": current_vars.get("port", "4444"),
+            "wordlist": current_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+            "loot": self.loot_manager.get_all_entries(),
+            "clipboard_history": self.clipboard_watcher.get_all_history()
+        }
+        self.project_manager.save_project_state(active_name, state)
+
+    def _load_active_project_state(self) -> None:
+        """Loads state data for currently active workspace into UI and managers."""
+        active_name = self.project_manager.get_active_project()
+        self.btn_project.setText(f"📁 Box: {active_name} ▾")
+        
+        state = self.project_manager.load_project_state(active_name)
+        target_ip = state.get("target_ip", "10.10.10.10")
+        attacker_ip = state.get("attacker_ip", "10.10.14.5")
+        port = state.get("port", "4444")
+        
+        # Update inputs
+        if hasattr(self, 'var_bar'):
+            self.var_bar.txt_target.setText(target_ip)
+            self.var_bar.txt_attacker.setText(attacker_ip)
+            self.var_bar.txt_port.setText(port)
+
+        # Update Loot and History items
+        self.loot_manager.set_entries(state.get("loot", []))
+        self.clipboard_watcher.set_history(state.get("clipboard_history", []))
+
+    def _switch_to_project(self, project_name: str) -> None:
+        """Switches workspace context and updates all state components."""
+        # 1. Save current project state
+        self._save_current_project_state()
+        
+        # 2. Switch active project in ProjectManager
+        self.project_manager.set_active_project(project_name)
+        
+        # 3. Load new project state
+        self._load_active_project_state()
+        
+        # 4. Refresh UI
+        self.refresh_filter_pills()
+        self.refresh_content()
+
     def switch_mode(self, mode: str) -> None:
         """Switches between 'cheatsheet', 'loot', and 'history' modes."""
         self.active_mode = mode
         
-        # Reset mode button styles
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive" if mode == "cheatsheet" else "ModeSwitchBtn")
         self.btn_mode_loot.setProperty("class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn")
         self.btn_mode_history.setProperty("class", "ModeSwitchBtnActive" if mode == "history" else "ModeSwitchBtn")
 
-        # Visibility of toolbar actions
         self.btn_export_loot.setVisible(mode == "loot")
         self.btn_clear_loot.setVisible(mode == "loot")
         self.btn_export_report.setVisible(mode == "history")
         self.btn_pause_history.setVisible(mode == "history")
         self.btn_clear_history.setVisible(mode == "history")
 
-        # Placeholder text
         if mode == "cheatsheet":
             self.search_bar.txt_search.setPlaceholderText("⚡ Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...")
         elif mode == "loot":
@@ -262,7 +370,6 @@ class MainWindow(QMainWindow):
         else:
             self.search_bar.txt_search.setPlaceholderText("📜 Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...")
 
-        # Polish styles
         for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history]:
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -401,7 +508,7 @@ class MainWindow(QMainWindow):
                 search_query=query
             )
             if not matched_loot:
-                empty_lbl = QLabel("📝 Noch kein Loot oder Notizen erfasst.\nDrücke 'Ctrl + N' oder '＋ Neu', um Einträge hinzuzufügen.")
+                empty_lbl = QLabel("📝 Noch kein Loot oder Notizen in diesem Projekt erfasst.\nDrücke 'Ctrl + N' oder '＋ Neu', um Einträge hinzuzufügen.")
                 empty_lbl.setStyleSheet("color: #8b949e; font-size: 13px; padding: 30px;")
                 empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(empty_lbl)
@@ -428,7 +535,7 @@ class MainWindow(QMainWindow):
                 filter_type=filter_type
             )
             if not matched_history:
-                empty_lbl = QLabel("📜 Noch keine Clipboard-Historie in dieser Session aufgezeichnet.\nKopierte Befehle oder Textblöcke erscheinen hier automatisch!")
+                empty_lbl = QLabel("📜 Noch keine Clipboard-Historie in diesem Projekt aufgezeichnet.\nKopierte Befehle oder Textblöcke erscheinen hier automatisch!")
                 empty_lbl.setStyleSheet("color: #8b949e; font-size: 13px; padding: 30px;")
                 empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.content_layout.addWidget(empty_lbl)
@@ -453,6 +560,9 @@ class MainWindow(QMainWindow):
         self.config.set("attacker_ip", vars_dict.get("attacker_ip", ""))
         self.config.set("port", vars_dict.get("port", ""))
         
+        # Save to project state
+        self._save_current_project_state()
+
         if self.active_mode == "cheatsheet":
             for card in self.cards:
                 if isinstance(card, SnippetCard):
@@ -462,7 +572,8 @@ class MainWindow(QMainWindow):
             self.refresh_content()
 
     def _on_clipboard_entry_added(self, entry: Dict[str, Any]) -> None:
-        """Dynamically refresh history if currently viewing history."""
+        """Auto-saves to active project state and updates view."""
+        self._save_current_project_state()
         if self.active_mode == "history":
             self.refresh_filter_pills()
             self.refresh_content()
@@ -484,11 +595,13 @@ class MainWindow(QMainWindow):
 
     def _on_loot_deleted(self, loot_id: str) -> None:
         if self.loot_manager.delete_entry(loot_id):
+            self._save_current_project_state()
             self.refresh_filter_pills()
             self.refresh_content()
 
     def _on_history_deleted(self, history_id: str) -> None:
         if self.clipboard_watcher.delete_entry(history_id):
+            self._save_current_project_state()
             self.refresh_filter_pills()
             self.refresh_content()
 
@@ -496,7 +609,6 @@ class MainWindow(QMainWindow):
         """Opens AddLootDialog with pre-filled content from clipboard history."""
         target_ip = history_item.get("target_ip", "") or self.var_bar.txt_target.text().strip()
         text = history_item.get("text", "")
-        # Guess default title
         first_line = text.split("\n")[0][:40]
         dlg = AddLootDialog(
             current_target_ip=target_ip,
@@ -513,6 +625,7 @@ class MainWindow(QMainWindow):
                 content=data["content"],
                 target_ip=data["target_ip"]
             )
+            self._save_current_project_state()
             QMessageBox.information(self, "Erfolg", "Eintrag erfolgreich in Session-Loot gespeichert!")
 
     def _on_add_button_clicked(self) -> None:
@@ -548,11 +661,14 @@ class MainWindow(QMainWindow):
                 content=data["content"],
                 target_ip=data["target_ip"]
             )
+            self._save_current_project_state()
             self.refresh_filter_pills()
             self.refresh_content()
 
     def _export_loot(self) -> None:
-        default_path = Path.cwd() / "loot.txt"
+        active_proj = self.project_manager.get_active_project()
+        proj_dir = self.project_manager.get_project_dir(active_proj)
+        default_path = proj_dir / "loot" / "loot.txt"
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Session-Loot exportieren", str(default_path), "Text / Markdown (*.txt *.md)"
         )
@@ -564,22 +680,24 @@ class MainWindow(QMainWindow):
     def _clear_loot(self) -> None:
         reply = QMessageBox.question(
             self, "Session leeren", 
-            "Möchtest du wirklich alle Loot-Einträge dieser Session löschen?",
+            "Möchtest du wirklich alle Loot-Einträge dieses Projekts löschen?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.loot_manager.clear_session()
+            self._save_current_project_state()
             self.refresh_filter_pills()
             self.refresh_content()
 
     def _export_report(self) -> None:
-        target_ip = self.var_bar.txt_target.text().strip()
-        filename = f"ctf_report_{target_ip.replace('.', '_') if target_ip else 'session'}.md"
-        default_path = Path.cwd() / filename
+        active_proj = self.project_manager.get_active_project()
+        proj_dir = self.project_manager.get_project_dir(active_proj)
+        default_path = proj_dir / "notes.md"
         file_path, _ = QFileDialog.getSaveFileName(
             self, "CTF Write-Up Report exportieren", str(default_path), "Markdown (*.md)"
         )
         if file_path:
+            target_ip = self.var_bar.txt_target.text().strip()
             msg = self.clipboard_watcher.export_report_markdown(
                 Path(file_path), 
                 target_ip=target_ip if target_ip else None, 
@@ -599,11 +717,12 @@ class MainWindow(QMainWindow):
     def _clear_history(self) -> None:
         reply = QMessageBox.question(
             self, "Historie leeren", 
-            "Möchtest du wirklich die gesamte Clipboard-Historie dieser Session löschen?",
+            "Möchtest du wirklich die gesamte Clipboard-Historie dieses Projekts löschen?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.clipboard_watcher.clear_history()
+            self._save_current_project_state()
             self.refresh_filter_pills()
             self.refresh_content()
 

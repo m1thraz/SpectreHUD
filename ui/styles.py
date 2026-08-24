@@ -1,5 +1,5 @@
 """
-Modern Cyber Dark Glassmorphism / HUD Overlay Stylesheet for the CTF Cheatsheet Widget & Loot Manager.
+Modern Cyber Dark Glassmorphism / HUD Overlay Stylesheet for the CTF Cheatsheet Widget, Loot Manager & Projects.
 """
 
 CYBER_DARK_QSS = """
@@ -32,8 +32,8 @@ QPushButton.ModeSwitchBtn {
     color: #8b949e;
     border: 1px solid rgba(48, 54, 61, 0.7);
     border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 13px;
+    padding: 5px 12px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -47,9 +47,53 @@ QPushButton.ModeSwitchBtnActive {
     color: #00e5ff;
     border: 1px solid #00e5ff;
     border-radius: 8px;
-    padding: 6px 14px;
-    font-size: 13px;
+    padding: 5px 12px;
+    font-size: 12px;
     font-weight: bold;
+}
+
+/* Project Selector Button */
+QPushButton.ProjectSelectBtn {
+    background-color: rgba(31, 41, 61, 0.6);
+    color: #58a6ff;
+    border: 1px solid rgba(56, 139, 253, 0.4);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton.ProjectSelectBtn:hover {
+    background-color: rgba(56, 139, 253, 0.25);
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+/* Dark QMenu for Dropdowns */
+QMenu {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 6px;
+    color: #c9d1d9;
+    font-size: 12px;
+}
+
+QMenu::item {
+    background-color: transparent;
+    padding: 6px 16px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #1f293d;
+    color: #00e5ff;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #30363d;
+    margin: 4px 8px;
 }
 
 /* Spotlight Search Section */

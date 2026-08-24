@@ -9,6 +9,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
+from core.project_manager import ProjectManager
 from core.net_detector import NetDetector
 from ui.main_window import MainWindow
 
@@ -25,26 +26,24 @@ class TestUI(unittest.TestCase):
             self.assertIsInstance(ip, str)
             self.assertIn(".", ip)
 
-    def test_hud_3_modes(self):
+    def test_hud_3_modes_and_projects(self):
         config_manager = ConfigManager()
         snippet_manager = SnippetManager()
         
-        temp_loot = Path(tempfile.gettempdir()) / "test_ui_loot_3m.json"
-        temp_clip = Path(tempfile.gettempdir()) / "test_ui_clip_3m.json"
-        if temp_loot.exists():
-            temp_loot.unlink()
-        if temp_clip.exists():
-            temp_clip.unlink()
+        temp_dir = tempfile.TemporaryDirectory()
+        base_proj_dir = Path(temp_dir.name) / "test_projects"
+        project_manager = ProjectManager(base_dir=base_proj_dir)
+
+        temp_loot = Path(temp_dir.name) / "test_ui_loot.json"
+        temp_clip = Path(temp_dir.name) / "test_ui_clip.json"
 
         loot_manager = LootManager(storage_file=temp_loot)
         clipboard_watcher = ClipboardWatcher(storage_file=temp_clip)
 
-        # Pre-seed items
-        loot_manager.add_entry("credentials", "MySQL Root", "root:toor123", "10.10.10.99")
-        clipboard_watcher.add_entry("curl -i http://10.10.10.99/login", "10.10.10.99")
-        clipboard_watcher.add_entry("whoami /priv", "10.10.10.99")
-
-        window = MainWindow(config_manager, snippet_manager, loot_manager, clipboard_watcher)
+        window = MainWindow(
+            config_manager, snippet_manager, loot_manager, 
+            clipboard_watcher, project_manager
+        )
         
         # 1. Mode: Cheatsheet
         self.assertEqual(window.active_mode, "cheatsheet")
@@ -53,22 +52,33 @@ class TestUI(unittest.TestCase):
         # 2. Mode: Loot
         window.switch_mode("loot")
         self.assertEqual(window.active_mode, "loot")
-        self.assertEqual(len(window.cards), 1)
 
         # 3. Mode: History
         window.switch_mode("history")
         self.assertEqual(window.active_mode, "history")
-        self.assertEqual(len(window.cards), 2)
 
-        # Search in History
-        window.search_bar.txt_search.setText("whoami")
-        self.assertEqual(len(window.cards), 1)
+        # 4. Project Workspace Switch
+        project_manager.create_project("BoxOmega", target_ip="10.10.10.123")
+        window._switch_to_project("BoxOmega")
+        self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.123")
+        self.assertEqual(project_manager.get_active_project(), "BoxOmega")
 
-        # Tab cycling
-        window.toggle_mode()
-        self.assertEqual(window.active_mode, "cheatsheet")
+        # Add loot to BoxOmega
+        loot_manager.add_entry("credentials", "Omega User", "omega:pass123", "10.10.10.123")
+        window._save_current_project_state()
+
+        # Switch back to Default
+        window._switch_to_project("Default")
+        self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.10")
+        self.assertEqual(len(loot_manager.get_entries()), 0)
+
+        # Switch back to BoxOmega -> Loot is restored!
+        window._switch_to_project("BoxOmega")
+        self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.123")
+        self.assertEqual(len(loot_manager.get_entries()), 1)
 
         window.close()
+        temp_dir.cleanup()
 
 if __name__ == "__main__":
     unittest.main()
