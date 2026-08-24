@@ -51,10 +51,6 @@
 - **Horizontale Filter-Chips:** Kategorien wie 🌐 *Web & HTTP*, 🐧 *Linux Shell*, 🪟 *Windows & PS*, 📡 *Network & Scans*, 🗄️ *SQL*, 🔐 *Crypto & Encoding* und ⭐ *Custom*.
 - **Interaktive Inline-Parameter:** Befehle mit Platzhaltern wie `{{WORDLIST}}`, `{{PARAM}}` oder `{{PATH}}` öffnen beim Kopieren einen fokussierten Mini-Prompt mit **Live-Befehlsvorschau**, **Smart-Presets** und **Session-Memory**.
 
-<p align="center">
-  <img src="assets/spectrehud_add_command.png" alt="Eigenen Befehl hinzufügen" width="550" style="border-radius: 6px;">
-</p>
-
 ### 6. Modus 2: Session-Loot & Notizbuch (Ctrl + 2)
 - Schnelle Erfassung von Beute direkt im HUD:
   - 📷 **Screenshots & PoCs**
