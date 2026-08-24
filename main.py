@@ -55,6 +55,7 @@ def main():
     hotkey_listener = HotkeyListener(hotkey_str=hotkey_str)
     hotkey_listener.toggle_requested.connect(window.toggle_visibility)
     hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
+    hotkey_listener.quit_requested.connect(app.quit)
     hotkey_listener.start()
 
     # System Tray Icon

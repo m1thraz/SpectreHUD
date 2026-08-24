@@ -246,7 +246,7 @@ class MainWindow(QMainWindow):
 
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
-        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Tab: Modus | Ctrl+N: Neu | Esc: Schließen")
+        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+S: Snip | Ctrl+Q: Exit | Esc: Verstecken")
         self.lbl_status.setObjectName("FooterText")
         footer_layout.addWidget(self.lbl_status)
 
@@ -264,6 +264,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_bar.set_focus)
         QShortcut(QKeySequence("Ctrl+N"), self, activated=self._on_add_button_clicked)
         QShortcut(QKeySequence("Ctrl+S"), self, activated=self.trigger_screenshot)
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=QApplication.quit)
         QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))

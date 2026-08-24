@@ -17,6 +17,7 @@
 - **Glassmorphism-Optik:** Milchig-transluzenter Dark-Look (`rgba`), abgerundete Ecken und feiner Cyan-Glow.
 - **Kein Taskleisten-Ballast:** Verhält sich wie ein echtes System-Overlay (`Qt.Tool`) und lässt sich frei per Maus auf dem Bildschirm verschieben.
 - **Globaler Hotkey:** Mit **`Strg + Super + <`** (bzw. `Ctrl + Win + <`) blitzschnell von überall aufrufen und schließen.
+- **Schnelles Beenden:** Beende die Anwendung komplett mit **`Strg + Super + Q`** (global) oder **`Ctrl + Q`** (im HUD).
 
 ### 📷 2. Integrierte Screenshot- & Region-Snip-Engine
 - **Nativ ohne Zusatz-Bibliotheken:** Nutzt hochperformant PyQt6 `QScreen` und `QPainter`.
@@ -68,6 +69,8 @@
 | Shortcut | Aktion |
 |---|---|
 | `Strg + Super + <` | SpectreHUD global ein- / ausblenden |
+| `Strg + Super + Q` | **SpectreHUD komplett beenden (Global)** |
+| `Ctrl + Q` (im HUD) | **SpectreHUD komplett beenden** |
 | `Strg + Super + X` | Screenshot & Region-Snip global auslösen |
 | `Ctrl + S` (im HUD) | Screenshot & Region-Snip starten |
 | `Tab` | Durch die 3 Modi zirkulieren (`Cheatsheet` ➔ `Loot` ➔ `History`) |
@@ -77,7 +80,7 @@
 | `Ctrl + F` | Spotlight-Suche fokussieren & Text markieren |
 | `Ctrl + N` | Neuen Befehl oder neuen Loot anlegen |
 | `Enter` (im Prompt) | Parameter übernehmen & Befehl kopieren |
-| `Esc` | Snip abbrechen, Dialog schließen oder HUD ausblenden |
+| `Esc` | Snip abbrechen, Dialog schließen oder HUD verstecken |
 
 ---
 
