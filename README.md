@@ -15,6 +15,9 @@
 
 **SpectreHUD** ist ein minimalistisches, rahmenloses Desktop-HUD (Heads-Up-Display im Spotlight / Raycast-Stil), das speziell für TryHackMe-, HackTheBox- und CTF-Challenges entwickelt wurde. Im Gegensatz zu schweren Wissensmanagement-Systemen ist SpectreHUD als **einsatzzentrierter Workspace** konzipiert: Es schwebt nahtlos über deinen Terminals und VMs und bündelt interaktive Befehlsvorlagen, ein Session-Loot-Notizbuch, Workspace-Projektmanagement, ein integriertes **Screenshot-Snipping-Tool** und einen automatischen Clipboard-Logger mit 1-Klick-Write-Up-Export.
 
+> [!NOTE]
+> **Sicherheitshinweis für den Praxiseinsatz:** SpectreHUD ist für CTF-Challenges, Pentest-Labs (z. B. TryHackMe, HackTheBox, Proving Grounds) und Trainingsumgebungen konzipiert. Alle erfassten Daten (Credentials, Hashes, Tokens, Befehle) werden lokal im Klartext (`JSON` & `Markdown`) in deinem Workspace abgelegt. Speichere darin keine realen Produktiv-Passwörter oder vertraulichen Produktiv-Schlüssel.
+
 ---
 
 ## Key Features
