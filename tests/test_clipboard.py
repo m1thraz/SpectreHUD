@@ -59,6 +59,7 @@ class TestClipboardWatcher(unittest.TestCase):
         loot_mgr = LootManager(storage_file=loot_file)
         loot_mgr.add_entry("credentials", "SSH admin", "admin:SecretPass", "10.10.10.77")
         loot_mgr.add_entry("flag", "User Flag", "THM{flag_abc_123}", "10.10.10.77")
+        loot_mgr.add_entry("screenshot", "Dashboard Exploit", "![Dashboard Exploit](loot/screenshot_dash.png)", "10.10.10.77")
 
         # Add clipboard history
         self.watcher.add_entry("nmap -p 22,80 10.10.10.77", target_ip="10.10.10.77")
@@ -72,6 +73,7 @@ class TestClipboardWatcher(unittest.TestCase):
         self.assertIn("CTF Session Report", content)
         self.assertIn("admin:SecretPass", content)
         self.assertIn("THM{flag_abc_123}", content)
+        self.assertIn("![Dashboard Exploit](loot/screenshot_dash.png)", content)
         self.assertIn("nmap -p 22,80", content)
         self.assertIn("ssh admin@10.10.10.77", content)
 

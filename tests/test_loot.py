@@ -69,14 +69,16 @@ class TestLootManager(unittest.TestCase):
     def test_export_loot(self):
         self.loot_mgr.add_entry("credentials", "Web Admin", "admin:Secret!", "10.10.10.30")
         self.loot_mgr.add_entry("flag", "Root Flag", "THM{test_flag}", "10.10.10.30")
+        self.loot_mgr.add_entry("screenshot", "Gained Root Shell", "![Gained Root Shell](loot/screenshot_root.png)", "10.10.10.30")
 
-        export_path = self.temp_path / "loot_export.txt"
+        export_path = self.temp_path / "loot_export.md"
         result = self.loot_mgr.export_loot(export_path, target_ip="10.10.10.30")
         
         self.assertTrue(export_path.exists())
         content = export_path.read_text(encoding="utf-8")
         self.assertIn("admin:Secret!", content)
         self.assertIn("THM{test_flag}", content)
+        self.assertIn("![Gained Root Shell](loot/screenshot_root.png)", content)
         self.assertIn("10.10.10.30", content)
 
 if __name__ == "__main__":

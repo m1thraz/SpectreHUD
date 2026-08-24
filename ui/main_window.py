@@ -722,9 +722,9 @@ class MainWindow(QMainWindow):
     def _export_loot(self) -> None:
         active_proj = self.project_manager.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
-        default_path = proj_dir / "loot" / "loot.txt"
+        default_path = proj_dir / "loot" / "loot_export.md"
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Session-Loot exportieren", str(default_path), "Text / Markdown (*.txt *.md)"
+            self, "Session-Loot als Markdown exportieren", str(default_path), "Markdown (*.md);;Text (*.txt)"
         )
         if file_path:
             target_ip = self.var_bar.txt_target.text().strip()

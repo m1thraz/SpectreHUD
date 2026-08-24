@@ -69,9 +69,26 @@ class LootManager:
 
     def add_entry(self, entry_type: str, title: str, content: str, target_ip: str = "") -> Dict[str, Any]:
         """Creates and stores a new loot entry."""
+        type_aliases = {
+            "cred": "credentials",
+            "credentials": "credentials",
+            "credential": "credentials",
+            "dir": "directory",
+            "directory": "directory",
+            "directories": "directory",
+            "notes": "note",
+            "note": "note",
+            "screenshots": "screenshot",
+            "screenshot": "screenshot",
+            "flags": "flag",
+            "flag": "flag",
+            "hashes": "hash",
+            "hash": "hash"
+        }
+        normalized_type = type_aliases.get(entry_type.lower(), entry_type) if entry_type else "note"
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
-            "type": entry_type or "note",
+            "type": normalized_type,
             "title": title.strip() or "Unbenannter Eintrag",
             "content": content.strip(),
             "target_ip": target_ip.strip(),
@@ -110,7 +127,24 @@ class LootManager:
             results = [e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")]
 
         if entry_type and entry_type != "all":
-            results = [e for e in results if e.get("type") == entry_type]
+            type_aliases = {
+                "cred": "credentials",
+                "credentials": "credentials",
+                "credential": "credentials",
+                "dir": "directory",
+                "directory": "directory",
+                "directories": "directory",
+                "notes": "note",
+                "note": "note",
+                "screenshots": "screenshot",
+                "screenshot": "screenshot",
+                "flags": "flag",
+                "flag": "flag",
+                "hashes": "hash",
+                "hash": "hash"
+            }
+            norm_type = type_aliases.get(entry_type.lower(), entry_type)
+            results = [e for e in results if type_aliases.get(e.get("type", "").lower(), e.get("type")) == norm_type]
 
         if not search_query or not search_query.strip():
             return results
@@ -135,16 +169,20 @@ class LootManager:
         return counts
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        """Exports loot entries to a structured text / Markdown file."""
+        """Exports loot entries to a structured Markdown (.md) file with embedded screenshots."""
         entries = self.get_entries(target_ip=target_ip)
         if not entries:
             return "Keine Loot-Einträge zum Exportieren vorhanden."
 
+        output_path = Path(output_path)
+        if output_path.suffix.lower() != ".md":
+            output_path = output_path.with_suffix(".md")
+
         lines = [
             f"# 🎯 CTF Session Loot Export",
-            f"Erstellt am: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Target: {target_ip if target_ip and target_ip != 'all' else 'Alle Targets'}",
-            f"Gesamtanzahl Einträge: {len(entries)}",
+            f"**Erstellt am:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
+            f"**Target:** `{target_ip if target_ip and target_ip != 'all' else 'Alle Targets'}`  ",
+            f"**Gesamtanzahl Einträge:** {len(entries)}  ",
             "",
             "---",
             ""
@@ -161,23 +199,40 @@ class LootManager:
 
             for e in type_entries:
                 lines.append(f"### {e.get('title')}")
+                meta_info = []
                 if e.get("target_ip"):
-                    lines.append(f"**Target:** `{e.get('target_ip')}` | **Zeit:** {e.get('timestamp')}")
-                else:
-                    lines.append(f"**Zeit:** {e.get('timestamp')}")
+                    meta_info.append(f"**Target:** `{e.get('target_ip')}`")
+                if e.get("timestamp"):
+                    meta_info.append(f"**Zeit:** `{e.get('timestamp')}`")
+                if meta_info:
+                    lines.append(" | ".join(meta_info))
                 lines.append("")
-                lines.append("```")
-                lines.append(e.get("content", ""))
-                lines.append("```")
+
+                content = e.get("content", "").strip()
+                if t["id"] == "screenshot":
+                    # Embed markdown image directly
+                    if content.startswith("![") and content.endswith(")"):
+                        lines.append(content)
+                    else:
+                        lines.append(f"![{e.get('title')}]({content})")
+                elif t["id"] in ["cred", "hash", "flag"]:
+                    lines.append("```")
+                    lines.append(content)
+                    lines.append("```")
+                elif t["id"] == "dir":
+                    lines.append(f"`{content}`")
+                else:
+                    lines.append(content)
+                
                 lines.append("")
 
             lines.append("---")
             lines.append("")
 
-        content = "\n".join(lines)
+        md_content = "\n".join(lines)
         try:
-            output_path.write_text(content, encoding="utf-8")
-            return f"Erfolgreich exportiert nach {output_path.name}"
+            output_path.write_text(md_content, encoding="utf-8")
+            return f"Erfolgreich als Markdown exportiert nach {output_path.name}"
         except OSError as e:
             logger.error(f"Failed to export loot to {output_path}: {e}", exc_info=True)
             return f"Fehler beim Exportieren: {e}"

@@ -211,9 +211,12 @@ class ClipboardWatcher(QObject):
         return self._is_paused
 
     def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None, loot_manager = None) -> str:
-        """Generates a structured Markdown CTF writeup/report draft."""
+        """Generates a structured Markdown CTF writeup/report with embedded screenshots and organized categories."""
+        output_path = Path(output_path)
+        if output_path.suffix.lower() != ".md":
+            output_path = output_path.with_suffix(".md")
+
         history_items = self.get_history(target_ip=target_ip)
-        
         target_display = target_ip if target_ip and target_ip != "all" else "Generisch / Multi-Target"
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -223,37 +226,84 @@ class ClipboardWatcher(QObject):
             f"**Ziel-IP:** `{target_display}`  ",
             "",
             "---",
-            "",
-            "## 🏆 1. Session Loot & Credentials",
             ""
         ]
 
-        # 1. Integrate Loot if available
+        # 1. Integrate Loot (categorized)
         if loot_manager:
             loot_entries = loot_manager.get_entries(target_ip=target_ip)
-            if loot_entries:
-                for entry in loot_entries:
-                    badge = entry.get("type", "note").upper()
+            
+            # 1a. Credentials, Hashes & Flags
+            cred_entries = [e for e in loot_entries if e.get("type") in ["cred", "credentials", "credential", "hash", "flag"]]
+            lines.append("## 🔑 1. Credentials, Hashes & Flags")
+            lines.append("")
+            if cred_entries:
+                for entry in cred_entries:
+                    raw_type = entry.get("type", "cred")
+                    badge = "CRED" if raw_type in ["cred", "credentials", "credential"] else raw_type.upper()
                     lines.append(f"### [{badge}] {entry.get('title')}")
-                    lines.append(f"- **Zeitstempel:** {entry.get('timestamp')}")
+                    meta = []
                     if entry.get("target_ip"):
-                        lines.append(f"- **Target:** `{entry.get('target_ip')}`")
+                        meta.append(f"**Target:** `{entry.get('target_ip')}`")
+                    if entry.get("timestamp"):
+                        meta.append(f"**Zeit:** `{entry.get('timestamp')}`")
+                    if meta:
+                        lines.append(" | ".join(meta))
                     lines.append("")
                     lines.append("```")
                     lines.append(entry.get("content", ""))
                     lines.append("```")
                     lines.append("")
             else:
-                lines.append("*Keine Loot-Einträge für diese Session protokolliert.*")
+                lines.append("*Keine Credentials, Hashes oder Flags erfasst.*")
                 lines.append("")
+
+            # 1b. Screenshots / Visual Proof of Concept (PoCs)
+            screenshot_entries = [e for e in loot_entries if e.get("type") in ["screenshot", "screenshots"]]
+            lines.append("## 📷 2. Screenshots & Visuelle Nachweise (PoC)")
+            lines.append("")
+            if screenshot_entries:
+                for entry in screenshot_entries:
+                    lines.append(f"### {entry.get('title')}")
+                    meta = []
+                    if entry.get("target_ip"):
+                        meta.append(f"**Target:** `{entry.get('target_ip')}`")
+                    if entry.get("timestamp"):
+                        meta.append(f"**Zeit:** `{entry.get('timestamp')}`")
+                    if meta:
+                        lines.append(" | ".join(meta))
+                    lines.append("")
+                    
+                    content = entry.get("content", "").strip()
+                    if content.startswith("![") and content.endswith(")"):
+                        lines.append(content)
+                    else:
+                        lines.append(f"![{entry.get('title')}]({content})")
+                    lines.append("")
+            else:
+                lines.append("*Keine Screenshots aufgezeichnet.*")
+                lines.append("")
+
+            # 1c. Directories & Notes
+            other_entries = [e for e in loot_entries if e.get("type") in ["dir", "directory", "directories", "note", "notes"]]
+            if other_entries:
+                lines.append("## 📂 3. Entdeckte Verzeichnisse & Notizen")
+                lines.append("")
+                for entry in other_entries:
+                    lines.append(f"### {entry.get('title')}")
+                    if entry.get("content"):
+                        lines.append(f"{entry.get('content')}")
+                    lines.append("")
         else:
+            lines.append("## 🏆 1. Session Loot")
+            lines.append("")
             lines.append("*Loot-Manager nicht verknüpft.*")
             lines.append("")
 
         lines.extend([
             "---",
             "",
-            "## ⚡ 2. Chronologischer Befehlsverlauf (Terminal History)",
+            "## ⚡ 4. Chronologischer Befehlsverlauf (Terminal History)",
             ""
         ])
 
@@ -275,9 +325,9 @@ class ClipboardWatcher(QObject):
         lines.extend([
             "---",
             "",
-            "## 📝 3. Eigene Notizen & Fazit",
+            "## 📝 5. Eigene Notizen & Fazit",
             "",
-            "- **Root Cause / Initial Access:** ",
+            "- **Initial Access / Schwachstelle:** ",
             "- **Privilege Escalation:** ",
             "- **Gelerntes / Highlights:** ",
             ""

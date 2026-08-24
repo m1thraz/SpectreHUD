@@ -65,14 +65,14 @@
   - 🚩 **Flags** (`THM{...}`, `user.txt`)
   - 📝 **Notizen & Beobachtungen**
 - **1-Click Kopieren:** Werte direkt ohne Markieren ins Clipboard kopieren.
-- **`💾 Exportieren`**: Sichert alle Notizen der Box direkt in `[BoxName]/loot/loot.txt`.
+- **`💾 Exportieren`**: Sichert alle Notizen & PoCs der Box als formatierte Markdown-Datei mit eingebetteten Screenshots direkt in `[BoxName]/loot/loot_export.md`.
 
 ### 7. Modus 3: Clipboard-Logger & Report-Generator (Ctrl + 3)
 - **Visual Privacy Indicator (`🔴 REC`):** Der Logger zeigt im HUD-Header und im System-Tray stets transparent an, ob die Aufzeichnung aktiv (`🔴 REC`) oder pausiert (`⏸️ REC: Aus`) ist.
 - **1-Click / Shortcut Pause:** Mit **`Ctrl + P`** (oder Klick auf den REC-Badge) lässt sich das Clipboard-Logging jederzeit sofort pausieren, um private Kopien (z. B. aus Passwort-Managern) zu schützen.
 - **Duplicate-Filter:** Filtert aufeinanderfolgende Duplikate und leere/zu große Blöcke heraus.
 - **`➕ Zu Loot`**: Übernimmt historische Clipboard-Snippets mit 1 Klick ins Session-Loot.
-- **`💾 Report (.md)`**: Generiert auf Knopfdruck ein vollständiges, strukturiertes **CTF Write-Up / Report-Dokument** (`.md`) mit Header, Loot-Zusammenfassung, Screenshots und chronologischem Bash-Befehlsverlauf direkt in `[BoxName]/notes.md`.
+- **`💾 Report (.md)`**: Generiert auf Knopfdruck ein vollständiges, strukturiertes **CTF Write-Up / Report-Dokument** (`.md`) mit kategorisiertem Loot, eingebetteten Screenshot-PoCs (`![Title](loot/screenshot.png)`) und chronologischem Bash-Befehlsverlauf direkt in `[BoxName]/report.md` (bzw. `notes.md`).
 
 ---
 
