@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 LOOT_TYPES = [
     {"id": "credentials", "name": "🔑 Credentials / Logins", "icon": "🔑", "badge_class": "BadgeCreds"},
     {"id": "hash", "name": "🔐 Hashes", "icon": "🔐", "badge_class": "BadgeHash"},
+    {"id": "screenshot", "name": "📷 Screenshots", "icon": "📷", "badge_class": "BadgeScreenshot"},
     {"id": "directory", "name": "📂 Directories / URLs", "icon": "📂", "badge_class": "BadgeDir"},
     {"id": "flag", "name": "🚩 Flags", "icon": "🚩", "badge_class": "BadgeFlag"},
     {"id": "note", "name": "📝 Notizen & Sonstiges", "icon": "📝", "badge_class": "BadgeNote"}

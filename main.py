@@ -54,6 +54,7 @@ def main():
     hotkey_str = config_manager.get("hotkey", "<ctrl>+<cmd>+<")
     hotkey_listener = HotkeyListener(hotkey_str=hotkey_str)
     hotkey_listener.toggle_requested.connect(window.toggle_visibility)
+    hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
     hotkey_listener.start()
 
     # System Tray Icon
@@ -64,6 +65,10 @@ def main():
     act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
     act_toggle.triggered.connect(window.toggle_visibility)
     tray_menu.addAction(act_toggle)
+
+    act_snip = QAction("📷 Screenshot aufnehmen (Strg+Super+X)", tray_menu)
+    act_snip.triggered.connect(window.trigger_screenshot)
+    tray_menu.addAction(act_snip)
 
     tray_menu.addSeparator()
 

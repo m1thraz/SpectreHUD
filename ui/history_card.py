@@ -1,13 +1,13 @@
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPlainTextEdit, QPushButton, QWidget, QApplication
+    QPushButton, QWidget, QApplication, QSizePolicy
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any
 import pyperclip
 
 class HistoryCard(QFrame):
-    """Visual card displaying a single clipboard history item with 1-click copying and Loot-transfer."""
+    """Visual card displaying a single clipboard history item with natural word wrapping and Loot-transfer."""
 
     copied = pyqtSignal(str)
     transfer_to_loot = pyqtSignal(dict)
@@ -22,7 +22,7 @@ class HistoryCard(QFrame):
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(5)
+        layout.setSpacing(6)
 
         # Header Row: Time, Target IP, Stats, Delete
         header_layout = QHBoxLayout()
@@ -61,22 +61,19 @@ class HistoryCard(QFrame):
 
         layout.addLayout(header_layout)
 
-        # Content Box
+        # Content Box Row
         content_row = QHBoxLayout()
         content_row.setSpacing(8)
 
-        self.txt_content = QPlainTextEdit()
-        self.txt_content.setObjectName("CommandBox")
-        self.txt_content.setReadOnly(True)
-        self.txt_content.setPlainText(self.entry.get("text", ""))
-        self.txt_content.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-        self.txt_content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.txt_content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Dynamic height
-        raw_lines = max(1, self.entry.get("text", "").count("\n") + 1)
-        self.txt_content.setFixedHeight(min(140, max(36, raw_lines * 19 + 14)))
-        content_row.addWidget(self.txt_content, stretch=1)
+        self.lbl_content = QLabel(self.entry.get("text", ""))
+        self.lbl_content.setObjectName("CommandLabel")
+        self.lbl_content.setWordWrap(True)
+        self.lbl_content.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | 
+            Qt.TextInteractionFlag.TextSelectableByKeyboard
+        )
+        self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        content_row.addWidget(self.lbl_content, stretch=1)
 
         # Action Buttons Column
         action_col = QVBoxLayout()

@@ -13,6 +13,7 @@ from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager, LOOT_TYPES
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
+from core.screenshot_manager import ScreenshotManager
 from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
 from ui.snippet_card import SnippetCard
@@ -32,7 +33,8 @@ class MainWindow(QMainWindow):
         snippet_manager: SnippetManager, 
         loot_manager: Optional[LootManager] = None,
         clipboard_watcher: Optional[ClipboardWatcher] = None,
-        project_manager: Optional[ProjectManager] = None
+        project_manager: Optional[ProjectManager] = None,
+        screenshot_manager: Optional[ScreenshotManager] = None
     ):
         super().__init__()
         self.config = config_manager
@@ -40,6 +42,9 @@ class MainWindow(QMainWindow):
         self.project_manager = project_manager if project_manager is not None else ProjectManager()
         self.loot_manager = loot_manager if loot_manager is not None else LootManager()
         self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
+        self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+        
+        self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
         
         # Connect watcher target provider
         self.clipboard_watcher.set_target_provider(lambda: self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else "")
@@ -136,6 +141,13 @@ class MainWindow(QMainWindow):
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_history.clicked.connect(lambda: self.switch_mode("history"))
         header_layout.addWidget(self.btn_mode_history)
+
+        # Screenshot Snip Button
+        self.btn_screenshot = QPushButton("📷 Snip")
+        self.btn_screenshot.setProperty("class", "ScreenshotBtn")
+        self.btn_screenshot.setToolTip("Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
+        self.btn_screenshot.clicked.connect(self.trigger_screenshot)
+        header_layout.addWidget(self.btn_screenshot)
 
         header_layout.addStretch()
 
@@ -251,10 +263,21 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Esc"), self, activated=self.hide)
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_bar.set_focus)
         QShortcut(QKeySequence("Ctrl+N"), self, activated=self._on_add_button_clicked)
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=self.trigger_screenshot)
         QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
+
+    def trigger_screenshot(self) -> None:
+        """Triggers screenshot & snipping overlay."""
+        target_ip = self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else ""
+        self.screenshot_manager.start_capture(self, self.project_manager, self.loot_manager, target_ip=target_ip)
+
+    def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:
+        """Called when a screenshot is successfully captured and saved."""
+        self._save_current_project_state()
+        self.switch_mode("loot")
 
     def _show_project_menu(self) -> None:
         """Displays project switcher popup menu."""

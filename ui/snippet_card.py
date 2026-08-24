@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPlainTextEdit, QPushButton, QWidget, QApplication, QSizePolicy
+    QPushButton, QWidget, QApplication, QSizePolicy
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any, Optional
@@ -9,7 +9,7 @@ from ui.param_prompt_dialog import ParamPromptDialog
 import pyperclip
 
 class SnippetCard(QFrame):
-    """Visual card displaying a single command snippet with responsive text wrapping, inline parameter prompts and 1-click copying."""
+    """Visual card displaying a single command snippet with natural word wrapping, inline parameter prompts and 1-click copying."""
 
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
@@ -26,7 +26,7 @@ class SnippetCard(QFrame):
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(5)
+        layout.setSpacing(6)
 
         # Header Row: Title & Category Tags
         header_layout = QHBoxLayout()
@@ -64,14 +64,17 @@ class SnippetCard(QFrame):
         cmd_row = QHBoxLayout()
         cmd_row.setSpacing(8)
 
-        self.txt_command = QPlainTextEdit()
-        self.txt_command.setObjectName("CommandBox")
-        self.txt_command.setReadOnly(True)
-        self.txt_command.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-        self.txt_command.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.txt_command.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Naturally wrapping selectable code label without clipping or inner scrollbars
+        self.lbl_command = QLabel()
+        self.lbl_command.setObjectName("CommandLabel")
+        self.lbl_command.setWordWrap(True)
+        self.lbl_command.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | 
+            Qt.TextInteractionFlag.TextSelectableByKeyboard
+        )
+        self.lbl_command.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         
-        cmd_row.addWidget(self.txt_command, stretch=1)
+        cmd_row.addWidget(self.lbl_command, stretch=1)
 
         self.btn_copy = QPushButton("📋 Kopieren")
         self.btn_copy.setProperty("class", "CopyBtn")
@@ -82,16 +85,11 @@ class SnippetCard(QFrame):
         layout.addLayout(cmd_row)
 
     def update_variables(self, variables: Dict[str, Any]) -> None:
-        """Rerenders the command template with current variables and adjusts height."""
+        """Rerenders the command template with current variables."""
         self.variables = variables
         template = self.snippet.get("template", "")
         self._rendered_command = TemplateEngine.render(template, variables)
-        self.txt_command.setPlainText(self._rendered_command)
-
-        # Adjust height based on line count
-        lines_count = max(1, self._rendered_command.count("\n") + 1)
-        target_height = min(150, max(36, lines_count * 20 + 14))
-        self.txt_command.setFixedHeight(target_height)
+        self.lbl_command.setText(self._rendered_command)
 
     def _copy_command(self) -> None:
         """
@@ -104,7 +102,6 @@ class SnippetCard(QFrame):
         text_to_copy = self._rendered_command.strip()
 
         if unresolved:
-            # Check for cached parameters in parent window config
             cached_params = {}
             main_win = self.window()
             if hasattr(main_win, "config") and hasattr(main_win.config, "session_param_cache"):
@@ -120,14 +117,12 @@ class SnippetCard(QFrame):
 
             if dlg.exec():
                 custom_values = dlg.get_values()
-                # Update session cache
                 if hasattr(main_win, "config") and hasattr(main_win.config, "set_cached_param"):
                     for k, v in custom_values.items():
                         main_win.config.set_cached_param(k, v)
 
                 text_to_copy = TemplateEngine.render_with_custom(template, self.variables, custom_values).strip()
             else:
-                # User cancelled dialog
                 return
 
         if text_to_copy:
@@ -138,7 +133,6 @@ class SnippetCard(QFrame):
             except Exception:
                 pass
 
-            # Visual feedback
             self.btn_copy.setText("✓ Kopiert!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
             self.btn_copy.style().unpolish(self.btn_copy)

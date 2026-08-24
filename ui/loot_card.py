@@ -1,14 +1,19 @@
+import os
+import sys
+import subprocess
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPlainTextEdit, QPushButton, QWidget, QApplication
+    QPushButton, QWidget, QApplication, QSizePolicy
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
+from PyQt6.QtGui import QPixmap
 from typing import Dict, Any
 from core.loot_manager import LOOT_TYPES
 import pyperclip
 
 class LootCard(QFrame):
-    """Visual card displaying a single loot/note item with 1-click copying and delete support."""
+    """Visual card displaying a single loot/note item or screenshot thumbnail with natural word wrapping."""
 
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
@@ -22,7 +27,7 @@ class LootCard(QFrame):
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(5)
+        layout.setSpacing(6)
 
         # Header Row: Badge, Title, Target IP, Time, Delete
         header_layout = QHBoxLayout()
@@ -66,21 +71,42 @@ class LootCard(QFrame):
 
         layout.addLayout(header_layout)
 
+        # If Screenshot: Show image thumbnail & open button
+        img_path = self._resolve_image_path()
+        if entry_type == "screenshot" and img_path and img_path.exists():
+            thumb_row = QHBoxLayout()
+            thumb_row.setSpacing(8)
+
+            lbl_thumb = QLabel()
+            pix = QPixmap(str(img_path))
+            if not pix.isNull():
+                scaled = pix.scaledToHeight(75, Qt.TransformationMode.SmoothTransformation)
+                lbl_thumb.setPixmap(scaled)
+                lbl_thumb.setStyleSheet("border: 1px solid #30363d; border-radius: 4px;")
+                thumb_row.addWidget(lbl_thumb)
+
+            btn_open_img = QPushButton("🖼️ Öffnen")
+            btn_open_img.setProperty("class", "SecondaryBtn")
+            btn_open_img.setToolTip("Screenshot in Standard-Bildbetrachter öffnen")
+            btn_open_img.clicked.connect(lambda: self._open_image(img_path))
+            thumb_row.addWidget(btn_open_img, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+            thumb_row.addStretch()
+            layout.addLayout(thumb_row)
+
         # Content Box & Copy Button Row
         content_row = QHBoxLayout()
         content_row.setSpacing(8)
 
-        self.txt_content = QPlainTextEdit()
-        self.txt_content.setObjectName("CommandBox")
-        self.txt_content.setReadOnly(True)
-        self.txt_content.setPlainText(self.entry.get("content", ""))
-        self.txt_content.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-        self.txt_content.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.txt_content.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        lines_count = max(1, self.entry.get("content", "").count("\n") + 1)
-        self.txt_content.setFixedHeight(min(140, max(36, lines_count * 20 + 14)))
-        content_row.addWidget(self.txt_content, stretch=1)
+        self.lbl_content = QLabel(self.entry.get("content", ""))
+        self.lbl_content.setObjectName("CommandLabel")
+        self.lbl_content.setWordWrap(True)
+        self.lbl_content.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | 
+            Qt.TextInteractionFlag.TextSelectableByKeyboard
+        )
+        self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        content_row.addWidget(self.lbl_content, stretch=1)
 
         self.btn_copy = QPushButton("📋 Kopieren")
         self.btn_copy.setProperty("class", "CopyBtn")
@@ -89,6 +115,36 @@ class LootCard(QFrame):
         content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(content_row)
+
+    def _resolve_image_path(self) -> Path:
+        """Resolves file path for screenshot from entry."""
+        if "file_path" in self.entry and self.entry["file_path"]:
+            p = Path(self.entry["file_path"])
+            if p.exists():
+                return p
+
+        content = self.entry.get("content", "")
+        if "loot/" in content:
+            import re
+            m = re.search(r'\((loot/[^\)]+)\)', content)
+            if m:
+                rel = m.group(1)
+                base_dir = Path.home() / "spectre_projects"
+                matches = list(base_dir.glob(f"**/{Path(rel).name}"))
+                if matches:
+                    return matches[0]
+        return None
+
+    def _open_image(self, img_path: Path) -> None:
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(img_path))
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(img_path)])
+            else:
+                subprocess.Popen(["xdg-open", str(img_path)])
+        except Exception as e:
+            print(f"[LootCard] Error opening image: {e}")
 
     def _copy_content(self) -> None:
         """Copies entry content directly to clipboard."""
@@ -101,7 +157,6 @@ class LootCard(QFrame):
             except Exception:
                 pass
 
-            # Visual animation
             self.btn_copy.setText("✓ Kopiert!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
             self.btn_copy.style().unpolish(self.btn_copy)

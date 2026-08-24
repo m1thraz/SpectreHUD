@@ -237,10 +237,31 @@ QLabel.BadgeFlag {
     border: 1px solid rgba(63, 185, 80, 0.4);
 }
 
+QLabel.BadgeScreenshot {
+    background-color: rgba(0, 229, 255, 0.2);
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+}
+
 QLabel.BadgeDir {
     background-color: rgba(56, 139, 253, 0.2);
     color: #79c0ff;
     border: 1px solid rgba(56, 139, 253, 0.4);
+}
+
+QPushButton.ScreenshotBtn {
+    background-color: rgba(0, 229, 255, 0.15);
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QPushButton.ScreenshotBtn:hover {
+    background-color: #00e5ff;
+    color: #0d1117;
 }
 
 QLabel.BadgeNote {
@@ -278,6 +299,17 @@ QLabel#SnippetCategory {
 QLabel#SnippetDesc {
     color: #8b949e;
     font-size: 11px;
+}
+
+QLabel#CommandLabel {
+    background-color: rgba(9, 13, 18, 0.92);
+    border: 1px solid rgba(33, 38, 45, 0.9);
+    border-radius: 6px;
+    color: #39d353;
+    font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    padding: 7px 10px;
+    selection-background-color: #1f3d29;
 }
 
 QPlainTextEdit#CommandBox {
