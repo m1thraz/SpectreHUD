@@ -101,7 +101,7 @@
 
 ### 1. Repository klonen & Abhängigkeiten installieren
 ```bash
-git clone https://github.com/DEIN_USERNAME/SpectreHUD.git
+git clone https://github.com/m1thraz/SpectreHUD
 cd SpectreHUD
 pip install -r requirements.txt
 ```
