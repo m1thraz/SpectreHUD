@@ -1,8 +1,22 @@
-# 👻 SpectreHUD
+# SpectreHUD — Tactical CTF & CLI Cheatsheet Overlay
 
-> **Spotlight-artiges Cheatsheet- & Session-Loot-Overlay für CTF-Challenges und Pentest-Labs.**
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/GUI-PyQt6-green?style=for-the-badge&logo=qt" alt="PyQt6">
+  <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange?style=for-the-badge" alt="Windows & Linux">
+  <img src="https://img.shields.io/badge/CI-Passing-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI Status">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License">
+  <img src="https://img.shields.io/badge/Focus-TryHackMe%20%7C%20HTB%20%7C%20CTFs-red?style=for-the-badge" alt="CTF Focus">
+</p>
 
-SpectreHUD ist ein ultraschnelles, rahmenloses HUD-Overlay auf Basis von PyQt6 — per globalem Hotkey über jedem Fenster (Terminal, Browser, VM-Konsole) aufrufbar. Es bündelt Cheatsheet-Suche mit Variablen-Substitution, automatisches Clipboard-Logging (opt-in), Screenshot-Snipping, eine nach Pentest-Phasen kategorisierte Loot-Verwaltung und einen direkt im Fenster editierbaren Markdown-Report mit Live-Vorschau — sodass am Ende der Session ein fast fertiger Write-up steht, kein externer Editor nötig.
+<p align="center">
+
+</p>
+
+**Ein lokales Operations-HUD für CTFs:** Dokumentieren, organisieren und arbeiten, ohne ständig zwischen fünf verschiedenen Anwendungen (VM, Browser, Notizen, Snipping-Tool, Terminal) zu wechseln. 
+
+**SpectreHUD** ist ein minimalistisches, rahmenloses Desktop-HUD (Heads-Up-Display im Spotlight / Raycast-Stil), das speziell für TryHackMe-, HackTheBox- und CTF-Challenges entwickelt wurde. Im Gegensatz zu schweren Wissensmanagement-Systemen ist SpectreHUD als **einsatzzentrierter Workspace** konzipiert: Es schwebt nahtlos über deinen Terminals und VMs und bündelt interaktive Befehlsvorlagen, ein Session-Loot-Notizbuch, Workspace-Projektmanagement, ein integriertes **Screenshot-Snipping-Tool** und einen automatischen Clipboard-Logger mit 1-Klick-Write-Up-Export.
+
 
 ![SpectreHUD Hauptansicht](assets/spectrehud_main.png)
 
