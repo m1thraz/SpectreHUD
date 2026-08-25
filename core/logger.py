@@ -25,15 +25,15 @@ def setup_logger(name: str = "spectrehud", level: int = logging.INFO) -> logging
 
     # Optional File Handler in config dir
     try:
-        from core.config import get_default_config_dir
-        log_dir = get_default_config_dir()
+        env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
+        log_dir = Path(env_dir) if env_dir else Path.home() / ".ctf_cheatsheet_widget"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "spectrehud.log"
         file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    except Exception:
-        pass
+    except (OSError, PermissionError) as e:
+        sys.stderr.write(f"Warning: Could not configure file logging: {e}\n")
 
     return logger
 

@@ -146,8 +146,8 @@ class ProjectManager:
             try:
                 with open(state_file, "w", encoding="utf-8") as f:
                     json.dump(initial_state, f, indent=2, ensure_ascii=False)
-            except Exception as e:
-                logger.exception(f"Failed to write initial project_state.json for {clean_name}: {e}")
+            except (OSError, TypeError, ValueError) as e:
+                logger.error(f"Failed to write initial project_state.json for {clean_name}: {e}")
 
         return proj_dir
 
@@ -161,8 +161,8 @@ class ProjectManager:
                     return json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted project_state.json for {pname}: {e}")
-            except Exception as e:
-                logger.exception(f"Error loading state for {pname}: {e}")
+            except (OSError, UnicodeDecodeError) as e:
+                logger.error(f"Error loading state for {pname}: {e}")
 
         # Return default fallback state
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -204,8 +204,8 @@ class ProjectManager:
                 json.dump(final_state, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
-        except Exception as e:
-            logger.exception(f"Unexpected error saving state for {pname}: {e}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving state for {pname}: {e}")
 
     def set_active_project(self, name: str) -> None:
         """Switches the active project context."""
@@ -233,6 +233,6 @@ class ProjectManager:
             else:
                 subprocess.Popen(["xdg-open", str(folder)])
             return True
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             logger.error(f"Error opening project folder {folder} in system file manager: {e}", exc_info=True)
             return False

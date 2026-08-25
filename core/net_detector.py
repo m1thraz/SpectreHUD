@@ -59,7 +59,7 @@ class NetDetector:
             for ip in all_ips:
                 if not ip.startswith("127.") and not ip.startswith("169.254."):
                     return ip
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, UnicodeDecodeError) as e:
             logger.debug(f"Windows IP detection error via ipconfig: {e}")
         return None
 
@@ -72,7 +72,7 @@ class NetDetector:
                 match = re.search(r"inet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
                 if match:
                     return match.group(1)
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, UnicodeDecodeError) as e:
                 logger.debug(f"Unix IP detection check for {iface} failed: {e}")
         return None
 
@@ -90,7 +90,7 @@ class NetDetector:
             for ip in ip_list:
                 if not ip.startswith("127.") and not ip.startswith("169.254."):
                     return ip
-        except Exception as e:
+        except (socket.error, OSError) as e:
             logger.debug(f"Socket IP detection error: {e}")
         return None
 
@@ -105,6 +105,6 @@ class NetDetector:
             s.close()
             if not ip.startswith("127."):
                 return ip
-        except Exception as e:
+        except (socket.error, OSError) as e:
             logger.debug(f"Outbound UDP IP detection error: {e}")
         return None

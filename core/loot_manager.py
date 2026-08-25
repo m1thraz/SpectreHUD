@@ -87,8 +87,8 @@ class LootManager:
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted loot file at {self.storage_file}: {e}")
                 self.entries = []
-            except Exception as e:
-                logger.exception(f"Unexpected error reading loot file {self.storage_file}: {e}")
+            except (OSError, UnicodeDecodeError) as e:
+                logger.error(f"Error reading loot file {self.storage_file}: {e}")
                 self.entries = []
         else:
             self.entries = []
@@ -116,8 +116,8 @@ class LootManager:
                 json.dump(self.entries, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving loot file to {self.storage_file}: {e}", exc_info=True)
-        except Exception as e:
-            logger.exception(f"Unexpected error saving loot file to {self.storage_file}: {e}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving loot file to {self.storage_file}: {e}")
 
     def add_entry(
         self, 

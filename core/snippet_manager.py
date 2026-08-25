@@ -11,9 +11,30 @@ logger = get_logger("snippets")
 class SnippetManager:
     """Manages built-in and custom user command snippets."""
 
+    @staticmethod
+    def _resolve_default_snippets_path() -> Path:
+        """Resolves default_snippets.json in source repository, site-packages, or package resources."""
+        # 1. Standard repo or site-packages layout (next to core/)
+        candidate = Path(__file__).resolve().parent.parent / "data" / "default_snippets.json"
+        if candidate.exists():
+            return candidate
+
+        # 2. Check importlib.resources if available
+        try:
+            import importlib.resources as pkg_resources
+            if hasattr(pkg_resources, 'files'):
+                traversable = pkg_resources.files('data') / 'default_snippets.json'
+                res_path = Path(str(traversable))
+                if res_path.exists():
+                    return res_path
+        except (ImportError, AttributeError, TypeError, ValueError, OSError) as e:
+            logger.debug(f"Could not resolve snippets path via importlib.resources: {e}")
+
+        return candidate
+
     def __init__(self, default_snippets_path: Optional[Path] = None, user_snippets_path: Optional[Path] = None):
         if default_snippets_path is None:
-            default_snippets_path = Path(__file__).parent.parent / "data" / "default_snippets.json"
+            default_snippets_path = self._resolve_default_snippets_path()
         if user_snippets_path is None:
             user_snippets_path = get_default_config_dir() / "user_snippets.json"
 
@@ -49,8 +70,8 @@ class SnippetManager:
                             self.snippets.append(snip)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted default snippets JSON at {self.default_snippets_path}: {e}")
-            except Exception as e:
-                logger.exception(f"Error reading default snippets from {self.default_snippets_path}: {e}")
+            except (OSError, UnicodeDecodeError, KeyError) as e:
+                logger.error(f"Error reading default snippets from {self.default_snippets_path}: {e}")
 
         # 2. Load user custom snippets
         custom_category = {
@@ -70,8 +91,8 @@ class SnippetManager:
                         user_snippets.append(snip)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
-            except Exception as e:
-                logger.exception(f"Error reading user snippets from {self.user_snippets_path}: {e}")
+            except (OSError, UnicodeDecodeError, KeyError) as e:
+                logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")
 
         if not any(c["id"] == "custom_snippets" for c in self.categories):
             self.categories.append(custom_category)
@@ -87,8 +108,8 @@ class SnippetManager:
                 json.dump(custom_only, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving user snippets to {self.user_snippets_path}: {e}", exc_info=True)
-        except Exception as e:
-            logger.exception(f"Unexpected error saving user snippets: {e}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving user snippets: {e}")
 
     def add_custom_snippet(self, title: str, category: str, subcategory: str, template: str, description: str = "", tags: List[str] = None) -> Dict[str, Any]:
         """Creates and stores a new custom snippet."""

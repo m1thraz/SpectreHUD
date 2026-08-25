@@ -1,0 +1,1 @@
+"""SpectreHUD bundled data package."""

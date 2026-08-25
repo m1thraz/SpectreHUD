@@ -66,8 +66,8 @@ class ConfigManager:
                     return cfg
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
-            except Exception as e:
-                logger.exception(f"Unexpected error loading config from {self.config_file}: {e}. Using defaults.")
+            except (OSError, UnicodeDecodeError, KeyError) as e:
+                logger.error(f"Error reading config from {self.config_file}: {e}. Using defaults.")
         
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg
@@ -80,8 +80,8 @@ class ConfigManager:
                 json.dump(self.data, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving config to {self.config_file}: {e}", exc_info=True)
-        except Exception as e:
-            logger.exception(f"Unexpected error saving config to {self.config_file}: {e}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving config to {self.config_file}: {e}")
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.data.get(key, default)

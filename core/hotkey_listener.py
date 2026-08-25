@@ -74,7 +74,7 @@ class HotkeyListener(QObject):
                             is_x_key = True
                         elif key.vk in [81, 113]:  # 'Q' / 'q'
                             is_q_key = True
-                except Exception:
+                except (AttributeError, TypeError):
                     pass
 
                 # 1. Primary Shortcut: Strg + Super/Win + < -> HUD Toggle
@@ -105,7 +105,7 @@ class HotkeyListener(QObject):
             self._listener.start()
             self._running = True
             logger.info("Registered global hotkeys: Strg+Super+< (Toggle), Strg+Super+X (Screenshot), Strg+Super+Q (Quit)")
-        except Exception as e:
+        except (ImportError, OSError, RuntimeError) as e:
             logger.error(f"Failed to start global hotkey listener: {e}", exc_info=True)
 
     def _fire_trigger(self) -> None:
@@ -134,7 +134,7 @@ class HotkeyListener(QObject):
         if self._listener:
             try:
                 self._listener.stop()
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 logger.debug(f"Error stopping hotkey listener: {e}")
             self._listener = None
         self._running = False

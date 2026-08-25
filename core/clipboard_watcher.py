@@ -66,11 +66,11 @@ class ClipboardWatcher(QObject):
             if self._current_target_provider:
                 try:
                     target_ip = self._current_target_provider() or ""
-                except Exception as e:
+                except (TypeError, ValueError, AttributeError) as e:
                     logger.debug(f"Error resolving target_ip in clipboard provider: {e}")
 
             self.add_entry(text, target_ip=target_ip)
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
             logger.error(f"Error reading clipboard content: {e}", exc_info=True)
 
     def add_entry(self, text: str, target_ip: str = "") -> Optional[Dict[str, Any]]:
@@ -124,8 +124,8 @@ class ClipboardWatcher(QObject):
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted clipboard history JSON at {self.storage_file}: {e}")
                 self.history = []
-            except Exception as e:
-                logger.exception(f"Unexpected error reading clipboard history from {self.storage_file}: {e}")
+            except (OSError, UnicodeDecodeError) as e:
+                logger.error(f"Error reading clipboard history from {self.storage_file}: {e}")
                 self.history = []
         else:
             self.history = []
@@ -147,8 +147,8 @@ class ClipboardWatcher(QObject):
                 json.dump(self.history, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving clipboard history to {self.storage_file}: {e}", exc_info=True)
-        except Exception as e:
-            logger.exception(f"Unexpected error saving clipboard history to {self.storage_file}: {e}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving clipboard history to {self.storage_file}: {e}")
 
     def delete_entry(self, entry_id: str) -> bool:
         """Removes an entry by ID."""

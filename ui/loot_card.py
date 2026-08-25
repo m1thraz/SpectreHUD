@@ -173,7 +173,7 @@ class LootCard(QFrame):
                 subprocess.Popen(["open", str(img_path)])
             else:
                 subprocess.Popen(["xdg-open", str(img_path)])
-        except Exception as e:
+        except (OSError, FileNotFoundError, subprocess.SubprocessError) as e:
             logger.error(f"Error opening image {img_path}: {e}", exc_info=True)
 
     def _copy_content(self) -> None:
@@ -184,8 +184,8 @@ class LootCard(QFrame):
             clipboard.setText(text_to_copy)
             try:
                 pyperclip.copy(text_to_copy)
-            except Exception:
-                pass
+            except (pyperclip.PyperclipException, OSError) as exc:
+                logger.debug(f"pyperclip copy fallback failed: {exc}")
 
             self.btn_copy.setText("✓ Kopiert!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")

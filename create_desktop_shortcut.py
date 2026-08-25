@@ -41,7 +41,7 @@ def create_shortcut():
         subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], check=True)
         print(f"[+] Desktop Shortcut erfolgreich erstellt: {shortcut_path}")
         return True, str(shortcut_path)
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         print(f"[-] Fehler beim Erstellen des Shortcuts: {e}")
         return False, str(e)
 

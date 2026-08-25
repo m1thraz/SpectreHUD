@@ -52,8 +52,8 @@ class ScreenshotManager(QObject):
                 self._active_overlay.snip_cancelled.connect(
                     lambda: self._on_snip_cancelled(parent_window)
                 )
-            except Exception as e:
-                logger.exception(f"Unexpected error during desktop grab: {e}")
+            except (RuntimeError, OSError) as e:
+                logger.error(f"Error during desktop grab: {e}", exc_info=True)
                 if was_visible:
                     parent_window.show()
 
@@ -98,8 +98,8 @@ class ScreenshotManager(QObject):
             )
             loot_entry["file_path"] = str(filepath)
             self.screenshot_saved.emit(loot_entry)
-        except Exception as e:
-            logger.exception(f"Error handling completed snip: {e}")
+        except (OSError, RuntimeError) as e:
+            logger.error(f"Error handling completed snip: {e}", exc_info=True)
 
         # Restore and switch HUD to loot mode
         try:
@@ -114,7 +114,7 @@ class ScreenshotManager(QObject):
                 parent_window.refresh_filter_pills()
             if hasattr(parent_window, "refresh_content"):
                 parent_window.refresh_content()
-        except Exception as e:
+        except RuntimeError as e:
             logger.error(f"Error restoring parent window after screenshot: {e}")
 
     def _on_snip_cancelled(self, parent_window: QWidget) -> None:
@@ -123,5 +123,5 @@ class ScreenshotManager(QObject):
             parent_window.show()
             parent_window.raise_()
             parent_window.activateWindow()
-        except Exception as e:
+        except RuntimeError as e:
             logger.error(f"Error restoring parent window after cancel: {e}")

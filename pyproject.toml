@@ -30,12 +30,16 @@ Repository = "https://github.com/m1thraz/SpectreHUD.git"
 [project.scripts]
 spectrehud = "main:main"
 
+[tool.setuptools]
+py-modules = ["main", "create_desktop_shortcut"]
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "ui*"]
+include = ["core*", "ui*", "data*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.png", "*.qss", "*.md"]
+data = ["*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

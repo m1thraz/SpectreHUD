@@ -131,8 +131,8 @@ class SnippetCard(QFrame):
             clipboard.setText(text_to_copy)
             try:
                 pyperclip.copy(text_to_copy)
-            except Exception:
-                pass
+            except (pyperclip.PyperclipException, OSError) as exc:
+                logger.debug(f"pyperclip copy fallback failed: {exc}")
 
             self.btn_copy.setText("✓ Kopiert!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
