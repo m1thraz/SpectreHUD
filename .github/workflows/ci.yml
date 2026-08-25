@@ -59,3 +59,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python -m pytest
+
+      - name: Verify Package Build & Entrypoint
+        run: |
+          pip install .
+          spectrehud --version
+          spectrehud --help

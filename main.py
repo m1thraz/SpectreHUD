@@ -47,6 +47,17 @@ def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
     return pixmap
 
 def main():
+    if "--version" in sys.argv or "-v" in sys.argv:
+        print("SpectreHUD 1.0.0")
+        return 0
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD")
+        print("Usage: spectrehud [OPTIONS]")
+        print("\nOptions:")
+        print("  -h, --help     Show this message and exit")
+        print("  -v, --version  Show version and exit")
+        return 0
+
     logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)
     app.setApplicationName("SpectreHUD")
