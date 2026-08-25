@@ -18,7 +18,6 @@ SpectreHUD ist ein ultraschnelles, rahmenloses HUD-Overlay auf Basis von PyQt6 �
 - **🔴 Privacy-safe Clipboard-Watcher** — startet standardmäßig **pausiert** (`⏸️ REC: Aus`), damit nichts versehentlich mitgeloggt wird. Ein Tastendruck (`Ctrl + P`) schaltet ihn für die aktive Hacking-Session scharf.
 - **📊 Editierbarer Report-Tab mit Live-Vorschau** — der generierte Markdown-Report lässt sich direkt im Fenster weiterschreiben (Splitter-Ansicht: Quelltext links, gerenderte Vorschau rechts), inklusive Backup vor jedem "Neu generieren" und Warnung bei ungespeicherten Änderungen.
 
-![Befehl hinzufügen](assets/spectrehud_add_command.png)
 
 ---
 
