@@ -1,11 +1,26 @@
 import os
+import sys
 import unittest
 import tempfile
 from pathlib import Path
+from typing import Optional, List, Dict, Any
+
+# Ensure project root is in sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
+
+
+class FakeClipboardWatcher:
+    """Minimal PyQt6-free stub for ClipboardWatcher."""
+    def __init__(self, history: Optional[List[Dict[str, Any]]] = None):
+        self.history = history or []
+
+    def get_history(self, target_ip: Optional[str] = None, filter_type: str = "all", search_query: str = "") -> List[Dict[str, Any]]:
+        return self.history
+
 
 class TestReportFileManager(unittest.TestCase):
 
@@ -17,7 +32,7 @@ class TestReportFileManager(unittest.TestCase):
 
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.loot_mgr = LootManager(storage_file=self.temp_path / "config" / "loot.json")
-        self.clip_watcher = ClipboardWatcher(storage_file=self.temp_path / "config" / "clip.json")
+        self.clip_watcher = FakeClipboardWatcher()
         self.report_mgr = ReportFileManager(self.project_mgr)
 
     def tearDown(self):

@@ -88,7 +88,7 @@ class ReportEditorTab(QWidget):
 
         self.btn_save = QPushButton("💾 Speichern")
         self.btn_save.setProperty("class", "PrimaryBtn")
-        self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+S)")
+        self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+Umschalt+S)")
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
 
@@ -117,9 +117,9 @@ class ReportEditorTab(QWidget):
         splitter.setStretchFactor(1, 1)
         layout.addWidget(splitter, stretch=1)
 
-        # Strg+S zum Speichern, unabhängig vom Fokus innerhalb des Tabs
+        # Strg+Umschalt+S zum Speichern, unabhängig vom Fokus innerhalb des Tabs
         from PyQt6.QtGui import QShortcut, QKeySequence
-        QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save)
+        QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
 
     # ------------------------------------------------------------------ #
     # Projekt-Wechsel / Laden

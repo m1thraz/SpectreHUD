@@ -33,6 +33,7 @@ logger = get_logger("main_window")
 
 RESIZE_MARGIN = 20
 CORNER_MARGIN = 32
+EXPORT_COPY_TOOLTIP = "Erstellt eine neue Kopie basierend auf dem aktuellen Loot. Für die bearbeitbare Version siehe Report-Tab."
 
 def _is_interactive_widget(widget: Optional[QWidget]) -> bool:
     """Checks if a widget or its parents are interactive controls (buttons, inputs, sliders, grips)."""
@@ -241,7 +242,7 @@ class MainWindow(QMainWindow):
         # Instantiate Contextual Action Buttons
         self.btn_export_loot = QPushButton("💾 Export (.md)")
         self.btn_export_loot.setProperty("class", "MiniActionBtn")
-        self.btn_export_loot.setToolTip("Erstellt eine neue Kopie basierend auf dem aktuellen Loot. Für die bearbeitbare Version siehe Report-Tab.")
+        self.btn_export_loot.setToolTip(EXPORT_COPY_TOOLTIP)
         self.btn_export_loot.clicked.connect(self._export_loot)
 
         self.btn_clear_loot = QPushButton("🗑️ Leeren")
@@ -251,7 +252,7 @@ class MainWindow(QMainWindow):
 
         self.btn_export_report = QPushButton("💾 Report (.md)")
         self.btn_export_report.setProperty("class", "MiniActionBtn")
-        self.btn_export_report.setToolTip("Erstellt eine neue Kopie basierend auf dem aktuellen Loot. Für die bearbeitbare Version siehe Report-Tab.")
+        self.btn_export_report.setToolTip(EXPORT_COPY_TOOLTIP)
         self.btn_export_report.clicked.connect(self._export_report)
 
         self.btn_clear_history = QPushButton("🗑️ Leeren")
@@ -582,7 +583,7 @@ class MainWindow(QMainWindow):
             # Add Contextual Loot Action Buttons
             self.btn_export_loot = QPushButton("💾 Export (.md)")
             self.btn_export_loot.setProperty("class", "MiniActionBtn")
-            self.btn_export_loot.setToolTip("Loot als formatierte Markdown-Datei exportieren")
+            self.btn_export_loot.setToolTip(EXPORT_COPY_TOOLTIP)
             self.btn_export_loot.clicked.connect(self._export_loot)
             self.pills_layout.addWidget(self.btn_export_loot)
 
@@ -614,7 +615,7 @@ class MainWindow(QMainWindow):
             # Add Contextual History Action Buttons
             self.btn_export_report = QPushButton("💾 Report (.md)")
             self.btn_export_report.setProperty("class", "MiniActionBtn")
-            self.btn_export_report.setToolTip("Vollständigen CTF Write-Up Report als Markdown exportieren")
+            self.btn_export_report.setToolTip(EXPORT_COPY_TOOLTIP)
             self.btn_export_report.clicked.connect(self._export_report)
             self.pills_layout.addWidget(self.btn_export_report)
 
