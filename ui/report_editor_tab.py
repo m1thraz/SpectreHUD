@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from core.report_file_manager import ReportFileManager
 from core.logger import get_logger
+from ui.styles import CYBER_DARK_QSS
 
 logger = get_logger("report_editor")
 
@@ -159,13 +160,20 @@ class ReportEditorTab(QWidget):
         if not self._dirty:
             return True
 
-        reply = QMessageBox.question(
-            self, "Ungespeicherte Änderungen",
+        msg = QMessageBox(self.window() if self else None)
+        msg.setWindowTitle("Ungespeicherte Änderungen")
+        msg.setText(
             "Der Report wurde bearbeitet, aber noch nicht gespeichert.\n\n"
-            "Änderungen jetzt speichern?",
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Save,
+            "Änderungen jetzt speichern?"
         )
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setStandardButtons(
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+        )
+        msg.setDefaultButton(QMessageBox.StandardButton.Save)
+        msg.setStyleSheet(CYBER_DARK_QSS)
+
+        reply = msg.exec()
         if reply == QMessageBox.StandardButton.Save:
             return self.save()
         elif reply == QMessageBox.StandardButton.Discard:
@@ -193,7 +201,12 @@ class ReportEditorTab(QWidget):
         if ok:
             self._set_dirty(False)
         else:
-            QMessageBox.warning(self, "Fehler", "Report konnte nicht gespeichert werden. Details im Log.")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Fehler")
+            msg.setText("Report konnte nicht gespeichert werden. Details im Log.")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
         return ok
 
     def _on_regenerate_clicked(self) -> None:
@@ -202,17 +215,21 @@ class ReportEditorTab(QWidget):
 
         has_existing = self.report_file_manager.exists(self.current_project) or self._dirty
         if has_existing:
-            reply = QMessageBox.question(
-                self, "Report neu generieren",
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Report neu generieren")
+            msg.setText(
                 "Der aktuelle Report-Text wird durch eine frische Generierung "
                 "aus Loot und Clipboard-Verlauf ERSETZT.\n\n"
                 "Der bisherige Stand wird vorher als report.md.bak gesichert "
                 "(überschreibt ein eventuell vorhandenes älteres Backup).\n\n"
-                "Fortfahren?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                "Fortfahren?"
             )
-            if reply != QMessageBox.StandardButton.Yes:
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg.setDefaultButton(QMessageBox.StandardButton.No)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+
+            if msg.exec() != QMessageBox.StandardButton.Yes:
                 return
 
         new_content = self.report_file_manager.regenerate(
@@ -233,10 +250,20 @@ class ReportEditorTab(QWidget):
             return
         try:
             Path(file_path).write_text(self.editor.toPlainText(), encoding="utf-8")
-            QMessageBox.information(self, "Exportiert", f"Kopie gespeichert: {Path(file_path).name}")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Exportiert")
+            msg.setText(f"Kopie gespeichert: {Path(file_path).name}")
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
         except OSError as e:
             logger.error(f"Export der Report-Kopie fehlgeschlagen: {e}", exc_info=True)
-            QMessageBox.warning(self, "Fehler", f"Export fehlgeschlagen: {e}")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Fehler")
+            msg.setText(f"Export fehlgeschlagen: {e}")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
 
     # ------------------------------------------------------------------ #
     # Vorschau

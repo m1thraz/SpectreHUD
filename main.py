@@ -14,6 +14,8 @@ from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
 
+from ui.styles import CYBER_DARK_QSS
+
 logger = get_logger("app")
 
 def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
@@ -49,6 +51,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("SpectreHUD")
     app.setQuitOnLastWindowClosed(False)
+    app.setStyleSheet(CYBER_DARK_QSS)
 
     # Initialize Managers
     config_manager = ConfigManager()

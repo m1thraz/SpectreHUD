@@ -873,12 +873,15 @@ class MainWindow(QMainWindow):
         self._export_report()
 
     def _clear_loot(self) -> None:
-        reply = QMessageBox.question(
-            self, "Session leeren", 
-            "Möchtest du wirklich alle Loot-Einträge dieses Projekts löschen?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Session leeren")
+        msg.setText("Möchtest du wirklich alle Loot-Einträge dieses Projekts löschen?")
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setStyleSheet(CYBER_DARK_QSS)
+
+        if msg.exec() == QMessageBox.StandardButton.Yes:
             self.loot_manager.clear_session()
             self._save_current_project_state()
             self.refresh_filter_pills()
@@ -898,12 +901,17 @@ class MainWindow(QMainWindow):
                 clipboard_watcher=self.clipboard_watcher,
                 project_manager=self.project_manager
             )
-            msg = builder.export(
+            report_msg = builder.export(
                 Path(file_path), 
                 target_ip=target_ip if target_ip else None, 
                 project_name=active_proj
             )
-            QMessageBox.information(self, "Report generiert", msg)
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Report generiert")
+            msg.setText(report_msg)
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
 
     def _toggle_pause_history(self) -> None:
         self.clipboard_watcher.toggle_pause()
@@ -923,12 +931,15 @@ class MainWindow(QMainWindow):
         self.btn_rec_indicator.style().polish(self.btn_rec_indicator)
 
     def _clear_history(self) -> None:
-        reply = QMessageBox.question(
-            self, "Historie leeren", 
-            "Möchtest du wirklich die gesamte Clipboard-Historie dieses Projekts löschen?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Historie leeren")
+        msg.setText("Möchtest du wirklich die gesamte Clipboard-Historie dieses Projekts löschen?")
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setStyleSheet(CYBER_DARK_QSS)
+
+        if msg.exec() == QMessageBox.StandardButton.Yes:
             self.clipboard_watcher.clear_history()
             self._save_current_project_state()
             self.refresh_filter_pills()

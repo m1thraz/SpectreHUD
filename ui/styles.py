@@ -619,4 +619,52 @@ QLabel.ReportStatusLabel {
     font-size: 12px;
     font-weight: 500;
 }
+
+/* QSplitter */
+QSplitter::handle {
+    background-color: #30363d;
+    width: 4px;
+    height: 4px;
+}
+
+QSplitter::handle:hover {
+    background-color: #00e5ff;
+}
+
+/* Dialogs & Message Boxes */
+QDialog, QMessageBox {
+    background-color: #161b22;
+    color: #f0f6fc;
+    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 13px;
+    border: 1px solid #30363d;
+}
+
+QMessageBox QLabel, QDialog QLabel {
+    color: #f0f6fc;
+    font-size: 13px;
+    background-color: transparent;
+}
+
+QMessageBox QPushButton, QDialogButtonBox QPushButton, QDialog QPushButton {
+    background-color: #21262d;
+    color: #f0f6fc;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 6px 16px;
+    min-width: 80px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QMessageBox QPushButton:hover, QDialogButtonBox QPushButton:hover, QDialog QPushButton:hover {
+    background-color: #30363d;
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+QMessageBox QPushButton:focus, QDialogButtonBox QPushButton:focus, QDialog QPushButton:focus {
+    border: 1px solid #00e5ff;
+    outline: none;
+}
 """
