@@ -7,9 +7,9 @@ from PyQt6.QtWidgets import (
     QPushButton, QWidget, QApplication, QSizePolicy
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QMouseEvent
 from typing import Dict, Any, Optional
-from core.loot_manager import LOOT_TYPES
+from core.loot_manager import LOOT_TYPES, CATEGORIES
 from core.project_manager import get_default_projects_dir
 from core.logger import get_logger
 import pyperclip
@@ -21,6 +21,7 @@ class LootCard(QFrame):
 
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
+    edit_requested = pyqtSignal(dict)
     loot_deleted = deleted
 
     def __init__(self, entry: Dict[str, Any], project_dir: Optional[Path] = None, parent: QWidget = None):
@@ -35,11 +36,11 @@ class LootCard(QFrame):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
 
-        # Header Row: Badge, Title, Target IP, Time, Delete
+        # Header Row: Type Badge, Category Badge, Title, Target IP, Time, Edit, Delete
         header_layout = QHBoxLayout()
-        header_layout.setSpacing(8)
+        header_layout.setSpacing(6)
 
-        # Type Badge
+        # 1. Type Badge
         entry_type = self.entry.get("type", "note")
         badge_info = next((t for t in LOOT_TYPES if t["id"] == entry_type), {"name": "📝 Notiz", "icon": "📝", "badge_class": "BadgeNote"})
         
@@ -47,20 +48,29 @@ class LootCard(QFrame):
         lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
         header_layout.addWidget(lbl_badge)
 
-        # Title
+        # 2. Category Badge
+        cat_id = self.entry.get("category", "misc")
+        cat_info = next((c for c in CATEGORIES if c["id"] == cat_id), {"name": "Sonstiges", "icon": "📝"})
+        cat_short_name = cat_info["name"].split(".")[1].strip().split("&")[0].strip() if "." in cat_info["name"] else cat_info["name"]
+        lbl_cat = QLabel(f"{cat_info['icon']} {cat_short_name}")
+        lbl_cat.setProperty("class", "CategoryBadge")
+        lbl_cat.setToolTip(f"Pentest-Phase: {cat_info['name']}")
+        header_layout.addWidget(lbl_cat)
+
+        # 3. Title
         lbl_title = QLabel(self.entry.get("title", "Unbenannt"))
         lbl_title.setObjectName("SnippetTitle")
         lbl_title.setWordWrap(True)
         header_layout.addWidget(lbl_title, stretch=1)
 
-        # Target IP (if set)
+        # 4. Target IP (if set)
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
             lbl_target = QLabel(f"🎯 {target_ip}")
             lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
             header_layout.addWidget(lbl_target)
 
-        # Timestamp
+        # 5. Timestamp
         timestamp = self.entry.get("timestamp", "")
         if timestamp:
             time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
@@ -68,7 +78,14 @@ class LootCard(QFrame):
             lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
             header_layout.addWidget(lbl_time)
 
-        # Delete Button
+        # 6. Edit Button
+        btn_edit = QPushButton("✏️")
+        btn_edit.setProperty("class", "EditBtn")
+        btn_edit.setToolTip("Diesen Eintrag bearbeiten / umkategorisieren")
+        btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
+        header_layout.addWidget(btn_edit)
+
+        # 7. Delete Button
         btn_delete = QPushButton("✕")
         btn_delete.setProperty("class", "DangerBtn")
         btn_delete.setToolTip("Diesen Eintrag löschen")
@@ -121,6 +138,13 @@ class LootCard(QFrame):
         content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(content_row)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.edit_requested.emit(self.entry)
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def _resolve_image_path(self) -> Path:
         """Resolves file path for screenshot from entry."""

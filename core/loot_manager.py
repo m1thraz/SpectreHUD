@@ -18,8 +18,36 @@ LOOT_TYPES = [
     {"id": "note", "name": "📝 Notizen & Sonstiges", "icon": "📝", "badge_class": "BadgeNote"}
 ]
 
+CATEGORIES = [
+    {"id": "recon", "name": "1. Reconnaissance & Enumeration", "order": 1, "icon": "🔍"},
+    {"id": "access", "name": "2. Initial Access & Exploitation", "order": 2, "icon": "🚪"},
+    {"id": "privesc", "name": "3. Privilege Escalation", "order": 3, "icon": "👑"},
+    {"id": "postex", "name": "4. Post-Exploitation & Lateral Movement", "order": 4, "icon": "🌐"},
+    {"id": "scripts", "name": "5. Custom Scripts & PoCs", "order": 5, "icon": "📜"},
+    {"id": "misc", "name": "6. Sonstiges & Unkategorisiert", "order": 6, "icon": "📝"}
+]
+
+VALID_CATEGORY_IDS = {c["id"] for c in CATEGORIES}
+
+TYPE_ALIASES = {
+    "cred": "credentials",
+    "credentials": "credentials",
+    "credential": "credentials",
+    "dir": "directory",
+    "directory": "directory",
+    "directories": "directory",
+    "notes": "note",
+    "note": "note",
+    "screenshots": "screenshot",
+    "screenshot": "screenshot",
+    "flags": "flag",
+    "flag": "flag",
+    "hashes": "hash",
+    "hash": "hash"
+}
+
 class LootManager:
-    """Manages session loot, credentials, hashes, flags and notes with persistence and export."""
+    """Manages session loot, credentials, hashes, flags and notes with persistence, categories and export."""
 
     def __init__(self, storage_file: Optional[Path] = None):
         if storage_file is None:
@@ -33,8 +61,25 @@ class LootManager:
         self.entries: List[Dict[str, Any]] = []
         self.load_entries()
 
+    def _migrate_entries(self) -> bool:
+        """Ensures all entries have a valid category. Returns True if any entry was migrated."""
+        migrated = False
+        for entry in self.entries:
+            cat = entry.get("category")
+            if not cat or cat not in VALID_CATEGORY_IDS:
+                entry["category"] = "misc"
+                migrated = True
+            
+            # Also normalize type if needed
+            entry_type = entry.get("type")
+            norm_type = TYPE_ALIASES.get(str(entry_type).lower(), entry_type)
+            if norm_type != entry_type:
+                entry["type"] = norm_type
+                migrated = True
+        return migrated
+
     def load_entries(self) -> None:
-        """Loads loot entries from local JSON file."""
+        """Loads loot entries from local JSON file and migrates legacy entries immediately to disk."""
         if self.storage_file.exists():
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
@@ -48,9 +93,16 @@ class LootManager:
         else:
             self.entries = []
 
+        # Automatic migration of legacy entries lacking category or with invalid category
+        if self._migrate_entries():
+            logger.info("Migrated legacy loot entries to include category and persisted to disk.")
+            self.save_entries()
+
     def set_entries(self, entries: List[Dict[str, Any]]) -> None:
-        """Replaces current entries with a new list (e.g. on project switch)."""
+        """Replaces current entries with a new list (e.g. on project switch) and migrates immediately."""
         self.entries = entries or []
+        if self._migrate_entries():
+            logger.info("Migrated entries set on project switch and persisted to disk.")
         self.save_entries()
 
     def get_all_entries(self) -> List[Dict[str, Any]]:
@@ -67,28 +119,23 @@ class LootManager:
         except Exception as e:
             logger.exception(f"Unexpected error saving loot file to {self.storage_file}: {e}")
 
-    def add_entry(self, entry_type: str, title: str, content: str, target_ip: str = "") -> Dict[str, Any]:
-        """Creates and stores a new loot entry."""
-        type_aliases = {
-            "cred": "credentials",
-            "credentials": "credentials",
-            "credential": "credentials",
-            "dir": "directory",
-            "directory": "directory",
-            "directories": "directory",
-            "notes": "note",
-            "note": "note",
-            "screenshots": "screenshot",
-            "screenshot": "screenshot",
-            "flags": "flag",
-            "flag": "flag",
-            "hashes": "hash",
-            "hash": "hash"
-        }
-        normalized_type = type_aliases.get(entry_type.lower(), entry_type) if entry_type else "note"
+    def add_entry(
+        self, 
+        entry_type: str, 
+        title: str, 
+        content: str, 
+        target_ip: str = "", 
+        category: str = "misc",
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Creates and stores a new loot entry with category classification."""
+        normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
+        cat_id = category if category in VALID_CATEGORY_IDS else "misc"
+        
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
             "type": normalized_type,
+            "category": cat_id,
             "title": title.strip() or "Unbenannter Eintrag",
             "content": content.strip(),
             "target_ip": target_ip.strip(),
@@ -97,6 +144,27 @@ class LootManager:
         self.entries.insert(0, entry)  # Most recent first
         self.save_entries()
         return entry
+
+    def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
+        """Updates fields of an existing entry by ID and persists changes."""
+        for entry in self.entries:
+            if entry.get("id") == entry_id:
+                if "category" in fields:
+                    cat = fields["category"]
+                    entry["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
+                if "type" in fields:
+                    raw_type = fields["type"]
+                    entry["type"] = TYPE_ALIASES.get(raw_type.lower(), raw_type) if raw_type else "note"
+                if "title" in fields:
+                    entry["title"] = fields["title"].strip() or "Unbenannter Eintrag"
+                if "content" in fields:
+                    entry["content"] = fields["content"].strip()
+                if "target_ip" in fields:
+                    entry["target_ip"] = fields["target_ip"].strip()
+                
+                self.save_entries()
+                return entry
+        return None
 
     def delete_entry(self, entry_id: str) -> bool:
         """Deletes an entry by ID."""
@@ -119,32 +187,25 @@ class LootManager:
         self.save_entries()
         return deleted_count
 
-    def get_entries(self, target_ip: Optional[str] = None, entry_type: Optional[str] = None, search_query: str = "") -> List[Dict[str, Any]]:
-        """Filters loot entries by target IP, type and search term."""
+    def get_entries(
+        self, 
+        target_ip: Optional[str] = None, 
+        entry_type: Optional[str] = None, 
+        category: Optional[str] = None,
+        search_query: str = ""
+    ) -> List[Dict[str, Any]]:
+        """Filters loot entries by target IP, type, category and search term."""
         results = self.entries
 
         if target_ip and target_ip != "all":
             results = [e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")]
 
         if entry_type and entry_type != "all":
-            type_aliases = {
-                "cred": "credentials",
-                "credentials": "credentials",
-                "credential": "credentials",
-                "dir": "directory",
-                "directory": "directory",
-                "directories": "directory",
-                "notes": "note",
-                "note": "note",
-                "screenshots": "screenshot",
-                "screenshot": "screenshot",
-                "flags": "flag",
-                "flag": "flag",
-                "hashes": "hash",
-                "hash": "hash"
-            }
-            norm_type = type_aliases.get(entry_type.lower(), entry_type)
-            results = [e for e in results if type_aliases.get(e.get("type", "").lower(), e.get("type")) == norm_type]
+            norm_type = TYPE_ALIASES.get(entry_type.lower(), entry_type)
+            results = [e for e in results if TYPE_ALIASES.get(e.get("type", "").lower(), e.get("type")) == norm_type]
+
+        if category and category != "all":
+            results = [e for e in results if e.get("category") == category]
 
         if not search_query or not search_query.strip():
             return results
@@ -155,7 +216,8 @@ class LootManager:
             title = e.get("title", "").lower()
             content = e.get("content", "").lower()
             target = e.get("target_ip", "").lower()
-            if q in title or q in content or q in target:
+            cat = e.get("category", "").lower()
+            if q in title or q in content or q in target or q in cat:
                 filtered.append(e)
 
         return filtered
@@ -168,71 +230,19 @@ class LootManager:
             counts[t["id"]] = sum(1 for e in entries if e.get("type") == t["id"])
         return counts
 
-    def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        """Exports loot entries to a structured Markdown (.md) file with embedded screenshots."""
+    def get_category_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
+        """Returns count of entries grouped by category."""
         entries = self.get_entries(target_ip=target_ip)
-        if not entries:
-            return "Keine Loot-Einträge zum Exportieren vorhanden."
+        counts = {"all": len(entries)}
+        for c in CATEGORIES:
+            counts[c["id"]] = sum(1 for e in entries if e.get("category") == c["id"])
+        return counts
 
-        output_path = Path(output_path)
-        if output_path.suffix.lower() != ".md":
-            output_path = output_path.with_suffix(".md")
-
-        lines = [
-            f"# 🎯 CTF Session Loot Export",
-            f"**Erstellt am:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
-            f"**Target:** `{target_ip if target_ip and target_ip != 'all' else 'Alle Targets'}`  ",
-            f"**Gesamtanzahl Einträge:** {len(entries)}  ",
-            "",
-            "---",
-            ""
-        ]
-
-        # Group by type
-        for t in LOOT_TYPES:
-            type_entries = [e for e in entries if e.get("type") == t["id"]]
-            if not type_entries:
-                continue
-
-            lines.append(f"## {t['name']} ({len(type_entries)})")
-            lines.append("")
-
-            for e in type_entries:
-                lines.append(f"### {e.get('title')}")
-                meta_info = []
-                if e.get("target_ip"):
-                    meta_info.append(f"**Target:** `{e.get('target_ip')}`")
-                if e.get("timestamp"):
-                    meta_info.append(f"**Zeit:** `{e.get('timestamp')}`")
-                if meta_info:
-                    lines.append(" | ".join(meta_info))
-                lines.append("")
-
-                content = e.get("content", "").strip()
-                if t["id"] == "screenshot":
-                    # Embed markdown image directly
-                    if content.startswith("![") and content.endswith(")"):
-                        lines.append(content)
-                    else:
-                        lines.append(f"![{e.get('title')}]({content})")
-                elif t["id"] in ["cred", "hash", "flag"]:
-                    lines.append("```")
-                    lines.append(content)
-                    lines.append("```")
-                elif t["id"] == "dir":
-                    lines.append(f"`{content}`")
-                else:
-                    lines.append(content)
-                
-                lines.append("")
-
-            lines.append("---")
-            lines.append("")
-
-        md_content = "\n".join(lines)
-        try:
-            output_path.write_text(md_content, encoding="utf-8")
-            return f"Erfolgreich als Markdown exportiert nach {output_path.name}"
-        except OSError as e:
-            logger.error(f"Failed to export loot to {output_path}: {e}", exc_info=True)
-            return f"Fehler beim Exportieren: {e}"
+    def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
+        """DEPRECATED: Use core.report_builder.ReportBuilder instead.
+        
+        Delegates to ReportBuilder for unified reporting.
+        """
+        from core.report_builder import ReportBuilder
+        builder = ReportBuilder(loot_manager=self)
+        return builder.export(output_path, target_ip=target_ip)

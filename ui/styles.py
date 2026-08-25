@@ -264,6 +264,38 @@ QLabel.BadgeDir {
     border: 1px solid rgba(56, 139, 253, 0.4);
 }
 
+QLabel.BadgeNote {
+    background-color: rgba(110, 118, 129, 0.2);
+    color: #8b949e;
+    border: 1px solid rgba(110, 118, 129, 0.4);
+}
+
+/* Pentest Category Badge */
+QLabel.CategoryBadge {
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    background-color: rgba(56, 139, 253, 0.12);
+    color: #58a6ff;
+    border: 1px solid rgba(56, 139, 253, 0.3);
+}
+
+QPushButton.EditBtn {
+    background-color: rgba(33, 38, 45, 0.7);
+    color: #8b949e;
+    border: 1px solid rgba(48, 54, 61, 0.6);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+}
+
+QPushButton.EditBtn:hover {
+    background-color: rgba(56, 139, 253, 0.2);
+    color: #58a6ff;
+    border-color: #58a6ff;
+}
+
 QPushButton.ScreenshotBtn {
     background-color: rgba(0, 229, 255, 0.15);
     color: #00e5ff;

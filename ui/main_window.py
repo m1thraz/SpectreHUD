@@ -15,6 +15,7 @@ from core.loot_manager import LootManager, LOOT_TYPES
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
+from core.report_builder import ReportBuilder
 from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
 from ui.snippet_card import SnippetCard
@@ -649,6 +650,7 @@ class MainWindow(QMainWindow):
             for entry in loot_entries:
                 card = LootCard(entry, project_dir=proj_dir, parent=self)
                 card.loot_deleted.connect(self._on_loot_deleted)
+                card.edit_requested.connect(self._on_edit_loot_requested)
                 self.content_layout.addWidget(card)
                 self.cards.append(card)
 
@@ -711,6 +713,7 @@ class MainWindow(QMainWindow):
                 data = dlg.get_data()
                 self.loot_manager.add_entry(
                     entry_type=data["type"],
+                    category=data.get("category", "misc"),
                     title=data["title"],
                     content=data["content"],
                     target_ip=data["target_ip"]
@@ -721,11 +724,12 @@ class MainWindow(QMainWindow):
         else:
             # History mode -> add custom note to loot
             target_ip = self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else ""
-            dlg = AddLootDialog(target_ip=target_ip, default_type="note", parent=self)
+            dlg = AddLootDialog(target_ip=target_ip, default_type="note", default_category="recon", parent=self)
             if dlg.exec():
                 data = dlg.get_data()
                 self.loot_manager.add_entry(
                     entry_type=data["type"],
+                    category=data.get("category", "misc"),
                     title=data["title"],
                     content=data["content"],
                     target_ip=data["target_ip"]
@@ -733,6 +737,32 @@ class MainWindow(QMainWindow):
                 self._save_current_project_state()
                 self.refresh_filter_pills()
                 self.refresh_content()
+
+    def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
+        """Opens AddLootDialog in edit mode to modify an existing loot entry."""
+        dlg = AddLootDialog(
+            parent=self,
+            entry_id=entry.get("id"),
+            is_edit=True,
+            initial_type=entry.get("type", "note"),
+            initial_category=entry.get("category", "misc"),
+            initial_title=entry.get("title", ""),
+            initial_content=entry.get("content", ""),
+            current_target_ip=entry.get("target_ip", "")
+        )
+        if dlg.exec():
+            data = dlg.get_data()
+            self.loot_manager.update_entry(
+                entry_id=data.get("id") or entry.get("id", ""),
+                type=data.get("type"),
+                category=data.get("category"),
+                title=data.get("title"),
+                content=data.get("content"),
+                target_ip=data.get("target_ip")
+            )
+            self._save_current_project_state()
+            self.refresh_filter_pills()
+            self.refresh_content()
 
     def _on_snippet_deleted(self, snippet_id: str) -> None:
         self.snippet_manager.delete_snippet(snippet_id)
@@ -762,6 +792,7 @@ class MainWindow(QMainWindow):
         dlg = AddLootDialog(
             target_ip=target_ip,
             default_type="credentials" if history_item.get("is_command") else "note",
+            default_category="access" if history_item.get("is_command") else "recon",
             default_title=f"Kopiert aus Terminal ({history_item.get('timestamp', '')})",
             default_content=history_item.get("text", ""),
             parent=self
@@ -770,6 +801,7 @@ class MainWindow(QMainWindow):
             data = dlg.get_data()
             self.loot_manager.add_entry(
                 entry_type=data["type"],
+                category=data.get("category", "misc"),
                 title=data["title"],
                 content=data["content"],
                 target_ip=data["target_ip"]
@@ -779,16 +811,7 @@ class MainWindow(QMainWindow):
             self.refresh_content()
 
     def _export_loot(self) -> None:
-        active_proj = self.project_manager.get_active_project()
-        proj_dir = self.project_manager.get_project_dir(active_proj)
-        default_path = proj_dir / "loot" / "loot_export.md"
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Session-Loot als Markdown exportieren", str(default_path), "Markdown (*.md);;Text (*.txt)"
-        )
-        if file_path:
-            target_ip = self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else ""
-            msg = self.loot_manager.export_loot(Path(file_path), target_ip=target_ip if target_ip else None)
-            QMessageBox.information(self, "Export erfolgreich", msg)
+        self._export_report()
 
     def _clear_loot(self) -> None:
         reply = QMessageBox.question(
@@ -811,10 +834,15 @@ class MainWindow(QMainWindow):
         )
         if file_path:
             target_ip = self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else ""
-            msg = self.clipboard_watcher.export_report_markdown(
+            builder = ReportBuilder(
+                loot_manager=self.loot_manager,
+                clipboard_watcher=self.clipboard_watcher,
+                project_manager=self.project_manager
+            )
+            msg = builder.export(
                 Path(file_path), 
                 target_ip=target_ip if target_ip else None, 
-                loot_manager=self.loot_manager
+                project_name=active_proj
             )
             QMessageBox.information(self, "Report generiert", msg)
 
