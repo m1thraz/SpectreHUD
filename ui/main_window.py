@@ -16,6 +16,8 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_builder import ReportBuilder
+from core.report_file_manager import ReportFileManager
+from ui.report_editor_tab import ReportEditorTab
 from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
 from ui.snippet_card import SnippetCard
@@ -75,7 +77,7 @@ class MainWindow(QMainWindow):
         self.clipboard_watcher.set_target_provider(lambda: self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else "")
         self.clipboard_watcher.entry_added.connect(self._on_clipboard_entry_added)
 
-        self.active_mode = "cheatsheet"  # 'cheatsheet', 'loot', or 'history'
+        self.active_mode = "cheatsheet"  # 'cheatsheet', 'loot', 'history', or 'report'
         self.current_category_id = "all"
         self.current_loot_type = "all"
         self.current_history_filter = "all"
@@ -83,6 +85,13 @@ class MainWindow(QMainWindow):
         self.cards: List[QWidget] = []
         self.filter_buttons: Dict[str, QPushButton] = {}
         
+        # Report File Manager & Editor Tab
+        self.report_file_manager = ReportFileManager(self.project_manager)
+        self.report_editor_tab = ReportEditorTab(
+            self.report_file_manager, self.loot_manager, self.clipboard_watcher, parent=self
+        )
+        self.report_editor_tab.load_project(self.project_manager.get_active_project())
+
         # Window moving and resizing state
         self._is_resizing = False
         self._resize_edge = ""
@@ -182,6 +191,13 @@ class MainWindow(QMainWindow):
         self.btn_mode_history.clicked.connect(lambda: self.switch_mode("history"))
         header_layout.addWidget(self.btn_mode_history)
 
+        self.btn_mode_report = QPushButton("📊 Report")
+        self.btn_mode_report.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_mode_report.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_report.setToolTip("Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)")
+        self.btn_mode_report.clicked.connect(lambda: self.switch_mode("report"))
+        header_layout.addWidget(self.btn_mode_report)
+
         header_layout.addStretch()
 
         # Screenshot Snip Button
@@ -225,7 +241,7 @@ class MainWindow(QMainWindow):
         # Instantiate Contextual Action Buttons
         self.btn_export_loot = QPushButton("💾 Export (.md)")
         self.btn_export_loot.setProperty("class", "MiniActionBtn")
-        self.btn_export_loot.setToolTip("Loot als formatierte Markdown-Datei exportieren")
+        self.btn_export_loot.setToolTip("Erstellt eine neue Kopie basierend auf dem aktuellen Loot. Für die bearbeitbare Version siehe Report-Tab.")
         self.btn_export_loot.clicked.connect(self._export_loot)
 
         self.btn_clear_loot = QPushButton("🗑️ Leeren")
@@ -235,7 +251,7 @@ class MainWindow(QMainWindow):
 
         self.btn_export_report = QPushButton("💾 Report (.md)")
         self.btn_export_report.setProperty("class", "MiniActionBtn")
-        self.btn_export_report.setToolTip("Vollständigen CTF Write-Up Report als Markdown exportieren")
+        self.btn_export_report.setToolTip("Erstellt eine neue Kopie basierend auf dem aktuellen Loot. Für die bearbeitbare Version siehe Report-Tab.")
         self.btn_export_report.clicked.connect(self._export_report)
 
         self.btn_clear_history = QPushButton("🗑️ Leeren")
@@ -338,6 +354,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
+        QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.switch_mode("report"))
 
     def trigger_screenshot(self) -> None:
         """Triggers screenshot & snipping overlay."""
@@ -440,10 +457,14 @@ class MainWindow(QMainWindow):
         self.project_manager.save_project_state(state=state)
 
     def _switch_to_project(self, project_name: str) -> None:
-        """Saves current state and switches to another project."""
+        """Saves current state and switches to another project with dirty check."""
         if project_name == self.project_manager.get_active_project():
             return
         
+        # Check dirty state on report editor tab before switching
+        if hasattr(self, "report_editor_tab") and not self.report_editor_tab.confirm_discard_if_dirty():
+            return
+
         # 1. Save current project state
         self._save_current_project_state()
         
@@ -453,41 +474,61 @@ class MainWindow(QMainWindow):
         # 3. Load new project state
         self._load_active_project_state()
         
-        # 4. Refresh UI
+        # 4. Load project report into ReportEditorTab
+        if hasattr(self, "report_editor_tab"):
+            self.report_editor_tab.load_project(project_name)
+
+        # 5. Refresh UI
         self.refresh_filter_pills()
         self.refresh_content()
 
     def switch_mode(self, mode: str) -> None:
-        """Switches between 'cheatsheet', 'loot', and 'history' modes."""
+        """Switches between 'cheatsheet', 'loot', 'history', and 'report' modes."""
+        if self.active_mode == "report" and mode != "report":
+            if hasattr(self, "report_editor_tab") and not self.report_editor_tab.confirm_discard_if_dirty():
+                return
+
         self.active_mode = mode
         
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive" if mode == "cheatsheet" else "ModeSwitchBtn")
         self.btn_mode_loot.setProperty("class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn")
         self.btn_mode_history.setProperty("class", "ModeSwitchBtnActive" if mode == "history" else "ModeSwitchBtn")
+        self.btn_mode_report.setProperty("class", "ModeSwitchBtnActive" if mode == "report" else "ModeSwitchBtn")
 
         self.privacy_banner.setVisible(mode == "history")
+        self.search_bar.setVisible(mode != "report")
+        self.pills_frame.setVisible(mode != "report")
+        self.var_bar.setVisible(mode != "report")
 
         if mode == "cheatsheet":
             self.search_bar.txt_search.setPlaceholderText("⚡ Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...")
         elif mode == "loot":
             self.search_bar.txt_search.setPlaceholderText("🔍 Session Loot, User, Passwörter, Hashes & Notizen durchsuchen...")
-        else:
+        elif mode == "history":
             self.search_bar.txt_search.setPlaceholderText("📜 Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...")
 
-        for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history]:
+        for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history, self.btn_mode_report]:
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
         self.refresh_filter_pills()
         self.refresh_content()
-        self.search_bar.set_focus()
+        if mode != "report":
+            self.search_bar.set_focus()
 
     def toggle_mode(self) -> None:
-        """Cycles through modes via Tab shortcut."""
+        """Cycles through modes via Tab shortcut (Report mode excluded from Tab cycle)."""
         modes = ["cheatsheet", "loot", "history"]
         idx = modes.index(self.active_mode) if self.active_mode in modes else 0
         next_mode = modes[(idx + 1) % len(modes)]
         self.switch_mode(next_mode)
+
+    def closeEvent(self, event) -> None:
+        """Intercepts window close to check for unsaved report modifications."""
+        if hasattr(self, "report_editor_tab") and not self.report_editor_tab.confirm_discard_if_dirty():
+            event.ignore()
+            return
+        event.accept()
 
     def refresh_filter_pills(self) -> None:
         """Populates horizontal filter pills and contextual actions depending on active mode."""
@@ -496,6 +537,9 @@ class MainWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
         self.filter_buttons.clear()
+
+        if self.active_mode == "report":
+            return
 
         if self.active_mode == "cheatsheet":
             cats = self.snippet_manager.get_categories()
@@ -605,7 +649,22 @@ class MainWindow(QMainWindow):
         self.refresh_content()
 
     def refresh_content(self) -> None:
-        """Rebuilds scrollable cards based on active mode and query."""
+        """Rebuilds scrollable cards or displays ReportEditorTab based on active mode and query."""
+        if self.active_mode == "report":
+            while self.content_layout.count():
+                child = self.content_layout.takeAt(0)
+                if child.widget() and child.widget() != self.report_editor_tab:
+                    child.widget().deleteLater()
+            self.cards.clear()
+            self.content_layout.addWidget(self.report_editor_tab)
+            self.lbl_count.setText("Report Editor")
+            return
+
+        # Detach report_editor_tab if previously attached without deleting
+        if hasattr(self, "report_editor_tab") and self.report_editor_tab.parent() is not None:
+            self.content_layout.removeWidget(self.report_editor_tab)
+            self.report_editor_tab.setParent(None)
+
         while self.content_layout.count():
             child = self.content_layout.takeAt(0)
             if child.widget():

@@ -589,4 +589,34 @@ QCheckBox#AlwaysOnTopCheck::indicator:checked {
     background-color: #00e5ff;
     border-color: #00e5ff;
 }
+
+/* Report Editor & Preview */
+QPlainTextEdit.ReportSourceEditor {
+    background-color: rgba(13, 17, 23, 0.95);
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+}
+
+QPlainTextEdit.ReportSourceEditor:focus {
+    border: 1px solid #58a6ff;
+}
+
+QTextEdit.ReportPreview {
+    background-color: rgba(17, 22, 29, 0.9);
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+}
+
+QLabel.ReportStatusLabel {
+    color: #8b949e;
+    font-size: 12px;
+    font-weight: 500;
+}
 """
