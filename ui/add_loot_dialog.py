@@ -3,21 +3,40 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPlainTextEdit, QPushButton, QComboBox, QWidget, QMessageBox
 )
 from PyQt6.QtCore import Qt
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES
+from ui.styles import CYBER_DARK_QSS
 
 class AddLootDialog(QDialog):
     """Dialog to quickly capture new credentials, hashes, flags or notes."""
 
-    def __init__(self, current_target_ip: str = "", initial_content: str = "", initial_title: str = "", initial_type: str = "note", parent: QWidget = None):
+    def __init__(
+        self, 
+        parent: Optional[QWidget] = None,
+        target_ip: str = "",
+        current_target_ip: str = "",
+        default_type: str = "note",
+        initial_type: str = "note",
+        entry_type: str = "note",
+        default_title: str = "",
+        initial_title: str = "",
+        title: str = "",
+        default_content: str = "",
+        initial_content: str = "",
+        content: str = "",
+        **kwargs
+    ):
         super().__init__(parent)
         self.setWindowTitle("📝 Neuen Session-Loot erfassen")
         self.setMinimumWidth(480)
         self.setMinimumHeight(380)
-        self.current_target_ip = current_target_ip
-        self.initial_content = initial_content
-        self.initial_title = initial_title
-        self.initial_type = initial_type
+        
+        self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
+        self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
+        self.initial_title = default_title or initial_title or title or kwargs.get("name", "")
+        self.initial_content = default_content or initial_content or content or kwargs.get("text", "")
+        
+        self.setStyleSheet(CYBER_DARK_QSS)
         self._init_ui()
 
     def _init_ui(self) -> None:

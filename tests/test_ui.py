@@ -93,6 +93,25 @@ class TestUI(unittest.TestCase):
         self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.123")
         self.assertEqual(len(loot_manager.get_entries()), 1)
 
+        # 5. Resizability and Edge Detection
+        self.assertGreaterEqual(window.width(), 740)
+        self.assertGreaterEqual(window.height(), 480)
+        
+        # Test edge calculation
+        from PyQt6.QtCore import QPoint
+        edge_bottom_right = window._get_resize_edge(QPoint(window.width() - 2, window.height() - 2))
+        self.assertEqual(edge_bottom_right, "bottom_right")
+        
+        edge_center = window._get_resize_edge(QPoint(window.width() // 2, window.height() // 2))
+        self.assertEqual(edge_center, "")
+
+        # 6. Always on Top Toggle
+        self.assertTrue(window.chk_always_on_top.isChecked())
+        window.chk_always_on_top.setChecked(False)
+        self.assertFalse(config_manager.get("always_on_top"))
+        window.chk_always_on_top.setChecked(True)
+        self.assertTrue(config_manager.get("always_on_top"))
+
         window.close()
 
 if __name__ == "__main__":

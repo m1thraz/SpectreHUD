@@ -33,3 +33,6 @@ class SearchBar(QFrame):
 
     def text(self) -> str:
         return self.txt_search.text().strip()
+
+    def get_text(self) -> str:
+        return self.txt_search.text().strip()

@@ -178,7 +178,7 @@ class ProjectManager:
             "clipboard_history": []
         }
 
-    def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None) -> None:
+    def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> None:
         """Persists state data for a project."""
         pname = self._sanitize_name(name or self.active_project)
         proj_dir = self.get_project_dir(pname)
@@ -189,15 +189,19 @@ class ProjectManager:
 
         state_file = proj_dir / "project_state.json"
 
-        if state is None:
-            return
+        # Merge state from dict and kwargs
+        final_state = self.load_project_state(pname) or {}
+        if state:
+            final_state.update(state)
+        if kwargs:
+            final_state.update(kwargs)
 
-        state["name"] = pname
-        state["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        final_state["name"] = pname
+        final_state["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         try:
             with open(state_file, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2, ensure_ascii=False)
+                json.dump(final_state, f, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
         except Exception as e:

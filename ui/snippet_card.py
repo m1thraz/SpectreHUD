@@ -13,6 +13,7 @@ class SnippetCard(QFrame):
 
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
+    snippet_deleted = deleted
 
     def __init__(self, snippet: Dict[str, Any], variables: Dict[str, Any], parent: QWidget = None):
         super().__init__(parent)

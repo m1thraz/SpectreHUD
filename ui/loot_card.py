@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QPixmap
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES
 from core.project_manager import get_default_projects_dir
 from core.logger import get_logger
@@ -21,11 +21,13 @@ class LootCard(QFrame):
 
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
+    loot_deleted = deleted
 
-    def __init__(self, entry: Dict[str, Any], parent: QWidget = None):
+    def __init__(self, entry: Dict[str, Any], project_dir: Optional[Path] = None, parent: QWidget = None):
         super().__init__(parent)
         self.setObjectName("SnippetCard")
         self.entry = entry
+        self.project_dir = project_dir
         self._init_ui()
 
     def _init_ui(self) -> None:

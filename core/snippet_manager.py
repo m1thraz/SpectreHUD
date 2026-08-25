@@ -151,6 +151,10 @@ class SnippetManager:
                 
         return filtered
 
+    def get_snippets(self, category_id: Optional[str] = None, search_query: str = "") -> List[Dict[str, Any]]:
+        """Alias for search() to retrieve filtered snippets."""
+        return self.search(query=search_query, category_id=category_id)
+
     def get_categories(self) -> List[Dict[str, Any]]:
         """Returns categories with accurate snippet counts."""
         cats = [{"id": "all", "name": "✨ Alle Befehle", "icon": "⚡", "count": len(self.snippets)}]

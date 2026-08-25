@@ -31,9 +31,9 @@ QPushButton.ModeSwitchBtn {
     background-color: rgba(13, 17, 23, 0.7);
     color: #8b949e;
     border: 1px solid rgba(48, 54, 61, 0.7);
-    border-radius: 8px;
-    padding: 5px 12px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 11px;
     font-weight: 600;
 }
 
@@ -46,9 +46,9 @@ QPushButton.ModeSwitchBtnActive {
     background-color: rgba(31, 41, 61, 0.9);
     color: #00e5ff;
     border: 1px solid #00e5ff;
-    border-radius: 8px;
-    padding: 5px 12px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 11px;
     font-weight: bold;
 }
 
@@ -57,15 +57,30 @@ QPushButton.ProjectSelectBtn {
     background-color: rgba(31, 41, 61, 0.6);
     color: #58a6ff;
     border: 1px solid rgba(56, 139, 253, 0.4);
-    border-radius: 7px;
-    padding: 4px 10px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 QPushButton.ProjectSelectBtn:hover {
     background-color: rgba(56, 139, 253, 0.25);
     color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+QPushButton.ScreenshotBtn {
+    background-color: rgba(0, 229, 255, 0.12);
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QPushButton.ScreenshotBtn:hover {
+    background-color: rgba(0, 229, 255, 0.25);
     border-color: #00e5ff;
 }
 
@@ -453,6 +468,46 @@ QLabel#PrivacyWarningText {
     font-weight: 500;
 }
 
+QPushButton.MiniActionBtn {
+    background-color: rgba(33, 38, 45, 0.85);
+    color: #c9d1d9;
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+QPushButton.MiniActionBtn:hover {
+    background-color: rgba(48, 54, 61, 0.95);
+    color: #00e5ff;
+    border-color: rgba(0, 229, 255, 0.4);
+}
+
+QPushButton.MiniDangerBtn {
+    background-color: transparent;
+    color: #f85149;
+    border: 1px solid rgba(218, 54, 51, 0.35);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+QPushButton.MiniDangerBtn:hover {
+    background-color: rgba(218, 54, 51, 0.2);
+    border-color: #f85149;
+}
+
+/* Custom Size Grip in Footer */
+QSizeGrip {
+    background-color: transparent;
+    width: 14px;
+    height: 14px;
+    margin-right: -4px;
+    margin-bottom: -2px;
+}
+
 /* Minimal HUD Footer */
 QFrame#HudFooter {
     background-color: rgba(17, 22, 29, 0.7);
@@ -465,5 +520,41 @@ QFrame#HudFooter {
 QLabel#FooterText {
     color: #6e7681;
     font-size: 11px;
+}
+
+/* Always on Top Checkbox in Footer */
+QCheckBox#AlwaysOnTopCheck {
+    color: #8b949e;
+    font-size: 11px;
+    font-weight: 500;
+    spacing: 5px;
+    margin-right: 4px;
+}
+
+QCheckBox#AlwaysOnTopCheck:hover {
+    color: #58a6ff;
+}
+
+QCheckBox#AlwaysOnTopCheck:checked {
+    color: #00e5ff;
+    font-weight: 600;
+}
+
+QCheckBox#AlwaysOnTopCheck::indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(88, 166, 255, 0.4);
+    background-color: rgba(13, 17, 23, 0.8);
+}
+
+QCheckBox#AlwaysOnTopCheck::indicator:hover {
+    border-color: #00e5ff;
+    background-color: rgba(31, 41, 61, 0.8);
+}
+
+QCheckBox#AlwaysOnTopCheck::indicator:checked {
+    background-color: #00e5ff;
+    border-color: #00e5ff;
 }
 """
