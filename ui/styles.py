@@ -281,6 +281,17 @@ QLabel.CategoryBadge {
     border: 1px solid rgba(56, 139, 253, 0.3);
 }
 
+/* Loot Group Section Header */
+QLabel.LootSectionHeader {
+    color: #8b949e;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 4px 2px 4px;
+    background-color: transparent;
+}
+
 QPushButton.EditBtn {
     background-color: rgba(33, 38, 45, 0.7);
     color: #8b949e;

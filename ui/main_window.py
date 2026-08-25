@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager, LOOT_TYPES
+from core.loot_manager import LootManager, LOOT_TYPES, CATEGORIES
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
@@ -707,12 +707,44 @@ class MainWindow(QMainWindow):
             active_proj = self.project_manager.get_active_project()
             proj_dir = self.project_manager.get_project_dir(active_proj)
 
+            # Group entries by category preserving sort order within category
+            entries_by_cat: Dict[str, List[Dict[str, Any]]] = {}
             for entry in loot_entries:
-                card = LootCard(entry, project_dir=proj_dir, parent=self)
-                card.loot_deleted.connect(self._on_loot_deleted)
-                card.edit_requested.connect(self._on_edit_loot_requested)
-                self.content_layout.addWidget(card)
-                self.cards.append(card)
+                cat_id = entry.get("category") or "misc"
+                entries_by_cat.setdefault(cat_id, []).append(entry)
+
+            # Render in CATEGORIES order (skipping empty categories)
+            for cat_def in sorted(CATEGORIES, key=lambda c: c.get("order", 99)):
+                cat_id = cat_def["id"]
+                cat_entries = entries_by_cat.pop(cat_id, None)
+                if not cat_entries:
+                    continue
+
+                header = QLabel(f"{cat_def.get('icon', '')} {cat_def.get('name', '')}".strip())
+                header.setProperty("class", "LootSectionHeader")
+                self.content_layout.addWidget(header)
+
+                for entry in cat_entries:
+                    card = LootCard(entry, project_dir=proj_dir, parent=self)
+                    card.loot_deleted.connect(self._on_loot_deleted)
+                    card.edit_requested.connect(self._on_edit_loot_requested)
+                    self.content_layout.addWidget(card)
+                    self.cards.append(card)
+
+            # Any remaining entries with unknown categories
+            for cat_id, cat_entries in entries_by_cat.items():
+                if not cat_entries:
+                    continue
+                header = QLabel(f"📝 {cat_id.capitalize()}")
+                header.setProperty("class", "LootSectionHeader")
+                self.content_layout.addWidget(header)
+
+                for entry in cat_entries:
+                    card = LootCard(entry, project_dir=proj_dir, parent=self)
+                    card.loot_deleted.connect(self._on_loot_deleted)
+                    card.edit_requested.connect(self._on_edit_loot_requested)
+                    self.content_layout.addWidget(card)
+                    self.cards.append(card)
 
         else:
             # History mode

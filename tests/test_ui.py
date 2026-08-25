@@ -165,5 +165,73 @@ class TestUI(unittest.TestCase):
         self.assertEqual(tab.editor.toPlainText(), "# Box Gamma Writeup\nInitial foothold via port 80.")
         self.assertFalse(tab.is_dirty())
 
+    def test_loot_grouped_by_category_with_headers(self):
+        """Verifies that loot view displays section headers only for non-empty categories in CATEGORIES order."""
+        from PyQt6.QtWidgets import QLabel
+        from ui.loot_card import LootCard
+
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        # Add entries into exactly 3 categories (recon, access, misc)
+        loot_manager.add_entry("directory", "Web Root", "http://10.10.10.10/", category="recon")
+        loot_manager.add_entry("credentials", "Admin SSH", "root:secret", category="access")
+        loot_manager.add_entry("note", "General Hint", "Check port 8080", category="misc")
+
+        window.switch_mode("loot")
+
+        def get_current_headers():
+            return [
+                window.content_layout.itemAt(i).widget()
+                for i in range(window.content_layout.count())
+                if isinstance(window.content_layout.itemAt(i).widget(), QLabel)
+                and window.content_layout.itemAt(i).widget().property("class") == "LootSectionHeader"
+            ]
+
+        def get_current_cards():
+            return [
+                window.content_layout.itemAt(i).widget()
+                for i in range(window.content_layout.count())
+                if isinstance(window.content_layout.itemAt(i).widget(), LootCard)
+            ]
+
+        headers = get_current_headers()
+
+        # 1. Exactly 3 headers for 3 non-empty categories
+        self.assertEqual(len(headers), 3)
+
+        # 2. Ordered according to CATEGORIES (Recon -> Access -> Misc)
+        self.assertIn("Reconnaissance", headers[0].text())
+        self.assertIn("Initial Access", headers[1].text())
+        self.assertIn("Sonstiges", headers[2].text())
+
+        # 3. Exactly 3 LootCards rendered
+        cards = get_current_cards()
+        self.assertEqual(len(cards), 3)
+
+        # 4. Filter by credentials: only access category header should remain
+        window._select_loot_type("credentials")
+        filtered_headers = get_current_headers()
+        self.assertEqual(len(filtered_headers), 1)
+        self.assertIn("Initial Access", filtered_headers[0].text())
+
+        # 5. Reset filter to 'all' -> all 3 headers return
+        window._select_loot_type("all")
+        reset_headers = get_current_headers()
+        self.assertEqual(len(reset_headers), 3)
+
+        window.close()
+
 if __name__ == "__main__":
     unittest.main()
