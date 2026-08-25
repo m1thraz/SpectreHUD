@@ -60,8 +60,25 @@ jobs:
         run: |
           python -m pytest
 
-      - name: Verify Package Build & Entrypoint
+      - name: Build Wheel Artifact
         run: |
-          pip install .
+          pip wheel . --no-deps -w dist/
+
+      - name: Inspect Wheel Artifact
+        run: |
+          python scripts/verify_wheel.py dist/
+
+      - name: Install Wheel Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pip install dist/*.whl
+          spectrehud --version
+          spectrehud --help
+
+      - name: Install Wheel Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $wheel = (Get-Item dist/*.whl).FullName
+          pip install $wheel
           spectrehud --version
           spectrehud --help
