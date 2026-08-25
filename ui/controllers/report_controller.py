@@ -42,13 +42,13 @@ class ReportController(QObject):
     def get_tab_widget(self) -> ReportEditorTab:
         return self.report_editor_tab
 
-    def render_content(self, content_layout: QVBoxLayout, cards: List[QWidget]) -> None:
+    def render_content(self, content_layout: QVBoxLayout) -> List[QWidget]:
         while content_layout.count():
             child = content_layout.takeAt(0)
             if child.widget() and child.widget() != self.report_editor_tab:
                 child.widget().deleteLater()
-        cards.clear()
         content_layout.addWidget(self.report_editor_tab)
+        return [self.report_editor_tab]
 
     def detach_tab_if_needed(self, content_layout: QVBoxLayout) -> None:
         if self.report_editor_tab.parent() is not None:

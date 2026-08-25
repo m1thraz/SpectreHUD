@@ -5,18 +5,18 @@ from typing import Dict, Any, List, Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QScrollArea, QFrame, QLabel, QPushButton, QMessageBox, 
-    QFileDialog, QMenu, QApplication, QSizeGrip, QCheckBox
+    QApplication, QSizeGrip, QCheckBox
 )
-from PyQt6.QtCore import Qt, QPoint, QRect, QEvent, pyqtSlot
-from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent, QAction
+from PyQt6.QtCore import Qt, QPoint, QRect, QEvent
+from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager, LOOT_TYPES, CATEGORIES
+from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
-from core.report_builder import ReportBuilder
+from core.project_session_service import ProjectSessionService
 from core.report_file_manager import ReportFileManager
 from core.logger import get_logger
 
@@ -59,16 +59,22 @@ class MainWindow(QMainWindow):
         self.loot_manager = loot_manager if loot_manager is not None else LootManager()
         self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
         self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
-        
+
+        # Domain Session Service
+        self.session_service = ProjectSessionService(
+            project_manager=self.project_manager,
+            loot_manager=self.loot_manager,
+            clipboard_watcher=self.clipboard_watcher
+        )
+
         self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
         
-        # Connect watcher target provider
+        # Connect watcher target provider & listener
         self.clipboard_watcher.set_target_provider(lambda: self.var_bar.txt_target.text().strip() if hasattr(self, 'var_bar') else "")
         self.clipboard_watcher.entry_added.connect(self._on_clipboard_entry_added)
 
         self.active_mode = "cheatsheet"  # 'cheatsheet', 'loot', 'history', or 'report'
         self.cards: List[QWidget] = []
-        self.filter_buttons: Dict[str, QPushButton] = {}
 
         # Initialize Controllers
         self.frame_manager = WindowFrameManager(self, self.config)
@@ -94,7 +100,17 @@ class MainWindow(QMainWindow):
         self.refresh_content()
         self._center_on_screen()
 
-    # --- Backward compatibility properties for controllers ---
+    # --- Backward compatibility properties for controllers & tests ---
+    @property
+    def filter_buttons(self) -> Dict[str, QPushButton]:
+        if self.active_mode == "cheatsheet":
+            return self.cheatsheet_ctrl.filter_buttons
+        elif self.active_mode == "loot":
+            return self.loot_ctrl.filter_buttons
+        elif self.active_mode == "history":
+            return self.history_ctrl.filter_buttons
+        return {}
+
     @property
     def current_category_id(self) -> str:
         return self.cheatsheet_ctrl.current_category_id
@@ -166,7 +182,7 @@ class MainWindow(QMainWindow):
         hud_layout.setContentsMargins(0, 0, 0, 0)
         hud_layout.setSpacing(0)
 
-        # 1. Clean Top Header Row
+        # 1. Header Bar
         self.header_bar = QFrame()
         self.header_bar.setObjectName("HeaderBar")
         header_layout = QHBoxLayout(self.header_bar)
@@ -177,7 +193,7 @@ class MainWindow(QMainWindow):
         lbl_brand.setStyleSheet("color: #00e5ff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 4px;")
         header_layout.addWidget(lbl_brand)
 
-        # Project / Box Selector Dropdown Button
+        # Project Selector Button
         active_proj = self.project_manager.get_active_project()
         self.btn_project = QPushButton(f"📁 Box: {active_proj} ▾")
         self.btn_project.setProperty("class", "ProjectSelectBtn")
@@ -245,7 +261,7 @@ class MainWindow(QMainWindow):
         self.search_bar.search_changed.connect(self._on_search_changed)
         hud_layout.addWidget(self.search_bar)
 
-        # 3. Horizontal Filter Pills & Contextual Actions Bar
+        # 3. Filter Pills Bar
         self.pills_frame = QFrame()
         self.pills_frame.setObjectName("FilterPillsFrame")
         self.pills_layout = QHBoxLayout(self.pills_frame)
@@ -253,28 +269,7 @@ class MainWindow(QMainWindow):
         self.pills_layout.setSpacing(6)
         hud_layout.addWidget(self.pills_frame)
 
-        # Action Button place-holders for backward compatibility
-        self.btn_export_loot = QPushButton("💾 Export (.md)")
-        self.btn_export_loot.setProperty("class", "MiniActionBtn")
-        self.btn_export_loot.setToolTip(EXPORT_COPY_TOOLTIP)
-        self.btn_export_loot.clicked.connect(self._export_loot)
-
-        self.btn_clear_loot = QPushButton("🗑️ Leeren")
-        self.btn_clear_loot.setProperty("class", "MiniDangerBtn")
-        self.btn_clear_loot.setToolTip("Session-Loot dieses Projekts leeren")
-        self.btn_clear_loot.clicked.connect(self._clear_loot)
-
-        self.btn_export_report = QPushButton("💾 Report (.md)")
-        self.btn_export_report.setProperty("class", "MiniActionBtn")
-        self.btn_export_report.setToolTip(EXPORT_COPY_TOOLTIP)
-        self.btn_export_report.clicked.connect(self._export_report)
-
-        self.btn_clear_history = QPushButton("🗑️ Leeren")
-        self.btn_clear_history.setProperty("class", "MiniDangerBtn")
-        self.btn_clear_history.setToolTip("Clipboard-Historie dieses Projekts leeren")
-        self.btn_clear_history.clicked.connect(self._clear_history)
-
-        # 4. Compact Variable Status Bar
+        # 4. Variable Bar
         initial_vars = {
             "target_ip": self.config.get("target_ip", "10.10.10.10"),
             "attacker_ip": self.config.get("attacker_ip", "10.10.14.5"),
@@ -313,7 +308,7 @@ class MainWindow(QMainWindow):
         self.scroll_area.setWidget(self.content_container)
         hud_layout.addWidget(self.scroll_area, stretch=1)
 
-        # 6. Minimal HUD Footer with Native QSizeGrip
+        # 6. HUD Footer
         self.footer_frame = QFrame()
         self.footer_frame.setObjectName("HudFooter")
         footer_layout = QHBoxLayout(self.footer_frame)
@@ -333,7 +328,7 @@ class MainWindow(QMainWindow):
 
         footer_layout.addSpacing(10)
 
-        # Always on Top Toggle Checkbox
+        # Always on Top Toggle
         is_always_on_top = self.config.get("always_on_top", True)
         self.chk_always_on_top = QCheckBox("📌 Im Vordergrund")
         self.chk_always_on_top.setObjectName("AlwaysOnTopCheck")
@@ -427,30 +422,29 @@ class MainWindow(QMainWindow):
             child = self.pills_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-        self.filter_buttons.clear()
 
         if self.active_mode == "report":
             return
 
         if self.active_mode == "cheatsheet":
             self.cheatsheet_ctrl.build_filter_pills(
-                self.pills_layout, self.filter_buttons, self._select_category
+                self.pills_layout, self._select_category
             )
         elif self.active_mode == "loot":
             self.loot_ctrl.build_filter_pills(
-                self.pills_layout, self.filter_buttons, self._select_loot_type,
+                self.pills_layout, self._select_loot_type,
                 self._export_loot, self._clear_loot, EXPORT_COPY_TOOLTIP
             )
         else:
             self.history_ctrl.build_filter_pills(
-                self.pills_layout, self.filter_buttons, self._select_history_filter,
+                self.pills_layout, self._select_history_filter,
                 self._export_report, self._clear_history, EXPORT_COPY_TOOLTIP
             )
 
     def refresh_content(self) -> None:
         """Rebuilds scrollable cards or displays ReportEditorTab based on active mode and query."""
         if self.active_mode == "report":
-            self.report_ctrl.render_content(self.content_layout, self.cards)
+            self.cards = self.report_ctrl.render_content(self.content_layout)
             self.lbl_count.setText("Report Editor")
             return
 
@@ -466,28 +460,28 @@ class MainWindow(QMainWindow):
         variables = self.var_bar.get_variables() if hasattr(self, 'var_bar') else {}
 
         if self.active_mode == "cheatsheet":
-            count = self.cheatsheet_ctrl.render_content(
-                self.content_layout, self.cards, query, variables,
+            self.cards = self.cheatsheet_ctrl.render_content(
+                self.content_layout, query, variables,
                 self._on_snippet_deleted, self, self._show_empty_state
             )
-            self.lbl_count.setText(f"{count} Befehle")
+            self.lbl_count.setText(f"{len(self.cards)} Befehle")
         elif self.active_mode == "loot":
             active_proj = self.project_manager.get_active_project()
             proj_dir = self.project_manager.get_project_dir(active_proj)
-            count = self.loot_ctrl.render_content(
-                self.content_layout, self.cards, query, proj_dir,
+            self.cards = self.loot_ctrl.render_content(
+                self.content_layout, query, proj_dir,
                 self._on_loot_deleted, self._on_edit_loot_requested,
                 self, self._show_empty_state
             )
-            self.lbl_count.setText(f"{count} Loot-Einträge")
+            self.lbl_count.setText(f"{len(self.cards)} Loot-Einträge")
         else:
             target_ip = variables.get("target_ip")
-            count = self.history_ctrl.render_content(
-                self.content_layout, self.cards, query, target_ip,
+            self.cards = self.history_ctrl.render_content(
+                self.content_layout, query, target_ip,
                 self._on_history_add_to_loot, self._on_history_entry_deleted,
                 self, self._show_empty_state
             )
-            self.lbl_count.setText(f"{count} Verlaufseinträge")
+            self.lbl_count.setText(f"{len(self.cards)} Verlaufseinträge")
 
     def _show_empty_state(self, message: str) -> None:
         empty_lbl = QLabel(message)
@@ -500,15 +494,15 @@ class MainWindow(QMainWindow):
     # Action & Event Callbacks
     # -------------------------------------------------------------
     def _select_category(self, category_id: str) -> None:
-        self.cheatsheet_ctrl.select_category(category_id, self.filter_buttons)
+        self.cheatsheet_ctrl.select_category(category_id)
         self.refresh_content()
 
     def _select_loot_type(self, type_id: str) -> None:
-        self.loot_ctrl.select_loot_type(type_id, self.filter_buttons)
+        self.loot_ctrl.select_loot_type(type_id)
         self.refresh_content()
 
     def _select_history_filter(self, filter_id: str) -> None:
-        self.history_ctrl.select_history_filter(filter_id, self.filter_buttons)
+        self.history_ctrl.select_history_filter(filter_id)
         self.refresh_content()
 
     def _on_search_changed(self, text: str) -> None:
@@ -637,14 +631,26 @@ class MainWindow(QMainWindow):
         )
 
     def _load_active_project_state(self) -> None:
-        self.project_ctrl.load_active_project_state(
-            self.btn_project, getattr(self, 'var_bar', None), self.loot_manager, self.clipboard_watcher
-        )
+        active_proj = self.project_manager.get_active_project()
+        self.btn_project.setText(f"📁 Box: {active_proj} ▾")
+
+        state = self.session_service.load_project_session(active_proj)
+        if hasattr(self, 'var_bar') and self.var_bar:
+            self.var_bar.txt_target.blockSignals(True)
+            self.var_bar.txt_attacker.blockSignals(True)
+            self.var_bar.txt_port.blockSignals(True)
+
+            self.var_bar.txt_target.setText(state.get("target_ip", "10.10.10.10"))
+            self.var_bar.txt_attacker.setText(state.get("attacker_ip", "10.10.14.5"))
+            self.var_bar.txt_port.setText(state.get("port", "4444"))
+
+            self.var_bar.txt_target.blockSignals(False)
+            self.var_bar.txt_attacker.blockSignals(False)
+            self.var_bar.txt_port.blockSignals(False)
 
     def _save_current_project_state(self) -> None:
-        self.project_ctrl.save_current_project_state(
-            getattr(self, 'var_bar', None), self.loot_manager, self.clipboard_watcher
-        )
+        variables = self.var_bar.get_variables() if hasattr(self, 'var_bar') else {}
+        self.session_service.save_project_session(variables)
 
     def _switch_to_project(self, project_name: str) -> None:
         if project_name == self.project_manager.get_active_project():

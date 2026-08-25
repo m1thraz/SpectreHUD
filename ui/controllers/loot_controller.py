@@ -26,10 +26,11 @@ class LootController(QObject):
         self.loot_manager = loot_manager
         self.project_manager = project_manager
         self.current_loot_type: str = "all"
+        self.filter_buttons: Dict[str, QPushButton] = {}
 
-    def select_loot_type(self, type_id: str, filter_buttons: Dict[str, QPushButton]) -> None:
+    def select_loot_type(self, type_id: str) -> None:
         self.current_loot_type = type_id
-        for tid, btn in filter_buttons.items():
+        for tid, btn in self.filter_buttons.items():
             btn.setProperty("class", "FilterPillActive" if tid == type_id else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -38,18 +39,18 @@ class LootController(QObject):
     def build_filter_pills(
         self,
         pills_layout: QHBoxLayout,
-        filter_buttons: Dict[str, QPushButton],
         on_select_type: Callable[[str], None],
         on_export: Callable[[], None],
         on_clear: Callable[[], None],
         export_tooltip: str
     ) -> None:
+        self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
         all_btn = QPushButton(f"⚡ Alle ({counts.get('all', 0)})")
         all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         all_btn.setProperty("class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill")
         all_btn.clicked.connect(lambda: on_select_type("all"))
-        filter_buttons["all"] = all_btn
+        self.filter_buttons["all"] = all_btn
         pills_layout.addWidget(all_btn)
 
         for t in LOOT_TYPES:
@@ -59,7 +60,7 @@ class LootController(QObject):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill")
             btn.clicked.connect(lambda checked=False, type_id=tid: on_select_type(type_id))
-            filter_buttons[tid] = btn
+            self.filter_buttons[tid] = btn
             pills_layout.addWidget(btn)
 
         pills_layout.addStretch()
@@ -80,14 +81,13 @@ class LootController(QObject):
     def render_content(
         self,
         content_layout: QVBoxLayout,
-        cards: List[QWidget],
         search_query: str,
         proj_dir: Path,
         on_delete_loot: Callable[[str], None],
         on_edit_loot: Callable[[Dict[str, Any]], None],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
-    ) -> int:
+    ) -> List[QWidget]:
         loot_entries = self.loot_manager.get_entries(
             target_ip=None,
             entry_type=self.current_loot_type,
@@ -96,7 +96,9 @@ class LootController(QObject):
 
         if not loot_entries:
             show_empty_state_fn("Kein Session-Loot vorhanden. Drücke Ctrl+N um Notizen/Creds anzulegen oder 📷 Snip für Screenshots.")
-            return 0
+            return []
+
+        rendered_cards: List[QWidget] = []
 
         # Group entries by category preserving sort order within category
         entries_by_cat: Dict[str, List[Dict[str, Any]]] = {}
@@ -120,7 +122,7 @@ class LootController(QObject):
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 content_layout.addWidget(card)
-                cards.append(card)
+                rendered_cards.append(card)
 
         # Any remaining entries with unknown categories
         for cat_id, cat_entries in entries_by_cat.items():
@@ -135,9 +137,9 @@ class LootController(QObject):
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 content_layout.addWidget(card)
-                cards.append(card)
+                rendered_cards.append(card)
 
-        return len(loot_entries)
+        return rendered_cards
 
     def open_add_dialog(
         self,

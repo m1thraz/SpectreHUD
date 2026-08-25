@@ -1,19 +1,17 @@
-from typing import Dict, Any, Optional, Callable
+from typing import Optional, Callable
 from PyQt6.QtCore import QObject, QPoint, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QWidget, QPushButton, QMenu
 
 from core.project_manager import ProjectManager
-from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
 from ui.project_dialog import NewProjectDialog
-from ui.variable_bar import VariableBar
 
 
 class ProjectController(QObject):
-    """Controller managing project/box workspaces, switching, and state persistence."""
+    """UI Controller managing project/box dropdown menus, selection, and creation dialogs."""
 
-    project_switched = pyqtSignal(str)
+    project_selected = pyqtSignal(str)
+    project_created = pyqtSignal(str)
 
     def __init__(self, project_manager: ProjectManager, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -77,58 +75,6 @@ class ProjectController(QObject):
                     port=data.get("port", "4444")
                 )
                 on_project_created(pname)
+                self.project_created.emit(pname)
                 return True
         return False
-
-    def load_active_project_state(
-        self,
-        btn_project: QPushButton,
-        var_bar: Optional[VariableBar],
-        loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher
-    ) -> None:
-        active_proj = self.project_manager.get_active_project()
-        btn_project.setText(f"📁 Box: {active_proj} ▾")
-
-        state = self.project_manager.load_project_state()
-        if not state:
-            return
-
-        # Restore Variables in VariableBar
-        if var_bar:
-            var_bar.txt_target.blockSignals(True)
-            var_bar.txt_attacker.blockSignals(True)
-            var_bar.txt_port.blockSignals(True)
-
-            var_bar.txt_target.setText(state.get("target_ip", "10.10.10.10"))
-            var_bar.txt_attacker.setText(state.get("attacker_ip", "10.10.14.5"))
-            var_bar.txt_port.setText(state.get("port", "4444"))
-
-            var_bar.txt_target.blockSignals(False)
-            var_bar.txt_attacker.blockSignals(False)
-            var_bar.txt_port.blockSignals(False)
-
-        # Restore Loot
-        loot_manager.set_entries(state.get("loot", []))
-
-        # Restore Clipboard History
-        clipboard_watcher.set_history(state.get("clipboard_history", []))
-
-    def save_current_project_state(
-        self,
-        var_bar: Optional[VariableBar],
-        loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher
-    ) -> None:
-        target_ip = var_bar.txt_target.text().strip() if var_bar else "10.10.10.10"
-        attacker_ip = var_bar.txt_attacker.text().strip() if var_bar else "10.10.14.5"
-        port = var_bar.txt_port.text().strip() if var_bar else "4444"
-
-        state = {
-            "target_ip": target_ip,
-            "attacker_ip": attacker_ip,
-            "port": port,
-            "loot": loot_manager.get_all_entries(),
-            "clipboard_history": clipboard_watcher.get_all_history()
-        }
-        self.project_manager.save_project_state(state=state)

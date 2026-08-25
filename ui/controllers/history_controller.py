@@ -29,10 +29,11 @@ class HistoryController(QObject):
         self.loot_manager = loot_manager
         self.project_manager = project_manager
         self.current_history_filter: str = "all"
+        self.filter_buttons: Dict[str, QPushButton] = {}
 
-    def select_history_filter(self, filter_id: str, filter_buttons: Dict[str, QPushButton]) -> None:
+    def select_history_filter(self, filter_id: str) -> None:
         self.current_history_filter = filter_id
-        for fid, btn in filter_buttons.items():
+        for fid, btn in self.filter_buttons.items():
             btn.setProperty("class", "FilterPillActive" if fid == filter_id else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -41,12 +42,12 @@ class HistoryController(QObject):
     def build_filter_pills(
         self,
         pills_layout: QHBoxLayout,
-        filter_buttons: Dict[str, QPushButton],
         on_select_filter: Callable[[str], None],
         on_export: Callable[[], None],
         on_clear: Callable[[], None],
         export_tooltip: str
     ) -> None:
+        self.filter_buttons.clear()
         history_all = self.clipboard_watcher.get_history()
         pills = [
             ("all", f"⚡ Alle ({len(history_all)})"),
@@ -59,7 +60,7 @@ class HistoryController(QObject):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if self.current_history_filter == pid else "FilterPill")
             btn.clicked.connect(lambda checked=False, fid=pid: on_select_filter(fid))
-            filter_buttons[pid] = btn
+            self.filter_buttons[pid] = btn
             pills_layout.addWidget(btn)
 
         pills_layout.addStretch()
@@ -80,14 +81,13 @@ class HistoryController(QObject):
     def render_content(
         self,
         content_layout: QVBoxLayout,
-        cards: List[QWidget],
         search_query: str,
         target_ip: Optional[str],
         on_add_to_loot: Callable[[Dict[str, Any]], None],
         on_delete_entry: Callable[[str], None],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
-    ) -> int:
+    ) -> List[QWidget]:
         history_items = self.clipboard_watcher.get_history(
             target_ip=target_ip if self.current_history_filter == "target_only" else None,
             filter_type=self.current_history_filter if self.current_history_filter in ["commands", "outputs"] else "all",
@@ -96,16 +96,17 @@ class HistoryController(QObject):
 
         if not history_items:
             show_empty_state_fn("Keine Clipboard-Historie vorhanden. Aktiviere 🔴 REC (Ctrl+P) und kopiere Befehle im Terminal.")
-            return 0
+            return []
 
+        rendered_cards: List[QWidget] = []
         for item in history_items:
             card = HistoryCard(item, parent=parent_widget)
             card.add_to_loot_requested.connect(on_add_to_loot)
             card.entry_deleted.connect(on_delete_entry)
             content_layout.addWidget(card)
-            cards.append(card)
+            rendered_cards.append(card)
 
-        return len(history_items)
+        return rendered_cards
 
     def toggle_pause(self) -> None:
         self.clipboard_watcher.toggle_pause()

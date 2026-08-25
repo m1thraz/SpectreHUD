@@ -17,10 +17,11 @@ class CheatsheetController(QObject):
         super().__init__(parent)
         self.snippet_manager = snippet_manager
         self.current_category_id: str = "all"
+        self.filter_buttons: Dict[str, QPushButton] = {}
 
-    def select_category(self, category_id: str, filter_buttons: Dict[str, QPushButton]) -> None:
+    def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
-        for cid, btn in filter_buttons.items():
+        for cid, btn in self.filter_buttons.items():
             btn.setProperty("class", "FilterPillActive" if cid == category_id else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -29,9 +30,9 @@ class CheatsheetController(QObject):
     def build_filter_pills(
         self, 
         pills_layout: QHBoxLayout, 
-        filter_buttons: Dict[str, QPushButton], 
         on_select_category: Callable[[str], None]
     ) -> None:
+        self.filter_buttons.clear()
         cats = self.snippet_manager.get_categories()
         for c in cats:
             cat_id = c.get("id")
@@ -43,7 +44,7 @@ class CheatsheetController(QObject):
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if cat_id == self.current_category_id else "FilterPill")
             btn.clicked.connect(lambda checked=False, cid=cat_id: on_select_category(cid))
-            filter_buttons[cat_id] = btn
+            self.filter_buttons[cat_id] = btn
             pills_layout.addWidget(btn)
 
         pills_layout.addStretch()
@@ -51,13 +52,12 @@ class CheatsheetController(QObject):
     def render_content(
         self,
         content_layout: QVBoxLayout,
-        cards: List[QWidget],
         search_query: str,
         variables: Dict[str, str],
         on_delete_snippet: Callable[[str], None],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
-    ) -> int:
+    ) -> List[QWidget]:
         snippets = self.snippet_manager.get_snippets(
             category_id=self.current_category_id,
             search_query=search_query
@@ -65,15 +65,16 @@ class CheatsheetController(QObject):
 
         if not snippets:
             show_empty_state_fn("Keine Befehle gefunden. Drücke Ctrl+N zum Hinzufügen.")
-            return 0
+            return []
 
+        rendered_cards: List[QWidget] = []
         for s in snippets:
             card = SnippetCard(s, variables=variables, parent=parent_widget)
             card.snippet_deleted.connect(on_delete_snippet)
             content_layout.addWidget(card)
-            cards.append(card)
+            rendered_cards.append(card)
 
-        return len(snippets)
+        return rendered_cards
 
     def update_variables(self, cards: List[QWidget], variables: Dict[str, str]) -> None:
         for card in cards:

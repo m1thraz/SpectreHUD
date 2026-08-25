@@ -24,7 +24,10 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
     return False
 
 class WindowFrameManager(QObject):
-    """Handles frameless window drag-to-move, 8-zone edge resizing, and cursor adaptation."""
+    """
+    Handles frameless window drag-to-move, 8-zone edge resizing, and dynamic cursor updates.
+    Provides a single source of truth for window geometry calculations and mouse events.
+    """
 
     def __init__(self, window: QWidget, config_manager: ConfigManager):
         super().__init__(window)
@@ -83,101 +86,32 @@ class WindowFrameManager(QObject):
         else:
             self.window.unsetCursor()
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if not self.window.isVisible():
-            return super().eventFilter(watched, event)
+    # -------------------------------------------------------------------------
+    # Core Mouse Logic (Single Source of Truth)
+    # -------------------------------------------------------------------------
+    def _process_mouse_press(self, global_pt: QPoint, local_pt: QPoint, button: Qt.MouseButton) -> bool:
+        if button != Qt.MouseButton.LeftButton:
+            return False
 
-        if event.type() == QEvent.Type.MouseMove:
-            if hasattr(event, "globalPosition"):
-                global_pt = event.globalPosition().toPoint()
+        edge = self.get_resize_edge(local_pt)
+        if edge:
+            self._is_resizing = True
+            self._resize_edge = edge
+            self._resize_start_pos = global_pt
+            self._resize_start_geo = self.window.geometry()
+            return True
 
-                if self._is_resizing:
-                    delta = global_pt - self._resize_start_pos
-                    geo = QRect(self._resize_start_geo)
-                    min_w = self.window.minimumWidth()
-                    min_h = self.window.minimumHeight()
+        clicked_widget = self.window.childAt(local_pt)
+        if not is_interactive_widget(clicked_widget, self.window):
+            self._is_moving = True
+            self._drag_pos = global_pt - self.window.frameGeometry().topLeft()
+            return True
 
-                    if "right" in self._resize_edge:
-                        new_w = max(min_w, self._resize_start_geo.width() + delta.x())
-                        geo.setWidth(new_w)
-                    elif "left" in self._resize_edge:
-                        new_w = max(min_w, self._resize_start_geo.width() - delta.x())
-                        geo.setLeft(self._resize_start_geo.right() - new_w)
-
-                    if "bottom" in self._resize_edge:
-                        new_h = max(min_h, self._resize_start_geo.height() + delta.y())
-                        geo.setHeight(new_h)
-                    elif "top" in self._resize_edge:
-                        new_h = max(min_h, self._resize_start_geo.height() - delta.y())
-                        geo.setTop(self._resize_start_geo.bottom() - new_h)
-
-                    self.window.setGeometry(geo)
-                    return True
-
-                if self._is_moving and not self._drag_pos.isNull():
-                    self.window.move(global_pt - self._drag_pos)
-                    return True
-
-                local_pt = self.window.mapFromGlobal(global_pt)
-                edge = self.get_resize_edge(local_pt)
-                self.update_cursor_for_edge(edge)
-
-        elif event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
-            if hasattr(event, "globalPosition"):
-                global_pt = event.globalPosition().toPoint()
-                local_pt = self.window.mapFromGlobal(global_pt)
-                edge = self.get_resize_edge(local_pt)
-
-                if edge:
-                    self._is_resizing = True
-                    self._resize_edge = edge
-                    self._resize_start_pos = global_pt
-                    self._resize_start_geo = self.window.geometry()
-                    return True
-
-                clicked_widget = self.window.childAt(local_pt)
-                if not is_interactive_widget(clicked_widget, self.window):
-                    self._is_moving = True
-                    self._drag_pos = global_pt - self.window.frameGeometry().topLeft()
-                    return True
-
-        elif event.type() == QEvent.Type.MouseButtonRelease:
-            if self._is_resizing:
-                self._is_resizing = False
-                self._resize_edge = ""
-                self.window.unsetCursor()
-                self.config.set("window_width", self.window.width())
-                self.config.set("window_height", self.window.height())
-                return True
-            elif self._is_moving:
-                self._is_moving = False
-                self._drag_pos = QPoint()
-                return True
-
-        return super().eventFilter(watched, event)
-
-    def handle_mouse_press(self, event: QMouseEvent) -> bool:
-        if event.button() == Qt.MouseButton.LeftButton:
-            edge = self.get_resize_edge(event.pos())
-            if edge:
-                self._is_resizing = True
-                self._resize_edge = edge
-                self._resize_start_pos = event.globalPosition().toPoint()
-                self._resize_start_geo = self.window.geometry()
-                event.accept()
-                return True
-
-            clicked_widget = self.window.childAt(event.pos())
-            if not is_interactive_widget(clicked_widget, self.window):
-                self._is_moving = True
-                self._drag_pos = event.globalPosition().toPoint() - self.window.frameGeometry().topLeft()
-                event.accept()
-                return True
         return False
 
-    def handle_mouse_move(self, event: QMouseEvent) -> bool:
+    def _process_mouse_move(self, global_pt: QPoint, local_pt: QPoint) -> bool:
         if self._is_resizing:
-            delta = event.globalPosition().toPoint() - self._resize_start_pos
+            delta = global_pt - self._resize_start_pos
             geo = QRect(self._resize_start_geo)
             min_w = self.window.minimumWidth()
             min_h = self.window.minimumHeight()
@@ -197,33 +131,76 @@ class WindowFrameManager(QObject):
                 geo.setTop(self._resize_start_geo.bottom() - new_h)
 
             self.window.setGeometry(geo)
-            event.accept()
             return True
 
         if self._is_moving and not self._drag_pos.isNull():
-            self.window.move(event.globalPosition().toPoint() - self._drag_pos)
-            event.accept()
+            self.window.move(global_pt - self._drag_pos)
             return True
 
-        edge = self.get_resize_edge(event.pos())
+        edge = self.get_resize_edge(local_pt)
         self.update_cursor_for_edge(edge)
         return False
 
-    def handle_mouse_release(self, event: QMouseEvent) -> bool:
+    def _process_mouse_release(self, button: Qt.MouseButton) -> bool:
         if self._is_resizing:
             self._is_resizing = False
             self._resize_edge = ""
             self.window.unsetCursor()
             self.config.set("window_width", self.window.width())
             self.config.set("window_height", self.window.height())
-            event.accept()
             return True
         elif self._is_moving:
             self._is_moving = False
             self._drag_pos = QPoint()
-            event.accept()
             return True
         return False
+
+    # -------------------------------------------------------------------------
+    # Event Filter & Event Handler Adaptors
+    # -------------------------------------------------------------------------
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if not self.window.isVisible():
+            return super().eventFilter(watched, event)
+
+        if event.type() == QEvent.Type.MouseMove and hasattr(event, "globalPosition"):
+            global_pt = event.globalPosition().toPoint()
+            local_pt = self.window.mapFromGlobal(global_pt)
+            if self._process_mouse_move(global_pt, local_pt):
+                return True
+
+        elif event.type() == QEvent.Type.MouseButtonPress and hasattr(event, "globalPosition"):
+            global_pt = event.globalPosition().toPoint()
+            local_pt = self.window.mapFromGlobal(global_pt)
+            if self._process_mouse_press(global_pt, local_pt, event.button()):
+                return True
+
+        elif event.type() == QEvent.Type.MouseButtonRelease:
+            if self._process_mouse_release(event.button()):
+                return True
+
+        return super().eventFilter(watched, event)
+
+    def handle_mouse_press(self, event: QMouseEvent) -> bool:
+        global_pt = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
+        local_pt = event.pos()
+        handled = self._process_mouse_press(global_pt, local_pt, event.button())
+        if handled:
+            event.accept()
+        return handled
+
+    def handle_mouse_move(self, event: QMouseEvent) -> bool:
+        global_pt = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
+        local_pt = event.pos()
+        handled = self._process_mouse_move(global_pt, local_pt)
+        if handled:
+            event.accept()
+        return handled
+
+    def handle_mouse_release(self, event: QMouseEvent) -> bool:
+        handled = self._process_mouse_release(event.button())
+        if handled:
+            event.accept()
+        return handled
 
     def handle_leave(self, event: QEvent) -> None:
         if not self._is_resizing:
