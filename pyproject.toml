@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
-    { name = "SpectreHUD Team" }
+    { name = "m1thraz" }
 ]
 dependencies = [
     "PyQt6>=6.6.0",
@@ -22,6 +22,10 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/m1thraz/SpectreHUD"
+Repository = "https://github.com/m1thraz/SpectreHUD.git"
 
 [project.scripts]
 spectrehud = "main:main"

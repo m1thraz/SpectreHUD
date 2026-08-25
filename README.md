@@ -2,7 +2,7 @@
 
 > **Spotlight-Style CTF Cheatsheet & Session Loot Overlay for Pentesters & Security Researchers.**
 
-SpectreHUD is an ultra-fast, frameless HUD overlay built with PyQt6. It provides instant access to cheatsheets, dynamic IP/port variable substitution, automated clipboard logging (opt-in), snippet bookmarking, snipping tool integration, and a **phase-structured Pentest / CTF Markdown report generator**.
+SpectreHUD is an ultra-fast, frameless HUD overlay built with PyQt6. It provides instant access to cheatsheets, dynamic IP/port variable substitution, automated clipboard logging (opt-in), snippet bookmarking, snipping tool integration, an **in-app markdown report editor with live preview**, and a **phase-structured Pentest / CTF Markdown report generator**.
 
 ---
 
@@ -19,9 +19,10 @@ SpectreHUD is an ultra-fast, frameless HUD overlay built with PyQt6. It provides
 - **🔴 Privacy-Safe Clipboard Watcher:** 
   - Defaults to **PAUSED (`⏸️ REC: Aus`)** on startup to prevent accidental logging of private host data or password manager clips.
   - One-click toggle (`Ctrl + P`) when starting your terminal hacking session.
-- **📊 Phase-Structured Reporting (`ReportBuilder`):**
+- **📊 Phase-Structured Reporting & Editor Tab (`ReportBuilder` & `ReportEditorTab`):**
   - Unified Markdown report generation combining categorized loot, screenshots, and chronological terminal history.
-  - Pre-structured in standard pentest phases with executive summary and notes sections for seamless report writing.
+  - In-app split editor with Qt-native debounced Markdown live preview.
+  - Automatic backup (`report.md.bak`) before regeneration and dirty-state protection against accidental data loss.
 
 ---
 
@@ -52,11 +53,14 @@ At the bottom of each phase, a markdown quote placeholder (`> `) is provided for
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/SpectreHUD.git
+git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 
-# Install dependencies
+# Install runtime dependencies
 pip install -r requirements.txt
+
+# Or install in editable mode with development dependencies:
+pip install -e ".[dev]"
 
 # Start SpectreHUD
 python main.py
@@ -65,6 +69,6 @@ python main.py
 ### Running Tests
 
 ```bash
-# Run full unit test suite
-python -m unittest discover tests
+# Run the complete test suite
+python -m pytest
 ```
