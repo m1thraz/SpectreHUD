@@ -75,9 +75,9 @@ class ConfigManager:
         return cfg
 
     def save_config(self) -> None:
+        from core.atomic_write import atomic_write_json
         try:
-            with open(self.config_file, "w", encoding="utf-8") as f:
-                json.dump(self.data, f, indent=2, ensure_ascii=False)
+            atomic_write_json(self.config_file, self.data, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving config to {self.config_file}: {e}", exc_info=True)
         except (TypeError, ValueError) as e:

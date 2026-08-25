@@ -50,16 +50,16 @@ class LootManager:
     """Manages session loot, credentials, hashes, flags and notes with persistence, categories and export."""
 
     def __init__(self, storage_file: Optional[Path] = None):
-        if storage_file is None:
-            storage_file = get_default_config_dir() / "loot_sessions.json"
-        self.storage_file = Path(storage_file)
-        try:
-            self.storage_file.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to create parent directory for loot storage {self.storage_file}: {e}", exc_info=True)
+        self.storage_file = Path(storage_file) if storage_file is not None else None
+        if self.storage_file:
+            try:
+                self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.error(f"Failed to create parent directory for loot storage {self.storage_file}: {e}", exc_info=True)
 
         self.entries: List[Dict[str, Any]] = []
-        self.load_entries()
+        if self.storage_file:
+            self.load_entries()
 
     def _migrate_entries(self) -> bool:
         """Ensures all entries have a valid category. Returns True if any entry was migrated."""
@@ -79,11 +79,15 @@ class LootManager:
         return migrated
 
     def load_entries(self) -> None:
-        """Loads loot entries from local JSON file and migrates legacy entries immediately to disk."""
+        """Loads and semantically validates loot entries from local JSON file if storage_file is set."""
+        if not self.storage_file:
+            return
+        from core.validators import validate_loot_list
         if self.storage_file.exists():
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
-                    self.entries = json.load(f)
+                    raw_data = json.load(f)
+                    self.entries = validate_loot_list(raw_data)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted loot file at {self.storage_file}: {e}")
                 self.entries = []
@@ -99,8 +103,9 @@ class LootManager:
             self.save_entries()
 
     def set_entries(self, entries: List[Dict[str, Any]]) -> None:
-        """Replaces current entries with a new list (e.g. on project switch) and migrates immediately."""
-        self.entries = entries or []
+        """Replaces current entries with a validated list (e.g. on project switch) and migrates immediately."""
+        from core.validators import validate_loot_list
+        self.entries = validate_loot_list(entries)
         if self._migrate_entries():
             logger.info("Migrated entries set on project switch and persisted to disk.")
         self.save_entries()
@@ -110,10 +115,12 @@ class LootManager:
         return self.entries
 
     def save_entries(self) -> None:
-        """Persists loot entries to disk."""
+        """Persists loot entries to disk atomically if storage_file is configured."""
+        if not self.storage_file:
+            return
+        from core.atomic_write import atomic_write_json
         try:
-            with open(self.storage_file, "w", encoding="utf-8") as f:
-                json.dump(self.entries, f, indent=2, ensure_ascii=False)
+            atomic_write_json(self.storage_file, self.entries, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving loot file to {self.storage_file}: {e}", exc_info=True)
         except (TypeError, ValueError) as e:

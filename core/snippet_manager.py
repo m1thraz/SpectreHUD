@@ -82,13 +82,11 @@ class SnippetManager:
         
         user_snippets = []
         if self.user_snippets_path.exists():
+            from core.validators import validate_user_snippets
             try:
                 with open(self.user_snippets_path, "r", encoding="utf-8") as f:
                     user_data = json.load(f)
-                    for snip in user_data:
-                        snip["is_custom"] = True
-                        snip["category_id"] = snip.get("category_id", "custom_snippets")
-                        user_snippets.append(snip)
+                    user_snippets = validate_user_snippets(user_data)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
             except (OSError, UnicodeDecodeError, KeyError) as e:
@@ -100,12 +98,11 @@ class SnippetManager:
         self.snippets.extend(user_snippets)
 
     def save_user_snippets(self) -> None:
-        """Persists custom user snippets to disk."""
+        """Persists custom user snippets to disk atomically."""
+        from core.atomic_write import atomic_write_json
         try:
-            self.user_snippets_path.parent.mkdir(parents=True, exist_ok=True)
             custom_only = [s for s in self.snippets if s.get("is_custom", False)]
-            with open(self.user_snippets_path, "w", encoding="utf-8") as f:
-                json.dump(custom_only, f, indent=2, ensure_ascii=False)
+            atomic_write_json(self.user_snippets_path, custom_only, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving user snippets to {self.user_snippets_path}: {e}", exc_info=True)
         except (TypeError, ValueError) as e:

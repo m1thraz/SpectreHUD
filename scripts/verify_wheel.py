@@ -20,6 +20,8 @@ REQUIRED_FILES = [
     "core/project_manager.py",
     "core/screenshot_manager.py",
     "core/project_session_service.py",
+    "core/validators.py",
+    "core/atomic_write.py",
     "core/report_builder.py",
     "core/report_file_manager.py",
     "ui/main_window.py",

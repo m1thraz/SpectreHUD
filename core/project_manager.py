@@ -67,9 +67,24 @@ class ProjectManager:
         self._ensure_default_project()
 
     def _sanitize_name(self, name: str) -> str:
-        """Sanitizes project name to safe folder characters."""
-        clean = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', name.strip())
-        return clean or "Default"
+        """
+        Sanitizes project name to safe folder characters, strictly preventing
+        directory traversal (e.g., '.', '..', '../foo').
+        """
+        if not name:
+            return "Default"
+
+        # Replace invalid path characters with underscore
+        clean = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', str(name).strip())
+
+        # Strip leading and trailing dots to prevent hidden/special traversal dirs
+        clean = clean.strip(".")
+
+        # Explicitly check against dangerous names or invalid formats
+        if not clean or clean in {".", ".."} or not re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$', clean):
+            return "Default"
+
+        return clean
 
     def _ensure_default_project(self) -> None:
         """Ensures a Default project exists."""
@@ -95,8 +110,19 @@ class ProjectManager:
         return self.active_project
 
     def get_project_dir(self, name: Optional[str] = None) -> Path:
-        """Returns the filesystem path for a project."""
+        """
+        Returns the filesystem path for a project, enforcing strict workspace boundaries.
+        Throws or falls back if a traversal escape attempt is detected.
+        """
         pname = self._sanitize_name(name or self.active_project)
+        resolved_base = self.base_dir.resolve()
+        proj_dir = (self.base_dir / pname).resolve()
+
+        # Second Line of Defense: Verify proj_dir is strictly inside base_dir
+        if resolved_base not in proj_dir.parents and proj_dir != resolved_base:
+            logger.error(f"Workspace escape attempt detected: {name!r} (resolved to {proj_dir}). Falling back to Default.")
+            return self.base_dir / "Default"
+
         return self.base_dir / pname
 
     def create_project(self, name: str, target_ip: str = "", attacker_ip: str = "", port: str = "4444") -> Path:
@@ -152,34 +178,26 @@ class ProjectManager:
         return proj_dir
 
     def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:
-        """Loads state data for a project."""
+        """Loads and semantically validates state data for a project."""
+        from core.validators import validate_project_state
         pname = self._sanitize_name(name or self.active_project)
         state_file = self.get_project_dir(pname) / "project_state.json"
         if state_file.exists():
             try:
                 with open(state_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    raw_data = json.load(f)
+                    return validate_project_state(raw_data, fallback_name=pname)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted project_state.json for {pname}: {e}")
             except (OSError, UnicodeDecodeError) as e:
                 logger.error(f"Error loading state for {pname}: {e}")
 
         # Return default fallback state
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return {
-            "name": pname,
-            "target_ip": "10.10.10.10",
-            "attacker_ip": "10.10.14.5",
-            "port": "4444",
-            "wordlist": "/usr/share/wordlists/dirb/common.txt",
-            "created_at": now_str,
-            "updated_at": now_str,
-            "loot": [],
-            "clipboard_history": []
-        }
+        return validate_project_state(None, fallback_name=pname)
 
     def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> None:
         """Persists state data for a project."""
+        from core.validators import validate_project_state
         pname = self._sanitize_name(name or self.active_project)
         proj_dir = self.get_project_dir(pname)
         try:
@@ -187,6 +205,7 @@ class ProjectManager:
         except OSError as e:
             logger.error(f"Failed to ensure project dir {proj_dir}: {e}", exc_info=True)
 
+        from core.atomic_write import atomic_write_json
         state_file = proj_dir / "project_state.json"
 
         # Merge state from dict and kwargs
@@ -198,10 +217,10 @@ class ProjectManager:
 
         final_state["name"] = pname
         final_state["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        valid_state = validate_project_state(final_state, fallback_name=pname)
 
         try:
-            with open(state_file, "w", encoding="utf-8") as f:
-                json.dump(final_state, f, indent=2, ensure_ascii=False)
+            atomic_write_json(state_file, valid_state, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
         except (TypeError, ValueError) as e:

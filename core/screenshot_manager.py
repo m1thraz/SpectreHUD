@@ -76,8 +76,13 @@ class ScreenshotManager(QObject):
 
             now = datetime.now()
             timestamp_str = now.strftime("%Y%m%d_%H%M%S")
-            filename = f"screenshot_{timestamp_str}.png"
-            filepath = loot_dir / filename
+            filepath = loot_dir / f"screenshot_{timestamp_str}.png"
+            counter = 1
+            while filepath.exists():
+                filepath = loot_dir / f"screenshot_{timestamp_str}_{counter}.png"
+                counter += 1
+
+            filename = filepath.name
 
             # Save PNG to disk
             success = cropped_pixmap.save(str(filepath), "PNG")

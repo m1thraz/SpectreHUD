@@ -94,5 +94,23 @@ class TestReportFileManager(unittest.TestCase):
         bak_path = self.report_mgr.get_backup_path("FreshBox")
         self.assertFalse(bak_path.exists())
 
+    def test_regenerate_fails_closed_if_backup_fails(self):
+        """Invariant: If backup fails, regenerate MUST raise ReportBackupError and NOT overwrite report.md."""
+        from unittest.mock import patch
+        from core.report_file_manager import ReportBackupError
+
+        self.project_mgr.create_project("ProtectedBox")
+        original_text = "# Critical Handcrafted Report"
+        self.report_mgr.save(original_text, "ProtectedBox")
+
+        # Mock backup to simulate a disk failure
+        with patch.object(self.report_mgr, "backup", return_value=False):
+            with self.assertRaises(ReportBackupError):
+                self.report_mgr.regenerate(self.loot_mgr, self.clip_watcher, "ProtectedBox")
+
+        # Invariant check: report.md MUST NOT be modified or destroyed
+        self.assertEqual(self.report_mgr.load("ProtectedBox"), original_text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -23,20 +23,20 @@ class ClipboardWatcher(QObject):
 
     def __init__(self, storage_file: Optional[Path] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
-        if storage_file is None:
-            storage_file = get_default_config_dir() / "clipboard_history.json"
-        self.storage_file = Path(storage_file)
-        try:
-            self.storage_file.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to create directory for clipboard storage {self.storage_file}: {e}", exc_info=True)
+        self.storage_file = Path(storage_file) if storage_file is not None else None
+        if self.storage_file:
+            try:
+                self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                logger.error(f"Failed to create directory for clipboard storage {self.storage_file}: {e}", exc_info=True)
         
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
         self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
         self._current_target_provider = None
         
-        self.load_history()
+        if self.storage_file:
+            self.load_history()
 
     def set_target_provider(self, provider_func) -> None:
         """Sets a callable that returns the active target IP."""
@@ -116,11 +116,15 @@ class ClipboardWatcher(QObject):
         return entry
 
     def load_history(self) -> None:
-        """Loads history from disk."""
+        """Loads and semantically validates history from disk if storage_file is set."""
+        if not self.storage_file:
+            return
+        from core.validators import validate_clipboard_list
         if self.storage_file.exists():
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
-                    self.history = json.load(f)
+                    raw_data = json.load(f)
+                    self.history = validate_clipboard_list(raw_data)
             except json.JSONDecodeError as e:
                 logger.error(f"Corrupted clipboard history JSON at {self.storage_file}: {e}")
                 self.history = []
@@ -131,8 +135,9 @@ class ClipboardWatcher(QObject):
             self.history = []
 
     def set_history(self, history: List[Dict[str, Any]]) -> None:
-        """Replaces history with a new list (e.g. on project switch)."""
-        self.history = history or []
+        """Replaces history with a validated list (e.g. on project switch)."""
+        from core.validators import validate_clipboard_list
+        self.history = validate_clipboard_list(history)
         self._last_copied_text = self.history[0]["text"] if self.history else None
         self.save_history()
 
@@ -141,10 +146,12 @@ class ClipboardWatcher(QObject):
         return self.history
 
     def save_history(self) -> None:
-        """Saves history to disk."""
+        """Saves history to disk atomically if storage_file is configured."""
+        if not self.storage_file:
+            return
+        from core.atomic_write import atomic_write_json
         try:
-            with open(self.storage_file, "w", encoding="utf-8") as f:
-                json.dump(self.history, f, indent=2, ensure_ascii=False)
+            atomic_write_json(self.storage_file, self.history, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving clipboard history to {self.storage_file}: {e}", exc_info=True)
         except (TypeError, ValueError) as e:

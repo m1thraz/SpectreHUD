@@ -278,6 +278,32 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertIn("![Nmap Port Scan Screenshot](loot/screenshot_20260825_120000.png)", report_text)
         self.assertTrue((proj_dir / "loot" / "screenshot_20260825_120000.png").exists())
 
+    # -------------------------------------------------------------------------
+    # Invariant 6: Single Source of Truth - No Global JSON Leakage
+    # -------------------------------------------------------------------------
+    def test_single_source_of_truth_no_global_leakage(self):
+        """
+        Invariant:
+        - project_state.json in the project directory is the SOLE source of truth.
+        - No global 'loot_sessions.json' or 'clipboard_history.json' files are created in the root config directory.
+        """
+        self.project_mgr.create_project("BoxSingleTruth", target_ip="10.10.10.77")
+        self.window._switch_to_project("BoxSingleTruth")
+
+        self.loot_mgr.add_entry(entry_type="note", title="Secret Note", content="confidential", category="recon")
+        self.clip_watcher.add_entry("curl http://10.10.10.77/admin", target_ip="10.10.10.77")
+        self.window._save_current_project_state()
+
+        # Check project state file
+        proj_dir = self.project_mgr.get_project_dir("BoxSingleTruth")
+        state_file = proj_dir / "project_state.json"
+        self.assertTrue(state_file.exists())
+
+        # Verify no global state files exist in config dir
+        config_dir = self.config_mgr.config_dir
+        self.assertFalse((config_dir / "loot_sessions.json").exists())
+        self.assertFalse((config_dir / "clipboard_history.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

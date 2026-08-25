@@ -232,14 +232,27 @@ class ReportEditorTab(QWidget):
             if msg.exec() != QMessageBox.StandardButton.Yes:
                 return
 
-        new_content = self.report_file_manager.regenerate(
-            self.loot_manager, self.clipboard_watcher, project_name=self.current_project
-        )
-        self.editor.blockSignals(True)
-        self.editor.setPlainText(new_content)
-        self.editor.blockSignals(False)
-        self._set_dirty(False)  # regenerate() hat bereits gespeichert
-        self._update_preview()
+        from core.report_file_manager import ReportBackupError
+        try:
+            new_content = self.report_file_manager.regenerate(
+                self.loot_manager, self.clipboard_watcher, project_name=self.current_project
+            )
+            self.editor.blockSignals(True)
+            self.editor.setPlainText(new_content)
+            self.editor.blockSignals(False)
+            self._set_dirty(False)  # regenerate() hat bereits gespeichert
+            self._update_preview()
+        except ReportBackupError as e:
+            logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Backup fehlgeschlagen")
+            msg.setText(
+                "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
+                "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen."
+            )
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
 
     def _on_export_copy_clicked(self) -> None:
         default_path = self.report_file_manager.get_report_path(self.current_project)

@@ -14,6 +14,11 @@ from core.logger import get_logger
 logger = get_logger("report_file_manager")
 
 
+class ReportBackupError(RuntimeError):
+    """Raised when backing up report.md fails before an operation that would overwrite it."""
+    pass
+
+
 class ReportFileManager:
     """Verwaltet das Laden, Speichern und Sichern der projekt-lokalen report.md."""
 
@@ -51,26 +56,25 @@ class ReportFileManager:
             return ""
 
     def save(self, content: str, project_name: Optional[str] = None) -> bool:
-        """Speichert den Inhalt in die report.md des Projekts."""
+        """Speichert den Inhalt atomar in die report.md des Projekts."""
+        from core.atomic_write import atomic_write_text
         path = self.get_report_path(project_name)
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8")
-            return True
+            return atomic_write_text(path, content, encoding="utf-8")
         except OSError as e:
             logger.error(f"Fehler beim Speichern von {path}: {e}", exc_info=True)
             return False
 
     def backup(self, project_name: Optional[str] = None) -> bool:
-        """Kopiert report.md zu report.md.bak, falls report.md existiert."""
+        """Kopiert report.md atomar zu report.md.bak, falls report.md existiert."""
+        from core.atomic_write import atomic_write_text
         report_path = self.get_report_path(project_name)
         backup_path = self.get_backup_path(project_name)
         if not report_path.exists():
             return False
         try:
-            backup_path.parent.mkdir(parents=True, exist_ok=True)
-            backup_path.write_text(report_path.read_text(encoding="utf-8"), encoding="utf-8")
-            return True
+            content = report_path.read_text(encoding="utf-8")
+            return atomic_write_text(backup_path, content, encoding="utf-8")
         except OSError as e:
             logger.error(f"Fehler beim Erstellen des Backups {backup_path}: {e}", exc_info=True)
             return False
@@ -89,13 +93,15 @@ class ReportFileManager:
 
     def regenerate(self, loot_manager, clipboard_watcher, project_name: Optional[str] = None) -> str:
         """
-        Sichert den aktuellen Stand (falls vorhanden) als report.md.bak,
-        generiert einen frischen Report via ReportBuilder, speichert ihn in
-        die report.md und gibt den generierten Inhalt zurück.
+        Sichert den aktuellen Stand (falls vorhanden) als report.md.bak.
+        Fail-Closed: Schlägt das Backup fehl, wird ReportBackupError geworfen
+        und die bestehende report.md keinesfalls überschrieben.
         """
         pname = self._resolve_project_name(project_name)
         if self.exists(pname):
-            self.backup(pname)
+            if not self.backup(pname):
+                logger.error(f"Automatisches Backup von report.md für {pname} fehlgeschlagen. Abbruch der Regenerierung zum Schutz von Benutzerdaten.")
+                raise ReportBackupError(f"Automatisches Backup von report.md für Projekt '{pname}' fehlgeschlagen.")
 
         builder = ReportBuilder(
             loot_manager=loot_manager,
