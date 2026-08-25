@@ -75,6 +75,18 @@ class ReportFileManager:
             logger.error(f"Fehler beim Erstellen des Backups {backup_path}: {e}", exc_info=True)
             return False
 
+    def restore_backup(self, project_name: Optional[str] = None) -> bool:
+        """Stellt report.md aus report.md.bak wieder her, falls das Backup existiert."""
+        backup_path = self.get_backup_path(project_name)
+        if not backup_path.exists():
+            return False
+        try:
+            content = backup_path.read_text(encoding="utf-8")
+            return self.save(content, project_name)
+        except OSError as e:
+            logger.error(f"Fehler beim Wiederherstellen des Backups {backup_path}: {e}", exc_info=True)
+            return False
+
     def regenerate(self, loot_manager, clipboard_watcher, project_name: Optional[str] = None) -> str:
         """
         Sichert den aktuellen Stand (falls vorhanden) als report.md.bak,

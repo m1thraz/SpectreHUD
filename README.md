@@ -15,7 +15,7 @@ SpectreHUD ist ein ultraschnelles, rahmenloses HUD-Overlay auf Basis von PyQt6 �
 - **📁 Isolierte Projekt-Workspaces** — pro Box/Challenge ein eigener Workspace, eigene Loot-Historie, eigener Report.
 - **📝 Session-Loot mit Pentest-Kategorisierung** — Credentials, Hashes, Directories, Flags und Notizen werden nicht nur nach Typ, sondern auch nach Phase einsortiert: Recon, Initial Access, Privilege Escalation, Post-Exploitation, Scripts, Sonstiges. In der Loot-Ansicht gruppiert nach Phase, direkt im Karten-Dialog nachträglich änderbar.
 - **📷 Screenshot-Snipping** — Bereichsauswahl direkt ins Projekt-Loot-Verzeichnis, landet automatisch im Report.
-- **🔴 Privacy-safe Clipboard-Watcher** — startet standardmäßig **pausiert** (`⏸️ REC: Aus`), damit nichts versehentlich mitgeloggt wird. Ein Tastendruck (`Ctrl + P`) schaltet ihn für die aktive Hacking-Session scharf.
+- **🔴 Privacy-conscious, Opt-in Clipboard-Watcher** — startet standardmäßig **pausiert** (`⏸️ REC: Aus`), damit nichts versehentlich mitgeloggt wird. Ein Tastendruck (`Ctrl + P`) schaltet ihn explizit für die aktive Hacking-Session scharf.
 - **📊 Editierbarer Report-Tab mit Live-Vorschau** — der generierte Markdown-Report lässt sich direkt im Fenster weiterschreiben (Splitter-Ansicht: Quelltext links, gerenderte Vorschau rechts), inklusive Backup vor jedem "Neu generieren" und Warnung bei ungespeicherten Änderungen.
 
 ![Befehl hinzufügen](assets/spectrehud_add_command.png)
@@ -74,27 +74,37 @@ Stört dich eine dieser Einschränkungen für deinen Workflow? Gerne ein Issue a
 
 ---
 
-## 🛠️ Installation
+## 🛠️ Installation & Ausführung
+
+### Standard-Installation
 
 ```bash
 # Repository klonen
 git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 
-# Abhängigkeiten installieren
-pip install -r requirements.txt
+# Als Paket installieren
+pip install .
 
-# Alternativ: editierbar mit Dev-Dependencies installieren
-pip install -e ".[dev]"
-
-# Starten
-python main.py
+# Starten über den CLI Entry Point
+spectrehud
 ```
 
-### Tests ausführen
+### Für Entwickler (Editable Mode mit Test-Dependencies)
 
 ```bash
+# Repository klonen
+git clone https://github.com/m1thraz/SpectreHUD.git
+cd SpectreHUD
+
+# Editierbare Installation inklusive pytest
+pip install -e ".[dev]"
+
+# Test Suite ausführen
 python -m pytest
+
+# Starten
+spectrehud
 ```
 
 ---
