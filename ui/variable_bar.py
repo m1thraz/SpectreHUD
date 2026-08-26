@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from typing import Dict, Any
 from core.net_detector import NetDetector
+from core.i18n import t
 
 class VariableBar(QFrame):
     """
@@ -27,53 +28,63 @@ class VariableBar(QFrame):
         layout.setSpacing(10)
 
         # 1. Target IP Input
-        lbl_target = QLabel("Target:")
-        lbl_target.setProperty("class", "VarTagLabel")
+        self.lbl_target = QLabel(t("varbar.target", "Target:"))
+        self.lbl_target.setProperty("class", "VarTagLabel")
         self.txt_target = QLineEdit(str(self.initial_vars.get("target_ip", "10.10.10.10")))
         self.txt_target.setProperty("class", "CompactVarInput")
         self.txt_target.setPlaceholderText("10.10.10.x")
         self.txt_target.setFixedWidth(110)
         self.txt_target.textChanged.connect(self._on_values_changed)
-        layout.addWidget(lbl_target)
+        layout.addWidget(self.lbl_target)
         layout.addWidget(self.txt_target)
 
         # 2. Attacker IP / LHOST Input
-        lbl_attacker = QLabel("LHOST:")
-        lbl_attacker.setProperty("class", "VarTagLabel")
+        self.lbl_attacker = QLabel(t("varbar.attacker", "LHOST:"))
+        self.lbl_attacker.setProperty("class", "VarTagLabel")
         self.txt_attacker = QLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
         self.txt_attacker.setFixedWidth(110)
         self.txt_attacker.textChanged.connect(self._on_values_changed)
-        layout.addWidget(lbl_attacker)
+        layout.addWidget(self.lbl_attacker)
         layout.addWidget(self.txt_attacker)
 
         # 3. Auto-Detect Button
-        self.btn_auto = QPushButton("Auto")
+        self.btn_auto = QPushButton(t("varbar.auto", "Auto"))
         self.btn_auto.setProperty("class", "AutoDetectBtn")
-        self.btn_auto.setToolTip("Auto-Erkennung für tun0 / VPN / lokale IP")
+        self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
         self.btn_auto.clicked.connect(self.auto_detect_ip)
         layout.addWidget(self.btn_auto)
 
         # 4. Port / LPORT Input
-        lbl_port = QLabel("Port:")
-        lbl_port.setProperty("class", "VarTagLabel")
+        self.lbl_port = QLabel(t("varbar.port", "Port:"))
+        self.lbl_port.setProperty("class", "VarTagLabel")
         self.txt_port = QLineEdit(str(self.initial_vars.get("port", "4444")))
         self.txt_port.setProperty("class", "CompactVarInput")
         self.txt_port.setPlaceholderText("4444")
         self.txt_port.setFixedWidth(65)
         self.txt_port.textChanged.connect(self._on_values_changed)
-        layout.addWidget(lbl_port)
+        layout.addWidget(self.lbl_port)
         layout.addWidget(self.txt_port)
 
         layout.addStretch()
 
         # 5. Add Snippet Button
-        self.btn_add = QPushButton("+ Neu")
+        self.btn_add = QPushButton(t("varbar.add_btn", "+ Neu"))
         self.btn_add.setProperty("class", "MiniPrimaryBtn")
-        self.btn_add.setToolTip("Neuen Befehl anlegen (Ctrl+N)")
+        self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
         layout.addWidget(self.btn_add)
+
+    def retranslate(self) -> None:
+        """Updates text elements when language changes."""
+        self.lbl_target.setText(t("varbar.target", "Target:"))
+        self.lbl_attacker.setText(t("varbar.attacker", "LHOST:"))
+        self.lbl_port.setText(t("varbar.port", "Port:"))
+        self.btn_auto.setText(t("varbar.auto", "Auto"))
+        self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
+        self.btn_add.setText(t("varbar.add_btn", "+ Neu"))
+        self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
 
     def auto_detect_ip(self) -> None:
         """Runs the network detector and fills the LHOST if an IP is detected."""
@@ -81,10 +92,10 @@ class VariableBar(QFrame):
         if detected:
             self.txt_attacker.setText(detected)
             self.btn_auto.setText("✓ " + detected)
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText("Auto"))
+            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
         else:
-            self.btn_auto.setText("Keine IP")
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText("Auto"))
+            self.btn_auto.setText(t("varbar.no_ip", "Keine IP"))
+            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
 
     def _on_values_changed(self) -> None:
         self.variables_changed.emit(self.get_variables())

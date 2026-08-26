@@ -24,6 +24,7 @@ from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
 from ui.settings_dialog import SettingsDialog
 from ui.styles import CYBER_DARK_QSS
+from core.i18n import get_i18n, t
 from ui.controllers import (
     WindowFrameManager,
     CheatsheetController,
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
         self.cheatsheet_ctrl.snippets_updated.connect(self._on_data_updated)
         self.loot_ctrl.loot_updated.connect(self._on_loot_data_updated)
         self.history_ctrl.history_updated.connect(self._on_history_data_updated)
+        get_i18n().locale_changed.connect(self._retranslate_ui)
 
         self._init_window()
         self._init_ui()
@@ -390,9 +392,45 @@ class MainWindow(QMainWindow):
             is_top = bool(new_settings["always_on_top"])
             self.chk_always_on_top.setChecked(is_top)
 
+        if "language" in new_settings:
+            self._retranslate_ui(new_settings["language"])
+        else:
+            self._update_footer_status()
+
+    def _retranslate_ui(self, locale_code: str = "") -> None:
+        """Dynamically re-translates all HUD texts and tooltips upon language switch."""
+        self.btn_mode_cheatsheet.setText(t("header.mode_cheatsheet", "Cheatsheet"))
+        self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
+        self.btn_mode_history.setText(t("header.mode_history", "History"))
+        self.btn_mode_report.setText(t("header.mode_report", "Report"))
+        self.btn_screenshot.setText(t("header.snip", "Snip"))
+        self.btn_screenshot.setToolTip(t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)"))
+        self.btn_settings.setText(t("header.opt", "Opt"))
+        self.btn_settings.setToolTip(t("header.opt_tip", "Optionen, Sprache & Hotkeys öffnen (Ctrl+,)"))
+        self.btn_mode_report.setToolTip(t("header.report_tip", "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)"))
+
+        if hasattr(self, "var_bar"):
+            self.var_bar.retranslate()
+
+        self._update_footer_status()
+        self._update_search_placeholder()
+        self.refresh_filter_pills()
+        self.refresh_content()
+
+    def _update_footer_status(self) -> None:
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
-        self.lbl_status.setText(f"{hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
+        self.lbl_status.setText(t("footer.status", "{hotkey}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken", hotkey=hotkey_display))
+        self.chk_always_on_top.setText(t("footer.always_on_top", "Im Vordergrund"))
+        self.chk_always_on_top.setToolTip(t("footer.always_on_top_tip", "Overlay immer über allen anderen Fenstern im Vordergrund halten"))
+
+    def _update_search_placeholder(self) -> None:
+        if self.active_mode == "cheatsheet":
+            self.search_bar.txt_search.setPlaceholderText(t("search.cheatsheet_placeholder", "Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')..."))
+        elif self.active_mode == "loot":
+            self.search_bar.txt_search.setPlaceholderText(t("search.loot_placeholder", "Session Loot, Credentials, Hashes & Notizen durchsuchen..."))
+        elif self.active_mode == "history":
+            self.search_bar.txt_search.setPlaceholderText(t("search.history_placeholder", "Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen..."))
 
     # -------------------------------------------------------------
     # Navigation & Mode Switching
@@ -415,12 +453,7 @@ class MainWindow(QMainWindow):
         self.pills_frame.setVisible(mode != "report")
         self.var_bar.setVisible(mode != "report")
 
-        if mode == "cheatsheet":
-            self.search_bar.txt_search.setPlaceholderText("Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql')...")
-        elif mode == "loot":
-            self.search_bar.txt_search.setPlaceholderText("Search session loot, credentials, hashes & notes...")
-        elif mode == "history":
-            self.search_bar.txt_search.setPlaceholderText("Search clipboard history, commands & outputs...")
+        self._update_search_placeholder()
 
         for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history, self.btn_mode_report]:
             btn.style().unpolish(btn)

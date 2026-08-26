@@ -14,7 +14,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "hotkey": "<ctrl>+<cmd>+<",
     "auto_hide_on_copy": False,
     "always_on_top": True,
-    "theme": "cyber_dark"
+    "theme": "cyber_dark",
+    "language": "de"
 }
 
 def get_default_config_dir() -> Path:

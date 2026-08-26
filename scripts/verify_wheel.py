@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "core/atomic_write.py",
     "core/report_builder.py",
     "core/report_file_manager.py",
+    "core/i18n.py",
     "ui/main_window.py",
     "ui/controllers/__init__.py",
     "ui/controllers/cheatsheet_controller.py",

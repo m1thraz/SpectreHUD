@@ -172,8 +172,11 @@ class LanguageSettingsPage(QWidget):
         row_lang.addWidget(lbl_select, stretch=1)
 
         self.combo_lang = QComboBox()
-        self.combo_lang.addItem("Deutsch (Standard)", "de")
-        self.combo_lang.addItem("English (US) — [Vorbereitet]", "en")
+        curr_lang = self.config.get("language", "de")
+        for i, (code, name) in enumerate([("de", "Deutsch (German)"), ("en", "English (US)")]):
+            self.combo_lang.addItem(name, code)
+            if code == curr_lang:
+                self.combo_lang.setCurrentIndex(i)
         row_lang.addWidget(self.combo_lang, stretch=1)
         card_layout.addLayout(row_lang)
 
@@ -190,11 +193,6 @@ class LanguageSettingsPage(QWidget):
         card_layout.addLayout(row_date)
 
         layout.addWidget(card_lang)
-
-        lbl_info = QLabel("Hinweis: Vollständige mehrsprachige Lokalisierung (i18n) wird im nächsten Schritt integriert.")
-        lbl_info.setStyleSheet("color: #8b949e; font-size: 11px; font-style: italic;")
-        layout.addWidget(lbl_info)
-
         layout.addStretch()
 
     def get_settings(self) -> Dict[str, Any]:
@@ -415,6 +413,10 @@ class SettingsDialog(BaseHudDialog):
         for key, val in all_settings.items():
             self.config.set(key, val)
         self.config.save_config()
+
+        if "language" in all_settings:
+            from core.i18n import set_locale
+            set_locale(all_settings["language"])
 
         self.settings_applied.emit(all_settings)
         self.accept()

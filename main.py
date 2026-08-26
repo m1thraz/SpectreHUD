@@ -66,6 +66,9 @@ def main():
 
     # Initialize Managers
     config_manager = ConfigManager()
+    from core.i18n import set_locale, t
+    set_locale(config_manager.get("language", "de"))
+
     snippet_manager = SnippetManager()
     project_manager = ProjectManager()
     loot_manager = LootManager()
