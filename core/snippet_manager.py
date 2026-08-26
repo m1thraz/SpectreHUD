@@ -1,7 +1,7 @@
 import json
 import uuid
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
@@ -137,47 +137,6 @@ class SnippetManager:
         self.snippets.append(new_snip)
         self.save_user_snippets()
         return new_snip
-
-    def import_snippets_list(self, snippet_list: List[Dict[str, Any]]) -> int:
-        """Appends a list of custom snippets and saves atomically."""
-        if not snippet_list:
-            return 0
-        
-        count = 0
-        for item in snippet_list:
-            if not isinstance(item, dict):
-                continue
-            tmpl = item.get("template") or item.get("command") or ""
-            if not tmpl.strip():
-                continue
-            snip_id = item.get("id") or f"custom_{uuid.uuid4().hex[:8]}"
-            # Avoid duplicate IDs
-            if any(s.get("id") == snip_id for s in self.snippets):
-                snip_id = f"custom_{uuid.uuid4().hex[:8]}"
-            
-            new_snip = {
-                "id": snip_id,
-                "title": item.get("title") or item.get("name") or "Importierter Befehl",
-                "category": item.get("category") or "Custom Notes & Snippets",
-                "category_id": item.get("category_id") or "custom_snippets",
-                "subcategory": item.get("subcategory") or "Allgemein",
-                "description": item.get("description") or "",
-                "template": tmpl,
-                "tags": item.get("tags") if isinstance(item.get("tags"), list) else [],
-                "is_custom": True
-            }
-            self.snippets.append(new_snip)
-            count += 1
-
-        if count > 0:
-            self.save_user_snippets()
-        return count
-
-    def import_from_file(self, file_path: Union[str, Path]) -> int:
-        """Parses and imports snippets from a JSON or Markdown file."""
-        from core.snippet_importer import import_snippets_from_file
-        parsed = import_snippets_from_file(file_path)
-        return self.import_snippets_list(parsed)
 
     def delete_snippet(self, snippet_id: str) -> bool:
         """Deletes a custom snippet by its ID."""

@@ -1,41 +1,28 @@
 from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPlainTextEdit, QPushButton, QComboBox, QWidget, QMessageBox, QFileDialog
+    QLineEdit, QPlainTextEdit, QPushButton, QComboBox, QWidget, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from typing import List, Dict, Any, Optional
 from ui.base_dialog import BaseHudDialog
-from core.snippet_importer import import_snippets_from_file
-from ui.styles import CYBER_DARK_QSS
 
 class AddSnippetDialog(BaseHudDialog):
-    """Dialog to create, save, or bulk-import custom snippets."""
+    """Dialog to create and save a new custom snippet with template variables."""
 
-    def __init__(self, existing_categories: List[Dict[str, Any]], snippet_manager: Optional[Any] = None, parent: Optional[QWidget] = None):
-        super().__init__(title="SPECTRE // BEFEHL HINZUFÜGEN ODER IMPORTIEREN", parent=parent)
-        self.setMinimumWidth(560)
-        self.resize(580, 500)
+    def __init__(self, existing_categories: List[Dict[str, Any]], parent: Optional[QWidget] = None):
+        super().__init__(title="SPECTRE // NEUEN BEFEHL HINZUFÜGEN", parent=parent)
+        self.setMinimumWidth(540)
+        self.resize(560, 480)
         self.existing_categories = existing_categories
-        self.snippet_manager = snippet_manager
-        self.imported_count = 0
         self._init_form()
 
     def _init_form(self) -> None:
         layout = self.body_layout
 
-        # Top Bar with Title and Import Button
-        top_row = QHBoxLayout()
+        # Title
         lbl_title = QLabel("Titel / Name des Befehls:")
         lbl_title.setProperty("class", "FormLabel")
-        top_row.addWidget(lbl_title)
-        top_row.addStretch()
-
-        self.btn_import_file = QPushButton("📂 Cheatsheet-Datei importieren (.json / .md)...")
-        self.btn_import_file.setProperty("class", "SecondaryBtn")
-        self.btn_import_file.setToolTip("Lädt einzelne oder mehrere Befehle aus einer Markdown- (.md) oder JSON-Datei.")
-        self.btn_import_file.clicked.connect(self._on_import_file_clicked)
-        top_row.addWidget(self.btn_import_file)
-        layout.addLayout(top_row)
+        layout.addWidget(lbl_title)
 
         self.txt_title = QLineEdit()
         self.txt_title.setPlaceholderText("z.B. Nmap UDP Scan mit Skripten")
@@ -123,61 +110,6 @@ class AddSnippetDialog(BaseHudDialog):
         btn_layout.addWidget(self.btn_save)
 
         layout.addLayout(btn_layout)
-
-    def _on_import_file_clicked(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Cheatsheet-Datei auswählen (.md / .json)",
-            "",
-            "Cheatsheets (*.md *.json *.txt);;Markdown (*.md *.txt);;JSON (*.json);;Alle Dateien (*.*)"
-        )
-        if not file_path:
-            return
-
-        snippets = import_snippets_from_file(file_path)
-        if not snippets:
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Keine Befehle gefunden")
-            msg.setText("In der ausgewählten Datei konnten keine gültigen Befehle oder Code-Blöcke gefunden werden.")
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.setStyleSheet(CYBER_DARK_QSS)
-            msg.exec()
-            return
-
-        if len(snippets) == 1:
-            # Populate form with the single snippet
-            s = snippets[0]
-            self.txt_title.setText(s.get("title", ""))
-            self.txt_subcategory.setText(s.get("subcategory", "Allgemein"))
-            self.txt_template.setPlainText(s.get("template", ""))
-            self.txt_description.setText(s.get("description", ""))
-            self.txt_tags.setText(", ".join(s.get("tags", [])))
-        else:
-            # Bulk import dialog
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Massen-Import")
-            msg.setText(
-                f"In der Datei wurden **{len(snippets)} Befehle** gefunden.\n\n"
-                f"Möchtest du alle {len(snippets)} Befehle direkt in deine Snippet-Datenbank importieren?"
-            )
-            msg.setIcon(QMessageBox.Icon.Question)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            msg.setStyleSheet(CYBER_DARK_QSS)
-
-            if msg.exec() == QMessageBox.StandardButton.Yes:
-                if self.snippet_manager:
-                    count = self.snippet_manager.import_snippets_list(snippets)
-                    self.imported_count = count
-                    self.accept()
-                else:
-                    # Fill the first one and notify
-                    s = snippets[0]
-                    self.txt_title.setText(s.get("title", ""))
-                    self.txt_subcategory.setText(s.get("subcategory", "Allgemein"))
-                    self.txt_template.setPlainText(s.get("template", ""))
-                    self.txt_description.setText(s.get("description", ""))
-                    self.txt_tags.setText(", ".join(s.get("tags", [])))
 
     def _on_save(self) -> None:
         if not self.txt_title.text().strip():

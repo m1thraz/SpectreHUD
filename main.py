@@ -54,22 +54,9 @@ def main():
         print("SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD")
         print("Usage: spectrehud [OPTIONS]")
         print("\nOptions:")
-        print("  -h, --help                      Show this message and exit")
-        print("  -v, --version                   Show version and exit")
-        print("  --import-snippets <file.md/.json> Import cheatsheet snippets into user database")
+        print("  -h, --help     Show this message and exit")
+        print("  -v, --version  Show version and exit")
         return 0
-
-    if "--import-snippets" in sys.argv:
-        idx = sys.argv.index("--import-snippets")
-        if idx + 1 < len(sys.argv):
-            import_file = Path(sys.argv[idx + 1])
-            snippet_manager = SnippetManager()
-            count = snippet_manager.import_from_file(import_file)
-            print(f"[+] Successfully imported {count} snippets from '{import_file}' into user database.")
-            return 0
-        else:
-            print("Error: --import-snippets requires a file path argument (.json or .md)")
-            return 1
 
     logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)
