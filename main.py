@@ -103,6 +103,10 @@ def main():
 
     tray_menu.addSeparator()
 
+    act_options = QAction("Optionen & Hotkeys... (Ctrl+,)", tray_menu)
+    act_options.triggered.connect(window.open_settings_dialog)
+    tray_menu.addAction(act_options)
+
     act_quit = QAction("Beenden (Strg+Super+Q)", tray_menu)
     act_quit.triggered.connect(app.quit)
     tray_menu.addAction(act_quit)

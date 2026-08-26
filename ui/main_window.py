@@ -22,6 +22,7 @@ from core.logger import get_logger
 
 from ui.variable_bar import VariableBar
 from ui.search_bar import SearchBar
+from ui.settings_dialog import SettingsDialog
 from ui.styles import CYBER_DARK_QSS
 from ui.controllers import (
     WindowFrameManager,
@@ -247,6 +248,13 @@ class MainWindow(QMainWindow):
         self.btn_rec_indicator.clicked.connect(self._toggle_pause_history)
         header_layout.addWidget(self.btn_rec_indicator)
 
+        # Settings & Hotkeys Button
+        self.btn_settings = QPushButton("Opt")
+        self.btn_settings.setProperty("class", "ScreenshotBtn")
+        self.btn_settings.setToolTip("Optionen, Sprache & Hotkeys öffnen (Ctrl+,)")
+        self.btn_settings.clicked.connect(self.open_settings_dialog)
+        header_layout.addWidget(self.btn_settings)
+
         # Close button in HUD header
         btn_close = QPushButton("✕")
         btn_close.setProperty("class", "DangerBtn")
@@ -363,11 +371,28 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+S"), self, activated=self.trigger_screenshot)
         QShortcut(QKeySequence("Ctrl+P"), self, activated=self._toggle_pause_history)
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=QApplication.quit)
+        QShortcut(QKeySequence("Ctrl+,"), self, activated=self.open_settings_dialog)
         QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
         QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.switch_mode("report"))
+
+    def open_settings_dialog(self) -> None:
+        """Opens the modular settings and options dialog."""
+        dlg = SettingsDialog(self.config, parent=self)
+        dlg.settings_applied.connect(self._on_settings_applied)
+        dlg.exec()
+
+    def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
+        """Applies updated configuration settings at runtime."""
+        if "always_on_top" in new_settings:
+            is_top = bool(new_settings["always_on_top"])
+            self.chk_always_on_top.setChecked(is_top)
+
+        hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
+        hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
+        self.lbl_status.setText(f"{hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
 
     # -------------------------------------------------------------
     # Navigation & Mode Switching

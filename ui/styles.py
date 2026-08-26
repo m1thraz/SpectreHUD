@@ -763,6 +763,68 @@ QPushButton.BrowseBtn:hover {
     border-color: #00e5ff;
 }
 
+/* Settings & Options Dialog Styles */
+QFrame#SettingsSidebar {
+    background-color: rgba(18, 22, 29, 0.9);
+    border-right: 1px solid rgba(48, 54, 61, 0.6);
+    padding: 10px 8px;
+}
+
+QPushButton.SettingsNavBtn {
+    background-color: transparent;
+    color: #8b949e;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+QPushButton.SettingsNavBtn:hover {
+    background-color: rgba(33, 38, 45, 0.8);
+    color: #f0f6fc;
+}
+
+QPushButton.SettingsNavBtnActive {
+    background-color: rgba(31, 41, 61, 0.9);
+    color: #00e5ff;
+    border: 1px solid rgba(0, 229, 255, 0.5);
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel.SettingsSectionTitle {
+    color: #00e5ff;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+QFrame.SettingsCard {
+    background-color: rgba(22, 27, 34, 0.7);
+    border: 1px solid rgba(48, 54, 61, 0.6);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+
+QLabel.ShortcutKeyBadge {
+    background-color: rgba(31, 41, 61, 0.9);
+    color: #58a6ff;
+    border: 1px solid rgba(56, 139, 253, 0.4);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: bold;
+}
+
 /* Dialogs & Message Boxes Fallback */
 QDialog, QMessageBox {
     background-color: #161b22;
