@@ -1,114 +1,120 @@
 # 👻 SpectreHUD
 
-> **Spotlight-artiges Cheatsheet- & Session-Loot-Overlay für CTF-Challenges und Pentest-Labs.**
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/GUI-PyQt6-green?style=for-the-badge&logo=qt" alt="PyQt6">
+  <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange?style=for-the-badge" alt="Windows & Linux">
+  <img src="https://img.shields.io/badge/Focus-TryHackMe%20%7C%20HTB%20%7C%20CTFs-red?style=for-the-badge" alt="CTF Focus">
+  <img src="https://img.shields.io/badge/i18n-English%20%7C%20German-purple?style=for-the-badge" alt="i18n English & German">
+  <img src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" alt="MIT License">
+</p>
 
-SpectreHUD ist ein ultraschnelles, rahmenloses HUD-Overlay auf Basis von PyQt6 — per globalem Hotkey über jedem Fenster (Terminal, Browser, VM-Konsole) aufrufbar. Es bündelt Cheatsheet-Suche mit Variablen-Substitution, automatisches Clipboard-Logging (opt-in), Screenshot-Snipping, eine nach Pentest-Phasen kategorisierte Loot-Verwaltung und einen direkt im Fenster editierbaren Markdown-Report mit Live-Vorschau — sodass am Ende der Session ein fast fertiger Write-up steht, kein externer Editor nötig.
+> **Tactical Spotlight-style cheatsheet, session loot, and live report HUD for CTFs and penetration testing labs.**
 
-![SpectreHUD Hauptansicht](assets/spectrehud_main.png)
+SpectreHUD is an ultra-fast, frameless HUD overlay built on PyQt6 — accessible anywhere via a global hotkey over terminals, browsers, and VM windows. It unifies instant cheatsheet search with dynamic variable replacement, an opt-in clipboard logger, native screenshot snipping, phase-categorized session loot management, and a live-preview editable Markdown report generator. At the end of your session, you get an almost finished write-up without needing an external editor.
+
+![SpectreHUD Main View](assets/spectrehud_main.png)
 
 ---
 
 ## 🚀 Features
 
-- **⚡ Sofort-Suche per Hotkey** — `Strg + Super + <` holt das HUD über jedem beliebigen Fenster nach vorne, egal ob Terminal, Browser oder VM-Fenster gerade aktiv ist.
-- **🎯 Dynamische Variablen** — `{{TARGET_IP}}`, `{{ATTACKER_IP}}`, `{{PORT}}`, `{{WORDLIST}}` werden live in alle Cheatsheet-Befehle eingesetzt, kein manuelles Copy-Paste-Anpassen mehr.
-- **📁 Isolierte Projekt-Workspaces** — pro Box/Challenge ein eigener Workspace, eigene Loot-Historie, eigener Report.
-- **📝 Session-Loot mit Pentest-Kategorisierung** — Credentials, Hashes, Directories, Flags und Notizen werden nicht nur nach Typ, sondern auch nach Phase einsortiert: Recon, Initial Access, Privilege Escalation, Post-Exploitation, Scripts, Sonstiges. In der Loot-Ansicht gruppiert nach Phase, direkt im Karten-Dialog nachträglich änderbar.
-- **📷 Screenshot-Snipping** — Bereichsauswahl direkt ins Projekt-Loot-Verzeichnis, landet automatisch im Report.
-- **🔴 Privacy-conscious, Opt-in Clipboard-Watcher** — startet standardmäßig **pausiert** (`⏸️ REC: Aus`), damit nichts versehentlich mitgeloggt wird. Ein Tastendruck (`Ctrl + P`) schaltet ihn explizit für die aktive Hacking-Session scharf.
-- **📊 Editierbarer Report-Tab mit Live-Vorschau** — der generierte Markdown-Report lässt sich direkt im Fenster weiterschreiben (Splitter-Ansicht: Quelltext links, gerenderte Vorschau rechts), inklusive Backup vor jedem "Neu generieren" und Warnung bei ungespeicherten Änderungen.
+- **⚡ Instant Search via Global Hotkey** — `Ctrl + Super + <` (customizable) summons the HUD instantly over any active window (terminals, browsers, or VM consoles).
+- **🎯 Dynamic Variables** — `{{TARGET_IP}}`, `{{ATTACKER_IP}}`, `{{PORT}}`, `{{WORDLIST}}` are replaced live across all cheatsheet commands. No more tedious manual copy-paste editing.
+- **📁 Multi-Location Workspaces & Project Registry** — Create isolated project workspaces anywhere on your filesystem (default directory or custom paths like `D:\CTF\BoxName`). SpectreHUD automatically indexes and remembers project locations for quick 1-click switching and imports.
+- **📝 Session Loot with Pentest Phase Categorization** — Credentials, hashes, directories, flags, and notes are classified by type and phase: *Recon, Initial Access, Privilege Escalation, Post-Exploitation, Custom Scripts, and Misc*.
+- **📷 Native Screenshot Snipping** — Region capture tool saves snippets directly into the active project's `loot/` directory and embeds them automatically into your report.
+- **🔴 Privacy-Conscious, Opt-in Clipboard Logger** — Starts **paused** by default (`REC: Off`) to protect your credentials. A single shortcut (`Ctrl + P`) or click activates logging exclusively for your active hacking session.
+- **📊 Live Markdown Report Editor** — Edit the generated pentest report directly inside the app (split-view: markdown editor on the left, live HTML preview on the right), with automatic backup before regeneration and unsaved change detection.
+- **🌐 Full Internationalization (i18n)** — Switch instantly between **English (US)** and **German (Standard)** without restarting the application.
+- **⚙️ Modular Settings & Hotkey Configuration** — Customize global toggle shortcuts, snip tool bindings, always-on-top behavior, and default variables in a cyber glassmorphism dialog (`Ctrl + ,`).
 
-![Befehl hinzufügen](assets/spectrehud_add_command.png)
-
----
-
-## 📊 Phasenbasierter Report-Workflow
-
-Der Report-Generator (`core/report_builder.py`) sortiert den gesamten gesammelten Loot automatisch in sechs feste Sektionen ein:
-
-1. **🔍 Reconnaissance & Enumeration** — offene Ports, Service-Banner, gefundene URLs/Endpunkte
-2. **🚪 Initial Access & Exploitation** — Credentials, Login-Nachweise, erster Fuß in der Tür
-3. **👑 Privilege Escalation** — SUID-Binaries, geknackte Hashes, root/system-Flags
-4. **🌐 Post-Exploitation & Lateral Movement** — interne Subnetze, Pivoting-Notizen, weitere Host-Creds
-5. **📜 Custom Scripts & PoCs** — Exploits, eigene Automatisierung, Payloads
-6. **📝 Sonstiges & Unkategorisiert** — alles, was sonst nirgends reinpasst
-
-Jede Sektion endet mit einem Freitext-Platzhalter zum handschriftlichen Ausformulieren, danach folgen der chronologische Terminal-Verlauf und eine Executive-Summary-Vorlage. Wer den Report direkt weiterbearbeiten will, macht das im **Report-Tab** (`Strg+4`) statt in einem externen Editor — Speichern mit `Strg+Umschalt+S`, "Neu aus Loot generieren" sichert den bisherigen Stand automatisch als `report.md.bak`, bevor er überschrieben wird.
+![Add Command Dialog](assets/spectrehud_add_command.png)
 
 ---
 
-## ⌨️ Tastenkürzel
+## 📊 Phase-Based Report Workflow
 
-| Kürzel | Aktion |
-|---|---|
-| `Strg + Super + <` | HUD global ein-/ausblenden (funktioniert über jedem Fenster) |
-| `Strg + Super + X` | Screenshot-Snipping starten (global) |
-| `Strg + Super + Q` | SpectreHUD komplett beenden (global) |
-| `Esc` | HUD verstecken |
-| `Tab` | Zwischen Cheatsheet / Loot / History durchschalten |
-| `Strg + 1` / `2` / `3` / `4` | Direkt zu Cheatsheet / Loot / History / Report springen |
-| `Strg + F` | Suchleiste fokussieren |
-| `Strg + N` | Neuen Loot-Eintrag anlegen |
-| `Strg + S` | Screenshot aufnehmen |
-| `Strg + P` | Clipboard-Logger pausieren/fortsetzen |
-| `Strg + Umschalt + S` | Report-Tab: Änderungen speichern |
+The automated report generator (`core/report_builder.py`) organizes session data into six standard penetration testing phases:
+
+1. **🔍 Reconnaissance & Enumeration** — Open ports, service banners, discovered URLs, and endpoints.
+2. **🚪 Initial Access & Exploitation** — Discovered credentials, login proof, and foothold vectors.
+3. **👑 Privilege Escalation** — SUID binaries, cracked hashes, root/system flags.
+4. **🌐 Post-Exploitation & Lateral Movement** — Internal subnets, pivoting notes, additional host accounts.
+5. **📜 Custom Scripts & PoCs** — Custom exploits, automation scripts, and payloads.
+6. **📝 Notes & Uncategorized** — Miscellaneous observations and takeaways.
+
+Each phase includes freeform text areas for explanations, followed by a chronological terminal output log and an Executive Summary template. Edit your report in the **Report Tab** (`Ctrl + 4`) and save with `Ctrl + S`.
 
 ---
 
-## 🔒 Sicherheit & Datenschutz
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Scope | Action |
+|---|---|---|
+| `Ctrl + Super + <` | Global | Toggle SpectreHUD overlay visibility |
+| `Ctrl + Super + X` | Global | Start region screenshot snip tool |
+| `Ctrl + Super + Q` | Global | Quit SpectreHUD completely |
+| `Esc` | In-App | Hide HUD overlay / Close modal dialog |
+| `Tab` | In-App | Cycle between Cheatsheet, Loot, and History tabs |
+| `Ctrl + 1` / `2` / `3` / `4` | In-App | Switch directly to Cheatsheet / Loot / History / Report |
+| `Ctrl + F` | In-App | Focus spotlight search input |
+| `Ctrl + N` | In-App | Create a new command snippet |
+| `Ctrl + S` | In-App | Take region screenshot (or Save Report in Report tab) |
+| `Ctrl + P` | In-App | Toggle clipboard logger (REC: ON / REC: Paused) |
+| `Ctrl + ,` | In-App | Open Settings & Hotkey Options |
+
+---
+
+## 🔒 Security & Privacy Notice
 
 > [!WARNING]
-> SpectreHUD ist als lokales Hilfsmittel für CTF-Challenges und autorisierte Pentest-Labs gedacht — nicht für den Einsatz gegen Produktivsysteme ohne Freigabe. Session-Loot und Clipboard-Verlauf werden **unverschlüsselt** als JSON im lokalen Projektordner abgelegt, damit sie sich leicht exportieren und einsehen lassen. Leg dort keine echten Produktiv-Zugangsdaten ab, und lass den Clipboard-Logger außerhalb aktiver Sessions pausiert (`Strg + P`).
+> SpectreHUD is intended as a local productivity tool for CTF challenges, training laboratories, and authorized penetration testing engagements. Session loot and clipboard logs are stored in **plaintext JSON** inside your local project folders for transparent inspection and easy export. Do not store production secrets without authorization, and keep the clipboard recorder paused outside active sessions (`Ctrl + P`).
 
 ---
 
-## 🧭 Bekannte Einschränkungen
+## 🧭 Known Limitations
 
-SpectreHUD ist primär für meinen eigenen Workflow gebaut (Single-Monitor, Windows/Linux). Folgendes ist bekannt, aber aktuell nicht behoben:
-
-- **Screenshot erfasst nur den primären Monitor.** Bei Multi-Monitor-Setups wird alles auf sekundären Bildschirmen abgeschnitten.
-- **macOS ist ungetestet.** Der globale Hotkey-Listener braucht dort die Bedienungshilfen-Berechtigung; ohne sie registriert sich der Hotkey lautlos nicht (Fallback: die Tray-Icon-Menüeinträge funktionieren trotzdem).
-- **`Strg + Super` kann mit Fenstermanager-Shortcuts kollidieren**, je nach Linux-Desktopumgebung.
-
-Stört dich eine dieser Einschränkungen für deinen Workflow? Gerne ein Issue aufmachen — schau ich mir an.
+- **Single-Monitor Region Snipping:** The screenshot snipping tool captures the primary monitor.
+- **Wayland / Linux Hotkeys:** Global key listeners on Wayland require appropriate permissions or fallback to the system tray context menu.
 
 ---
 
-## 🛠️ Installation & Ausführung
+## 🛠️ Installation & Execution
 
-### Standard-Installation
+### Standard Installation
 
 ```bash
-# Repository klonen
+# Clone the repository
 git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 
-# Als Paket installieren
+# Install package
 pip install .
 
-# Starten über den CLI Entry Point
+# Launch via CLI entry point
 spectrehud
 ```
 
-### Für Entwickler (Editable Mode mit Test-Dependencies)
+### Developer Mode (Editable Install with Tests)
 
 ```bash
-# Repository klonen
+# Clone repository
 git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 
-# Editierbare Installation inklusive pytest
-pip install -e ".[dev]"
+# Install in editable mode
+pip install -e .
 
-# Test Suite ausführen
-python -m pytest
+# Run test suite
+python -m unittest discover tests
 
-# Starten
-spectrehud
+# Build distribution wheel
+pip wheel . --no-deps -w dist/
 ```
 
 ---
 
-## 📄 Lizenz
+## 📄 License
 
-Open Source unter der [MIT License](LICENSE).
+SpectreHUD is open source and licensed under the [MIT License](LICENSE).

@@ -282,6 +282,21 @@ class GeneralSettingsPage(QWidget):
         row_w.addWidget(btn_browse_w)
         d_layout.addLayout(row_w)
 
+        # Default Workspace Directory
+        lbl_ws = QLabel("Standard-Projektordner / Workspace:")
+        lbl_ws.setProperty("class", "FormLabel")
+        d_layout.addWidget(lbl_ws)
+
+        row_ws = QHBoxLayout()
+        self.txt_workspace = QLineEdit(self.config.get("workspace_dir", str(Path.home() / "spectre_projects")))
+        row_ws.addWidget(self.txt_workspace, stretch=1)
+
+        btn_browse_ws = QPushButton("Durchsuchen...")
+        btn_browse_ws.setProperty("class", "BrowseBtn")
+        btn_browse_ws.clicked.connect(self._on_browse_workspace)
+        row_ws.addWidget(btn_browse_ws)
+        d_layout.addLayout(row_ws)
+
         layout.addWidget(card_defaults)
         layout.addStretch()
 
@@ -290,13 +305,19 @@ class GeneralSettingsPage(QWidget):
         if file_path:
             self.txt_wordlist.setText(file_path)
 
+    def _on_browse_workspace(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "Workspace-Verzeichnis auswählen", self.txt_workspace.text().strip())
+        if folder:
+            self.txt_workspace.setText(folder)
+
     def get_settings(self) -> Dict[str, Any]:
         return {
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
             "target_ip": self.txt_default_target.text().strip(),
             "attacker_ip": self.txt_default_attacker.text().strip(),
-            "wordlist": self.txt_wordlist.text().strip()
+            "wordlist": self.txt_wordlist.text().strip(),
+            "workspace_dir": self.txt_workspace.text().strip()
         }
 
 

@@ -34,6 +34,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Project Menu
         "project.new_project": "+ Neues Projekt / Box erstellen...",
+        "project.import_folder": "Projekt-Ordner importieren / öffnen...",
+        "project.import_title": "Projekt-Ordner auswählen",
         "project.open_folder": "Projektordner im Explorer öffnen",
 
         # Variable Bar
@@ -201,6 +203,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Project Menu
         "project.new_project": "+ Create new project / box...",
+        "project.import_folder": "Import / open existing project folder...",
+        "project.import_title": "Select Project Folder",
         "project.open_folder": "Open project folder in file manager",
 
         # Variable Bar

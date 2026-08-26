@@ -15,7 +15,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "auto_hide_on_copy": False,
     "always_on_top": True,
     "theme": "cyber_dark",
-    "language": "de"
+    "language": "de",
+    "workspace_dir": str(Path.home() / "spectre_projects")
 }
 
 def get_default_config_dir() -> Path:

@@ -51,10 +51,16 @@ def get_default_projects_dir() -> Path:
         return Path(env_dir)
     return Path.home() / "spectre_projects"
 
-class ProjectManager:
-    """Manages isolated CTF/Pentest workspaces on the filesystem."""
+def get_default_config_dir() -> Path:
+    env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
+    if env_dir:
+        return Path(env_dir)
+    return Path.home() / ".ctf_cheatsheet_widget"
 
-    def __init__(self, base_dir: Optional[Path] = None):
+class ProjectManager:
+    """Manages isolated CTF/Pentest workspaces across default and custom directory locations."""
+
+    def __init__(self, base_dir: Optional[Path] = None, config_dir: Optional[Path] = None):
         if base_dir is None:
             base_dir = get_default_projects_dir()
         self.base_dir = Path(base_dir)
@@ -63,8 +69,37 @@ class ProjectManager:
         except OSError as e:
             logger.error(f"Failed to create base projects directory {self.base_dir}: {e}", exc_info=True)
         
+        self.config_dir = Path(config_dir) if config_dir is not None else get_default_config_dir()
+        try:
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+
+        self.registry_file = self.config_dir / "projects_registry.json"
+        self.registry: Dict[str, str] = self._load_registry()
+
         self.active_project = "Default"
         self._ensure_default_project()
+
+    def _load_registry(self) -> Dict[str, str]:
+        """Loads registered project paths from projects_registry.json."""
+        if self.registry_file.exists():
+            try:
+                with open(self.registry_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return {str(k): str(v) for k, v in data.items()}
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(f"Could not load projects registry from {self.registry_file}: {e}")
+        return {}
+
+    def _save_registry(self) -> None:
+        """Persists the project registry mapping to disk."""
+        try:
+            from core.atomic_write import atomic_write_json
+            atomic_write_json(self.registry_file, self.registry, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Failed to save projects registry to {self.registry_file}: {e}")
 
     def _sanitize_name(self, name: str) -> str:
         """
@@ -87,23 +122,43 @@ class ProjectManager:
         return clean
 
     def _ensure_default_project(self) -> None:
-        """Ensures a Default project exists."""
+        """Ensures a Default project exists and is registered."""
         default_dir = self.base_dir / "Default"
         if not default_dir.exists():
             self.create_project("Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5")
+        else:
+            self.registry["Default"] = str(default_dir.resolve())
+            self._save_registry()
 
     def list_projects(self) -> List[str]:
-        """Returns list of all available project directory names."""
-        if not self.base_dir.exists():
-            return ["Default"]
-        projects = []
-        try:
-            for p in self.base_dir.iterdir():
-                if p.is_dir() and not p.name.startswith("."):
-                    projects.append(p.name)
-        except OSError as e:
-            logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
-        return sorted(projects) if projects else ["Default"]
+        """Returns list of all available project directory names across base_dir and custom locations."""
+        projects = set()
+        
+        # 1. Base directory projects
+        if self.base_dir.exists():
+            try:
+                for p in self.base_dir.iterdir():
+                    if p.is_dir() and not p.name.startswith("."):
+                        clean = self._sanitize_name(p.name)
+                        projects.add(clean)
+                        if clean not in self.registry:
+                            self.registry[clean] = str(p.resolve())
+            except OSError as e:
+                logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
+
+        # 2. Registered projects (filtered by existence on disk)
+        for name, path_str in list(self.registry.items()):
+            try:
+                p = Path(path_str)
+                if p.exists() and p.is_dir():
+                    projects.add(name)
+            except OSError:
+                pass
+
+        if not projects:
+            projects.add("Default")
+
+        return sorted(list(projects))
 
     def get_active_project(self) -> str:
         """Returns the name of the currently active project."""
@@ -111,27 +166,43 @@ class ProjectManager:
 
     def get_project_dir(self, name: Optional[str] = None) -> Path:
         """
-        Returns the filesystem path for a project, enforcing strict workspace boundaries.
-        Throws or falls back if a traversal escape attempt is detected.
+        Returns the filesystem path for a project.
+        Checks registered paths first, then falls back to base_dir with boundary validation.
         """
         pname = self._sanitize_name(name or self.active_project)
+        
+        # 1. Check registry
+        if pname in self.registry:
+            reg_path = Path(self.registry[pname]).resolve()
+            if reg_path.exists() and reg_path.is_dir():
+                return reg_path
+
+        # 2. Base directory fallback with boundary defense
         resolved_base = self.base_dir.resolve()
         proj_dir = (self.base_dir / pname).resolve()
 
-        # Second Line of Defense: Verify proj_dir is strictly inside base_dir
         if resolved_base not in proj_dir.parents and proj_dir != resolved_base:
             logger.error(f"Workspace escape attempt detected: {name!r} (resolved to {proj_dir}). Falling back to Default.")
             return self.base_dir / "Default"
 
         return self.base_dir / pname
 
-    def create_project(self, name: str, target_ip: str = "", attacker_ip: str = "", port: str = "4444") -> Path:
+    def create_project(
+        self, 
+        name: str, 
+        target_ip: str = "", 
+        attacker_ip: str = "", 
+        port: str = "4444",
+        base_dir: Optional[Path] = None
+    ) -> Path:
         """
         Creates an isolated project workspace with subfolders (recon, exploit, loot),
-        notes.md, and project_state.json.
+        notes.md, and project_state.json, and registers its path.
         """
         clean_name = self._sanitize_name(name)
-        proj_dir = self.base_dir / clean_name
+        target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
+        proj_dir = (target_base / clean_name).resolve()
+
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)
             (proj_dir / "recon").mkdir(exist_ok=True)
@@ -175,7 +246,53 @@ class ProjectManager:
             except (OSError, TypeError, ValueError) as e:
                 logger.error(f"Failed to write initial project_state.json for {clean_name}: {e}")
 
+        # Register project location
+        self.registry[clean_name] = str(proj_dir)
+        self._save_registry()
+
         return proj_dir
+
+    def import_project_folder(self, folder_path: Path | str) -> Optional[str]:
+        """
+        Imports and registers an existing directory as a project workspace.
+        Ensures necessary subfolders and metadata files exist.
+        """
+        try:
+            target_path = Path(folder_path).resolve()
+            if not target_path.exists() or not target_path.is_dir():
+                logger.warning(f"Cannot import non-existing or non-directory project folder: {folder_path}")
+                return None
+
+            clean_name = self._sanitize_name(target_path.name)
+            (target_path / "recon").mkdir(exist_ok=True)
+            (target_path / "exploit").mkdir(exist_ok=True)
+            (target_path / "loot").mkdir(exist_ok=True)
+
+            state_file = target_path / "project_state.json"
+            if not state_file.exists():
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                initial_state = {
+                    "name": clean_name,
+                    "target_ip": "10.10.10.10",
+                    "attacker_ip": "10.10.14.5",
+                    "port": "4444",
+                    "wordlist": "/usr/share/wordlists/dirb/common.txt",
+                    "created_at": now_str,
+                    "updated_at": now_str,
+                    "loot": [],
+                    "clipboard_history": []
+                }
+                with open(state_file, "w", encoding="utf-8") as f:
+                    json.dump(initial_state, f, indent=2, ensure_ascii=False)
+
+            self.registry[clean_name] = str(target_path)
+            self._save_registry()
+            self.active_project = clean_name
+            logger.info(f"Successfully imported project '{clean_name}' from {target_path}")
+            return clean_name
+        except Exception as e:
+            logger.error(f"Failed to import project folder {folder_path}: {e}", exc_info=True)
+            return None
 
     def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:
         """Loads and semantically validates state data for a project."""

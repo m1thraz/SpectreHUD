@@ -95,6 +95,40 @@ class TestProjectManager(unittest.TestCase):
                 f"Project directory for {name!r} escaped workspace: {proj_dir}"
             )
 
+    def test_create_project_with_custom_base_dir(self):
+        with tempfile.TemporaryDirectory() as custom_dir:
+            custom_path = Path(custom_dir)
+            proj_dir = self.pm.create_project("ExternalBox", target_ip="192.168.1.50", base_dir=custom_path)
+            
+            self.assertEqual(proj_dir, (custom_path / "ExternalBox").resolve())
+            self.assertTrue((proj_dir / "notes.md").exists())
+            self.assertTrue((proj_dir / "project_state.json").exists())
+            self.assertIn("ExternalBox", self.pm.list_projects())
+            self.assertEqual(self.pm.get_project_dir("ExternalBox"), proj_dir)
+
+    def test_project_registry_persistence(self):
+        with tempfile.TemporaryDirectory() as custom_dir:
+            custom_path = Path(custom_dir)
+            self.pm.create_project("PersistentBox", target_ip="10.10.10.99", base_dir=custom_path)
+            
+            # Create a second ProjectManager instance pointing to the same config/base dir
+            pm2 = ProjectManager(base_dir=self.base_dir, config_dir=self.pm.config_dir)
+            self.assertIn("PersistentBox", pm2.list_projects())
+            self.assertEqual(pm2.get_project_dir("PersistentBox"), (custom_path / "PersistentBox").resolve())
+
+    def test_import_project_folder(self):
+        with tempfile.TemporaryDirectory() as external_dir:
+            ext_path = Path(external_dir) / "ImportedBox"
+            ext_path.mkdir()
+            (ext_path / "random_file.txt").write_text("hello", encoding="utf-8")
+            
+            imported_name = self.pm.import_project_folder(ext_path)
+            self.assertEqual(imported_name, "ImportedBox")
+            self.assertEqual(self.pm.get_active_project(), "ImportedBox")
+            self.assertTrue((ext_path / "loot").exists())
+            self.assertTrue((ext_path / "project_state.json").exists())
+            self.assertIn("ImportedBox", self.pm.list_projects())
+
 
 if __name__ == "__main__":
     unittest.main()
