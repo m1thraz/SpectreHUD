@@ -89,7 +89,7 @@ class ProjectManager:
                     data = json.load(f)
                     if isinstance(data, dict):
                         return {str(k): str(v) for k, v in data.items()}
-            except (json.JSONDecodeError, OSError) as e:
+            except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as e:
                 logger.warning(f"Could not load projects registry from {self.registry_file}: {e}")
         return {}
 
@@ -304,7 +304,7 @@ class ProjectManager:
                 with open(state_file, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
                     return validate_project_state(raw_data, fallback_name=pname)
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted project_state.json for {pname}: {e}")
             except (OSError, UnicodeDecodeError) as e:
                 logger.error(f"Error loading state for {pname}: {e}")

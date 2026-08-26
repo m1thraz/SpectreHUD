@@ -216,6 +216,63 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertFalse((self.config_dir / "loot_sessions.json").exists())
         self.assertFalse((self.config_dir / "clipboard_history.json").exists())
 
+    # -------------------------------------------------------------------------
+    # 6. P5: Deeply Nested JSON Parsing & RecursionError Resilience
+    # -------------------------------------------------------------------------
+    def test_deeply_nested_json_recursion_dos_protection(self):
+        """
+        Adversarial: Deeply nested JSON files (e.g. [[[[...]]]] or {{{{...}}}} with depth > 5000)
+        must NEVER cause unhandled RecursionError crashes during project import, state loading,
+        loot loading, clipboard loading, snippet loading, or config initialization.
+        All loaders must gracefully recover to empty/default states.
+        """
+        depth = 5000
+        malicious_nested_json = ("[" * depth) + ("]" * depth)
+
+        # 1. Project State Loader
+        self.project_mgr.create_project("BoxDeepBomb")
+        state_file = self.project_mgr.get_project_dir("BoxDeepBomb") / "project_state.json"
+        state_file.write_text(malicious_nested_json, encoding="utf-8")
+        
+        # Must not throw RecursionError and return a valid fallback state schema
+        state = self.project_mgr.load_project_state("BoxDeepBomb")
+        self.assertIsInstance(state, dict)
+        self.assertEqual(state["name"], "BoxDeepBomb")
+        self.assertEqual(state["loot"], [])
+
+        # 2. Loot Manager Loader
+        loot_file = self.temp_path / "bomb_loot.json"
+        loot_file.write_text(malicious_nested_json, encoding="utf-8")
+        bomb_loot_mgr = LootManager(storage_file=loot_file)
+        self.assertEqual(bomb_loot_mgr.get_all_entries(), [])
+
+        # 3. Clipboard Watcher Loader
+        clip_file = self.temp_path / "bomb_clip.json"
+        clip_file.write_text(malicious_nested_json, encoding="utf-8")
+        bomb_clip = ClipboardWatcher(storage_file=clip_file)
+        self.assertEqual(bomb_clip.get_all_history(), [])
+
+        # 4. Project Registry Loader
+        reg_file = self.config_dir / "projects_registry.json"
+        reg_file.write_text(malicious_nested_json, encoding="utf-8")
+        reg_data = self.project_mgr._load_registry()
+        self.assertEqual(reg_data, {})
+
+        # 5. User Snippets Loader
+        snip_cfg_dir = self.temp_path / "snip_cfg"
+        snip_cfg_dir.mkdir(parents=True, exist_ok=True)
+        snip_file = snip_cfg_dir / "user_snippets.json"
+        snip_file.write_text(malicious_nested_json, encoding="utf-8")
+        snip_mgr = SnippetManager(user_snippets_path=snip_file)
+        self.assertTrue(len(snip_mgr.get_snippets()) > 0)  # default snippets still loaded safely
+
+        # 6. Config Loader
+        bomb_cfg_dir = self.temp_path / "bomb_cfg"
+        bomb_cfg_dir.mkdir(parents=True, exist_ok=True)
+        (bomb_cfg_dir / "config.json").write_text(malicious_nested_json, encoding="utf-8")
+        cfg_mgr = ConfigManager(config_dir=bomb_cfg_dir)
+        self.assertIn("hotkey", cfg_mgr.data)
+
 
 if __name__ == "__main__":
     unittest.main()

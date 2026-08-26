@@ -125,7 +125,7 @@ class ClipboardWatcher(QObject):
                 with open(self.storage_file, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
                     self.history = validate_clipboard_list(raw_data)
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted clipboard history JSON at {self.storage_file}: {e}")
                 self.history = []
             except (OSError, UnicodeDecodeError) as e:

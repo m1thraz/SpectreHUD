@@ -66,7 +66,7 @@ class ConfigManager:
                     self.data = cfg
                     self.save_config()
                     return cfg
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
             except (OSError, UnicodeDecodeError, KeyError) as e:
                 logger.error(f"Error reading config from {self.config_file}: {e}. Using defaults.")

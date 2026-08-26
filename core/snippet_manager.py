@@ -68,7 +68,7 @@ class SnippetManager:
                             if "category" not in snip:
                                 snip["category"] = cat_info["name"]
                             self.snippets.append(snip)
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted default snippets JSON at {self.default_snippets_path}: {e}")
             except (OSError, UnicodeDecodeError, KeyError) as e:
                 logger.error(f"Error reading default snippets from {self.default_snippets_path}: {e}")
@@ -87,7 +87,7 @@ class SnippetManager:
                 with open(self.user_snippets_path, "r", encoding="utf-8") as f:
                     user_data = json.load(f)
                     user_snippets = validate_user_snippets(user_data)
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
             except (OSError, UnicodeDecodeError, KeyError) as e:
                 logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")

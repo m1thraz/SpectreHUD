@@ -88,7 +88,7 @@ class LootManager:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
                     self.entries = validate_loot_list(raw_data)
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted loot file at {self.storage_file}: {e}")
                 self.entries = []
             except (OSError, UnicodeDecodeError) as e:
