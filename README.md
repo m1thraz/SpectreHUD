@@ -35,7 +35,7 @@ SpectreHUD is an ultra-fast, frameless HUD overlay built on PyQt6 — accessible
 
 ![Add Command Dialog](assets/spectrehud_add_command.png)
 
-![New Project Workspace Dialog](assets/spectrehud_new_project.png)
+
 
 ---
 
