@@ -55,7 +55,12 @@ class SnippetManager:
             try:
                 with open(self.default_snippets_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                    if not isinstance(data, dict):
+                        logger.warning(f"Expected dict in snippets JSON at {self.default_snippets_path}, got {type(data).__name__}.")
+                        data = {}
                     for cat in data.get("categories", []):
+                        if not isinstance(cat, dict):
+                            continue
                         cat_info = {
                             "id": cat.get("id", cat.get("name")),
                             "name": cat.get("name"),
@@ -63,6 +68,8 @@ class SnippetManager:
                         }
                         self.categories.append(cat_info)
                         for snip in cat.get("snippets", []):
+                            if not isinstance(snip, dict):
+                                continue
                             snip["is_custom"] = False
                             snip["category_id"] = cat_info["id"]
                             if "category" not in snip:
@@ -70,7 +77,7 @@ class SnippetManager:
                             self.snippets.append(snip)
             except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted default snippets JSON at {self.default_snippets_path}: {e}")
-            except (OSError, UnicodeDecodeError, KeyError) as e:
+            except (OSError, UnicodeDecodeError, KeyError, AttributeError) as e:
                 logger.error(f"Error reading default snippets from {self.default_snippets_path}: {e}")
 
         # 2. Load user custom snippets
