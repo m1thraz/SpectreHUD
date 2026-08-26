@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional, Callable
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMenu
 
 from core.snippet_manager import SnippetManager
 from ui.snippet_card import SnippetCard
@@ -11,10 +11,16 @@ CATEGORY_SHORT_NAMES: Dict[str, str] = {
     "all": "Alle",
     "web_http": "Web",
     "linux_shell": "Linux",
+    "windows_powershell": "Windows",
     "windows_ad": "Windows",
+    "network_scanning": "Netzwerk",
     "network_recon": "Netzwerk",
     "sql_databases": "SQL",
+    "crypto_encoding": "Krypto",
     "crypto_hashes": "Krypto",
+    "shells_payloads": "Shells",
+    "password_cracking": "Passwörter",
+    "post_exploitation": "Post-Ex",
     "custom_snippets": "Eigene",
 }
 
@@ -30,13 +36,32 @@ class CheatsheetController(QObject):
         self.snippet_manager = snippet_manager
         self.current_category_id: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+        self.btn_more: Optional[QPushButton] = None
+        self._more_menu: Optional[QMenu] = None
+        self._overflow_cat_ids: List[str] = []
 
     def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
+        
+        # Update primary pill styles
         for cid, btn in self.filter_buttons.items():
-            btn.setProperty("class", "FilterPillActive" if cid == category_id else "FilterPill")
+            is_active = (cid == category_id)
+            btn.setProperty("class", "FilterPillActive" if is_active else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
+
+        # Update "Mehr ▾" button state
+        if self.btn_more:
+            if category_id in self._overflow_cat_ids:
+                short = CATEGORY_SHORT_NAMES.get(category_id, "Mehr")
+                self.btn_more.setText(f"{short} ▾")
+                self.btn_more.setProperty("class", "FilterPillActive")
+            else:
+                self.btn_more.setText("Mehr ▾")
+                self.btn_more.setProperty("class", "FilterPill")
+            self.btn_more.style().unpolish(self.btn_more)
+            self.btn_more.style().polish(self.btn_more)
+
         self.category_changed.emit(category_id)
 
     def build_filter_pills(
@@ -45,19 +70,77 @@ class CheatsheetController(QObject):
         on_select_category: Callable[[str], None]
     ) -> None:
         self.filter_buttons.clear()
+        self._overflow_cat_ids.clear()
+        self.btn_more = None
+        self._more_menu = None
+
         cats = self.snippet_manager.get_categories()
+
+        # Group categories: Keep top 6-7 as primary pills, place rest in "Mehr ▾"
+        primary_ids = {
+            "all", "web_http", "linux_shell", 
+            "windows_powershell", "windows_ad", 
+            "network_scanning", "network_recon", 
+            "sql_databases", "custom_snippets"
+        }
+
+        primary_cats = []
+        overflow_cats = []
+        custom_cat = None
+
         for c in cats:
+            cid = c.get("id")
+            if cid == "custom_snippets":
+                custom_cat = c
+            elif cid in primary_ids:
+                primary_cats.append(c)
+            else:
+                overflow_cats.append(c)
+
+        if custom_cat:
+            primary_cats.append(custom_cat)
+
+        # Render primary pills on the bar
+        for c in primary_cats:
             cat_id = c.get("id")
-            full_name = c.get("name", "")
-            pill_text = CATEGORY_SHORT_NAMES.get(cat_id, full_name)
+            full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
+            pill_text = CATEGORY_SHORT_NAMES.get(cat_id, full_name[:12])
 
             btn = QPushButton(pill_text)
-            btn.setToolTip(full_name)
+            btn.setToolTip(f"{full_name} ({c.get('count', 0)})" if full_name else pill_text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if cat_id == self.current_category_id else "FilterPill")
             btn.clicked.connect(lambda checked=False, cid=cat_id: on_select_category(cid))
             self.filter_buttons[cat_id] = btn
             pills_layout.addWidget(btn)
+
+        # Render "Mehr ▾" dropdown menu button for remaining categories
+        if overflow_cats:
+            self._overflow_cat_ids = [c.get("id") for c in overflow_cats]
+
+            is_overflow_active = self.current_category_id in self._overflow_cat_ids
+            more_label = "Mehr ▾"
+            if is_overflow_active:
+                short = CATEGORY_SHORT_NAMES.get(self.current_category_id, "Mehr")
+                more_label = f"{short} ▾"
+
+            self.btn_more = QPushButton(more_label)
+            self.btn_more.setProperty("class", "FilterPillActive" if is_overflow_active else "FilterPill")
+            self.btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.btn_more.setToolTip("Weitere Kategorien anzeigen")
+
+            self._more_menu = QMenu(self.btn_more)
+            for c in overflow_cats:
+                cid = c.get("id")
+                cname = c.get("name", cid).strip().lstrip("\ufe0f \t")
+                count = c.get("count", 0)
+                action_text = f"{cname} ({count})" if count else cname
+                
+                act = self._more_menu.addAction(action_text)
+                act.triggered.connect(lambda checked=False, target_cid=cid: on_select_category(target_cid))
+
+            self.btn_more.setMenu(self._more_menu)
+            pills_layout.addWidget(self.btn_more)
 
         pills_layout.addStretch()
 

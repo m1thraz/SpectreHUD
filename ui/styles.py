@@ -339,9 +339,16 @@ QFrame#SnippetCard {
     padding: 8px 12px;
 }
 
+QFrame#SnippetCard {
+    background-color: rgba(22, 27, 34, 0.85);
+    border: 1px solid rgba(48, 54, 61, 0.7);
+    border-radius: 8px;
+    padding: 2px;
+}
+
 QFrame#SnippetCard:hover {
     border: 1px solid rgba(0, 229, 255, 0.5);
-    background-color: rgba(26, 33, 44, 0.85);
+    background-color: rgba(26, 33, 44, 0.9);
 }
 
 QLabel#SnippetTitle {
@@ -351,9 +358,13 @@ QLabel#SnippetTitle {
 }
 
 QLabel#SnippetCategory {
-    color: #8b949e;
-    font-size: 11px;
-    font-weight: 500;
+    background-color: rgba(56, 139, 253, 0.12);
+    color: #79c0ff;
+    border: 1px solid rgba(56, 139, 253, 0.35);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
 }
 
 QLabel#SnippetDesc {
@@ -362,13 +373,13 @@ QLabel#SnippetDesc {
 }
 
 QLabel#CommandLabel {
-    background-color: rgba(9, 13, 18, 0.92);
-    border: 1px solid rgba(33, 38, 45, 0.9);
+    background-color: rgba(9, 13, 18, 0.95);
+    border: 1px solid rgba(48, 54, 61, 0.8);
     border-radius: 6px;
     color: #39d353;
     font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
     font-size: 12px;
-    padding: 7px 10px;
+    padding: 8px 12px;
     selection-background-color: #1f3d29;
 }
 
@@ -385,11 +396,11 @@ QPlainTextEdit#CommandBox {
 
 /* Copy Buttons */
 QPushButton.CopyBtn {
-    background-color: rgba(31, 41, 61, 0.8);
-    color: #58a6ff;
-    border: 1px solid rgba(56, 139, 253, 0.3);
+    background-color: rgba(31, 41, 61, 0.85);
+    color: #79c0ff;
+    border: 1px solid rgba(56, 139, 253, 0.4);
     border-radius: 6px;
-    padding: 5px 12px;
+    padding: 6px 12px;
     font-weight: 600;
     font-size: 12px;
 }
@@ -397,6 +408,7 @@ QPushButton.CopyBtn {
 QPushButton.CopyBtn:hover {
     background-color: #388bfd;
     color: #ffffff;
+    border-color: #58a6ff;
 }
 
 QPushButton.CopyBtnSuccess {

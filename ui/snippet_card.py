@@ -25,11 +25,12 @@ class SnippetCard(QFrame):
         self.update_variables(variables)
 
     def _init_ui(self) -> None:
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(6)
 
-        # Header Row: Title & Category Tags
+        # Header Row: Title & Category Badge
         header_layout = QHBoxLayout()
         header_layout.setSpacing(8)
 
@@ -38,10 +39,12 @@ class SnippetCard(QFrame):
         self.lbl_title.setWordWrap(True)
         header_layout.addWidget(self.lbl_title, stretch=1)
 
-        cat_text = f"{self.snippet.get('category', '')} › {self.snippet.get('subcategory', '')}"
+        cat_part = self.snippet.get('category', '').strip().lstrip("\ufe0f \t")
+        subcat_part = self.snippet.get('subcategory', '').strip()
+        cat_text = f"{cat_part} › {subcat_part}" if subcat_part else cat_part
         self.lbl_category = QLabel(cat_text)
         self.lbl_category.setObjectName("SnippetCategory")
-        header_layout.addWidget(self.lbl_category)
+        header_layout.addWidget(self.lbl_category, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         # Delete button if custom snippet
         if self.snippet.get("is_custom", False):
@@ -63,9 +66,9 @@ class SnippetCard(QFrame):
 
         # Command Box & Copy Button Row
         cmd_row = QHBoxLayout()
-        cmd_row.setSpacing(8)
+        cmd_row.setSpacing(10)
 
-        # Naturally wrapping selectable code label without clipping or inner scrollbars
+        # Naturally wrapping selectable code label without expanding the card
         self.lbl_command = QLabel()
         self.lbl_command.setObjectName("CommandLabel")
         self.lbl_command.setWordWrap(True)
@@ -73,15 +76,15 @@ class SnippetCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse | 
             Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
-        self.lbl_command.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.lbl_command.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
         self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setMinimumWidth(90)
+        self.btn_copy.setFixedWidth(85)
         self.btn_copy.clicked.connect(self._copy_command)
-        cmd_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
+        cmd_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         layout.addLayout(cmd_row)
 
