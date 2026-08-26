@@ -161,7 +161,7 @@ class ScreenshotManager(QObject):
                 self._active_overlay.snip_cancelled.connect(
                     lambda: self._on_snip_cancelled(parent_window)
                 )
-            except (RuntimeError, OSError, Exception) as e:
+            except (RuntimeError, OSError) as e:
                 logger.error(f"Error during desktop grab: {e}", exc_info=True)
                 if was_visible:
                     parent_window.show()
