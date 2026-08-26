@@ -16,7 +16,7 @@ def setup_logger(
 ) -> logging.Logger:
     """Configures and returns a structured, rotating file logger for SpectreHUD."""
     logger = logging.getLogger(name)
-    if logger.hasHandlers():
+    if logger.handlers:
         return logger
 
     logger.setLevel(level)
