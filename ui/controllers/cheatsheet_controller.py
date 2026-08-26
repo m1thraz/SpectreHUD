@@ -7,6 +7,18 @@ from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
 
 
+CATEGORY_SHORT_NAMES: Dict[str, str] = {
+    "all": "Alle",
+    "web_http": "Web",
+    "linux_shell": "Linux",
+    "windows_ad": "Windows",
+    "network_recon": "Netzwerk",
+    "sql_databases": "SQL",
+    "crypto_hashes": "Krypto",
+    "custom_snippets": "Eigene",
+}
+
+
 class CheatsheetController(QObject):
     """Controller managing cheatsheet snippets, categories, search filtering, and interpolation."""
 
@@ -36,11 +48,11 @@ class CheatsheetController(QObject):
         cats = self.snippet_manager.get_categories()
         for c in cats:
             cat_id = c.get("id")
-            pill_text = c.get("name", "")
-            if cat_id == "all":
-                pill_text = "All Commands"
+            full_name = c.get("name", "")
+            pill_text = CATEGORY_SHORT_NAMES.get(cat_id, full_name)
 
             btn = QPushButton(pill_text)
+            btn.setToolTip(full_name)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if cat_id == self.current_category_id else "FilterPill")
             btn.clicked.connect(lambda checked=False, cid=cat_id: on_select_category(cid))

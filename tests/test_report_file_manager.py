@@ -135,6 +135,31 @@ class TestReportFileManager(unittest.TestCase):
         self.assertTrue(export_file.exists())
         self.assertIn("Pentest Report: ExportTest", export_file.read_text(encoding="utf-8"))
 
+    def test_report_document_resolves_loot_images(self):
+        """Tests that ReportDocument successfully resolves project-relative loot screenshots."""
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QImage, QTextDocument, QColor
+        from ui.report_editor_tab import ReportDocument
+
+        self.project_mgr.create_project("BoxImageTest")
+        proj_dir = self.project_mgr.get_project_dir("BoxImageTest")
+        loot_dir = proj_dir / "loot"
+        loot_dir.mkdir(exist_ok=True)
+        img_file = loot_dir / "screenshot_20260826_120000.png"
+
+        test_img = QImage(200, 100, QImage.Format.Format_RGB32)
+        test_img.fill(QColor("blue"))
+        self.assertTrue(test_img.save(str(img_file), "PNG"))
+
+        doc = ReportDocument(project_dir=proj_dir)
+        doc.setMarkdown("![Screenshot](loot/screenshot_20260826_120000.png)")
+
+        loaded = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), QUrl("loot/screenshot_20260826_120000.png"))
+        self.assertIsNotNone(loaded)
+        self.assertIsInstance(loaded, QImage)
+        self.assertEqual(loaded.width(), 200)
+        self.assertEqual(loaded.height(), 100)
+
 
 if __name__ == "__main__":
     unittest.main()

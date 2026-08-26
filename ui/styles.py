@@ -28,35 +28,36 @@ QFrame#HeaderBar {
 }
 
 QPushButton.ModeSwitchBtn {
-    background-color: rgba(13, 17, 23, 0.7);
-    color: #8b949e;
-    border: 1px solid rgba(48, 54, 61, 0.7);
+    background-color: rgba(22, 27, 34, 0.85);
+    color: #e6edf3;
+    border: 1px solid rgba(48, 54, 61, 0.8);
     border-radius: 6px;
-    padding: 4px 9px;
+    padding: 4px 10px;
     font-size: 11px;
     font-weight: 600;
 }
 
 QPushButton.ModeSwitchBtn:hover {
-    background-color: rgba(33, 38, 45, 0.9);
-    color: #f0f6fc;
+    background-color: rgba(56, 139, 253, 0.25);
+    color: #ffffff;
+    border-color: #58a6ff;
 }
 
 QPushButton.ModeSwitchBtnActive {
-    background-color: rgba(31, 41, 61, 0.9);
+    background-color: rgba(31, 41, 61, 0.95);
     color: #00e5ff;
     border: 1px solid #00e5ff;
     border-radius: 6px;
-    padding: 4px 9px;
+    padding: 4px 10px;
     font-size: 11px;
     font-weight: bold;
 }
 
 /* Project Selector Button */
 QPushButton.ProjectSelectBtn {
-    background-color: rgba(31, 41, 61, 0.6);
-    color: #58a6ff;
-    border: 1px solid rgba(56, 139, 253, 0.4);
+    background-color: rgba(31, 41, 61, 0.75);
+    color: #79c0ff;
+    border: 1px solid rgba(56, 139, 253, 0.5);
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 11px;
@@ -70,9 +71,9 @@ QPushButton.ProjectSelectBtn:hover {
 }
 
 QPushButton.ScreenshotBtn {
-    background-color: rgba(0, 229, 255, 0.12);
+    background-color: rgba(0, 229, 255, 0.15);
     color: #00e5ff;
-    border: 1px solid rgba(0, 229, 255, 0.4);
+    border: 1px solid rgba(0, 229, 255, 0.5);
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 11px;
@@ -80,7 +81,7 @@ QPushButton.ScreenshotBtn {
 }
 
 QPushButton.ScreenshotBtn:hover {
-    background-color: rgba(0, 229, 255, 0.25);
+    background-color: rgba(0, 229, 255, 0.3);
     border-color: #00e5ff;
 }
 
@@ -173,10 +174,11 @@ QFrame#CompactVarBar {
 }
 
 QLabel.VarTagLabel {
-    color: #8b949e;
+    color: #79c0ff;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 QLineEdit.CompactVarInput {
@@ -421,6 +423,23 @@ QPushButton.DangerBtn:hover {
     color: #ffffff;
 }
 
+QPushButton.MinimizeBtn {
+    background-color: rgba(22, 27, 34, 0.85);
+    color: #e6edf3;
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    min-width: 22px;
+}
+
+QPushButton.MinimizeBtn:hover {
+    background-color: rgba(56, 139, 253, 0.25);
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
 /* Secondary & Action Buttons */
 QPushButton.SecondaryBtn {
     background-color: rgba(33, 38, 45, 0.8);
@@ -487,14 +506,16 @@ QPushButton#RecIndicatorBtn:hover {
 }
 
 QPushButton#RecIndicatorBtn[paused="true"] {
-    background-color: rgba(110, 118, 129, 0.15);
-    border: 1px solid rgba(110, 118, 129, 0.4);
-    color: #8b949e;
+    background-color: rgba(110, 118, 129, 0.25);
+    border: 1px solid rgba(110, 118, 129, 0.6);
+    color: #e6edf3;
+    font-weight: 700;
 }
 
 QPushButton#RecIndicatorBtn[paused="true"]:hover {
-    background-color: rgba(110, 118, 129, 0.3);
-    color: #c9d1d9;
+    background-color: rgba(110, 118, 129, 0.4);
+    color: #ffffff;
+    border-color: #58a6ff;
 }
 
 QFrame#PrivacyWarningBanner {
@@ -617,12 +638,14 @@ QPlainTextEdit.ReportSourceEditor:focus {
 }
 
 QTextEdit.ReportPreview {
-    background-color: rgba(17, 22, 29, 0.9);
-    color: #e6edf3;
+    background-color: rgba(13, 17, 23, 0.98);
+    color: #f0f6fc;
     border: 1px solid #30363d;
     border-radius: 8px;
-    padding: 12px;
+    padding: 14px;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
     font-size: 13px;
+    line-height: 1.6;
 }
 
 QLabel.ReportStatusLabel {
@@ -666,9 +689,9 @@ QLabel#DialogTitle {
 
 /* Form Section Labels */
 QLabel.FormLabel {
-    color: #8b949e;
+    color: #e6edf3;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     margin-top: 2px;
@@ -772,29 +795,29 @@ QFrame#SettingsSidebar {
 
 QPushButton.SettingsNavBtn {
     background-color: transparent;
-    color: #8b949e;
+    color: #e6edf3;
     border: 1px solid transparent;
     border-radius: 6px;
     padding: 8px 12px;
     text-align: left;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 QPushButton.SettingsNavBtn:hover {
-    background-color: rgba(33, 38, 45, 0.8);
-    color: #f0f6fc;
+    background-color: rgba(56, 139, 253, 0.2);
+    color: #ffffff;
 }
 
 QPushButton.SettingsNavBtnActive {
-    background-color: rgba(31, 41, 61, 0.9);
+    background-color: rgba(31, 41, 61, 0.95);
     color: #00e5ff;
-    border: 1px solid rgba(0, 229, 255, 0.5);
+    border: 1px solid rgba(0, 229, 255, 0.6);
     border-radius: 6px;
     padding: 8px 12px;
     text-align: left;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 QLabel.SettingsSectionTitle {
@@ -808,21 +831,52 @@ QLabel.SettingsSectionTitle {
 }
 
 QFrame.SettingsCard {
-    background-color: rgba(22, 27, 34, 0.7);
+    background-color: rgba(22, 27, 34, 0.85);
     border: 1px solid rgba(48, 54, 61, 0.6);
     border-radius: 8px;
-    padding: 10px 14px;
+    padding: 12px 14px;
 }
 
 QLabel.ShortcutKeyBadge {
-    background-color: rgba(31, 41, 61, 0.9);
+    background-color: rgba(31, 41, 61, 0.95);
     color: #58a6ff;
-    border: 1px solid rgba(56, 139, 253, 0.4);
+    border: 1px solid rgba(56, 139, 253, 0.5);
     border-radius: 5px;
-    padding: 2px 8px;
-    font-family: 'Consolas', monospace;
+    padding: 3px 10px;
+    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
     font-size: 11px;
     font-weight: bold;
+    min-height: 18px;
+}
+
+/* Checkboxes */
+QCheckBox {
+    color: #f0f6fc;
+    font-size: 12px;
+    font-weight: 500;
+    spacing: 8px;
+}
+
+QCheckBox:hover {
+    color: #00e5ff;
+}
+
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(88, 166, 255, 0.5);
+    background-color: rgba(13, 17, 23, 0.85);
+}
+
+QCheckBox::indicator:hover {
+    border-color: #00e5ff;
+    background-color: rgba(31, 41, 61, 0.85);
+}
+
+QCheckBox::indicator:checked {
+    background-color: #00e5ff;
+    border-color: #00e5ff;
 }
 
 /* Dialogs & Message Boxes Fallback */

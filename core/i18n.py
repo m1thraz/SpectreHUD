@@ -24,12 +24,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "header.rec_on": "REC: ON",
         "header.rec_off": "REC: Off",
         "header.rec_paused": "REC: Paused",
-        "header.opt": "Opt",
-        "header.close_tip": "Overlay schließen (Esc)",
+        "header.opt": "⚙",
+        "header.close_tip": "Overlay minimieren / verstecken (Esc)",
         "header.snip_tip": "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)",
         "header.rec_tip_paused": "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
         "header.rec_tip_active": "Clipboard-Logger ist AKTIV (zeichnet auf).\nKlicken oder Ctrl+P zum Pausieren.",
-        "header.opt_tip": "Optionen, Sprache & Hotkeys öffnen (Ctrl+,)",
+        "header.opt_tip": "Einstellungen & Optionen öffnen (Ctrl+,)",
         "header.report_tip": "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
 
         # Project Menu
@@ -193,12 +193,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "header.rec_on": "REC: ON",
         "header.rec_off": "REC: Off",
         "header.rec_paused": "REC: Paused",
-        "header.opt": "Opt",
-        "header.close_tip": "Close overlay (Esc)",
+        "header.opt": "⚙",
+        "header.close_tip": "Minimize / hide overlay (Esc)",
         "header.snip_tip": "Capture region screenshot (Ctrl+Super+X or Ctrl+S)",
         "header.rec_tip_paused": "Clipboard logger is PAUSED (not recording).\nClick or Ctrl+P to start recording.",
         "header.rec_tip_active": "Clipboard logger is ACTIVE (recording).\nClick or Ctrl+P to pause.",
-        "header.opt_tip": "Open options, language & hotkeys (Ctrl+,)",
+        "header.opt_tip": "Open settings & options (Ctrl+,)",
         "header.report_tip": "Open editable markdown pentest report for active box (Ctrl+4)",
 
         # Project Menu

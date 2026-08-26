@@ -13,14 +13,16 @@ Widget kennt nur "lade Text rein / hol Text raus", die eigentliche
 Backup-vor-Regenerierung-Logik lebt im FileManager, nicht hier - damit
 sie ohne Qt testbar bleibt.
 """
+import urllib.parse
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
     QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog
 )
+from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QImage
 
 from core.report_file_manager import ReportFileManager
 from core.logger import get_logger
@@ -29,6 +31,57 @@ from ui.styles import CYBER_DARK_QSS
 logger = get_logger("report_editor")
 
 PREVIEW_DEBOUNCE_MS = 300
+
+
+class ReportDocument(QTextDocument):
+    """Custom QTextDocument that dynamically resolves project-relative image paths and loot screenshots."""
+
+    def __init__(self, project_dir: Optional[Path] = None, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.project_dir = Path(project_dir) if project_dir else None
+        self._image_cache: Dict[str, QImage] = {}
+
+    def set_project_dir(self, project_dir: Optional[Path]) -> None:
+        new_dir = Path(project_dir) if project_dir else None
+        if self.project_dir != new_dir:
+            self.project_dir = new_dir
+            self._image_cache.clear()
+            if self.project_dir and self.project_dir.exists():
+                self.setBaseUrl(QUrl.fromLocalFile(str(self.project_dir.resolve()) + "/"))
+
+    def loadResource(self, r_type: int, name: QUrl):
+        if r_type == int(QTextDocument.ResourceType.ImageResource) or r_type == 2:
+            url_str = name.toString() if hasattr(name, "toString") else str(name)
+            if url_str in self._image_cache:
+                return self._image_cache[url_str]
+
+            clean_path = urllib.parse.unquote(url_str)
+            if clean_path.startswith("file:///"):
+                clean_path = clean_path[8:]
+            elif clean_path.startswith("file://"):
+                clean_path = clean_path[7:]
+
+            p = Path(clean_path)
+            candidate_paths = []
+            if p.is_absolute():
+                candidate_paths.append(p)
+            elif self.project_dir:
+                candidate_paths.append((self.project_dir / p).resolve())
+                candidate_paths.append((self.project_dir / "loot" / p.name).resolve())
+
+            for candidate in candidate_paths:
+                if candidate.exists() and candidate.is_file():
+                    img = QImage(str(candidate))
+                    if not img.isNull():
+                        # Downscale oversized screenshots for preview performance & clean rendering
+                        if img.width() > 1400:
+                            img = img.scaledToWidth(1400, Qt.TransformationMode.SmoothTransformation)
+                        self._image_cache[url_str] = img
+                        return img
+                    else:
+                        logger.warning(f"Could not decode QImage from candidate: {candidate}")
+
+        return super().loadResource(r_type, name)
 
 
 class ReportEditorTab(QWidget):
@@ -108,7 +161,31 @@ class ReportEditorTab(QWidget):
         self.editor.textChanged.connect(self._on_text_changed)
         splitter.addWidget(self.editor)
 
+        self.preview_document = ReportDocument(parent=self)
+        
+        # Crisp typography for Markdown live preview
+        preview_font = QFont("Segoe UI", 10)
+        preview_font.setStyleHint(QFont.StyleHint.SansSerif)
+        self.preview_document.setDefaultFont(preview_font)
+        self.preview_document.setDefaultStyleSheet("""
+            body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #f0f6fc; line-height: 1.6; }
+            h1, h2, h3, h4, h5, h6 { color: #58a6ff; font-family: 'Segoe UI', sans-serif; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
+            h1 { font-size: 18px; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
+            h2 { font-size: 15px; border-bottom: 1px solid #21262d; padding-bottom: 3px; color: #79c0ff; }
+            h3 { font-size: 14px; color: #a5d6ff; }
+            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: #161b22; color: #7ee787; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
+            pre { background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; }
+            blockquote { border-left: 3px solid #388bfd; margin: 8px 0; padding-left: 10px; color: #8b949e; }
+            hr { border: 0; border-top: 1px solid #30363d; margin: 14px 0; }
+            a { color: #58a6ff; text-decoration: none; }
+            img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin: 8px 0; }
+            ul, ol { padding-left: 20px; margin: 6px 0; }
+            li { margin: 3px 0; }
+            p { margin: 6px 0; }
+        """)
+
         self.preview = QTextEdit()
+        self.preview.setDocument(self.preview_document)
         self.preview.setReadOnly(True)
         self.preview.setProperty("class", "ReportPreview")
         splitter.addWidget(self.preview)
@@ -118,7 +195,6 @@ class ReportEditorTab(QWidget):
         layout.addWidget(splitter, stretch=1)
 
         # Strg+Umschalt+S zum Speichern, unabhängig vom Fokus innerhalb des Tabs
-        from PyQt6.QtGui import QShortcut, QKeySequence
         QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
 
     # ------------------------------------------------------------------ #
@@ -133,6 +209,9 @@ class ReportEditorTab(QWidget):
         Projekt, das ist Aufgabe des Aufrufers (siehe confirm_discard_if_dirty).
         """
         self.current_project = project_name
+        proj_dir = self.report_file_manager.project_manager.get_project_dir(project_name)
+        self.preview_document.set_project_dir(proj_dir)
+
         content = self.report_file_manager.load(project_name)
         # setPlainText löst textChanged aus -> _dirty würde faelschlich True
         # werden, deshalb Signal kurz blocken.
@@ -300,6 +379,9 @@ class ReportEditorTab(QWidget):
     # ------------------------------------------------------------------ #
 
     def _update_preview(self) -> None:
+        if self.current_project:
+            proj_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
+            self.preview_document.set_project_dir(proj_dir)
         self.preview.setMarkdown(self.editor.toPlainText())
 
     def _update_status_label(self) -> None:

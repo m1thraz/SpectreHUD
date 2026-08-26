@@ -251,18 +251,18 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.btn_rec_indicator)
 
         # Settings & Hotkeys Button
-        self.btn_settings = QPushButton("Opt")
+        self.btn_settings = QPushButton("⚙")
         self.btn_settings.setProperty("class", "ScreenshotBtn")
-        self.btn_settings.setToolTip("Optionen, Sprache & Hotkeys öffnen (Ctrl+,)")
+        self.btn_settings.setToolTip("Einstellungen & Optionen öffnen (Ctrl+,)")
         self.btn_settings.clicked.connect(self.open_settings_dialog)
         header_layout.addWidget(self.btn_settings)
 
-        # Close button in HUD header
-        btn_close = QPushButton("✕")
-        btn_close.setProperty("class", "DangerBtn")
-        btn_close.setToolTip("Overlay schließen (Esc)")
-        btn_close.clicked.connect(self.hide)
-        header_layout.addWidget(btn_close)
+        # Minimize button in HUD header
+        btn_minimize = QPushButton("🗕")
+        btn_minimize.setProperty("class", "MinimizeBtn")
+        btn_minimize.setToolTip("Overlay minimieren / verstecken (Esc)")
+        btn_minimize.clicked.connect(self.hide)
+        header_layout.addWidget(btn_minimize)
 
         hud_layout.addWidget(self.header_bar)
 
@@ -405,8 +405,8 @@ class MainWindow(QMainWindow):
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)"))
-        self.btn_settings.setText(t("header.opt", "Opt"))
-        self.btn_settings.setToolTip(t("header.opt_tip", "Optionen, Sprache & Hotkeys öffnen (Ctrl+,)"))
+        self.btn_settings.setText(t("header.opt", "⚙"))
+        self.btn_settings.setToolTip(t("header.opt_tip", "Einstellungen & Optionen öffnen (Ctrl+,)"))
         self.btn_mode_report.setToolTip(t("header.report_tip", "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)"))
 
         if hasattr(self, "var_bar"):
@@ -493,7 +493,7 @@ class MainWindow(QMainWindow):
                 self.pills_layout, self._select_loot_type,
                 self._export_loot, self._clear_loot, EXPORT_COPY_TOOLTIP
             )
-        else:
+        elif self.active_mode == "history":
             self.history_ctrl.build_filter_pills(
                 self.pills_layout, self._select_history_filter,
                 self._export_report, self._clear_history, EXPORT_COPY_TOOLTIP

@@ -33,9 +33,19 @@ class HotkeySettingsPage(QWidget):
         self._init_ui()
 
     def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(12)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("background: transparent; border: none;")
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(8, 4, 12, 8)
+        layout.setSpacing(14)
 
         # 1. Global Hotkeys Section
         lbl_global = QLabel("Globale Tastenkombinationen (Systemweit)")
@@ -45,7 +55,7 @@ class HotkeySettingsPage(QWidget):
         card_global = QFrame()
         card_global.setProperty("class", "SettingsCard")
         card_layout = QVBoxLayout(card_global)
-        card_layout.setSpacing(10)
+        card_layout.setSpacing(12)
 
         # Overlay Toggle Hotkey
         row_toggle = QHBoxLayout()
@@ -54,6 +64,7 @@ class HotkeySettingsPage(QWidget):
         row_toggle.addWidget(lbl_toggle, stretch=1)
 
         self.combo_toggle = QComboBox()
+        self.combo_toggle.setMinimumWidth(220)
         curr_hotkey = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         for i, preset in enumerate(HOTKEY_PRESETS):
             self.combo_toggle.addItem(preset["label"], preset["value"])
@@ -69,6 +80,7 @@ class HotkeySettingsPage(QWidget):
         row_snip.addWidget(lbl_snip, stretch=1)
 
         self.combo_snip = QComboBox()
+        self.combo_snip.setMinimumWidth(220)
         for preset in SNIP_PRESETS:
             self.combo_snip.addItem(preset["label"], preset["value"])
         row_snip.addWidget(self.combo_snip, stretch=1)
@@ -82,6 +94,7 @@ class HotkeySettingsPage(QWidget):
 
         lbl_quit_val = QLabel("Strg + Super + Q")
         lbl_quit_val.setProperty("class", "ShortcutKeyBadge")
+        lbl_quit_val.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row_quit.addWidget(lbl_quit_val, alignment=Qt.AlignmentFlag.AlignRight)
         card_layout.addLayout(row_quit)
 
@@ -95,7 +108,7 @@ class HotkeySettingsPage(QWidget):
         card_local = QFrame()
         card_local.setProperty("class", "SettingsCard")
         local_layout = QVBoxLayout(card_local)
-        local_layout.setSpacing(8)
+        local_layout.setSpacing(10)
 
         shortcuts = [
             ("Esc", "HUD-Overlay verstecken"),
@@ -109,15 +122,15 @@ class HotkeySettingsPage(QWidget):
 
         for key_text, desc_text in shortcuts:
             row = QHBoxLayout()
+            row.setContentsMargins(0, 1, 0, 1)
             lbl_desc = QLabel(desc_text)
-            lbl_desc.setStyleSheet("color: #c9d1d9; font-size: 12px;")
-            row.addWidget(lbl_desc)
-
-            row.addStretch()
+            lbl_desc.setStyleSheet("color: #e6edf3; font-size: 12px;")
+            row.addWidget(lbl_desc, stretch=1)
 
             lbl_key = QLabel(key_text)
             lbl_key.setProperty("class", "ShortcutKeyBadge")
-            row.addWidget(lbl_key)
+            lbl_key.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            row.addWidget(lbl_key, alignment=Qt.AlignmentFlag.AlignRight)
             local_layout.addLayout(row)
 
         layout.addWidget(card_local)
@@ -132,6 +145,8 @@ class HotkeySettingsPage(QWidget):
         layout.addLayout(row_reset)
 
         layout.addStretch()
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
 
     def _reset_defaults(self) -> None:
         self.combo_toggle.setCurrentIndex(0)
@@ -153,8 +168,8 @@ class LanguageSettingsPage(QWidget):
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(12)
+        layout.setContentsMargins(8, 4, 12, 8)
+        layout.setSpacing(14)
 
         lbl_lang = QLabel("Sprach- und Regionaleinstellungen")
         lbl_lang.setProperty("class", "SettingsSectionTitle")
@@ -163,7 +178,7 @@ class LanguageSettingsPage(QWidget):
         card_lang = QFrame()
         card_lang.setProperty("class", "SettingsCard")
         card_layout = QVBoxLayout(card_lang)
-        card_layout.setSpacing(10)
+        card_layout.setSpacing(14)
 
         # Language dropdown
         row_lang = QHBoxLayout()
@@ -172,6 +187,7 @@ class LanguageSettingsPage(QWidget):
         row_lang.addWidget(lbl_select, stretch=1)
 
         self.combo_lang = QComboBox()
+        self.combo_lang.setMinimumWidth(220)
         curr_lang = self.config.get("language", "de")
         for i, (code, name) in enumerate([("de", "Deutsch (German)"), ("en", "English (US)")]):
             self.combo_lang.addItem(name, code)
@@ -187,8 +203,12 @@ class LanguageSettingsPage(QWidget):
         row_date.addWidget(lbl_date, stretch=1)
 
         self.combo_date = QComboBox()
+        self.combo_date.setMinimumWidth(220)
         self.combo_date.addItem("24-Stunden (YYYY-MM-DD HH:mm:ss)", "24h")
         self.combo_date.addItem("12-Stunden AM/PM (YYYY-MM-DD hh:mm:ss a)", "12h")
+        curr_time_fmt = self.config.get("time_format", "24h")
+        if curr_time_fmt == "12h":
+            self.combo_date.setCurrentIndex(1)
         row_date.addWidget(self.combo_date, stretch=1)
         card_layout.addLayout(row_date)
 
@@ -211,9 +231,19 @@ class GeneralSettingsPage(QWidget):
         self._init_ui()
 
     def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(12)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("background: transparent; border: none;")
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(8, 4, 12, 8)
+        layout.setSpacing(14)
 
         # 1. Behavior Section
         lbl_behavior = QLabel("Overlay-Verhalten & Anzeige")
@@ -243,11 +273,11 @@ class GeneralSettingsPage(QWidget):
         card_defaults = QFrame()
         card_defaults.setProperty("class", "SettingsCard")
         d_layout = QVBoxLayout(card_defaults)
-        d_layout.setSpacing(10)
+        d_layout.setSpacing(12)
 
         # Default Target & Attacker IP
         row_ips = QHBoxLayout()
-        row_ips.setSpacing(10)
+        row_ips.setSpacing(12)
 
         col_target = QVBoxLayout()
         lbl_t = QLabel("Standard Target IP:")
@@ -299,6 +329,8 @@ class GeneralSettingsPage(QWidget):
 
         layout.addWidget(card_defaults)
         layout.addStretch()
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
 
     def _on_browse_wordlist(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(self, "Wordlist auswählen", self.txt_wordlist.text().strip())
@@ -333,8 +365,8 @@ class SettingsDialog(BaseHudDialog):
         super().__init__(title="SPECTRE // EINSTELLUNGEN & OPTIONEN", parent=parent)
         self.config = config_manager
         self.setMinimumWidth(720)
-        self.setMinimumHeight(520)
-        self.resize(740, 540)
+        self.setMinimumHeight(480)
+        self.resize(780, 560)
         self._init_layout()
 
     def _init_layout(self) -> None:
@@ -377,7 +409,7 @@ class SettingsDialog(BaseHudDialog):
         # 2. Right Page Container
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
-        right_layout.setContentsMargins(16, 12, 16, 12)
+        right_layout.setContentsMargins(14, 10, 14, 10)
         right_layout.setSpacing(10)
 
         # Stacked Pages
@@ -390,6 +422,7 @@ class SettingsDialog(BaseHudDialog):
         self.stack.addWidget(self.page_hotkeys)
         self.stack.addWidget(self.page_language)
         self.stack.addWidget(self.page_general)
+        
         right_layout.addWidget(self.stack, stretch=1)
 
         # Action Buttons
@@ -397,7 +430,7 @@ class SettingsDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel("↵ Enter: Speichern | Esc: Abbrechen")
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        lbl_hint.setStyleSheet("color: #8b949e; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
