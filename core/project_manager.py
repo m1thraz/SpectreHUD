@@ -149,22 +149,47 @@ class ProjectManager:
     def list_projects(self) -> List[str]:
         """Returns list of all available project directory names across base_dir and custom locations."""
         projects = set()
+        resolved_base = self.base_dir.resolve()
         
-        # 1. Base directory projects
+        # 1. Base directory projects (auto-discovery)
         if self.base_dir.exists():
             try:
                 for p in self.base_dir.iterdir():
-                    if p.is_dir() and not p.name.startswith("."):
+                    if p.name.startswith("."):
+                        continue
+
+                    # Defense against Symlinks and Junctions within the default workspace
+                    if p.is_symlink():
+                        logger.warning(f"Ignoring symlinked project folder inside base_dir: {p}")
+                        continue
+
+                    try:
+                        resolved_p = p.resolve()
+                    except (OSError, RuntimeError):
+                        continue
+
+                    if not resolved_p.is_relative_to(resolved_base) or resolved_p == resolved_base:
+                        logger.warning(f"Ignoring escaping directory/junction inside base_dir: {p} -> {resolved_p}")
+                        continue
+
+                    if p.is_dir():
                         clean = self._sanitize_name(p.name)
                         projects.add(clean)
                         if clean not in self.registry:
-                            self.registry[clean] = str(p.resolve())
+                            self.registry[clean] = str(resolved_p)
             except OSError as e:
                 logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
 
-        # 2. Registered projects (filtered by existence on disk)
+        # 2. Registered projects (filtered by existence on disk and invalid base_dir symlinks)
         for name, path_str in list(self.registry.items()):
             try:
+                candidate_in_base = self.base_dir / name
+                # If a symlink in base_dir masquerades as this project, purge it from registry
+                if candidate_in_base.exists() and candidate_in_base.is_symlink():
+                    logger.warning(f"Purging compromised symlinked registry entry: {name} -> {path_str}")
+                    del self.registry[name]
+                    continue
+
                 p = Path(path_str)
                 if p.exists() and p.is_dir():
                     projects.add(name)
@@ -187,15 +212,25 @@ class ProjectManager:
         """
         pname = self._sanitize_name(name or self.active_project)
         resolved_base = self.base_dir.resolve()
-        
-        # 1. Check registry
+        candidate = self.base_dir / pname
+
+        # Defense against Symlinks/Junctions in base_dir masquerading as projects
+        if candidate.exists() and candidate.is_symlink():
+            logger.error(
+                f"Workspace escape attempt / symlink traversal detected in base_dir: {candidate}. "
+                f"Falling back to Default."
+            )
+            if pname in self.registry:
+                del self.registry[pname]
+            return (self.base_dir / "Default").resolve()
+
+        # 1. Check registry (for legitimately imported external folders)
         if pname in self.registry:
             reg_path = Path(self.registry[pname]).resolve()
             if reg_path.exists() and reg_path.is_dir():
                 return reg_path
 
         # 2. Base directory fallback with boundary & symlink defense
-        candidate = self.base_dir / pname
         proj_dir = candidate.resolve()
 
         if not proj_dir.is_relative_to(resolved_base) or proj_dir == resolved_base:

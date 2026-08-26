@@ -527,6 +527,35 @@ class TestAdversarialRegressions(unittest.TestCase):
         # Verify original files were NOT overwritten
         self.assertEqual(notes_file.read_text(encoding="utf-8"), "Confidential Original Notes")
 
+    # -------------------------------------------------------------------------
+    # 15. Symlink / Junction Workspace Auto-Discovery & Registry Escape
+    # -------------------------------------------------------------------------
+    def test_symlink_project_cannot_be_registered_as_workspace(self):
+        """
+        Adversarial: A symlink placed inside base_dir pointing to an outside directory
+        must NOT be automatically registered or listed as a project workspace, and
+        get_project_dir() must NOT resolve to the external path.
+        """
+        outside_dir = self.temp_path / "outside_victim_dir"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        (outside_dir / "notes.md").write_text("Victim Outside Data", encoding="utf-8")
+
+        symlink_path = self.projects_dir / "EvilSymlink"
+        try:
+            symlink_path.symlink_to(outside_dir, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            return
+
+        # 1. list_projects must NOT include the symlink or auto-register it
+        project_list = self.project_mgr.list_projects()
+        self.assertNotIn("EvilSymlink", project_list)
+        self.assertNotIn("EvilSymlink", self.project_mgr.registry)
+
+        # 2. get_project_dir("EvilSymlink") must NOT return outside_dir
+        resolved_dir = self.project_mgr.get_project_dir("EvilSymlink")
+        self.assertNotEqual(resolved_dir, outside_dir)
+        self.assertTrue(resolved_dir.is_relative_to(self.projects_dir.resolve()))
+
 
 if __name__ == "__main__":
     unittest.main()
