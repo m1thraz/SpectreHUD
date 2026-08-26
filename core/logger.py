@@ -3,9 +3,18 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
+from logging.handlers import RotatingFileHandler
 
-def setup_logger(name: str = "spectrehud", level: int = logging.INFO) -> logging.Logger:
-    """Configures and returns a structured logger for SpectreHUD."""
+DEFAULT_MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB per log file
+DEFAULT_LOG_BACKUP_COUNT = 3             # 3 rotated backups (spectrehud.log.1, .2, .3)
+
+def setup_logger(
+    name: str = "spectrehud", 
+    level: int = logging.INFO,
+    max_bytes: int = DEFAULT_MAX_LOG_BYTES,
+    backup_count: int = DEFAULT_LOG_BACKUP_COUNT
+) -> logging.Logger:
+    """Configures and returns a structured, rotating file logger for SpectreHUD."""
     logger = logging.getLogger(name)
     if logger.hasHandlers():
         return logger
@@ -23,13 +32,18 @@ def setup_logger(name: str = "spectrehud", level: int = logging.INFO) -> logging
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # Optional File Handler in config dir
+    # Rotating File Handler in config dir
     try:
         env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
         log_dir = Path(env_dir) if env_dir else Path.home() / ".ctf_cheatsheet_widget"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "spectrehud.log"
-        file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
+        file_handler = RotatingFileHandler(
+            str(log_file),
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8"
+        )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     except (OSError, PermissionError) as e:
