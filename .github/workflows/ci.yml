@@ -82,3 +82,16 @@ jobs:
           pip install $wheel
           spectrehud --version
           spectrehud --help
+
+      - name: Build Standalone Windows Executable (EXE)
+        if: runner.os == 'Windows' && matrix.python-version == '3.11'
+        run: |
+          python scripts/build_exe.py
+
+      - name: Upload Windows Executable Artifact
+        if: runner.os == 'Windows' && matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpectreHUD-Windows-x64
+          path: dist/SpectreHUD.exe
+          if-no-files-found: error

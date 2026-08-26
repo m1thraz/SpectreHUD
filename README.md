@@ -91,7 +91,17 @@ Each phase includes freeform text areas for explanations, followed by a chronolo
 
 ## Installation & Execution
 
-### Standard Installation
+### Standalone Executable (Windows)
+
+Download `SpectreHUD.exe` directly from the [GitHub Releases](https://github.com/m1thraz/SpectreHUD/releases) page and run it — no Python installation required!
+
+To compile your own standalone single-file `.exe`:
+```bash
+python scripts/build_exe.py
+# Output: dist/SpectreHUD.exe
+```
+
+### Standard Python Package Installation
 
 ```bash
 # Clone the repository
@@ -100,6 +110,9 @@ cd SpectreHUD
 
 # Install package
 pip install .
+
+# Optional: Create Windows Desktop Shortcut with App Logo
+python create_desktop_shortcut.py
 
 # Launch via CLI entry point
 spectrehud
@@ -112,14 +125,15 @@ spectrehud
 git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 
-# Install in editable mode
-pip install -e .
+# Install in editable mode with development dependencies
+pip install -e ".[dev]"
 
 # Run test suite
 python -m unittest discover tests
 
-# Build distribution wheel
+# Build distribution wheel & verify
 pip wheel . --no-deps -w dist/
+python scripts/verify_wheel.py dist/
 ```
 
 ---

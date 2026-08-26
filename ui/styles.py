@@ -935,7 +935,16 @@ from PyQt6.QtGui import QIcon
 
 
 def get_app_icon_path() -> Optional[Path]:
-    """Resolves data/icon.ico or data/icon.svg across standard source tree and package layouts."""
+    """Resolves data/icon.ico or data/icon.svg across standard source tree, PyInstaller bundles, and package layouts."""
+    # 0. Check PyInstaller frozen bundle
+    import sys
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        bundle_data = Path(sys._MEIPASS) / "data"
+        for name in ("icon.ico", "icon.svg"):
+            candidate = bundle_data / name
+            if candidate.exists():
+                return candidate
+
     # 1. Check relative to this repository / package root
     root_data = Path(__file__).resolve().parent.parent / "data"
     for name in ("icon.ico", "icon.svg"):

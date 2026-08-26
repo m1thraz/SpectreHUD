@@ -13,7 +13,14 @@ class SnippetManager:
 
     @staticmethod
     def _resolve_default_snippets_path() -> Path:
-        """Resolves default_snippets.json in source repository, site-packages, or package resources."""
+        """Resolves default_snippets.json in source repository, site-packages, package resources, or PyInstaller bundle."""
+        # 0. Check PyInstaller frozen bundle
+        import sys
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            bundle_candidate = Path(sys._MEIPASS) / "data" / "default_snippets.json"
+            if bundle_candidate.exists():
+                return bundle_candidate
+
         # 1. Standard repo or site-packages layout (next to core/)
         candidate = Path(__file__).resolve().parent.parent / "data" / "default_snippets.json"
         if candidate.exists():
