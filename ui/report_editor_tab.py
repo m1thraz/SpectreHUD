@@ -33,8 +33,11 @@ logger = get_logger("report_editor")
 PREVIEW_DEBOUNCE_MS = 300
 
 
+MAX_PREVIEW_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB
+
+
 class ReportDocument(QTextDocument):
-    """Custom QTextDocument that dynamically resolves project-relative image paths and loot screenshots."""
+    """Custom QTextDocument that dynamically resolves project-relative image paths and loot screenshots within the project sandbox."""
 
     def __init__(self, project_dir: Optional[Path] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -47,7 +50,10 @@ class ReportDocument(QTextDocument):
             self.project_dir = new_dir
             self._image_cache.clear()
             if self.project_dir and self.project_dir.exists():
-                self.setBaseUrl(QUrl.fromLocalFile(str(self.project_dir.resolve()) + "/"))
+                try:
+                    self.setBaseUrl(QUrl.fromLocalFile(str(self.project_dir.resolve()) + "/"))
+                except OSError:
+                    pass
 
     def loadResource(self, r_type: int, name: QUrl):
         if r_type == int(QTextDocument.ResourceType.ImageResource) or r_type == 2:
@@ -55,7 +61,16 @@ class ReportDocument(QTextDocument):
             if url_str in self._image_cache:
                 return self._image_cache[url_str]
 
-            clean_path = urllib.parse.unquote(url_str)
+            if not self.project_dir:
+                return super().loadResource(r_type, name)
+
+            try:
+                proj_resolved = self.project_dir.resolve()
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"Could not resolve project directory: {e}")
+                return super().loadResource(r_type, name)
+
+            clean_path = urllib.parse.unquote(url_str).strip()
             if clean_path.startswith("file:///"):
                 clean_path = clean_path[8:]
             elif clean_path.startswith("file://"):
@@ -65,21 +80,52 @@ class ReportDocument(QTextDocument):
             candidate_paths = []
             if p.is_absolute():
                 candidate_paths.append(p)
-            elif self.project_dir:
-                candidate_paths.append((self.project_dir / p).resolve())
-                candidate_paths.append((self.project_dir / "loot" / p.name).resolve())
+            else:
+                candidate_paths.append(self.project_dir / p)
+                candidate_paths.append(self.project_dir / "loot" / p.name)
 
             for candidate in candidate_paths:
-                if candidate.exists() and candidate.is_file():
-                    img = QImage(str(candidate))
-                    if not img.isNull():
-                        # Downscale oversized screenshots for preview performance & clean rendering
-                        if img.width() > 1400:
-                            img = img.scaledToWidth(1400, Qt.TransformationMode.SmoothTransformation)
-                        self._image_cache[url_str] = img
-                        return img
-                    else:
-                        logger.warning(f"Could not decode QImage from candidate: {candidate}")
+                try:
+                    cand_resolved = candidate.resolve()
+                except (OSError, RuntimeError):
+                    continue
+
+                # STRICT SANDBOX BOUNDARY CHECK:
+                # Disallow any path traversal escaping the active project workspace
+                try:
+                    if not cand_resolved.is_relative_to(proj_resolved):
+                        logger.warning(
+                            f"Blocked path traversal image preview attempt outside project sandbox: {candidate} -> {cand_resolved}"
+                        )
+                        continue
+                except (ValueError, AttributeError):
+                    continue
+
+                # Must exist and be a regular file
+                if not cand_resolved.exists() or not cand_resolved.is_file():
+                    continue
+
+                # DoS Protection: Size limit check before decoding
+                try:
+                    file_size = cand_resolved.stat().st_size
+                    if file_size > MAX_PREVIEW_IMAGE_FILE_SIZE or file_size == 0:
+                        logger.warning(
+                            f"Rejected oversized/empty image preview file ({file_size} bytes): {cand_resolved}"
+                        )
+                        continue
+                except OSError:
+                    continue
+
+                # Load and decode image
+                img = QImage(str(cand_resolved))
+                if not img.isNull():
+                    # Downscale oversized screenshots for preview performance & clean rendering
+                    if img.width() > 1400:
+                        img = img.scaledToWidth(1400, Qt.TransformationMode.SmoothTransformation)
+                    self._image_cache[url_str] = img
+                    return img
+                else:
+                    logger.warning(f"Could not decode QImage from candidate: {cand_resolved}")
 
         return super().loadResource(r_type, name)
 

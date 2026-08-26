@@ -556,6 +556,155 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertNotEqual(resolved_dir, outside_dir)
         self.assertTrue(resolved_dir.is_relative_to(self.projects_dir.resolve()))
 
+    # -------------------------------------------------------------------------
+    # 16. Report-Preview Sandbox & Arbitrary Local File Disclosure Defense
+    # -------------------------------------------------------------------------
+    def test_report_document_blocks_path_traversal_and_absolute_outside_images(self):
+        """
+        Adversarial: A malicious markdown entry with relative traversal (../../outside.png)
+        or absolute path outside the project directory must be strictly blocked by ReportDocument.
+        """
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QTextDocument
+        from ui.report_editor_tab import ReportDocument
+
+        # 1. Create a secret image outside the project workspace
+        secret_outside = self.temp_path / "secret_victim_data.png"
+        victim_img = QImage(100, 100, QImage.Format.Format_RGB32)
+        victim_img.fill(QColor("red"))
+        self.assertTrue(victim_img.save(str(secret_outside), "PNG"))
+
+        # 2. Create legitimate project workspace
+        proj_dir = self.project_mgr.create_project("SandboxBox")
+        doc = ReportDocument(project_dir=proj_dir)
+
+        # 3. Test relative traversal escape
+        traversal_url = QUrl("../../../../secret_victim_data.png")
+        loaded_traversal = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), traversal_url)
+        self.assertNotIsInstance(loaded_traversal, QImage)
+
+        # 4. Test absolute file path escape
+        absolute_url = QUrl.fromLocalFile(str(secret_outside.resolve()))
+        loaded_absolute = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), absolute_url)
+        self.assertNotIsInstance(loaded_absolute, QImage)
+
+        # 5. Test raw absolute string path escape
+        raw_absolute_url = QUrl(str(secret_outside.resolve()))
+        loaded_raw_abs = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), raw_absolute_url)
+        self.assertNotIsInstance(loaded_raw_abs, QImage)
+
+    # -------------------------------------------------------------------------
+    # 17. Report-Preview Oversized Image / Decompress Bomb DoS Defense
+    # -------------------------------------------------------------------------
+    def test_report_document_rejects_oversized_images(self):
+        """
+        Adversarial: An oversized image file (>15MB) inside the project loot must be
+        rejected before QImage loading/decoding to prevent memory exhaustion and UI freezing.
+        """
+        from PyQt6.QtCore import QUrl
+        from PyQt6.QtGui import QTextDocument
+        from ui.report_editor_tab import ReportDocument
+
+        proj_dir = self.project_mgr.create_project("BombBox")
+        loot_dir = proj_dir / "loot"
+        loot_dir.mkdir(exist_ok=True)
+        giant_file = loot_dir / "giant_bomb.png"
+
+        # Create 16MB file
+        with open(giant_file, "wb") as f:
+            f.seek(16 * 1024 * 1024)
+            f.write(b"\x00")
+
+        doc = ReportDocument(project_dir=proj_dir)
+        loaded = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), QUrl("loot/giant_bomb.png"))
+        self.assertNotIsInstance(loaded, QImage)
+
+    # -------------------------------------------------------------------------
+    # 18. ReportBuilder Markdown / Code-Fence Injection Defense
+    # -------------------------------------------------------------------------
+    def test_report_builder_code_fence_injection_defense(self):
+        """
+        Adversarial: Loot items and clipboard entries containing backticks (e.g. ```)
+        must be enclosed with adaptive fences (e.g. ````) to prevent breaking out
+        of codeblocks and injecting arbitrary markdown or fake headers into reports.
+        """
+        from core.report_builder import ReportBuilder
+
+        # Add credentials with triple backticks injection attempt
+        malicious_cred = "admin\n```\n# FAKE EXECUTIVE SUMMARY INJECTION\n```"
+        self.loot_mgr.add_entry(
+            entry_type="credentials",
+            title="Injected Credential",
+            content=malicious_cred,
+            target_ip="10.10.10.55",
+            category="initial_access"
+        )
+
+        # Add directory with backticks
+        malicious_dir = "/var/www/`html`/`secret`"
+        self.loot_mgr.add_entry(
+            entry_type="directory",
+            title="Injected Directory",
+            content=malicious_dir,
+            target_ip="10.10.10.55",
+            category="recon"
+        )
+
+        # Add clipboard item with quadruple backticks
+        malicious_clip = "echo 'pwned'\n````\n## INJECTED FOOTER\n````"
+        self.clip_watcher.add_entry(malicious_clip, target_ip="10.10.10.55")
+
+        builder = ReportBuilder(
+            loot_manager=self.loot_mgr,
+            clipboard_watcher=self.clip_watcher,
+            project_manager=self.project_mgr
+        )
+        report_md = builder.build(target_ip="10.10.10.55", project_name="FenceTest")
+
+        # 1. Verify credential code fence adapted to 4 backticks
+        self.assertIn("````\nadmin\n```\n# FAKE EXECUTIVE SUMMARY INJECTION\n```\n````", report_md)
+
+        # 2. Verify clipboard code fence adapted to 5 backticks
+        self.assertIn("`````bash\necho 'pwned'\n````\n## INJECTED FOOTER\n````\n`````", report_md)
+
+        # 3. Verify directory inline code adapted with CommonMark space padding
+        self.assertIn("`` /var/www/`html`/`secret` ``", report_md)
+
+    # -------------------------------------------------------------------------
+    # 19. TemplateEngine Regex Backslash Sequences Crash & Corruption Defense
+    # -------------------------------------------------------------------------
+    def test_template_engine_backslash_sequences_safety(self):
+        r"""
+        Adversarial: User variables containing backslash sequences (e.g. \1, \g<0>, \n, \x)
+        must not crash re.sub or trigger regex backreference group corruption.
+        """
+        from core.template_engine import TemplateEngine
+
+        # 1. Invalid regex group backreference \1 (would crash re.sub with re.error)
+        res1 = TemplateEngine.render(
+            "curl {{TARGET_IP}}",
+            {"target_ip": r"10.10.10.1\1"}
+        )
+        self.assertEqual(res1, r"curl 10.10.10.1\1")
+
+        # 2. Named group backreference \g<0> (would replace with {{TARGET_IP}} itself)
+        res2 = TemplateEngine.render(
+            "curl {{TARGET_IP}}",
+            {"target_ip": r"10.10.10.1\g<0>"}
+        )
+        self.assertEqual(res2, r"curl 10.10.10.1\g<0>")
+
+        # 3. Complex password with multiple backslash sequences in render_with_custom
+        res3 = TemplateEngine.render_with_custom(
+            "mysql -u {{USER}} -p'{{PASSWORD}}' -h {{TARGET_IP}}",
+            {"target_ip": "10.10.10.99", "user": r"root\1"},
+            {"PASSWORD": r"P@ss\2\g<1>\test"}
+        )
+        self.assertEqual(
+            res3,
+            r"mysql -u root\1 -p'P@ss\2\g<1>\test' -h 10.10.10.99"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

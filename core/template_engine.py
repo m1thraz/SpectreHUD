@@ -95,7 +95,7 @@ class TemplateEngine:
         result = template
         for key, val in aliases.items():
             pattern = re.compile(rf"\{{\{{\s*{re.escape(key)}\s*\}}\}}", re.IGNORECASE)
-            result = pattern.sub(val, result)
+            result = pattern.sub(lambda m, v=val: v, result)
 
         return result
 

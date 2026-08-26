@@ -20,6 +20,7 @@ Titel-Block sind bewusst über TEMPLATE_SECTIONS/HEADER_TEMPLATE als
 Konstanten ausgelagert, damit sie sich später (z.B. für ein eigenes
 Firmen-Reportformat) ohne Umbau der Rendering-Logik anpassen lassen.
 """
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -33,6 +34,34 @@ logger = get_logger("report_builder")
 # So kann der Nutzer die automatisch gesammelten Rohdaten direkt im
 # exportierten .md zu Fließtext ausformulieren, statt das separat zu tun.
 SECTION_NOTES_PLACEHOLDER = "_Eigene Anmerkungen zu dieser Phase:_\n\n> "
+
+
+def _wrap_code_fence(text: str, lang: str = "") -> List[str]:
+    """
+    Wraps text in a markdown code fence with adaptive backtick length to prevent
+    code-fence breakout and injection when content contains triple or consecutive backticks.
+    """
+    backtick_runs = re.findall(r"`+", text)
+    max_backticks = max([len(r) for r in backtick_runs], default=0)
+    fence_len = max(3, max_backticks + 1)
+    fence = "`" * fence_len
+    return [f"{fence}{lang}", text, fence]
+
+
+def _wrap_inline_code(text: str) -> str:
+    """
+    Wraps text in markdown inline code backticks with adaptive length to prevent
+    inline code breakage when content contains backticks.
+    """
+    if not text:
+        return "``"
+    backtick_runs = re.findall(r"`+", text)
+    max_backticks = max([len(r) for r in backtick_runs], default=0)
+    fence_len = max_backticks + 1
+    fence = "`" * fence_len
+    if text.startswith("`") or text.endswith("`"):
+        return f"{fence} {text} {fence}"
+    return f"{fence}{text}{fence}"
 
 
 class ReportBuilder:
@@ -83,7 +112,7 @@ class ReportBuilder:
         title = f"Pentest Report: {project_name}" if project_name else "Pentest / CTF Session Report"
         return [
             f"# {title}",
-            f"**Ziel:** `{target_display}`  ",
+            f"**Ziel:** {_wrap_inline_code(target_display)}  ",
             f"**Erstellt am:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
             "",
             "---",
@@ -126,9 +155,9 @@ class ReportBuilder:
         lines = [f"### {title}"]
         meta = []
         if entry.get("target_ip"):
-            meta.append(f"**Target:** `{entry.get('target_ip')}`")
+            meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
         if entry.get("timestamp"):
-            meta.append(f"**Zeit:** `{entry.get('timestamp')}`")
+            meta.append(f"**Zeit:** {_wrap_inline_code(str(entry.get('timestamp')))}")
         if meta:
             lines.append(" | ".join(meta))
         lines.append("")
@@ -139,11 +168,9 @@ class ReportBuilder:
             else:
                 lines.append(f"![{title}]({content})")
         elif entry_type in ("credentials", "hash", "flag"):
-            lines.append("```")
-            lines.append(content)
-            lines.append("```")
+            lines.extend(_wrap_code_fence(content))
         elif entry_type == "directory":
-            lines.append(f"`{content}`")
+            lines.append(_wrap_inline_code(content))
         else:
             lines.append(content)
 
@@ -169,11 +196,9 @@ class ReportBuilder:
         chronological = list(reversed(history_items))
         for i, item in enumerate(chronological, start=1):
             ts = item.get("timestamp", "").split(" ")[-1]
-            target_tag = f" `[{item.get('target_ip')}]`" if item.get("target_ip") else ""
-            lines.append(f"#### {i}. `{ts}`{target_tag}")
-            lines.append("```bash")
-            lines.append(item.get("text", ""))
-            lines.append("```")
+            target_tag = f" {_wrap_inline_code('[' + str(item.get('target_ip')) + ']')}" if item.get("target_ip") else ""
+            lines.append(f"#### {i}. {_wrap_inline_code(ts)}{target_tag}")
+            lines.extend(_wrap_code_fence(item.get("text", ""), lang="bash"))
             lines.append("")
 
         lines.append("---")

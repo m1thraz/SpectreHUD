@@ -23,6 +23,8 @@ def create_shortcut():
         if onedrive_desktop.exists():
             desktop_dir = onedrive_desktop
 
+    shortcut_path = desktop_dir / "SpectreHUD.lnk"
+
     icon_path = project_dir / "data" / "icon.ico"
     icon_line = f'$Shortcut.IconLocation = "{icon_path}"' if icon_path.exists() else ""
 
