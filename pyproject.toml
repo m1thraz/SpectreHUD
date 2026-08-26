@@ -38,8 +38,8 @@ where = ["."]
 include = ["core*", "ui*", "data*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.png", "*.qss", "*.md"]
-data = ["*.json"]
+"*" = ["*.json", "*.png", "*.qss", "*.md", "*.svg", "*.ico"]
+data = ["*.json", "*.svg", "*.ico"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

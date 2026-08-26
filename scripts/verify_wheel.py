@@ -13,6 +13,8 @@ REQUIRED_FILES = [
     "create_desktop_shortcut.py",
     "data/__init__.py",
     "data/default_snippets.json",
+    "data/icon.ico",
+    "data/icon.svg",
     "core/config.py",
     "core/snippet_manager.py",
     "core/loot_manager.py",

@@ -166,6 +166,11 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setStyleSheet(CYBER_DARK_QSS)
 
+        from ui.styles import get_app_icon
+        app_icon = get_app_icon()
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
+
     def _init_ui(self) -> None:
         central_widget = QWidget()
         central_widget.setObjectName("CentralWidget")

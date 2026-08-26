@@ -64,6 +64,11 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     app.setStyleSheet(CYBER_DARK_QSS)
 
+    from ui.styles import get_app_icon
+    app_icon = get_app_icon()
+    if not app_icon.isNull():
+        app.setWindowIcon(app_icon)
+
     # Initialize Managers
     config_manager = ConfigManager()
     from core.i18n import set_locale, t
@@ -77,6 +82,8 @@ def main():
 
     # Main Window
     window = MainWindow(config_manager, snippet_manager, loot_manager, clipboard_watcher, project_manager)
+    if not app_icon.isNull():
+        window.setWindowIcon(app_icon)
     window.show()
 
     # Global Hotkey Listener

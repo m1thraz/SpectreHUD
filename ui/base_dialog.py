@@ -23,6 +23,11 @@ class BaseHudDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet(CYBER_DARK_QSS)
 
+        from ui.styles import get_app_icon
+        app_icon = get_app_icon()
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
+
         # Dragging state
         self._is_dragging = False
         self._drag_position = QPoint()
