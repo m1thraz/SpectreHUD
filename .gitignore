@@ -32,7 +32,7 @@ MANIFEST
 
 # PyInstaller / Executables
 *.manifest
-*.spec
+!SpectreHUD.spec
 
 # Installer logs
 pip-log.txt

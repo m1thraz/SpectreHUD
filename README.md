@@ -35,7 +35,7 @@ SpectreHUD is an ultra-fast, frameless HUD overlay built on PyQt6 — accessible
 
 ![Add Command Dialog](assets/spectrehud_add_command.png)
 
-
+![New Project Workspace Dialog](assets/spectrehud_new_project.png)
 
 ---
 
@@ -83,6 +83,7 @@ Each phase includes freeform text areas for explanations, followed by a chronolo
 
 ## Known Limitations
 
+- **Multi-Monitor Display Coverage:** SpectreHUD seamlessly captures and spans across all active displays in your virtual desktop (including negative x/y monitor offsets and mixed DPI configurations).
 - **Wayland Screen Capture Security Model (`XDG_SESSION_TYPE=wayland`):** On modern Linux Wayland compositors (GNOME/KDE Wayland), direct screen capture without user portal prompts is restricted by the operating system's security architecture. If Qt's screen grab returns an empty canvas, SpectreHUD safely falls back and logs a diagnostic warning.
 - **Wayland Global Shortcuts:** Global key hooks under pure Wayland require desktop shortcut permissions or using the system tray menu actions.
 
