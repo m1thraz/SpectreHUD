@@ -35,6 +35,8 @@ SpectreHUD is an ultra-fast, frameless HUD overlay built on PyQt6 — accessible
 
 ![Add Command Dialog](assets/spectrehud_add_command.png)
 
+![New Project Workspace Dialog](assets/spectrehud_new_project.png)
+
 ---
 
 ## Phase-Based Report Workflow
@@ -49,6 +51,8 @@ The automated report generator (`core/report_builder.py`) organizes session data
 6. **Notes & Uncategorized** — Miscellaneous observations and takeaways.
 
 Each phase includes freeform text areas for explanations, followed by a chronological terminal output log and an Executive Summary template. Edit your report in the **Report Tab** (`Ctrl + 4`) and save with `Ctrl + S`.
+
+![Live Markdown Report Editor](assets/spectrehud_report_editor.png)
 
 ---
 
