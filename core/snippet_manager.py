@@ -119,7 +119,7 @@ class SnippetManager:
         except (TypeError, ValueError) as e:
             logger.error(f"JSON serialization error saving user snippets: {e}")
 
-    def add_custom_snippet(self, title: str, category: str, subcategory: str, template: str, description: str = "", tags: List[str] = None) -> Dict[str, Any]:
+    def add_custom_snippet(self, title: str, category: str = "Custom Notes & Snippets", subcategory: str = "Allgemein", template: str = "", description: str = "", tags: Optional[List[str]] = None) -> Dict[str, Any]:
         """Creates and stores a new custom snippet."""
         if tags is None:
             tags = []
@@ -137,6 +137,31 @@ class SnippetManager:
         self.snippets.append(new_snip)
         self.save_user_snippets()
         return new_snip
+
+    def import_from_file(self, file_path: Any) -> int:
+        """
+        Imports snippets from a JSON or Markdown file, adds them to user snippets,
+        and persists them to user_snippets.json.
+        Returns the number of snippets imported.
+        """
+        from core.snippet_importer import import_snippets_from_file
+        parsed = import_snippets_from_file(file_path)
+        if not parsed:
+            return 0
+
+        count = 0
+        for snip in parsed:
+            self.add_custom_snippet(
+                title=snip.get("title", "Imported Snippet"),
+                category=snip.get("category", "Custom Notes & Snippets"),
+                subcategory=snip.get("subcategory", "Allgemein"),
+                template=snip.get("template", ""),
+                description=snip.get("description", ""),
+                tags=snip.get("tags", [])
+            )
+            count += 1
+
+        return count
 
     def delete_snippet(self, snippet_id: str) -> bool:
         """Deletes a custom snippet by its ID."""

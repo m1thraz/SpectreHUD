@@ -1,16 +1,11 @@
+﻿"""
+Snippet Importer & Parser for SpectreHUD.
+Allows importing custom snippets from JSON and Markdown files with automatic variable normalization.
 """
-Snippet Importer: Parst und importiert Cheatsheets im JSON- oder Markdown-Format.
-
-Ermöglicht den flexiblen Massen-Import von Befehlen und Cheatsheets:
-1. JSON-Format: Listen von Snippet-Objekten oder strukturierte Kategorien.
-2. Markdown-Format (.md): Standard Markdown mit Überschriften (#, ##, ###)
-   und Fenced Code Blocks (```bash ... ```).
-"""
-import json
 import re
-import uuid
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import List, Dict, Any, Union, Optional
 
 from core.logger import get_logger
 
@@ -19,167 +14,135 @@ logger = get_logger("snippet_importer")
 
 def normalize_template_variables(text: str) -> str:
     """
-    Wandelt gängige Platzhalter wie $TARGET, $target, $ATTACKER, $LHOST, $PORT
-    in die von SpectreHUD verwendeten Template-Variablen ({{TARGET_IP}} etc.) um.
+    Normalizes common CTF / Pentesting variable placeholders to standard SpectreHUD placeholders:
+    - $TARGET, $TARGET_IP, <target_ip>, <target>, {{TARGET}} -> {{TARGET_IP}}
+    - $ATTACKER, $ATTACKER_IP, $LHOST, <attacker_ip>, <lhost>, {{ATTACKER}} -> {{ATTACKER_IP}}
+    - $PORT, $LPORT, <port>, <lport> -> {{PORT}}
+    - $WORDLIST, <wordlist> -> {{WORDLIST}}
     """
     if not text:
         return ""
-    
-    # $TARGET / $target / <target> / <TARGET>
-    text = re.sub(r'(?i)\$TARGET\b|\bTARGET_IP\b|(?i)<target_ip>|(?i)<target>', '{{TARGET_IP}}', text)
-    # $ATTACKER / $LHOST / $attacker / $attackerIP / <attacker>
-    text = re.sub(r'(?i)\$ATTACKER(?:_IP|IP)?\b|(?i)\$LHOST\b|(?i)<attacker_ip>|(?i)<lhost>', '{{ATTACKER_IP}}', text)
-    # $PORT / $LPORT / <port>
-    text = re.sub(r'(?i)\$LPORT\b|\$PORT\b|(?i)<port>|(?i)<lport>', '{{PORT}}', text)
-    # $WORDLIST / <wordlist>
-    text = re.sub(r'(?i)\$WORDLIST\b|(?i)<wordlist>', '{{WORDLIST}}', text)
-    
+
+    # Target IP
+    text = re.sub(r'\$(?:TARGET_IP|TARGET)\b|\bTARGET_IP\b|<(?:target_ip|target)>|\{\{TARGET\}\}', '{{TARGET_IP}}', text, flags=re.IGNORECASE)
+    # Attacker / LHOST IP
+    text = re.sub(r'\$(?:ATTACKER(?:_IP|IP)?|LHOST)\b|<(?:attacker_ip|lhost|attacker)>|\{\{ATTACKER\}\}|\{\{LHOST\}\}', '{{ATTACKER_IP}}', text, flags=re.IGNORECASE)
+    # Port / LPORT
+    text = re.sub(r'\$(?:LPORT|PORT)\b|<(?:lport|port)>|\{\{LPORT\}\}', '{{PORT}}', text, flags=re.IGNORECASE)
+    # Wordlist
+    text = re.sub(r'\$WORDLIST\b|<wordlist>', '{{WORDLIST}}', text, flags=re.IGNORECASE)
+
     return text
 
 
-def parse_snippets_json(raw_text: str) -> List[Dict[str, Any]]:
-    """Parst einen JSON-String und extrahiert standardisierte Snippets."""
+def parse_snippets_json(content: str) -> List[Dict[str, Any]]:
+    """Parses snippet definitions from JSON string (array or object)."""
     snippets: List[Dict[str, Any]] = []
     try:
-        data = json.loads(raw_text)
+        data = json.loads(content)
     except Exception as e:
-        logger.error(f"Failed to parse JSON snippets: {e}")
+        logger.error(f"Failed to parse snippets JSON: {e}")
         return []
 
-    # Format 1: Liste von Snippet-Objekten
+    items = []
     if isinstance(data, list):
-        for item in data:
-            if isinstance(item, dict) and (item.get("template") or item.get("command")):
-                tmpl = item.get("template") or item.get("command") or ""
-                snippets.append({
-                    "id": f"custom_{uuid.uuid4().hex[:8]}",
-                    "title": item.get("title") or item.get("name") or "Importierter Befehl",
-                    "category": item.get("category") or "Custom Notes & Snippets",
-                    "category_id": item.get("category_id") or "custom_snippets",
-                    "subcategory": item.get("subcategory") or "Allgemein",
-                    "description": item.get("description") or "",
-                    "template": normalize_template_variables(tmpl),
-                    "tags": item.get("tags") if isinstance(item.get("tags"), list) else [],
-                    "is_custom": True
-                })
-
-    # Format 2: Kategorien-Struktur {"categories": [{"name": ..., "snippets": [...]}]}
+        items = data
     elif isinstance(data, dict):
-        if "categories" in data and isinstance(data["categories"], list):
+        if "snippets" in data and isinstance(data["snippets"], list):
+            items = data["snippets"]
+        elif "categories" in data and isinstance(data["categories"], list):
             for cat in data["categories"]:
-                if not isinstance(cat, dict):
-                    continue
-                cat_name = cat.get("name") or "Custom Notes & Snippets"
-                cat_id = cat.get("id") or "custom_snippets"
-                for snip in cat.get("snippets", []):
-                    if not isinstance(snip, dict):
-                        continue
-                    tmpl = snip.get("template") or snip.get("command") or ""
-                    if not tmpl.strip():
-                        continue
-                    snippets.append({
-                        "id": f"custom_{uuid.uuid4().hex[:8]}",
-                        "title": snip.get("title") or snip.get("name") or "Importierter Befehl",
-                        "category": snip.get("category") or cat_name,
-                        "category_id": cat_id,
-                        "subcategory": snip.get("subcategory") or "Allgemein",
-                        "description": snip.get("description") or "",
-                        "template": normalize_template_variables(tmpl),
-                        "tags": snip.get("tags") if isinstance(snip.get("tags"), list) else [],
-                        "is_custom": True
-                    })
-        elif "snippets" in data and isinstance(data["snippets"], list):
-            return parse_snippets_json(json.dumps(data["snippets"]))
+                if isinstance(cat, dict) and "snippets" in cat and isinstance(cat["snippets"], list):
+                    cat_name = cat.get("name", "Custom")
+                    for s in cat["snippets"]:
+                        if isinstance(s, dict):
+                            s.setdefault("category", cat_name)
+                            items.append(s)
+        else:
+            items = [data]
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        title = item.get("title", item.get("name", "Custom Snippet"))
+        template = item.get("template", item.get("command", item.get("code", "")))
+        if not template:
+            continue
+        category = item.get("category", "Custom Notes & Snippets")
+        tags = item.get("tags", [])
+        if isinstance(tags, str):
+            tags = [t.strip() for t in tags.split(",") if t.strip()]
+
+        snippets.append({
+            "title": str(title),
+            "template": normalize_template_variables(str(template).strip()),
+            "category": str(category),
+            "tags": tags if isinstance(tags, list) else []
+        })
 
     return snippets
 
 
-def parse_snippets_markdown(raw_text: str) -> List[Dict[str, Any]]:
+def parse_snippets_markdown(content: str) -> List[Dict[str, Any]]:
     """
-    Parst ein Markdown-Cheatsheet und wandelt Abschnitte mit Code-Blöcken in Snippets um.
-    
-    Erkennt:
-    # Hauptkategorie
-    ## Unterkategorie
-    ### Befehls-Titel / Name
-    Optionale Beschreibung oder Notiz
-    ```bash
-    command ...
-    ```
+    Parses snippets from Markdown text.
+    Headings (#, ##, ###) define category / section / title.
+    Code blocks (```...```) define the command template.
     """
     snippets: List[Dict[str, Any]] = []
-    lines = raw_text.splitlines()
+    lines = content.splitlines()
 
-    current_category = "Custom Notes & Snippets"
-    current_subcategory = "Allgemein"
+    current_h1 = "Custom"
+    current_h2 = ""
     current_title = ""
-    current_desc_lines: List[str] = []
     in_code_block = False
-    current_code_lines: List[str] = []
+    code_lines: List[str] = []
 
     for line in lines:
         stripped = line.strip()
-
-        # Fenced code block Start/Ende
         if stripped.startswith("```"):
-            if in_code_block:
-                # Code Block beendet -> Snippet erstellen!
-                code_content = "\n".join(current_code_lines).strip()
-                if code_content:
-                    title = current_title or (code_content.splitlines()[0][:40] if code_content else "Importierter Befehl")
-                    desc = "\n".join(current_desc_lines).strip()
-                    
-                    snippets.append({
-                        "id": f"custom_{uuid.uuid4().hex[:8]}",
-                        "title": title,
-                        "category": current_category,
-                        "category_id": "custom_snippets",
-                        "subcategory": current_subcategory,
-                        "description": desc,
-                        "template": normalize_template_variables(code_content),
-                        "tags": [t.lower() for t in re.findall(r'\b[A-Za-z0-9_-]{3,}\b', current_subcategory + " " + title)[:5]],
-                        "is_custom": True
-                    })
-                
-                in_code_block = False
-                current_code_lines = []
-                current_desc_lines = []
-                current_title = ""
-            else:
+            if not in_code_block:
                 in_code_block = True
-                current_code_lines = []
+                code_lines = []
+            else:
+                in_code_block = False
+                template = "\n".join(code_lines).strip()
+                if template:
+                    title = current_title or (f"{current_h2} - Command" if current_h2 else f"{current_h1} - Command")
+                    category = current_h1
+                    snippets.append({
+                        "title": title,
+                        "template": normalize_template_variables(template),
+                        "category": category,
+                        "tags": [t for t in [current_h1, current_h2] if t]
+                    })
+                code_lines = []
             continue
 
         if in_code_block:
-            current_code_lines.append(line)
+            code_lines.append(line)
             continue
 
-        # Überschriften-Erkennung
         if stripped.startswith("# "):
-            current_category = stripped[2:].strip()
-            current_subcategory = "Allgemein"
+            current_h1 = stripped[2:].strip()
+            current_h2 = ""
             current_title = ""
-            current_desc_lines = []
         elif stripped.startswith("## "):
-            current_subcategory = stripped[3:].strip()
-            current_title = ""
-            current_desc_lines = []
-        elif stripped.startswith("### ") or stripped.startswith("#### "):
-            header_level = 4 if stripped.startswith("#### ") else 3
-            current_title = stripped[header_level + 1:].strip()
-            current_desc_lines = []
-        else:
-            if stripped and not stripped.startswith("---") and not stripped.startswith("{%"):
-                current_desc_lines.append(stripped)
+            current_h2 = stripped[3:].strip()
+            current_title = current_h2
+        elif stripped.startswith("### "):
+            current_title = stripped[4:].strip()
+        elif stripped.startswith("#### "):
+            current_title = stripped[5:].strip()
 
     return snippets
 
 
 def import_snippets_from_file(file_path: Union[str, Path]) -> List[Dict[str, Any]]:
-    """Lädt eine Datei (.json oder .md/.txt) und parst alle enthaltenen Snippets."""
+    """Reads a JSON or Markdown file and parses snippets."""
     path = Path(file_path)
     if not path.exists() or not path.is_file():
-        logger.error(f"File not found for import: {path}")
+        logger.error(f"Import file does not exist: {path}")
         return []
 
     try:
@@ -188,7 +151,13 @@ def import_snippets_from_file(file_path: Union[str, Path]) -> List[Dict[str, Any
         logger.error(f"Failed to read file {path}: {e}")
         return []
 
-    if path.suffix.lower() == ".json":
+    suffix = path.suffix.lower()
+    if suffix in (".json", ".js"):
         return parse_snippets_json(content)
+    elif suffix in (".md", ".markdown", ".txt"):
+        return parse_snippets_markdown(content)
     else:
+        res = parse_snippets_json(content)
+        if res:
+            return res
         return parse_snippets_markdown(content)
