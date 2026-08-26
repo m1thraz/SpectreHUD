@@ -95,8 +95,11 @@ class CheatsheetController(QObject):
 
     def open_add_dialog(self, parent_widget: QWidget) -> bool:
         cats = self.snippet_manager.get_categories()
-        dlg = AddSnippetDialog(cats, parent=parent_widget)
+        dlg = AddSnippetDialog(cats, snippet_manager=self.snippet_manager, parent=parent_widget)
         if dlg.exec():
+            if dlg.imported_count > 0:
+                self.snippets_updated.emit()
+                return True
             data = dlg.get_data()
             self.snippet_manager.add_custom_snippet(
                 title=data["title"],
