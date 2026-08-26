@@ -170,6 +170,7 @@ class ProjectManager:
         Checks registered paths first, then falls back to base_dir with boundary validation.
         """
         pname = self._sanitize_name(name or self.active_project)
+        resolved_base = self.base_dir.resolve()
         
         # 1. Check registry
         if pname in self.registry:
@@ -177,15 +178,18 @@ class ProjectManager:
             if reg_path.exists() and reg_path.is_dir():
                 return reg_path
 
-        # 2. Base directory fallback with boundary defense
-        resolved_base = self.base_dir.resolve()
-        proj_dir = (self.base_dir / pname).resolve()
+        # 2. Base directory fallback with boundary & symlink defense
+        candidate = self.base_dir / pname
+        proj_dir = candidate.resolve()
 
-        if resolved_base not in proj_dir.parents and proj_dir != resolved_base:
-            logger.error(f"Workspace escape attempt detected: {name!r} (resolved to {proj_dir}). Falling back to Default.")
-            return self.base_dir / "Default"
+        if not proj_dir.is_relative_to(resolved_base) or proj_dir == resolved_base:
+            logger.error(
+                f"Workspace escape attempt / symlink traversal detected: {name!r} "
+                f"(resolved to {proj_dir}). Falling back to Default."
+            )
+            return (self.base_dir / "Default").resolve()
 
-        return self.base_dir / pname
+        return proj_dir
 
     def create_project(
         self, 
@@ -198,10 +202,26 @@ class ProjectManager:
         """
         Creates an isolated project workspace with subfolders (recon, exploit, loot),
         notes.md, and project_state.json, and registers its path.
+        Enforces strict boundary checks against symlink and directory traversal escapes.
         """
         clean_name = self._sanitize_name(name)
         target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
-        proj_dir = (target_base / clean_name).resolve()
+        
+        # Boundary & symlink escape validation
+        candidate = target_base / clean_name
+        resolved_proj = candidate.resolve()
+
+        if not resolved_proj.is_relative_to(target_base) or resolved_proj == target_base:
+            logger.error(
+                f"Workspace escape attempt / symlink traversal detected for project {name!r}: "
+                f"resolved to {resolved_proj}, which is outside target base {target_base}. "
+                "Rejecting creation and falling back to Default inside workspace."
+            )
+            clean_name = "Default"
+            target_base = self.base_dir.resolve()
+            proj_dir = (target_base / "Default").resolve()
+        else:
+            proj_dir = resolved_proj
 
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)

@@ -344,6 +344,42 @@ class TestAdversarialRegressions(unittest.TestCase):
             "Security Failure: LootCard resolved a screenshot file from another project's sandbox!"
         )
 
+    # -------------------------------------------------------------------------
+    # 9. P1: Symlink & Junction Workspace Escape Prevention
+    # -------------------------------------------------------------------------
+    def test_symlink_and_junction_workspace_escape_prevention(self):
+        """
+        Adversarial P1: Pre-existing symlinks or Windows junctions inside a workspace
+        pointing to an external location (e.g. projects/Evil -> /outside) must NEVER be
+        followed by create_project() or get_project_dir() to write payload files outside.
+        """
+        outside_dir = self.temp_path / "outside_victim"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        
+        evil_link = self.projects_dir / "Evil"
+        try:
+            os.symlink(outside_dir, evil_link, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            # In some restricted Windows environments without Developer Mode/Admin, symlink creation might raise OSError
+            pass
+
+        if evil_link.exists() or evil_link.is_symlink():
+            # Attempt to create project on symlink target
+            res_dir = self.project_mgr.create_project("Evil")
+            
+            # Invariant 1: Outside directory must have NO files or folders written to it
+            outside_files = [p.name for p in outside_dir.iterdir()]
+            self.assertEqual(
+                outside_files, [],
+                f"P1 Security Breach: create_project wrote files into outside directory {outside_dir}: {outside_files}"
+            )
+            
+            # Invariant 2: Returned project directory must be strictly inside workspace
+            self.assertTrue(
+                res_dir.resolve().is_relative_to(self.projects_dir.resolve()),
+                f"P1 Security Breach: Returned project directory is outside workspace: {res_dir}"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
