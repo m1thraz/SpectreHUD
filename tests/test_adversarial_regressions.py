@@ -273,6 +273,40 @@ class TestAdversarialRegressions(unittest.TestCase):
         cfg_mgr = ConfigManager(config_dir=bomb_cfg_dir)
         self.assertIn("hotkey", cfg_mgr.data)
 
+    # -------------------------------------------------------------------------
+    # 7. P6: Bloated / Massive JSON Data Ingest Bounding (Asymmetric Trust Defense)
+    # -------------------------------------------------------------------------
+    def test_bloated_project_state_is_bounded_and_capped(self):
+        """
+        Adversarial: Importing or loading an externally crafted project_state.json
+        with thousands of items or oversized payload strings must be strictly capped
+        to prevent memory explosion and UI stalling.
+        """
+        self.project_mgr.create_project("BoxBloated")
+        state_file = self.project_mgr.get_project_dir("BoxBloated") / "project_state.json"
+
+        # Create bloated state with 1050 loot items and 600 clipboard entries with oversized payload
+        bloated_state = {
+            "name": "BoxBloated",
+            "target_ip": "10.10.10.10",
+            "loot": [{"title": f"Loot {i}", "content": "X" * (150 * 1024)} for i in range(1050)],
+            "clipboard_history": [{"text": "Y" * (100 * 1024)} for i in range(600)]
+        }
+        state_file.write_text(json.dumps(bloated_state), encoding="utf-8")
+
+        # Load session via service
+        loaded = self.session_service.load_project_session("BoxBloated")
+
+        # Invariant 1: Loot is capped to 1000 items, each item bounded to 128 KB
+        self.assertEqual(len(loaded["loot"]), 1000)
+        self.assertEqual(len(loaded["loot"][0]["content"]), 128 * 1024)
+        self.assertEqual(len(self.loot_mgr.get_all_entries()), 1000)
+
+        # Invariant 2: Clipboard is capped to 500 items, each item bounded to 64 KB
+        self.assertEqual(len(loaded["clipboard_history"]), 500)
+        self.assertEqual(len(loaded["clipboard_history"][0]["text"]), 64 * 1024)
+        self.assertEqual(len(self.clip_watcher.get_all_history()), 500)
+
 
 if __name__ == "__main__":
     unittest.main()

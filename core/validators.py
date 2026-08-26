@@ -9,6 +9,19 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 
+# Content & payload size bounds (defense against bloated / malicious project states)
+MAX_LOOT_ENTRIES: int = 1000
+MAX_CLIPBOARD_ENTRIES: int = 500
+MAX_USER_SNIPPETS: int = 500
+
+MAX_TITLE_LENGTH: int = 256
+MAX_CONTENT_LENGTH: int = 128 * 1024        # 128 KB
+MAX_CLIPBOARD_TEXT_LENGTH: int = 64 * 1024  # 64 KB (matches live recorder)
+MAX_TARGET_IP_LENGTH: int = 128
+MAX_TIMESTAMP_LENGTH: int = 64
+MAX_PROJECT_NAME_LENGTH: int = 128
+
+
 def _stable_hash_id(prefix: str, content: str) -> str:
     """Generates a deterministic, process-independent fallback ID using MD5."""
     digest = hashlib.md5(content.encode("utf-8", errors="replace")).hexdigest()[:8]
@@ -16,17 +29,17 @@ def _stable_hash_id(prefix: str, content: str) -> str:
 
 
 def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
-    """Validates and normalizes a single loot item dictionary."""
+    """Validates, bounds, and normalizes a single loot item dictionary."""
     if not isinstance(entry, dict):
         return None
 
-    entry_id = str(entry.get("id") or "")
-    entry_type = str(entry.get("type") or "note").strip().lower()
-    category = str(entry.get("category") or "misc").strip().lower()
-    title = str(entry.get("title") or "Unbenannter Eintrag").strip()
-    content = str(entry.get("content") or "").strip()
-    target_ip = str(entry.get("target_ip") or "").strip()
-    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    entry_id = str(entry.get("id") or "")[:64]
+    entry_type = str(entry.get("type") or "note").strip().lower()[:32]
+    category = str(entry.get("category") or "misc").strip().lower()[:32]
+    title = str(entry.get("title") or "Unbenannter Eintrag").strip()[:MAX_TITLE_LENGTH]
+    content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
+    target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
+    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
 
     return {
         "id": entry_id or _stable_hash_id("loot_gen", f"{title}:{content}"),
@@ -39,8 +52,8 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     }
 
 
-def validate_loot_list(data: Any) -> List[Dict[str, Any]]:
-    """Validates and normalizes a list of loot entries."""
+def validate_loot_list(data: Any, max_entries: int = MAX_LOOT_ENTRIES) -> List[Dict[str, Any]]:
+    """Validates, normalizes, and caps a list of loot entries."""
     if not isinstance(data, list):
         return []
     valid_entries = []
@@ -48,21 +61,26 @@ def validate_loot_list(data: Any) -> List[Dict[str, Any]]:
         validated = validate_loot_entry(item)
         if validated is not None:
             valid_entries.append(validated)
+            if len(valid_entries) >= max_entries:
+                break
     return valid_entries
 
 
 def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
-    """Validates and normalizes a single clipboard history item dictionary."""
+    """Validates, bounds, and normalizes a single clipboard history item dictionary."""
     if not isinstance(entry, dict):
         return None
 
-    text = str(entry.get("text") or "").strip()
-    if not text:
+    raw_text = str(entry.get("text") or "").strip()
+    if not raw_text:
         return None
 
-    entry_id = str(entry.get("id") or "")
-    target_ip = str(entry.get("target_ip") or "").strip()
-    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    # Cap text length to 64 KB
+    text = raw_text[:MAX_CLIPBOARD_TEXT_LENGTH]
+
+    entry_id = str(entry.get("id") or "")[:64]
+    target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
+    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
     
     lines_count = entry.get("lines_count")
     if not isinstance(lines_count, int) or lines_count < 1:
@@ -80,13 +98,13 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "target_ip": target_ip,
         "timestamp": timestamp,
         "lines_count": lines_count,
-        "char_count": char_count,
+        "char_count": min(char_count, len(text)),
         "is_multiline": is_multiline
     }
 
 
-def validate_clipboard_list(data: Any) -> List[Dict[str, Any]]:
-    """Validates and normalizes a list of clipboard history entries."""
+def validate_clipboard_list(data: Any, max_entries: int = MAX_CLIPBOARD_ENTRIES) -> List[Dict[str, Any]]:
+    """Validates, normalizes, and caps a list of clipboard history entries."""
     if not isinstance(data, list):
         return []
     valid_entries = []
@@ -94,17 +112,20 @@ def validate_clipboard_list(data: Any) -> List[Dict[str, Any]]:
         validated = validate_clipboard_entry(item)
         if validated is not None:
             valid_entries.append(validated)
+            if len(valid_entries) >= max_entries:
+                break
     return valid_entries
 
 
 def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[str, Any]:
     """
     Validates and normalizes the full project_state.json schema.
-    Ensures all expected keys and nested structures (loot list, clipboard list) exist.
+    Ensures all expected keys and nested structures (loot list, clipboard list) exist,
+    strictly bounding all string lengths and list sizes.
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     default_state = {
-        "name": fallback_name,
+        "name": fallback_name[:MAX_PROJECT_NAME_LENGTH],
         "target_ip": "10.10.10.10",
         "attacker_ip": "10.10.14.5",
         "port": "4444",
@@ -119,34 +140,38 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         return default_state
 
     return {
-        "name": str(data.get("name") or fallback_name),
-        "target_ip": str(data.get("target_ip") or "10.10.10.10"),
-        "attacker_ip": str(data.get("attacker_ip") or "10.10.14.5"),
-        "port": str(data.get("port") or "4444"),
-        "wordlist": str(data.get("wordlist") or "/usr/share/wordlists/dirb/common.txt"),
-        "created_at": str(data.get("created_at") or now_str),
-        "updated_at": str(data.get("updated_at") or now_str),
+        "name": str(data.get("name") or fallback_name)[:MAX_PROJECT_NAME_LENGTH],
+        "target_ip": str(data.get("target_ip") or "10.10.10.10")[:MAX_TARGET_IP_LENGTH],
+        "attacker_ip": str(data.get("attacker_ip") or "10.10.14.5")[:MAX_TARGET_IP_LENGTH],
+        "port": str(data.get("port") or "4444")[:32],
+        "wordlist": str(data.get("wordlist") or "/usr/share/wordlists/dirb/common.txt")[:1024],
+        "created_at": str(data.get("created_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
+        "updated_at": str(data.get("updated_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "loot": validate_loot_list(data.get("loot")),
         "clipboard_history": validate_clipboard_list(data.get("clipboard_history"))
     }
 
 
-def validate_user_snippets(data: Any) -> List[Dict[str, Any]]:
-    """Validates and normalizes user custom snippets list."""
+def validate_user_snippets(data: Any, max_entries: int = MAX_USER_SNIPPETS) -> List[Dict[str, Any]]:
+    """Validates, normalizes, and caps user custom snippets list."""
     if not isinstance(data, list):
         return []
     valid = []
     for s in data:
         if isinstance(s, dict) and s.get("title") and s.get("template"):
+            title = str(s.get("title"))[:MAX_TITLE_LENGTH]
+            template = str(s.get("template"))[:MAX_CONTENT_LENGTH]
             valid.append({
-                "id": str(s.get("id") or _stable_hash_id("snip", s['title'])),
-                "title": str(s.get("title")),
-                "template": str(s.get("template")),
-                "category": str(s.get("category") or "Custom"),
-                "category_id": str(s.get("category_id") or "custom_snippets"),
-                "subcategory": str(s.get("subcategory") or "Allgemein"),
-                "description": str(s.get("description") or ""),
-                "tags": [str(t) for t in s.get("tags", [])] if isinstance(s.get("tags"), list) else [],
+                "id": str(s.get("id") or _stable_hash_id("snip", title))[:64],
+                "title": title,
+                "template": template,
+                "category": str(s.get("category") or "Custom")[:64],
+                "category_id": str(s.get("category_id") or "custom_snippets")[:64],
+                "subcategory": str(s.get("subcategory") or "Allgemein")[:64],
+                "description": str(s.get("description") or "")[:2048],
+                "tags": [str(t)[:64] for t in s.get("tags", [])][:32] if isinstance(s.get("tags"), list) else [],
                 "is_custom": True
             })
+            if len(valid) >= max_entries:
+                break
     return valid
