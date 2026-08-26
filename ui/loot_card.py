@@ -42,17 +42,17 @@ class LootCard(QFrame):
 
         # 1. Type Badge
         entry_type = self.entry.get("type", "note")
-        badge_info = next((t for t in LOOT_TYPES if t["id"] == entry_type), {"name": "📝 Notiz", "icon": "📝", "badge_class": "BadgeNote"})
+        badge_info = next((t for t in LOOT_TYPES if t["id"] == entry_type), {"name": "Note", "icon": "", "badge_class": "BadgeNote"})
         
-        lbl_badge = QLabel(f"{badge_info['icon']} {badge_info['name'].split(' ')[1] if ' ' in badge_info['name'] else badge_info['name']}")
+        lbl_badge = QLabel(badge_info["name"])
         lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
         header_layout.addWidget(lbl_badge)
 
         # 2. Category Badge
         cat_id = self.entry.get("category", "misc")
-        cat_info = next((c for c in CATEGORIES if c["id"] == cat_id), {"name": "Sonstiges", "icon": "📝"})
+        cat_info = next((c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""})
         cat_short_name = cat_info["name"].split(".")[1].strip().split("&")[0].strip() if "." in cat_info["name"] else cat_info["name"]
-        lbl_cat = QLabel(f"{cat_info['icon']} {cat_short_name}")
+        lbl_cat = QLabel(cat_short_name)
         lbl_cat.setProperty("class", "CategoryBadge")
         lbl_cat.setToolTip(f"Pentest-Phase: {cat_info['name']}")
         header_layout.addWidget(lbl_cat)
@@ -66,7 +66,7 @@ class LootCard(QFrame):
         # 4. Target IP (if set)
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
-            lbl_target = QLabel(f"🎯 {target_ip}")
+            lbl_target = QLabel(target_ip)
             lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
             header_layout.addWidget(lbl_target)
 
@@ -79,7 +79,7 @@ class LootCard(QFrame):
             header_layout.addWidget(lbl_time)
 
         # 6. Edit Button
-        btn_edit = QPushButton("✏️")
+        btn_edit = QPushButton("✎")
         btn_edit.setProperty("class", "EditBtn")
         btn_edit.setToolTip("Diesen Eintrag bearbeiten / umkategorisieren")
         btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
@@ -108,7 +108,7 @@ class LootCard(QFrame):
                 lbl_thumb.setStyleSheet("border: 1px solid #30363d; border-radius: 4px;")
                 thumb_row.addWidget(lbl_thumb)
 
-            btn_open_img = QPushButton("🖼️ Öffnen")
+            btn_open_img = QPushButton("Open")
             btn_open_img.setProperty("class", "SecondaryBtn")
             btn_open_img.setToolTip("Screenshot in Standard-Bildbetrachter öffnen")
             btn_open_img.clicked.connect(lambda: self._open_image(img_path))
@@ -131,7 +131,7 @@ class LootCard(QFrame):
         self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content_row.addWidget(self.lbl_content, stretch=1)
 
-        self.btn_copy = QPushButton("📋 Kopieren")
+        self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.setMinimumWidth(90)
         self.btn_copy.clicked.connect(self._copy_content)
@@ -187,7 +187,7 @@ class LootCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Kopiert!")
+            self.btn_copy.setText("✓ Copied!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
@@ -196,7 +196,7 @@ class LootCard(QFrame):
             self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("📋 Kopieren")
+        self.btn_copy.setText("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)

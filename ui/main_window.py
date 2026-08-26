@@ -189,13 +189,13 @@ class MainWindow(QMainWindow):
         header_layout.setContentsMargins(12, 6, 10, 6)
         header_layout.setSpacing(8)
 
-        lbl_brand = QLabel("👻 SpectreHUD")
+        lbl_brand = QLabel("SPECTRE // HUD")
         lbl_brand.setStyleSheet("color: #00e5ff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 4px;")
         header_layout.addWidget(lbl_brand)
 
         # Project Selector Button
         active_proj = self.project_manager.get_active_project()
-        self.btn_project = QPushButton(f"📁 Box: {active_proj} ▾")
+        self.btn_project = QPushButton(f"Box: {active_proj} ▾")
         self.btn_project.setProperty("class", "ProjectSelectBtn")
         self.btn_project.setToolTip("Aktives CTF-Projekt / Box wechseln")
         self.btn_project.clicked.connect(self._show_project_menu)
@@ -204,25 +204,25 @@ class MainWindow(QMainWindow):
         header_layout.addSpacing(4)
 
         # Mode Switcher Tabs
-        self.btn_mode_cheatsheet = QPushButton("⚡ Cheatsheet")
+        self.btn_mode_cheatsheet = QPushButton("Cheatsheet")
         self.btn_mode_cheatsheet.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive")
         self.btn_mode_cheatsheet.clicked.connect(lambda: self.switch_mode("cheatsheet"))
         header_layout.addWidget(self.btn_mode_cheatsheet)
 
-        self.btn_mode_loot = QPushButton("📝 Loot")
+        self.btn_mode_loot = QPushButton("Loot")
         self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_loot.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_loot.clicked.connect(lambda: self.switch_mode("loot"))
         header_layout.addWidget(self.btn_mode_loot)
 
-        self.btn_mode_history = QPushButton("📜 History")
+        self.btn_mode_history = QPushButton("History")
         self.btn_mode_history.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_history.clicked.connect(lambda: self.switch_mode("history"))
         header_layout.addWidget(self.btn_mode_history)
 
-        self.btn_mode_report = QPushButton("📊 Report")
+        self.btn_mode_report = QPushButton("Report")
         self.btn_mode_report.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_report.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_report.setToolTip("Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)")
@@ -232,14 +232,14 @@ class MainWindow(QMainWindow):
         header_layout.addStretch()
 
         # Screenshot Snip Button
-        self.btn_screenshot = QPushButton("📷 Snip")
+        self.btn_screenshot = QPushButton("Snip")
         self.btn_screenshot.setProperty("class", "ScreenshotBtn")
         self.btn_screenshot.setToolTip("Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
         self.btn_screenshot.clicked.connect(self.trigger_screenshot)
         header_layout.addWidget(self.btn_screenshot)
 
         # Clipboard Recording Indicator Button
-        self.btn_rec_indicator = QPushButton("⏸️ REC: Aus")
+        self.btn_rec_indicator = QPushButton("REC: Off")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
         self.btn_rec_indicator.setProperty("paused", "true")
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
         self.privacy_banner.setObjectName("PrivacyWarningBanner")
         banner_layout = QHBoxLayout(self.privacy_banner)
         banner_layout.setContentsMargins(10, 4, 10, 4)
-        lbl_warn = QLabel("⚠️ Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf 🔴 REC).")
+        lbl_warn = QLabel("Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf REC: ON).")
         lbl_warn.setObjectName("PrivacyWarningText")
         lbl_warn.setWordWrap(True)
         banner_layout.addWidget(lbl_warn)
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
 
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_display = hotkey_raw.replace("<ctrl>", "Strg").replace("<cmd>", "Super").replace("<shift>", "Shift").replace("<alt>", "Alt").replace("<", "").replace(">", "").replace("+", " + ")
-        self.lbl_status = QLabel(f"⌨ {hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
+        self.lbl_status = QLabel(f"{hotkey_display}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
         self.lbl_status.setObjectName("FooterText")
         footer_layout.addWidget(self.lbl_status)
 
@@ -330,7 +330,7 @@ class MainWindow(QMainWindow):
 
         # Always on Top Toggle
         is_always_on_top = self.config.get("always_on_top", True)
-        self.chk_always_on_top = QCheckBox("📌 Im Vordergrund")
+        self.chk_always_on_top = QCheckBox("Im Vordergrund")
         self.chk_always_on_top.setObjectName("AlwaysOnTopCheck")
         self.chk_always_on_top.setChecked(is_always_on_top)
         self.chk_always_on_top.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -391,11 +391,11 @@ class MainWindow(QMainWindow):
         self.var_bar.setVisible(mode != "report")
 
         if mode == "cheatsheet":
-            self.search_bar.txt_search.setPlaceholderText("⚡ Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...")
+            self.search_bar.txt_search.setPlaceholderText("Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql')...")
         elif mode == "loot":
-            self.search_bar.txt_search.setPlaceholderText("🔍 Session Loot, User, Passwörter, Hashes & Notizen durchsuchen...")
+            self.search_bar.txt_search.setPlaceholderText("Search session loot, credentials, hashes & notes...")
         elif mode == "history":
-            self.search_bar.txt_search.setPlaceholderText("📜 Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...")
+            self.search_bar.txt_search.setPlaceholderText("Search clipboard history, commands & outputs...")
 
         for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history, self.btn_mode_report]:
             btn.style().unpolish(btn)
@@ -632,7 +632,7 @@ class MainWindow(QMainWindow):
 
     def _load_active_project_state(self) -> None:
         active_proj = self.project_manager.get_active_project()
-        self.btn_project.setText(f"📁 Box: {active_proj} ▾")
+        self.btn_project.setText(f"Box: {active_proj} ▾")
 
         state = self.session_service.load_project_session(active_proj)
         if hasattr(self, 'var_bar') and self.var_bar:

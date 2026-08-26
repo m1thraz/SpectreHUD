@@ -77,7 +77,7 @@ class SnippetCard(QFrame):
         
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
-        self.btn_copy = QPushButton("📋 Kopieren")
+        self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.setMinimumWidth(90)
         self.btn_copy.clicked.connect(self._copy_command)
@@ -134,7 +134,7 @@ class SnippetCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Kopiert!")
+            self.btn_copy.setText("✓ Copied!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
@@ -143,7 +143,7 @@ class SnippetCard(QFrame):
             self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("📋 Kopieren")
+        self.btn_copy.setText("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)

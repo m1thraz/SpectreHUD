@@ -50,10 +50,10 @@ class HistoryController(QObject):
         self.filter_buttons.clear()
         history_all = self.clipboard_watcher.get_history()
         pills = [
-            ("all", f"⚡ Alle ({len(history_all)})"),
-            ("target_only", "🎯 Nur Ziel-IP"),
-            ("commands", "⌨️ Befehle"),
-            ("outputs", "📄 Ausgaben")
+            ("all", f"All ({len(history_all)})"),
+            ("target_only", "Target IP Only"),
+            ("commands", "Commands"),
+            ("outputs", "Outputs")
         ]
         for pid, ptext in pills:
             btn = QPushButton(ptext)
@@ -66,13 +66,13 @@ class HistoryController(QObject):
         pills_layout.addStretch()
 
         # Contextual History Action Buttons
-        btn_export = QPushButton("💾 Report (.md)")
+        btn_export = QPushButton("Report (.md)")
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
 
-        btn_clear = QPushButton("🗑️ Leeren")
+        btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip("Clipboard-Historie dieses Projekts leeren")
         btn_clear.clicked.connect(on_clear)
@@ -95,7 +95,7 @@ class HistoryController(QObject):
         )
 
         if not history_items:
-            show_empty_state_fn("Keine Clipboard-Historie vorhanden. Aktiviere 🔴 REC (Ctrl+P) und kopiere Befehle im Terminal.")
+            show_empty_state_fn("Keine Clipboard-Historie vorhanden. Aktiviere REC (Ctrl+P) und kopiere Befehle im Terminal.")
             return []
 
         rendered_cards: List[QWidget] = []
@@ -113,11 +113,11 @@ class HistoryController(QObject):
 
     def update_rec_indicator(self, btn_indicator: QPushButton, is_active: bool) -> None:
         if is_active:
-            btn_indicator.setText("🔴 REC")
+            btn_indicator.setText("REC: ON")
             btn_indicator.setProperty("paused", "false")
             btn_indicator.setToolTip("Clipboard-Logger ist AKTIV (schneidet alle Kopien mit).\nKlicken oder Ctrl+P zum Pausieren.")
         else:
-            btn_indicator.setText("⏸️ REC: Aus")
+            btn_indicator.setText("REC: Off")
             btn_indicator.setProperty("paused", "true")
             btn_indicator.setToolTip("Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Fortsetzen.")
 

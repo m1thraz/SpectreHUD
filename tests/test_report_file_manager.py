@@ -88,7 +88,7 @@ class TestReportFileManager(unittest.TestCase):
         self.assertFalse(self.report_mgr.exists("FreshBox"))
 
         new_content = self.report_mgr.regenerate(self.loot_mgr, self.clip_watcher, "FreshBox")
-        self.assertIn("## 🔍 1. Reconnaissance & Enumeration", new_content)
+        self.assertIn("## 1. Reconnaissance & Enumeration", new_content)
 
         # No backup should have been created
         bak_path = self.report_mgr.get_backup_path("FreshBox")

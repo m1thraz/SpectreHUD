@@ -70,7 +70,7 @@ class ReportEditorTab(QWidget):
         toolbar.addWidget(self.lbl_status)
         toolbar.addStretch()
 
-        self.btn_regenerate = QPushButton("🔄 Neu aus Loot generieren")
+        self.btn_regenerate = QPushButton("Regenerate from Loot")
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
         self.btn_regenerate.setToolTip(
             "Ersetzt den Report-Text durch eine frische Generierung aus Loot "
@@ -80,13 +80,13 @@ class ReportEditorTab(QWidget):
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
-        self.btn_export_copy = QPushButton("📤 Exportieren als...")
+        self.btn_export_copy = QPushButton("Export Copy...")
         self.btn_export_copy.setProperty("class", "SecondaryBtn")
         self.btn_export_copy.setToolTip("Speichert eine Kopie des aktuellen Report-Texts an einem beliebigen Ort.")
         self.btn_export_copy.clicked.connect(self._on_export_copy_clicked)
         toolbar.addWidget(self.btn_export_copy)
 
-        self.btn_save = QPushButton("💾 Speichern")
+        self.btn_save = QPushButton("Save")
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+Umschalt+S)")
         self.btn_save.clicked.connect(self.save)
@@ -100,7 +100,7 @@ class ReportEditorTab(QWidget):
         self.editor = QPlainTextEdit()
         self.editor.setPlaceholderText(
             "Noch kein Report für dieses Projekt vorhanden.\n\n"
-            "Klicke oben auf '🔄 Neu aus Loot generieren', um mit dem "
+            "Klicke oben auf 'Regenerate from Loot', um mit dem "
             "automatisch zusammengestellten Report zu starten - oder "
             "schreib direkt hier los."
         )

@@ -28,16 +28,16 @@ class TestReportBuilder(unittest.TestCase):
         """Report with no loot and no history still contains all categories and summary."""
         report = self.builder.build(project_name="EmptyBox")
         
-        self.assertIn("# 🛡️ Pentest Report: EmptyBox", report)
-        self.assertIn("## 🔍 1. Reconnaissance & Enumeration", report)
-        self.assertIn("## 🚪 2. Initial Access & Exploitation", report)
-        self.assertIn("## 👑 3. Privilege Escalation", report)
-        self.assertIn("## 🌐 4. Post-Exploitation & Lateral Movement", report)
-        self.assertIn("## 📜 5. Custom Scripts & PoCs", report)
-        self.assertIn("## 📝 6. Sonstiges & Unkategorisiert", report)
+        self.assertIn("# Pentest Report: EmptyBox", report)
+        self.assertIn("## 1. Reconnaissance & Enumeration", report)
+        self.assertIn("## 2. Initial Access & Exploitation", report)
+        self.assertIn("## 3. Privilege Escalation", report)
+        self.assertIn("## 4. Post-Exploitation & Lateral Movement", report)
+        self.assertIn("## 5. Custom Scripts & PoCs", report)
+        self.assertIn("## 6. Miscellaneous", report)
         self.assertIn("*Keine Einträge in dieser Phase.*", report)
         self.assertIn("*Keine Clipboard-Historie aufgezeichnet.*", report)
-        self.assertIn("## 📝 Executive Summary", report)
+        self.assertIn("## Executive Summary", report)
 
     def test_categorized_loot_rendering(self):
         """Loot is correctly rendered into its respective category sections in order."""
@@ -51,11 +51,11 @@ class TestReportBuilder(unittest.TestCase):
         report = self.builder.build(target_ip="10.10.10.50", project_name="BoxAlpha")
 
         # Verify section order
-        idx_recon = report.find("## 🔍 1. Reconnaissance & Enumeration")
-        idx_access = report.find("## 🚪 2. Initial Access & Exploitation")
-        idx_privesc = report.find("## 👑 3. Privilege Escalation")
-        idx_postex = report.find("## 🌐 4. Post-Exploitation & Lateral Movement")
-        idx_misc = report.find("## 📝 6. Sonstiges & Unkategorisiert")
+        idx_recon = report.find("## 1. Reconnaissance & Enumeration")
+        idx_access = report.find("## 2. Initial Access & Exploitation")
+        idx_privesc = report.find("## 3. Privilege Escalation")
+        idx_postex = report.find("## 4. Post-Exploitation & Lateral Movement")
+        idx_misc = report.find("## 6. Miscellaneous")
 
         self.assertTrue(idx_recon < idx_access < idx_privesc < idx_postex < idx_misc)
 
@@ -89,7 +89,7 @@ class TestReportBuilder(unittest.TestCase):
         standalone_builder = ReportBuilder(loot_manager=None, clipboard_watcher=self.clip_watcher)
         self.clip_watcher.add_entry("whoami")
         report = standalone_builder.build()
-        self.assertIn("## 🔍 1. Reconnaissance & Enumeration", report)
+        self.assertIn("## 1. Reconnaissance & Enumeration", report)
         self.assertIn("*Keine Einträge in dieser Phase.*", report)
         self.assertIn("whoami", report)
 

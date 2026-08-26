@@ -38,12 +38,12 @@ class ProjectController(QObject):
         menu.addSeparator()
 
         # Action: New Project
-        act_new = QAction("➕ Neues Projekt / Box erstellen...", menu)
+        act_new = QAction("+ Neues Projekt / Box erstellen...", menu)
         act_new.triggered.connect(on_open_new_project)
         menu.addAction(act_new)
 
         # Action: Open in Explorer
-        act_open_folder = QAction("📂 Projektordner im Explorer öffnen", menu)
+        act_open_folder = QAction("Projektordner im Explorer öffnen", menu)
         act_open_folder.triggered.connect(lambda: self.project_manager.open_project_folder())
         menu.addAction(act_open_folder)
 
@@ -62,12 +62,16 @@ class ProjectController(QObject):
             parent_widget,
             default_target=default_target,
             default_attacker=default_attacker,
-            default_port=default_port
+            default_port=default_port,
+            default_base_dir=self.project_manager.base_dir
         )
         if dlg.exec():
             data = dlg.get_data()
             pname = data.get("name")
             if pname:
+                custom_base = data.get("base_dir")
+                if custom_base and custom_base != self.project_manager.base_dir:
+                    self.project_manager.base_dir = custom_base
                 self.project_manager.create_project(
                     name=pname,
                     target_ip=data.get("target_ip", ""),

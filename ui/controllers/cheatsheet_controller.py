@@ -36,9 +36,9 @@ class CheatsheetController(QObject):
         cats = self.snippet_manager.get_categories()
         for c in cats:
             cat_id = c.get("id")
-            pill_text = f"{c.get('icon', '')} {c.get('name').split(' ')[-1] if ' ' in c.get('name') else c.get('name')}"
+            pill_text = c.get("name", "")
             if cat_id == "all":
-                pill_text = "⚡ Alle Befehle"
+                pill_text = "All Commands"
 
             btn = QPushButton(pill_text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)

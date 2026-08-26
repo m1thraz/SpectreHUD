@@ -33,21 +33,21 @@ class HistoryCard(QFrame):
         # Time Badge
         ts = self.entry.get("timestamp", "")
         time_display = ts.split(" ")[-1] if " " in ts else ts
-        lbl_time = QLabel(f"🕒 {time_display}")
+        lbl_time = QLabel(time_display)
         lbl_time.setStyleSheet("background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
         header_layout.addWidget(lbl_time)
 
         # Target IP Badge (if present)
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
-            lbl_target = QLabel(f"🎯 {target_ip}")
+            lbl_target = QLabel(target_ip)
             lbl_target.setStyleSheet("background-color: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
             header_layout.addWidget(lbl_target)
 
         # Stats Badge
         lines_count = self.entry.get("lines_count", 1)
         char_count = self.entry.get("char_count", 0)
-        type_str = "⌨️ Befehl" if lines_count <= 2 and char_count < 120 else f"📄 {lines_count} Zeilen ({char_count} Z.)"
+        type_str = "Command" if lines_count <= 2 and char_count < 120 else f"{lines_count} lines ({char_count} chars)"
         lbl_stats = QLabel(type_str)
         lbl_stats.setStyleSheet("color: #8b949e; font-size: 10px;")
         header_layout.addWidget(lbl_stats)
@@ -81,13 +81,13 @@ class HistoryCard(QFrame):
         action_col = QVBoxLayout()
         action_col.setSpacing(4)
 
-        self.btn_copy = QPushButton("📋 Kopieren")
+        self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.setMinimumWidth(90)
         self.btn_copy.clicked.connect(self._copy_content)
         action_col.addWidget(self.btn_copy)
 
-        self.btn_to_loot = QPushButton("➕ Zu Loot")
+        self.btn_to_loot = QPushButton("+ Loot")
         self.btn_to_loot.setProperty("class", "SecondaryBtn")
         self.btn_to_loot.setToolTip("Diesen Text als Credential/Notiz in Session-Loot übernehmen")
         self.btn_to_loot.setMinimumWidth(90)
@@ -108,7 +108,7 @@ class HistoryCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Kopiert!")
+            self.btn_copy.setText("✓ Copied!")
             self.btn_copy.setProperty("class", "CopyBtnSuccess")
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
@@ -117,7 +117,7 @@ class HistoryCard(QFrame):
             self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("📋 Kopieren")
+        self.btn_copy.setText("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)

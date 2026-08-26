@@ -78,7 +78,7 @@ class ReportBuilder:
         target_display = target_ip if target_ip and target_ip != "all" else "Alle Targets"
         title = f"Pentest Report: {project_name}" if project_name else "Pentest / CTF Session Report"
         return [
-            f"# 🛡️ {title}",
+            f"# {title}",
             f"**Ziel:** `{target_display}`  ",
             f"**Erstellt am:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
             "",
@@ -94,8 +94,7 @@ class ReportBuilder:
         for category in sorted(CATEGORIES, key=lambda c: c["order"]):
             cat_entries = [e for e in all_entries if e.get("category") == category["id"]]
 
-            icon_str = f"{category['icon']} " if category.get("icon") else ""
-            lines.append(f"## {icon_str}{category['name']}")
+            lines.append(f"## {category['name']}")
             lines.append("")
 
             if not cat_entries:
@@ -149,7 +148,7 @@ class ReportBuilder:
 
     def _render_command_history(self, target_ip: Optional[str]) -> List[str]:
         lines = [
-            "## ⚡ Chronologischer Befehlsverlauf (Terminal History)",
+            "## Chronologischer Befehlsverlauf (Terminal History)",
             "",
         ]
         if not self.clipboard_watcher:
@@ -179,7 +178,7 @@ class ReportBuilder:
 
     def _render_footer(self) -> List[str]:
         return [
-            "## 📝 Executive Summary",
+            "## Executive Summary",
             "",
             "- **Initial Access / Schwachstelle:** ",
             "- **Privilege Escalation:** ",

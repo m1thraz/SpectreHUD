@@ -18,7 +18,7 @@ class SearchBar(QFrame):
 
         self.txt_search = QLineEdit()
         self.txt_search.setObjectName("SpotlightSearch")
-        self.txt_search.setPlaceholderText("⚡ Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql', 'suid', 'lfi')...")
+        self.txt_search.setPlaceholderText("Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql', 'suid', 'lfi')...")
         self.txt_search.setClearButtonEnabled(True)
         self.txt_search.textChanged.connect(self.search_changed.emit)
         

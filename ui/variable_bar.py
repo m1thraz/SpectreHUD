@@ -27,7 +27,7 @@ class VariableBar(QFrame):
         layout.setSpacing(10)
 
         # 1. Target IP Input
-        lbl_target = QLabel("🎯 Target:")
+        lbl_target = QLabel("Target:")
         lbl_target.setProperty("class", "VarTagLabel")
         self.txt_target = QLineEdit(str(self.initial_vars.get("target_ip", "10.10.10.10")))
         self.txt_target.setProperty("class", "CompactVarInput")
@@ -38,7 +38,7 @@ class VariableBar(QFrame):
         layout.addWidget(self.txt_target)
 
         # 2. Attacker IP / LHOST Input
-        lbl_attacker = QLabel("💻 LHOST:")
+        lbl_attacker = QLabel("LHOST:")
         lbl_attacker.setProperty("class", "VarTagLabel")
         self.txt_attacker = QLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
         self.txt_attacker.setProperty("class", "CompactVarInput")
@@ -49,14 +49,14 @@ class VariableBar(QFrame):
         layout.addWidget(self.txt_attacker)
 
         # 3. Auto-Detect Button
-        self.btn_auto = QPushButton("🔄 Auto")
+        self.btn_auto = QPushButton("Auto")
         self.btn_auto.setProperty("class", "AutoDetectBtn")
         self.btn_auto.setToolTip("Auto-Erkennung für tun0 / VPN / lokale IP")
         self.btn_auto.clicked.connect(self.auto_detect_ip)
         layout.addWidget(self.btn_auto)
 
         # 4. Port / LPORT Input
-        lbl_port = QLabel("🔌 Port:")
+        lbl_port = QLabel("Port:")
         lbl_port.setProperty("class", "VarTagLabel")
         self.txt_port = QLineEdit(str(self.initial_vars.get("port", "4444")))
         self.txt_port.setProperty("class", "CompactVarInput")
@@ -69,7 +69,7 @@ class VariableBar(QFrame):
         layout.addStretch()
 
         # 5. Add Snippet Button
-        self.btn_add = QPushButton("＋ Neu")
+        self.btn_add = QPushButton("+ Neu")
         self.btn_add.setProperty("class", "MiniPrimaryBtn")
         self.btn_add.setToolTip("Neuen Befehl anlegen (Ctrl+N)")
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
@@ -81,10 +81,10 @@ class VariableBar(QFrame):
         if detected:
             self.txt_attacker.setText(detected)
             self.btn_auto.setText("✓ " + detected)
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText("🔄 Auto"))
+            QTimer.singleShot(2000, lambda: self.btn_auto.setText("Auto"))
         else:
-            self.btn_auto.setText("❌ Keine IP")
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText("🔄 Auto"))
+            self.btn_auto.setText("Keine IP")
+            QTimer.singleShot(2000, lambda: self.btn_auto.setText("Auto"))
 
     def _on_values_changed(self) -> None:
         self.variables_changed.emit(self.get_variables())

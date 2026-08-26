@@ -214,7 +214,7 @@ class TestUI(unittest.TestCase):
         # 2. Ordered according to CATEGORIES (Recon -> Access -> Misc)
         self.assertIn("Reconnaissance", headers[0].text())
         self.assertIn("Initial Access", headers[1].text())
-        self.assertIn("Sonstiges", headers[2].text())
+        self.assertIn("Miscellaneous", headers[2].text())
 
         # 3. Exactly 3 LootCards rendered
         cards = get_current_cards()

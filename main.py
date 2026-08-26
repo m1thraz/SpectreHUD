@@ -35,7 +35,7 @@ def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
     painter.setPen(QColor("#0d1117") if is_recording else QColor("#c9d1d9"))
     font = QFont("Segoe UI", 16, QFont.Weight.Bold)
     painter.setFont(font)
-    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "⚡")
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "S")
 
     # Visual Red Recording Dot in top-right corner if recording
     if is_recording:
@@ -86,18 +86,18 @@ def main():
 
     # System Tray Icon (Default: Paused for privacy)
     tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False)), app)
-    tray_icon.setToolTip("SpectreHUD [⏸️ REC: Pausiert] - CTF Cheatsheet & Loot Overlay")
+    tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
     tray_menu = QMenu()
     
     act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
     act_toggle.triggered.connect(window.toggle_visibility)
     tray_menu.addAction(act_toggle)
 
-    act_snip = QAction("📷 Screenshot aufnehmen (Strg+Super+X)", tray_menu)
+    act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
     act_snip.triggered.connect(window.trigger_screenshot)
     tray_menu.addAction(act_snip)
 
-    act_rec_toggle = QAction("🔴 Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
+    act_rec_toggle = QAction("Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
     act_rec_toggle.triggered.connect(window._toggle_pause_history)
     tray_menu.addAction(act_rec_toggle)
 
@@ -113,9 +113,9 @@ def main():
 
     def update_tray_state(is_active: bool):
         tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active)))
-        status = "🔴 REC: Aktiv" if is_active else "⏸️ REC: Pausiert"
+        status = "REC: ON" if is_active else "REC: Paused"
         tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
-        act_rec_toggle.setText(f"{'⏸️' if is_active else '🔴'} Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
+        act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
 
     clipboard_watcher.logging_state_changed.connect(update_tray_state)
 

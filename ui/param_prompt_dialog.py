@@ -1,13 +1,13 @@
+from typing import Dict, List, Any, Optional
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QPlainTextEdit, QPushButton, QWidget
 )
 from PyQt6.QtCore import Qt
-from typing import Dict, List, Any
 from core.template_engine import TemplateEngine, SMART_PRESETS
-from ui.styles import CYBER_DARK_QSS
+from ui.base_dialog import BaseHudDialog
 
-class ParamPromptDialog(QDialog):
+class ParamPromptDialog(BaseHudDialog):
     """
     Focused modal dialog asking for missing command-specific inline parameters
     with live command preview and session cache.
@@ -19,12 +19,11 @@ class ParamPromptDialog(QDialog):
         variables: Dict[str, Any], 
         unresolved_params: List[str], 
         cached_params: Dict[str, str] = None,
-        parent: QWidget = None
+        parent: Optional[QWidget] = None
     ):
-        super().__init__(parent)
-        self.setWindowTitle("⚡ Parameter ausfüllen")
-        self.setMinimumWidth(520)
-        self.resize(540, 360)
+        super().__init__(title="SPECTRE // PARAMETER AUSFÜLLEN", parent=parent)
+        self.setMinimumWidth(540)
+        self.resize(560, 380)
         
         self.template = template
         self.variables = variables
@@ -32,19 +31,11 @@ class ParamPromptDialog(QDialog):
         self.cached_params = cached_params or {}
         
         self.param_inputs: Dict[str, QLineEdit] = {}
-        self.setStyleSheet(CYBER_DARK_QSS)
-        self._init_ui()
+        self._init_form()
         self._update_preview()
 
-    def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(10)
-
-        # Header Title
-        lbl_header = QLabel("🎯 Befehls-Parameter eingeben:")
-        lbl_header.setStyleSheet("color: #00e5ff; font-size: 14px; font-weight: bold;")
-        layout.addWidget(lbl_header)
+    def _init_form(self) -> None:
+        layout = self.body_layout
 
         # Dynamic Inputs for each parameter
         for param in self.unresolved_params:
@@ -52,14 +43,13 @@ class ParamPromptDialog(QDialog):
             row.setSpacing(2)
             
             lbl = QLabel(f"Wert für {{{{{param}}}}}:")
-            lbl.setStyleSheet("color: #c9d1d9; font-weight: 600; font-size: 12px;")
+            lbl.setProperty("class", "FormLabel")
             row.addWidget(lbl)
 
             # Determine default value (cached -> preset -> empty)
             default_val = self.cached_params.get(param, SMART_PRESETS.get(param, ""))
             
             txt = QLineEdit(default_val)
-            txt.setObjectName("SpotlightSearch")
             txt.setPlaceholderText(f"Wert für {param}...")
             txt.textChanged.connect(self._update_preview)
             self.param_inputs[param] = txt
@@ -75,13 +65,13 @@ class ParamPromptDialog(QDialog):
 
         # Live Command Preview Box
         lbl_preview = QLabel("Live-Befehlsvorschau:")
-        lbl_preview.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: 600; margin-top: 4px;")
+        lbl_preview.setProperty("class", "FormLabel")
         layout.addWidget(lbl_preview)
 
         self.txt_preview = QPlainTextEdit()
         self.txt_preview.setObjectName("CommandBox")
         self.txt_preview.setReadOnly(True)
-        self.txt_preview.setFixedHeight(70)
+        self.txt_preview.setFixedHeight(75)
         layout.addWidget(self.txt_preview)
 
         # Buttons
@@ -98,7 +88,7 @@ class ParamPromptDialog(QDialog):
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_copy = QPushButton("📋 Übernehmen & Kopieren")
+        self.btn_copy = QPushButton("Übernehmen & Kopieren")
         self.btn_copy.setProperty("class", "PrimaryBtn")
         self.btn_copy.clicked.connect(self.accept)
         btn_layout.addWidget(self.btn_copy)

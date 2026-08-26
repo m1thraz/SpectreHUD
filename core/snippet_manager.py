@@ -59,7 +59,7 @@ class SnippetManager:
                         cat_info = {
                             "id": cat.get("id", cat.get("name")),
                             "name": cat.get("name"),
-                            "icon": cat.get("icon", "📁")
+                            "icon": cat.get("icon", "")
                         }
                         self.categories.append(cat_info)
                         for snip in cat.get("snippets", []):
@@ -76,8 +76,8 @@ class SnippetManager:
         # 2. Load user custom snippets
         custom_category = {
             "id": "custom_snippets",
-            "name": "⭐ Eigene Notizen & Custom",
-            "icon": "⭐"
+            "name": "Custom Notes & Snippets",
+            "icon": ""
         }
         
         user_snippets = []
@@ -115,7 +115,7 @@ class SnippetManager:
         new_snip = {
             "id": f"custom_{uuid.uuid4().hex[:8]}",
             "title": title,
-            "category": category or "⭐ Eigene Notizen & Custom",
+            "category": category or "Custom Notes & Snippets",
             "category_id": "custom_snippets",
             "subcategory": subcategory or "Allgemein",
             "description": description,
@@ -175,13 +175,13 @@ class SnippetManager:
 
     def get_categories(self) -> List[Dict[str, Any]]:
         """Returns categories with accurate snippet counts."""
-        cats = [{"id": "all", "name": "✨ Alle Befehle", "icon": "⚡", "count": len(self.snippets)}]
+        cats = [{"id": "all", "name": "All Commands", "icon": "", "count": len(self.snippets)}]
         for c in self.categories:
             count = sum(1 for s in self.snippets if s.get("category_id") == c["id"])
             cats.append({
                 "id": c["id"],
                 "name": c["name"],
-                "icon": c.get("icon", "📁"),
+                "icon": c.get("icon", ""),
                 "count": count
             })
         return cats

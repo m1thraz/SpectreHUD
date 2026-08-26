@@ -11,7 +11,7 @@ from core.logger import get_logger
 
 logger = get_logger("projects")
 
-DEFAULT_NOTES_TEMPLATE = """# 🎯 CTF Write-Up & Notes: {project_name}
+DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
 
 - **Target IP:** `{target_ip}`
 - **Attacker IP / LHOST:** `{attacker_ip}`
@@ -19,7 +19,7 @@ DEFAULT_NOTES_TEMPLATE = """# 🎯 CTF Write-Up & Notes: {project_name}
 
 ---
 
-## 🔍 1. Reconnaissance & Port Scans
+## 1. Reconnaissance & Port Scans
 - **Nmap Initial Scan:**
 ```bash
 # Nmap initial results
@@ -27,20 +27,20 @@ DEFAULT_NOTES_TEMPLATE = """# 🎯 CTF Write-Up & Notes: {project_name}
 
 ---
 
-## ⚡ 2. Initial Access & Exploitation
+## 2. Initial Access & Exploitation
 - **Schwachstelle:** 
 - **Vorgehensweise:** 
 
 ---
 
-## 🛡️ 3. Privilege Escalation
+## 3. Privilege Escalation
 - **User Flag:** 
 - **Root / Admin Escalation:** 
 - **Root Flag:** 
 
 ---
 
-## 📝 4. Notizen & Gelerntes
+## 4. Notizen & Gelerntes
 - 
 """
 

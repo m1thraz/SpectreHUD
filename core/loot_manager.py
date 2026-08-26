@@ -10,21 +10,21 @@ from core.logger import get_logger
 logger = get_logger("loot")
 
 LOOT_TYPES = [
-    {"id": "credentials", "name": "🔑 Credentials / Logins", "icon": "🔑", "badge_class": "BadgeCreds"},
-    {"id": "hash", "name": "🔐 Hashes", "icon": "🔐", "badge_class": "BadgeHash"},
-    {"id": "screenshot", "name": "📷 Screenshots", "icon": "📷", "badge_class": "BadgeScreenshot"},
-    {"id": "directory", "name": "📂 Directories / URLs", "icon": "📂", "badge_class": "BadgeDir"},
-    {"id": "flag", "name": "🚩 Flags", "icon": "🚩", "badge_class": "BadgeFlag"},
-    {"id": "note", "name": "📝 Notizen & Sonstiges", "icon": "📝", "badge_class": "BadgeNote"}
+    {"id": "credentials", "name": "Credentials", "icon": "", "badge_class": "BadgeCreds"},
+    {"id": "hash", "name": "Hashes", "icon": "", "badge_class": "BadgeHash"},
+    {"id": "screenshot", "name": "Screenshots", "icon": "", "badge_class": "BadgeScreenshot"},
+    {"id": "directory", "name": "Directories", "icon": "", "badge_class": "BadgeDir"},
+    {"id": "flag", "name": "Flags", "icon": "", "badge_class": "BadgeFlag"},
+    {"id": "note", "name": "Notes", "icon": "", "badge_class": "BadgeNote"}
 ]
 
 CATEGORIES = [
-    {"id": "recon", "name": "1. Reconnaissance & Enumeration", "order": 1, "icon": "🔍"},
-    {"id": "access", "name": "2. Initial Access & Exploitation", "order": 2, "icon": "🚪"},
-    {"id": "privesc", "name": "3. Privilege Escalation", "order": 3, "icon": "👑"},
-    {"id": "postex", "name": "4. Post-Exploitation & Lateral Movement", "order": 4, "icon": "🌐"},
-    {"id": "scripts", "name": "5. Custom Scripts & PoCs", "order": 5, "icon": "📜"},
-    {"id": "misc", "name": "6. Sonstiges & Unkategorisiert", "order": 6, "icon": "📝"}
+    {"id": "recon", "name": "1. Reconnaissance & Enumeration", "order": 1, "icon": ""},
+    {"id": "access", "name": "2. Initial Access & Exploitation", "order": 2, "icon": ""},
+    {"id": "privesc", "name": "3. Privilege Escalation", "order": 3, "icon": ""},
+    {"id": "postex", "name": "4. Post-Exploitation & Lateral Movement", "order": 4, "icon": ""},
+    {"id": "scripts", "name": "5. Custom Scripts & PoCs", "order": 5, "icon": ""},
+    {"id": "misc", "name": "6. Miscellaneous", "order": 6, "icon": ""}
 ]
 
 VALID_CATEGORY_IDS = {c["id"] for c in CATEGORIES}

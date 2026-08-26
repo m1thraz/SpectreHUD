@@ -32,6 +32,7 @@ REQUIRED_FILES = [
     "ui/controllers/report_controller.py",
     "ui/controllers/project_controller.py",
     "ui/controllers/window_frame_manager.py",
+    "ui/base_dialog.py",
 ]
 
 def verify_wheel(wheel_path: Path) -> bool:

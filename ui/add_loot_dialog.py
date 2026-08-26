@@ -1,13 +1,13 @@
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QPlainTextEdit, QPushButton, QComboBox, QWidget, QMessageBox
 )
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
-from ui.styles import CYBER_DARK_QSS
+from ui.base_dialog import BaseHudDialog
 
-class AddLootDialog(QDialog):
+class AddLootDialog(BaseHudDialog):
     """Dialog to capture new or edit existing session loot (credentials, hashes, flags, notes, PoCs)."""
 
     def __init__(
@@ -31,13 +31,13 @@ class AddLootDialog(QDialog):
         is_edit: bool = False,
         **kwargs
     ):
-        super().__init__(parent)
         self.entry_id = entry_id or kwargs.get("id")
         self.is_edit = is_edit or bool(self.entry_id)
-
-        self.setWindowTitle("✏️ Session-Loot bearbeiten" if self.is_edit else "📝 Neuen Session-Loot erfassen")
-        self.setMinimumWidth(500)
-        self.setMinimumHeight(420)
+        dialog_title = "SPECTRE // SESSION-LOOT BEARBEITEN" if self.is_edit else "SPECTRE // NEUEN SESSION-LOOT ERFASSEN"
+        
+        super().__init__(title=dialog_title, parent=parent)
+        self.setMinimumWidth(540)
+        self.resize(560, 460)
         
         self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
         self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
@@ -45,13 +45,10 @@ class AddLootDialog(QDialog):
         self.initial_title = default_title or initial_title or title or kwargs.get("name", "")
         self.initial_content = default_content or initial_content or content or kwargs.get("text", "")
         
-        self.setStyleSheet(CYBER_DARK_QSS)
-        self._init_ui()
+        self._init_form()
 
-    def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
+    def _init_form(self) -> None:
+        layout = self.body_layout
 
         # 1. Type and Category Selection (Side by Side)
         select_row = QHBoxLayout()
@@ -60,10 +57,13 @@ class AddLootDialog(QDialog):
         # 1a. Type
         type_col = QVBoxLayout()
         type_col.setSpacing(4)
-        type_col.addWidget(QLabel("Typ des Eintrags:"))
+        lbl_type = QLabel("Typ des Eintrags:")
+        lbl_type.setProperty("class", "FormLabel")
+        type_col.addWidget(lbl_type)
+
         self.combo_type = QComboBox()
         for i, t in enumerate(LOOT_TYPES):
-            self.combo_type.addItem(f"{t['icon']} {t['name']}", t['id'])
+            self.combo_type.addItem(t['name'], t['id'])
             if t['id'] == self.initial_type:
                 self.combo_type.setCurrentIndex(i)
         type_col.addWidget(self.combo_type)
@@ -72,10 +72,13 @@ class AddLootDialog(QDialog):
         # 1b. Pentest Category
         cat_col = QVBoxLayout()
         cat_col.setSpacing(4)
-        cat_col.addWidget(QLabel("Pentest-Phase / Kategorie:"))
+        lbl_cat = QLabel("Pentest-Phase / Kategorie:")
+        lbl_cat.setProperty("class", "FormLabel")
+        cat_col.addWidget(lbl_cat)
+
         self.combo_category = QComboBox()
         for i, c in enumerate(sorted(CATEGORIES, key=lambda x: x["order"])):
-            self.combo_category.addItem(f"{c['icon']} {c['name']}", c['id'])
+            self.combo_category.addItem(c['name'], c['id'])
             if c['id'] == self.initial_category:
                 self.combo_category.setCurrentIndex(i)
         cat_col.addWidget(self.combo_category)
@@ -84,27 +87,42 @@ class AddLootDialog(QDialog):
         layout.addLayout(select_row)
 
         # 2. Title
-        layout.addWidget(QLabel("Titel / Bezeichner:"))
+        lbl_title = QLabel("Titel / Bezeichner:")
+        lbl_title.setProperty("class", "FormLabel")
+        layout.addWidget(lbl_title)
+
         self.txt_title = QLineEdit(self.initial_title)
         self.txt_title.setPlaceholderText("z.B. SSH Key user 'alice', MySQL Root Password, user.txt")
         layout.addWidget(self.txt_title)
 
         # 3. Content / Value
-        layout.addWidget(QLabel("Inhalt / Passwort / Hash / Flag / Notiz:"))
+        lbl_content = QLabel("Inhalt / Passwort / Hash / Flag / Notiz:")
+        lbl_content.setProperty("class", "FormLabel")
+        layout.addWidget(lbl_content)
+
         self.txt_content = QPlainTextEdit()
+        self.txt_content.setObjectName("CommandBox")
         self.txt_content.setPlainText(self.initial_content)
         self.txt_content.setPlaceholderText("z.B. admin:SuperSecretPass! oder THM{fl4g_h3r3}")
-        self.txt_content.setFixedHeight(110)
+        self.txt_content.setFixedHeight(100)
         layout.addWidget(self.txt_content)
 
         # 4. Target IP
-        layout.addWidget(QLabel("Zugehöriges Target (optional):"))
+        lbl_target = QLabel("Zugehöriges Target (optional):")
+        lbl_target.setProperty("class", "FormLabel")
+        layout.addWidget(lbl_target)
+
         self.txt_target = QLineEdit(self.current_target_ip)
         self.txt_target.setPlaceholderText("10.10.10.x")
         layout.addWidget(self.txt_target)
 
         # 5. Action Buttons
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(8)
+
+        lbl_hint = QLabel("↵ Enter: Speichern | Esc: Abbrechen")
+        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
         self.btn_cancel = QPushButton("Abbrechen")
@@ -112,7 +130,7 @@ class AddLootDialog(QDialog):
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        save_label = "💾 Aktualisieren" if self.is_edit else "💾 Speichern"
+        save_label = "Aktualisieren" if self.is_edit else "Speichern"
         self.btn_save = QPushButton(save_label)
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.clicked.connect(self._on_save)

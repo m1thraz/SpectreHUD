@@ -46,7 +46,7 @@ class LootController(QObject):
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
-        all_btn = QPushButton(f"⚡ Alle ({counts.get('all', 0)})")
+        all_btn = QPushButton(f"All ({counts.get('all', 0)})")
         all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         all_btn.setProperty("class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill")
         all_btn.clicked.connect(lambda: on_select_type("all"))
@@ -56,7 +56,7 @@ class LootController(QObject):
         for t in LOOT_TYPES:
             tid = t["id"]
             count = counts.get(tid, 0)
-            btn = QPushButton(f"{t['icon']} {t['name'].split(' ')[1]} ({count})")
+            btn = QPushButton(f"{t['name']} ({count})")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill")
             btn.clicked.connect(lambda checked=False, type_id=tid: on_select_type(type_id))
@@ -66,13 +66,13 @@ class LootController(QObject):
         pills_layout.addStretch()
 
         # Contextual Loot Action Buttons
-        btn_export = QPushButton("💾 Export (.md)")
+        btn_export = QPushButton("Export (.md)")
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
 
-        btn_clear = QPushButton("🗑️ Leeren")
+        btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip("Session-Loot dieses Projekts leeren")
         btn_clear.clicked.connect(on_clear)
@@ -95,7 +95,7 @@ class LootController(QObject):
         )
 
         if not loot_entries:
-            show_empty_state_fn("Kein Session-Loot vorhanden. Drücke Ctrl+N um Notizen/Creds anzulegen oder 📷 Snip für Screenshots.")
+            show_empty_state_fn("Kein Session-Loot vorhanden. Drücke Ctrl+N um Notizen/Creds anzulegen oder Snip für Screenshots.")
             return []
 
         rendered_cards: List[QWidget] = []
@@ -128,7 +128,7 @@ class LootController(QObject):
         for cat_id, cat_entries in entries_by_cat.items():
             if not cat_entries:
                 continue
-            header = QLabel(f"📝 {cat_id.capitalize()}")
+            header = QLabel(f"{cat_id.capitalize()}")
             header.setProperty("class", "LootSectionHeader")
             content_layout.addWidget(header)
 

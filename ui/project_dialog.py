@@ -1,13 +1,15 @@
+from pathlib import Path
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPushButton, QWidget, QMessageBox
+    QVBoxLayout, QHBoxLayout, QLabel, 
+    QLineEdit, QPushButton, QWidget, QMessageBox, QFileDialog
 )
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
-from ui.styles import CYBER_DARK_QSS
+from core.project_manager import get_default_projects_dir
+from ui.base_dialog import BaseHudDialog
 
-class NewProjectDialog(QDialog):
-    """Dialog to create a new isolated CTF / Pentest project workspace."""
+class NewProjectDialog(BaseHudDialog):
+    """Dialog to create a new isolated CTF / Pentest project workspace with custom folder selection."""
 
     def __init__(
         self, 
@@ -16,52 +18,69 @@ class NewProjectDialog(QDialog):
         default_target: str = "",
         default_attacker: str = "10.10.14.5",
         default_port: str = "4444",
+        default_base_dir: Optional[Path] = None,
         **kwargs
     ):
-        super().__init__(parent)
-        self.setWindowTitle("📁 Neues CTF-Projekt / Box anlegen")
-        self.setMinimumWidth(440)
-        self.resize(460, 260)
+        super().__init__(title="SPECTRE // NEUES PROJEKT / BOX ERSTELLEN", parent=parent)
+        self.setMinimumWidth(520)
+        self.resize(540, 380)
         
         self.default_name = default_name or kwargs.get("name", "")
         self.default_target = default_target or kwargs.get("target_ip", "")
         self.default_attacker = default_attacker or kwargs.get("attacker_ip", "10.10.14.5")
         self.default_port = default_port or kwargs.get("port", "4444")
+        self.base_projects_dir = Path(default_base_dir) if default_base_dir else get_default_projects_dir()
         
-        self.setStyleSheet(CYBER_DARK_QSS)
-        self._init_ui()
+        self._init_form()
 
-    def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(10)
+    def _init_form(self) -> None:
+        layout = self.body_layout
 
-        # Header Title
-        lbl_header = QLabel("📁 Neues Projekt / Box initialisieren:")
-        lbl_header.setStyleSheet("color: #00e5ff; font-size: 14px; font-weight: bold;")
-        layout.addWidget(lbl_header)
-
-        # Project Name
+        # 1. Project Name
         lbl_name = QLabel("Projekt- / Box-Name:")
-        lbl_name.setStyleSheet("color: #c9d1d9; font-weight: 600; font-size: 12px;")
+        lbl_name.setProperty("class", "FormLabel")
         layout.addWidget(lbl_name)
 
         self.txt_name = QLineEdit(self.default_name)
-        self.txt_name.setObjectName("SpotlightSearch")
         self.txt_name.setPlaceholderText("z. B. PickleRick, Blue, Lame, InternalAudit...")
+        self.txt_name.textChanged.connect(self._update_path_preview)
         layout.addWidget(self.txt_name)
 
-        # Target IP
+        # 2. Target IP
         lbl_ip = QLabel("Target IP:")
-        lbl_ip.setStyleSheet("color: #c9d1d9; font-weight: 600; font-size: 12px;")
+        lbl_ip.setProperty("class", "FormLabel")
         layout.addWidget(lbl_ip)
 
         self.txt_target = QLineEdit(self.default_target)
-        self.txt_target.setObjectName("SpotlightSearch")
         self.txt_target.setPlaceholderText("z. B. 10.10.10.80")
         layout.addWidget(self.txt_target)
 
-        # Buttons
+        # 3. Base Directory / Location
+        lbl_dir = QLabel("Basis-Verzeichnis für Projekte:")
+        lbl_dir.setProperty("class", "FormLabel")
+        layout.addWidget(lbl_dir)
+
+        dir_row = QHBoxLayout()
+        dir_row.setSpacing(8)
+
+        self.txt_dir = QLineEdit(str(self.base_projects_dir))
+        self.txt_dir.setPlaceholderText("Pfad zum Workspace-Ordner...")
+        self.txt_dir.textChanged.connect(self._update_path_preview)
+        dir_row.addWidget(self.txt_dir, stretch=1)
+
+        self.btn_browse = QPushButton("Durchsuchen...")
+        self.btn_browse.setProperty("class", "BrowseBtn")
+        self.btn_browse.clicked.connect(self._on_browse_directory)
+        dir_row.addWidget(self.btn_browse)
+
+        layout.addLayout(dir_row)
+
+        # 4. Target Directory Preview
+        self.lbl_path_preview = QLabel(f"Zielpfad: {self.base_projects_dir / (self.default_name or 'Projektname')}")
+        self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
+        layout.addWidget(self.lbl_path_preview)
+
+        # 5. Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
@@ -75,12 +94,26 @@ class NewProjectDialog(QDialog):
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_create = QPushButton("📁 Projekt erstellen")
+        self.btn_create = QPushButton("Projekt erstellen")
         self.btn_create.setProperty("class", "PrimaryBtn")
         self.btn_create.clicked.connect(self._on_create)
         btn_layout.addWidget(self.btn_create)
 
         layout.addLayout(btn_layout)
+
+    def _on_browse_directory(self) -> None:
+        chosen = QFileDialog.getExistingDirectory(
+            self, 
+            "Basis-Verzeichnis für Projekte auswählen", 
+            self.txt_dir.text().strip() or str(self.base_projects_dir)
+        )
+        if chosen:
+            self.txt_dir.setText(chosen)
+
+    def _update_path_preview(self) -> None:
+        pname = self.txt_name.text().strip() or "Projektname"
+        base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
+        self.lbl_path_preview.setText(f"Zielpfad: {base / pname}")
 
     def _on_create(self) -> None:
         name = self.txt_name.text().strip()
@@ -89,10 +122,11 @@ class NewProjectDialog(QDialog):
             return
         self.accept()
 
-    def get_data(self) -> Dict[str, str]:
+    def get_data(self) -> Dict[str, Any]:
         return {
             "name": self.txt_name.text().strip(),
             "target_ip": self.txt_target.text().strip(),
             "attacker_ip": self.default_attacker,
-            "port": self.default_port
+            "port": self.default_port,
+            "base_dir": Path(self.txt_dir.text().strip()) if self.txt_dir.text().strip() else self.base_projects_dir
         }
