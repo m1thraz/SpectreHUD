@@ -146,23 +146,40 @@ class LootCard(QFrame):
         else:
             super().mouseDoubleClickEvent(event)
 
-    def _resolve_image_path(self) -> Path:
-        """Resolves file path for screenshot from entry."""
+    def _resolve_image_path(self) -> Optional[Path]:
+        """
+        Resolves file path for screenshot from entry strictly within this project's loot directory.
+        Strictly prevents cross-project file leakage.
+        """
+        filename = None
         if "file_path" in self.entry and self.entry["file_path"]:
-            p = Path(self.entry["file_path"])
-            if p.exists():
-                return p
+            filename = Path(self.entry["file_path"]).name
+        elif "content" in self.entry:
+            content = self.entry.get("content", "")
+            if "loot/" in content:
+                import re
+                m = re.search(r'\((loot/[^\)]+)\)', content)
+                if m:
+                    rel = m.group(1)
+                    filename = Path(rel).name
 
-        content = self.entry.get("content", "")
-        if "loot/" in content:
-            import re
-            m = re.search(r'\((loot/[^\)]+)\)', content)
-            if m:
-                rel = m.group(1)
-                base_dir = get_default_projects_dir()
-                matches = list(base_dir.glob(f"**/{Path(rel).name}"))
-                if matches:
-                    return matches[0]
+        if not filename:
+            return None
+
+        # 1. Look strictly in the assigned project directory
+        if self.project_dir:
+            candidate = Path(self.project_dir) / "loot" / filename
+            if candidate.exists():
+                return candidate
+            return None
+
+        # 2. Standalone fallback (e.g. tests or legacy without explicit project_dir)
+        base_dir = get_default_projects_dir()
+        for candidate_proj in [base_dir / "Default", base_dir]:
+            candidate = candidate_proj / "loot" / filename
+            if candidate.exists():
+                return candidate
+
         return None
 
     def _open_image(self, img_path: Path) -> None:

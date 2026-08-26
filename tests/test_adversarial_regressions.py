@@ -307,6 +307,43 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertEqual(len(loaded["clipboard_history"][0]["text"]), 64 * 1024)
         self.assertEqual(len(self.clip_watcher.get_all_history()), 500)
 
+    # -------------------------------------------------------------------------
+    # 8. P7: Cross-Project Screenshot Resolution Isolation (Confused Deputy Guard)
+    # -------------------------------------------------------------------------
+    def test_cross_project_screenshot_resolution_isolation(self):
+        """
+        Adversarial: A loot entry in Project A referencing a screenshot filename
+        that exists in Project B must NEVER resolve or display Project B's image.
+        LootCard image resolution must be strictly sandboxed to the active project folder.
+        """
+        from ui.loot_card import LootCard
+
+        # 1. Setup victim project with sensitive screenshot
+        victim_dir = self.project_mgr.create_project("BoxVictimClient")
+        victim_loot = victim_dir / "loot"
+        victim_loot.mkdir(parents=True, exist_ok=True)
+        victim_screenshot = victim_loot / "screenshot_20260115_143022.png"
+        victim_screenshot.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR...")
+
+        # 2. Setup separate project with malicious reference attempting confused deputy leak
+        attacker_dir = self.project_mgr.create_project("BoxAttackerEvent")
+        malicious_entry = {
+            "id": "loot_spoof_1",
+            "type": "screenshot",
+            "title": "Guess Victim Screenshot",
+            "content": "![Guess](loot/screenshot_20260115_143022.png)"
+        }
+
+        # 3. Create LootCard for attacker project
+        card = LootCard(malicious_entry, project_dir=attacker_dir)
+        resolved = card._resolve_image_path()
+
+        # Invariant: Must return None because the image does NOT exist in BoxAttackerEvent
+        self.assertIsNone(
+            resolved,
+            "Security Failure: LootCard resolved a screenshot file from another project's sandbox!"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -65,8 +65,8 @@ class TestScreenshot(unittest.TestCase):
         self.assertEqual(len(files), 1)
         self.assertTrue(files[0].exists())
 
-        # Test LootCard image resolution
-        card = LootCard(entries[0])
+        # Test LootCard image resolution with strict project isolation
+        card = LootCard(entries[0], project_dir=proj_dir)
         resolved_img = card._resolve_image_path()
         self.assertIsNotNone(resolved_img)
         self.assertTrue(resolved_img.exists())
