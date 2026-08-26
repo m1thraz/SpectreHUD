@@ -1,19 +1,25 @@
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt
+from typing import Optional, Tuple, List
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt, QRect
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtGui import QGuiApplication, QPixmap
+from PyQt6.QtGui import QGuiApplication, QPixmap, QPainter, QColor
 from ui.snipping_overlay import SnippingOverlay
+from core.display_geometry import (
+    ScreenGeometry,
+    VirtualDesktopBoundingBox,
+    compute_virtual_desktop_bounding_box,
+    compute_screen_paint_offset
+)
 from core.logger import get_logger
 
 logger = get_logger("screenshot")
 
 class ScreenshotManager(QObject):
     """
-    Coordinates desktop screenshots, interactive region selection overlay,
-    and automatic file & loot persistence.
+    Coordinates desktop screenshots across single and multi-monitor setups,
+    interactive region selection overlay, and automatic file & loot persistence.
     """
     screenshot_saved = pyqtSignal(dict)
 
@@ -21,12 +27,116 @@ class ScreenshotManager(QObject):
         super().__init__(parent)
         self._active_overlay: Optional[SnippingOverlay] = None
 
+    def capture_virtual_desktop(self) -> Tuple[Optional[QPixmap], Optional[VirtualDesktopBoundingBox]]:
+        """
+        Captures screenshots of all active displays and composites them into a single QPixmap
+        spanning the entire virtual desktop bounding box.
+
+        Correctly handles:
+        - Single-monitor setups (identical single grab behavior).
+        - Multi-monitor setups with negative x/y offsets and mixed resolutions.
+        - Mixed Device Pixel Ratios (DPR).
+        - Graceful fallback to primary screen if multi-grab encounters errors or empty pixmaps.
+        """
+        screens = QGuiApplication.screens()
+        if not screens:
+            logger.warning("No display screens detected by Qt for desktop capture.")
+            return None, None
+
+        # Single-monitor fast path (zero overhead / 100% backward compatible)
+        if len(screens) == 1:
+            primary = screens[0]
+            try:
+                pix = primary.grabWindow(0)
+                if not pix.isNull():
+                    geom = primary.geometry()
+                    bbox = VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                    return pix, bbox
+                else:
+                    logger.warning(f"Primary screen {primary.name()} returned null pixmap on grab.")
+                    return None, None
+            except Exception as e:
+                logger.error(f"Failed to grab primary screen: {e}", exc_info=True)
+                return None, None
+
+        # Multi-monitor composite path
+        try:
+            screen_geoms: List[ScreenGeometry] = []
+            for s in screens:
+                geom = s.geometry()
+                dpr = s.devicePixelRatio()
+                screen_geoms.append(
+                    ScreenGeometry(
+                        x=geom.x(),
+                        y=geom.y(),
+                        width=geom.width(),
+                        height=geom.height(),
+                        device_pixel_ratio=dpr
+                    )
+                )
+
+            bbox = compute_virtual_desktop_bounding_box(screen_geoms)
+            if bbox.width <= 0 or bbox.height <= 0:
+                logger.warning(f"Invalid virtual desktop bounding box computed: {bbox}")
+                return None, None
+
+            composite = QPixmap(bbox.width, bbox.height)
+            composite.fill(QColor(10, 14, 20))  # dark fallback background for multi-monitor gaps
+
+            painter = QPainter(composite)
+            success_count = 0
+
+            for s, s_geom in zip(screens, screen_geoms):
+                try:
+                    pix = s.grabWindow(0)
+                    if pix.isNull():
+                        logger.warning(f"Screen '{s.name()}' returned null pixmap on grab (e.g. Wayland restriction).")
+                        continue
+
+                    offset_x, offset_y = compute_screen_paint_offset(s_geom, bbox)
+                    target_rect = QRect(offset_x, offset_y, s_geom.width, s_geom.height)
+                    
+                    # Draw screen grab into logical target rect
+                    painter.drawPixmap(target_rect, pix)
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Error grabbing screen '{s.name()}': {e}", exc_info=True)
+
+            painter.end()
+
+            if success_count > 0:
+                logger.info(f"Successfully captured {success_count}/{len(screens)} screens across virtual desktop {bbox.width}x{bbox.height} at ({bbox.min_x}, {bbox.min_y})")
+                return composite, bbox
+            else:
+                logger.warning("All multi-monitor screen grabs failed. Attempting primary screen fallback.")
+                primary = QGuiApplication.primaryScreen()
+                if primary:
+                    fallback_pix = primary.grabWindow(0)
+                    if not fallback_pix.isNull():
+                        geom = primary.geometry()
+                        return fallback_pix, VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                return None, None
+
+        except Exception as e:
+            logger.error(f"Unexpected error during multi-monitor virtual desktop capture: {e}", exc_info=True)
+            # Fallback to primary screen
+            primary = QGuiApplication.primaryScreen()
+            if primary:
+                try:
+                    fallback_pix = primary.grabWindow(0)
+                    if not fallback_pix.isNull():
+                        geom = primary.geometry()
+                        return fallback_pix, VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                except Exception:
+                    pass
+            return None, None
+
     def start_capture(self, parent_window: QWidget, project_manager, loot_manager, target_ip: str = "") -> None:
         """
         Main entry point:
         1. Hides parent window.
-        2. Delays 200ms for clean desktop view.
-        3. Grabs desktop.
+        2. Delays 220ms for clean desktop view.
+        3. Grabs virtual desktop across all active monitors.
         4. Launches SnippingOverlay.
         """
         was_visible = parent_window.isVisible()
@@ -34,15 +144,14 @@ class ScreenshotManager(QObject):
 
         def do_grab():
             try:
-                screen = QGuiApplication.primaryScreen()
-                if not screen:
-                    logger.warning("No primary screen detected for screenshot capture.")
+                full_pixmap, bbox = self.capture_virtual_desktop()
+                if not full_pixmap or full_pixmap.isNull():
+                    logger.warning("No valid desktop pixmap captured for snip overlay.")
                     if was_visible:
                         parent_window.show()
                     return
 
-                full_pixmap = screen.grabWindow(0)
-                self._active_overlay = SnippingOverlay(full_pixmap)
+                self._active_overlay = SnippingOverlay(full_pixmap, bbox=bbox)
                 
                 self._active_overlay.snip_completed.connect(
                     lambda cropped: self._on_snip_completed(
@@ -52,7 +161,7 @@ class ScreenshotManager(QObject):
                 self._active_overlay.snip_cancelled.connect(
                     lambda: self._on_snip_cancelled(parent_window)
                 )
-            except (RuntimeError, OSError) as e:
+            except (RuntimeError, OSError, Exception) as e:
                 logger.error(f"Error during desktop grab: {e}", exc_info=True)
                 if was_visible:
                     parent_window.show()

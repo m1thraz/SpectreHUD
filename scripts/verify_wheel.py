@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "core/report_builder.py",
     "core/report_file_manager.py",
     "core/i18n.py",
+    "core/display_geometry.py",
     "ui/main_window.py",
     "ui/controllers/__init__.py",
     "ui/controllers/cheatsheet_controller.py",

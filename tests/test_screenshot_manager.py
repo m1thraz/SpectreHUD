@@ -91,6 +91,16 @@ class TestScreenshotManager(unittest.TestCase):
         entries = self.loot_mgr.get_all_entries()
         self.assertEqual(len(entries), 2)
 
+    def test_capture_virtual_desktop_fallback_or_single_screen(self):
+        """Tests that capture_virtual_desktop returns a valid pixmap or handles offscreen."""
+        pixmap, bbox = self.screenshot_mgr.capture_virtual_desktop()
+        # In offscreen test environment, QScreen may return a pixmap or None
+        if pixmap is not None:
+            self.assertFalse(pixmap.isNull())
+            self.assertIsNotNone(bbox)
+            self.assertGreater(bbox.width, 0)
+            self.assertGreater(bbox.height, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

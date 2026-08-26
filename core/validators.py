@@ -4,8 +4,15 @@ Protects against malformed data types (e.g. str instead of list, missing dict ke
 when loading user-editable JSON files.
 """
 
+import hashlib
 from typing import Any, Dict, List, Optional
 from datetime import datetime
+
+
+def _stable_hash_id(prefix: str, content: str) -> str:
+    """Generates a deterministic, process-independent fallback ID using MD5."""
+    digest = hashlib.md5(content.encode("utf-8", errors="replace")).hexdigest()[:8]
+    return f"{prefix}_{digest}"
 
 
 def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
@@ -22,7 +29,7 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     return {
-        "id": entry_id or f"loot_gen_{hash(title) & 0xFFFFFFFF:08x}",
+        "id": entry_id or _stable_hash_id("loot_gen", f"{title}:{content}"),
         "type": entry_type or "note",
         "category": category or "misc",
         "title": title or "Unbenannter Eintrag",
@@ -68,7 +75,7 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
     is_multiline = bool(entry.get("is_multiline", lines_count > 2 or char_count > 120))
 
     return {
-        "id": entry_id or f"clip_gen_{hash(text) & 0xFFFFFFFF:08x}",
+        "id": entry_id or _stable_hash_id("clip_gen", text),
         "text": text,
         "target_ip": target_ip,
         "timestamp": timestamp,
@@ -132,7 +139,7 @@ def validate_user_snippets(data: Any) -> List[Dict[str, Any]]:
     for s in data:
         if isinstance(s, dict) and s.get("title") and s.get("template"):
             valid.append({
-                "id": str(s.get("id") or f"snip_{hash(s['title']) & 0xFFFFFFFF:08x}"),
+                "id": str(s.get("id") or _stable_hash_id("snip", s['title'])),
                 "title": str(s.get("title")),
                 "template": str(s.get("template")),
                 "category": str(s.get("category") or "Custom"),

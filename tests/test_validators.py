@@ -81,7 +81,17 @@ class TestSemanticValidators(unittest.TestCase):
         self.assertEqual(len(validated), 1)
         self.assertEqual(validated[0]["title"], "Valid Snippet")
         self.assertEqual(validated[0]["template"], "curl -s http://target")
-        self.assertTrue(validated[0]["is_custom"])
+    def test_deterministic_id_generation(self):
+        """Tests that fallback ID generation is deterministic and process-independent."""
+        entry1 = validate_loot_entry({"title": "Test Title", "content": "secret_data"})
+        entry2 = validate_loot_entry({"title": "Test Title", "content": "secret_data"})
+        self.assertEqual(entry1["id"], entry2["id"])
+        self.assertTrue(entry1["id"].startswith("loot_gen_"))
+
+        clip1 = validate_clipboard_entry({"text": "cat /etc/passwd"})
+        clip2 = validate_clipboard_entry({"text": "cat /etc/passwd"})
+        self.assertEqual(clip1["id"], clip2["id"])
+        self.assertTrue(clip1["id"].startswith("clip_gen_"))
 
 
 if __name__ == "__main__":

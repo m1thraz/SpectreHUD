@@ -1,18 +1,37 @@
+from typing import Optional
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPixmap, QFont, QGuiApplication, QKeyEvent, QMouseEvent
+from core.display_geometry import VirtualDesktopBoundingBox
 
 class SnippingOverlay(QWidget):
     """
-    Frameless, translucent fullscreen snipping overlay with rubber band selection,
+    Frameless, translucent multi-monitor snipping overlay with rubber band selection,
     cyan border glow, dimension indicator, and crosshair cursor.
+    Spans the entire virtual desktop bounding box across all connected displays.
     """
     snip_completed = pyqtSignal(QPixmap)
     snip_cancelled = pyqtSignal()
 
-    def __init__(self, full_screen_pixmap: QPixmap, parent: QWidget = None):
+    def __init__(
+        self, 
+        full_screen_pixmap: QPixmap, 
+        bbox: Optional[VirtualDesktopBoundingBox] = None, 
+        parent: Optional[QWidget] = None
+    ):
         super().__init__(parent)
         self.full_pixmap = full_screen_pixmap
+        
+        if bbox is not None:
+            self.bbox = bbox
+        else:
+            screen = QGuiApplication.primaryScreen()
+            if screen:
+                geom = screen.geometry()
+                self.bbox = VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+            else:
+                self.bbox = VirtualDesktopBoundingBox(0, 0, full_screen_pixmap.width(), full_screen_pixmap.height())
+
         self.begin: QPoint = QPoint()
         self.end: QPoint = QPoint()
         self.is_selecting: bool = False
@@ -27,11 +46,9 @@ class SnippingOverlay(QWidget):
         )
         self.setCursor(Qt.CursorShape.CrossCursor)
         
-        # Cover virtual geometry of all screens or primary screen
-        screen = QGuiApplication.primaryScreen()
-        if screen:
-            self.setGeometry(screen.geometry())
-        self.showFullScreen()
+        # Position over virtual desktop bounding box across all screens
+        self.setGeometry(self.bbox.min_x, self.bbox.min_y, self.bbox.width, self.bbox.height)
+        self.show()
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -102,6 +119,7 @@ class SnippingOverlay(QWidget):
             self.end = event.pos()
             
             selection_rect = QRect(self.begin, self.end).normalized()
+            selection_rect = selection_rect.intersected(self.full_pixmap.rect())
             # If region is valid (greater than 8x8 pixels)
             if selection_rect.width() > 8 and selection_rect.height() > 8:
                 cropped = self.full_pixmap.copy(selection_rect)
