@@ -111,6 +111,30 @@ class TestReportFileManager(unittest.TestCase):
         # Invariant check: report.md MUST NOT be modified or destroyed
         self.assertEqual(self.report_mgr.load("ProtectedBox"), original_text)
 
+    def test_regenerate_fails_closed_if_save_fails(self):
+        """Invariant: If save fails after build, regenerate MUST raise ReportSaveError and not return false-success."""
+        from unittest.mock import patch
+        from core.report_file_manager import ReportSaveError
+
+        self.project_mgr.create_project("SaveFailBox")
+        
+        # Mock save to simulate disk write failure during regenerate
+        with patch.object(self.report_mgr, "save", return_value=False):
+            with self.assertRaises(ReportSaveError):
+                self.report_mgr.regenerate(self.loot_mgr, self.clip_watcher, "SaveFailBox")
+
+    def test_report_builder_atomic_export(self):
+        """Tests that ReportBuilder.export writes report atomically to output_path."""
+        from core.report_builder import ReportBuilder
+
+        builder = ReportBuilder(loot_manager=self.loot_mgr, clipboard_watcher=self.clip_watcher)
+        export_file = self.temp_path / "custom_export.md"
+        msg = builder.export(export_file, project_name="ExportTest")
+
+        self.assertIn("erfolgreich", msg)
+        self.assertTrue(export_file.exists())
+        self.assertIn("Pentest Report: ExportTest", export_file.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

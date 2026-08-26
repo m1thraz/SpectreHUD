@@ -101,6 +101,26 @@ class TestScreenshotManager(unittest.TestCase):
             self.assertGreater(bbox.width, 0)
             self.assertGreater(bbox.height, 0)
 
+    def test_screenshot_save_failure_does_not_create_loot_entry(self):
+        """Invariant: If saving PNG to disk fails, NO loot entry must be created (no ghost/orphaned loot)."""
+        from unittest.mock import patch
+
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        pixmap = QPixmap.fromImage(img)
+        parent_win = QWidget()
+
+        with patch.object(QPixmap, "save", return_value=False):
+            self.screenshot_mgr._on_snip_completed(
+                cropped_pixmap=pixmap,
+                parent_window=parent_win,
+                project_manager=self.project_mgr,
+                loot_manager=self.loot_mgr,
+                target_ip="10.10.10.55"
+            )
+
+        # Invariant: No loot entries created when disk save fails
+        self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

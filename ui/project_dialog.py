@@ -19,12 +19,14 @@ class NewProjectDialog(BaseHudDialog):
         default_attacker: str = "10.10.14.5",
         default_port: str = "4444",
         default_base_dir: Optional[Path] = None,
+        project_manager: Optional[Any] = None,
         **kwargs
     ):
         super().__init__(title="SPECTRE // NEUES PROJEKT / BOX ERSTELLEN", parent=parent)
         self.setMinimumWidth(520)
         self.resize(540, 380)
         
+        self.project_manager = project_manager
         self.default_name = default_name or kwargs.get("name", "")
         self.default_target = default_target or kwargs.get("target_ip", "")
         self.default_attacker = default_attacker or kwargs.get("attacker_ip", "10.10.14.5")
@@ -111,15 +113,41 @@ class NewProjectDialog(BaseHudDialog):
             self.txt_dir.setText(chosen)
 
     def _update_path_preview(self) -> None:
-        pname = self.txt_name.text().strip() or "Projektname"
+        raw_name = self.txt_name.text().strip()
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
-        self.lbl_path_preview.setText(f"Zielpfad: {base / pname}")
+        clean_name = self.project_manager._sanitize_name(raw_name) if self.project_manager else raw_name.replace(" ", "_")
+        target_path = base / (clean_name or "Projektname")
+
+        exists = False
+        if self.project_manager and raw_name:
+            exists = self.project_manager.project_exists(raw_name, base_dir=base)
+        elif raw_name:
+            exists = target_path.exists()
+
+        if exists and clean_name != "Default":
+            self.lbl_path_preview.setText(f"Zielpfad: {target_path} (⚠️ existiert bereits)")
+            self.lbl_path_preview.setStyleSheet("color: #ff5555; font-size: 11px; font-family: monospace;")
+        else:
+            self.lbl_path_preview.setText(f"Zielpfad: {target_path}")
+            self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
 
     def _on_create(self) -> None:
         name = self.txt_name.text().strip()
         if not name:
             QMessageBox.warning(self, "Fehler", "Bitte gib einen Namen für das Projekt / die Box ein.")
             return
+
+        base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
+        if self.project_manager and self.project_manager.project_exists(name, base_dir=base):
+            clean = self.project_manager._sanitize_name(name)
+            QMessageBox.warning(
+                self, 
+                "Projekt existiert bereits", 
+                f"Ein Projekt mit dem bereinigten Namen '{clean}' existiert bereits im gewählten Workspace.\n\n"
+                "Bitte wähle einen eindeutigen Projektnamen."
+            )
+            return
+
         self.accept()
 
     def get_data(self) -> Dict[str, Any]:

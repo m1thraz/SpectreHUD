@@ -160,9 +160,10 @@ class HistoryController(QObject):
                 target_ip=target_ip if target_ip else None,
                 project_name=active_proj
             )
+            is_error = report_msg.startswith("Fehler")
             msg = QMessageBox(parent_widget)
-            msg.setWindowTitle("Report generiert")
+            msg.setWindowTitle("Fehler beim Export" if is_error else "Report generiert")
             msg.setText(report_msg)
-            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setIcon(QMessageBox.Icon.Warning if is_error else QMessageBox.Icon.Information)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()

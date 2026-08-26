@@ -129,6 +129,22 @@ class TestProjectManager(unittest.TestCase):
             self.assertTrue((ext_path / "project_state.json").exists())
             self.assertIn("ImportedBox", self.pm.list_projects())
 
+    def test_project_sanitization_collision_prevention(self):
+        """Invariant: Creating 'foo bar' and then 'foo_bar' must reject the second creation."""
+        from core.project_manager import ProjectExistsError
+
+        self.pm.create_project("foo bar")
+        self.assertIn("foo_bar", self.pm.list_projects())
+        self.assertTrue(self.pm.project_exists("foo bar"))
+        self.assertTrue(self.pm.project_exists("foo_bar"))
+
+        # Attempting to create colliding project name must raise ProjectExistsError
+        with self.assertRaises(ProjectExistsError):
+            self.pm.create_project("foo_bar")
+
+        with self.assertRaises(ProjectExistsError):
+            self.pm.create_project("foo bar")
+
 
 if __name__ == "__main__":
     unittest.main()

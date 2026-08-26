@@ -51,7 +51,8 @@ class SnippetManager:
         self.snippets = []
         
         # 1. Load default snippets
-        if self.default_snippets_path.exists():
+        from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
+        if self.default_snippets_path.exists() and is_file_size_valid(self.default_snippets_path, MAX_SNIPPETS_FILE_SIZE):
             try:
                 with open(self.default_snippets_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -89,15 +90,18 @@ class SnippetManager:
         
         user_snippets = []
         if self.user_snippets_path.exists():
-            from core.validators import validate_user_snippets
-            try:
-                with open(self.user_snippets_path, "r", encoding="utf-8") as f:
-                    user_data = json.load(f)
-                    user_snippets = validate_user_snippets(user_data)
-            except (json.JSONDecodeError, RecursionError) as e:
-                logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
-            except (OSError, UnicodeDecodeError, KeyError) as e:
-                logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")
+            if not is_file_size_valid(self.user_snippets_path, MAX_SNIPPETS_FILE_SIZE):
+                logger.error(f"User snippets file {self.user_snippets_path} exceeds maximum size limit of {MAX_SNIPPETS_FILE_SIZE} bytes. Rejecting oversized file.")
+            else:
+                from core.validators import validate_user_snippets
+                try:
+                    with open(self.user_snippets_path, "r", encoding="utf-8") as f:
+                        user_data = json.load(f)
+                        user_snippets = validate_user_snippets(user_data)
+                except (json.JSONDecodeError, RecursionError) as e:
+                    logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
+                except (OSError, UnicodeDecodeError, KeyError) as e:
+                    logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")
 
         if not any(c["id"] == "custom_snippets" for c in self.categories):
             self.categories.append(custom_category)

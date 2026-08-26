@@ -113,6 +113,20 @@ class TestSemanticValidators(unittest.TestCase):
         capped_clips = validate_clipboard_list(many_clips)
         self.assertEqual(len(capped_clips), 500)
 
+    def test_is_file_size_valid(self):
+        """Tests that is_file_size_valid correctly checks file size bounds on disk."""
+        import tempfile
+        from pathlib import Path
+        from core.validators import is_file_size_valid
+
+        with tempfile.TemporaryDirectory() as td:
+            f = Path(td) / "test.json"
+            f.write_bytes(b"A" * 1000)
+            self.assertTrue(is_file_size_valid(f, 1000))
+            self.assertTrue(is_file_size_valid(f, 2000))
+            self.assertFalse(is_file_size_valid(f, 500))
+            self.assertFalse(is_file_size_valid(Path(td) / "non_existent.json", 1000))
+
 
 if __name__ == "__main__":
     unittest.main()

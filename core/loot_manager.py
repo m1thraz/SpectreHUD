@@ -82,8 +82,12 @@ class LootManager:
         """Loads and semantically validates loot entries from local JSON file if storage_file is set."""
         if not self.storage_file:
             return
-        from core.validators import validate_loot_list
+        from core.validators import validate_loot_list, is_file_size_valid, MAX_LOOT_FILE_SIZE
         if self.storage_file.exists():
+            if not is_file_size_valid(self.storage_file, MAX_LOOT_FILE_SIZE):
+                logger.error(f"Loot storage file {self.storage_file} exceeds maximum size limit of {MAX_LOOT_FILE_SIZE} bytes. Rejecting oversized file.")
+                self.entries = []
+                return
             try:
                 with open(self.storage_file, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)

@@ -78,26 +78,33 @@ class ProjectController(QObject):
         default_port: str,
         on_project_created: Callable[[str], None]
     ) -> bool:
+        from core.project_manager import ProjectExistsError
         dlg = NewProjectDialog(
             parent_widget,
             default_target=default_target,
             default_attacker=default_attacker,
             default_port=default_port,
-            default_base_dir=self.project_manager.base_dir
+            default_base_dir=self.project_manager.base_dir,
+            project_manager=self.project_manager
         )
         if dlg.exec():
             data = dlg.get_data()
             pname = data.get("name")
             if pname:
                 custom_base = data.get("base_dir")
-                self.project_manager.create_project(
-                    name=pname,
-                    target_ip=data.get("target_ip", ""),
-                    attacker_ip=data.get("attacker_ip", ""),
-                    port=data.get("port", "4444"),
-                    base_dir=Path(custom_base) if custom_base else None
-                )
-                on_project_created(pname)
-                self.project_created.emit(pname)
-                return True
+                try:
+                    self.project_manager.create_project(
+                        name=pname,
+                        target_ip=data.get("target_ip", ""),
+                        attacker_ip=data.get("attacker_ip", ""),
+                        port=data.get("port", "4444"),
+                        base_dir=Path(custom_base) if custom_base else None
+                    )
+                    clean_name = self.project_manager._sanitize_name(pname)
+                    on_project_created(clean_name)
+                    self.project_created.emit(clean_name)
+                    return True
+                except ProjectExistsError as e:
+                    QMessageBox.warning(parent_widget, "Projekt existiert bereits", str(e))
+                    return False
         return False

@@ -57,15 +57,19 @@ class ReportBuilder:
         return "\n".join(lines)
 
     def export(self, output_path: Path, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
-        """Baut den Report und schreibt ihn nach output_path (.md erzwungen)."""
+        """Baut den Report und schreibt ihn atomar nach output_path (.md erzwungen)."""
+        from core.atomic_write import atomic_write_text
         output_path = Path(output_path)
         if output_path.suffix.lower() != ".md":
             output_path = output_path.with_suffix(".md")
 
         content = self.build(target_ip=target_ip, project_name=project_name)
         try:
-            output_path.write_text(content, encoding="utf-8")
-            return f"Report erfolgreich generiert: {output_path.name}"
+            if atomic_write_text(output_path, content):
+                return f"Report erfolgreich generiert: {output_path.name}"
+            else:
+                logger.error(f"Failed to atomically export report to {output_path}")
+                return f"Fehler beim Generieren des Reports: {output_path.name}"
         except OSError as e:
             logger.error(f"Failed to export report to {output_path}: {e}", exc_info=True)
             return f"Fehler beim Generieren des Reports: {e}"

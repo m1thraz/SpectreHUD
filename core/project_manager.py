@@ -9,6 +9,11 @@ from typing import List, Dict, Any, Optional
 
 from core.logger import get_logger
 
+class ProjectExistsError(ValueError):
+    """Raised when attempting to create a project whose sanitized name already exists."""
+    pass
+
+
 logger = get_logger("projects")
 
 DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
@@ -84,6 +89,10 @@ class ProjectManager:
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
         if self.registry_file.exists():
+            from core.validators import is_file_size_valid, MAX_REGISTRY_FILE_SIZE
+            if not is_file_size_valid(self.registry_file, MAX_REGISTRY_FILE_SIZE):
+                logger.warning(f"Project registry file {self.registry_file} exceeds maximum size limit. Ignoring.")
+                return {}
             try:
                 with open(self.registry_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -109,11 +118,11 @@ class ProjectManager:
         if not name:
             return "Default"
 
-        # Replace invalid path characters with underscore
-        clean = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', str(name).strip())
+        # Replace invalid path characters with underscore (collapsing consecutive invalid chars)
+        clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', str(name).strip())
 
-        # Strip leading and trailing dots to prevent hidden/special traversal dirs
-        clean = clean.strip(".")
+        # Strip leading and trailing dots and underscores to prevent hidden/special traversal dirs
+        clean = clean.strip("._")
 
         # Explicitly check against dangerous names or invalid formats
         if not clean or clean in {".", ".."} or not re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$', clean):
@@ -125,10 +134,17 @@ class ProjectManager:
         """Ensures a Default project exists and is registered."""
         default_dir = self.base_dir / "Default"
         if not default_dir.exists():
-            self.create_project("Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5")
+            self.create_project("Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5", allow_existing=True)
         else:
             self.registry["Default"] = str(default_dir.resolve())
             self._save_registry()
+
+    def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
+        """Returns True if a project with the given or sanitized name already exists."""
+        clean = self._sanitize_name(name)
+        target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
+        proj_dir = (target_base / clean).resolve()
+        return clean in self.list_projects() or proj_dir.exists()
 
     def list_projects(self) -> List[str]:
         """Returns list of all available project directory names across base_dir and custom locations."""
@@ -197,12 +213,14 @@ class ProjectManager:
         target_ip: str = "", 
         attacker_ip: str = "", 
         port: str = "4444",
-        base_dir: Optional[Path] = None
+        base_dir: Optional[Path] = None,
+        allow_existing: bool = False
     ) -> Path:
         """
         Creates an isolated project workspace with subfolders (recon, exploit, loot),
         notes.md, and project_state.json, and registers its path.
         Enforces strict boundary checks against symlink and directory traversal escapes.
+        Rejects creation if a project with the sanitized name already exists.
         """
         clean_name = self._sanitize_name(name)
         target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
@@ -223,6 +241,12 @@ class ProjectManager:
         else:
             proj_dir = resolved_proj
 
+        if not allow_existing and clean_name != "Default":
+            if clean_name in self.list_projects() or proj_dir.exists():
+                raise ProjectExistsError(
+                    f"A project with sanitized name '{clean_name}' already exists at {proj_dir}."
+                )
+
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)
             (proj_dir / "recon").mkdir(exist_ok=True)
@@ -241,10 +265,9 @@ class ProjectManager:
                 attacker_ip=attacker_ip or "TBD",
                 created_at=now_str
             )
-            try:
-                notes_file.write_text(notes_content, encoding="utf-8")
-            except OSError as e:
-                logger.error(f"Failed to create notes.md for {clean_name}: {e}", exc_info=True)
+            from core.atomic_write import atomic_write_text, atomic_write_json
+            if not atomic_write_text(notes_file, notes_content):
+                logger.error(f"Failed to atomically create notes.md for {clean_name}")
 
         # Create project_state.json if not exists
         state_file = proj_dir / "project_state.json"
@@ -260,11 +283,9 @@ class ProjectManager:
                 "loot": [],
                 "clipboard_history": []
             }
-            try:
-                with open(state_file, "w", encoding="utf-8") as f:
-                    json.dump(initial_state, f, indent=2, ensure_ascii=False)
-            except (OSError, TypeError, ValueError) as e:
-                logger.error(f"Failed to write initial project_state.json for {clean_name}: {e}")
+            from core.atomic_write import atomic_write_json
+            if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
+                logger.error(f"Failed to atomically write initial project_state.json for {clean_name}")
 
         # Register project location
         self.registry[clean_name] = str(proj_dir)
@@ -302,8 +323,9 @@ class ProjectManager:
                     "loot": [],
                     "clipboard_history": []
                 }
-                with open(state_file, "w", encoding="utf-8") as f:
-                    json.dump(initial_state, f, indent=2, ensure_ascii=False)
+                from core.atomic_write import atomic_write_json
+                if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
+                    logger.error(f"Failed to atomically write project_state.json for imported project {clean_name}")
 
             self.registry[clean_name] = str(target_path)
             self._save_registry()
@@ -316,10 +338,13 @@ class ProjectManager:
 
     def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:
         """Loads and semantically validates state data for a project."""
-        from core.validators import validate_project_state
+        from core.validators import validate_project_state, is_file_size_valid, MAX_PROJECT_STATE_FILE_SIZE
         pname = self._sanitize_name(name or self.active_project)
         state_file = self.get_project_dir(pname) / "project_state.json"
         if state_file.exists():
+            if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
+                logger.error(f"Project state file {state_file} exceeds maximum size limit of {MAX_PROJECT_STATE_FILE_SIZE} bytes. Rejecting oversized file and using default state.")
+                return validate_project_state(None, fallback_name=pname)
             try:
                 with open(state_file, "r", encoding="utf-8") as f:
                     raw_data = json.load(f)
@@ -332,8 +357,8 @@ class ProjectManager:
         # Return default fallback state
         return validate_project_state(None, fallback_name=pname)
 
-    def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> None:
-        """Persists state data for a project."""
+    def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
+        """Persists state data for a project. Returns True on success, False on failure."""
         from core.validators import validate_project_state
         pname = self._sanitize_name(name or self.active_project)
         proj_dir = self.get_project_dir(pname)
@@ -341,6 +366,7 @@ class ProjectManager:
             proj_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             logger.error(f"Failed to ensure project dir {proj_dir}: {e}", exc_info=True)
+            return False
 
         from core.atomic_write import atomic_write_json
         state_file = proj_dir / "project_state.json"
@@ -357,11 +383,13 @@ class ProjectManager:
         valid_state = validate_project_state(final_state, fallback_name=pname)
 
         try:
-            atomic_write_json(state_file, valid_state, indent=2, ensure_ascii=False)
+            return atomic_write_json(state_file, valid_state, indent=2, ensure_ascii=False)
         except OSError as e:
             logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
+            return False
         except (TypeError, ValueError) as e:
             logger.error(f"JSON serialization error saving state for {pname}: {e}")
+            return False
 
     def set_active_project(self, name: str) -> None:
         """Switches the active project context."""

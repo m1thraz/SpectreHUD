@@ -19,6 +19,11 @@ class ReportBackupError(RuntimeError):
     pass
 
 
+class ReportSaveError(RuntimeError):
+    """Raised when saving the newly generated report.md to disk fails."""
+    pass
+
+
 class ReportFileManager:
     """Verwaltet das Laden, Speichern und Sichern der projekt-lokalen report.md."""
 
@@ -46,8 +51,12 @@ class ReportFileManager:
 
     def load(self, project_name: Optional[str] = None) -> str:
         """Lädt den Inhalt der report.md. Gibt leeren String zurück, falls nicht vorhanden."""
+        from core.validators import is_file_size_valid, MAX_REPORT_FILE_SIZE
         path = self.get_report_path(project_name)
         if not path.exists():
+            return ""
+        if not is_file_size_valid(path, MAX_REPORT_FILE_SIZE):
+            logger.error(f"Report file {path} exceeds maximum size limit of {MAX_REPORT_FILE_SIZE} bytes. Rejecting oversized file.")
             return ""
         try:
             return path.read_text(encoding="utf-8")
@@ -109,5 +118,7 @@ class ReportFileManager:
             project_manager=self.project_manager
         )
         content = builder.build(project_name=pname)
-        self.save(content, project_name=pname)
+        if not self.save(content, project_name=pname):
+            logger.error(f"Speichern des regenerierten Reports für {pname} fehlgeschlagen.")
+            raise ReportSaveError(f"Speichern des regenerierten Reports für Projekt '{pname}' fehlgeschlagen.")
         return content

@@ -14,7 +14,13 @@ from core.display_geometry import (
 )
 from core.logger import get_logger
 
+class ScreenshotSaveError(RuntimeError):
+    """Raised when writing the captured screenshot image file to disk fails."""
+    pass
+
+
 logger = get_logger("screenshot")
+
 
 class ScreenshotManager(QObject):
     """
@@ -197,10 +203,11 @@ class ScreenshotManager(QObject):
             success = cropped_pixmap.save(str(filepath), "PNG")
             if not success:
                 logger.error(f"Failed to save cropped screenshot PNG to {filepath}")
-            else:
-                logger.info(f"Saved screenshot snip to {filepath}")
+                raise ScreenshotSaveError(f"Failed to save cropped screenshot PNG to {filepath}")
 
-            # Create loot entry
+            logger.info(f"Saved screenshot snip to {filepath}")
+
+            # Create loot entry only AFTER successful file write
             default_title = f"Screenshot {now.strftime('%Y-%m-%d %H:%M:%S')}"
             markdown_content = f"![{default_title}](loot/{filename})"
 

@@ -55,24 +55,28 @@ class ConfigManager:
 
     def load_config(self) -> Dict[str, Any]:
         if self.config_file.exists():
-            try:
-                with open(self.config_file, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                    if not isinstance(loaded, dict):
-                        logger.warning(f"Expected dict in config JSON at {self.config_file}, got {type(loaded).__name__}. Falling back to default configuration.")
-                        loaded = {}
-                    # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
-                    if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
-                        loaded["hotkey"] = "<ctrl>+<cmd>+<"
-                    cfg = DEFAULT_CONFIG.copy()
-                    cfg.update(loaded)
-                    self.data = cfg
-                    self.save_config()
-                    return cfg
-            except (json.JSONDecodeError, RecursionError) as e:
-                logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
-            except (OSError, UnicodeDecodeError, KeyError, AttributeError) as e:
-                logger.error(f"Error reading config from {self.config_file}: {e}. Using defaults.")
+            from core.validators import is_file_size_valid, MAX_CONFIG_FILE_SIZE
+            if not is_file_size_valid(self.config_file, MAX_CONFIG_FILE_SIZE):
+                logger.error(f"Config file {self.config_file} exceeds maximum size limit of {MAX_CONFIG_FILE_SIZE} bytes. Using defaults.")
+            else:
+                try:
+                    with open(self.config_file, "r", encoding="utf-8") as f:
+                        loaded = json.load(f)
+                        if not isinstance(loaded, dict):
+                            logger.warning(f"Expected dict in config JSON at {self.config_file}, got {type(loaded).__name__}. Falling back to default configuration.")
+                            loaded = {}
+                        # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
+                        if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
+                            loaded["hotkey"] = "<ctrl>+<cmd>+<"
+                        cfg = DEFAULT_CONFIG.copy()
+                        cfg.update(loaded)
+                        self.data = cfg
+                        self.save_config()
+                        return cfg
+                except (json.JSONDecodeError, RecursionError) as e:
+                    logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
+                except (OSError, UnicodeDecodeError, KeyError, AttributeError) as e:
+                    logger.error(f"Error reading config from {self.config_file}: {e}. Using defaults.")
         
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg

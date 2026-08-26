@@ -706,9 +706,9 @@ class MainWindow(QMainWindow):
             self.var_bar.txt_attacker.blockSignals(False)
             self.var_bar.txt_port.blockSignals(False)
 
-    def _save_current_project_state(self) -> None:
+    def _save_current_project_state(self) -> bool:
         variables = self.var_bar.get_variables() if hasattr(self, 'var_bar') else {}
-        self.session_service.save_project_session(variables)
+        return self.session_service.save_project_session(variables)
 
     def _switch_to_project(self, project_name: str) -> None:
         if project_name == self.project_manager.get_active_project():
@@ -717,7 +717,24 @@ class MainWindow(QMainWindow):
         if not self.report_ctrl.confirm_discard_if_dirty():
             return
 
-        self._save_current_project_state()
+        current_proj = self.project_manager.get_active_project()
+        if not self._save_current_project_state():
+            logger.error(f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'")
+            msg = QMessageBox(self)
+            msg.setWindowTitle(tr("general.save_failed", "Speichern fehlgeschlagen"))
+            msg.setText(
+                f"Der Zustand des aktuellen Projekts '{current_proj}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
+                "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
+            )
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            if msg.exec() != QMessageBox.StandardButton.Yes:
+                if hasattr(self, 'project_ctrl'):
+                    self.project_ctrl.update_project_combo()
+                return
+
         self.project_manager.set_active_project(project_name)
         self._load_active_project_state()
         self.report_ctrl.load_project(project_name)
@@ -778,6 +795,7 @@ class MainWindow(QMainWindow):
         if not self.report_ctrl.confirm_discard_if_dirty():
             event.ignore()
             return
+        self._save_current_project_state()
         event.accept()
 
     def resizeEvent(self, event) -> None:

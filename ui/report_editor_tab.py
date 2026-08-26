@@ -232,7 +232,7 @@ class ReportEditorTab(QWidget):
             if msg.exec() != QMessageBox.StandardButton.Yes:
                 return
 
-        from core.report_file_manager import ReportBackupError
+        from core.report_file_manager import ReportBackupError, ReportSaveError
         try:
             new_content = self.report_file_manager.regenerate(
                 self.loot_manager, self.clipboard_watcher, project_name=self.current_project
@@ -240,7 +240,7 @@ class ReportEditorTab(QWidget):
             self.editor.blockSignals(True)
             self.editor.setPlainText(new_content)
             self.editor.blockSignals(False)
-            self._set_dirty(False)  # regenerate() hat bereits gespeichert
+            self._set_dirty(False)  # regenerate() hat bereits erfolgreich gespeichert
             self._update_preview()
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
@@ -253,27 +253,44 @@ class ReportEditorTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
+        except ReportSaveError as e:
+            logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Speichern fehlgeschlagen")
+            msg.setText(
+                "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
+                "Der bisherige Report bleibt erhalten."
+            )
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
 
     def _on_export_copy_clicked(self) -> None:
+        from core.atomic_write import atomic_write_text
         default_path = self.report_file_manager.get_report_path(self.current_project)
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Report-Kopie exportieren", str(default_path), "Markdown (*.md)"
         )
         if not file_path:
             return
-        try:
-            Path(file_path).write_text(self.editor.toPlainText(), encoding="utf-8")
+
+        target = Path(file_path)
+        if target.suffix.lower() != ".md":
+            target = target.with_suffix(".md")
+
+        success = atomic_write_text(target, self.editor.toPlainText())
+        if success:
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Exportiert")
-            msg.setText(f"Kopie gespeichert: {Path(file_path).name}")
+            msg.setText(f"Kopie gespeichert: {target.name}")
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
-        except OSError as e:
-            logger.error(f"Export der Report-Kopie fehlgeschlagen: {e}", exc_info=True)
+        else:
+            logger.error(f"Export der Report-Kopie nach {target} fehlgeschlagen")
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
-            msg.setText(f"Export fehlgeschlagen: {e}")
+            msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()

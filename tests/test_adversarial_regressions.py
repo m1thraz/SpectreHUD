@@ -81,7 +81,7 @@ class TestAdversarialRegressions(unittest.TestCase):
         resolved_base = self.projects_dir.resolve()
 
         for bad_name in malicious_names:
-            proj_dir = self.project_mgr.create_project(bad_name)
+            proj_dir = self.project_mgr.create_project(bad_name, allow_existing=True)
             resolved_proj = proj_dir.resolve()
 
             # Boundary Invariant: Must be strictly inside projects_dir
@@ -285,24 +285,31 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.project_mgr.create_project("BoxBloated")
         state_file = self.project_mgr.get_project_dir("BoxBloated") / "project_state.json"
 
-        # Create bloated state with 1050 loot items and 600 clipboard entries with oversized payload
+        # Create bloated state with 1050 loot items and 600 clipboard entries
+        # Item 0 has oversized 150 KB string to test string truncation
+        bloated_loot = [{"title": f"Loot {i}", "content": "X" * 200} for i in range(1050)]
+        bloated_loot[0]["content"] = "X" * (150 * 1024)
+
+        bloated_clips = [{"text": f"cmd {i}"} for i in range(600)]
+        bloated_clips[0]["text"] = "Y" * (100 * 1024)
+
         bloated_state = {
             "name": "BoxBloated",
             "target_ip": "10.10.10.10",
-            "loot": [{"title": f"Loot {i}", "content": "X" * (150 * 1024)} for i in range(1050)],
-            "clipboard_history": [{"text": "Y" * (100 * 1024)} for i in range(600)]
+            "loot": bloated_loot,
+            "clipboard_history": bloated_clips
         }
         state_file.write_text(json.dumps(bloated_state), encoding="utf-8")
 
         # Load session via service
         loaded = self.session_service.load_project_session("BoxBloated")
 
-        # Invariant 1: Loot is capped to 1000 items, each item bounded to 128 KB
+        # Invariant 1: Loot is capped to 1000 items, oversized items bounded to 128 KB
         self.assertEqual(len(loaded["loot"]), 1000)
         self.assertEqual(len(loaded["loot"][0]["content"]), 128 * 1024)
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 1000)
 
-        # Invariant 2: Clipboard is capped to 500 items, each item bounded to 64 KB
+        # Invariant 2: Clipboard is capped to 500 items, oversized items bounded to 64 KB
         self.assertEqual(len(loaded["clipboard_history"]), 500)
         self.assertEqual(len(loaded["clipboard_history"][0]["text"]), 64 * 1024)
         self.assertEqual(len(self.clip_watcher.get_all_history()), 500)
@@ -379,6 +386,146 @@ class TestAdversarialRegressions(unittest.TestCase):
                 res_dir.resolve().is_relative_to(self.projects_dir.resolve()),
                 f"P1 Security Breach: Returned project directory is outside workspace: {res_dir}"
             )
+
+    # -------------------------------------------------------------------------
+    # 10. P2: Report Regeneration False-Success Prevention on Save Failure
+    # -------------------------------------------------------------------------
+    def test_report_regeneration_fails_closed_on_save_error_no_false_success(self):
+        """
+        Adversarial P2: If report save fails after building content, regenerate()
+        must RAISE ReportSaveError rather than returning content and signalling false success.
+        """
+        from unittest.mock import patch
+        from core.report_file_manager import ReportFileManager, ReportSaveError
+
+        rfm = ReportFileManager(self.project_mgr)
+        self.project_mgr.create_project("BoxSaveBomb")
+        
+        # Simulate write failure during atomic save
+        with patch.object(rfm, "save", return_value=False):
+            with self.assertRaises(ReportSaveError):
+                rfm.regenerate(self.loot_mgr, self.clip_watcher, "BoxSaveBomb")
+
+    # -------------------------------------------------------------------------
+    # 11. P2: Screenshot File Save Failure Must Not Create Orphaned Loot
+    # -------------------------------------------------------------------------
+    def test_screenshot_save_failure_does_not_create_orphaned_loot(self):
+        """
+        Adversarial P2: If saving a screenshot image to disk fails,
+        no loot entry should be created referencing the non-existent image file.
+        """
+        from unittest.mock import patch
+        from PyQt6.QtGui import QImage, QPixmap
+        from PyQt6.QtWidgets import QWidget
+        from core.screenshot_manager import ScreenshotManager
+
+        snip_mgr = ScreenshotManager()
+        self.project_mgr.create_project("BoxSnipFail")
+        self.project_mgr.set_active_project("BoxSnipFail")
+
+        img = QImage(10, 10, QImage.Format.Format_RGB32)
+        pix = QPixmap.fromImage(img)
+
+        with patch.object(QPixmap, "save", return_value=False):
+            snip_mgr._on_snip_completed(
+                cropped_pixmap=pix,
+                parent_window=QWidget(),
+                project_manager=self.project_mgr,
+                loot_manager=self.loot_mgr,
+                target_ip="10.10.10.99"
+            )
+
+        self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
+
+    # -------------------------------------------------------------------------
+    # 12. P2: Session Save Failure Reports False and Propagates Error
+    # -------------------------------------------------------------------------
+    def test_session_save_failure_returns_false(self):
+        """
+        Adversarial P2: If project state cannot be saved (e.g. disk full, read-only),
+        save_project_state() and save_project_session() must return False, allowing
+        the UI to alert the user and avoid silent data loss during project switch.
+        """
+        from unittest.mock import patch
+
+        self.project_mgr.create_project("BoxSaveErr")
+        
+        # Test atomic write failure in save_project_state
+        with patch("core.atomic_write.atomic_write_json", return_value=False):
+            saved = self.project_mgr.save_project_state("BoxSaveErr", {"target_ip": "1.2.3.4"})
+            self.assertFalse(saved)
+
+            session_saved = self.session_service.save_project_session({"target_ip": "1.2.3.4"}, "BoxSaveErr")
+            self.assertFalse(session_saved)
+
+    # -------------------------------------------------------------------------
+    # 13. Pre-Parse File Size Defense (Gigabyte JSON Bomb Defense)
+    # -------------------------------------------------------------------------
+    def test_oversized_raw_json_files_rejected_before_parsing(self):
+        """
+        Adversarial: Gigantic JSON files (> MAX_FILE_SIZE) must be rejected
+        BEFORE attempting json.load() to prevent massive RAM allocation during parsing.
+        """
+        from unittest.mock import patch
+
+        # 1. Project state file size limit (simulate oversized file)
+        self.project_mgr.create_project("BoxOversized")
+        state_file = self.project_mgr.get_project_dir("BoxOversized") / "project_state.json"
+        state_file.write_text('{"name": "BoxOversized", "loot": [{"title": "Should Not Load", "content": "X"}]}', encoding="utf-8")
+
+        # Mock is_file_size_valid to return False
+        with patch("core.validators.is_file_size_valid", return_value=False):
+            loaded = self.project_mgr.load_project_state("BoxOversized")
+            # Should safely fallback to clean default without parsing
+            self.assertEqual(loaded["name"], "BoxOversized")
+            self.assertEqual(loaded["loot"], [])
+
+        # 2. Loot manager file size limit
+        loot_file = self.temp_path / "giant_loot.json"
+        loot_file.write_text('[{"title": "Giant Item", "content": "data"}]', encoding="utf-8")
+        bomb_loot = LootManager(storage_file=loot_file)
+        with patch("core.validators.is_file_size_valid", return_value=False):
+            bomb_loot.load_entries()
+            self.assertEqual(bomb_loot.get_all_entries(), [])
+
+        # 3. User snippets file size limit
+        snip_file = self.temp_path / "giant_snippets.json"
+        snip_file.write_text('[{"title": "Giant Snippet", "template": "data"}]', encoding="utf-8")
+        with patch("core.validators.is_file_size_valid", return_value=False):
+            snip_mgr = SnippetManager(user_snippets_path=snip_file)
+            self.assertEqual(len([s for s in snip_mgr.get_snippets() if s.get("is_custom")]), 0)
+
+    # -------------------------------------------------------------------------
+    # 14. Project Name Sanitization Collision Defense
+    # -------------------------------------------------------------------------
+    def test_sanitization_collision_cannot_merge_or_overwrite_workspaces(self):
+        """
+        Adversarial: Creating 'hack box' and then 'hack_box' must not silently merge
+        workspaces or overwrite state. The second creation must be rejected with ProjectExistsError.
+        """
+        from core.project_manager import ProjectExistsError
+
+        # Create original project with spaces
+        dir1 = self.project_mgr.create_project("hack box", target_ip="10.10.10.50")
+        self.assertEqual(dir1.name, "hack_box")
+
+        # Mutate state in original project
+        notes_file = dir1 / "notes.md"
+        notes_file.write_text("Confidential Original Notes", encoding="utf-8")
+
+        # Attempting to create project with already sanitized name
+        with self.assertRaises(ProjectExistsError):
+            self.project_mgr.create_project("hack_box", target_ip="1.1.1.1")
+
+        # Attempting with extra spaces / slashes that resolve to the same sanitized name
+        with self.assertRaises(ProjectExistsError):
+            self.project_mgr.create_project("hack   box")
+
+        with self.assertRaises(ProjectExistsError):
+            self.project_mgr.create_project("hack/box")
+
+        # Verify original files were NOT overwritten
+        self.assertEqual(notes_file.read_text(encoding="utf-8"), "Confidential Original Notes")
 
 
 if __name__ == "__main__":

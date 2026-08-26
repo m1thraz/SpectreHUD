@@ -9,6 +9,15 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 
+# Raw file size bounds before JSON decoding (defense against parsing Gigabyte JSON bombs)
+MAX_PROJECT_STATE_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
+MAX_LOOT_FILE_SIZE: int = 10 * 1024 * 1024           # 10 MB
+MAX_CLIPBOARD_FILE_SIZE: int = 5 * 1024 * 1024       # 5 MB
+MAX_SNIPPETS_FILE_SIZE: int = 5 * 1024 * 1024        # 5 MB
+MAX_CONFIG_FILE_SIZE: int = 1 * 1024 * 1024          # 1 MB
+MAX_REGISTRY_FILE_SIZE: int = 2 * 1024 * 1024        # 2 MB
+MAX_REPORT_FILE_SIZE: int = 10 * 1024 * 1024         # 10 MB
+
 # Content & payload size bounds (defense against bloated / malicious project states)
 MAX_LOOT_ENTRIES: int = 1000
 MAX_CLIPBOARD_ENTRIES: int = 500
@@ -20,6 +29,21 @@ MAX_CLIPBOARD_TEXT_LENGTH: int = 64 * 1024  # 64 KB (matches live recorder)
 MAX_TARGET_IP_LENGTH: int = 128
 MAX_TIMESTAMP_LENGTH: int = 64
 MAX_PROJECT_NAME_LENGTH: int = 128
+
+
+def is_file_size_valid(file_path, max_bytes: int) -> bool:
+    """
+    Checks if a file exists and its size on disk is within max_bytes.
+    Returns False if file exceeds max_bytes or cannot be stated.
+    """
+    try:
+        from pathlib import Path
+        p = Path(file_path)
+        if not p.exists():
+            return False
+        return p.stat().st_size <= max_bytes
+    except OSError:
+        return False
 
 
 def _stable_hash_id(prefix: str, content: str) -> str:
