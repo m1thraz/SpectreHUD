@@ -388,6 +388,24 @@ class MainWindow(QMainWindow):
     def _show_empty_state(self, message: str) -> None:
         self.content_panel.show_empty_state(message)
 
+    def _toggle_pause_history(self) -> None:
+        self.app._toggle_pause_history()
+
+    def _on_add_button_clicked(self) -> None:
+        self.app._on_add_button_clicked()
+
+    def _export_report(self) -> None:
+        self.app._export_report()
+
+    def _export_loot(self) -> None:
+        self.app._export_loot()
+
+    def _clear_loot(self) -> None:
+        self.app._clear_loot()
+
+    def _clear_history(self) -> None:
+        self.app._clear_history()
+
     def toggle_visibility(self) -> None:
         if self.isVisible() and not self.isMinimized():
             self.hide()

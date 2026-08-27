@@ -1,24 +1,10 @@
 """
 Zentraler Report-Generator für SpectreHUD.
 
-Ersetzt die zwei bisher getrennten, divergierenden Markdown-Exporte
-(LootManager.export_loot und ClipboardWatcher.export_report_markdown).
-Beide pflegten eigene Alias-Listen und Rendering-Regeln, was schon jetzt
-zu Inkonsistenzen (siehe: "cred"/"dir"-Bug) geführt hat und mit jeder
-neuen Kategorie/jedem neuen Typ ein weiterer Ort wäre, an dem man Logik
-synchron halten müsste.
-
-Aufbau: pro Loot-Kategorie (core.loot_manager.CATEGORIES) eine Report-
-Sektion, in fester Pentest-Reihenfolge (Recon -> Access -> PrivEsc ->
-Post-Ex -> Scripts -> Misc). Innerhalb einer Sektion wird jeder Eintrag
-je nach loot_manager.LOOT_TYPES-Typ passend gerendert (Code-Block, Bild-
-Embed, Backtick-Inline). Am Ende jeder Sektion steht ein freier Markdown-
-Platzhalter, den man beim Schreiben des Berichts direkt ausfüllen kann.
-
-Die eigentliche Sektionsreihenfolge, das Sektions-Freitextfeld und der
-Titel-Block sind bewusst über TEMPLATE_SECTIONS/HEADER_TEMPLATE als
-Konstanten ausgelagert, damit sie sich später (z.B. für ein eigenes
-Firmen-Reportformat) ohne Umbau der Rendering-Logik anpassen lassen.
+Erstellt strukturierte, professionelle Pentest- & CTF-Berichte im Markdown-Format.
+Baut Metadaten-Tabellen, Executive Summary mit Findings-Matrix, Scope-Definitionen,
+phänomenologische Kategorien (1. Recon bis 6. Misc), Remediation-Pläne,
+sowie Anhänge für Terminal-History und Screenshot-Evidenzen.
 """
 import re
 from datetime import datetime
@@ -31,8 +17,6 @@ from core.logger import get_logger
 logger = get_logger("report_builder")
 
 # Freitext-Platzhalter, der an das Ende jeder Kategorie-Sektion gehängt wird.
-# So kann der Nutzer die automatisch gesammelten Rohdaten direkt im
-# exportierten .md zu Fließtext ausformulieren, statt das separat zu tun.
 SECTION_NOTES_PLACEHOLDER = "_Eigene Anmerkungen zu dieser Phase:_\n\n> "
 
 
@@ -65,7 +49,7 @@ def _wrap_inline_code(text: str) -> str:
 
 
 class ReportBuilder:
-    """Baut den vollständigen Markdown-Report aus Loot + Clipboard-History."""
+    """Baut den vollständigen, professionellen Markdown-Report aus Loot + Clipboard-History."""
 
     def __init__(self, loot_manager=None, clipboard_watcher=None, project_manager=None):
         self.loot_manager = loot_manager
@@ -77,12 +61,20 @@ class ReportBuilder:
     # ------------------------------------------------------------------ #
 
     def build(self, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
-        """Baut den kompletten Report-String (noch nicht auf Disk geschrieben)."""
+        """Baut den kompletten Report-String nach dem neuen professionellen Pentest-Template."""
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M:%S")
+
         lines: List[str] = []
-        lines.extend(self._render_header(target_ip, project_name))
+        lines.extend(self._render_header(target_ip, project_name, date_str))
+        lines.extend(self._render_executive_summary())
+        lines.extend(self._render_scope_limitations())
         lines.extend(self._render_loot_sections(target_ip))
+        lines.extend(self._render_remediation_plan())
         lines.extend(self._render_command_history(target_ip))
-        lines.extend(self._render_footer())
+        lines.extend(self._render_screenshots_appendix(target_ip))
+        lines.extend(self._render_footer(date_str, time_str))
         return "\n".join(lines)
 
     def export(self, output_path: Path, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
@@ -104,20 +96,70 @@ class ReportBuilder:
             return f"Fehler beim Generieren des Reports: {e}"
 
     # ------------------------------------------------------------------ #
-    # Sektionen
+    # Header & Metadaten
     # ------------------------------------------------------------------ #
 
-    def _render_header(self, target_ip: Optional[str], project_name: Optional[str]) -> List[str]:
+    def _render_header(self, target_ip: Optional[str], project_name: Optional[str], date_str: str) -> List[str]:
         target_display = target_ip if target_ip and target_ip != "all" else "Alle Targets"
-        title = f"Pentest Report: {project_name}" if project_name else "Pentest / CTF Session Report"
+        title = project_name if project_name else "Pentest / CTF Session"
         return [
-            f"# {title}",
-            f"**Ziel:** {_wrap_inline_code(target_display)}  ",
-            f"**Erstellt am:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`  ",
+            f"# Pentest Report: {title}",
+            "",
+            "| | |",
+            "|---|---|",
+            "| **Auftraggeber / Client** | `` |",
+            "| **Tester** | `` |",
+            f"| **Ziel(e) / Scope** | `{target_display}` |",
+            "| **Testzeitraum** | `` – `` |",
+            f"| **Berichtsdatum** | `{date_str}` |",
+            "| **Klassifizierung** | `Vertraulich – Nur für internen Gebrauch` |",
+            "| **Report-Version** | `v1.0` |",
             "",
             "---",
             "",
         ]
+
+    def _render_executive_summary(self) -> List[str]:
+        return [
+            "## Executive Summary",
+            "",
+            "> _Freitext für nicht-technische Leser: Was wurde getestet, was war das Gesamtergebnis, wie kritisch ist die Lage insgesamt._",
+            "",
+            "### Findings-Übersicht",
+            "",
+            "| # | Finding | Severity | Phase | Status |",
+            "|---|---------|----------|-------|--------|",
+            "| | | | | |",
+            "",
+            "**Gesamt:** 🔴 0 Critical · 🟠 0 High · 🟡 0 Medium · 🟢 0 Low",
+            "",
+            "### Kernaussagen",
+            "",
+            "- **Initial Access / Schwachstelle:**",
+            "- **Privilege Escalation:**",
+            "- **Business Impact / Risiko:**",
+            "- **Empfohlene Remediation:**",
+            "",
+            "---",
+            "",
+        ]
+
+    def _render_scope_limitations(self) -> List[str]:
+        return [
+            "## Scope & Limitations",
+            "",
+            "- **In Scope:**",
+            "- **Out of Scope:**",
+            "- **Testmethodik:**",
+            "- **Einschränkungen:**",
+            "",
+            "---",
+            "",
+        ]
+
+    # ------------------------------------------------------------------ #
+    # Kategorien (1. Recon bis 6. Misc)
+    # ------------------------------------------------------------------ #
 
     def _render_loot_sections(self, target_ip: Optional[str]) -> List[str]:
         """Eine Sektion pro Kategorie, in fester CATEGORIES-Reihenfolge."""
@@ -177,9 +219,25 @@ class ReportBuilder:
         lines.append("")
         return lines
 
+    # ------------------------------------------------------------------ #
+    # Remediation-Plan & Anhänge
+    # ------------------------------------------------------------------ #
+
+    def _render_remediation_plan(self) -> List[str]:
+        return [
+            "## Empfehlungen (Remediation-Plan)",
+            "",
+            "| Priorität | Empfehlung | Betrifft Finding # |",
+            "|---|---|---|",
+            "| | | |",
+            "",
+            "---",
+            "",
+        ]
+
     def _render_command_history(self, target_ip: Optional[str]) -> List[str]:
         lines = [
-            "## Chronologischer Befehlsverlauf (Terminal History)",
+            "## Anhang A: Chronologischer Befehlsverlauf (Terminal History)",
             "",
         ]
         if not self.clipboard_watcher:
@@ -205,13 +263,42 @@ class ReportBuilder:
         lines.append("")
         return lines
 
-    def _render_footer(self) -> List[str]:
-        return [
-            "## Executive Summary",
+    def _render_screenshots_appendix(self, target_ip: Optional[str]) -> List[str]:
+        lines = [
+            "## Anhang B: Screenshots",
             "",
-            "- **Initial Access / Schwachstelle:** ",
-            "- **Privilege Escalation:** ",
-            "- **Business Impact / Risiko:** ",
-            "- **Empfohlene Remediation:** ",
+        ]
+        all_entries = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        screenshots = [e for e in all_entries if e.get("type") == "screenshot"]
+
+        if not screenshots:
+            lines.append("*Keine Screenshots in diesem Projekt vorhanden.*")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+            return lines
+
+        for i, entry in enumerate(reversed(screenshots), start=1):
+            title = entry.get("title", f"Screenshot {i}")
+            content = (entry.get("content") or "").strip()
+            lines.append(f"### {i}. {title}")
+            if entry.get("timestamp"):
+                lines.append(f"**Zeitstempel:** `{entry.get('timestamp')}`  ")
+            if entry.get("target_ip"):
+                lines.append(f"**Target:** `{entry.get('target_ip')}`  ")
+            lines.append("")
+            if content.startswith("![") and content.endswith(")"):
+                lines.append(content)
+            else:
+                lines.append(f"![{title}]({content})")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+        return lines
+
+    def _render_footer(self, date_str: str, time_str: str) -> List[str]:
+        return [
+            f"*Erstellt mit SpectreHUD Pentest & CTF Companion – `{date_str} {time_str}`*",
             "",
         ]

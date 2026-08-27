@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Union
@@ -14,10 +15,26 @@ def _secure_chmod(path: Path, mode: int = 0o600) -> None:
         pass
 
 
+def _replace_file_with_retry(src: Path, dst: Path, max_retries: int = 5, retry_delay: float = 0.02) -> None:
+    """
+    Replaces dst with src atomically.
+    On Windows, rapid file replacement or antivirus locking can cause transient PermissionErrors (WinError 5).
+    Retries with brief delay to guarantee reliable atomic replacement.
+    """
+    for attempt in range(max_retries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(retry_delay * (attempt + 1))
+
+
 def atomic_write_text(filepath: Union[str, Path], content: str, encoding: str = "utf-8") -> bool:
     """
     Atomically writes text to target filepath via a temporary file in the same directory,
-    using flush, fsync, atomic rename (os.replace), and restrictive permissions (0o600).
+    using flush, fsync, atomic rename (os.replace with retry), and restrictive permissions (0o600).
     """
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,7 +46,7 @@ def atomic_write_text(filepath: Union[str, Path], content: str, encoding: str = 
             f.flush()
             os.fsync(f.fileno())
         _secure_chmod(temp_path, 0o600)
-        os.replace(temp_path, path)
+        _replace_file_with_retry(temp_path, path)
         _secure_chmod(path, 0o600)
         return True
     except OSError as e:
@@ -55,7 +72,7 @@ def atomic_write_json(filepath: Union[str, Path], data: Any, indent: int = 2, en
             f.flush()
             os.fsync(f.fileno())
         _secure_chmod(temp_path, 0o600)
-        os.replace(temp_path, path)
+        _replace_file_with_retry(temp_path, path)
         _secure_chmod(path, 0o600)
         return True
     except (OSError, TypeError, ValueError) as e:

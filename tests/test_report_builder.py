@@ -29,15 +29,23 @@ class TestReportBuilder(unittest.TestCase):
         report = self.builder.build(project_name="EmptyBox")
         
         self.assertIn("# Pentest Report: EmptyBox", report)
+        self.assertIn("**Auftraggeber / Client**", report)
+        self.assertIn("## Executive Summary", report)
+        self.assertIn("### Findings-Übersicht", report)
+        self.assertIn("## Scope & Limitations", report)
         self.assertIn("## 1. Reconnaissance & Enumeration", report)
         self.assertIn("## 2. Initial Access & Exploitation", report)
         self.assertIn("## 3. Privilege Escalation", report)
         self.assertIn("## 4. Post-Exploitation & Lateral Movement", report)
         self.assertIn("## 5. Custom Scripts & PoCs", report)
         self.assertIn("## 6. Miscellaneous", report)
+        self.assertIn("## Empfehlungen (Remediation-Plan)", report)
+        self.assertIn("## Anhang A: Chronologischer Befehlsverlauf (Terminal History)", report)
+        self.assertIn("## Anhang B: Screenshots", report)
         self.assertIn("*Keine Einträge in dieser Phase.*", report)
         self.assertIn("*Keine Clipboard-Historie aufgezeichnet.*", report)
-        self.assertIn("## Executive Summary", report)
+        self.assertIn("*Keine Screenshots in diesem Projekt vorhanden.*", report)
+        self.assertIn("Erstellt mit SpectreHUD Pentest & CTF Companion", report)
 
     def test_categorized_loot_rendering(self):
         """Loot is correctly rendered into its respective category sections in order."""
