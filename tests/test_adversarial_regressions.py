@@ -375,20 +375,23 @@ class TestAdversarialRegressions(unittest.TestCase):
             pass
 
         if evil_link.exists() or evil_link.is_symlink():
-            # Attempt to create project on symlink target
-            res_dir = self.project_mgr.create_project("Evil")
+            # Attempt to create project on symlink target (must either reject via exception or avoid following)
+            try:
+                res_dir = self.project_mgr.create_project("Evil")
+                # If it didn't raise, verify project dir is strictly inside workspace
+                self.assertTrue(
+                    res_dir.resolve().is_relative_to(self.projects_dir.resolve()),
+                    f"P1 Security Breach: Returned project directory is outside workspace: {res_dir}"
+                )
+            except (InvalidProjectNameError, ProjectCreationError, OSError):
+                # Safely rejected symlink / junction traversal escape attempt
+                pass
             
-            # Invariant 1: Outside directory must have NO files or folders written to it
+            # Invariant: Outside directory must have NO files or folders written to it
             outside_files = [p.name for p in outside_dir.iterdir()]
             self.assertEqual(
                 outside_files, [],
                 f"P1 Security Breach: create_project wrote files into outside directory {outside_dir}: {outside_files}"
-            )
-            
-            # Invariant 2: Returned project directory must be strictly inside workspace
-            self.assertTrue(
-                res_dir.resolve().is_relative_to(self.projects_dir.resolve()),
-                f"P1 Security Breach: Returned project directory is outside workspace: {res_dir}"
             )
 
     # -------------------------------------------------------------------------
