@@ -82,8 +82,14 @@ def main():
     window.show()
 
     # Global Hotkey Listener
-    hotkey_str = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
-    hotkey_listener = HotkeyListener(hotkey_str=hotkey_str)
+    from core.hotkey_listener import HotkeyConfig
+    from core.event_bus import EventType
+
+    hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
+    hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
+    hotkey_config = HotkeyConfig(toggle=hotkey_toggle, screenshot=hotkey_snip)
+    
+    hotkey_listener = HotkeyListener(config=hotkey_config)
     hotkey_listener.toggle_requested.connect(window.toggle_visibility)
     hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
     hotkey_listener.quit_requested.connect(app.quit)
@@ -127,6 +133,16 @@ def main():
         act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
 
     container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
+
+    def on_hotkeys_changed(data: dict):
+        new_toggle = data.get("hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<"))
+        new_snip = data.get("snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x"))
+        new_cfg = HotkeyConfig(toggle=new_toggle, screenshot=new_snip)
+        hotkey_listener.update_config(new_cfg)
+        act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
+        act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
+
+    container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
 
     # Clean exit
     exit_code = app.exec()

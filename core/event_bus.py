@@ -25,6 +25,7 @@ class EventType(str, Enum):
     LANGUAGE_CHANGED = "language_changed"
     SEARCH_CHANGED = "search_changed"
     VARIABLES_CHANGED = "variables_changed"
+    HOTKEY_SETTINGS_CHANGED = "hotkey_settings_changed"
 
 
 class EventBus:

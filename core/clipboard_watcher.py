@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
 
 logger = get_logger("clipboard")
 
@@ -114,12 +114,14 @@ class ClipboardWatcher(QObject):
             "is_multiline": is_multiline
         }
 
-        self.history.insert(0, entry)
-        # Keep maximum 500 session history items
-        if len(self.history) > 500:
-            self.history = self.history[:500]
+        new_history = [entry, *self.history]
+        if len(new_history) > 500:
+            new_history = new_history[:500]
 
-        self.save_history()
+        if not self.storage.save_json("clipboard", new_history):
+            raise PersistenceError("Could not persist clipboard entry to storage.")
+        
+        self.history = new_history
         self.entry_added.emit(entry)
         return entry
 
@@ -135,9 +137,11 @@ class ClipboardWatcher(QObject):
     def set_history(self, history: List[Dict[str, Any]]) -> None:
         """Replaces history with a validated list (e.g. on project switch)."""
         from core.validators import validate_clipboard_list
-        self.history = validate_clipboard_list(history)
+        validated = validate_clipboard_list(history)
+        if not self.storage.save_json("clipboard", validated):
+            raise PersistenceError("Could not persist set_history to storage.")
+        self.history = validated
         self._last_copied_text = self.history[0]["text"] if self.history else None
-        self.save_history()
 
     def get_all_history(self) -> List[Dict[str, Any]]:
         """Returns all history items raw."""
@@ -145,23 +149,26 @@ class ClipboardWatcher(QObject):
 
     def save_history(self) -> None:
         """Persists history using configured storage backend."""
-        self.storage.save_json("clipboard", self.history)
+        if not self.storage.save_json("clipboard", self.history):
+            raise PersistenceError("Could not persist clipboard history to storage.")
 
     def delete_entry(self, entry_id: str) -> bool:
         """Removes an entry by ID."""
-        for i, entry in enumerate(self.history):
-            if entry.get("id") == entry_id:
-                self.history.pop(i)
-                self.save_history()
-                return True
-        return False
+        new_history = [e for e in self.history if e.get("id") != entry_id]
+        if len(new_history) == len(self.history):
+            return False
+        if not self.storage.save_json("clipboard", new_history):
+            raise PersistenceError(f"Could not persist deletion of clipboard entry {entry_id}.")
+        self.history = new_history
+        return True
 
     def clear_history(self) -> int:
         """Clears all clipboard history."""
         count = len(self.history)
+        if not self.storage.save_json("clipboard", []):
+            raise PersistenceError("Could not persist cleared clipboard history.")
         self.history = []
         self._last_copied_text = None
-        self.save_history()
         return count
 
     def get_history(self, search_query: str = "", target_ip: Optional[str] = None, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:

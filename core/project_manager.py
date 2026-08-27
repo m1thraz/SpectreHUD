@@ -8,9 +8,15 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from core.logger import get_logger
+from core.storage import PersistenceError
 
 class ProjectExistsError(ValueError):
     """Raised when attempting to create a project whose sanitized name already exists."""
+    pass
+
+
+class ProjectCreationError(RuntimeError):
+    """Raised when project workspace creation fails transactionally."""
     pass
 
 
@@ -108,7 +114,8 @@ class ProjectManager:
             from core.atomic_write import atomic_write_json
             atomic_write_json(self.registry_file, self.registry, indent=2, ensure_ascii=False)
         except Exception as e:
-            logger.error(f"Failed to save projects registry to {self.registry_file}: {e}")
+            logger.error(f"Failed to save projects registry to {self.registry_file}: {e}", exc_info=True)
+            raise PersistenceError(f"Failed to save projects registry to {self.registry_file}: {e}") from e
 
     def _sanitize_name(self, name: str) -> str:
         """
@@ -270,76 +277,94 @@ class ProjectManager:
                 f"resolved to {resolved_proj}, which is outside target base {target_base}. "
                 "Rejecting creation and falling back to Default inside workspace."
             )
-            clean_name = "Default"
-            target_base = self.base_dir.resolve()
-            proj_dir = (target_base / "Default").resolve()
-        else:
-            proj_dir = resolved_proj
-
+        proj_dir = resolved_proj
         if not allow_existing and clean_name != "Default":
             if clean_name in self.list_projects() or proj_dir.exists():
                 raise ProjectExistsError(
                     f"A project with sanitized name '{clean_name}' already exists at {proj_dir}."
                 )
 
+        dir_existed_initially = proj_dir.exists()
+
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)
-            (proj_dir / "recon").mkdir(exist_ok=True)
-            (proj_dir / "exploit").mkdir(exist_ok=True)
-            (proj_dir / "loot").mkdir(exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to create folder structure for project {clean_name}: {e}", exc_info=True)
+            for sub in ("recon", "exploit", "loot"):
+                sub_p = proj_dir / sub
+                if sub_p.exists() and not sub_p.is_dir():
+                    raise OSError(f"Cannot create subfolder '{sub}' because a non-directory file exists with that name.")
+                sub_p.mkdir(exist_ok=True)
 
-        # Create notes.md if not exists
-        notes_file = proj_dir / "notes.md"
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if not notes_file.exists():
-            notes_content = DEFAULT_NOTES_TEMPLATE.format(
-                project_name=clean_name,
-                target_ip=target_ip or "TBD",
-                attacker_ip=attacker_ip or "TBD",
-                created_at=now_str
-            )
-            from core.atomic_write import atomic_write_text, atomic_write_json
-            if not atomic_write_text(notes_file, notes_content):
-                logger.error(f"Failed to atomically create notes.md for {clean_name}")
+            # Create notes.md if not exists
+            notes_file = proj_dir / "notes.md"
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if not notes_file.exists():
+                notes_content = DEFAULT_NOTES_TEMPLATE.format(
+                    project_name=clean_name,
+                    target_ip=target_ip or "TBD",
+                    attacker_ip=attacker_ip or "TBD",
+                    created_at=now_str
+                )
+                from core.atomic_write import atomic_write_text
+                if not atomic_write_text(notes_file, notes_content):
+                    raise OSError(f"Failed to atomically create notes.md for {clean_name}")
 
-        # Create project_state.json if not exists
-        state_file = proj_dir / "project_state.json"
-        if not state_file.exists():
-            initial_state = {
-                "name": clean_name,
-                "target_ip": target_ip or "10.10.10.10",
-                "attacker_ip": attacker_ip or "10.10.14.5",
-                "port": port or "4444",
-                "wordlist": "/usr/share/wordlists/dirb/common.txt",
-                "created_at": now_str,
-                "updated_at": now_str,
-                "loot": [],
-                "clipboard_history": []
-            }
-            from core.atomic_write import atomic_write_json
-            if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                logger.error(f"Failed to atomically write initial project_state.json for {clean_name}")
+            # Create project_state.json if not exists
+            state_file = proj_dir / "project_state.json"
+            if not state_file.exists():
+                initial_state = {
+                    "name": clean_name,
+                    "target_ip": target_ip or "10.10.10.10",
+                    "attacker_ip": attacker_ip or "10.10.14.5",
+                    "port": port or "4444",
+                    "wordlist": "/usr/share/wordlists/dirb/common.txt",
+                    "created_at": now_str,
+                    "updated_at": now_str,
+                    "loot": [],
+                    "clipboard_history": []
+                }
+                from core.atomic_write import atomic_write_json
+                if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
+                    raise OSError(f"Failed to atomically write initial project_state.json for {clean_name}")
 
-        # Register project location
-        self.registry[clean_name] = str(proj_dir)
-        self._save_registry()
+            # Register project location
+            self.registry[clean_name] = str(proj_dir)
+            self._save_registry()
+            return proj_dir
 
-        return proj_dir
+        except Exception as e:
+            logger.error(f"Project creation failed for {clean_name}: {e}. Rolling back partial files.", exc_info=True)
+            if not dir_existed_initially and proj_dir.exists():
+                import shutil
+                try:
+                    shutil.rmtree(proj_dir, ignore_errors=True)
+                except Exception as rb_err:
+                    logger.warning(f"Rollback cleanup failed for {proj_dir}: {rb_err}")
+            
+            if clean_name in self.registry:
+                del self.registry[clean_name]
+
+            raise ProjectCreationError(f"Failed to create project '{clean_name}': {e}") from e
 
     def import_project_folder(self, folder_path: Path | str) -> Optional[str]:
         """
         Imports and registers an existing directory as a project workspace.
         Ensures necessary subfolders and metadata files exist.
+        Protects against hijacking existing projects of the same name.
         """
-        try:
-            target_path = Path(folder_path).resolve()
-            if not target_path.exists() or not target_path.is_dir():
-                logger.warning(f"Cannot import non-existing or non-directory project folder: {folder_path}")
-                return None
+        target_path = Path(folder_path).resolve()
+        if not target_path.exists() or not target_path.is_dir():
+            logger.warning(f"Cannot import non-existing or non-directory project folder: {folder_path}")
+            return None
 
-            clean_name = self._sanitize_name(target_path.name)
+        clean_name = self._sanitize_name(target_path.name)
+        if clean_name in self.registry and self.registry[clean_name] != str(target_path):
+            existing_loc = Path(self.registry[clean_name])
+            if existing_loc.exists() and existing_loc.is_dir():
+                raise ProjectExistsError(
+                    f"Cannot import project '{clean_name}': An existing project is already registered at '{existing_loc}'."
+                )
+
+        try:
             (target_path / "recon").mkdir(exist_ok=True)
             (target_path / "exploit").mkdir(exist_ok=True)
             (target_path / "loot").mkdir(exist_ok=True)
@@ -360,7 +385,7 @@ class ProjectManager:
                 }
                 from core.atomic_write import atomic_write_json
                 if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                    logger.error(f"Failed to atomically write project_state.json for imported project {clean_name}")
+                    raise OSError(f"Failed to atomically write project_state.json for imported project {clean_name}")
 
             self.registry[clean_name] = str(target_path)
             self._save_registry()
@@ -369,6 +394,8 @@ class ProjectManager:
             return clean_name
         except Exception as e:
             logger.error(f"Failed to import project folder {folder_path}: {e}", exc_info=True)
+            if isinstance(e, (ProjectExistsError, PersistenceError)):
+                raise
             return None
 
     def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:

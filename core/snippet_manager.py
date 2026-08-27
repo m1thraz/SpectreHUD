@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
+from core.storage import PersistenceError
 
 logger = get_logger("snippets")
 
@@ -107,10 +108,9 @@ class SnippetManager:
         from core.atomic_write import atomic_write_json
         try:
             atomic_write_json(self.favorites_path, sorted(list(self.favorite_ids)), indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.error(f"OS error saving favorites to {self.favorites_path}: {e}", exc_info=True)
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving favorites: {e}")
+        except Exception as e:
+            logger.error(f"Error saving favorites to {self.favorites_path}: {e}", exc_info=True)
+            raise PersistenceError(f"Could not persist favorites: {e}") from e
 
     def toggle_favorite(self, snippet_id: str) -> bool:
         """Toggles favorite state for a given snippet ID. Returns True if now favorite, False otherwise."""
@@ -205,13 +205,12 @@ class SnippetManager:
     def save_user_snippets(self) -> None:
         """Persists custom user snippets to disk atomically."""
         from core.atomic_write import atomic_write_json
+        custom_only = [s for s in self.snippets if s.get("is_custom", False)]
         try:
-            custom_only = [s for s in self.snippets if s.get("is_custom", False)]
             atomic_write_json(self.user_snippets_path, custom_only, indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.error(f"OS error saving user snippets to {self.user_snippets_path}: {e}", exc_info=True)
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving user snippets: {e}")
+        except Exception as e:
+            logger.error(f"Error saving user snippets to {self.user_snippets_path}: {e}", exc_info=True)
+            raise PersistenceError(f"Could not persist user snippets: {e}") from e
 
     def add_custom_snippet(self, title: str, category: str = "Custom Notes & Snippets", subcategory: str = "Allgemein", template: str = "", description: str = "", tags: Optional[List[str]] = None) -> Dict[str, Any]:
         """Creates and stores a new custom snippet."""
@@ -229,8 +228,15 @@ class SnippetManager:
             "is_custom": True,
             "is_favorite": False
         }
+        from core.atomic_write import atomic_write_json
+        custom_only = [s for s in self.snippets if s.get("is_custom", False)] + [new_snip]
+        try:
+            atomic_write_json(self.user_snippets_path, custom_only, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Error saving user snippets: {e}", exc_info=True)
+            raise PersistenceError(f"Could not persist custom snippet: {e}") from e
+
         self.snippets.append(new_snip)
-        self.save_user_snippets()
         return new_snip
 
     def import_from_file(self, file_path: Any) -> int:
@@ -244,7 +250,7 @@ class SnippetManager:
         if not parsed:
             return 0
 
-        count = 0
+        new_items = []
         for snip in parsed:
             new_snip = {
                 "id": f"custom_{uuid.uuid4().hex[:8]}",
@@ -258,25 +264,48 @@ class SnippetManager:
                 "is_custom": True,
                 "is_favorite": False
             }
-            self.snippets.append(new_snip)
-            count += 1
+            new_items.append(new_snip)
 
-        if count > 0:
-            self.save_user_snippets()
+        if new_items:
+            from core.atomic_write import atomic_write_json
+            custom_only = [s for s in self.snippets if s.get("is_custom", False)] + new_items
+            try:
+                atomic_write_json(self.user_snippets_path, custom_only, indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.error(f"Error persisting imported snippets: {e}", exc_info=True)
+                raise PersistenceError(f"Could not persist imported snippets: {e}") from e
 
-        return count
+            self.snippets.extend(new_items)
+
+        return len(new_items)
 
     def delete_snippet(self, snippet_id: str) -> bool:
         """Deletes a custom snippet by its ID."""
+        target_idx = None
         for i, snip in enumerate(self.snippets):
             if snip.get("id") == snippet_id and snip.get("is_custom", False):
-                self.snippets.pop(i)
-                if snippet_id in self.favorite_ids:
-                    self.favorite_ids.remove(snippet_id)
-                    self.save_favorites()
-                self.save_user_snippets()
-                return True
-        return False
+                target_idx = i
+                break
+        
+        if target_idx is None:
+            return False
+
+        from core.atomic_write import atomic_write_json
+        custom_only = [s for s in self.snippets if s.get("is_custom", False) and s.get("id") != snippet_id]
+        try:
+            atomic_write_json(self.user_snippets_path, custom_only, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"Error persisting snippets after deletion: {e}", exc_info=True)
+            raise PersistenceError(f"Could not persist deletion of snippet {snippet_id}: {e}") from e
+
+        self.snippets.pop(target_idx)
+        if snippet_id in self.favorite_ids:
+            self.favorite_ids.remove(snippet_id)
+            try:
+                self.save_favorites()
+            except Exception:
+                pass
+        return True
 
     def search(self, query: str = "", category_id: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """

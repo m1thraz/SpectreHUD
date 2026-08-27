@@ -1,111 +1,118 @@
+"""
+Global Hotkey Listener for SpectreHUD.
+
+Provides dynamic, configurable system-wide keyboard shortcuts for:
+- Overlay Toggle
+- Screenshot & Region Snip
+- Complete Application Quit
+"""
+
 import time
-import threading
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Dict, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
+
 from core.logger import get_logger
 
-logger = get_logger("hotkeys")
+logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class HotkeyConfig:
+    """Immutable configuration for global hotkey mappings."""
+    toggle: str = "<ctrl>+<cmd>+<"
+    screenshot: str = "<ctrl>+<cmd>+x"
+    quit: str = "<ctrl>+<cmd>+q"
+
+
+def normalize_hotkey_for_pynput(hotkey_str: str) -> str:
+    """
+    Normalizes human-friendly hotkey strings to pynput GlobalHotKeys format.
+    E.g.:
+      'Strg + Super + <' -> '<ctrl>+<cmd>+<'
+      'Ctrl + Alt + S'   -> '<ctrl>+<alt>+s'
+      'F12'              -> '<f12>'
+    """
+    if not hotkey_str:
+        return "<ctrl>+<cmd>+<"
+
+    s = hotkey_str.strip().lower()
+    s = s.replace("strg", "ctrl").replace("super", "cmd").replace("win", "cmd")
+    parts = [p.strip() for p in s.replace("+", " ").split() if p.strip()]
+
+    normalized_parts = []
+    for p in parts:
+        if p in ("<", ">"):
+            normalized_parts.append(p)
+            continue
+        clean_p = p.strip("<>")
+        if clean_p in ("ctrl", "cmd", "alt", "shift", "space", "enter", "tab", "esc") or (clean_p.startswith("f") and clean_p[1:].isdigit()):
+            normalized_parts.append(f"<{clean_p}>")
+        else:
+            normalized_parts.append(clean_p)
+
+    return "+".join(normalized_parts)
+
 
 class HotkeyListener(QObject):
     """
-    Robust global hotkey listener supporting:
-    - Strg + Super + < (HUD Toggle)
-    - Strg + Super + X (Screenshot & Region Snipping)
-    - Strg + Super + Q (Quit SpectreHUD)
-    across all keyboard layouts and Windows virtual keycodes.
+    Dynamic global hotkey listener supporting configurable key combinations
+    via pynput.keyboard.GlobalHotKeys with hot-reload capability.
     """
     toggle_requested = pyqtSignal()
     screenshot_requested = pyqtSignal()
     quit_requested = pyqtSignal()
 
-    def __init__(self, hotkey_str: str = "<ctrl>+<cmd>+<"):
+    def __init__(self, hotkey_str: str = "<ctrl>+<cmd>+<", config: Optional[HotkeyConfig] = None):
         super().__init__()
-        # Normalize hotkey string
-        normalized = hotkey_str.lower().replace("strg", "ctrl").replace("super", "cmd").replace("win", "cmd")
-        self.hotkey_str = normalized
-        
+        if config is not None:
+            self.config = config
+        else:
+            self.config = HotkeyConfig(toggle=hotkey_str)
+
         self._listener = None
         self._running = False
         self._last_trigger_time = 0.0
         self._last_screenshot_time = 0.0
         self._last_quit_time = 0.0
         self._debounce_cooldown = 0.35  # seconds
-        
-        # State tracking for modifier keys
-        self._ctrl_down = False
-        self._cmd_down = False
-        self._alt_down = False
-        self._shift_down = False
+
+    def update_config(self, new_config: HotkeyConfig) -> bool:
+        """Dynamically updates the hotkey configuration and reloads listener if active."""
+        if new_config == self.config and self._running:
+            return True
+
+        self.config = new_config
+        logger.info(f"Updated hotkey config: Toggle='{self.config.toggle}', Snip='{self.config.screenshot}', Quit='{self.config.quit}'")
+        if self._running:
+            self.stop()
+            self.start()
+        return True
 
     def start(self) -> None:
-        """Starts the robust low-level keyboard listener."""
+        """Starts the pynput GlobalHotKeys listener."""
         try:
             from pynput import keyboard
 
-            def on_press(key):
-                # Update modifier states
-                if key in [keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r]:
-                    self._ctrl_down = True
-                elif key in [keyboard.Key.cmd, keyboard.Key.cmd_l, keyboard.Key.cmd_r]:
-                    self._cmd_down = True
-                elif key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r, keyboard.Key.alt_gr]:
-                    self._alt_down = True
-                elif key in [keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r]:
-                    self._shift_down = True
+            norm_toggle = normalize_hotkey_for_pynput(self.config.toggle)
+            norm_snip = normalize_hotkey_for_pynput(self.config.screenshot)
+            norm_quit = normalize_hotkey_for_pynput(self.config.quit)
 
-                # Check for trigger keys
-                is_less_than_key = False
-                is_x_key = False
-                is_q_key = False
-                try:
-                    if hasattr(key, 'char') and key.char:
-                        char_l = key.char.lower()
-                        if key.char in ['<', '>', '«', '»']:
-                            is_less_than_key = True
-                        elif char_l == 'x':
-                            is_x_key = True
-                        elif char_l == 'q':
-                            is_q_key = True
-                    
-                    if hasattr(key, 'vk') and key.vk:
-                        if key.vk in [226, 188]:
-                            is_less_than_key = True
-                        elif key.vk in [88, 120]:  # 'X' / 'x'
-                            is_x_key = True
-                        elif key.vk in [81, 113]:  # 'Q' / 'q'
-                            is_q_key = True
-                except (AttributeError, TypeError):
-                    pass
+            hotkey_mapping: Dict[str, Callable[[], None]] = {}
 
-                # 1. Primary Shortcut: Strg + Super/Win + < -> HUD Toggle
-                if self._ctrl_down and self._cmd_down and is_less_than_key:
-                    self._fire_trigger()
+            if norm_toggle:
+                hotkey_mapping[norm_toggle] = self._fire_trigger
+            if norm_snip:
+                hotkey_mapping[norm_snip] = self._fire_screenshot_trigger
+            if norm_quit:
+                hotkey_mapping[norm_quit] = self._fire_quit_trigger
 
-                # 2. Screenshot Shortcut: Strg + Super/Win + X -> Snip Tool
-                if self._ctrl_down and self._cmd_down and is_x_key:
-                    self._fire_screenshot_trigger()
-
-                # 3. Quit Shortcut: Strg + Super/Win + Q -> Complete Quit
-                if self._ctrl_down and self._cmd_down and is_q_key:
-                    self._fire_quit_trigger()
-
-            def on_release(key):
-                # Release modifier states
-                if key in [keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r]:
-                    self._ctrl_down = False
-                elif key in [keyboard.Key.cmd, keyboard.Key.cmd_l, keyboard.Key.cmd_r]:
-                    self._cmd_down = False
-                elif key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r, keyboard.Key.alt_gr]:
-                    self._alt_down = False
-                elif key in [keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r]:
-                    self._shift_down = False
-
-            self._listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+            self._listener = keyboard.GlobalHotKeys(hotkey_mapping)
             self._listener.daemon = True
             self._listener.start()
             self._running = True
-            logger.info("Registered global hotkeys: Strg+Super+< (Toggle), Strg+Super+X (Screenshot), Strg+Super+Q (Quit)")
-        except (ImportError, OSError, RuntimeError) as e:
+            logger.info(f"Registered global hotkeys: {list(hotkey_mapping.keys())}")
+        except (ImportError, ValueError, OSError, RuntimeError) as e:
             logger.error(f"Failed to start global hotkey listener: {e}", exc_info=True)
 
     def _fire_trigger(self) -> None:

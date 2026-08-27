@@ -29,6 +29,21 @@ class TestContainer(unittest.TestCase):
             self.assertIsNotNone(container.storage)
             self.assertIsNotNone(container.event_bus)
 
+    def test_service_container_uses_custom_workspace_dir(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            config_dir = Path(tmp_dir) / "config"
+            custom_ws = Path(tmp_dir) / "my_custom_workspace"
+            
+            # Pre-populate config with custom workspace
+            from core.storage import FileStorageBackend
+            from core.config import ConfigManager
+            st = FileStorageBackend(base_dir=config_dir)
+            cfg = ConfigManager(config_dir=config_dir, storage=st)
+            cfg.set("workspace_dir", str(custom_ws))
+
+            container = ServiceContainer.create_production(config_dir=config_dir, language="en")
+            self.assertEqual(container.project_manager.base_dir.resolve(), custom_ws.resolve())
+
     def test_service_container_create_in_memory(self):
         container = ServiceContainer.create_in_memory(
             initial_config={"target_ip": "192.168.1.100", "theme": "cyber_dark"},

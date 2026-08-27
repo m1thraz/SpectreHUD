@@ -356,6 +356,21 @@ class AppController(QObject):
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
+        if "hotkey" in new_settings or "snip_hotkey" in new_settings:
+            self._update_footer_status()
+            self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, {
+                "hotkey": new_settings.get("hotkey", self.config.get("hotkey", "<ctrl>+<cmd>+<")),
+                "snip_hotkey": new_settings.get("snip_hotkey", self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")),
+            })
+        if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
+            new_ws = Path(new_settings["workspace_dir"]).resolve()
+            if new_ws != self.project_manager.base_dir.resolve():
+                self.project_manager.base_dir = new_ws
+                try:
+                    new_ws.mkdir(parents=True, exist_ok=True)
+                except OSError:
+                    pass
+                self.project_manager.list_projects()
         if "language" in new_settings:
             self.retranslate_ui(new_settings["language"])
         else:

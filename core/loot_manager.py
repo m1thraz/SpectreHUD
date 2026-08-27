@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
 
 logger = get_logger("loot")
 
@@ -113,7 +113,8 @@ class LootManager:
 
     def save_entries(self) -> None:
         """Persists loot entries using configured storage backend."""
-        self.storage.save_json("loot", self.entries)
+        if not self.storage.save_json("loot", self.entries):
+            raise PersistenceError("Could not persist loot entries to storage.")
 
     def add_entry(
         self, 
@@ -137,13 +138,17 @@ class LootManager:
             "target_ip": target_ip.strip(),
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        self.entries.insert(0, entry)  # Most recent first
-        self.save_entries()
+        new_entries = [entry, *self.entries]
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError("Could not persist new loot entry to storage.")
+        self.entries = new_entries
         return entry
 
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
         """Updates fields of an existing entry by ID and persists changes."""
-        for entry in self.entries:
+        new_entries = [dict(e) for e in self.entries]
+        updated_entry = None
+        for entry in new_entries:
             if entry.get("id") == entry_id:
                 if "category" in fields:
                     cat = fields["category"]
@@ -157,30 +162,38 @@ class LootManager:
                     entry["content"] = fields["content"].strip()
                 if "target_ip" in fields:
                     entry["target_ip"] = fields["target_ip"].strip()
-                
-                self.save_entries()
-                return entry
-        return None
+                updated_entry = entry
+                break
+        
+        if updated_entry is None:
+            return None
+
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
+        self.entries = new_entries
+        return updated_entry
 
     def delete_entry(self, entry_id: str) -> bool:
         """Deletes an entry by ID."""
-        for i, entry in enumerate(self.entries):
-            if entry.get("id") == entry_id:
-                self.entries.pop(i)
-                self.save_entries()
-                return True
-        return False
+        new_entries = [e for e in self.entries if e.get("id") != entry_id]
+        if len(new_entries) == len(self.entries):
+            return False
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError(f"Could not persist deletion for loot entry {entry_id}.")
+        self.entries = new_entries
+        return True
 
     def clear_session(self, target_ip: Optional[str] = None) -> int:
         """Clears all entries, or only those matching a specific target IP."""
         if target_ip:
-            before_count = len(self.entries)
-            self.entries = [e for e in self.entries if e.get("target_ip") != target_ip]
-            deleted_count = before_count - len(self.entries)
+            new_entries = [e for e in self.entries if e.get("target_ip") != target_ip]
+            deleted_count = len(self.entries) - len(new_entries)
         else:
             deleted_count = len(self.entries)
-            self.entries = []
-        self.save_entries()
+            new_entries = []
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError("Could not persist cleared session loot to storage.")
+        self.entries = new_entries
         return deleted_count
 
     def get_entries(

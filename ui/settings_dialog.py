@@ -81,8 +81,11 @@ class HotkeySettingsPage(QWidget):
 
         self.combo_snip = QComboBox()
         self.combo_snip.setMinimumWidth(220)
-        for preset in SNIP_PRESETS:
+        curr_snip = self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")
+        for i, preset in enumerate(SNIP_PRESETS):
             self.combo_snip.addItem(preset["label"], preset["value"])
+            if preset["value"] == curr_snip:
+                self.combo_snip.setCurrentIndex(i)
         row_snip.addWidget(self.combo_snip, stretch=1)
         card_layout.addLayout(row_snip)
 
@@ -154,7 +157,8 @@ class HotkeySettingsPage(QWidget):
 
     def get_settings(self) -> Dict[str, Any]:
         return {
-            "hotkey": self.combo_toggle.currentData() or "<ctrl>+<cmd>+<"
+            "hotkey": self.combo_toggle.currentData() or "<ctrl>+<cmd>+<",
+            "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<cmd>+x",
         }
 
 

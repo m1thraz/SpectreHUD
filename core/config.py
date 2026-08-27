@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
 
 logger = get_logger("config")
 
@@ -67,20 +67,26 @@ class ConfigManager:
             cfg = DEFAULT_CONFIG.copy()
             cfg.update(loaded)
             self.data = cfg
-            self.save_config()
             return cfg
         
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg
-        self.save_config()
+        try:
+            self.save_config()
+        except PersistenceError:
+            pass
         return cfg
 
     def save_config(self) -> None:
-        self.storage.save_json("config", self.data)
+        if not self.storage.save_json("config", self.data):
+            raise PersistenceError("Could not persist configuration to storage.")
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.data.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
-        self.data[key] = value
-        self.save_config()
+        new_data = dict(self.data)
+        new_data[key] = value
+        if not self.storage.save_json("config", new_data):
+            raise PersistenceError(f"Could not persist config key '{key}' to storage.")
+        self.data = new_data

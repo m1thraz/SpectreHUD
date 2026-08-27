@@ -68,7 +68,9 @@ class ServiceContainer:
         set_locale(active_lang)
 
         snippet_manager = SnippetManager(language=active_lang)
-        project_manager = ProjectManager(config_dir=resolved_config_dir)
+        workspace_setting = config_manager.get("workspace_dir")
+        base_projects_dir = Path(workspace_setting) if workspace_setting else None
+        project_manager = ProjectManager(base_dir=base_projects_dir, config_dir=resolved_config_dir)
         loot_manager = LootManager()
         clipboard_watcher = ClipboardWatcher()
         screenshot_manager = ScreenshotManager()
