@@ -705,6 +705,63 @@ class TestAdversarialRegressions(unittest.TestCase):
             r"mysql -u root\1 -p'P@ss\2\g<1>\test' -h 10.10.10.99"
         )
 
+    # -------------------------------------------------------------------------
+    # 20. Local File Disclosure and HTML Spoofing Defense in Card Widgets
+    # -------------------------------------------------------------------------
+    def test_card_widgets_plain_text_enforcement(self):
+        """
+        Adversarial: Card widgets (LootCard, HistoryCard, SnippetCard) displaying user
+        or clipboard data must explicitly enforce PlainText format on their QLabels to prevent
+        Rich Text auto-parsing and arbitrary local file disclosure / oracle loading via <img src="file">.
+        """
+        from PyQt6.QtCore import Qt
+        from ui.loot_card import LootCard
+        from ui.history_card import HistoryCard
+        from ui.snippet_card import SnippetCard
+
+        # 1. LootCard PlainText Verification
+        malicious_loot = {
+            "id": "loot_xss",
+            "type": "credentials",
+            "category": "access",
+            "title": '<img src="/etc/shadow"><b>Root Creds</b>',
+            "content": '<img src="/home/user/secret.png"><span style="display:none">Hidden</span>admin:pass',
+            "target_ip": '<script>10.10.10.10</script>',
+            "timestamp": '2026-08-27 12:00:00'
+        }
+        loot_card = LootCard(entry=malicious_loot)
+        self.assertEqual(loot_card.lbl_content.textFormat(), Qt.TextFormat.PlainText)
+        self.assertEqual(loot_card.lbl_content.text(), malicious_loot["content"])
+
+        # 2. HistoryCard PlainText Verification (Clipboard Watcher ingestion)
+        malicious_history = {
+            "id": "clip_1",
+            "text": 'curl http://attacker.com/<img src="C:/Windows/System32/drivers/etc/hosts">',
+            "timestamp": '12:30:00',
+            "target_ip": '10.10.10.10',
+            "lines_count": 1,
+            "char_count": 80
+        }
+        hist_card = HistoryCard(entry=malicious_history)
+        self.assertEqual(hist_card.lbl_content.textFormat(), Qt.TextFormat.PlainText)
+        self.assertEqual(hist_card.lbl_content.text(), malicious_history["text"])
+
+        # 3. SnippetCard PlainText Verification
+        malicious_snippet = {
+            "id": "snip_1",
+            "title": 'Nmap Scan <img src="/etc/passwd">',
+            "category": 'Web <script>',
+            "subcategory": 'Recon',
+            "description": 'Scan description with <img src="/secret.png">',
+            "template": 'nmap -sV {{TARGET_IP}} <img src="/private.png">',
+            "is_custom": True
+        }
+        snippet_card = SnippetCard(snippet=malicious_snippet, variables={"target_ip": "10.10.10.10"})
+        self.assertEqual(snippet_card.lbl_title.textFormat(), Qt.TextFormat.PlainText)
+        self.assertEqual(snippet_card.lbl_category.textFormat(), Qt.TextFormat.PlainText)
+        self.assertEqual(snippet_card.lbl_desc.textFormat(), Qt.TextFormat.PlainText)
+        self.assertEqual(snippet_card.lbl_command.textFormat(), Qt.TextFormat.PlainText)
+
 
 if __name__ == "__main__":
     unittest.main()

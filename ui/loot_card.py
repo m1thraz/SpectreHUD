@@ -45,6 +45,7 @@ class LootCard(QFrame):
         badge_info = next((t for t in LOOT_TYPES if t["id"] == entry_type), {"name": "Note", "icon": "", "badge_class": "BadgeNote"})
         
         lbl_badge = QLabel(badge_info["name"])
+        lbl_badge.setTextFormat(Qt.TextFormat.PlainText)
         lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
         header_layout.addWidget(lbl_badge)
 
@@ -53,12 +54,14 @@ class LootCard(QFrame):
         cat_info = next((c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""})
         cat_short_name = cat_info["name"].split(".")[1].strip().split("&")[0].strip() if "." in cat_info["name"] else cat_info["name"]
         lbl_cat = QLabel(cat_short_name)
+        lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
         lbl_cat.setProperty("class", "CategoryBadge")
         lbl_cat.setToolTip(f"Pentest-Phase: {cat_info['name']}")
         header_layout.addWidget(lbl_cat)
 
         # 3. Title
         lbl_title = QLabel(self.entry.get("title", "Unbenannt"))
+        lbl_title.setTextFormat(Qt.TextFormat.PlainText)
         lbl_title.setObjectName("SnippetTitle")
         lbl_title.setWordWrap(True)
         header_layout.addWidget(lbl_title, stretch=1)
@@ -67,6 +70,7 @@ class LootCard(QFrame):
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
             lbl_target = QLabel(target_ip)
+            lbl_target.setTextFormat(Qt.TextFormat.PlainText)
             lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
             header_layout.addWidget(lbl_target)
 
@@ -75,6 +79,7 @@ class LootCard(QFrame):
         if timestamp:
             time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
             lbl_time = QLabel(time_part)
+            lbl_time.setTextFormat(Qt.TextFormat.PlainText)
             lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
             header_layout.addWidget(lbl_time)
 
@@ -122,6 +127,7 @@ class LootCard(QFrame):
         content_row.setSpacing(8)
 
         self.lbl_content = QLabel(self.entry.get("content", ""))
+        self.lbl_content.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
         self.lbl_content.setTextInteractionFlags(

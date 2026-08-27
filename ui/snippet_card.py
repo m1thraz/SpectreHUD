@@ -45,6 +45,7 @@ class SnippetCard(QFrame):
         header_layout.addWidget(self.btn_fav, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         self.lbl_title = QLabel(self.snippet.get("title", "Unbenannter Befehl"))
+        self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_title.setObjectName("SnippetTitle")
         self.lbl_title.setWordWrap(True)
         header_layout.addWidget(self.lbl_title, stretch=1)
@@ -53,6 +54,7 @@ class SnippetCard(QFrame):
         subcat_part = self.snippet.get('subcategory', '').strip()
         cat_text = f"{cat_part} › {subcat_part}" if subcat_part else cat_part
         self.lbl_category = QLabel(cat_text)
+        self.lbl_category.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_category.setObjectName("SnippetCategory")
         header_layout.addWidget(self.lbl_category, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
@@ -70,6 +72,7 @@ class SnippetCard(QFrame):
         desc_text = self.snippet.get("description", "")
         if desc_text:
             self.lbl_desc = QLabel(desc_text)
+            self.lbl_desc.setTextFormat(Qt.TextFormat.PlainText)
             self.lbl_desc.setObjectName("SnippetDesc")
             self.lbl_desc.setWordWrap(True)
             layout.addWidget(self.lbl_desc)
@@ -80,6 +83,7 @@ class SnippetCard(QFrame):
 
         # Naturally wrapping selectable code label without expanding the card
         self.lbl_command = QLabel()
+        self.lbl_command.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_command.setObjectName("CommandLabel")
         self.lbl_command.setWordWrap(True)
         self.lbl_command.setTextInteractionFlags(

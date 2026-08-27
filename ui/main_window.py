@@ -558,6 +558,7 @@ class MainWindow(QMainWindow):
 
     def _show_empty_state(self, message: str) -> None:
         empty_lbl = QLabel(message)
+        empty_lbl.setTextFormat(Qt.TextFormat.PlainText)
         empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty_lbl.setStyleSheet("color: #6e7681; font-size: 13px; font-style: italic; padding: 40px 20px;")
         empty_lbl.setWordWrap(True)

@@ -34,6 +34,7 @@ class HistoryCard(QFrame):
         ts = self.entry.get("timestamp", "")
         time_display = ts.split(" ")[-1] if " " in ts else ts
         lbl_time = QLabel(time_display)
+        lbl_time.setTextFormat(Qt.TextFormat.PlainText)
         lbl_time.setStyleSheet("background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
         header_layout.addWidget(lbl_time)
 
@@ -41,6 +42,7 @@ class HistoryCard(QFrame):
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
             lbl_target = QLabel(target_ip)
+            lbl_target.setTextFormat(Qt.TextFormat.PlainText)
             lbl_target.setStyleSheet("background-color: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
             header_layout.addWidget(lbl_target)
 
@@ -49,6 +51,7 @@ class HistoryCard(QFrame):
         char_count = self.entry.get("char_count", 0)
         type_str = "Command" if lines_count <= 2 and char_count < 120 else f"{lines_count} lines ({char_count} chars)"
         lbl_stats = QLabel(type_str)
+        lbl_stats.setTextFormat(Qt.TextFormat.PlainText)
         lbl_stats.setStyleSheet("color: #8b949e; font-size: 10px;")
         header_layout.addWidget(lbl_stats)
 
@@ -68,6 +71,7 @@ class HistoryCard(QFrame):
         content_row.setSpacing(8)
 
         self.lbl_content = QLabel(self.entry.get("text", ""))
+        self.lbl_content.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
         self.lbl_content.setTextInteractionFlags(
