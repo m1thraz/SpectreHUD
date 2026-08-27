@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 
 logger = get_logger("loot")
 
@@ -49,17 +50,23 @@ TYPE_ALIASES = {
 class LootManager:
     """Manages session loot, credentials, hashes, flags and notes with persistence, categories and export."""
 
-    def __init__(self, storage_file: Optional[Path] = None):
-        self.storage_file = Path(storage_file) if storage_file is not None else None
-        if self.storage_file:
-            try:
-                self.storage_file.parent.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                logger.error(f"Failed to create parent directory for loot storage {self.storage_file}: {e}", exc_info=True)
+    def __init__(
+        self,
+        storage_file: Optional[Path] = None,
+        storage: Optional[StorageBackend] = None
+    ):
+        if storage is not None:
+            self.storage = storage
+            self.storage_file = getattr(storage, "single_file_path", None)
+        elif storage_file is not None:
+            self.storage_file = Path(storage_file)
+            self.storage = FileStorageBackend(single_file_path=self.storage_file)
+        else:
+            self.storage_file = None
+            self.storage = InMemoryStorageBackend()
 
         self.entries: List[Dict[str, Any]] = []
-        if self.storage_file:
-            self.load_entries()
+        self.load_entries()
 
     def _migrate_entries(self) -> bool:
         """Ensures all entries have a valid category. Returns True if any entry was migrated."""
@@ -79,31 +86,17 @@ class LootManager:
         return migrated
 
     def load_entries(self) -> None:
-        """Loads and semantically validates loot entries from local JSON file if storage_file is set."""
-        if not self.storage_file:
-            return
-        from core.validators import validate_loot_list, is_file_size_valid, MAX_LOOT_FILE_SIZE
-        if self.storage_file.exists():
-            if not is_file_size_valid(self.storage_file, MAX_LOOT_FILE_SIZE):
-                logger.error(f"Loot storage file {self.storage_file} exceeds maximum size limit of {MAX_LOOT_FILE_SIZE} bytes. Rejecting oversized file.")
-                self.entries = []
-                return
-            try:
-                with open(self.storage_file, "r", encoding="utf-8") as f:
-                    raw_data = json.load(f)
-                    self.entries = validate_loot_list(raw_data)
-            except (json.JSONDecodeError, RecursionError) as e:
-                logger.error(f"Corrupted loot file at {self.storage_file}: {e}")
-                self.entries = []
-            except (OSError, UnicodeDecodeError) as e:
-                logger.error(f"Error reading loot file {self.storage_file}: {e}")
-                self.entries = []
+        """Loads and semantically validates loot entries from storage backend."""
+        from core.validators import validate_loot_list
+        raw_data = self.storage.load_json("loot")
+        if raw_data is not None:
+            self.entries = validate_loot_list(raw_data)
         else:
             self.entries = []
 
         # Automatic migration of legacy entries lacking category or with invalid category
         if self._migrate_entries():
-            logger.info("Migrated legacy loot entries to include category and persisted to disk.")
+            logger.info("Migrated legacy loot entries to include category and persisted.")
             self.save_entries()
 
     def set_entries(self, entries: List[Dict[str, Any]]) -> None:
@@ -119,16 +112,8 @@ class LootManager:
         return self.entries
 
     def save_entries(self) -> None:
-        """Persists loot entries to disk atomically if storage_file is configured."""
-        if not self.storage_file:
-            return
-        from core.atomic_write import atomic_write_json
-        try:
-            atomic_write_json(self.storage_file, self.entries, indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.error(f"OS error saving loot file to {self.storage_file}: {e}", exc_info=True)
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving loot file to {self.storage_file}: {e}")
+        """Persists loot entries using configured storage backend."""
+        self.storage.save_json("loot", self.entries)
 
     def add_entry(
         self, 

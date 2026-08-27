@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from core.logger import get_logger
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 
 logger = get_logger("config")
 
@@ -31,17 +32,19 @@ def get_default_config_dir() -> Path:
 class ConfigManager:
     """Manages application configuration, user state, and preferences with full path parameterization."""
     
-    def __init__(self, config_dir: Optional[Path] = None):
-        if config_dir is None:
-            config_dir = get_default_config_dir()
-        self.config_dir = Path(config_dir)
+    def __init__(self, config_dir: Optional[Path] = None, storage: Optional[StorageBackend] = None):
+        if storage is not None:
+            self.storage = storage
+            self.config_dir = getattr(storage, "base_dir", get_default_config_dir())
+        elif config_dir is not None:
+            self.config_dir = Path(config_dir)
+            self.storage = FileStorageBackend(base_dir=self.config_dir)
+        else:
+            self.config_dir = get_default_config_dir()
+            self.storage = FileStorageBackend(base_dir=self.config_dir)
+
         self.config_file = self.config_dir / "config.json"
         self.user_snippets_file = self.config_dir / "user_snippets.json"
-        
-        try:
-            self.config_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to create config directory {self.config_dir}: {e}", exc_info=True)
 
         self.session_param_cache: Dict[str, str] = {}
         self.data = self.load_config()
@@ -56,29 +59,16 @@ class ConfigManager:
             self.session_param_cache[param_name.upper()] = value
 
     def load_config(self) -> Dict[str, Any]:
-        if self.config_file.exists():
-            from core.validators import is_file_size_valid, MAX_CONFIG_FILE_SIZE
-            if not is_file_size_valid(self.config_file, MAX_CONFIG_FILE_SIZE):
-                logger.error(f"Config file {self.config_file} exceeds maximum size limit of {MAX_CONFIG_FILE_SIZE} bytes. Using defaults.")
-            else:
-                try:
-                    with open(self.config_file, "r", encoding="utf-8") as f:
-                        loaded = json.load(f)
-                        if not isinstance(loaded, dict):
-                            logger.warning(f"Expected dict in config JSON at {self.config_file}, got {type(loaded).__name__}. Falling back to default configuration.")
-                            loaded = {}
-                        # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
-                        if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
-                            loaded["hotkey"] = "<ctrl>+<cmd>+<"
-                        cfg = DEFAULT_CONFIG.copy()
-                        cfg.update(loaded)
-                        self.data = cfg
-                        self.save_config()
-                        return cfg
-                except (json.JSONDecodeError, RecursionError) as e:
-                    logger.error(f"Corrupted config JSON at {self.config_file}: {e}. Falling back to default configuration.")
-                except (OSError, UnicodeDecodeError, KeyError, AttributeError) as e:
-                    logger.error(f"Error reading config from {self.config_file}: {e}. Using defaults.")
+        loaded = self.storage.load_json("config")
+        if isinstance(loaded, dict):
+            # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
+            if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
+                loaded["hotkey"] = "<ctrl>+<cmd>+<"
+            cfg = DEFAULT_CONFIG.copy()
+            cfg.update(loaded)
+            self.data = cfg
+            self.save_config()
+            return cfg
         
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg
@@ -86,13 +76,7 @@ class ConfigManager:
         return cfg
 
     def save_config(self) -> None:
-        from core.atomic_write import atomic_write_json
-        try:
-            atomic_write_json(self.config_file, self.data, indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.error(f"OS error saving config to {self.config_file}: {e}", exc_info=True)
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving config to {self.config_file}: {e}")
+        self.storage.save_json("config", self.data)
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.data.get(key, default)

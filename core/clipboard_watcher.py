@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import get_default_config_dir
 from core.logger import get_logger
+from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 
 logger = get_logger("clipboard")
 
@@ -21,22 +22,29 @@ class ClipboardWatcher(QObject):
     entry_added = pyqtSignal(dict)
     logging_state_changed = pyqtSignal(bool)
 
-    def __init__(self, storage_file: Optional[Path] = None, parent: Optional[QObject] = None):
+    def __init__(
+        self,
+        storage_file: Optional[Path] = None,
+        storage: Optional[StorageBackend] = None,
+        parent: Optional[QObject] = None
+    ):
         super().__init__(parent)
-        self.storage_file = Path(storage_file) if storage_file is not None else None
-        if self.storage_file:
-            try:
-                self.storage_file.parent.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                logger.error(f"Failed to create directory for clipboard storage {self.storage_file}: {e}", exc_info=True)
+        if storage is not None:
+            self.storage = storage
+            self.storage_file = getattr(storage, "single_file_path", None)
+        elif storage_file is not None:
+            self.storage_file = Path(storage_file)
+            self.storage = FileStorageBackend(single_file_path=self.storage_file)
+        else:
+            self.storage_file = None
+            self.storage = InMemoryStorageBackend()
         
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
         self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
         self._current_target_provider = None
         
-        if self.storage_file:
-            self.load_history()
+        self.load_history()
 
     def set_target_provider(self, provider_func) -> None:
         """Sets a callable that returns the active target IP."""
@@ -116,25 +124,11 @@ class ClipboardWatcher(QObject):
         return entry
 
     def load_history(self) -> None:
-        """Loads and semantically validates history from disk if storage_file is set."""
-        if not self.storage_file:
-            return
-        from core.validators import validate_clipboard_list, is_file_size_valid, MAX_CLIPBOARD_FILE_SIZE
-        if self.storage_file.exists():
-            if not is_file_size_valid(self.storage_file, MAX_CLIPBOARD_FILE_SIZE):
-                logger.error(f"Clipboard history file {self.storage_file} exceeds maximum size limit of {MAX_CLIPBOARD_FILE_SIZE} bytes. Rejecting oversized file.")
-                self.history = []
-                return
-            try:
-                with open(self.storage_file, "r", encoding="utf-8") as f:
-                    raw_data = json.load(f)
-                    self.history = validate_clipboard_list(raw_data)
-            except (json.JSONDecodeError, RecursionError) as e:
-                logger.error(f"Corrupted clipboard history JSON at {self.storage_file}: {e}")
-                self.history = []
-            except (OSError, UnicodeDecodeError) as e:
-                logger.error(f"Error reading clipboard history from {self.storage_file}: {e}")
-                self.history = []
+        """Loads and semantically validates clipboard history from storage backend."""
+        from core.validators import validate_clipboard_list
+        raw_data = self.storage.load_json("clipboard")
+        if raw_data is not None:
+            self.history = validate_clipboard_list(raw_data)
         else:
             self.history = []
 
@@ -150,16 +144,8 @@ class ClipboardWatcher(QObject):
         return self.history
 
     def save_history(self) -> None:
-        """Saves history to disk atomically if storage_file is configured."""
-        if not self.storage_file:
-            return
-        from core.atomic_write import atomic_write_json
-        try:
-            atomic_write_json(self.storage_file, self.history, indent=2, ensure_ascii=False)
-        except OSError as e:
-            logger.error(f"OS error saving clipboard history to {self.storage_file}: {e}", exc_info=True)
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving clipboard history to {self.storage_file}: {e}")
+        """Persists history using configured storage backend."""
+        self.storage.save_json("clipboard", self.history)
 
     def delete_entry(self, entry_id: str) -> bool:
         """Removes an entry by ID."""
