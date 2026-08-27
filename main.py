@@ -69,25 +69,20 @@ def main():
     if not app_icon.isNull():
         app.setWindowIcon(app_icon)
 
-    # Initialize Managers
-    config_manager = ConfigManager()
-    from core.i18n import set_locale, t
-    set_locale(config_manager.get("language", "de"))
+    from core.container import ServiceContainer
 
-    snippet_manager = SnippetManager()
-    project_manager = ProjectManager()
-    loot_manager = LootManager()
-    clipboard_watcher = ClipboardWatcher()
-    clipboard_watcher.start_listening()
+    # Initialize Service Container
+    container = ServiceContainer.create_production()
+    container.clipboard_watcher.start_listening()
 
     # Main Window
-    window = MainWindow(config_manager, snippet_manager, loot_manager, clipboard_watcher, project_manager)
+    window = MainWindow(container=container)
     if not app_icon.isNull():
         window.setWindowIcon(app_icon)
     window.show()
 
     # Global Hotkey Listener
-    hotkey_str = config_manager.get("hotkey", "<ctrl>+<cmd>+<")
+    hotkey_str = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
     hotkey_listener = HotkeyListener(hotkey_str=hotkey_str)
     hotkey_listener.toggle_requested.connect(window.toggle_visibility)
     hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
@@ -131,7 +126,7 @@ def main():
         tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
         act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
 
-    clipboard_watcher.logging_state_changed.connect(update_tray_state)
+    container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
 
     # Clean exit
     exit_code = app.exec()

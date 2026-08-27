@@ -22,6 +22,8 @@ from ui.app_controller import AppController
 from ui.controllers.window_frame_manager import WindowFrameManager
 from ui.styles import CYBER_DARK_QSS, get_app_icon
 
+from core.container import ServiceContainer
+
 logger = get_logger("main_window")
 
 
@@ -33,20 +35,31 @@ class MainWindow(QMainWindow):
 
     def __init__(
         self, 
-        config_manager: ConfigManager, 
-        snippet_manager: SnippetManager, 
+        config_manager: Optional[ConfigManager] = None, 
+        snippet_manager: Optional[SnippetManager] = None, 
         loot_manager: Optional[LootManager] = None,
         clipboard_watcher: Optional[ClipboardWatcher] = None,
         project_manager: Optional[ProjectManager] = None,
-        screenshot_manager: Optional[ScreenshotManager] = None
+        screenshot_manager: Optional[ScreenshotManager] = None,
+        container: Optional[ServiceContainer] = None
     ):
         super().__init__()
-        self.config = config_manager
-        self.snippet_manager = snippet_manager
-        self.project_manager = project_manager if project_manager is not None else ProjectManager()
-        self.loot_manager = loot_manager if loot_manager is not None else LootManager()
-        self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
-        self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+        if container is not None:
+            self.container = container
+            self.config = container.config_manager
+            self.snippet_manager = container.snippet_manager
+            self.project_manager = container.project_manager
+            self.loot_manager = container.loot_manager
+            self.clipboard_watcher = container.clipboard_watcher
+            self.screenshot_manager = container.screenshot_manager
+        else:
+            self.container = None
+            self.config = config_manager if config_manager is not None else ConfigManager()
+            self.snippet_manager = snippet_manager if snippet_manager is not None else SnippetManager()
+            self.project_manager = project_manager if project_manager is not None else ProjectManager(config_manager=self.config)
+            self.loot_manager = loot_manager if loot_manager is not None else LootManager()
+            self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
+            self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
 
         # Window Frame Manager for Frameless Resize & Dragging
         self.frame_manager = WindowFrameManager(self, self.config)
@@ -69,7 +82,8 @@ class MainWindow(QMainWindow):
             loot_manager=self.loot_manager,
             clipboard_watcher=self.clipboard_watcher,
             project_manager=self.project_manager,
-            screenshot_manager=self.screenshot_manager
+            screenshot_manager=self.screenshot_manager,
+            container=self.container
         )
 
         # Load Initial Project State and Content
