@@ -113,8 +113,9 @@ class ServiceContainer:
         actual_storage = storage or InMemoryStorageBackend(initial_data=init_data)
         actual_event_bus = event_bus or EventBus()
 
-        temp_cfg_dir = config_dir or Path("/in_memory/config")
-        temp_base_dir = base_dir or Path("/in_memory/projects")
+        temp_dir = tempfile.mkdtemp(prefix="spectrehud_in_mem_")
+        temp_cfg_dir = config_dir or (Path(temp_dir) / "config")
+        temp_base_dir = base_dir or (Path(temp_dir) / "projects")
 
         config_manager = ConfigManager(config_dir=temp_cfg_dir, storage=actual_storage)
         from core.i18n import set_locale

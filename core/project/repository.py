@@ -298,7 +298,7 @@ class ProjectRepository:
             return clean_name
         except Exception as e:
             logger.error(f"Failed to import project folder {folder_path}: {e}", exc_info=True)
-            if isinstance(e, (ProjectExistsError, PersistenceError)):
+            if isinstance(e, (ProjectExistsError, ProjectCreationError, PersistenceError)):
                 raise
             return None
 
