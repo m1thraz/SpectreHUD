@@ -36,9 +36,23 @@ class TestReportFileManager(unittest.TestCase):
         self.report_mgr = ReportFileManager(self.project_mgr)
 
     def tearDown(self):
+        import logging
+        import gc
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
         os.environ.pop("SPECTRE_PROJECTS_DIR", None)
-        self.temp_dir.cleanup()
+        for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", ""]:
+            l = logging.getLogger(name)
+            for h in list(l.handlers):
+                try:
+                    h.close()
+                    l.removeHandler(h)
+                except Exception:
+                    pass
+        gc.collect()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
 
     def test_paths(self):
         self.project_mgr.create_project("BoxBeta")

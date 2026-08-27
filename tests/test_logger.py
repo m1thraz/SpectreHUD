@@ -13,13 +13,21 @@ class TestLogger(unittest.TestCase):
 
     def tearDown(self):
         import logging
+        import gc
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        for name in ["spectrehud", "test_rotator", "spectrehud.test_module"]:
+        for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", "test_rotator", ""]:
             l = logging.getLogger(name)
             for h in list(l.handlers):
-                h.close()
-                l.removeHandler(h)
-        self.temp_dir.cleanup()
+                try:
+                    h.close()
+                    l.removeHandler(h)
+                except Exception:
+                    pass
+        gc.collect()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
 
     def test_logger_setup_and_emit(self):
         logger = get_logger("test_module")

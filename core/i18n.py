@@ -9,7 +9,7 @@ SUPPORTED_LOCALES: Dict[str, str] = {
     "en": "English"
 }
 
-DEFAULT_LOCALE = "de"
+DEFAULT_LOCALE = "en"
 
 TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "de": {
@@ -420,20 +420,30 @@ class I18nManager(QObject):
 
 
 # Global singleton instance
-_i18n_instance = I18nManager()
+_i18n_instance: Optional[I18nManager] = None
+
+def get_i18n() -> I18nManager:
+    """Returns the global i18n manager instance, ensuring it is always a valid live QObject."""
+    global _i18n_instance
+    if _i18n_instance is not None:
+        try:
+            # Accessing pyqtSignal touches C++ metadata and raises RuntimeError if deleted
+            _ = _i18n_instance.locale_changed
+        except (RuntimeError, AttributeError):
+            _i18n_instance = None
+
+    if _i18n_instance is None:
+        _i18n_instance = I18nManager()
+    return _i18n_instance
 
 def t(key: str, default: Optional[str] = None, **kwargs) -> str:
     """Convenience global translation function."""
-    return _i18n_instance.t(key, default=default, **kwargs)
-
-def get_i18n() -> I18nManager:
-    """Returns the global i18n manager instance."""
-    return _i18n_instance
+    return get_i18n().t(key, default=default, **kwargs)
 
 def set_locale(locale_code: str) -> None:
     """Sets the global active locale."""
-    _i18n_instance.set_locale(locale_code)
+    get_i18n().set_locale(locale_code)
 
 def get_locale() -> str:
     """Returns the current active locale code."""
-    return _i18n_instance.current_locale
+    return get_i18n().current_locale

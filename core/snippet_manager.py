@@ -12,25 +12,37 @@ class SnippetManager:
     """Manages built-in and custom user command snippets."""
 
     @staticmethod
-    def _resolve_default_snippets_path() -> Path:
-        """Resolves default_snippets.json in source repository, site-packages, package resources, or PyInstaller bundle."""
-        # 0. Check PyInstaller frozen bundle
+    def _resolve_default_snippets_path(language: str = "en") -> Path:
+        """Resolves default_snippets JSON for language ('en' or 'de') in source repository, site-packages, package resources, or PyInstaller bundle."""
         import sys
+
+        is_en = str(language).lower().startswith("en")
+        filename = "default_snippets - EN.json" if is_en else "default_snippets.json"
+
+        # 0. Check PyInstaller frozen bundle
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-            bundle_candidate = Path(sys._MEIPASS) / "data" / "default_snippets.json"
+            bundle_candidate = Path(sys._MEIPASS) / "data" / filename
             if bundle_candidate.exists():
                 return bundle_candidate
+            fallback = Path(sys._MEIPASS) / "data" / "default_snippets.json"
+            if fallback.exists():
+                return fallback
 
         # 1. Standard repo or site-packages layout (next to core/)
-        candidate = Path(__file__).resolve().parent.parent / "data" / "default_snippets.json"
+        data_dir = Path(__file__).resolve().parent.parent / "data"
+        candidate = data_dir / filename
         if candidate.exists():
             return candidate
+
+        fallback_candidate = data_dir / "default_snippets.json"
+        if fallback_candidate.exists():
+            return fallback_candidate
 
         # 2. Check importlib.resources if available
         try:
             import importlib.resources as pkg_resources
             if hasattr(pkg_resources, 'files'):
-                traversable = pkg_resources.files('data') / 'default_snippets.json'
+                traversable = pkg_resources.files('data') / filename
                 res_path = Path(str(traversable))
                 if res_path.exists():
                     return res_path
@@ -39,9 +51,17 @@ class SnippetManager:
 
         return candidate
 
-    def __init__(self, default_snippets_path: Optional[Path] = None, user_snippets_path: Optional[Path] = None, favorites_path: Optional[Path] = None):
+    def __init__(
+        self,
+        default_snippets_path: Optional[Path] = None,
+        user_snippets_path: Optional[Path] = None,
+        favorites_path: Optional[Path] = None,
+        language: str = "en"
+    ):
+        self.language = "en" if str(language).lower().startswith("en") else "de"
+        self._custom_default_snippets_path = default_snippets_path is not None
         if default_snippets_path is None:
-            default_snippets_path = self._resolve_default_snippets_path()
+            default_snippets_path = self._resolve_default_snippets_path(self.language)
         if user_snippets_path is None:
             user_snippets_path = get_default_config_dir() / "user_snippets.json"
         if favorites_path is None:
@@ -55,6 +75,16 @@ class SnippetManager:
         self.snippets: List[Dict[str, Any]] = []
         
         self.load_favorites()
+        self.load_all()
+
+    def set_language(self, language: str) -> None:
+        """Switches snippet database to match the given language ('en' or 'de') and reloads."""
+        new_lang = "en" if str(language).lower().startswith("en") else "de"
+        if self.language == new_lang and self.default_snippets_path.exists() and not self._custom_default_snippets_path:
+            return
+        self.language = new_lang
+        if not self._custom_default_snippets_path:
+            self.default_snippets_path = self._resolve_default_snippets_path(new_lang)
         self.load_all()
 
     def load_favorites(self) -> None:

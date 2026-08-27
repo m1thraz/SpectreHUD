@@ -9,7 +9,7 @@ class TestI18n(unittest.TestCase):
         self.i18n = I18nManager(default_locale="de")
 
     def tearDown(self):
-        set_locale("de")
+        set_locale("en")
 
     def test_default_locale_and_supported(self):
         self.assertEqual(self.i18n.current_locale, "de")
