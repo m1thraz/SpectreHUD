@@ -368,5 +368,36 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_project_archive_ui_action(self):
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        project_manager.create_project("BoxToArchive", target_ip="10.10.10.99")
+        project_manager.set_active_project("BoxToArchive")
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        out_zip = self.temp_path / "BoxToArchive.zip"
+        with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_zip), "ZIP Archives (*.zip)")), \
+             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
+            window.project_ctrl._on_archive_project(window)
+
+        self.assertTrue(out_zip.exists())
+        import zipfile
+        self.assertTrue(zipfile.is_zipfile(out_zip))
+
+        window.close()
+
 if __name__ == "__main__":
     unittest.main()

@@ -455,3 +455,10 @@ class ProjectManager:
         except (OSError, subprocess.SubprocessError) as e:
             logger.error(f"Error opening project folder {folder} in system file manager: {e}", exc_info=True)
             return False
+
+    def archive_project(self, name: Optional[str] = None, output_zip: Optional[Path] = None) -> Dict[str, Any]:
+        """Archives the project workspace as a .zip file."""
+        from core.box_archiver import BoxArchiver
+        pname = self._sanitize_name(name or self.active_project)
+        proj_dir = self.get_project_dir(pname)
+        return BoxArchiver.archive_project(proj_dir, output_zip)

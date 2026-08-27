@@ -138,6 +138,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "loot_dialog.err_content": "Bitte gib den Inhalt / Wert ein.",
 
         # New Project Dialog
+        "project.archive": "📦 Box archivieren (.zip)...",
+        "project.archive_title": "Box als ZIP archivieren",
+        "project.archive_success_title": "Archiv erstellt",
+        "project.archive_error_title": "Archivierung fehlgeschlagen",
         "project_dialog.title": "SPECTRE // NEUES PROJEKT / BOX ERSTELLEN",
         "project_dialog.lbl_name": "Projekt- / Box-Name:",
         "project_dialog.ph_name": "z. B. PickleRick, Blue, Lame, InternalAudit...",
@@ -312,6 +316,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "loot_dialog.err_content": "Please enter the content / value.",
 
         # New Project Dialog
+        "project.archive": "📦 Archive Box (.zip)...",
+        "project.archive_title": "Archive Box to ZIP",
+        "project.archive_success_title": "Archive Created",
+        "project.archive_error_title": "Archiving Failed",
         "project_dialog.title": "SPECTRE // CREATE NEW PROJECT / BOX",
         "project_dialog.lbl_name": "Project / Box Name:",
         "project_dialog.ph_name": "e.g. PickleRick, Blue, Lame, InternalAudit...",
