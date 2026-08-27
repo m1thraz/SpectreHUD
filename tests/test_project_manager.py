@@ -63,6 +63,18 @@ class TestProjectManager(unittest.TestCase):
         self.pm.set_active_project("Default")
         self.assertEqual(self.pm.get_active_project(), "Default")
 
+    def test_activate_project_strict(self):
+        """Finding 14: activate_project() must strictly raise ProjectNotFoundError for non-existent projects."""
+        from core.project import ProjectNotFoundError
+        self.pm.create_project("ExistingBox")
+        
+        active = self.pm.activate_project("ExistingBox")
+        self.assertEqual(active, "ExistingBox")
+        self.assertEqual(self.pm.get_active_project(), "ExistingBox")
+
+        with self.assertRaises(ProjectNotFoundError):
+            self.pm.activate_project("NonExistentBox_999")
+
     def test_path_traversal_prevention_double_dot(self):
         """Finding 15: Project name '..' must raise InvalidProjectNameError and NEVER escape base directory."""
         from core.project_manager import InvalidProjectNameError

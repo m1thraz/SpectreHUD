@@ -53,7 +53,8 @@ class LootManager:
     def __init__(
         self,
         storage_file: Optional[Path] = None,
-        storage: Optional[StorageBackend] = None
+        storage: Optional[StorageBackend] = None,
+        event_bus: Optional[Any] = None
     ):
         if storage is not None:
             self.storage = storage
@@ -65,6 +66,7 @@ class LootManager:
             self.storage_file = None
             self.storage = InMemoryStorageBackend()
 
+        self.event_bus = event_bus
         self.entries: List[Dict[str, Any]] = []
         self.load_entries()
 
@@ -106,10 +108,13 @@ class LootManager:
         if self._migrate_entries():
             logger.info("Migrated entries set on project switch and persisted to disk.")
         self.save_entries()
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
 
     def get_all_entries(self) -> List[Dict[str, Any]]:
-        """Returns all entries raw."""
-        return self.entries
+        """Returns defensive copies of all entries."""
+        return [dict(e) for e in self.entries]
 
     def save_entries(self) -> None:
         """Persists loot entries using configured storage backend."""
@@ -142,6 +147,9 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist new loot entry to storage.")
         self.entries = new_entries
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
         return entry
 
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
@@ -171,6 +179,9 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
         self.entries = new_entries
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
         return updated_entry
 
     def delete_entry(self, entry_id: str) -> bool:
@@ -181,6 +192,9 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError(f"Could not persist deletion for loot entry {entry_id}.")
         self.entries = new_entries
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
         return True
 
     def clear_session(self, target_ip: Optional[str] = None) -> int:
@@ -194,6 +208,9 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist cleared session loot to storage.")
         self.entries = new_entries
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
         return deleted_count
 
     def get_entries(

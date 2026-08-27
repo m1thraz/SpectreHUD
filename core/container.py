@@ -7,6 +7,7 @@ for all core domain services, storage backends, and event buses.
 
 from typing import Optional, Dict, Any
 from pathlib import Path
+import tempfile
 
 from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 from core.event_bus import EventBus, get_event_bus
@@ -14,7 +15,7 @@ from core.config import ConfigManager, get_default_config_dir
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.logger import get_logger
 
@@ -70,10 +71,10 @@ class ServiceContainer:
         snippet_manager = SnippetManager(language=active_lang)
         workspace_setting = config_manager.get("workspace_dir")
         base_projects_dir = Path(workspace_setting) if workspace_setting else None
-        project_manager = ProjectManager(base_dir=base_projects_dir, config_dir=resolved_config_dir)
-        loot_manager = LootManager()
-        clipboard_watcher = ClipboardWatcher()
-        screenshot_manager = ScreenshotManager()
+        project_manager = ProjectManager(base_dir=base_projects_dir, config_dir=resolved_config_dir, event_bus=event_bus)
+        loot_manager = LootManager(storage=storage, event_bus=event_bus)
+        clipboard_watcher = ClipboardWatcher(storage=storage, event_bus=event_bus)
+        screenshot_manager = ScreenshotManager(event_bus=event_bus)
 
         return cls(
             config_manager=config_manager,
@@ -90,28 +91,35 @@ class ServiceContainer:
     def create_in_memory(
         cls,
         initial_config: Optional[Dict[str, Any]] = None,
-        language: str = "en"
+        language: str = "en",
+        base_dir: Optional[Path] = None,
+        config_dir: Optional[Path] = None,
+        storage: Optional[StorageBackend] = None,
+        event_bus: Optional[EventBus] = None
     ) -> "ServiceContainer":
         """
-        Creates a pure in-memory service container with zero disk I/O.
+        Creates a pure in-memory service container with zero unwanted disk pollution.
         Ideal for unit testing, test fakes, and headless test runners.
         """
         init_data: Dict[str, Any] = {}
         if initial_config:
             init_data["config"] = dict(initial_config)
 
-        storage = InMemoryStorageBackend(initial_data=init_data)
-        event_bus = EventBus()
+        actual_storage = storage or InMemoryStorageBackend(initial_data=init_data)
+        actual_event_bus = event_bus or EventBus()
 
-        config_manager = ConfigManager(storage=storage)
+        temp_cfg_dir = config_dir or Path(tempfile.mkdtemp(prefix="spectre_mem_cfg_"))
+        temp_base_dir = base_dir or Path(tempfile.mkdtemp(prefix="spectre_mem_proj_"))
+
+        config_manager = ConfigManager(config_dir=temp_cfg_dir, storage=actual_storage)
         from core.i18n import set_locale
         set_locale(language)
 
         snippet_manager = SnippetManager(language=language)
-        project_manager = ProjectManager(config_dir=config_manager.config_dir)
-        loot_manager = LootManager(storage=storage)
-        clipboard_watcher = ClipboardWatcher(storage=storage)
-        screenshot_manager = ScreenshotManager()
+        project_manager = ProjectManager(base_dir=temp_base_dir, config_dir=temp_cfg_dir, event_bus=actual_event_bus)
+        loot_manager = LootManager(storage=actual_storage, event_bus=actual_event_bus)
+        clipboard_watcher = ClipboardWatcher(storage=actual_storage, event_bus=actual_event_bus)
+        screenshot_manager = ScreenshotManager(event_bus=actual_event_bus)
 
         return cls(
             config_manager=config_manager,
@@ -120,6 +128,6 @@ class ServiceContainer:
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
             screenshot_manager=screenshot_manager,
-            storage=storage,
-            event_bus=event_bus
+            storage=actual_storage,
+            event_bus=actual_event_bus
         )

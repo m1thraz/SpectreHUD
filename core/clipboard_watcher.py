@@ -26,6 +26,7 @@ class ClipboardWatcher(QObject):
         self,
         storage_file: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
+        event_bus: Optional[Any] = None,
         parent: Optional[QObject] = None
     ):
         super().__init__(parent)
@@ -39,6 +40,7 @@ class ClipboardWatcher(QObject):
             self.storage_file = None
             self.storage = InMemoryStorageBackend()
         
+        self.event_bus = event_bus
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
         self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
@@ -123,6 +125,9 @@ class ClipboardWatcher(QObject):
         
         self.history = new_history
         self.entry_added.emit(entry)
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
         return entry
 
     def load_history(self) -> None:
@@ -142,10 +147,13 @@ class ClipboardWatcher(QObject):
             raise PersistenceError("Could not persist set_history to storage.")
         self.history = validated
         self._last_copied_text = self.history[0]["text"] if self.history else None
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
 
     def get_all_history(self) -> List[Dict[str, Any]]:
-        """Returns all history items raw."""
-        return self.history
+        """Returns defensive copies of all history items."""
+        return [dict(e) for e in self.history]
 
     def save_history(self) -> None:
         """Persists history using configured storage backend."""
@@ -160,6 +168,9 @@ class ClipboardWatcher(QObject):
         if not self.storage.save_json("clipboard", new_history):
             raise PersistenceError(f"Could not persist deletion of clipboard entry {entry_id}.")
         self.history = new_history
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
         return True
 
     def clear_history(self) -> int:
@@ -169,6 +180,9 @@ class ClipboardWatcher(QObject):
             raise PersistenceError("Could not persist cleared clipboard history.")
         self.history = []
         self._last_copied_text = None
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
         return count
 
     def get_history(self, search_query: str = "", target_ip: Optional[str] = None, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:

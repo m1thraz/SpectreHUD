@@ -16,6 +16,8 @@ logger = get_logger("event_bus")
 class EventType(str, Enum):
     """Standardized event topics across SpectreHUD."""
     PROJECT_CHANGED = "project_changed"
+    PROJECT_CREATED = "project_created"
+    PROJECT_ACTIVATED = "project_activated"
     LOOT_UPDATED = "loot_updated"
     HISTORY_UPDATED = "history_updated"
     SNIPPETS_UPDATED = "snippets_updated"

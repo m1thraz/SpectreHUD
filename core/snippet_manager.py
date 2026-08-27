@@ -57,7 +57,8 @@ class SnippetManager:
         default_snippets_path: Optional[Path] = None,
         user_snippets_path: Optional[Path] = None,
         favorites_path: Optional[Path] = None,
-        language: str = "en"
+        language: str = "en",
+        event_bus: Optional[Any] = None
     ):
         self.language = "en" if str(language).lower().startswith("en") else "de"
         self._custom_default_snippets_path = default_snippets_path is not None
@@ -68,6 +69,7 @@ class SnippetManager:
         if favorites_path is None:
             favorites_path = get_default_config_dir() / "user_favorites.json"
 
+        self.event_bus = event_bus
         self.default_snippets_path = Path(default_snippets_path)
         self.user_snippets_path = Path(user_snippets_path)
         self.favorites_path = Path(favorites_path)
@@ -334,15 +336,19 @@ class SnippetManager:
             results = sorted(results, key=lambda s: 0 if s.get("id") in self.favorite_ids else 1)
 
         if limit is not None and limit > 0:
-            return results[:limit]
-        return results
+            return [dict(s) for s in results[:limit]]
+        return [dict(s) for s in results]
+
+    def get_all_snippets(self) -> List[Dict[str, Any]]:
+        """Returns defensive copies of all snippets."""
+        return [dict(s) for s in self.snippets]
 
     def get_snippets(self, category_id: Optional[str] = None, search_query: str = "", limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Alias for search() to retrieve filtered & ranked snippets."""
         return self.search(query=search_query, category_id=category_id, limit=limit)
 
     def get_categories(self) -> List[Dict[str, Any]]:
-        """Returns categories with accurate snippet counts, including 'all' and 'favorites'."""
+        """Returns defensive copies of categories with accurate snippet counts, including 'all' and 'favorites'."""
         fav_count = sum(1 for s in self.snippets if s.get("id") in self.favorite_ids)
         cats = [
             {"id": "all", "name": "All Commands", "icon": "", "count": len(self.snippets)},
@@ -356,4 +362,4 @@ class SnippetManager:
                 "icon": c.get("icon", ""),
                 "count": count
             })
-        return cats
+        return [dict(c) for c in cats]

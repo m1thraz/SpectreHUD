@@ -15,10 +15,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "password": "",
     "wordlist": "/usr/share/wordlists/dirb/common.txt",
     "hotkey": "<ctrl>+<cmd>+<",
+    "snip_hotkey": "<ctrl>+<cmd>+x",
     "auto_hide_on_copy": False,
     "always_on_top": True,
     "theme": "cyber_dark",
     "language": "en",
+    "time_format": "24h",
     "workspace_dir": str(Path.home() / "spectre_projects")
 }
 
