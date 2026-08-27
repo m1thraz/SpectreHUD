@@ -15,6 +15,7 @@ from core.project_session_service import ProjectSessionService
 from core.report_file_manager import ReportFileManager
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
+from core.event_bus import EventBus, EventType, get_event_bus
 
 from ui.variable_bar import VariableBar
 from ui.panels.header_panel import HeaderPanel
@@ -61,7 +62,8 @@ class AppController(QObject):
         loot_manager: Optional[LootManager] = None,
         clipboard_watcher: Optional[ClipboardWatcher] = None,
         project_manager: Optional[ProjectManager] = None,
-        screenshot_manager: Optional[ScreenshotManager] = None
+        screenshot_manager: Optional[ScreenshotManager] = None,
+        event_bus: Optional[EventBus] = None
     ):
         super().__init__(window)
         self.window = window
@@ -77,6 +79,7 @@ class AppController(QObject):
         self.loot_manager = loot_manager if loot_manager is not None else LootManager()
         self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
         self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+        self.event_bus = event_bus or get_event_bus()
 
         # Domain Session Service
         self.session_service = ProjectSessionService(
@@ -89,11 +92,11 @@ class AppController(QObject):
         self.cards: List[QWidget] = []
 
         # Domain Controllers
-        self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, parent=self)
-        self.loot_ctrl = LootController(self.loot_manager, self.project_manager, parent=self)
-        self.history_ctrl = HistoryController(self.clipboard_watcher, self.loot_manager, self.project_manager, parent=self)
+        self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, event_bus=self.event_bus, parent=self)
+        self.loot_ctrl = LootController(self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
+        self.history_ctrl = HistoryController(self.clipboard_watcher, self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
         self.report_ctrl = ReportController(self.project_manager, self.loot_manager, self.clipboard_watcher, parent_widget=self.window)
-        self.project_ctrl = ProjectController(self.project_manager, parent=self)
+        self.project_ctrl = ProjectController(self.project_manager, event_bus=self.event_bus, parent=self)
 
         # Wire all events and listeners
         self._wire_signals()
@@ -160,6 +163,7 @@ class AppController(QObject):
             self.search.set_focus()
 
         self.mode_changed.emit(mode)
+        self.event_bus.publish(EventType.MODE_CHANGED, {"mode": mode})
 
     def toggle_mode(self) -> None:
         """Cycles through modes via Tab shortcut (Report mode excluded from Tab cycle)."""
@@ -419,6 +423,7 @@ class AppController(QObject):
         self.report_ctrl.load_project(project_name)
         self.refresh_filter_pills()
         self.refresh_content()
+        self.event_bus.publish(EventType.PROJECT_CHANGED, {"project_name": project_name})
 
     # -------------------------------------------------------------
     # Screenshots, Settings & Retranslation
@@ -430,6 +435,7 @@ class AppController(QObject):
     def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:
         self.save_current_project_state()
         self.switch_mode("loot")
+        self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
 
     def open_settings_dialog(self) -> None:
         """Opens the modular settings and options dialog."""
@@ -476,6 +482,7 @@ class AppController(QObject):
         self.search.update_placeholder(self.active_mode)
         self.refresh_filter_pills()
         self.refresh_content()
+        self.event_bus.publish(EventType.LANGUAGE_CHANGED, {"locale": active_lang})
 
     def _update_footer_status(self) -> None:
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")

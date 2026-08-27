@@ -2,13 +2,13 @@ import os
 import sys
 import unittest
 import tempfile
+import uuid
 from pathlib import Path
 
-# Ensure Qt runs headlessly in test environments
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PyQt6.QtWidgets import QApplication
-
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
@@ -18,13 +18,12 @@ from core.screenshot_manager import ScreenshotManager
 from core.report_builder import ReportBuilder
 from ui.main_window import MainWindow
 
-
 class TestAppSmoke(unittest.TestCase):
-    """End-to-End Smoke Test verifying full application lifecycle and workflows."""
-
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance()
+        if cls.app is None:
+            cls.app = QApplication([])
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -32,29 +31,21 @@ class TestAppSmoke(unittest.TestCase):
         
         self.config_dir = self.base_path / "config"
         self.projects_dir = self.base_path / "projects"
+        os.environ["SPECTRE_CONFIG_DIR"] = str(self.config_dir)
         
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
-        self.snippet_mgr = SnippetManager()
+        self.snippet_mgr = SnippetManager(user_snippets_path=self.config_dir / "user_snippets.json")
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager(storage_file=self.config_dir / "loot.json")
         self.clip_watcher = ClipboardWatcher(storage_file=self.config_dir / "clipboard.json")
         self.screen_mgr = ScreenshotManager()
 
     def tearDown(self):
+        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_full_app_lifecycle_smoke(self):
-        """
-        Comprehensive smoke test:
-        1. MainWindow creation & initialization
-        2. Cheatsheet search & snippet loading
-        3. Project creation & switching
-        4. Session loot creation (creds, notes, screenshots)
-        5. Clipboard history logging & loot transfer
-        6. Report generation & Markdown verification
-        7. Clean shutdown
-        """
-        # 1. Instantiate MainWindow
+        print("Smoke: 1. Instantiate MainWindow", flush=True)
         window = MainWindow(
             config_manager=self.config_mgr,
             snippet_manager=self.snippet_mgr,
@@ -64,22 +55,21 @@ class TestAppSmoke(unittest.TestCase):
             screenshot_manager=self.screen_mgr
         )
         self.assertIsNotNone(window)
-        self.assertEqual(window.active_mode, "cheatsheet")
 
-        # 2. Cheatsheet Mode: Check Snippets & Categories
+        print("Smoke: 2. Verify Initial Cheatsheet State", flush=True)
+        self.assertEqual(window.active_mode, "cheatsheet")
         categories = self.snippet_mgr.get_categories()
         self.assertGreater(len(categories), 0)
         
         snippets = self.snippet_mgr.get_snippets(category_id="all")
         self.assertGreater(len(snippets), 0)
         
-        # Test search filtering
         window.search_bar.txt_search.setText("nmap")
         window.refresh_content()
         self.assertGreater(len(window.cards), 0)
 
-        # 3. Project / Box Management: Create & Switch to new Box
-        new_box = "BoxSmokeTest"
+        print("Smoke: 3. Create project", flush=True)
+        new_box = f"BoxSmoke_{uuid.uuid4().hex[:6]}"
         self.project_mgr.create_project(
             name=new_box,
             target_ip="10.10.11.200",
@@ -91,19 +81,19 @@ class TestAppSmoke(unittest.TestCase):
         self.assertEqual(window.var_bar.txt_target.text(), "10.10.11.200")
         self.assertEqual(window.var_bar.txt_attacker.text(), "10.10.14.33")
 
-        # 4. Loot Management: Add Findings into Box
+        print("Smoke: 4. Loot mode", flush=True)
         window.switch_mode("loot")
         window.search_bar.txt_search.setText("")
         self.assertEqual(window.active_mode, "loot")
 
-        self.loot_mgr.add_entry(
+        window.loot_ctrl.add_entry(
             entry_type="credentials",
             category="access",
             title="Root SSH Key",
             content="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...",
             target_ip="10.10.11.200"
         )
-        self.loot_mgr.add_entry(
+        window.loot_ctrl.add_entry(
             entry_type="flag",
             category="post_exploit",
             title="User Flag",
@@ -115,17 +105,17 @@ class TestAppSmoke(unittest.TestCase):
         window.refresh_content()
         self.assertGreaterEqual(len(window.cards), 2)
 
-        # 5. History & Clipboard Recording
+        print("Smoke: 5. History mode", flush=True)
         window.switch_mode("history")
         window.search_bar.txt_search.setText("")
         self.assertEqual(window.active_mode, "history")
 
-        self.clip_watcher.add_entry("curl http://10.10.11.200/secret.txt", target_ip="10.10.11.200")
+        window.history_ctrl.add_entry("curl http://10.10.11.200/secret.txt", target_ip="10.10.11.200")
         window.refresh_filter_pills()
         window.refresh_content()
         self.assertEqual(len(self.clip_watcher.get_history()), 1)
 
-        # 6. Report Generation
+        print("Smoke: 6. Report mode", flush=True)
         window.switch_mode("report")
         self.assertEqual(window.active_mode, "report")
 
@@ -141,14 +131,16 @@ class TestAppSmoke(unittest.TestCase):
         
         self.assertTrue(report_file.exists())
         content = report_file.read_text(encoding="utf-8")
-        self.assertIn("BoxSmokeTest", content)
+        self.assertIn(new_box, content)
         self.assertIn("HTB{sm0k3_t3st_fl4g_1337}", content)
         self.assertIn("Root SSH Key", content)
 
-        # 7. Clean Shutdown
+        print("Smoke: 7. Clean Shutdown", flush=True)
+        window.hide()
         window.close()
-        self.clip_watcher.stop_listening() if hasattr(self.clip_watcher, 'stop_listening') else None
-
+        if hasattr(self.clip_watcher, 'stop_listening'):
+            self.clip_watcher.stop_listening()
+        print("Smoke: COMPLETE", flush=True)
 
 if __name__ == "__main__":
     unittest.main()

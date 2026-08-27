@@ -7,12 +7,14 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.loot_manager import LootManager
 from core.project_manager import ProjectManager
 from core.report_builder import ReportBuilder
+from core.menu_actions import MenuAction
+from core.event_bus import EventBus, EventType, get_event_bus
 from ui.history_card import HistoryCard
 from ui.styles import CYBER_DARK_QSS
 
 
 class HistoryController(QObject):
-    """Controller managing clipboard history, filtering, recording status, and report export."""
+    """UI-independent controller managing clipboard history, filtering, recording status, and domain actions."""
 
     history_filter_changed = pyqtSignal(str)
     history_updated = pyqtSignal()
@@ -22,14 +24,104 @@ class HistoryController(QObject):
         clipboard_watcher: ClipboardWatcher,
         loot_manager: LootManager,
         project_manager: ProjectManager,
+        event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None
     ):
         super().__init__(parent)
         self.clipboard_watcher = clipboard_watcher
         self.loot_manager = loot_manager
         self.project_manager = project_manager
+        self.event_bus = event_bus or get_event_bus()
         self.current_history_filter: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+
+    # ------------------------------------------------------------------ #
+    # Pure Domain Methods (UI-Independent)
+    # ------------------------------------------------------------------ #
+
+    def get_history(
+        self,
+        target_ip: Optional[str] = None,
+        filter_type: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        active_filter = filter_type if filter_type is not None else self.current_history_filter
+        actual_target = target_ip if active_filter == "target_only" else None
+        actual_filter_type = active_filter if active_filter in ["commands", "outputs"] else "all"
+        return self.clipboard_watcher.get_history(
+            target_ip=actual_target,
+            filter_type=actual_filter_type,
+            search_query=search_query
+        )
+
+    def add_entry(self, text: str, target_ip: Optional[str] = None) -> None:
+        self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
+        self.history_updated.emit()
+        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "add", "target_ip": target_ip})
+
+    def clear_history(self, parent_widget: Optional[QWidget] = None) -> bool:
+        if parent_widget:
+            reply = QMessageBox.question(
+                parent_widget,
+                "Historie leeren",
+                "Möchtest du wirklich den gesamten aufgezeichneten Verlauf dieses Projekts löschen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+        self.clipboard_watcher.clear_history()
+        self.history_updated.emit()
+        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "clear"})
+        return True
+
+    def delete_entry(self, item_id: str) -> None:
+        self.clipboard_watcher.delete_entry(item_id)
+        self.history_updated.emit()
+        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "delete", "id": item_id})
+
+    def toggle_pause(self) -> bool:
+        is_paused = self.clipboard_watcher.toggle_pause()
+        self.history_updated.emit()
+        self.event_bus.publish(EventType.LOGGING_STATE_CHANGED, {"is_active": not is_paused})
+        return is_paused
+
+    def is_paused(self) -> bool:
+        return self.clipboard_watcher.is_paused
+
+    def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None) -> str:
+        return self.clipboard_watcher.export_report_markdown(
+            output_path=output_path,
+            target_ip=target_ip,
+            loot_manager=self.loot_manager
+        )
+
+    def get_filter_actions(
+        self,
+        on_select_filter: Optional[Callable[[str], None]] = None
+    ) -> List[MenuAction]:
+        """Returns a list of MenuAction DTOs for filtering history."""
+        history_all = self.clipboard_watcher.get_history()
+        pills = [
+            ("all", f"All ({len(history_all)})"),
+            ("target_only", "Target IP Only"),
+            ("commands", "Commands"),
+            ("outputs", "Outputs")
+        ]
+        actions: List[MenuAction] = []
+        for pid, ptext in pills:
+            actions.append(MenuAction(
+                id=f"history_filter:{pid}",
+                text=ptext,
+                checked=(self.current_history_filter == pid),
+                callback=lambda target_pid=pid: on_select_filter(target_pid) if on_select_filter else self.select_history_filter(target_pid),
+                data={"filter": pid}
+            ))
+        return actions
+
+    # ------------------------------------------------------------------ #
+    # UI Adapters (Pills & Rendering)
+    # ------------------------------------------------------------------ #
 
     def select_history_filter(self, filter_id: str) -> None:
         self.current_history_filter = filter_id
@@ -88,9 +180,8 @@ class HistoryController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
     ) -> List[QWidget]:
-        history_items = self.clipboard_watcher.get_history(
-            target_ip=target_ip if self.current_history_filter == "target_only" else None,
-            filter_type=self.current_history_filter if self.current_history_filter in ["commands", "outputs"] else "all",
+        history_items = self.get_history(
+            target_ip=target_ip,
             search_query=search_query
         )
 
@@ -101,88 +192,33 @@ class HistoryController(QObject):
         rendered_cards: List[QWidget] = []
         for item in history_items:
             card = HistoryCard(item, parent=parent_widget)
-            card.add_to_loot_requested.connect(on_add_to_loot)
+            card.transfer_to_loot.connect(on_add_to_loot)
             card.entry_deleted.connect(on_delete_entry)
             content_layout.addWidget(card)
             rendered_cards.append(card)
 
         return rendered_cards
 
-    def toggle_pause(self) -> None:
-        self.clipboard_watcher.toggle_pause()
-
-    def update_rec_indicator(self, btn_indicator: QPushButton, is_active: bool) -> None:
-        if is_active:
-            btn_indicator.setText("REC: ON")
-            btn_indicator.setProperty("paused", "false")
-            btn_indicator.setToolTip("Clipboard-Logger ist AKTIV (schneidet alle Kopien mit).\nKlicken oder Ctrl+P zum Pausieren.")
-        else:
-            btn_indicator.setText("REC: Off")
-            btn_indicator.setProperty("paused", "true")
-            btn_indicator.setToolTip("Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Fortsetzen.")
-
-        btn_indicator.style().unpolish(btn_indicator)
-        btn_indicator.style().polish(btn_indicator)
-
-    def delete_entry(self, entry_id: str) -> None:
-        self.clipboard_watcher.delete_entry(entry_id)
-        self.history_updated.emit()
-
-    def clear_history(self, parent_widget: QWidget) -> bool:
-        msg = QMessageBox(parent_widget)
-        msg.setWindowTitle("Historie leeren")
-        msg.setText("Möchtest du wirklich die gesamte Clipboard-Historie dieses Projekts löschen?")
-        msg.setIcon(QMessageBox.Icon.Question)
-        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg.setDefaultButton(QMessageBox.StandardButton.No)
-        msg.setStyleSheet(CYBER_DARK_QSS)
-
-        if msg.exec() == QMessageBox.StandardButton.Yes:
-            self.clipboard_watcher.clear_history()
-            self.history_updated.emit()
-            return True
-        return False
-
-    def export_report(self, parent_widget: QWidget, target_ip: str, active_proj: str) -> None:
+    def export_report_dialog(
+        self,
+        parent_widget: QWidget,
+        target_ip: Optional[str] = None
+    ) -> Optional[str]:
+        active_proj = self.project_manager.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
-        default_path = proj_dir / "report.md"
-        file_path, selected_filter = QFileDialog.getSaveFileName(
-            parent_widget, "CTF Write-Up Report exportieren", str(default_path), "Markdown (*.md);;HTML (*.html);;All Files (*)"
+        default_file = proj_dir / "report.md"
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            parent_widget,
+            "Pentest Report exportieren",
+            str(default_file),
+            "Markdown Files (*.md);;All Files (*)"
         )
         if file_path:
-            target = Path(file_path)
-            builder = ReportBuilder(
-                loot_manager=self.loot_manager,
-                clipboard_watcher=self.clipboard_watcher,
-                project_manager=self.project_manager
-            )
-            md_content = builder.build(
-                target_ip=target_ip if target_ip else None,
-                project_name=active_proj
-            )
-            if target.suffix.lower() == ".html" or ("html" in selected_filter.lower() and target.suffix.lower() != ".md"):
-                if target.suffix.lower() != ".html":
-                    target = target.with_suffix(".html")
-                from core.html_report_exporter import HtmlReportExporter
-                success = HtmlReportExporter.export_to_file(
-                    markdown_content=md_content,
-                    output_path=target,
-                    project_dir=proj_dir,
-                    project_name=active_proj,
-                    target_ip=target_ip
-                )
-                report_msg = f"HTML-Report erfolgreich generiert: {target.name}" if success else f"Fehler beim Exportieren: {target.name}"
-            else:
-                report_msg = builder.export(
-                    target,
-                    target_ip=target_ip if target_ip else None,
-                    project_name=active_proj
-                )
+            out_path = Path(file_path)
+            res = self.export_report_markdown(out_path, target_ip=target_ip)
+            QMessageBox.information(parent_widget, "Report Export", res)
+            return res
+        return None
 
-            is_error = report_msg.startswith("Fehler")
-            msg = QMessageBox(parent_widget)
-            msg.setWindowTitle("Fehler beim Export" if is_error else "Report generiert")
-            msg.setText(report_msg)
-            msg.setIcon(QMessageBox.Icon.Warning if is_error else QMessageBox.Icon.Information)
-            msg.setStyleSheet(CYBER_DARK_QSS)
-            msg.exec()
+    export_report = export_report_dialog

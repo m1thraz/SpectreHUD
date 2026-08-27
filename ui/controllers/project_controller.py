@@ -1,23 +1,136 @@
-from typing import Optional, Callable
+"""
+Project Controller managing project state, workspace actions, and MenuAction DTOs.
+"""
+from typing import Optional, Callable, List, Dict, Any
 from pathlib import Path
 from PyQt6.QtCore import QObject, QPoint, pyqtSignal
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QWidget, QPushButton, QMenu, QFileDialog
+from PyQt6.QtWidgets import QWidget, QPushButton, QFileDialog, QMessageBox
 
-from core.project_manager import ProjectManager
-from ui.project_dialog import NewProjectDialog
+from core.project_manager import ProjectManager, ProjectExistsError
+from core.menu_actions import MenuAction
+from core.event_bus import EventBus, EventType, get_event_bus
 from core.i18n import t
+from ui.menu_builder import build_qmenu
+from ui.project_dialog import NewProjectDialog
 
 
 class ProjectController(QObject):
-    """UI Controller managing project/box dropdown menus, selection, import, and creation dialogs."""
+    """UI-independent controller managing project lifecycle, metadata, and MenuAction DTOs."""
 
     project_selected = pyqtSignal(str)
     project_created = pyqtSignal(str)
 
-    def __init__(self, project_manager: ProjectManager, parent: Optional[QObject] = None):
+    def __init__(
+        self,
+        project_manager: ProjectManager,
+        event_bus: Optional[EventBus] = None,
+        parent: Optional[QObject] = None
+    ):
         super().__init__(parent)
         self.project_manager = project_manager
+        self.event_bus = event_bus or get_event_bus()
+
+    # ------------------------------------------------------------------ #
+    # Pure Domain & DTO Methods (UI-Independent)
+    # ------------------------------------------------------------------ #
+
+    def get_active_project(self) -> str:
+        return self.project_manager.get_active_project()
+
+    def list_projects(self) -> List[str]:
+        return self.project_manager.list_projects()
+
+    def create_project(
+        self,
+        name: str,
+        target_ip: str = "",
+        attacker_ip: str = "",
+        port: str = "4444",
+        base_dir: Optional[Path] = None
+    ) -> str:
+        self.project_manager.create_project(
+            name=name,
+            target_ip=target_ip,
+            attacker_ip=attacker_ip,
+            port=port,
+            base_dir=base_dir
+        )
+        clean_name = self.project_manager._sanitize_name(name)
+        self.project_created.emit(clean_name)
+        return clean_name
+
+    def import_project_folder(self, folder_path: str) -> Optional[str]:
+        pname = self.project_manager.import_project_folder(folder_path)
+        if pname:
+            self.project_selected.emit(pname)
+        return pname
+
+    def archive_project(self, project_name: str, target_zip_path: Path) -> Dict[str, Any]:
+        return self.project_manager.archive_project(project_name, target_zip_path)
+
+    def open_project_folder(self) -> None:
+        self.project_manager.open_project_folder()
+
+    def get_project_menu_actions(
+        self,
+        on_switch_project: Optional[Callable[[str], None]] = None,
+        on_open_new_project: Optional[Callable[[], None]] = None,
+        on_import_project: Optional[Callable[[], None]] = None,
+        on_archive_project: Optional[Callable[[], None]] = None,
+        on_open_folder: Optional[Callable[[], None]] = None
+    ) -> List[MenuAction]:
+        """Generates a list of UI-independent MenuAction DTOs for the project selector menu."""
+        actions: List[MenuAction] = []
+        active_proj = self.get_active_project()
+        all_projects = self.list_projects()
+
+        # Project list items
+        for p in all_projects:
+            is_active = (p == active_proj)
+            prefix = "✓ " if is_active else "   "
+            actions.append(MenuAction(
+                id=f"switch_project:{p}",
+                text=f"{prefix}{p}",
+                checked=is_active,
+                callback=lambda pname=p: on_switch_project(pname) if on_switch_project else self.project_selected.emit(pname),
+                data={"project_name": p}
+            ))
+
+        actions.append(MenuAction.separator("sep_projects"))
+
+        # Action: New Project
+        actions.append(MenuAction(
+            id="new_project",
+            text=t("project.new_project", "+ Neues Projekt / Box erstellen..."),
+            callback=on_open_new_project
+        ))
+
+        # Action: Import Existing Project Folder
+        actions.append(MenuAction(
+            id="import_folder",
+            text=t("project.import_folder", "Projekt-Ordner importieren / öffnen..."),
+            callback=on_import_project
+        ))
+
+        # Action: Archive Box (.zip)
+        actions.append(MenuAction(
+            id="archive_box",
+            text=t("project.archive", "📦 Box archivieren (.zip)..."),
+            callback=on_archive_project
+        ))
+
+        # Action: Open in Explorer
+        actions.append(MenuAction(
+            id="open_folder",
+            text=t("project.open_folder", "Projektordner im Explorer öffnen"),
+            callback=on_open_folder if on_open_folder else self.open_project_folder
+        ))
+
+        return actions
+
+    # ------------------------------------------------------------------ #
+    # UI Adapters (Backward-Compatibility & Dialog Triggers)
+    # ------------------------------------------------------------------ #
 
     def show_project_menu(
         self,
@@ -26,50 +139,25 @@ class ProjectController(QObject):
         on_open_new_project: Callable[[], None],
         parent_widget: QWidget
     ) -> None:
-        menu = QMenu(parent_widget)
-        active_proj = self.project_manager.get_active_project()
-        all_projects = self.project_manager.list_projects()
+        """Constructs and displays the project selection popup menu under the given button."""
+        actions = self.get_project_menu_actions(
+            on_switch_project=on_switch_project,
+            on_open_new_project=on_open_new_project,
+            on_import_project=lambda: self._on_import_project(parent_widget, on_switch_project),
+            on_archive_project=lambda: self._on_archive_project(parent_widget),
+            on_open_folder=self.open_project_folder
+        )
 
-        # Project list
-        for p in all_projects:
-            prefix = "✓ " if p == active_proj else "   "
-            act = QAction(f"{prefix}{p}", menu)
-            act.triggered.connect(lambda checked=False, pname=p: on_switch_project(pname))
-            menu.addAction(act)
-
-        menu.addSeparator()
-
-        # Action: New Project
-        act_new = QAction(t("project.new_project", "+ Neues Projekt / Box erstellen..."), menu)
-        act_new.triggered.connect(on_open_new_project)
-        menu.addAction(act_new)
-
-        # Action: Import Existing Project Folder
-        act_import = QAction(t("project.import_folder", "Projekt-Ordner importieren / öffnen..."), menu)
-        act_import.triggered.connect(lambda: self._on_import_project(parent_widget, on_switch_project))
-        menu.addAction(act_import)
-
-        # Action: Archive Box (.zip)
-        act_archive = QAction(t("project.archive", "📦 Box archivieren (.zip)..."), menu)
-        act_archive.triggered.connect(lambda: self._on_archive_project(parent_widget))
-        menu.addAction(act_archive)
-
-        # Action: Open in Explorer
-        act_open_folder = QAction(t("project.open_folder", "Projektordner im Explorer öffnen"), menu)
-        act_open_folder.triggered.connect(lambda: self.project_manager.open_project_folder())
-        menu.addAction(act_open_folder)
-
-        # Show menu under project button
+        menu = build_qmenu(actions, parent_widget=parent_widget)
         menu.exec(btn_project.mapToGlobal(QPoint(0, btn_project.height() + 4)))
 
     def _on_archive_project(self, parent_widget: QWidget) -> None:
         """Prompts user to select output zip path and creates a compressed project archive."""
-        from PyQt6.QtWidgets import QMessageBox
         from ui.styles import CYBER_DARK_QSS
         from datetime import datetime
         import sys, subprocess, os
 
-        active_proj = self.project_manager.get_active_project()
+        active_proj = self.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         default_zip = proj_dir.parent / f"{active_proj}_archive_{ts}.zip"
@@ -84,7 +172,7 @@ class ProjectController(QObject):
             return
 
         out_zip = Path(file_path)
-        result = self.project_manager.archive_project(active_proj, out_zip)
+        result = self.archive_project(active_proj, out_zip)
         if result.get("success"):
             zip_path = result.get("zip_path")
             file_count = result.get("file_count", 0)
@@ -133,10 +221,9 @@ class ProjectController(QObject):
             str(self.project_manager.base_dir)
         )
         if folder:
-            pname = self.project_manager.import_project_folder(folder)
+            pname = self.import_project_folder(folder)
             if pname:
                 on_switch_project(pname)
-                self.project_selected.emit(pname)
 
     def open_new_project_dialog(
         self,
@@ -146,7 +233,6 @@ class ProjectController(QObject):
         default_port: str,
         on_project_created: Callable[[str], None]
     ) -> bool:
-        from core.project_manager import ProjectExistsError
         dlg = NewProjectDialog(
             parent_widget,
             default_target=default_target,
@@ -161,16 +247,14 @@ class ProjectController(QObject):
             if pname:
                 custom_base = data.get("base_dir")
                 try:
-                    self.project_manager.create_project(
+                    clean_name = self.create_project(
                         name=pname,
                         target_ip=data.get("target_ip", ""),
                         attacker_ip=data.get("attacker_ip", ""),
                         port=data.get("port", "4444"),
                         base_dir=Path(custom_base) if custom_base else None
                     )
-                    clean_name = self.project_manager._sanitize_name(pname)
                     on_project_created(clean_name)
-                    self.project_created.emit(clean_name)
                     return True
                 except ProjectExistsError as e:
                     QMessageBox.warning(parent_widget, "Projekt existiert bereits", str(e))

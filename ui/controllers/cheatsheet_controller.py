@@ -3,8 +3,11 @@ from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMenu
 
 from core.snippet_manager import SnippetManager
+from core.menu_actions import MenuAction
+from core.event_bus import EventBus, EventType, get_event_bus
 from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
+from ui.menu_builder import build_qmenu
 
 
 CATEGORY_SHORT_NAMES: Dict[str, str] = {
@@ -27,14 +30,20 @@ CATEGORY_SHORT_NAMES: Dict[str, str] = {
 
 
 class CheatsheetController(QObject):
-    """Controller managing cheatsheet snippets, categories, search filtering, and interpolation."""
+    """UI-independent controller managing cheatsheet snippets, categories, search filtering, and MenuAction DTOs."""
 
     category_changed = pyqtSignal(str)
     snippets_updated = pyqtSignal()
 
-    def __init__(self, snippet_manager: SnippetManager, parent: Optional[QObject] = None):
+    def __init__(
+        self,
+        snippet_manager: SnippetManager,
+        event_bus: Optional[EventBus] = None,
+        parent: Optional[QObject] = None
+    ):
         super().__init__(parent)
         self.snippet_manager = snippet_manager
+        self.event_bus = event_bus or get_event_bus()
         self.current_category_id: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
         self.btn_more: Optional[QPushButton] = None
@@ -42,6 +51,87 @@ class CheatsheetController(QObject):
         self._overflow_cat_ids: List[str] = []
         self._search_expanded: bool = False
         self._last_query: str = ""
+
+    # ------------------------------------------------------------------ #
+    # Pure Domain Methods (UI-Independent)
+    # ------------------------------------------------------------------ #
+
+    def get_categories(self) -> List[Dict[str, Any]]:
+        return self.snippet_manager.get_categories()
+
+    def get_snippets(
+        self,
+        category_id: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        target_cat = category_id if category_id is not None else self.current_category_id
+        return self.snippet_manager.get_snippets(category_id=target_cat, search_query=search_query)
+
+    def add_custom_snippet(
+        self,
+        title: str,
+        category: str,
+        subcategory: str,
+        template: str,
+        description: str = "",
+        tags: Optional[List[str]] = None
+    ) -> str:
+        new_snip = self.snippet_manager.add_custom_snippet(
+            title=title,
+            category=category,
+            subcategory=subcategory,
+            template=template,
+            description=description,
+            tags=tags or []
+        )
+        self.snippets_updated.emit()
+        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "add", "snippet": new_snip})
+        return new_snip["id"] if isinstance(new_snip, dict) else str(new_snip)
+
+    def delete_snippet(self, snippet_id: str) -> None:
+        self.snippet_manager.delete_snippet(snippet_id)
+        self.snippets_updated.emit()
+        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "delete", "id": snippet_id})
+
+    def toggle_favorite(self, snippet_id: str) -> bool:
+        is_fav = self.snippet_manager.toggle_favorite(snippet_id)
+        self.snippets_updated.emit()
+        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "favorite", "id": snippet_id, "is_favorite": is_fav})
+        return is_fav
+
+    def get_overflow_category_actions(
+        self,
+        on_select_category: Optional[Callable[[str], None]] = None
+    ) -> List[MenuAction]:
+        """Returns MenuAction DTOs for categories that overflow the primary horizontal bar."""
+        cats = self.get_categories()
+        primary_ids = {
+            "all", "favorites", "web_http", "linux_shell", 
+            "windows_powershell", "windows_ad", 
+            "network_scanning", "network_recon", 
+            "sql_databases", "custom_snippets"
+        }
+        overflow_cats = [c for c in cats if c.get("id") not in primary_ids]
+
+        actions: List[MenuAction] = []
+        for c in overflow_cats:
+            cid = c.get("id")
+            cname = c.get("name", cid).strip().lstrip("\ufe0f \t")
+            count = c.get("count", 0)
+            text = f"{cname} ({count})" if count else cname
+            is_active = (cid == self.current_category_id)
+            actions.append(MenuAction(
+                id=f"select_cat:{cid}",
+                text=text,
+                checked=is_active,
+                callback=lambda target_cid=cid: on_select_category(target_cid) if on_select_category else self.select_category(target_cid),
+                data={"category_id": cid}
+            ))
+        return actions
+
+    # ------------------------------------------------------------------ #
+    # UI Selection & Pill Adapters
+    # ------------------------------------------------------------------ #
 
     def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
@@ -145,16 +235,8 @@ class CheatsheetController(QObject):
             self.btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
             self.btn_more.setToolTip("Weitere Kategorien anzeigen")
 
-            self._more_menu = QMenu(self.btn_more)
-            for c in overflow_cats:
-                cid = c.get("id")
-                cname = c.get("name", cid).strip().lstrip("\ufe0f \t")
-                count = c.get("count", 0)
-                action_text = f"{cname} ({count})" if count else cname
-                
-                act = self._more_menu.addAction(action_text)
-                act.triggered.connect(lambda checked=False, target_cid=cid: on_select_category(target_cid))
-
+            actions = self.get_overflow_category_actions(on_select_category)
+            self._more_menu = build_qmenu(actions, parent_widget=self.btn_more)
             self.btn_more.setMenu(self._more_menu)
             pills_layout.addWidget(self.btn_more)
 
@@ -162,8 +244,7 @@ class CheatsheetController(QObject):
 
     def _on_favorite_toggled(self, snippet_id: str, is_fav: bool) -> None:
         """Handles toggling favorite on a card."""
-        self.snippet_manager.toggle_favorite(snippet_id)
-        self.snippets_updated.emit()
+        self.toggle_favorite(snippet_id)
 
     def render_content(
         self,
@@ -241,7 +322,7 @@ class CheatsheetController(QObject):
         dlg = AddSnippetDialog(cats, parent=parent_widget)
         if dlg.exec():
             data = dlg.get_data()
-            self.snippet_manager.add_custom_snippet(
+            self.add_custom_snippet(
                 title=data["title"],
                 category=data["category"],
                 subcategory=data["subcategory"],
@@ -249,10 +330,5 @@ class CheatsheetController(QObject):
                 description=data["description"],
                 tags=data.get("tags", [])
             )
-            self.snippets_updated.emit()
             return True
         return False
-
-    def delete_snippet(self, snippet_id: str) -> None:
-        self.snippet_manager.delete_snippet(snippet_id)
-        self.snippets_updated.emit()

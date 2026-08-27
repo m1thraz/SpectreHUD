@@ -5,13 +5,15 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 
 from core.loot_manager import LootManager, LOOT_TYPES, CATEGORIES
 from core.project_manager import ProjectManager
+from core.menu_actions import MenuAction
+from core.event_bus import EventBus, EventType, get_event_bus
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
 from ui.styles import CYBER_DARK_QSS
 
 
 class LootController(QObject):
-    """Controller managing loot entries, category grouping, filter pills, and add/edit/delete dialogs."""
+    """UI-independent controller managing loot entries, category grouping, filter pills, and domain actions."""
 
     loot_type_changed = pyqtSignal(str)
     loot_updated = pyqtSignal()
@@ -20,13 +22,136 @@ class LootController(QObject):
         self, 
         loot_manager: LootManager, 
         project_manager: ProjectManager, 
+        event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None
     ):
         super().__init__(parent)
         self.loot_manager = loot_manager
         self.project_manager = project_manager
+        self.event_bus = event_bus or get_event_bus()
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+
+    # ------------------------------------------------------------------ #
+    # Pure Domain Methods (UI-Independent)
+    # ------------------------------------------------------------------ #
+
+    def get_entries(
+        self,
+        target_ip: Optional[str] = None,
+        entry_type: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        target_type = entry_type if entry_type is not None else self.current_loot_type
+        return self.loot_manager.get_entries(
+            target_ip=target_ip,
+            entry_type=target_type,
+            search_query=search_query
+        )
+
+    def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
+        return self.loot_manager.get_type_counts(target_ip=target_ip)
+
+    def add_entry(
+        self,
+        entry_type: str,
+        title: str,
+        content: str,
+        target_ip: str = "",
+        category: str = "misc"
+    ) -> Dict[str, Any]:
+        entry = self.loot_manager.add_entry(
+            entry_type=entry_type,
+            title=title,
+            content=content,
+            target_ip=target_ip,
+            category=category
+        )
+        self.loot_updated.emit()
+        self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "add", "entry": entry})
+        return entry
+
+    def update_entry(
+        self,
+        entry_id: str,
+        title: str,
+        content: str,
+        target_ip: str = "",
+        category: str = "misc"
+    ) -> bool:
+        success = self.loot_manager.update_entry(
+            entry_id=entry_id,
+            title=title,
+            content=content,
+            target_ip=target_ip,
+            category=category
+        )
+        if success:
+            self.loot_updated.emit()
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "update", "id": entry_id})
+        return success
+
+    def delete_entry(self, entry_id: str) -> bool:
+        success = self.loot_manager.delete_entry(entry_id)
+        if success:
+            self.loot_updated.emit()
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "delete", "id": entry_id})
+        return success
+
+    delete_loot = delete_entry
+
+    def clear_entries(self, target_ip: Optional[str] = None) -> None:
+        self.loot_manager.clear_entries(target_ip=target_ip)
+        self.loot_updated.emit()
+        self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "clear", "target_ip": target_ip})
+
+    def clear_loot(self, parent_widget: Optional[QWidget] = None) -> bool:
+        if parent_widget:
+            reply = QMessageBox.question(
+                parent_widget,
+                "Loot leeren",
+                "Möchtest du wirklich den gesamten Session-Loot dieses Projekts löschen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+        self.clear_entries()
+        return True
+
+    def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
+        return self.loot_manager.export_loot(output_path, target_ip=target_ip)
+
+    def get_type_filter_actions(
+        self,
+        on_select_type: Optional[Callable[[str], None]] = None
+    ) -> List[MenuAction]:
+        """Returns a list of MenuAction DTOs for filtering loot by type."""
+        counts = self.get_type_counts(target_ip=None)
+        actions: List[MenuAction] = [
+            MenuAction(
+                id="type:all",
+                text=f"All ({counts.get('all', 0)})",
+                checked=(self.current_loot_type == "all"),
+                callback=lambda: on_select_type("all") if on_select_type else self.select_loot_type("all"),
+                data={"type": "all"}
+            )
+        ]
+        for t in LOOT_TYPES:
+            tid = t["id"]
+            count = counts.get(tid, 0)
+            actions.append(MenuAction(
+                id=f"type:{tid}",
+                text=f"{t['name']} ({count})",
+                checked=(self.current_loot_type == tid),
+                callback=lambda target_id=tid: on_select_type(target_id) if on_select_type else self.select_loot_type(target_id),
+                data={"type": tid}
+            ))
+        return actions
+
+    # ------------------------------------------------------------------ #
+    # UI Adapters (Pills & Rendering)
+    # ------------------------------------------------------------------ #
 
     def select_loot_type(self, type_id: str) -> None:
         self.current_loot_type = type_id
@@ -88,7 +213,7 @@ class LootController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
     ) -> List[QWidget]:
-        loot_entries = self.loot_manager.get_entries(
+        loot_entries = self.get_entries(
             target_ip=None,
             entry_type=self.current_loot_type,
             search_query=search_query
@@ -99,41 +224,18 @@ class LootController(QObject):
             return []
 
         rendered_cards: List[QWidget] = []
-
-        # Group entries by category preserving sort order within category
-        entries_by_cat: Dict[str, List[Dict[str, Any]]] = {}
-        for entry in loot_entries:
-            cat_id = entry.get("category") or "misc"
-            entries_by_cat.setdefault(cat_id, []).append(entry)
-
-        # Render in CATEGORIES order (skipping empty categories)
-        for cat_def in sorted(CATEGORIES, key=lambda c: c.get("order", 99)):
-            cat_id = cat_def["id"]
-            cat_entries = entries_by_cat.pop(cat_id, None)
+        for category in sorted(CATEGORIES, key=lambda c: c["order"]):
+            cat_entries = [e for e in loot_entries if e.get("category") == category["id"]]
             if not cat_entries:
                 continue
 
-            header = QLabel(f"{cat_def.get('icon', '')} {cat_def.get('name', '')}".strip())
-            header.setProperty("class", "LootSectionHeader")
-            content_layout.addWidget(header)
+            sec_header = QLabel(f"{category['icon']} {category['name']} ({len(cat_entries)})")
+            sec_header.setProperty("class", "LootSectionHeader")
+            content_layout.addWidget(sec_header)
+            rendered_cards.append(sec_header)
 
             for entry in cat_entries:
-                card = LootCard(entry, project_dir=proj_dir, parent=parent_widget)
-                card.loot_deleted.connect(on_delete_loot)
-                card.edit_requested.connect(on_edit_loot)
-                content_layout.addWidget(card)
-                rendered_cards.append(card)
-
-        # Any remaining entries with unknown categories
-        for cat_id, cat_entries in entries_by_cat.items():
-            if not cat_entries:
-                continue
-            header = QLabel(f"{cat_id.capitalize()}")
-            header.setProperty("class", "LootSectionHeader")
-            content_layout.addWidget(header)
-
-            for entry in cat_entries:
-                card = LootCard(entry, project_dir=proj_dir, parent=parent_widget)
+                card = LootCard(entry, proj_dir, parent=parent_widget)
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 content_layout.addWidget(card)
@@ -141,76 +243,30 @@ class LootController(QObject):
 
         return rendered_cards
 
-    def open_add_dialog(
-        self,
-        parent_widget: QWidget,
-        target_ip: str = "",
-        default_type: str = "credentials",
-        default_category: str = "misc",
-        default_title: str = "",
-        default_content: str = ""
-    ) -> bool:
-        dlg = AddLootDialog(
-            target_ip=target_ip,
-            default_type=default_type,
-            default_category=default_category,
-            default_title=default_title,
-            default_content=default_content,
-            parent=parent_widget
-        )
+    def open_add_dialog(self, parent_widget: QWidget, default_target: str = "") -> bool:
+        dlg = AddLootDialog(default_target=default_target, parent=parent_widget)
         if dlg.exec():
             data = dlg.get_data()
-            self.loot_manager.add_entry(
+            self.add_entry(
                 entry_type=data["type"],
-                category=data.get("category", "misc"),
                 title=data["title"],
                 content=data["content"],
-                target_ip=data["target_ip"]
+                target_ip=data["target_ip"],
+                category=data.get("category", "misc")
             )
-            self.loot_updated.emit()
             return True
         return False
 
     def open_edit_dialog(self, parent_widget: QWidget, entry: Dict[str, Any]) -> bool:
-        dlg = AddLootDialog(
-            parent=parent_widget,
-            entry_id=entry.get("id"),
-            is_edit=True,
-            initial_type=entry.get("type", "note"),
-            initial_category=entry.get("category", "misc"),
-            initial_title=entry.get("title", ""),
-            initial_content=entry.get("content", ""),
-            current_target_ip=entry.get("target_ip", "")
-        )
+        dlg = AddLootDialog(entry_to_edit=entry, parent=parent_widget)
         if dlg.exec():
             data = dlg.get_data()
-            self.loot_manager.update_entry(
-                entry_id=data.get("id") or entry.get("id", ""),
-                type=data.get("type"),
-                category=data.get("category"),
-                title=data.get("title"),
-                content=data.get("content"),
-                target_ip=data.get("target_ip")
+            self.update_entry(
+                entry_id=entry["id"],
+                title=data["title"],
+                content=data["content"],
+                target_ip=data["target_ip"],
+                category=data.get("category", "misc")
             )
-            self.loot_updated.emit()
-            return True
-        return False
-
-    def delete_loot(self, loot_id: str) -> None:
-        self.loot_manager.delete_entry(loot_id)
-        self.loot_updated.emit()
-
-    def clear_loot(self, parent_widget: QWidget) -> bool:
-        msg = QMessageBox(parent_widget)
-        msg.setWindowTitle("Session leeren")
-        msg.setText("Möchtest du wirklich alle Loot-Einträge dieses Projekts löschen?")
-        msg.setIcon(QMessageBox.Icon.Question)
-        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg.setDefaultButton(QMessageBox.StandardButton.No)
-        msg.setStyleSheet(CYBER_DARK_QSS)
-
-        if msg.exec() == QMessageBox.StandardButton.Yes:
-            self.loot_manager.clear_session()
-            self.loot_updated.emit()
             return True
         return False

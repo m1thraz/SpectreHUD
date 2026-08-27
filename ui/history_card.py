@@ -12,6 +12,7 @@ class HistoryCard(QFrame):
     copied = pyqtSignal(str)
     transfer_to_loot = pyqtSignal(dict)
     add_to_loot_requested = transfer_to_loot
+    added_to_loot = transfer_to_loot
     deleted = pyqtSignal(str)
     entry_deleted = deleted
 
