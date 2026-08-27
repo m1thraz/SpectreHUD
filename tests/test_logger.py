@@ -1,8 +1,9 @@
 import os
 import unittest
 import tempfile
+import logging
 from pathlib import Path
-from core.logger import get_logger, setup_logger
+from core.logger import get_logger, setup_logger, set_log_level, flush_logs
 
 class TestLogger(unittest.TestCase):
 
@@ -12,9 +13,9 @@ class TestLogger(unittest.TestCase):
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
     def tearDown(self):
-        import logging
         import gc
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
+        os.environ.pop("SPECTRE_LOG_LEVEL", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", "test_rotator", ""]:
             l = logging.getLogger(name)
             for h in list(l.handlers):
@@ -38,6 +39,33 @@ class TestLogger(unittest.TestCase):
         logger.info("Test info message")
         logger.warning("Test warning message")
         logger.error("Test error message")
+
+    def test_logger_hierarchical_namespacing(self):
+        # 1. Standard module __name__
+        logger1 = get_logger("core.loot_manager")
+        self.assertEqual(logger1.name, "spectrehud.core.loot_manager")
+
+        # 2. Pre-prefixed name (no double prefix)
+        logger2 = get_logger("spectrehud.core.loot_manager")
+        self.assertEqual(logger2.name, "spectrehud.core.loot_manager")
+
+        # 3. Base root logger
+        logger_root = get_logger("spectrehud")
+        self.assertEqual(logger_root.name, "spectrehud")
+
+        logger_empty = get_logger()
+        self.assertEqual(logger_empty.name, "spectrehud")
+
+    def test_set_log_level_and_flush(self):
+        root = get_logger("test_lvl")
+        set_log_level("DEBUG")
+        self.assertEqual(logging.getLogger("spectrehud").level, logging.DEBUG)
+
+        set_log_level(logging.WARNING)
+        self.assertEqual(logging.getLogger("spectrehud").level, logging.WARNING)
+
+        # Flush without error
+        flush_logs()
 
     def test_rotating_file_handler_limits_log_file_size(self):
         """Tests that RotatingFileHandler properly rolls over files once max_bytes is reached."""
