@@ -103,7 +103,7 @@ class HtmlReportExporter:
             # Images: allow http, https, approved data:image/ mime types, and safe relative paths
             if lower_no_spaces.startswith(("http://", "https://")):
                 return html.escape(clean, quote=True)
-            if lower_no_spaces.startswith(("data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/gif", "data:image/webp", "data:image/svg+xml")):
+            if lower_no_spaces.startswith(("data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/gif", "data:image/webp")):
                 return html.escape(clean, quote=True)
             if lower_no_spaces.startswith("data:"):
                 return "#unsafe-data-uri-blocked"
