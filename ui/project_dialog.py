@@ -79,6 +79,7 @@ class NewProjectDialog(BaseHudDialog):
 
         # 4. Target Directory Preview
         self.lbl_path_preview = QLabel(f"Zielpfad: {self.base_projects_dir / (self.default_name or 'Projektname')}")
+        self.lbl_path_preview.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
         layout.addWidget(self.lbl_path_preview)
 
