@@ -1,9 +1,12 @@
-import sys
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+"""
+Central Application Orchestrator for SpectreHUD.
 
+Orchestrates UI panels, domain managers, and specialized coordinators.
+"""
+
+from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QMessageBox, QPushButton
+from PyQt6.QtWidgets import QWidget, QPushButton
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
@@ -12,10 +15,10 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
-from core.report_file_manager import ReportFileManager
-from core.i18n import get_i18n, get_locale, t
+from core.i18n import get_i18n, get_locale
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType, get_event_bus
+from core.container import ServiceContainer
 
 from ui.variable_bar import VariableBar
 from ui.panels.header_panel import HeaderPanel
@@ -23,7 +26,6 @@ from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
 from ui.panels.footer_panel import FooterPanel
 from ui.settings_dialog import SettingsDialog
-from ui.styles import CYBER_DARK_QSS
 from ui.controllers import (
     CheatsheetController,
     LootController,
@@ -31,20 +33,20 @@ from ui.controllers import (
     ReportController,
     ProjectController
 )
-
-logger = get_logger("app_controller")
-
-EXPORT_COPY_TOOLTIP = (
-    "Erstellt eine neue Kopie basierend auf dem aktuellen Loot. "
-    "Für die bearbeitbare Version siehe Report-Tab."
+from ui.coordinators import (
+    WorkspaceCoordinator,
+    NavigationCoordinator,
+    ClipboardCoordinator,
+    ExportCoordinator,
+    EXPORT_COPY_TOOLTIP
 )
-from core.container import ServiceContainer
+
+logger = get_logger(__name__)
 
 
 class AppController(QObject):
     """
-    Central application coordinator connecting UI panels, domain services, and workflow controllers.
-    Manages mode navigation, workspace lifecycles, signal dispatching, and settings synchronization.
+    Lean central orchestrator coordinating UI panels and workflow coordinators.
     """
 
     mode_changed = pyqtSignal(str)
@@ -94,14 +96,11 @@ class AppController(QObject):
             self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
             self.event_bus = event_bus or get_event_bus()
 
-        # Domain Session Service
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
             clipboard_watcher=self.clipboard_watcher
         )
-
-        self.active_mode = "cheatsheet"  # 'cheatsheet', 'loot', 'history', or 'report'
         self.cards: List[QWidget] = []
 
         # Domain Controllers
@@ -111,110 +110,100 @@ class AppController(QObject):
         self.report_ctrl = ReportController(self.project_manager, self.loot_manager, self.clipboard_watcher, parent_widget=self.window)
         self.project_ctrl = ProjectController(self.project_manager, event_bus=self.event_bus, parent=self)
 
-        # Wire all events and listeners
+        # Specialized Coordinators
+        self._target_provider = lambda: self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
+
+        self.navigation_coord = NavigationCoordinator(
+            header=self.header, search=self.search, var_bar=self.var_bar, content=self.content,
+            report_ctrl=self.report_ctrl, event_bus=self.event_bus,
+            on_mode_switched=self._on_mode_switched, parent=self
+        )
+        self.workspace_coord = WorkspaceCoordinator(
+            project_manager=self.project_manager, session_service=self.session_service,
+            project_ctrl=self.project_ctrl, report_ctrl=self.report_ctrl, event_bus=self.event_bus, parent=self
+        )
+        self.clipboard_coord = ClipboardCoordinator(
+            clipboard_watcher=self.clipboard_watcher, history_ctrl=self.history_ctrl,
+            loot_ctrl=self.loot_ctrl, target_provider=self._target_provider, parent=self
+        )
+        self.export_coord = ExportCoordinator(
+            project_manager=self.project_manager, loot_manager=self.loot_manager,
+            history_ctrl=self.history_ctrl, target_provider=self._target_provider, parent=self
+        )
+
         self._wire_signals()
 
-        # Synchronize initial language from config
+        # Synchronize initial language
         initial_lang = self.config.get("language", "en")
         get_i18n().set_locale(initial_lang)
         self.snippet_manager.set_language(initial_lang)
 
+    @property
+    def active_mode(self) -> str:
+        return self.navigation_coord.active_mode
+
+    @active_mode.setter
+    def active_mode(self, mode: str) -> None:
+        self.navigation_coord._active_mode = mode
+
     def _wire_signals(self) -> None:
-        # Header Panel signals
+        # Header & Navigation
         self.header.mode_changed.connect(self.switch_mode)
+        self.navigation_coord.mode_changed.connect(self.mode_changed.emit)
         self.header.project_menu_requested.connect(self._show_project_menu)
         self.header.screenshot_requested.connect(self.trigger_screenshot)
-        self.header.toggle_rec_requested.connect(self._toggle_pause_history)
+        self.header.toggle_rec_requested.connect(self.clipboard_coord.toggle_pause)
         self.header.settings_requested.connect(self.open_settings_dialog)
         self.header.minimize_requested.connect(self.window.hide)
 
-        # Search Panel signals
-        self.search.search_changed.connect(self._on_search_changed)
-
-        # Variable Bar signals
+        # Panels & Inputs
+        self.search.search_changed.connect(lambda _: self.refresh_content())
         self.var_bar.variables_changed.connect(self._on_variables_changed)
         self.var_bar.add_snippet_clicked.connect(self._on_add_button_clicked)
-
-        # Footer Panel signals
         self.footer.always_on_top_toggled.connect(self._on_always_on_top_toggled)
 
-        # Controller signals
+        # Data & Controller Events
         self.cheatsheet_ctrl.snippets_updated.connect(self._on_data_updated)
         self.loot_ctrl.loot_updated.connect(self._on_loot_data_updated)
         self.history_ctrl.history_updated.connect(self._on_history_data_updated)
+        self.clipboard_coord.history_mutated.connect(self._on_history_data_updated)
+        self.clipboard_coord.loot_mutated.connect(self._on_loot_data_updated)
 
-        # Screenshot & Clipboard Watcher signals
         self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
-        self.clipboard_watcher.set_target_provider(lambda: self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else "")
         self.clipboard_watcher.entry_added.connect(self._on_clipboard_entry_added)
-        self.clipboard_watcher.logging_state_changed.connect(self._on_logging_state_changed)
-
-        # i18n
+        self.clipboard_watcher.logging_state_changed.connect(self.header.update_rec_indicator)
         get_i18n().locale_changed.connect(self.retranslate_ui)
 
-    # -------------------------------------------------------------
-    # Navigation & Mode Switching
-    # -------------------------------------------------------------
     def switch_mode(self, mode: str) -> None:
-        """Switches between 'cheatsheet', 'loot', 'history', and 'report' modes."""
-        if self.active_mode == "report" and mode != "report":
-            if not self.report_ctrl.confirm_discard_if_dirty():
-                return
+        self.navigation_coord.switch_mode(mode)
 
-        self.active_mode = mode
-        self.header.set_active_mode(mode)
+    def toggle_mode(self) -> None:
+        self.navigation_coord.toggle_mode()
 
-        self.content.set_privacy_banner_visible(mode == "history")
-        self.search.setVisible(mode != "report")
-        self.var_bar.setVisible(mode != "report")
-
-        self.search.update_placeholder(mode)
+    def _on_mode_switched(self, mode: str) -> None:
         self.refresh_filter_pills()
         self.refresh_content()
 
-        if mode != "report":
-            self.search.set_focus()
-
-        self.mode_changed.emit(mode)
-        self.event_bus.publish(EventType.MODE_CHANGED, {"mode": mode})
-
-    def toggle_mode(self) -> None:
-        """Cycles through modes via Tab shortcut (Report mode excluded from Tab cycle)."""
-        modes = ["cheatsheet", "loot", "history"]
-        idx = modes.index(self.active_mode) if self.active_mode in modes else 0
-        next_mode = modes[(idx + 1) % len(modes)]
-        self.switch_mode(next_mode)
-
-    # -------------------------------------------------------------
-    # Content & Filter Rendering
-    # -------------------------------------------------------------
     def refresh_filter_pills(self) -> None:
-        """Populates horizontal filter pills and contextual actions depending on active mode."""
         self.search.clear_pills()
         pills_layout = self.search.get_pills_layout()
-
-        if self.active_mode == "report":
-            return
-
         if self.active_mode == "cheatsheet":
-            self.cheatsheet_ctrl.build_filter_pills(
-                pills_layout, self._select_category
-            )
+            self.cheatsheet_ctrl.build_filter_pills(pills_layout, self._select_category)
         elif self.active_mode == "loot":
             self.loot_ctrl.build_filter_pills(
                 pills_layout, self._select_loot_type,
-                self._export_loot, self._clear_loot, EXPORT_COPY_TOOLTIP
+                lambda: self.export_coord.export_loot(self.window),
+                self._clear_loot, EXPORT_COPY_TOOLTIP
             )
         elif self.active_mode == "history":
             self.history_ctrl.build_filter_pills(
                 pills_layout, self._select_history_filter,
-                self._export_report, self._clear_history, EXPORT_COPY_TOOLTIP
+                lambda: self.export_coord.export_report(self.window),
+                lambda: self.clipboard_coord.clear_history(self.window), EXPORT_COPY_TOOLTIP
             )
 
     def refresh_content(self) -> None:
-        """Rebuilds scrollable cards or displays ReportEditorTab based on active mode and query."""
         content_layout = self.content.get_layout()
-
         if self.active_mode == "report":
             self.cards = self.report_ctrl.render_content(content_layout)
             self.footer.set_count("Report Editor")
@@ -224,41 +213,32 @@ class AppController(QObject):
         self.report_ctrl.detach_tab_if_needed(content_layout)
         self.content.clear_cards()
         self.cards.clear()
-
         query = self.search.get_query()
         variables = self.var_bar.get_variables() if self.var_bar else {}
 
         if self.active_mode == "cheatsheet":
             self.cards = self.cheatsheet_ctrl.render_content(
-                content_layout, query, variables,
-                self._on_snippet_deleted, self.window, self.content.show_empty_state
+                content_layout, query, variables, self._on_snippet_deleted, self.window, self.content.show_empty_state
             )
             self.footer.set_count(f"{len(self.cards)} Befehle")
         elif self.active_mode == "loot":
-            active_proj = self.project_manager.get_active_project()
-            proj_dir = self.project_manager.get_project_dir(active_proj)
+            proj_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
             self.cards = self.loot_ctrl.render_content(
-                content_layout, query, proj_dir,
-                self._on_loot_deleted, self._on_edit_loot_requested,
+                content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                 self.window, self.content.show_empty_state
             )
             self.footer.set_count(f"{len(self.cards)} Loot-Einträge")
         else:
-            target_ip = variables.get("target_ip")
             self.cards = self.history_ctrl.render_content(
-                content_layout, query, target_ip,
-                self._on_history_add_to_loot, self._on_history_entry_deleted,
-                self.window, self.content.show_empty_state
+                content_layout, query, variables.get("target_ip"),
+                lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
+                self.clipboard_coord.delete_history_entry, self.window, self.content.show_empty_state
             )
             self.footer.set_count(f"{len(self.cards)} Verlaufseinträge")
-
         self.content_refreshed.emit()
 
-    # -------------------------------------------------------------
-    # Event Handlers & Sub-Actions
-    # -------------------------------------------------------------
-    def _select_category(self, category_id: str) -> None:
-        self.cheatsheet_ctrl.select_category(category_id)
+    def _select_category(self, cat_id: str) -> None:
+        self.cheatsheet_ctrl.select_category(cat_id)
         self.refresh_content()
 
     def _select_loot_type(self, type_id: str) -> None:
@@ -269,99 +249,40 @@ class AppController(QObject):
         self.history_ctrl.select_history_filter(filter_id)
         self.refresh_content()
 
-    def _on_search_changed(self, text: str) -> None:
-        self.refresh_content()
-
     def _on_variables_changed(self, vars_dict: Dict[str, str]) -> None:
         if self.active_mode == "cheatsheet":
             self.cheatsheet_ctrl.update_variables(self.cards, vars_dict)
 
     def _on_add_button_clicked(self) -> None:
+        target_ip = self._target_provider()
         if self.active_mode == "cheatsheet":
             if self.cheatsheet_ctrl.open_add_dialog(self.window):
-                self.refresh_filter_pills()
-                self.refresh_content()
+                self._on_data_updated()
         elif self.active_mode == "loot":
-            target_ip = self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
             if self.loot_ctrl.open_add_dialog(self.window, target_ip=target_ip):
-                self.save_current_project_state()
-                self.refresh_filter_pills()
-                self.refresh_content()
+                self._on_loot_data_updated()
         else:
-            target_ip = self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
             if self.loot_ctrl.open_add_dialog(self.window, target_ip=target_ip, default_type="note", default_category="recon"):
-                self.save_current_project_state()
-                self.refresh_filter_pills()
-                self.refresh_content()
+                self._on_loot_data_updated()
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         if self.loot_ctrl.open_edit_dialog(self.window, entry):
-            self.save_current_project_state()
-            self.refresh_filter_pills()
-            self.refresh_content()
+            self._on_loot_data_updated()
 
     def _on_snippet_deleted(self, snippet_id: str) -> None:
         self.cheatsheet_ctrl.delete_snippet(snippet_id)
-        self.refresh_filter_pills()
-        self.refresh_content()
+        self._on_data_updated()
 
     def _on_loot_deleted(self, loot_id: str) -> None:
         self.loot_ctrl.delete_loot(loot_id)
-        self.save_current_project_state()
-        self.refresh_filter_pills()
-        self.refresh_content()
+        self._on_loot_data_updated()
 
     def _on_clipboard_entry_added(self, entry: Dict[str, Any]) -> None:
-        if self.active_mode == "history":
-            self.refresh_filter_pills()
-            self.refresh_content()
-        self.save_current_project_state()
-
-    def _on_history_entry_deleted(self, entry_id: str) -> None:
-        self.history_ctrl.delete_entry(entry_id)
-        self.save_current_project_state()
-        self.refresh_filter_pills()
-        self.refresh_content()
-
-    def _on_history_add_to_loot(self, history_item: Dict[str, Any]) -> None:
-        target_ip = history_item.get("target_ip") or (self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else "")
-        if self.loot_ctrl.open_add_dialog(
-            parent_widget=self.window,
-            target_ip=target_ip,
-            default_type="credentials" if history_item.get("is_command") else "note",
-            default_category="access" if history_item.get("is_command") else "recon",
-            default_title=f"Kopiert aus Terminal ({history_item.get('timestamp', '')})",
-            default_content=history_item.get("text", "")
-        ):
-            self.save_current_project_state()
-            self.refresh_filter_pills()
-            self.refresh_content()
+        self.clipboard_coord.on_clipboard_entry_added(entry)
 
     def _clear_loot(self) -> None:
         if self.loot_ctrl.clear_loot(self.window):
-            self.save_current_project_state()
-            self.refresh_filter_pills()
-            self.refresh_content()
-
-    def _clear_history(self) -> None:
-        if self.history_ctrl.clear_history(self.window):
-            self.save_current_project_state()
-            self.refresh_filter_pills()
-            self.refresh_content()
-
-    def _export_loot(self) -> None:
-        self._export_report()
-
-    def _export_report(self) -> None:
-        target_ip = self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
-        active_proj = self.project_manager.get_active_project()
-        self.history_ctrl.export_report(self.window, target_ip, active_proj)
-
-    def _toggle_pause_history(self) -> None:
-        self.history_ctrl.toggle_pause()
-
-    def _on_logging_state_changed(self, is_active: bool) -> None:
-        self.header.update_rec_indicator(is_active)
+            self._on_loot_data_updated()
 
     def _on_data_updated(self) -> None:
         self.refresh_filter_pills()
@@ -374,76 +295,53 @@ class AppController(QObject):
 
     def _on_history_data_updated(self) -> None:
         self.save_current_project_state()
-        self.refresh_filter_pills()
-        self.refresh_content()
+        if self.active_mode == "history":
+            self.refresh_filter_pills()
+            self.refresh_content()
 
-    # -------------------------------------------------------------
-    # Project Workspaces
-    # -------------------------------------------------------------
+    # Workspaces
     def _show_project_menu(self, btn_anchor: QPushButton) -> None:
-        self.project_ctrl.show_project_menu(
-            btn_anchor, self.switch_to_project, self._open_new_project_dialog, self.window
+        self.workspace_coord.show_project_menu(
+            btn_anchor, self.window, self.switch_to_project, self._open_new_project_dialog
         )
 
     def _open_new_project_dialog(self) -> None:
-        curr_target = self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
-        curr_attacker = self.var_bar.txt_attacker.text().strip() if hasattr(self.var_bar, 'txt_attacker') else ""
-        curr_port = self.var_bar.txt_port.text().strip() if hasattr(self.var_bar, 'txt_port') else "4444"
-
-        self.project_ctrl.open_new_project_dialog(
-            self.window, curr_target, curr_attacker, curr_port, self.switch_to_project
+        self.workspace_coord.open_new_project_dialog(
+            self.window,
+            self._target_provider(),
+            self.var_bar.txt_attacker.text().strip() if hasattr(self.var_bar, 'txt_attacker') else "",
+            self.var_bar.txt_port.text().strip() if hasattr(self.var_bar, 'txt_port') else "4444",
+            self.switch_to_project
         )
 
     def load_active_project_state(self) -> None:
         active_proj = self.project_manager.get_active_project()
         self.header.set_project_title(active_proj)
-
-        state = self.session_service.load_project_session(active_proj)
+        state = self.workspace_coord.load_active_project_session()
         if self.var_bar:
             self.var_bar.set_variables(state)
 
     def save_current_project_state(self) -> bool:
-        variables = self.var_bar.get_variables() if self.var_bar else {}
-        return self.session_service.save_project_session(variables)
+        vars_dict = self.var_bar.get_variables() if self.var_bar else {}
+        return self.workspace_coord.save_current_project_session(vars_dict)
 
     def switch_to_project(self, project_name: str) -> None:
-        if project_name == self.project_manager.get_active_project():
-            return
-        
-        if not self.report_ctrl.confirm_discard_if_dirty():
-            return
+        def on_switched(pname: str):
+            self.load_active_project_state()
+            self.refresh_filter_pills()
+            self.refresh_content()
 
-        current_proj = self.project_manager.get_active_project()
-        if not self.save_current_project_state():
-            logger.error(f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'")
-            msg = QMessageBox(self.window)
-            msg.setWindowTitle(t("general.save_failed", "Speichern fehlgeschlagen"))
-            msg.setText(
-                f"Der Zustand des aktuellen Projekts '{current_proj}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
-                "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
-            )
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
-            msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            msg.setStyleSheet(CYBER_DARK_QSS)
-            if msg.exec() != QMessageBox.StandardButton.Yes:
-                if hasattr(self, 'project_ctrl'):
-                    self.project_ctrl.update_project_combo()
-                return
+        self.workspace_coord.switch_to_project(
+            project_name=project_name, window=self.window,
+            variables_provider=lambda: self.var_bar.get_variables() if self.var_bar else {},
+            on_success_callback=on_switched
+        )
 
-        self.project_manager.set_active_project(project_name)
-        self.load_active_project_state()
-        self.report_ctrl.load_project(project_name)
-        self.refresh_filter_pills()
-        self.refresh_content()
-        self.event_bus.publish(EventType.PROJECT_CHANGED, {"project_name": project_name})
-
-    # -------------------------------------------------------------
-    # Screenshots, Settings & Retranslation
-    # -------------------------------------------------------------
+    # Screenshots & Settings
     def trigger_screenshot(self) -> None:
-        target_ip = self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
-        self.screenshot_manager.start_capture(self.window, self.project_manager, self.loot_manager, target_ip=target_ip)
+        self.screenshot_manager.start_capture(
+            self.window, self.project_manager, self.loot_manager, target_ip=self._target_provider()
+        )
 
     def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:
         self.save_current_project_state()
@@ -451,16 +349,13 @@ class AppController(QObject):
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
 
     def open_settings_dialog(self) -> None:
-        """Opens the modular settings and options dialog."""
         dlg = SettingsDialog(self.config, parent=self.window)
         dlg.settings_applied.connect(self._on_settings_applied)
         dlg.exec()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
         if "always_on_top" in new_settings:
-            is_top = bool(new_settings["always_on_top"])
-            self.footer.set_always_on_top(is_top)
-
+            self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
         if "language" in new_settings:
             self.retranslate_ui(new_settings["language"])
         else:
@@ -469,11 +364,7 @@ class AppController(QObject):
     def _on_always_on_top_toggled(self, checked: bool) -> None:
         self.config.set("always_on_top", checked)
         flags = self.window.windowFlags()
-        if checked:
-            flags |= Qt.WindowType.WindowStaysOnTopHint
-        else:
-            flags &= ~Qt.WindowType.WindowStaysOnTopHint
-        
+        flags = (flags | Qt.WindowType.WindowStaysOnTopHint) if checked else (flags & ~Qt.WindowType.WindowStaysOnTopHint)
         was_visible = self.window.isVisible()
         self.window.setWindowFlags(flags)
         if was_visible:
@@ -482,15 +373,12 @@ class AppController(QObject):
             self.window.activateWindow()
 
     def retranslate_ui(self, locale_code: str = "") -> None:
-        """Dynamically re-translates all HUD texts and tooltips upon language switch."""
         active_lang = locale_code or get_locale()
         if hasattr(self, "snippet_manager") and self.snippet_manager:
             self.snippet_manager.set_language(active_lang)
-
         self.header.retranslate()
         if self.var_bar:
             self.var_bar.retranslate()
-
         self._update_footer_status()
         self.search.update_placeholder(self.active_mode)
         self.refresh_filter_pills()
