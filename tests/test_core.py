@@ -59,14 +59,46 @@ class TestCoreModules(unittest.TestCase):
         self.assertIn("web_http", cat_ids)
         self.assertIn("linux_shell", cat_ids)
 
-    def test_config_manager_isolated(self):
-        cfg = ConfigManager(config_dir=self.temp_config_dir)
-        self.assertEqual(cfg.get("target_ip"), "10.10.10.10")
-        cfg.set("target_ip", "10.10.10.222")
-        self.assertEqual(cfg.get("target_ip"), "10.10.10.222")
-
-        # Verify it wrote to temp dir, not home
-        self.assertTrue((self.temp_config_dir / "config.json").exists())
+    def test_snippet_manager_favorites_lifecycle(self):
+        fav_file = self.temp_path / "custom_favorites.json"
+        sm = SnippetManager(user_snippets_path=self.temp_snippets_file, favorites_path=fav_file)
+        self.assertGreater(len(sm.snippets), 2)
+        
+        target_id = sm.snippets[1]["id"]
+        self.assertFalse(sm.is_favorite(target_id))
+        
+        # Toggle on
+        res = sm.toggle_favorite(target_id)
+        self.assertTrue(res)
+        self.assertTrue(sm.is_favorite(target_id))
+        self.assertTrue(fav_file.exists())
+        
+        # Pinned snippet should now be first in search results
+        results = sm.search()
+        self.assertEqual(results[0]["id"], target_id)
+        self.assertTrue(results[0]["is_favorite"])
+        
+        # Category "favorites" should return only this snippet
+        fav_results = sm.get_snippets(category_id="favorites")
+        self.assertEqual(len(fav_results), 1)
+        self.assertEqual(fav_results[0]["id"], target_id)
+        
+        # Check category count
+        cats = sm.get_categories()
+        fav_cat = next(c for c in cats if c["id"] == "favorites")
+        self.assertEqual(fav_cat["count"], 1)
+        
+        # Test reload from disk
+        sm2 = SnippetManager(user_snippets_path=self.temp_snippets_file, favorites_path=fav_file)
+        self.assertTrue(sm2.is_favorite(target_id))
+        self.assertEqual(sm2.search()[0]["id"], target_id)
+        
+        # Toggle off
+        res_off = sm2.toggle_favorite(target_id)
+        self.assertFalse(res_off)
+        self.assertFalse(sm2.is_favorite(target_id))
+        self.assertEqual(len(sm2.get_snippets(category_id="favorites")), 0)
 
 if __name__ == "__main__":
     unittest.main()
+

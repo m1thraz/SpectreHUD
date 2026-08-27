@@ -39,18 +39,72 @@ class SnippetManager:
 
         return candidate
 
-    def __init__(self, default_snippets_path: Optional[Path] = None, user_snippets_path: Optional[Path] = None):
+    def __init__(self, default_snippets_path: Optional[Path] = None, user_snippets_path: Optional[Path] = None, favorites_path: Optional[Path] = None):
         if default_snippets_path is None:
             default_snippets_path = self._resolve_default_snippets_path()
         if user_snippets_path is None:
             user_snippets_path = get_default_config_dir() / "user_snippets.json"
+        if favorites_path is None:
+            favorites_path = get_default_config_dir() / "user_favorites.json"
 
         self.default_snippets_path = Path(default_snippets_path)
         self.user_snippets_path = Path(user_snippets_path)
+        self.favorites_path = Path(favorites_path)
+        self.favorite_ids: set = set()
         self.categories: List[Dict[str, Any]] = []
         self.snippets: List[Dict[str, Any]] = []
         
+        self.load_favorites()
         self.load_all()
+
+    def load_favorites(self) -> None:
+        """Loads list of pinned snippet IDs from disk."""
+        from core.validators import is_file_size_valid, MAX_CONFIG_FILE_SIZE
+        self.favorite_ids = set()
+        if self.favorites_path.exists() and is_file_size_valid(self.favorites_path, MAX_CONFIG_FILE_SIZE):
+            try:
+                with open(self.favorites_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        self.favorite_ids = set(str(item) for item in data if isinstance(item, (str, int)))
+            except (json.JSONDecodeError, RecursionError) as e:
+                logger.error(f"Corrupted favorites JSON at {self.favorites_path}: {e}")
+            except (OSError, UnicodeDecodeError) as e:
+                logger.error(f"Error reading favorites from {self.favorites_path}: {e}")
+
+    def save_favorites(self) -> None:
+        """Persists pinned snippet IDs to disk atomically."""
+        from core.atomic_write import atomic_write_json
+        try:
+            atomic_write_json(self.favorites_path, sorted(list(self.favorite_ids)), indent=2, ensure_ascii=False)
+        except OSError as e:
+            logger.error(f"OS error saving favorites to {self.favorites_path}: {e}", exc_info=True)
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON serialization error saving favorites: {e}")
+
+    def toggle_favorite(self, snippet_id: str) -> bool:
+        """Toggles favorite state for a given snippet ID. Returns True if now favorite, False otherwise."""
+        if not snippet_id:
+            return False
+        if snippet_id in self.favorite_ids:
+            self.favorite_ids.remove(snippet_id)
+            state = False
+        else:
+            self.favorite_ids.add(snippet_id)
+            state = True
+        
+        # Update in-memory snippets
+        for s in self.snippets:
+            if s.get("id") == snippet_id:
+                s["is_favorite"] = state
+                break
+
+        self.save_favorites()
+        return state
+
+    def is_favorite(self, snippet_id: str) -> bool:
+        """Returns True if the snippet ID is pinned as a favorite."""
+        return snippet_id in self.favorite_ids
 
     def load_all(self) -> None:
         """Loads both default bundled snippets and user-added custom snippets."""
@@ -80,6 +134,7 @@ class SnippetManager:
                                 continue
                             snip["is_custom"] = False
                             snip["category_id"] = cat_info["id"]
+                            snip["is_favorite"] = snip.get("id") in self.favorite_ids
                             if "category" not in snip:
                                 snip["category"] = cat_info["name"]
                             self.snippets.append(snip)
@@ -105,6 +160,8 @@ class SnippetManager:
                     with open(self.user_snippets_path, "r", encoding="utf-8") as f:
                         user_data = json.load(f)
                         user_snippets = validate_user_snippets(user_data)
+                        for s in user_snippets:
+                            s["is_favorite"] = s.get("id") in self.favorite_ids
                 except (json.JSONDecodeError, RecursionError) as e:
                     logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
                 except (OSError, UnicodeDecodeError, KeyError) as e:
@@ -139,7 +196,8 @@ class SnippetManager:
             "description": description,
             "template": template,
             "tags": tags,
-            "is_custom": True
+            "is_custom": True,
+            "is_favorite": False
         }
         self.snippets.append(new_snip)
         self.save_user_snippets()
@@ -175,6 +233,9 @@ class SnippetManager:
         for i, snip in enumerate(self.snippets):
             if snip.get("id") == snippet_id and snip.get("is_custom", False):
                 self.snippets.pop(i)
+                if snippet_id in self.favorite_ids:
+                    self.favorite_ids.remove(snippet_id)
+                    self.save_favorites()
                 self.save_user_snippets()
                 return True
         return False
@@ -183,42 +244,49 @@ class SnippetManager:
         """
         Filters snippets by search query (across title, description, template, tags)
         and optionally restricts to a specific category.
+        Prioritizes pinned favorites to the top while preserving relative ordering.
         """
         results = self.snippets
         
-        if category_id and category_id != "all":
+        if category_id == "favorites":
+            results = [s for s in results if s.get("id") in self.favorite_ids]
+        elif category_id and category_id != "all":
             results = [s for s in results if s.get("category_id") == category_id]
             
-        if not query or not query.strip():
-            return results
+        if query and query.strip():
+            q = query.strip().lower()
+            terms = q.split()
             
-        q = query.strip().lower()
-        terms = q.split()
-        
-        filtered = []
-        for s in results:
-            title = s.get("title", "").lower()
-            desc = s.get("description", "").lower()
-            tmpl = s.get("template", "").lower()
-            cat = s.get("category", "").lower()
-            subcat = s.get("subcategory", "").lower()
-            tags = " ".join(s.get("tags", [])).lower()
-            
-            combined = f"{title} {desc} {tmpl} {cat} {subcat} {tags}"
-            
-            # All search terms must match somewhere
-            if all(term in combined for term in terms):
-                filtered.append(s)
+            filtered = []
+            for s in results:
+                title = s.get("title", "").lower()
+                desc = s.get("description", "").lower()
+                tmpl = s.get("template", "").lower()
+                cat = s.get("category", "").lower()
+                subcat = s.get("subcategory", "").lower()
+                tags = " ".join(s.get("tags", [])).lower()
                 
-        return filtered
+                combined = f"{title} {desc} {tmpl} {cat} {subcat} {tags}"
+                
+                # All search terms must match somewhere
+                if all(term in combined for term in terms):
+                    filtered.append(s)
+            results = filtered
+                    
+        # Sort favorites to the top while preserving stable relative order
+        return sorted(results, key=lambda s: 0 if s.get("id") in self.favorite_ids else 1)
 
     def get_snippets(self, category_id: Optional[str] = None, search_query: str = "") -> List[Dict[str, Any]]:
         """Alias for search() to retrieve filtered snippets."""
         return self.search(query=search_query, category_id=category_id)
 
     def get_categories(self) -> List[Dict[str, Any]]:
-        """Returns categories with accurate snippet counts."""
-        cats = [{"id": "all", "name": "All Commands", "icon": "", "count": len(self.snippets)}]
+        """Returns categories with accurate snippet counts, including 'all' and 'favorites'."""
+        fav_count = sum(1 for s in self.snippets if s.get("id") in self.favorite_ids)
+        cats = [
+            {"id": "all", "name": "All Commands", "icon": "", "count": len(self.snippets)},
+            {"id": "favorites", "name": "Favoriten", "icon": "★", "count": fav_count}
+        ]
         for c in self.categories:
             count = sum(1 for s in self.snippets if s.get("category_id") == c["id"])
             cats.append({

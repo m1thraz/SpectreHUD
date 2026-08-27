@@ -14,6 +14,7 @@ class SnippetCard(QFrame):
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
     snippet_deleted = deleted
+    favorite_toggled = pyqtSignal(str, bool)
 
     def __init__(self, snippet: Dict[str, Any], variables: Dict[str, Any], parent: QWidget = None):
         super().__init__(parent)
@@ -30,9 +31,18 @@ class SnippetCard(QFrame):
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(6)
 
-        # Header Row: Title & Category Badge
+        # Header Row: Star, Title & Category Badge
         header_layout = QHBoxLayout()
         header_layout.setSpacing(8)
+
+        # Star / Favorite Button
+        is_fav = bool(self.snippet.get("is_favorite", False))
+        self.btn_fav = QPushButton("★" if is_fav else "☆")
+        self.btn_fav.setProperty("class", "StarBtnActive" if is_fav else "StarBtn")
+        self.btn_fav.setToolTip("Favorit entfernen" if is_fav else "Als Favorit anheften")
+        self.btn_fav.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_fav.clicked.connect(self._toggle_favorite)
+        header_layout.addWidget(self.btn_fav, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         self.lbl_title = QLabel(self.snippet.get("title", "Unbenannter Befehl"))
         self.lbl_title.setObjectName("SnippetTitle")
@@ -150,3 +160,17 @@ class SnippetCard(QFrame):
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)
+
+    def _toggle_favorite(self) -> None:
+        """Toggles favorite state for this snippet and emits signal."""
+        current_state = bool(self.snippet.get("is_favorite", False))
+        new_state = not current_state
+        self.snippet["is_favorite"] = new_state
+        
+        self.btn_fav.setText("★" if new_state else "☆")
+        self.btn_fav.setProperty("class", "StarBtnActive" if new_state else "StarBtn")
+        self.btn_fav.setToolTip("Favorit entfernen" if new_state else "Als Favorit anheften")
+        self.btn_fav.style().unpolish(self.btn_fav)
+        self.btn_fav.style().polish(self.btn_fav)
+        
+        self.favorite_toggled.emit(self.snippet.get("id", ""), new_state)

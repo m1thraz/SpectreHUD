@@ -435,6 +435,38 @@ QPushButton.DangerBtn:hover {
     color: #ffffff;
 }
 
+QPushButton.StarBtn {
+    background-color: transparent;
+    color: #6e7681;
+    border: none;
+    font-size: 15px;
+    padding: 0px 4px;
+    min-width: 20px;
+    max-width: 24px;
+}
+
+QPushButton.StarBtn:hover {
+    color: #e3b341;
+    background-color: rgba(227, 179, 65, 0.15);
+    border-radius: 4px;
+}
+
+QPushButton.StarBtnActive {
+    background-color: transparent;
+    color: #e3b341;
+    border: none;
+    font-size: 15px;
+    padding: 0px 4px;
+    min-width: 20px;
+    max-width: 24px;
+}
+
+QPushButton.StarBtnActive:hover {
+    color: #ffd700;
+    background-color: rgba(227, 179, 65, 0.25);
+    border-radius: 4px;
+}
+
 QPushButton.MinimizeBtn {
     background-color: rgba(22, 27, 34, 0.85);
     color: #e6edf3;

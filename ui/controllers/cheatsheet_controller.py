@@ -9,6 +9,7 @@ from ui.add_snippet_dialog import AddSnippetDialog
 
 CATEGORY_SHORT_NAMES: Dict[str, str] = {
     "all": "Alle",
+    "favorites": "★ Favoriten",
     "web_http": "Web",
     "linux_shell": "Linux",
     "windows_powershell": "Windows",
@@ -76,32 +77,44 @@ class CheatsheetController(QObject):
 
         cats = self.snippet_manager.get_categories()
 
-        # Group categories: Keep top 6-7 as primary pills, place rest in "Mehr ▾"
+        # Group categories: Keep top categories as primary pills, place rest in "Mehr ▾"
         primary_ids = {
-            "all", "web_http", "linux_shell", 
+            "all", "favorites", "web_http", "linux_shell", 
             "windows_powershell", "windows_ad", 
             "network_scanning", "network_recon", 
             "sql_databases", "custom_snippets"
         }
 
+        all_cat = None
+        fav_cat = None
+        custom_cat = None
         primary_cats = []
         overflow_cats = []
-        custom_cat = None
 
         for c in cats:
             cid = c.get("id")
-            if cid == "custom_snippets":
+            if cid == "all":
+                all_cat = c
+            elif cid == "favorites":
+                fav_cat = c
+            elif cid == "custom_snippets":
                 custom_cat = c
             elif cid in primary_ids:
                 primary_cats.append(c)
             else:
                 overflow_cats.append(c)
 
+        ordered_primary = []
+        if all_cat:
+            ordered_primary.append(all_cat)
+        if fav_cat:
+            ordered_primary.append(fav_cat)
+        ordered_primary.extend(primary_cats)
         if custom_cat:
-            primary_cats.append(custom_cat)
+            ordered_primary.append(custom_cat)
 
         # Render primary pills on the bar
-        for c in primary_cats:
+        for c in ordered_primary:
             cat_id = c.get("id")
             full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
             pill_text = CATEGORY_SHORT_NAMES.get(cat_id, full_name[:12])
@@ -144,6 +157,11 @@ class CheatsheetController(QObject):
 
         pills_layout.addStretch()
 
+    def _on_favorite_toggled(self, snippet_id: str, is_fav: bool) -> None:
+        """Handles toggling favorite on a card."""
+        self.snippet_manager.toggle_favorite(snippet_id)
+        self.snippets_updated.emit()
+
     def render_content(
         self,
         content_layout: QVBoxLayout,
@@ -166,6 +184,7 @@ class CheatsheetController(QObject):
         for s in snippets:
             card = SnippetCard(s, variables=variables, parent=parent_widget)
             card.snippet_deleted.connect(on_delete_snippet)
+            card.favorite_toggled.connect(self._on_favorite_toggled)
             content_layout.addWidget(card)
             rendered_cards.append(card)
 

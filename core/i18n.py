@@ -55,6 +55,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Filter Pills
         "filter.all_commands": "All Commands",
+        "filter.favorites": "★ Favoriten",
         "filter.all_loot": "All ({count})",
         "filter.target_only": "Target IP Only",
         "filter.all_history": "All ({count})",
@@ -224,6 +225,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
 
         # Filter Pills
         "filter.all_commands": "All Commands",
+        "filter.favorites": "★ Favorites",
         "filter.all_loot": "All ({count})",
         "filter.target_only": "Target IP Only",
         "filter.all_history": "All ({count})",

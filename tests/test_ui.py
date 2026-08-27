@@ -233,5 +233,52 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_cheatsheet_favorites_ui_interaction(self):
+        from ui.snippet_card import SnippetCard
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        window.switch_mode("cheatsheet")
+        self.assertGreater(len(window.cards), 2)
+        
+        # Check that favorites filter pill exists
+        self.assertIn("favorites", window.cheatsheet_ctrl.filter_buttons)
+        fav_btn = window.cheatsheet_ctrl.filter_buttons["favorites"]
+        self.assertIn("★", fav_btn.text())
+        
+        # Grab first card and click its star button
+        first_card = window.cards[0]
+        self.assertIsInstance(first_card, SnippetCard)
+        snippet_id = first_card.snippet.get("id")
+        
+        self.assertFalse(snippet_manager.is_favorite(snippet_id))
+        first_card.btn_fav.click()
+        
+        # Check that it is now favorite in manager
+        self.assertTrue(snippet_manager.is_favorite(snippet_id))
+        
+        # Filter by favorites
+        window._select_category("favorites")
+        self.assertEqual(len(window.cards), 1)
+        self.assertEqual(window.cards[0].snippet.get("id"), snippet_id)
+        
+        # Toggle off
+        window.cards[0].btn_fav.click()
+        self.assertFalse(snippet_manager.is_favorite(snippet_id))
+        self.assertEqual(len(window.cards), 0)
+
+        window.close()
+
 if __name__ == "__main__":
     unittest.main()
