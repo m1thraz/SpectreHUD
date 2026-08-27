@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
-from core.project_manager import ProjectManager
+from core.project_manager import ProjectManager, InvalidProjectNameError, ProjectCreationError
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
