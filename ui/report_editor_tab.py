@@ -185,6 +185,12 @@ class ReportEditorTab(QWidget):
         self.btn_export_copy.clicked.connect(self._on_export_copy_clicked)
         toolbar.addWidget(self.btn_export_copy)
 
+        self.btn_export_html = QPushButton("Export HTML...")
+        self.btn_export_html.setProperty("class", "SecondaryBtn")
+        self.btn_export_html.setToolTip("Exportiert den Report als eigenständige HTML-Datei mit Cyber-Dark Theme und eingebetteten Screenshots.")
+        self.btn_export_html.clicked.connect(self._on_export_html_clicked)
+        toolbar.addWidget(self.btn_export_html)
+
         self.btn_save = QPushButton("Save")
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+Umschalt+S)")
@@ -413,6 +419,47 @@ class ReportEditorTab(QWidget):
             msg.exec()
         else:
             logger.error(f"Export der Report-Kopie nach {target} fehlgeschlagen")
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("Fehler")
+            msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
+
+    def _on_export_html_clicked(self) -> None:
+        from core.html_report_exporter import HtmlReportExporter
+        from PyQt6.QtGui import QDesktopServices
+        default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(".html")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "HTML-Report exportieren", str(default_path), "HTML (*.html)"
+        )
+        if not file_path:
+            return
+
+        target = Path(file_path)
+        if target.suffix.lower() != ".html":
+            target = target.with_suffix(".html")
+
+        proj_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
+        success = HtmlReportExporter.export_to_file(
+            markdown_content=self.editor.toPlainText(),
+            output_path=target,
+            project_dir=proj_dir,
+            project_name=self.current_project,
+            target_ip=""
+        )
+        if success:
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle("HTML-Report exportiert")
+            msg.setText(f"HTML-Report gespeichert:\n{target.name}\n\nIm Standard-Browser öffnen?")
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            if msg.exec() == QMessageBox.StandardButton.Yes:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve())))
+        else:
+            logger.error(f"Export des HTML-Reports nach {target} fehlgeschlagen")
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
             msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")

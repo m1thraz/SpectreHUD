@@ -160,6 +160,37 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(loaded.width(), 200)
         self.assertEqual(loaded.height(), 100)
 
+    def test_report_editor_html_export_button(self):
+        """Tests that ReportEditorTab has the Export HTML button and triggers export."""
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+        from ui.report_editor_tab import ReportEditorTab
+
+        app = QApplication.instance() or QApplication([])
+        self.project_mgr.create_project("BoxHtmlTest")
+        tab = ReportEditorTab(
+            report_file_manager=self.report_mgr,
+            loot_manager=self.loot_mgr,
+            clipboard_watcher=self.clip_watcher
+        )
+        tab.load_project("BoxHtmlTest")
+        tab.editor.setPlainText("# HTML Export Test\nContent goes here.")
+
+        self.assertTrue(hasattr(tab, "btn_export_html"))
+        self.assertEqual(tab.btn_export_html.text(), "Export HTML...")
+
+        out_html = self.temp_path / "exported_test.html"
+        with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_html), "HTML (*.html)")), \
+             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
+            tab.btn_export_html.click()
+
+        self.assertTrue(out_html.exists())
+        content = out_html.read_text(encoding="utf-8")
+        self.assertIn("<h1>HTML Export Test</h1>", content)
+        self.assertIn("BoxHtmlTest", content)
+
+        tab.deleteLater()
+
 
 if __name__ == "__main__":
     unittest.main()

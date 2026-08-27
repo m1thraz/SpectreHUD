@@ -146,20 +146,39 @@ class HistoryController(QObject):
     def export_report(self, parent_widget: QWidget, target_ip: str, active_proj: str) -> None:
         proj_dir = self.project_manager.get_project_dir(active_proj)
         default_path = proj_dir / "report.md"
-        file_path, _ = QFileDialog.getSaveFileName(
-            parent_widget, "CTF Write-Up Report exportieren", str(default_path), "Markdown (*.md)"
+        file_path, selected_filter = QFileDialog.getSaveFileName(
+            parent_widget, "CTF Write-Up Report exportieren", str(default_path), "Markdown (*.md);;HTML (*.html);;All Files (*)"
         )
         if file_path:
+            target = Path(file_path)
             builder = ReportBuilder(
                 loot_manager=self.loot_manager,
                 clipboard_watcher=self.clipboard_watcher,
                 project_manager=self.project_manager
             )
-            report_msg = builder.export(
-                Path(file_path),
+            md_content = builder.build(
                 target_ip=target_ip if target_ip else None,
                 project_name=active_proj
             )
+            if target.suffix.lower() == ".html" or ("html" in selected_filter.lower() and target.suffix.lower() != ".md"):
+                if target.suffix.lower() != ".html":
+                    target = target.with_suffix(".html")
+                from core.html_report_exporter import HtmlReportExporter
+                success = HtmlReportExporter.export_to_file(
+                    markdown_content=md_content,
+                    output_path=target,
+                    project_dir=proj_dir,
+                    project_name=active_proj,
+                    target_ip=target_ip
+                )
+                report_msg = f"HTML-Report erfolgreich generiert: {target.name}" if success else f"Fehler beim Exportieren: {target.name}"
+            else:
+                report_msg = builder.export(
+                    target,
+                    target_ip=target_ip if target_ip else None,
+                    project_name=active_proj
+                )
+
             is_error = report_msg.startswith("Fehler")
             msg = QMessageBox(parent_widget)
             msg.setWindowTitle("Fehler beim Export" if is_error else "Report generiert")
