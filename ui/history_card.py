@@ -5,6 +5,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any
 import pyperclip
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 class HistoryCard(QFrame):
     """Visual card displaying a single clipboard history item with natural word wrapping and Loot-transfer."""

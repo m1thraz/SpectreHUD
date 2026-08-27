@@ -140,7 +140,7 @@ class HtmlReportExporter:
         blockquote_lines: List[str] = []
 
         def _flush_list():
-            nonlocal in_list, list_type
+            nonlocal in_list
             if in_list:
                 html_lines.append(f"</{list_type}>")
                 in_list = False
