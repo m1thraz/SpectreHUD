@@ -70,7 +70,7 @@ class TestClipboardWatcher(unittest.TestCase):
 
         self.assertTrue(report_path.exists())
         content = report_path.read_text(encoding="utf-8")
-        self.assertIn("CTF Session Report", content)
+        self.assertIn("Pentest Report", content)
         self.assertIn("admin:SecretPass", content)
         self.assertIn("THM{flag_abc_123}", content)
         self.assertIn("![Dashboard Exploit](loot/screenshot_dash.png)", content)
