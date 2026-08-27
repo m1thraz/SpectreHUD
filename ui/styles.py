@@ -467,6 +467,68 @@ QPushButton.StarBtnActive:hover {
     border-radius: 4px;
 }
 
+QPushButton.VarPassToggleBtn {
+    background-color: transparent;
+    color: #8b949e;
+    border: 1px solid rgba(56, 139, 253, 0.3);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+QPushButton.VarPassToggleBtn:hover {
+    background-color: rgba(56, 139, 253, 0.2);
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+QFrame#TweakContainer {
+    background-color: rgba(13, 17, 23, 0.95);
+    border: 1px solid rgba(88, 166, 255, 0.35);
+    border-radius: 6px;
+    margin-top: 4px;
+    padding: 4px 6px;
+}
+
+QLineEdit.TweakLineEdit {
+    background-color: rgba(9, 13, 18, 0.95);
+    color: #39d353;
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    border-radius: 5px;
+    font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+QLineEdit.TweakLineEdit:focus {
+    border: 1px solid #00e5ff;
+    background-color: rgba(9, 13, 18, 0.98);
+}
+
+QPushButton.TweakBtn {
+    background-color: rgba(33, 38, 45, 0.85);
+    color: #8b949e;
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+
+QPushButton.TweakBtn:hover {
+    background-color: rgba(56, 139, 253, 0.25);
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+QPushButton.TweakBtnActive {
+    background-color: rgba(0, 229, 255, 0.2);
+    color: #00e5ff;
+    border: 1px solid #00e5ff;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+
 QPushButton.MinimizeBtn {
     background-color: rgba(22, 27, 34, 0.85);
     color: #e6edf3;

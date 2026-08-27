@@ -42,11 +42,15 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "varbar.target": "Target:",
         "varbar.attacker": "LHOST:",
         "varbar.port": "Port:",
+        "varbar.user": "User:",
+        "varbar.pass": "Pass:",
+        "varbar.pass_toggle_tip": "Passwort ein-/ausblenden",
         "varbar.auto": "Auto",
         "varbar.auto_tip": "Auto-Erkennung für tun0 / VPN / lokale IP",
         "varbar.no_ip": "Keine IP",
         "varbar.add_btn": "+ Neu",
         "varbar.add_btn_tip": "Neuen Befehl anlegen (Ctrl+N)",
+        "card.tweak_tip": "Befehl anpassen vor dem Kopieren",
 
         # Search Bar
         "search.cheatsheet_placeholder": "Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...",
@@ -212,11 +216,15 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "varbar.target": "Target:",
         "varbar.attacker": "LHOST:",
         "varbar.port": "Port:",
+        "varbar.user": "User:",
+        "varbar.pass": "Pass:",
+        "varbar.pass_toggle_tip": "Toggle password visibility",
         "varbar.auto": "Auto",
         "varbar.auto_tip": "Auto-detect tun0 / VPN / local IP",
         "varbar.no_ip": "No IP",
         "varbar.add_btn": "+ New",
         "varbar.add_btn_tip": "Create new command snippet (Ctrl+N)",
+        "card.tweak_tip": "Tweak command before copying",
 
         # Search Bar
         "search.cheatsheet_placeholder": "Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql')...",

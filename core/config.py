@@ -10,6 +10,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "target_ip": "10.10.10.10",
     "attacker_ip": "10.10.14.5",
     "port": "4444",
+    "username": "",
+    "password": "",
     "wordlist": "/usr/share/wordlists/dirb/common.txt",
     "hotkey": "<ctrl>+<cmd>+<",
     "auto_hide_on_copy": False,

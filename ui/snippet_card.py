@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy
+    QPushButton, QWidget, QApplication, QSizePolicy, QLineEdit
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any, Optional
@@ -90,13 +90,78 @@ class SnippetCard(QFrame):
         
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
+        # Inline Tweak Button
+        self.btn_tweak = QPushButton("✏️")
+        self.btn_tweak.setProperty("class", "TweakBtn")
+        self.btn_tweak.setToolTip("Befehl anpassen vor dem Kopieren")
+        self.btn_tweak.setFixedWidth(34)
+        self.btn_tweak.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_tweak.clicked.connect(self._toggle_tweak_bar)
+        cmd_row.addWidget(self.btn_tweak, alignment=Qt.AlignmentFlag.AlignVCenter)
+
         self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.setFixedWidth(85)
+        self.btn_copy.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_copy.clicked.connect(self._copy_command)
         cmd_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         layout.addLayout(cmd_row)
+
+        # Expandable Inline Command Tweaker Row
+        self.tweak_container = QFrame()
+        self.tweak_container.setObjectName("TweakContainer")
+        self.tweak_container.setVisible(False)
+        tweak_layout = QHBoxLayout(self.tweak_container)
+        tweak_layout.setContentsMargins(4, 4, 4, 4)
+        tweak_layout.setSpacing(6)
+
+        self.txt_tweak = QLineEdit()
+        self.txt_tweak.setObjectName("TweakInput")
+        self.txt_tweak.setProperty("class", "TweakLineEdit")
+        self.txt_tweak.setPlaceholderText("Befehl frei anpassen...")
+        self.txt_tweak.returnPressed.connect(self._copy_tweaked_command)
+        tweak_layout.addWidget(self.txt_tweak, stretch=1)
+
+        self.btn_tweak_copy = QPushButton("Copy")
+        self.btn_tweak_copy.setProperty("class", "CopyBtn")
+        self.btn_tweak_copy.setFixedWidth(75)
+        self.btn_tweak_copy.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_tweak_copy.clicked.connect(self._copy_tweaked_command)
+        tweak_layout.addWidget(self.btn_tweak_copy)
+
+        self.btn_tweak_cancel = QPushButton("✕")
+        self.btn_tweak_cancel.setProperty("class", "DangerBtn")
+        self.btn_tweak_cancel.setFixedWidth(28)
+        self.btn_tweak_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_tweak_cancel.setToolTip("Abbrechen")
+        self.btn_tweak_cancel.clicked.connect(lambda: self.tweak_container.setVisible(False))
+        tweak_layout.addWidget(self.btn_tweak_cancel)
+
+        layout.addWidget(self.tweak_container)
+
+    def _toggle_tweak_bar(self) -> None:
+        """Toggles visibility of the inline command tweaker bar."""
+        will_show = self.tweak_container.isHidden()
+        self.tweak_container.setVisible(will_show)
+        self.btn_tweak.setProperty("class", "TweakBtnActive" if will_show else "TweakBtn")
+        self.btn_tweak.style().unpolish(self.btn_tweak)
+        self.btn_tweak.style().polish(self.btn_tweak)
+
+        if will_show:
+            self.txt_tweak.setText(self._rendered_command)
+            self.txt_tweak.setFocus()
+            self.txt_tweak.selectAll()
+
+    def _copy_tweaked_command(self) -> None:
+        """Copies the ad-hoc tweaked command from the inline line edit."""
+        text_to_copy = self.txt_tweak.text().strip()
+        if text_to_copy:
+            self._perform_clipboard_copy(text_to_copy, target_btn=self.btn_tweak_copy)
+            QTimer.singleShot(400, lambda: self.tweak_container.setVisible(False))
+            self.btn_tweak.setProperty("class", "TweakBtn")
+            self.btn_tweak.style().unpolish(self.btn_tweak)
+            self.btn_tweak.style().polish(self.btn_tweak)
 
     def update_variables(self, variables: Dict[str, Any]) -> None:
         """Rerenders the command template with current variables."""
@@ -104,6 +169,36 @@ class SnippetCard(QFrame):
         template = self.snippet.get("template", "")
         self._rendered_command = TemplateEngine.render(template, variables)
         self.lbl_command.setText(self._rendered_command)
+        if self.tweak_container.isHidden():
+            self.txt_tweak.setText(self._rendered_command)
+
+    def _perform_clipboard_copy(self, text_to_copy: str, target_btn: Optional[QPushButton] = None) -> None:
+        """Helper to copy text to clipboard and trigger visual feedback."""
+        if not text_to_copy:
+            return
+
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text_to_copy)
+        try:
+            pyperclip.copy(text_to_copy)
+        except (pyperclip.PyperclipException, OSError):
+            pass
+
+        btn = target_btn or self.btn_copy
+        btn.setText("✓ Copied!")
+        btn.setProperty("class", "CopyBtnSuccess")
+        btn.style().unpolish(btn)
+        btn.style().polish(btn)
+
+        QTimer.singleShot(1200, lambda: self._reset_copy_btn(btn))
+        self.copied.emit(text_to_copy)
+
+    def _reset_copy_btn(self, btn: Optional[QPushButton] = None) -> None:
+        target = btn or self.btn_copy
+        target.setText("Copy")
+        target.setProperty("class", "CopyBtn")
+        target.style().unpolish(target)
+        target.style().polish(target)
 
     def _copy_command(self) -> None:
         """
@@ -140,26 +235,7 @@ class SnippetCard(QFrame):
                 return
 
         if text_to_copy:
-            clipboard = QApplication.clipboard()
-            clipboard.setText(text_to_copy)
-            try:
-                pyperclip.copy(text_to_copy)
-            except (pyperclip.PyperclipException, OSError) as exc:
-                logger.debug(f"pyperclip copy fallback failed: {exc}")
-
-            self.btn_copy.setText("✓ Copied!")
-            self.btn_copy.setProperty("class", "CopyBtnSuccess")
-            self.btn_copy.style().unpolish(self.btn_copy)
-            self.btn_copy.style().polish(self.btn_copy)
-
-            QTimer.singleShot(1200, self._reset_copy_btn)
-            self.copied.emit(text_to_copy)
-
-    def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.style().unpolish(self.btn_copy)
-        self.btn_copy.style().polish(self.btn_copy)
+            self._perform_clipboard_copy(text_to_copy)
 
     def _toggle_favorite(self) -> None:
         """Toggles favorite state for this snippet and emits signal."""

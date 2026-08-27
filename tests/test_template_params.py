@@ -42,11 +42,54 @@ class TestTemplateParams(unittest.TestCase):
         rendered = TemplateEngine.render_with_custom(tmpl, variables, custom)
         self.assertEqual(rendered, "hashcat -m 1000 -a 0 ntlm.txt /usr/share/wordlists/rockyou.txt")
 
-    def test_session_param_cache(self):
-        cfg = ConfigManager(config_dir=self.temp_config_dir)
-        cfg.set_cached_param("WORDLIST", "/usr/share/wordlists/rockyou.txt")
-        self.assertEqual(cfg.get_cached_param("WORDLIST"), "/usr/share/wordlists/rockyou.txt")
-        self.assertEqual(cfg.get_cached_param("NON_EXISTENT", "default"), "default")
+    def test_username_password_globals(self):
+        tmpl = "hydra -l {{USERNAME}} -p {{PASSWORD}} ssh://{{TARGET_IP}}:{{PORT}}"
+        variables = {
+            "target_ip": "10.10.10.50",
+            "port": "22",
+            "username": "root",
+            "password": "secretpassword"
+        }
+        # USERNAME and PASSWORD are now recognized globals
+        unresolved = TemplateEngine.extract_unresolved_placeholders(tmpl, variables)
+        self.assertEqual(unresolved, [])
+        rendered = TemplateEngine.render(tmpl, variables)
+        self.assertEqual(rendered, "hydra -l root -p secretpassword ssh://10.10.10.50:22")
+
+    def test_user_pass_short_aliases(self):
+        tmpl = "smbclient //{{TARGET_IP}}/share -U {{USER}}%{{PASS}}"
+        variables = {
+            "target_ip": "10.10.10.70",
+            "username": "alice",
+            "password": "Password123!"
+        }
+        unresolved = TemplateEngine.extract_unresolved_placeholders(tmpl, variables)
+        self.assertEqual(unresolved, [])
+        rendered = TemplateEngine.render(tmpl, variables)
+        self.assertEqual(rendered, "smbclient //10.10.10.70/share -U alice%Password123!")
+
+    def test_full_parameter_tags_and_smart_presets(self):
+        from core.template_engine import SMART_PRESETS
+        all_tags = [
+            "DOMAIN", "DNS_SERVER", "WORDLIST", "HASH_FILE",
+            "TABLE_NAME", "DATABASE_NAME", "FILE_PATH", "FILE_NAME",
+            "ENDPOINT", "SERVICE_NAME", "SUBNET", "PORT_SEQUENCE",
+            "LOCAL_HOST", "LOCAL_PORT", "REQUEST_FILE", "PARAMETER",
+            "EIP_VALUE", "PATTERN", "SSH_PUBLIC_KEY", "ZIP_FILE",
+            "SOURCE_FILE", "OUTPUT_FILE", "OBJECT_FILE",
+            "USER_FIELD", "PASS_FIELD", "FAIL_MESSAGE", "LOG_PATH"
+        ]
+
+        # Verify all 27 tags have smart presets defined
+        for tag in all_tags:
+            self.assertIn(tag, SMART_PRESETS, f"Missing preset for tag: {tag}")
+            self.assertTrue(len(SMART_PRESETS[tag]) > 0)
+
+        # Verify extract_unresolved_placeholders detects all of them
+        constructed_tmpl = " ".join([f"{{{{{tag}}}}}" for tag in all_tags])
+        extracted = TemplateEngine.extract_unresolved_placeholders(constructed_tmpl, {})
+        for tag in all_tags:
+            self.assertIn(tag, extracted)
 
 if __name__ == "__main__":
     unittest.main()

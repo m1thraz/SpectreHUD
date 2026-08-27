@@ -700,17 +700,7 @@ class MainWindow(QMainWindow):
 
         state = self.session_service.load_project_session(active_proj)
         if hasattr(self, 'var_bar') and self.var_bar:
-            self.var_bar.txt_target.blockSignals(True)
-            self.var_bar.txt_attacker.blockSignals(True)
-            self.var_bar.txt_port.blockSignals(True)
-
-            self.var_bar.txt_target.setText(state.get("target_ip", "10.10.10.10"))
-            self.var_bar.txt_attacker.setText(state.get("attacker_ip", "10.10.14.5"))
-            self.var_bar.txt_port.setText(state.get("port", "4444"))
-
-            self.var_bar.txt_target.blockSignals(False)
-            self.var_bar.txt_attacker.blockSignals(False)
-            self.var_bar.txt_port.blockSignals(False)
+            self.var_bar.set_variables(state)
 
     def _save_current_project_state(self) -> bool:
         variables = self.var_bar.get_variables() if hasattr(self, 'var_bar') else {}

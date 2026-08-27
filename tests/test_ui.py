@@ -280,5 +280,93 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_inline_command_tweaker_interaction(self):
+        from ui.snippet_card import SnippetCard
+        from PyQt6.QtWidgets import QApplication
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        window.switch_mode("cheatsheet")
+        self.assertGreater(len(window.cards), 0)
+        card = window.cards[0]
+        self.assertIsInstance(card, SnippetCard)
+
+        # 1. Tweaker starts hidden
+        self.assertTrue(card.tweak_container.isHidden())
+
+        # 2. Click Tweak button (✏️) -> container becomes unhidden with rendered command
+        card.btn_tweak.click()
+        self.assertFalse(card.tweak_container.isHidden())
+        self.assertEqual(card.txt_tweak.text(), card._rendered_command)
+
+        # 3. Modify text and copy via tweaked copy button
+        tweaked_cmd = card.txt_tweak.text() + " --proxy socks5://127.0.0.1:9050"
+        card.txt_tweak.setText(tweaked_cmd)
+        card.btn_tweak_copy.click()
+
+        # Check clipboard content
+        clipboard = QApplication.clipboard()
+        self.assertEqual(clipboard.text().strip(), tweaked_cmd.strip())
+
+        window.close()
+
+    def test_variable_bar_user_pass_and_visibility_toggle(self):
+        from PyQt6.QtWidgets import QLineEdit
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        # Check fields exist on VariableBar
+        self.assertTrue(hasattr(window.var_bar, "txt_user"))
+        self.assertTrue(hasattr(window.var_bar, "txt_pass"))
+        self.assertTrue(hasattr(window.var_bar, "btn_toggle_pass"))
+
+        # Password initially in Password mode
+        self.assertEqual(window.var_bar.txt_pass.echoMode(), QLineEdit.EchoMode.Password)
+
+        # Click eye button -> toggles to Normal
+        window.var_bar.btn_toggle_pass.click()
+        self.assertEqual(window.var_bar.txt_pass.echoMode(), QLineEdit.EchoMode.Normal)
+
+        # Click again -> toggles back to Password
+        window.var_bar.btn_toggle_pass.click()
+        self.assertEqual(window.var_bar.txt_pass.echoMode(), QLineEdit.EchoMode.Password)
+
+        # Test set_variables and get_variables
+        test_vars = {
+            "target_ip": "192.168.1.10",
+            "attacker_ip": "192.168.1.5",
+            "port": "8000",
+            "username": "pentester",
+            "password": "SuperSecretPassword123"
+        }
+        window.var_bar.set_variables(test_vars)
+        retrieved = window.var_bar.get_variables()
+        self.assertEqual(retrieved["username"], "pentester")
+        self.assertEqual(retrieved["password"], "SuperSecretPassword123")
+
+        window.close()
+
 if __name__ == "__main__":
     unittest.main()
