@@ -399,5 +399,55 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_search_fuzzy_and_result_capping(self):
+        """Verifies that typing with typos finds matches and caps results at top 25 with expander."""
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager
+        )
+
+        # 1. Typo Search: 'nmp' finds nmap (and snmp)
+        window.search_bar.txt_search.setText("nmp")
+        window.search_bar._emit_search_changed()
+
+        self.assertGreater(len(window.cards), 0)
+        found_nmap = any("nmap" in (c.snippet["title"] + c.snippet["template"]).lower() for c in window.cards if hasattr(c, "snippet"))
+        self.assertTrue(found_nmap)
+
+        # Exact Tool Search: 'nmap' puts nmap at the top
+        window.search_bar.txt_search.setText("nmap")
+        window.search_bar._emit_search_changed()
+        self.assertGreater(len(window.cards), 0)
+        first_card = window.cards[0]
+        self.assertIn("nmap", first_card.snippet["title"].lower() + first_card.snippet["template"].lower())
+
+        # 2. Broad search with > 25 matches triggers capping
+        window.search_bar.txt_search.setText("e")
+        window.search_bar._emit_search_changed()
+
+        matching_total = len(snippet_manager.get_snippets(search_query="e"))
+        if matching_total > 25:
+            # 25 SnippetCards + 1 Expander Button = 26 widgets in cards
+            self.assertEqual(len(window.cards), 26)
+            expander_btn = window.cards[-1]
+            from PyQt6.QtWidgets import QPushButton
+            self.assertIsInstance(expander_btn, QPushButton)
+            self.assertIn("Weitere", expander_btn.text())
+
+            # Click expander -> now all matching items are rendered
+            expander_btn.click()
+            self.assertEqual(len(window.cards), matching_total)
+
+        window.close()
+
 if __name__ == "__main__":
     unittest.main()

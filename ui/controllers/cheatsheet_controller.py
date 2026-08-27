@@ -40,9 +40,12 @@ class CheatsheetController(QObject):
         self.btn_more: Optional[QPushButton] = None
         self._more_menu: Optional[QMenu] = None
         self._overflow_cat_ids: List[str] = []
+        self._search_expanded: bool = False
+        self._last_query: str = ""
 
     def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
+        self._search_expanded = False
         
         # Update primary pill styles
         for cid, btn in self.filter_buttons.items():
@@ -171,14 +174,23 @@ class CheatsheetController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
     ) -> List[QWidget]:
-        snippets = self.snippet_manager.get_snippets(
+        # Reset expand state if search query changed
+        if search_query != self._last_query:
+            self._search_expanded = False
+            self._last_query = search_query
+
+        all_matching = self.snippet_manager.get_snippets(
             category_id=self.current_category_id,
             search_query=search_query
         )
 
-        if not snippets:
+        if not all_matching:
             show_empty_state_fn("Keine Befehle gefunden. Drücke Ctrl+N zum Hinzufügen.")
             return []
+
+        # When searching, cap at top 25 unless expanded
+        is_capped = bool(search_query.strip()) and not self._search_expanded and len(all_matching) > 25
+        snippets = all_matching[:25] if is_capped else all_matching
 
         rendered_cards: List[QWidget] = []
         for s in snippets:
@@ -187,6 +199,35 @@ class CheatsheetController(QObject):
             card.favorite_toggled.connect(self._on_favorite_toggled)
             content_layout.addWidget(card)
             rendered_cards.append(card)
+
+        # If capped, render expander button
+        if is_capped:
+            remaining = len(all_matching) - len(snippets)
+            btn_expand = QPushButton(f"▾ Weitere {remaining} Treffer anzeigen (Insgesamt {len(all_matching)})")
+            btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_expand.setStyleSheet("""
+                QPushButton {
+                    background: rgba(0, 229, 255, 0.08);
+                    border: 1px dashed rgba(0, 229, 255, 0.35);
+                    border-radius: 6px;
+                    color: #00e5ff;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 8px;
+                    margin: 8px 4px 12px 4px;
+                }
+                QPushButton:hover {
+                    background: rgba(0, 229, 255, 0.18);
+                    border: 1px solid #00e5ff;
+                }
+            """)
+            def _expand():
+                self._search_expanded = True
+                self.snippets_updated.emit()
+
+            btn_expand.clicked.connect(_expand)
+            content_layout.addWidget(btn_expand)
+            rendered_cards.append(btn_expand)
 
         return rendered_cards
 
