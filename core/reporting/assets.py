@@ -11,7 +11,30 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-MAX_EMBED_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB
+MAX_EMBED_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB per image
+MAX_EMBEDDED_IMAGES: int = 25
+MAX_TOTAL_IMAGE_BYTES: int = 50 * 1024 * 1024  # 50 MB total session budget
+
+
+class ImageEmbeddingBudget:
+    """Tracks and enforces global image count and memory limits during HTML export."""
+
+    def __init__(self, max_images: int = MAX_EMBEDDED_IMAGES, max_total_bytes: int = MAX_TOTAL_IMAGE_BYTES):
+        self.max_images = max_images
+        self.max_total_bytes = max_total_bytes
+        self.embedded_count: int = 0
+        self.embedded_bytes: int = 0
+
+    def can_embed(self, file_size: int) -> bool:
+        if self.embedded_count >= self.max_images:
+            return False
+        if self.embedded_bytes + file_size > self.max_total_bytes:
+            return False
+        return True
+
+    def record(self, file_size: int) -> None:
+        self.embedded_count += 1
+        self.embedded_bytes += file_size
 
 REPORT_CSS = """
 :root {

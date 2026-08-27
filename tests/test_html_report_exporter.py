@@ -132,6 +132,34 @@ curl -i http://10.10.10.10/admin
         self.assertIn('href="https://example.com/docs"', html_safe)
         self.assertIn('href="mailto:test@example.com"', html_safe)
 
+    def test_protocol_relative_urls_blocked(self):
+        """Finding 11: Protocol-relative URLs must be blocked in both links and images."""
+        md_link_pr = '[Evil](//attacker.com/evil.js)'
+        html_out_link = HtmlReportExporter.markdown_to_html(md_link_pr, project_dir=self.proj_dir)
+        self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
+
+        md_img_pr = '![Evil](//attacker.com/evil.png)'
+        html_out_img = HtmlReportExporter.markdown_to_html(md_img_pr, project_dir=self.proj_dir)
+        self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
+
+    def test_image_embedding_budget_limit(self):
+        """Finding 10: Image embedding must obey global session budget limits."""
+        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa75\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82'
+        
+        # Create 30 small images
+        md_lines = []
+        for i in range(30):
+            img_p = self.loot_dir / f"snip_{i}.png"
+            img_p.write_bytes(png_bytes)
+            md_lines.append(f"![Snip {i}](snip_{i}.png)")
+
+        md_text = "\n\n".join(md_lines)
+        html_out = HtmlReportExporter.markdown_to_html(md_text, project_dir=self.proj_dir)
+
+        # 25 images embedded, 5 exceeded budget
+        self.assertEqual(html_out.count("data:image/png;base64,"), 25)
+        self.assertIn("[Embedded image limit reached:", html_out)
+
 
 if __name__ == "__main__":
     unittest.main()

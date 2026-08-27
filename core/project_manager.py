@@ -15,6 +15,11 @@ class ProjectExistsError(ValueError):
     pass
 
 
+class InvalidProjectNameError(ValueError):
+    """Raised when a project name is empty, contains only invalid characters, or matches Windows reserved names."""
+    pass
+
+
 class ProjectCreationError(RuntimeError):
     """Raised when project workspace creation fails transactionally."""
     pass
@@ -117,25 +122,46 @@ class ProjectManager:
             logger.error(f"Failed to save projects registry to {self.registry_file}: {e}", exc_info=True)
             raise PersistenceError(f"Failed to save projects registry to {self.registry_file}: {e}") from e
 
-    def _sanitize_name(self, name: str) -> str:
+    def validate_project_name(self, name: str) -> str:
         """
-        Sanitizes project name to safe folder characters, strictly preventing
-        directory traversal (e.g., '.', '..', '../foo').
+        Validates and sanitizes a project name.
+        Raises InvalidProjectNameError if the name is empty, contains traversal tokens,
+        contains only invalid characters, or matches Windows reserved device names.
         """
-        if not name:
-            return "Default"
+        if not name or not str(name).strip():
+            raise InvalidProjectNameError("Project name cannot be empty or whitespace only.")
+
+        raw = str(name).strip()
+        
+        # Path separators, traversal sequences, or control characters are strictly invalid
+        if "/" in raw or "\\" in raw or ".." in raw or re.search(r'[\x00-\x1f\x7f-\x9f]', raw):
+            raise InvalidProjectNameError(f"Project name '{name}' contains forbidden characters or sequences.")
+
+        from core.validators import is_windows_reserved_name
+        if is_windows_reserved_name(raw):
+            raise InvalidProjectNameError(f"Project name '{name}' is a Windows reserved device name.")
 
         # Replace invalid path characters with underscore (collapsing consecutive invalid chars)
-        clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', str(name).strip())
-
-        # Strip leading and trailing dots and underscores to prevent hidden/special traversal dirs
+        clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', raw)
         clean = clean.strip("._")
 
-        # Explicitly check against dangerous names or invalid formats
         if not clean or clean in {".", ".."} or not re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$', clean):
-            return "Default"
+            raise InvalidProjectNameError(f"Project name '{name}' contains no valid identifier characters.")
+
+        if is_windows_reserved_name(clean):
+            raise InvalidProjectNameError(f"Project name '{name}' resolves to a Windows reserved device name.")
 
         return clean
+
+    def _sanitize_name(self, name: str, fallback: str = "Default") -> str:
+        """
+        Safe sanitization helper for internal lookups.
+        Falls back to fallback value if name is invalid.
+        """
+        try:
+            return self.validate_project_name(name)
+        except InvalidProjectNameError:
+            return fallback
 
     def _ensure_default_project(self) -> None:
         """Ensures a Default project exists and is registered."""
@@ -264,7 +290,7 @@ class ProjectManager:
         Enforces strict boundary checks against symlink and directory traversal escapes.
         Rejects creation if a project with the sanitized name already exists.
         """
-        clean_name = self._sanitize_name(name)
+        clean_name = self.validate_project_name(name)
         target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
         
         # Boundary & symlink escape validation
@@ -274,9 +300,10 @@ class ProjectManager:
         if not resolved_proj.is_relative_to(target_base) or resolved_proj == target_base:
             logger.error(
                 f"Workspace escape attempt / symlink traversal detected for project {name!r}: "
-                f"resolved to {resolved_proj}, which is outside target base {target_base}. "
-                "Rejecting creation and falling back to Default inside workspace."
+                f"resolved to {resolved_proj}, which is outside target base {target_base}."
             )
+            raise InvalidProjectNameError(f"Project path traversal escape detected for name: {name}")
+
         proj_dir = resolved_proj
         if not allow_existing and clean_name != "Default":
             if clean_name in self.list_projects() or proj_dir.exists():
@@ -354,9 +381,12 @@ class ProjectManager:
         target_path = Path(folder_path).resolve()
         if not target_path.exists() or not target_path.is_dir():
             logger.warning(f"Cannot import non-existing or non-directory project folder: {folder_path}")
+        try:
+            clean_name = self.validate_project_name(target_path.name)
+        except InvalidProjectNameError as e:
+            logger.warning(f"Cannot import project with invalid directory name {target_path.name}: {e}")
             return None
 
-        clean_name = self._sanitize_name(target_path.name)
         if clean_name in self.registry and self.registry[clean_name] != str(target_path):
             existing_loc = Path(self.registry[clean_name])
             if existing_loc.exists() and existing_loc.is_dir():

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Optional, List
 
-from core.reporting.assets import encode_image_base64
+from core.reporting.assets import encode_image_base64, ImageEmbeddingBudget
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +16,8 @@ logger = get_logger(__name__)
 def sanitize_url(url: str, is_image: bool = False) -> str:
     """
     Sanitizes URLs for href or src attributes.
-    Blocks 'javascript:', 'vbscript:', 'data:' (non-image), and unapproved schemes to prevent XSS.
+    Blocks 'javascript:', 'vbscript:', 'data:' (non-image), unapproved schemes,
+    and protocol-relative URLs ('//...', '\\\\...') to prevent XSS and SSRF.
     """
     clean = url.strip()
     lower = clean.lower()
@@ -27,6 +28,10 @@ def sanitize_url(url: str, is_image: bool = False) -> str:
     # Explicitly block dangerous script URI schemes
     if lower_no_spaces.startswith(("javascript:", "vbscript:", "livescript:")):
         return "#unsafe-scheme-blocked"
+
+    # Explicitly block protocol-relative URLs
+    if lower_no_spaces.startswith(("//", "\\\\")):
+        return "#unsafe-protocol-relative-blocked"
 
     if is_image:
         # Images: allow http, https, approved data:image/ mime types, and safe relative paths
@@ -52,12 +57,13 @@ def sanitize_url(url: str, is_image: bool = False) -> str:
         return html.escape(clean, quote=True)
 
 
-def resolve_and_embed_images(md_text: str, project_dir: Optional[Path]) -> str:
-    """Finds all ![alt](src) in markdown and embeds local images as base64 data URIs."""
+def resolve_and_embed_images(md_text: str, project_dir: Optional[Path], budget: Optional[ImageEmbeddingBudget] = None) -> str:
+    """Finds all ![alt](src) in markdown and embeds local images as base64 data URIs within limits."""
     if not project_dir:
         return md_text
 
     proj_resolved = project_dir.resolve()
+    active_budget = budget or ImageEmbeddingBudget()
 
     def _replace_img(match: re.Match) -> str:
         alt_text = match.group(1)
@@ -85,8 +91,17 @@ def resolve_and_embed_images(md_text: str, project_dir: Optional[Path]) -> str:
             try:
                 cand_resolved = candidate.resolve()
                 if cand_resolved.is_relative_to(proj_resolved) and cand_resolved.exists() and cand_resolved.is_file():
+                    file_size = cand_resolved.stat().st_size
+                    if not active_budget.can_embed(file_size):
+                        logger.warning(
+                            f"Image embedding budget exceeded (embedded={active_budget.embedded_count}/{active_budget.max_images} imgs, "
+                            f"bytes={active_budget.embedded_bytes}/{active_budget.max_total_bytes} bytes). Skipping {cand_resolved.name}"
+                        )
+                        return f"*[Embedded image limit reached: {alt_text or cand_resolved.name}]*"
+                    
                     b64_uri = encode_image_base64(cand_resolved)
                     if b64_uri:
+                        active_budget.record(file_size)
                         return f"![{alt_text}]({b64_uri})"
             except (OSError, RuntimeError):
                 continue

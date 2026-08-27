@@ -63,9 +63,10 @@ class BoxArchiver:
 
         file_count = 0
         total_raw_bytes = 0
+        tmp_zip = output_zip.with_name(f".{output_zip.name}.{os.getpid()}.{datetime.now().strftime('%f')}.tmp")
 
         try:
-            with zipfile.ZipFile(output_zip, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            with zipfile.ZipFile(tmp_zip, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
                 for root, dirs, files in os.walk(proj_path):
                     root_path = Path(root).resolve()
                     # Security: Disallow symlink escapes outside project_dir
@@ -80,8 +81,8 @@ class BoxArchiver:
                             continue
 
                         file_path = root_path / filename
-                        # Skip the output zip file itself if located inside project_dir
-                        if file_path == output_zip:
+                        # Skip the output zip file itself or temp files
+                        if file_path in (output_zip, tmp_zip):
                             continue
 
                         if file_path.is_file() and not file_path.is_symlink():
@@ -91,6 +92,8 @@ class BoxArchiver:
                             file_count += 1
                             total_raw_bytes += file_path.stat().st_size
 
+            # Atomically replace destination with completed tmp archive
+            os.replace(tmp_zip, output_zip)
             compressed_size = output_zip.stat().st_size if output_zip.exists() else 0
             logger.info(f"Successfully archived project {proj_path.name} to {output_zip} ({file_count} files, {compressed_size} bytes)")
             return {
@@ -103,6 +106,11 @@ class BoxArchiver:
             }
         except Exception as e:
             logger.error(f"Failed to archive project {proj_path.name} to {output_zip}: {e}", exc_info=True)
+            if tmp_zip.exists():
+                try:
+                    tmp_zip.unlink()
+                except OSError:
+                    pass
             return {
                 "success": False,
                 "zip_path": output_zip,

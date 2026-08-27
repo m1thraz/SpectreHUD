@@ -247,7 +247,10 @@ class ReportEditorTab(QWidget):
         layout.addWidget(splitter, stretch=1)
 
         # Strg+Umschalt+S zum Speichern, unabhängig vom Fokus innerhalb des Tabs
-        QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
+        sc_save = QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save)
+        sc_save.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        sc_save_shift = QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
+        sc_save_shift.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     # ------------------------------------------------------------------ #
     # Projekt-Wechsel / Laden

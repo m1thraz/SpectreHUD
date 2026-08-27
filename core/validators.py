@@ -30,6 +30,22 @@ MAX_TARGET_IP_LENGTH: int = 128
 MAX_TIMESTAMP_LENGTH: int = 64
 MAX_PROJECT_NAME_LENGTH: int = 128
 
+# Windows reserved device names (case-insensitive, including stem checks like CON.txt)
+WINDOWS_RESERVED_DEVICE_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+}
+
+
+def is_windows_reserved_name(name: str) -> bool:
+    """Checks if a name or its stem matches Windows reserved device names."""
+    if not name:
+        return False
+    clean = str(name).strip()
+    stem = clean.split(".")[0].strip().upper()
+    return stem in WINDOWS_RESERVED_DEVICE_NAMES or clean.upper() in WINDOWS_RESERVED_DEVICE_NAMES
+
 
 def is_file_size_valid(file_path, max_bytes: int) -> bool:
     """

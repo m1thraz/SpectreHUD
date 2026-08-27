@@ -64,15 +64,41 @@ class TestProjectManager(unittest.TestCase):
         self.assertEqual(self.pm.get_active_project(), "Default")
 
     def test_path_traversal_prevention_double_dot(self):
-        """Invariant: Project name '..' must NEVER escape base projects directory."""
-        proj_dir = self.pm.create_project("..")
-        self.assertTrue(proj_dir.resolve().is_relative_to(self.base_dir.resolve()))
-        self.assertEqual(proj_dir.name, "Default")
+        """Finding 15: Project name '..' must raise InvalidProjectNameError and NEVER escape base directory."""
+        from core.project_manager import InvalidProjectNameError
+        with self.assertRaises(InvalidProjectNameError):
+            self.pm.create_project("..")
 
         # Verify nothing was created outside base_dir
         parent_items = list(self.base_dir.parent.iterdir())
         self.assertNotIn("recon", [p.name for p in parent_items if p.is_dir()])
         self.assertNotIn("exploit", [p.name for p in parent_items if p.is_dir()])
+
+    def test_windows_reserved_names_and_invalid_identifiers(self):
+        """Findings 15 & 16: Windows reserved names and invalid project names must be rejected."""
+        from core.project_manager import InvalidProjectNameError
+        invalid_names = [
+            "",
+            "   ",
+            "...",
+            "CON",
+            "con.txt",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM9",
+            "LPT1",
+            "LPT9",
+            "../secret",
+            "..\\evil",
+            "../../../../etc"
+        ]
+
+        for name in invalid_names:
+            with self.subTest(name=name):
+                with self.assertRaises(InvalidProjectNameError):
+                    self.pm.create_project(name)
 
     def test_path_traversal_prevention_nested_traversal(self):
         """Invariant: Traversal payloads ('../foo', '....', '..\\..\\') must remain sandboxed."""

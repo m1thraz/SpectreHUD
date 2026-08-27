@@ -49,20 +49,25 @@ class ReportFileManager:
         path = self.get_report_path(project_name)
         return path.exists() and path.is_file()
 
-    def load(self, project_name: Optional[str] = None) -> str:
-        """Lädt den Inhalt der report.md. Gibt leeren String zurück, falls nicht vorhanden."""
+    def _read_report_checked(self, path: Path) -> Optional[str]:
+        """Reads text from path with strict size limit verification and exception handling."""
         from core.validators import is_file_size_valid, MAX_REPORT_FILE_SIZE
-        path = self.get_report_path(project_name)
-        if not path.exists():
-            return ""
+        if not path.exists() or not path.is_file():
+            return None
         if not is_file_size_valid(path, MAX_REPORT_FILE_SIZE):
             logger.error(f"Report file {path} exceeds maximum size limit of {MAX_REPORT_FILE_SIZE} bytes. Rejecting oversized file.")
-            return ""
+            return None
         try:
             return path.read_text(encoding="utf-8")
         except OSError as e:
-            logger.error(f"Fehler beim Laden von {path}: {e}", exc_info=True)
-            return ""
+            logger.error(f"Error reading report file {path}: {e}", exc_info=True)
+            return None
+
+    def load(self, project_name: Optional[str] = None) -> str:
+        """Lädt den Inhalt der report.md. Gibt leeren String zurück, falls nicht vorhanden oder ungültig."""
+        path = self.get_report_path(project_name)
+        content = self._read_report_checked(path)
+        return content if content is not None else ""
 
     def save(self, content: str, project_name: Optional[str] = None) -> bool:
         """Speichert den Inhalt atomar in die report.md des Projekts."""
@@ -75,30 +80,26 @@ class ReportFileManager:
             return False
 
     def backup(self, project_name: Optional[str] = None) -> bool:
-        """Kopiert report.md atomar zu report.md.bak, falls report.md existiert."""
+        """Kopiert report.md atomar zu report.md.bak, falls report.md existiert und Größenlimits einhält."""
         from core.atomic_write import atomic_write_text
         report_path = self.get_report_path(project_name)
         backup_path = self.get_backup_path(project_name)
-        if not report_path.exists():
+        content = self._read_report_checked(report_path)
+        if content is None:
             return False
         try:
-            content = report_path.read_text(encoding="utf-8")
             return atomic_write_text(backup_path, content, encoding="utf-8")
         except OSError as e:
             logger.error(f"Fehler beim Erstellen des Backups {backup_path}: {e}", exc_info=True)
             return False
 
     def restore_backup(self, project_name: Optional[str] = None) -> bool:
-        """Stellt report.md aus report.md.bak wieder her, falls das Backup existiert."""
+        """Stellt report.md aus report.md.bak wieder her, falls das Backup existiert und Größenlimits einhält."""
         backup_path = self.get_backup_path(project_name)
-        if not backup_path.exists():
+        content = self._read_report_checked(backup_path)
+        if content is None:
             return False
-        try:
-            content = backup_path.read_text(encoding="utf-8")
-            return self.save(content, project_name)
-        except OSError as e:
-            logger.error(f"Fehler beim Wiederherstellen des Backups {backup_path}: {e}", exc_info=True)
-            return False
+        return self.save(content, project_name)
 
     def regenerate(self, loot_manager, clipboard_watcher, project_name: Optional[str] = None) -> str:
         """

@@ -79,9 +79,13 @@ class TestAdversarialRegressions(unittest.TestCase):
         ]
 
         resolved_base = self.projects_dir.resolve()
+        from core.project_manager import InvalidProjectNameError
 
         for bad_name in malicious_names:
-            proj_dir = self.project_mgr.create_project(bad_name, allow_existing=True)
+            with self.assertRaises(InvalidProjectNameError):
+                self.project_mgr.create_project(bad_name, allow_existing=True)
+
+            proj_dir = self.project_mgr.get_project_dir(bad_name)
             resolved_proj = proj_dir.resolve()
 
             # Boundary Invariant: Must be strictly inside projects_dir
@@ -503,7 +507,7 @@ class TestAdversarialRegressions(unittest.TestCase):
         Adversarial: Creating 'hack box' and then 'hack_box' must not silently merge
         workspaces or overwrite state. The second creation must be rejected with ProjectExistsError.
         """
-        from core.project_manager import ProjectExistsError
+        from core.project_manager import ProjectExistsError, InvalidProjectNameError
 
         # Create original project with spaces
         dir1 = self.project_mgr.create_project("hack box", target_ip="10.10.10.50")
@@ -521,7 +525,7 @@ class TestAdversarialRegressions(unittest.TestCase):
         with self.assertRaises(ProjectExistsError):
             self.project_mgr.create_project("hack   box")
 
-        with self.assertRaises(ProjectExistsError):
+        with self.assertRaises((ProjectExistsError, InvalidProjectNameError)):
             self.project_mgr.create_project("hack/box")
 
         # Verify original files were NOT overwritten
