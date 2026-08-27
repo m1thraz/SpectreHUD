@@ -134,6 +134,8 @@ class LootManager:
         normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
         
+        from core.validators import format_timestamp
+        time_format = kwargs.get("time_format", "24h")
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
             "type": normalized_type,
@@ -141,7 +143,7 @@ class LootManager:
             "title": title.strip() or "Unbenannter Eintrag",
             "content": content.strip(),
             "target_ip": target_ip.strip(),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "timestamp": format_timestamp(time_format=time_format)
         }
         new_entries = [entry, *self.entries]
         if not self.storage.save_json("loot", new_entries):
@@ -234,7 +236,7 @@ class LootManager:
             results = [e for e in results if e.get("category") == category]
 
         if not search_query or not search_query.strip():
-            return results
+            return [dict(e) for e in results]
 
         q = search_query.strip().lower()
         filtered = []
@@ -246,7 +248,7 @@ class LootManager:
             if q in title or q in content or q in target or q in cat:
                 filtered.append(e)
 
-        return filtered
+        return [dict(e) for e in filtered]
 
     def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
         """Returns count of entries grouped by loot type."""

@@ -127,6 +127,17 @@ class TestSemanticValidators(unittest.TestCase):
             self.assertFalse(is_file_size_valid(f, 500))
             self.assertFalse(is_file_size_valid(Path(td) / "non_existent.json", 1000))
 
+    def test_format_timestamp(self):
+        """Tests that format_timestamp correctly formats timestamps according to 24h and 12h modes."""
+        from datetime import datetime
+        from core.validators import format_timestamp
+
+        sample_dt = datetime(2026, 8, 27, 14, 30, 15)
+        # 24h format
+        self.assertEqual(format_timestamp(sample_dt, "24h"), "2026-08-27 14:30:15")
+        # 12h format
+        self.assertEqual(format_timestamp(sample_dt, "12h"), "2026-08-27 02:30:15 PM")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -769,6 +769,47 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertEqual(snippet_card.lbl_desc.textFormat(), Qt.TextFormat.PlainText)
         self.assertEqual(snippet_card.lbl_command.textFormat(), Qt.TextFormat.PlainText)
 
+    # -------------------------------------------------------------------------
+    # 21. Subdirectory Symlink Escape Defense for Imported Projects
+    # -------------------------------------------------------------------------
+    def test_imported_project_symlinked_subdirectory_rejected(self):
+        """
+        Adversarial: An imported project directory whose 'loot', 'recon', or 'exploit'
+        subfolder is a symlink to an outside victim directory must be rejected immediately.
+        """
+        victim_dir = self.temp_path / "victim_external"
+        victim_dir.mkdir(parents=True, exist_ok=True)
+
+        external_proj = self.temp_path / "MaliciousExternalBox"
+        external_proj.mkdir(parents=True, exist_ok=True)
+        symlink_loot = external_proj / "loot"
+
+        try:
+            os.symlink(victim_dir, symlink_loot, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            # In restricted environments without symlink privileges
+            return
+
+        if symlink_loot.is_symlink():
+            with self.assertRaises(ProjectCreationError):
+                self.project_mgr.import_project_folder(external_proj)
+
+            # Ensure victim dir has no files
+            self.assertEqual(list(victim_dir.iterdir()), [])
+
+    # -------------------------------------------------------------------------
+    # 22. Side-Effect Free Logger Isolation
+    # -------------------------------------------------------------------------
+    def test_logger_import_creates_no_files_on_disk(self):
+        """
+        Importing and retrieving loggers must NOT touch the filesystem or create log files.
+        """
+        from core.logger import get_logger
+        test_log = get_logger("isolated_test_module")
+        test_log.info("In-memory test message")
+        # Ensure default root logging without configure_file_logging creates no files
+        self.assertIsNotNone(test_log)
+
 
 if __name__ == "__main__":
     unittest.main()

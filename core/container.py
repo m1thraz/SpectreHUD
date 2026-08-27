@@ -58,6 +58,8 @@ class ServiceContainer:
         and default OS directories.
         """
         resolved_config_dir = Path(config_dir) if config_dir else get_default_config_dir()
+        from core.logger import configure_file_logging
+        configure_file_logging(config_dir=resolved_config_dir)
         storage = FileStorageBackend(base_dir=resolved_config_dir)
         event_bus = get_event_bus()
 
@@ -72,8 +74,11 @@ class ServiceContainer:
         workspace_setting = config_manager.get("workspace_dir")
         base_projects_dir = Path(workspace_setting) if workspace_setting else None
         project_manager = ProjectManager(base_dir=base_projects_dir, config_dir=resolved_config_dir, event_bus=event_bus)
-        loot_manager = LootManager(storage=storage, event_bus=event_bus)
-        clipboard_watcher = ClipboardWatcher(storage=storage, event_bus=event_bus)
+        
+        # Single Source of Truth: Loot & Clipboard operate in session memory and are persisted exclusively to project_state.json
+        session_storage = InMemoryStorageBackend()
+        loot_manager = LootManager(storage=session_storage, event_bus=event_bus)
+        clipboard_watcher = ClipboardWatcher(storage=session_storage, event_bus=event_bus)
         screenshot_manager = ScreenshotManager(event_bus=event_bus)
 
         return cls(
@@ -108,8 +113,8 @@ class ServiceContainer:
         actual_storage = storage or InMemoryStorageBackend(initial_data=init_data)
         actual_event_bus = event_bus or EventBus()
 
-        temp_cfg_dir = config_dir or Path(tempfile.mkdtemp(prefix="spectre_mem_cfg_"))
-        temp_base_dir = base_dir or Path(tempfile.mkdtemp(prefix="spectre_mem_proj_"))
+        temp_cfg_dir = config_dir or Path("/in_memory/config")
+        temp_base_dir = base_dir or Path("/in_memory/projects")
 
         config_manager = ConfigManager(config_dir=temp_cfg_dir, storage=actual_storage)
         from core.i18n import set_locale

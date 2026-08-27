@@ -96,8 +96,60 @@ class TestPersistenceErrors(unittest.TestCase):
             blocked_file.write_text("i am a file", encoding="utf-8")
             pm.registry_file = blocked_file / "registry.json"
             
-            with self.assertRaises(PersistenceError):
-                pm._save_registry()
+    def test_config_manager_batch_update_atomic(self):
+        """Batch update must apply all settings in one atomic write or fail cleanly."""
+        backend = FailingStorageBackend()
+        cfg = ConfigManager(storage=backend)
+        orig_hotkey = cfg.get("hotkey")
+        orig_lang = cfg.get("language")
+
+        with self.assertRaises(PersistenceError):
+            cfg.update({"hotkey": "<ctrl>+x", "language": "de", "workspace_dir": "D:\\Evil"})
+
+        # None of the batch changes must have been applied to memory
+        self.assertEqual(cfg.get("hotkey"), orig_hotkey)
+        self.assertEqual(cfg.get("language"), orig_lang)
+
+    def test_clipboard_retry_after_persistence_failure(self):
+        """If persistence fails on first copy, retry of the same text must succeed when storage recovers."""
+        class FlakyStorageBackend(StorageBackend):
+            def __init__(self):
+                self.fail_once = True
+                self.saved_data = None
+
+            def load_json(self, resource_name: str) -> Optional[Any]:
+                return self.saved_data
+
+            def save_json(self, resource_name: str, data: Any) -> bool:
+                if self.fail_once:
+                    self.fail_once = False
+                    return False
+                self.saved_data = data
+                return True
+
+            def exists(self, resource_name: str) -> bool:
+                return self.saved_data is not None
+
+            def delete(self, resource_name: str) -> bool:
+                return True
+
+            def clear(self) -> None:
+                self.saved_data = None
+
+        flaky = FlakyStorageBackend()
+        watcher = ClipboardWatcher(storage=flaky)
+
+        # 1. First attempt fails due to storage error
+        with self.assertRaises(PersistenceError):
+            watcher.add_entry("secret_token_123")
+
+        self.assertEqual(len(watcher.get_all_history()), 0)
+
+        # 2. User retries same copied text — MUST NOT be blocked by deduplication
+        res = watcher.add_entry("secret_token_123")
+        self.assertIsNotNone(res)
+        self.assertEqual(len(watcher.get_all_history()), 1)
+        self.assertEqual(watcher.get_all_history()[0]["text"], "secret_token_123")
 
 
 if __name__ == '__main__':

@@ -14,6 +14,8 @@ class TestLogger(unittest.TestCase):
 
     def tearDown(self):
         import gc
+        from core.logger import close_log_handlers
+        close_log_handlers()
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
         os.environ.pop("SPECTRE_LOG_LEVEL", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", "test_rotator", ""]:
@@ -69,15 +71,16 @@ class TestLogger(unittest.TestCase):
 
     def test_rotating_file_handler_limits_log_file_size(self):
         """Tests that RotatingFileHandler properly rolls over files once max_bytes is reached."""
-        test_logger = setup_logger("test_rotator", max_bytes=500, backup_count=2)
+        from core.logger import configure_file_logging
+        configure_file_logging(config_dir=self.temp_path, max_bytes=500, backup_count=2)
+        test_logger = get_logger("test_rotator")
         
         # Emit logs to trigger rotation (> 500 bytes)
         for i in range(20):
             test_logger.info(f"Log message line {i} to exceed max_bytes and force rollover")
 
         # Flush handlers
-        for handler in test_logger.handlers:
-            handler.flush()
+        flush_logs()
 
         log_dir = self.temp_path
         log_files = list(log_dir.glob("spectrehud.log*"))

@@ -86,34 +86,37 @@ graph TD
 
 ## 3. Security & Resilience Architecture
 
-1. **Path Traversal Protection**:
+1. **Path Traversal & Symlink Escape Protection**:
    - `core/validators.py` sanitizes project names, output paths, and snippet titles, preventing directory traversal outside project sandboxes.
+   - `core/project/repository.py` validates workspace boundaries for both created and imported projects, actively rejecting pre-existing symlinked subdirectories (`recon/`, `exploit/`, `loot/`).
 2. **File Size Guards & Memory Bomb Prevention**:
    - Maximum file size thresholds on all JSON imports, registries, notes, and screenshots (`MAX_SNIPPETS_FILE_SIZE`, `MAX_REGISTRY_FILE_SIZE`, `MAX_IMAGE_FILE_SIZE`).
 3. **Atomic File Persistence**:
    - `core/atomic_write.py` ensures power-loss and crash resilience by writing to unique temp files before atomically replacing target JSON/markdown files.
-4. **Structured & Rotating Logging (`core/logger.py`)**:
-   - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation.
+4. **Single Source of Truth for Session Data**:
+   - `project_state.json` inside each project folder is the sole source of truth for loot, variables, and clipboard history.
+   - `LootManager` and `ClipboardWatcher` operate as session buffers in RAM, avoiding redundant and conflicting global storage files.
+5. **Code Fence XSS Immunity**:
+   - Markdown exporter strictly sanitizes and HTML-escapes code-fence language specifiers to prevent attribute injection and script execution.
+6. **Structured & Rotating Logging (`core/logger.py`)**:
+   - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
 
 ---
 
-## 4. Testing & CI/CD Strategy
+## 4. Multi-Location Workspace & Registry Semantics
+
+- **Default Workspace (`workspace_dir`)**: Configures the base directory where newly created CTF box projects are stored by default.
+- **Multi-Location Registry (`projects_registry.json`)**: Allows projects to reside across multiple locations (e.g. secondary drives, mounted network shares, imported folders) without moving them into the default workspace. Changing `workspace_dir` in Settings updates the default path for future boxes while preserving existing registered project locations.
+
+---
+
+## 5. Testing & CI/CD Strategy
 
 - **Master Test Runner (`run_tests.py`)**:
-  - Automatically discovers all 33 test suites across `tests/`.
+  - Automatically discovers and executes all 36 test suites across `tests/`.
   - Runs in headless mode (`QT_QPA_PLATFORM=offscreen`).
-- **GitHub Actions CI (`.github/workflows/tests.yml`)**:
+- **GitHub Actions CI (`.github/workflows/ci.yml`)**:
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.
-  - Python matrix: `3.10`, `3.11`, `3.12`.
+  - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.
   - Linux headless display setup using `xvfb-run`.
   - Automated `flake8` syntax validation and `coverage` reporting.
-
----
-
-## 5. Technical Debt & Future Roadmap
-
-| Priority | Area | Description | Recommended Solution |
-|---|---|---|---|
-| **Prio D** | **i18n Localization** | English/German translations missing in some secondary dialogs and empty state banners. | Audit all UI text strings against `core/i18n.py` language dictionaries. |
-| **Prio E** | **Async Workers** | Heavy regex filtering or bulk project exports run on the main Qt GUI thread. | Offload long-running operations to `QThreadPool` / `QRunnable`. |
-| **Prio E** | **Plugin Architecture** | Cheatsheet snippets and tools are currently bundled in JSON files. | Introduce a lightweight plugin interface for custom tool integrators. |

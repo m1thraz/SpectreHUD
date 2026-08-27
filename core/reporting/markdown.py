@@ -222,7 +222,9 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
             if in_code_block:
                 raw_code = "\n".join(code_block_lines)
                 escaped_code = html.escape(raw_code)
-                lang_class = f' class="language-{code_block_lang}"' if code_block_lang else ""
+                safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", code_block_lang)
+                safe_lang = html.escape(safe_lang, quote=True)
+                lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
                 html_lines.append(f'<pre><code{lang_class}>{escaped_code}</code></pre>')
                 in_code_block = False
                 code_block_lines = []

@@ -98,19 +98,18 @@ class ClipboardWatcher(QObject):
         if self._last_copied_text == clean_text:
             return None
 
-        self._last_copied_text = clean_text
-
         lines_count = clean_text.count("\n") + 1
         char_count = len(clean_text)
 
         # Categorize entry (Command vs Output/Snippet)
         is_multiline = lines_count > 2 or char_count > 120
 
+        from core.validators import format_timestamp
         entry = {
             "id": f"clip_{uuid.uuid4().hex[:8]}",
             "text": clean_text,
             "target_ip": target_ip.strip(),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": format_timestamp(),
             "lines_count": lines_count,
             "char_count": char_count,
             "is_multiline": is_multiline
@@ -123,6 +122,7 @@ class ClipboardWatcher(QObject):
         if not self.storage.save_json("clipboard", new_history):
             raise PersistenceError("Could not persist clipboard entry to storage.")
         
+        self._last_copied_text = clean_text
         self.history = new_history
         self.entry_added.emit(entry)
         if self.event_bus:
@@ -198,7 +198,7 @@ class ClipboardWatcher(QObject):
             results = [e for e in results if e.get("is_multiline", False)]
 
         if not search_query or not search_query.strip():
-            return results
+            return [dict(e) for e in results]
 
         q = search_query.strip().lower()
         filtered = []
@@ -208,7 +208,7 @@ class ClipboardWatcher(QObject):
             if q in text or q in target:
                 filtered.append(e)
 
-        return filtered
+        return [dict(e) for e in filtered]
 
     def toggle_pause(self) -> bool:
         """Toggles logging pause state and emits signal."""

@@ -46,7 +46,8 @@ def create_initial_notes(
     created_at: Optional[str] = None
 ) -> str:
     """Renders initial notes.md markdown text for a new project."""
-    ts = created_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    from core.validators import format_timestamp
+    ts = created_at or format_timestamp()
     return DEFAULT_NOTES_TEMPLATE.format(
         project_name=project_name,
         target_ip=target_ip or "TBD",
@@ -64,7 +65,8 @@ def create_initial_state(
     created_at: Optional[str] = None
 ) -> Dict[str, Any]:
     """Generates initial dictionary structure for project_state.json."""
-    ts = created_at or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    from core.validators import format_timestamp
+    ts = created_at or format_timestamp()
     return {
         "name": project_name,
         "target_ip": target_ip or "10.10.10.10",

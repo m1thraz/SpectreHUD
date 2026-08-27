@@ -92,3 +92,13 @@ class ConfigManager:
         if not self.storage.save_json("config", new_data):
             raise PersistenceError(f"Could not persist config key '{key}' to storage.")
         self.data = new_data
+
+    def update(self, values: Dict[str, Any]) -> None:
+        """Batch updates multiple configuration values in a single atomic storage write."""
+        if not values:
+            return
+        new_data = dict(self.data)
+        new_data.update(values)
+        if not self.storage.save_json("config", new_data):
+            raise PersistenceError("Could not persist batch configuration update to storage.")
+        self.data = new_data

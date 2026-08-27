@@ -204,6 +204,10 @@ class SnippetManager:
             
         self.snippets.extend(user_snippets)
 
+        # Prune any orphaned favorite IDs that do not match loaded snippets
+        valid_ids = {s.get("id") for s in self.snippets if s.get("id")}
+        self.favorite_ids = {fid for fid in self.favorite_ids if fid in valid_ids}
+
     def save_user_snippets(self) -> None:
         """Persists custom user snippets to disk atomically."""
         from core.atomic_write import atomic_write_json
@@ -303,10 +307,11 @@ class SnippetManager:
         self.snippets.pop(target_idx)
         if snippet_id in self.favorite_ids:
             self.favorite_ids.remove(snippet_id)
+            from core.atomic_write import atomic_write_json
             try:
-                self.save_favorites()
-            except Exception:
-                pass
+                atomic_write_json(self.favorites_path, sorted(list(self.favorite_ids)), indent=2, ensure_ascii=False)
+            except Exception as e:
+                logger.warning(f"Could not persist favorites during snippet deletion: {e}")
         return True
 
     def search(self, query: str = "", category_id: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:

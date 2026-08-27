@@ -462,15 +462,13 @@ class SettingsDialog(BaseHudDialog):
             btn.style().polish(btn)
 
     def _on_save_settings(self) -> None:
-        """Collects all settings from modular pages and saves to config."""
+        """Collects all settings from modular pages and saves atomically to config."""
         all_settings: Dict[str, Any] = {}
         all_settings.update(self.page_hotkeys.get_settings())
         all_settings.update(self.page_language.get_settings())
         all_settings.update(self.page_general.get_settings())
 
-        for key, val in all_settings.items():
-            self.config.set(key, val)
-        self.config.save_config()
+        self.config.update(all_settings)
 
         if "language" in all_settings:
             from core.i18n import set_locale

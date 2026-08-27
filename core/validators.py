@@ -47,6 +47,17 @@ def is_windows_reserved_name(name: str) -> bool:
     return stem in WINDOWS_RESERVED_DEVICE_NAMES or clean.upper() in WINDOWS_RESERVED_DEVICE_NAMES
 
 
+def format_timestamp(dt: Optional[datetime] = None, time_format: str = "24h") -> str:
+    """
+    Formats a datetime object (or now) according to the configured time_format ('24h' or '12h').
+    """
+    if dt is None:
+        dt = datetime.now()
+    if str(time_format).strip().lower() == "12h":
+        return dt.strftime("%Y-%m-%d %I:%M:%S %p")
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
 def is_file_size_valid(file_path, max_bytes: int) -> bool:
     """
     Checks if a file exists and its size on disk is within max_bytes.

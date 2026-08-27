@@ -31,40 +31,28 @@ def _resolve_default_log_level() -> int:
     return _LEVEL_MAP.get(env_level, logging.INFO)
 
 
-def setup_logger(
-    name: str = "spectrehud", 
-    level: Optional[Union[int, str]] = None,
+_file_logging_configured = False
+
+
+def configure_file_logging(
+    config_dir: Optional[Path] = None,
     max_bytes: int = DEFAULT_MAX_LOG_BYTES,
     backup_count: int = DEFAULT_LOG_BACKUP_COUNT
-) -> logging.Logger:
-    """Configures and returns a structured, rotating file logger for SpectreHUD."""
-    logger = logging.getLogger(name)
-    resolved_level = (
-        _LEVEL_MAP.get(str(level).upper(), logging.INFO) if isinstance(level, str)
-        else (level if level is not None else _resolve_default_log_level())
-    )
-    
-    if logger.handlers:
-        logger.setLevel(resolved_level)
-        return logger
+) -> None:
+    """Explicitly configures rotating file logging during application bootstrap."""
+    global _file_logging_configured
+    if _file_logging_configured:
+        return
 
-    logger.setLevel(resolved_level)
-
-    # Formatter
+    root_logger = logging.getLogger("spectrehud")
     formatter = logging.Formatter(
         fmt="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    # Console Handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    # Rotating File Handler in config dir
     try:
         env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
-        log_dir = Path(env_dir) if env_dir else Path.home() / ".ctf_cheatsheet_widget"
+        log_dir = Path(config_dir) if config_dir else (Path(env_dir) if env_dir else Path.home() / ".ctf_cheatsheet_widget")
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "spectrehud.log"
         file_handler = RotatingFileHandler(
@@ -74,9 +62,34 @@ def setup_logger(
             encoding="utf-8"
         )
         file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        root_logger.addHandler(file_handler)
+        _file_logging_configured = True
     except (OSError, PermissionError) as e:
         sys.stderr.write(f"Warning: Could not configure file logging: {e}\n")
+
+
+def setup_logger(
+    name: str = "spectrehud", 
+    level: Optional[Union[int, str]] = None,
+    max_bytes: int = DEFAULT_MAX_LOG_BYTES,
+    backup_count: int = DEFAULT_LOG_BACKUP_COUNT
+) -> logging.Logger:
+    """Configures and returns a structured logger for SpectreHUD with console streaming."""
+    logger = logging.getLogger(name)
+    resolved_level = (
+        _LEVEL_MAP.get(str(level).upper(), logging.INFO) if isinstance(level, str)
+        else (level if level is not None else _resolve_default_log_level())
+    )
+    logger.setLevel(resolved_level)
+
+    if not logger.handlers:
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     return logger
 
@@ -119,3 +132,17 @@ def flush_logs() -> None:
             handler.flush()
         except Exception:
             pass
+
+
+def close_log_handlers() -> None:
+    """Closes and removes all handlers (file and stream) to release file locks on Windows."""
+    global _file_logging_configured
+    root = logging.getLogger("spectrehud")
+    for handler in list(root.handlers):
+        try:
+            handler.flush()
+            handler.close()
+        except Exception:
+            pass
+        root.removeHandler(handler)
+    _file_logging_configured = False

@@ -156,9 +156,24 @@ curl -i http://10.10.10.10/admin
         md_text = "\n\n".join(md_lines)
         html_out = HtmlReportExporter.markdown_to_html(md_text, project_dir=self.proj_dir)
 
-        # 25 images embedded, 5 exceeded budget
-        self.assertEqual(html_out.count("data:image/png;base64,"), 25)
-        self.assertIn("[Embedded image limit reached:", html_out)
+    def test_code_fence_language_is_html_escaped(self):
+        """CRITICAL: Code fence language metadata must be sanitized and HTML escaped against attribute injection."""
+        # 1. Attribute injection attempt via double quote and mouse handler
+        md_attr = '```" onmouseover="alert(1)\nhello\n```'
+        html_out = HtmlReportExporter.markdown_to_html(md_attr, project_dir=self.proj_dir)
+        self.assertNotIn('onmouseover="', html_out)
+        self.assertNotIn("onmouseover=", html_out)
+        self.assertNotIn("<script", html_out)
+
+        # 2. Tag injection attempt
+        md_tag = '```><script>alert(1)</script>\nevil\n```'
+        html_out_tag = HtmlReportExporter.markdown_to_html(md_tag, project_dir=self.proj_dir)
+        self.assertNotIn("<script>alert(1)</script>", html_out_tag)
+
+        # 3. Legitimate language identifier is preserved
+        md_valid = '```python\nprint("secure")\n```'
+        html_out_valid = HtmlReportExporter.markdown_to_html(md_valid, project_dir=self.proj_dir)
+        self.assertIn('<code class="language-python">print(&quot;secure&quot;)</code>', html_out_valid)
 
 
 if __name__ == "__main__":

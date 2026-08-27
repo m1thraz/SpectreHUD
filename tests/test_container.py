@@ -15,6 +15,10 @@ if not app:
 class TestContainer(unittest.TestCase):
     """Unit tests verifying ServiceContainer and Dependency Injection."""
 
+    def tearDown(self):
+        from core.logger import close_log_handlers
+        close_log_handlers()
+
     def test_service_container_create_production(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             config_dir = Path(tmp_dir)
@@ -28,6 +32,9 @@ class TestContainer(unittest.TestCase):
             self.assertIsNotNone(container.screenshot_manager)
             self.assertIsNotNone(container.storage)
             self.assertIsNotNone(container.event_bus)
+
+            from core.logger import close_log_handlers
+            close_log_handlers()
 
     def test_service_container_uses_custom_workspace_dir(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -43,6 +50,9 @@ class TestContainer(unittest.TestCase):
 
             container = ServiceContainer.create_production(config_dir=config_dir, language="en")
             self.assertEqual(container.project_manager.base_dir.resolve(), custom_ws.resolve())
+
+            from core.logger import close_log_handlers
+            close_log_handlers()
 
     def test_service_container_create_in_memory(self):
         container = ServiceContainer.create_in_memory(

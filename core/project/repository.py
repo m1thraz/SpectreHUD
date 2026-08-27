@@ -209,6 +209,8 @@ class ProjectRepository:
             proj_dir.mkdir(parents=True, exist_ok=True)
             for sub in ("recon", "exploit", "loot"):
                 sub_p = proj_dir / sub
+                if sub_p.is_symlink():
+                    raise ProjectCreationError(f"Project directory contains symlinked subdirectory: {sub}")
                 if sub_p.exists() and not sub_p.is_dir():
                     raise OSError(f"Cannot create subfolder '{sub}' because a non-directory file exists with that name.")
                 sub_p.mkdir(exist_ok=True)
@@ -276,9 +278,13 @@ class ProjectRepository:
                 )
 
         try:
-            (target_path / "recon").mkdir(exist_ok=True)
-            (target_path / "exploit").mkdir(exist_ok=True)
-            (target_path / "loot").mkdir(exist_ok=True)
+            for sub in ("recon", "exploit", "loot"):
+                sub_p = target_path / sub
+                if sub_p.is_symlink():
+                    raise ProjectCreationError(f"Imported project contains symlinked subdirectory: {sub}")
+                if sub_p.exists() and not sub_p.is_dir():
+                    raise ProjectCreationError(f"Imported project contains non-directory file named '{sub}'")
+                sub_p.mkdir(exist_ok=True)
 
             state_file = target_path / "project_state.json"
             if not state_file.exists():
