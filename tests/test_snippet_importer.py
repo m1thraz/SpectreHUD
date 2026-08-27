@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import unittest
 import tempfile
@@ -94,6 +94,19 @@ gobuster dir -u http://$TARGET -w /wordlists/dir.txt
         count = self.mgr.import_from_file(fpath)
         self.assertEqual(count, 1)
         self.assertTrue(any(s["title"] == "Gobuster Directory Search" for s in self.mgr.snippets))
+
+    def test_import_oversized_file_rejected(self):
+        fpath = self.temp_path / "giant_snippets.json"
+        # Write file exceeding MAX_CONFIG_FILE_SIZE (5MB)
+        with open(fpath, "wb") as f:
+            f.seek(5 * 1024 * 1024 + 1024)
+            f.write(b"0")
+        
+        parsed = import_snippets_from_file(fpath)
+        self.assertEqual(parsed, [])
+
+        count = self.mgr.import_from_file(fpath)
+        self.assertEqual(count, 0)
 
 
 if __name__ == "__main__":

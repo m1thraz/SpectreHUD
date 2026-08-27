@@ -52,6 +52,16 @@ class TestAtomicWrite(unittest.TestCase):
             reloaded = json.load(f)
         self.assertEqual(reloaded["name"], "BoxAlphaModified")
 
+    def test_restrictive_permissions_posix(self):
+        """Tests that written files have 0o600 permissions on POSIX systems."""
+        import os
+        import stat
+        target_file = self.temp_path / "secret.json"
+        atomic_write_json(target_file, {"key": "val"})
+        if os.name == 'posix':
+            file_stat = target_file.stat().st_mode
+            self.assertEqual(stat.S_IMODE(file_stat), 0o600)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -49,6 +49,8 @@ class ProjectSessionService:
             "target_ip": variables.get("target_ip", "10.10.10.10"),
             "attacker_ip": variables.get("attacker_ip", "10.10.14.5"),
             "port": variables.get("port", "4444"),
+            "username": variables.get("username", ""),
+            "password": variables.get("password", ""),
             "loot": self.loot_manager.get_all_entries(),
             "clipboard_history": self.clipboard_watcher.get_all_history()
         }

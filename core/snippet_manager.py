@@ -236,7 +236,7 @@ class SnippetManager:
     def import_from_file(self, file_path: Any) -> int:
         """
         Imports snippets from a JSON or Markdown file, adds them to user snippets,
-        and persists them to user_snippets.json.
+        and persists them to user_snippets.json in a single atomic batch write.
         Returns the number of snippets imported.
         """
         from core.snippet_importer import import_snippets_from_file
@@ -246,15 +246,23 @@ class SnippetManager:
 
         count = 0
         for snip in parsed:
-            self.add_custom_snippet(
-                title=snip.get("title", "Imported Snippet"),
-                category=snip.get("category", "Custom Notes & Snippets"),
-                subcategory=snip.get("subcategory", "Allgemein"),
-                template=snip.get("template", ""),
-                description=snip.get("description", ""),
-                tags=snip.get("tags", [])
-            )
+            new_snip = {
+                "id": f"custom_{uuid.uuid4().hex[:8]}",
+                "title": snip.get("title", "Imported Snippet"),
+                "category": snip.get("category", "Custom Notes & Snippets"),
+                "category_id": "custom_snippets",
+                "subcategory": snip.get("subcategory", "Allgemein"),
+                "template": snip.get("template", ""),
+                "description": snip.get("description", ""),
+                "tags": snip.get("tags", []) if isinstance(snip.get("tags"), list) else [],
+                "is_custom": True,
+                "is_favorite": False
+            }
+            self.snippets.append(new_snip)
             count += 1
+
+        if count > 0:
+            self.save_user_snippets()
 
         return count
 

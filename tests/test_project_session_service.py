@@ -47,7 +47,9 @@ class TestProjectSessionService(unittest.TestCase):
         variables = {
             "target_ip": "10.10.10.10",
             "attacker_ip": "10.10.14.5",
-            "port": "2222"
+            "port": "2222",
+            "username": "admin",
+            "password": "SecretPassword123"
         }
 
         # Save session
@@ -62,6 +64,8 @@ class TestProjectSessionService(unittest.TestCase):
 
         self.assertEqual(loaded_state.get("target_ip"), "10.10.10.10")
         self.assertEqual(loaded_state.get("port"), "2222")
+        self.assertEqual(loaded_state.get("username"), "admin")
+        self.assertEqual(loaded_state.get("password"), "SecretPassword123")
         self.assertEqual(len(self.loot_manager.get_all_entries()), 1)
         self.assertEqual(self.loot_manager.get_all_entries()[0]["title"], "SSH Root")
         self.assertEqual(len(self.clipboard_watcher.get_all_history()), 1)

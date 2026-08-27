@@ -1,4 +1,4 @@
-﻿"""
+"""
 Snippet Importer & Parser for SpectreHUD.
 Allows importing custom snippets from JSON and Markdown files with automatic variable normalization.
 """
@@ -139,10 +139,15 @@ def parse_snippets_markdown(content: str) -> List[Dict[str, Any]]:
 
 
 def import_snippets_from_file(file_path: Union[str, Path]) -> List[Dict[str, Any]]:
-    """Reads a JSON or Markdown file and parses snippets."""
+    """Reads a JSON or Markdown file and parses snippets with size limit checks."""
+    from core.validators import is_file_size_valid, MAX_CONFIG_FILE_SIZE
     path = Path(file_path)
     if not path.exists() or not path.is_file():
         logger.error(f"Import file does not exist: {path}")
+        return []
+
+    if not is_file_size_valid(path, MAX_CONFIG_FILE_SIZE):
+        logger.error(f"Import file exceeds maximum allowed size ({path.stat().st_size} > {MAX_CONFIG_FILE_SIZE} bytes): {path}")
         return []
 
     try:
