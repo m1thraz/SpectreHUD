@@ -93,6 +93,45 @@ curl -i http://10.10.10.10/admin
         self.assertIn("<h1>Complete Report</h1>", content)
         self.assertIn("window.print()", content)
 
+    def test_xss_prevention_in_images_and_links(self):
+        """Verifies that malicious image src and link href payloads cannot execute XSS or inject attributes."""
+        # 1. Block Image attribute breakout PoC
+        md_img_block = '![pwned](x" onerror=alert(document.cookie) x=")'
+        html_out = HtmlReportExporter.markdown_to_html(md_img_block, project_dir=self.proj_dir)
+        self.assertNotIn('" onerror=', html_out)
+        self.assertIn('src="x&quot; onerror=alert(document.cookie) x=&quot;"', html_out)
+
+        # 2. Inline Image attribute breakout PoC
+        md_img_inline = 'Inline screenshot: ![pwned](x" onfocus=alert(1) autofocus x=")'
+        html_out_inline = HtmlReportExporter.markdown_to_html(md_img_inline, project_dir=self.proj_dir)
+        self.assertNotIn('" onfocus=', html_out_inline)
+        self.assertNotIn('" autofocus', html_out_inline)
+        self.assertIn('&quot;', html_out_inline)
+
+        # 3. JavaScript URI Scheme in Markdown Links
+        md_link_js = '[Exploit](javascript:alert(1))'
+        html_out_link = HtmlReportExporter.markdown_to_html(md_link_js, project_dir=self.proj_dir)
+        self.assertNotIn('href="javascript:', html_out_link)
+        self.assertIn('href="#unsafe-scheme-blocked"', html_out_link)
+
+        # 4. Obfuscated whitespace javascript URI Scheme
+        md_link_obf = '[Exploit](   javascript:alert(1)   )'
+        html_out_obf = HtmlReportExporter.markdown_to_html(md_link_obf, project_dir=self.proj_dir)
+        self.assertNotIn('href="javascript', html_out_obf)
+        self.assertIn('href="#unsafe-scheme-blocked"', html_out_obf)
+
+        # 5. Data:text/html URI Scheme in Images
+        md_img_data = '![XSS](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)'
+        html_out_data = HtmlReportExporter.markdown_to_html(md_img_data, project_dir=self.proj_dir)
+        self.assertNotIn('src="data:text/html', html_out_data)
+        self.assertIn('src="#unsafe-data-uri-blocked"', html_out_data)
+
+        # 6. Valid Safe Links and Images are preserved
+        md_safe = '[Docs](https://example.com/docs) and [Mail](mailto:test@example.com)'
+        html_safe = HtmlReportExporter.markdown_to_html(md_safe, project_dir=self.proj_dir)
+        self.assertIn('href="https://example.com/docs"', html_safe)
+        self.assertIn('href="mailto:test@example.com"', html_safe)
+
 
 if __name__ == "__main__":
     unittest.main()

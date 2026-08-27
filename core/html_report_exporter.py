@@ -83,6 +83,45 @@ class HtmlReportExporter:
         img_pattern = re.compile(r"!\[(.*?)\]\((.*?)\)")
         return img_pattern.sub(_replace_img, md_text)
 
+    @staticmethod
+    def _sanitize_url(url: str, is_image: bool = False) -> str:
+        """
+        Sanitizes URLs for href or src attributes.
+        Blocks 'javascript:', 'vbscript:', 'data:' (non-image), and unapproved schemes to prevent XSS.
+        """
+        clean = url.strip()
+        lower = clean.lower()
+
+        # Remove control characters and whitespace tricks
+        lower_no_spaces = re.sub(r'[\s\x00-\x1f\x7f-\x9f]', '', lower)
+
+        # Explicitly block dangerous script URI schemes
+        if lower_no_spaces.startswith(("javascript:", "vbscript:", "livescript:")):
+            return "#unsafe-scheme-blocked"
+
+        if is_image:
+            # Images: allow http, https, approved data:image/ mime types, and safe relative paths
+            if lower_no_spaces.startswith(("http://", "https://")):
+                return html.escape(clean, quote=True)
+            if lower_no_spaces.startswith(("data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/gif", "data:image/webp", "data:image/svg+xml")):
+                return html.escape(clean, quote=True)
+            if lower_no_spaces.startswith("data:"):
+                return "#unsafe-data-uri-blocked"
+            # Block any unapproved scheme
+            if ":" in clean.split("/")[0]:
+                return "#unsafe-image-scheme-blocked"
+            return html.escape(clean, quote=True)
+        else:
+            # Links: allow http, https, mailto, and relative / anchor links
+            if lower_no_spaces.startswith(("http://", "https://", "mailto:", "#")):
+                return html.escape(clean, quote=True)
+            if lower_no_spaces.startswith("data:"):
+                return "#unsafe-data-link-blocked"
+            # Block any unapproved scheme
+            if ":" in clean.split("/")[0]:
+                return "#unsafe-link-scheme-blocked"
+            return html.escape(clean, quote=True)
+
     @classmethod
     def markdown_to_html(cls, md_text: str, project_dir: Optional[Path] = None) -> str:
         """Converts Markdown text to HTML body structure."""
@@ -236,8 +275,9 @@ class HtmlReportExporter:
 
             img_match = re.match(r"^!\[(.*?)\]\((.*?)\)$", stripped)
             if img_match:
-                alt = html.escape(img_match.group(1))
-                src = img_match.group(2)
+                alt = html.escape(img_match.group(1), quote=True)
+                raw_src = img_match.group(2)
+                src = cls._sanitize_url(raw_src, is_image=True)
                 html_lines.append(f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>')
                 continue
 
@@ -271,8 +311,8 @@ class HtmlReportExporter:
         img_tokens: List[str] = []
         def _img_sub(m: re.Match) -> str:
             token = f"@@SPECTRE_IMGTOKEN{len(img_tokens)}@@"
-            alt = html.escape(m.group(1))
-            src = m.group(2)
+            alt = html.escape(m.group(1), quote=True)
+            src = cls._sanitize_url(m.group(2), is_image=True)
             img_tokens.append(f'<img src="{src}" alt="{alt}" class="inline-img">')
             return token
 
@@ -282,7 +322,7 @@ class HtmlReportExporter:
         def _link_sub(m: re.Match) -> str:
             token = f"@@SPECTRE_LINKTOKEN{len(link_tokens)}@@"
             ltext = html.escape(m.group(1))
-            url = html.escape(m.group(2))
+            url = cls._sanitize_url(m.group(2), is_image=False)
             link_tokens.append(f'<a href="{url}" target="_blank" rel="noopener noreferrer">{ltext}</a>')
             return token
 
