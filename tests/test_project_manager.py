@@ -2,7 +2,7 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from core.project_manager import ProjectManager
+from core.project_manager import ProjectManager, InvalidProjectNameError
 
 class TestProjectManager(unittest.TestCase):
 
@@ -74,6 +74,19 @@ class TestProjectManager(unittest.TestCase):
 
         with self.assertRaises(ProjectNotFoundError):
             self.pm.activate_project("NonExistentBox_999")
+
+    def test_invalid_project_exists_name_is_not_interpreted_as_default(self):
+        """Public existence checks must reject invalid names instead of checking Default."""
+        self.assertIn("Default", self.pm.list_projects())
+        with self.assertRaises(InvalidProjectNameError):
+            self.pm.project_exists("../../bad")
+
+    def test_invalid_archive_name_does_not_archive_default(self):
+        """An invalid archive request must not silently create an archive of Default."""
+        archive_path = self.base_dir / "unexpected_default_archive.zip"
+        with self.assertRaises(InvalidProjectNameError):
+            self.pm.archive_project("../../bad", output_zip=archive_path)
+        self.assertFalse(archive_path.exists())
 
     def test_path_traversal_prevention_double_dot(self):
         """Finding 15: Project name '..' must raise InvalidProjectNameError and NEVER escape base directory."""

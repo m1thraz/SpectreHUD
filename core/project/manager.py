@@ -91,7 +91,7 @@ class ProjectManager:
         self.repository.sync_registry()
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
-        """Returns True if a project with the given or sanitized name already exists."""
+        """Returns whether a project with the strictly validated name exists."""
         return self.repository.project_exists(name, base_dir=base_dir)
 
     def list_projects(self) -> List[str]:

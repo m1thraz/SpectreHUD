@@ -192,8 +192,8 @@ class ProjectRepository:
         self._update_registry(additions=self.registry)
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
-        """Returns True if a project with the given or sanitized name already exists."""
-        clean = sanitize_project_name(name)
+        """Returns whether a project with the strictly validated name exists."""
+        clean = validate_project_name(name)
         target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
         proj_dir = (target_base / clean).resolve()
         return clean in self.list_projects() or proj_dir.exists()
@@ -569,6 +569,6 @@ class ProjectRepository:
     def archive_project(self, name: str, output_zip: Optional[Path] = None) -> Dict[str, Any]:
         """Archives the project workspace as a .zip file."""
         from core.box_archiver import BoxArchiver
-        pname = sanitize_project_name(name)
+        pname = validate_project_name(name)
         proj_dir = self.get_project_dir(pname)
         return BoxArchiver.archive_project(proj_dir, output_zip)
