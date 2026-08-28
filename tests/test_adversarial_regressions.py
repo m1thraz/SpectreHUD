@@ -260,6 +260,48 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertIn("ExternalA", projects)
         self.assertIn("ExternalB", projects)
 
+    def test_registry_purge_survives_read_merge_write_and_restart(self):
+        """A symlink purge remains deleted after persistence and a fresh process start."""
+        outside_dir = self.temp_path / "outside_registry_target"
+        outside_dir.mkdir()
+        symlink_path = self.projects_dir / "Evil"
+        symlink_path.mkdir()
+
+        self.project_mgr.repository._update_registry(additions={"Evil": str(outside_dir)})
+        # Model a symlinked workspace entry without requiring Windows Developer
+        # Mode or administrator symlink privileges in CI.
+        real_is_symlink = Path.is_symlink
+        with patch.object(
+            Path,
+            "is_symlink",
+            autospec=True,
+            side_effect=lambda path: path == symlink_path or real_is_symlink(path),
+        ):
+            self.project_mgr.sync_registry()
+            self.assertNotIn("Evil", self.project_mgr.registry)
+            with self.project_mgr.registry_file.open(encoding="utf-8") as registry_file:
+                self.assertNotIn("Evil", json.load(registry_file))
+
+            restarted = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+            self.assertNotIn("Evil", restarted.registry)
+
+    def test_registry_add_and_remove_from_stale_instances(self):
+        """An explicit removal and a stale-instance addition both survive the merge."""
+        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        external_x = self.temp_path / "external_x" / "ExternalX"
+        external_y = self.temp_path / "external_y" / "ExternalY"
+        external_x.mkdir(parents=True)
+        external_y.mkdir(parents=True)
+
+        first.repository._update_registry(additions={"ExternalX": str(external_x)})
+        first.repository._update_registry(removals={"ExternalX"})
+        second.repository._update_registry(additions={"ExternalY": str(external_y)})
+
+        restarted = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        self.assertNotIn("ExternalX", restarted.registry)
+        self.assertEqual(restarted.registry["ExternalY"], str(external_y))
+
     def test_workspace_loss_while_running_fails_closed_without_crashing(self):
         """Saving after the configured workspace disappears must report failure safely."""
         self.project_mgr.create_project("BoxWorkspaceLoss")

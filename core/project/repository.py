@@ -115,18 +115,39 @@ class ProjectRepository:
             except OSError:
                 pass
 
-    def _save_registry(self) -> None:
-        """Atomically merges and persists registry changes across application processes."""
+    def _update_registry(
+        self,
+        additions: Optional[Dict[str, str]] = None,
+        removals: Optional[set[str]] = None,
+    ) -> None:
+        """Atomically apply explicit registry additions and removals across processes.
+
+        A registry snapshot cannot represent a deletion when another process has a
+        stale copy.  This method therefore reloads the latest disk state while
+        holding the cross-process lock and applies the requested mutations to that
+        state before committing it.
+        """
+        additions = dict(additions or {})
+        removals = set(removals or set())
         try:
             with self._registry_write_lock():
                 disk_registry = self._load_registry()
-                merged_registry = dict(disk_registry)
-                merged_registry.update(self.registry)
-                self.registry = merged_registry
-                atomic_write_json(self.registry_file, self.registry, indent=2, ensure_ascii=False)
+                for name in removals:
+                    disk_registry.pop(name, None)
+                disk_registry.update(additions)
+                atomic_write_json(self.registry_file, disk_registry, indent=2, ensure_ascii=False)
+                self.registry = disk_registry
         except Exception as e:
-            logger.error(f"Failed to save projects registry to {self.registry_file}: {e}", exc_info=True)
-            raise PersistenceError(f"Failed to save projects registry to {self.registry_file}: {e}") from e
+            logger.error(f"Failed to update projects registry at {self.registry_file}: {e}", exc_info=True)
+            raise PersistenceError(f"Failed to update projects registry at {self.registry_file}: {e}") from e
+
+    def _save_registry(self) -> None:
+        """Persist the current registry as add-only legacy snapshot compatibility.
+
+        New registry code must call :meth:`_update_registry` with explicit
+        additions/removals so that deletes survive a concurrent read-merge-write.
+        """
+        self._update_registry(additions=self.registry)
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
         """Returns True if a project with the given or sanitized name already exists."""
@@ -213,6 +234,8 @@ class ProjectRepository:
         Returns the sorted list of discovered project names.
         """
         from collections import defaultdict
+        additions: Dict[str, str] = {}
+        removals: set[str] = set()
         projects = set()
         resolved_base = self.base_dir.resolve()
 
@@ -245,7 +268,7 @@ class ProjectRepository:
                     resolved_p = cand_paths[0]
                     projects.add(clean)
                     if clean not in self.registry:
-                        self.registry[clean] = str(resolved_p)
+                        additions[clean] = str(resolved_p)
                         logger.debug(f"sync_registry: registered new project '{clean}' at {resolved_p}")
 
             except OSError as e:
@@ -257,7 +280,7 @@ class ProjectRepository:
                 candidate_in_base = self.base_dir / name
                 if candidate_in_base.exists() and candidate_in_base.is_symlink():
                     logger.warning(f"Purging compromised symlinked registry entry during sync: {name}")
-                    del self.registry[name]
+                    removals.add(name)
                     continue
                 p = Path(self.registry.get(name, ""))
                 if p.exists() and p.is_dir():
@@ -268,7 +291,7 @@ class ProjectRepository:
         if not projects:
             projects.add("Default")
 
-        self._save_registry()
+        self._update_registry(additions=additions, removals=removals)
         return sorted(list(projects))
 
     def get_project_dir(self, name: Optional[str] = None) -> Path:
@@ -364,8 +387,7 @@ class ProjectRepository:
                     raise OSError(f"Failed to atomically write initial project_state.json for {clean_name}")
 
             # Register project location
-            self.registry[clean_name] = str(proj_dir)
-            self._save_registry()
+            self._update_registry(additions={clean_name: str(proj_dir)})
             return proj_dir
 
         except Exception as e:
@@ -378,7 +400,10 @@ class ProjectRepository:
                     logger.warning(f"Rollback cleanup failed for {proj_dir}: {rb_err}")
 
             if clean_name in self.registry:
-                del self.registry[clean_name]
+                try:
+                    self._update_registry(removals={clean_name})
+                except PersistenceError:
+                    logger.exception("Failed to remove rolled-back project '%s' from registry", clean_name)
 
             raise ProjectCreationError(f"Failed to create project '{clean_name}': {e}") from e
 
@@ -417,8 +442,7 @@ class ProjectRepository:
                 if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
                     raise OSError(f"Failed to atomically write project_state.json for imported project {clean_name}")
 
-            self.registry[clean_name] = str(target_path)
-            self._save_registry()
+            self._update_registry(additions={clean_name: str(target_path)})
             logger.info(f"Successfully imported project '{clean_name}' from {target_path}")
             return clean_name
         except Exception as e:

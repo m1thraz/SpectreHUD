@@ -86,8 +86,7 @@ class ProjectManager:
         if not default_dir.exists():
             self.create_project("Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5", allow_existing=True)
         else:
-            self.repository.registry["Default"] = str(default_dir.resolve())
-            self.repository._save_registry()
+            self.repository._update_registry(additions={"Default": str(default_dir.resolve())})
         # Bootstrap: sync discovered projects into registry at startup
         self.repository.sync_registry()
 
