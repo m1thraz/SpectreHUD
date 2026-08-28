@@ -36,7 +36,9 @@ REQUIRED_FILES = [
     "core/display_geometry.py",
     # Reporting subsystem
     "core/reporting/__init__.py",
-    "core/reporting/models.py",
+    # ReportTemplate, TemplateSection, and ReportContext live here.  The
+    # former reporting/models.py module was removed during the refactor.
+    "core/reporting/template_engine.py",
     "core/reporting/template_engine.py",
     "core/reporting/template_repository.py",
     "core/reporting/charts.py",
