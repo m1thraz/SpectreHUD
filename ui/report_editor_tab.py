@@ -21,7 +21,8 @@ from typing import Optional, Dict
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog
+    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog,
+    QComboBox, QFormLayout
 )
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QImage
 
@@ -156,6 +157,97 @@ class ReportDocument(QTextDocument):
         return super().loadResource(r_type, name)
 
 
+class ReportGenerationDialog(QDialog):
+    """Choose a report template immediately before generating from loot."""
+
+    def __init__(
+        self,
+        template_repo: TemplateRepository,
+        selected_template: Optional[ReportTemplate] = None,
+        has_existing_report: bool = False,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.template_repo = template_repo
+        self.selected_template: Optional[ReportTemplate] = selected_template
+        self.setWindowTitle("Report aus Loot erzeugen")
+        self.setMinimumWidth(460)
+        self.setStyleSheet(CYBER_DARK_QSS)
+        self._build_ui(has_existing_report)
+        self._populate_templates()
+
+    def _build_ui(self, has_existing_report: bool) -> None:
+        layout = QVBoxLayout(self)
+
+        description = QLabel(
+            "Erstellt einen strukturierten Report aus dem aktuellen Loot "
+            "und Clipboard-Verlauf."
+        )
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        if has_existing_report:
+            warning = QLabel(
+                "Der vorhandene Report wird ersetzt. Vorher wird er als "
+                "<b>report.md.bak</b> gesichert."
+            )
+            warning.setWordWrap(True)
+            warning.setStyleSheet("color: #f0b429; margin-top: 6px;")
+            layout.addWidget(warning)
+
+        form = QFormLayout()
+        self.combo_templates = QComboBox()
+        self.combo_templates.setToolTip("Vorlage für den neu erzeugten Report auswählen")
+        form.addRow("Report-Vorlage:", self.combo_templates)
+        layout.addLayout(form)
+
+        self.btn_manage_templates = QPushButton("Templates verwalten...")
+        self.btn_manage_templates.setProperty("class", "SecondaryBtn")
+        self.btn_manage_templates.clicked.connect(self._open_template_manager)
+        layout.addWidget(self.btn_manage_templates, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        btn_cancel = QPushButton("Abbrechen")
+        btn_cancel.clicked.connect(self.reject)
+        buttons.addWidget(btn_cancel)
+        btn_generate = QPushButton("Report erzeugen")
+        btn_generate.setProperty("class", "PrimaryBtn")
+        btn_generate.clicked.connect(self._accept_selection)
+        buttons.addWidget(btn_generate)
+        layout.addLayout(buttons)
+
+    def _populate_templates(self) -> None:
+        selected_id = self.selected_template.id if self.selected_template else None
+        templates = self.template_repo.get_all_templates()
+        self.combo_templates.blockSignals(True)
+        self.combo_templates.clear()
+        for template in templates:
+            self.combo_templates.addItem(f"{template.name} [{template.language.upper()}]", template.id)
+
+        index = self.combo_templates.findData(selected_id) if selected_id else -1
+        if index >= 0:
+            self.combo_templates.setCurrentIndex(index)
+        elif templates:
+            self.combo_templates.setCurrentIndex(0)
+        self.combo_templates.blockSignals(False)
+
+    def _open_template_manager(self) -> None:
+        dialog = TemplateManagerDialog(repository=self.template_repo, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_template:
+            self.selected_template = dialog.selected_template
+        self._populate_templates()
+
+    def _accept_selection(self) -> None:
+        template_id = self.combo_templates.currentData()
+        template = self.template_repo.get_template(template_id) if template_id else None
+        if template is None:
+            QMessageBox.warning(self, "Keine Vorlage", "Bitte wähle eine Report-Vorlage aus.")
+            return
+        self.selected_template = template
+        self.accept()
+
+
 class ReportEditorTab(QWidget):
     """Editierbarer Markdown-Report mit Live-Vorschau für das aktive Projekt."""
 
@@ -181,7 +273,7 @@ class ReportEditorTab(QWidget):
         self._preview_timer.timeout.connect(self._update_preview)
 
         self._build_ui()
-        self._populate_templates()
+        self._ensure_active_template()
 
     # ------------------------------------------------------------------ #
     # UI-Aufbau
@@ -217,19 +309,6 @@ class ReportEditorTab(QWidget):
         self.btn_mode_preview.setToolTip(t("report.mode_preview_tip", "Editable full-screen Live Preview (Ctrl+3)"))
         self.btn_mode_preview.clicked.connect(lambda: self._set_view_mode(ViewMode.PREVIEW))
         toolbar.addWidget(self.btn_mode_preview)
-
-        # Template Selector Dropdown & Manager Button
-        from PyQt6.QtWidgets import QComboBox
-        self.combo_templates = QComboBox()
-        self.combo_templates.setToolTip(t("report.templates_tip", "Select report template for regeneration"))
-        self.combo_templates.currentIndexChanged.connect(self._on_template_combo_changed)
-        toolbar.addWidget(self.combo_templates)
-
-        self.btn_manage_templates = QPushButton(t("report.manage_templates", "🎨 Templates..."))
-        self.btn_manage_templates.setProperty("class", "SecondaryBtn")
-        self.btn_manage_templates.setToolTip(t("report.manage_templates_tip", "Manage, customize or create report templates"))
-        self.btn_manage_templates.clicked.connect(self._open_template_manager)
-        toolbar.addWidget(self.btn_manage_templates)
 
         self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
@@ -505,23 +584,15 @@ class ReportEditorTab(QWidget):
             return
 
         has_existing = self.report_file_manager.exists(self.current_project) or self._dirty
-        if has_existing:
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Report neu generieren")
-            msg.setText(
-                "Der aktuelle Report-Text wird durch eine frische Generierung "
-                "aus Loot und Clipboard-Verlauf ERSETZT.\n\n"
-                "Der bisherige Stand wird vorher als report.md.bak gesichert "
-                "(überschreibt ein eventuell vorhandenes älteres Backup).\n\n"
-                "Fortfahren?"
-            )
-            msg.setIcon(QMessageBox.Icon.Question)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.No)
-            msg.setStyleSheet(CYBER_DARK_QSS)
-
-            if msg.exec() != QMessageBox.StandardButton.Yes:
-                return
+        dialog = ReportGenerationDialog(
+            template_repo=self.template_repo,
+            selected_template=self.active_template,
+            has_existing_report=has_existing,
+            parent=self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.selected_template is None:
+            return
+        self.active_template = dialog.selected_template
 
         from core.report_file_manager import ReportBackupError, ReportSaveError
         try:
@@ -559,44 +630,11 @@ class ReportEditorTab(QWidget):
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
 
-    def _populate_templates(self) -> None:
-        """Loads all available templates into the toolbar combo box."""
-        if not hasattr(self, "combo_templates"):
-            return
-        self.combo_templates.blockSignals(True)
-        self.combo_templates.clear()
-        all_templates = self.template_repo.get_all_templates()
-        for t in all_templates:
-            self.combo_templates.addItem(f"{t.name} [{t.language.upper()}]", t.id)
-
-        if self.active_template:
-            idx = self.combo_templates.findData(self.active_template.id)
-            if idx >= 0:
-                self.combo_templates.setCurrentIndex(idx)
-        elif all_templates:
-            self.active_template = all_templates[0]
-            self.combo_templates.setCurrentIndex(0)
-
-        self.combo_templates.blockSignals(False)
-
-    def _on_template_combo_changed(self) -> None:
-        """Handles selection of a template from the toolbar combo box."""
-        tid = self.combo_templates.currentData()
-        if tid:
-            self.active_template = self.template_repo.get_template(tid)
-
-    def _open_template_manager(self) -> None:
-        """Opens the template management dialog."""
-        from PyQt6.QtWidgets import QDialog
-        dlg = TemplateManagerDialog(repository=self.template_repo, parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected_template:
-            self.active_template = dlg.selected_template
-            self._populate_templates()
-            idx = self.combo_templates.findData(self.active_template.id)
-            if idx >= 0:
-                self.combo_templates.setCurrentIndex(idx)
-        else:
-            self._populate_templates()
+    def _ensure_active_template(self) -> None:
+        """Keeps the most recently selected template available for the next dialog."""
+        templates = self.template_repo.get_all_templates()
+        if self.active_template is None and templates:
+            self.active_template = templates[0]
 
     def _on_export_copy_clicked(self) -> None:
         from core.atomic_write import atomic_write_text

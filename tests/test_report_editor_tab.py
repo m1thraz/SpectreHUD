@@ -14,7 +14,7 @@ from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
-from ui.report_editor_tab import ReportEditorTab, ViewMode, ReportPreviewEdit
+from ui.report_editor_tab import ReportEditorTab, ViewMode, ReportPreviewEdit, ReportGenerationDialog
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -53,6 +53,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab.preview.isVisible())
         self.assertTrue(self.tab.preview.isReadOnly())
         self.assertIn("Split", self.tab.lbl_status.text())
+
+    def test_template_selection_is_in_report_generation_dialog(self):
+        """Templates are selected immediately before report generation, not in the toolbar."""
+        self.assertFalse(hasattr(self.tab, "combo_templates"))
+
+        dialog = ReportGenerationDialog(
+            template_repo=self.tab.template_repo,
+            selected_template=self.tab.active_template,
+            has_existing_report=True,
+            parent=self.tab,
+        )
+        self.assertGreater(dialog.combo_templates.count(), 0)
+        self.assertIn("Report aus Loot erzeugen", dialog.windowTitle())
 
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""
