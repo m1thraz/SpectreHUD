@@ -6,6 +6,8 @@ import json
 import os
 import sys
 import subprocess
+import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
@@ -82,10 +84,46 @@ class ProjectRepository:
                 logger.warning(f"Could not load projects registry from {self.registry_file}: {e}")
         return {}
 
-    def _save_registry(self) -> None:
-        """Persists the project registry mapping to disk."""
+    @contextmanager
+    def _registry_write_lock(self):
+        """Serializes registry read-merge-write operations across application processes."""
+        lock_path = self.registry_file.with_name(f".{self.registry_file.name}.lock")
+        lock_fd = None
+        deadline = time.monotonic() + 5.0
+        while lock_fd is None:
+            try:
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(lock_fd, str(os.getpid()).encode("ascii"))
+            except FileExistsError:
+                try:
+                    # A process crash must not block future application starts forever.
+                    if time.time() - lock_path.stat().st_mtime > 30:
+                        lock_path.unlink()
+                        continue
+                except OSError:
+                    pass
+                if time.monotonic() >= deadline:
+                    raise PersistenceError(f"Timed out waiting for registry lock {lock_path}.")
+                time.sleep(0.02)
         try:
-            atomic_write_json(self.registry_file, self.registry, indent=2, ensure_ascii=False)
+            yield
+        finally:
+            if lock_fd is not None:
+                os.close(lock_fd)
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+
+    def _save_registry(self) -> None:
+        """Atomically merges and persists registry changes across application processes."""
+        try:
+            with self._registry_write_lock():
+                disk_registry = self._load_registry()
+                merged_registry = dict(disk_registry)
+                merged_registry.update(self.registry)
+                self.registry = merged_registry
+                atomic_write_json(self.registry_file, self.registry, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"Failed to save projects registry to {self.registry_file}: {e}", exc_info=True)
             raise PersistenceError(f"Failed to save projects registry to {self.registry_file}: {e}") from e

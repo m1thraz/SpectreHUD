@@ -243,6 +243,23 @@ class TestAdversarialRegressions(unittest.TestCase):
             state = json.load(saved_state)
         self.assertIn(state["target_ip"], {"10.10.10.1", "10.10.10.2"})
 
+    def test_two_instances_import_external_projects_without_registry_loss(self):
+        """External imports remain registered even when two instances started with stale registries."""
+        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        external_a = self.temp_path / "external_a" / "ExternalA"
+        external_b = self.temp_path / "external_b" / "ExternalB"
+        external_a.mkdir(parents=True)
+        external_b.mkdir(parents=True)
+
+        self.assertEqual(first.import_project_folder(external_a), "ExternalA")
+        self.assertEqual(second.import_project_folder(external_b), "ExternalB")
+
+        restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        projects = restarted_manager.list_projects()
+        self.assertIn("ExternalA", projects)
+        self.assertIn("ExternalB", projects)
+
     def test_workspace_loss_while_running_fails_closed_without_crashing(self):
         """Saving after the configured workspace disappears must report failure safely."""
         self.project_mgr.create_project("BoxWorkspaceLoss")
