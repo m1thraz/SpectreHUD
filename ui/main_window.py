@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
     def _get_resize_edge(self, pos: QPoint) -> str:
         return self.frame_manager.get_resize_edge(pos)
 
-    def request_quit(self) -> bool:
+    def request_quit(self, quit_app: bool = True) -> bool:
         """
         Unified transactional shutdown path.
         Validates dirty reports, persists active project state, and safely terminates application.
@@ -473,9 +473,10 @@ class MainWindow(QMainWindow):
             pass
 
         # 4. Quit application
-        app = QApplication.instance()
-        if app:
-            app.quit()
+        if quit_app:
+            app = QApplication.instance()
+            if app:
+                app.quit()
         return True
 
     def prepare_for_shutdown(self) -> None:
@@ -492,7 +493,7 @@ class MainWindow(QMainWindow):
             pass
 
     def closeEvent(self, event) -> None:
-        if self.request_quit():
+        if self.request_quit(quit_app=False):
             event.accept()
         else:
             event.ignore()

@@ -1063,6 +1063,40 @@ class TestAdversarialRegressions(unittest.TestCase):
         from core.logger import close_log_handlers
         close_log_handlers()
 
+    # -------------------------------------------------------------------------
+    # 35. Tooltip HTML Injection Defense in SnippetListModel
+    # -------------------------------------------------------------------------
+    def test_snippet_list_model_tooltip_html_escaped(self):
+        """
+        Adversarial: Snippet titles, descriptions, and code templates containing
+        raw HTML or XSS payloads must be strictly escaped in ToolTipRole.
+        """
+        from PyQt6.QtCore import Qt
+        from ui.models.snippet_list_model import SnippetListModel
+
+        malicious_snippet = {
+            "id": "snip_xss_1",
+            "title": "<script>alert('pwn')</script><b>Injected Title</b>",
+            "description": "<img src=x onerror=alert('desc')>",
+            "template": "<svg/onload=alert('code')> && cat /etc/passwd"
+        }
+
+        model = SnippetListModel([malicious_snippet])
+        idx = model.index(0, 0)
+        tooltip = model.data(idx, Qt.ItemDataRole.ToolTipRole)
+
+        # Invariant: Raw dangerous HTML tags must NOT be present unescaped
+        self.assertNotIn("<script>", tooltip)
+        self.assertNotIn("<b>Injected Title</b>", tooltip)
+        self.assertNotIn("<img src=x onerror=alert('desc')>", tooltip)
+        self.assertNotIn("<svg/onload=alert('code')>", tooltip)
+
+        # Invariant: Escaped HTML entities must be present
+        self.assertIn("&lt;script&gt;alert(&#x27;pwn&#x27;)&lt;/script&gt;", tooltip)
+        self.assertIn("&lt;b&gt;Injected Title&lt;/b&gt;", tooltip)
+        self.assertIn("&lt;img src=x onerror=alert(&#x27;desc&#x27;)&gt;", tooltip)
+        self.assertIn("&lt;svg/onload=alert(&#x27;code&#x27;)&gt; &amp;&amp; cat /etc/passwd", tooltip)
+
 
 if __name__ == "__main__":
     unittest.main()

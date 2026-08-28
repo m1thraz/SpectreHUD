@@ -4,6 +4,7 @@ Provides isolation, validation, metadata generation, repository storage, and lif
 """
 
 from core.project.validator import (
+    ProjectError,
     ProjectExistsError,
     InvalidProjectNameError,
     ProjectNotFoundError,
@@ -29,6 +30,7 @@ from core.project.manager import ProjectManager
 __all__ = [
     "ProjectManager",
     "ProjectRepository",
+    "ProjectError",
     "ProjectExistsError",
     "InvalidProjectNameError",
     "ProjectNotFoundError",

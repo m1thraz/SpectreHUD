@@ -9,27 +9,32 @@ from typing import Optional, Union
 from core.validators import is_windows_reserved_name
 
 
-class ProjectExistsError(ValueError):
+class ProjectError(Exception):
+    """Base exception for all project management errors."""
+    pass
+
+
+class ProjectExistsError(ProjectError, ValueError):
     """Raised when attempting to create a project whose sanitized name already exists."""
     pass
 
 
-class InvalidProjectNameError(ValueError):
+class InvalidProjectNameError(ProjectError, ValueError):
     """Raised when a project name is empty, contains invalid characters, or matches Windows reserved names."""
     pass
 
 
-class ProjectNotFoundError(KeyError):
+class ProjectNotFoundError(ProjectError, KeyError):
     """Raised when attempting to activate a project that does not exist."""
     pass
 
 
-class ProjectCreationError(RuntimeError):
+class ProjectCreationError(ProjectError, RuntimeError):
     """Raised when project workspace creation fails transactionally."""
     pass
 
 
-class WorkspaceError(RuntimeError):
+class WorkspaceError(ProjectError, RuntimeError):
     """Raised when a workspace directory cannot be created, is inaccessible, or is unwritable."""
     pass
 

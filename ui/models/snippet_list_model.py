@@ -5,6 +5,7 @@ Standard-compliant QAbstractListModel providing decoupled data binding
 and fast virtualization for Cheatsheet snippets and search filtering.
 """
 
+import html
 from typing import List, Dict, Any, Optional
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QVariant
 
@@ -43,11 +44,11 @@ class SnippetListModel(QAbstractListModel):
             title = snippet.get("title", "")
             desc = snippet.get("description", "")
             template = snippet.get("template", "")
-            tooltip_parts = [f"<b>{title}</b>"]
+            tooltip_parts = [f"<b>{html.escape(title)}</b>"]
             if desc:
-                tooltip_parts.append(desc)
+                tooltip_parts.append(html.escape(desc))
             if template:
-                tooltip_parts.append(f"<code>{template}</code>")
+                tooltip_parts.append(f"<code>{html.escape(template)}</code>")
             return "\n\n".join(tooltip_parts)
 
         return QVariant()

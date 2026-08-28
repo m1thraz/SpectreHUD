@@ -114,7 +114,7 @@ class ClipboardWatcher(QObject):
         entry = {
             "id": f"clip_{uuid.uuid4().hex[:8]}",
             "text": clean_text,
-            "target_ip": target_ip.strip(),
+            "target_ip": (target_ip or "").strip(),
             "timestamp": format_timestamp(time_format=self.time_format),
             "lines_count": lines_count,
             "char_count": char_count,

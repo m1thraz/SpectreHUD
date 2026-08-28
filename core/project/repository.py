@@ -198,8 +198,6 @@ class ProjectRepository:
 
         return proj_dir
 
-        return proj_dir
-
     def create_project_workspace(
         self,
         clean_name: str,

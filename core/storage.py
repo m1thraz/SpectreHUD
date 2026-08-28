@@ -22,7 +22,12 @@ logger = get_logger("storage")
 MAX_DEFAULT_STORAGE_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-class PersistenceError(RuntimeError):
+class StorageError(Exception):
+    """Base exception for all storage layer errors."""
+    pass
+
+
+class PersistenceError(StorageError, RuntimeError):
     """Raised when data persistence to the underlying storage backend fails."""
     pass
 

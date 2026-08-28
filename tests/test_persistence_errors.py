@@ -151,6 +151,100 @@ class TestPersistenceErrors(unittest.TestCase):
         self.assertEqual(len(watcher.get_all_history()), 1)
         self.assertEqual(watcher.get_all_history()[0]["text"], "secret_token_123")
 
+    def test_loot_controller_catches_persistence_error_gracefully(self):
+        """Invariant: Controller must NOT let PersistenceError crash slot execution."""
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from ui.controllers.loot_controller import LootController
+
+        app = QApplication.instance() or QApplication([])
+        backend = FailingStorageBackend()
+        loot_mgr = LootManager(storage=backend)
+        proj_mgr = ProjectManager()
+        ctrl = LootController(loot_manager=loot_mgr, project_manager=proj_mgr)
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            entry = ctrl.add_entry("credentials", "Admin", "P@ss")
+            self.assertEqual(entry, {})
+            mock_box.assert_called_once()
+
+        # Seed existing entry in memory
+        loot_mgr.entries = [{"id": "item1", "type": "credentials", "title": "Old", "content": "123"}]
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            success = ctrl.update_entry("item1", "New Title", "New Content")
+            self.assertFalse(success)
+            mock_box.assert_called_once()
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            success = ctrl.delete_entry("item1")
+            self.assertFalse(success)
+            mock_box.assert_called_once()
+
+    def test_history_controller_catches_persistence_error_gracefully(self):
+        """Invariant: HistoryController must NOT let PersistenceError crash slot execution."""
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from ui.controllers.history_controller import HistoryController
+
+        app = QApplication.instance() or QApplication([])
+        backend = FailingStorageBackend()
+        watcher = ClipboardWatcher(storage=backend)
+        loot_mgr = LootManager(storage=backend)
+        proj_mgr = ProjectManager()
+        ctrl = HistoryController(clipboard_watcher=watcher, loot_manager=loot_mgr, project_manager=proj_mgr)
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            # add_entry does not crash and notifies
+            ctrl.add_entry("nmap 10.10.10.1")
+            mock_box.assert_called_once()
+
+        # Seed existing item in memory
+        watcher.history = [{"id": "clip1", "text": "test"}]
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            ctrl.delete_entry("clip1")
+            mock_box.assert_called_once()
+
+    def test_cheatsheet_controller_catches_persistence_error_gracefully(self):
+        """Invariant: CheatsheetController must NOT let PersistenceError crash slot execution."""
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from ui.controllers.cheatsheet_controller import CheatsheetController
+
+        app = QApplication.instance() or QApplication([])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            blocked_file = Path(tmpdir) / "blocked_file"
+            blocked_file.write_text("i am a file", encoding="utf-8")
+            bad_path = blocked_file / "unwritable.json"
+
+            snip_mgr = SnippetManager(user_snippets_path=bad_path)
+            ctrl = CheatsheetController(snippet_manager=snip_mgr)
+
+            with patch.object(QMessageBox, "critical") as mock_box:
+                snip_id = ctrl.add_custom_snippet("Failing Snip", "web_http", "sub", "cmd")
+                self.assertEqual(snip_id, "")
+                mock_box.assert_called_once()
+
+    def test_global_excepthook_handles_persistence_error(self):
+        """Invariant: Global excepthook logs traceback and presents safe message without terminating."""
+        import sys
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from main import global_exception_hook
+
+        app = QApplication.instance() or QApplication([])
+        err = PersistenceError("Simulated disk write failure")
+
+        with patch.object(QMessageBox, "critical") as mock_box:
+            try:
+                raise err
+            except PersistenceError:
+                exctype, value, tb = sys.exc_info()
+                global_exception_hook(exctype, value, tb)
+
+            mock_box.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

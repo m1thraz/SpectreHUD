@@ -1,7 +1,8 @@
 import sys
 import os
+import traceback
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QFont
 from PyQt6.QtCore import Qt
 
@@ -17,6 +18,30 @@ from ui.main_window import MainWindow
 from ui.styles import CYBER_DARK_QSS
 
 logger = get_logger("app")
+
+def global_exception_hook(exctype, value, tb):
+    """
+    Global exception hook protecting the GUI process from sudden termination
+    on unhandled slot exceptions, logging the incident with full traceback.
+    """
+    tb_str = "".join(traceback.format_exception(exctype, value, tb))
+    logger.critical(f"Unhandled exception caught by global hook:\n{tb_str}")
+    
+    if issubclass(exctype, (KeyboardInterrupt, SystemExit)):
+        sys.__excepthook__(exctype, value, tb)
+        return
+        
+    app = QApplication.instance()
+    if app and not os.environ.get("SPECTREHUD_NO_GUI_CRASH_POPUP"):
+        active_win = app.activeWindow()
+        QMessageBox.critical(
+            active_win,
+            "Unerwarteter Fehler",
+            f"Ein unerwarteter Fehler ist aufgetreten:\n{value}\n\n"
+            f"Die Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten."
+        )
+
+sys.excepthook = global_exception_hook
 
 def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
     """Generates a clean programmatic icon with visual recording status."""

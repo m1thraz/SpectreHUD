@@ -5,11 +5,15 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 
 from core.loot_manager import LootManager, LOOT_TYPES, CATEGORIES
 from core.project_manager import ProjectManager
+from core.storage import PersistenceError, StorageError
+from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
 from ui.styles import CYBER_DARK_QSS
+
+logger = get_logger("loot_controller")
 
 
 class LootController(QObject):
@@ -31,6 +35,20 @@ class LootController(QObject):
         self.event_bus = event_bus or get_event_bus()
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+
+    def _notify_persistence_error(self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None) -> None:
+        logger.error(f"Persistence error during {operation}: {error}")
+        target_widget = parent_widget
+        if target_widget is None:
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                target_widget = app.activeWindow()
+        QMessageBox.critical(
+            target_widget,
+            "Speicherfehler",
+            f"Loot-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt."
+        )
 
     # ------------------------------------------------------------------ #
     # Pure Domain Methods (UI-Independent)
@@ -60,16 +78,20 @@ class LootController(QObject):
         target_ip: str = "",
         category: str = "misc"
     ) -> Dict[str, Any]:
-        entry = self.loot_manager.add_entry(
-            entry_type=entry_type,
-            title=title,
-            content=content,
-            target_ip=target_ip,
-            category=category
-        )
-        self.loot_updated.emit()
-        self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "add", "entry": entry})
-        return entry
+        try:
+            entry = self.loot_manager.add_entry(
+                entry_type=entry_type,
+                title=title,
+                content=content,
+                target_ip=target_ip,
+                category=category
+            )
+            self.loot_updated.emit()
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "add", "entry": entry})
+            return entry
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("add_entry", e)
+            return {}
 
     def update_entry(
         self,
@@ -79,31 +101,42 @@ class LootController(QObject):
         target_ip: str = "",
         category: str = "misc"
     ) -> bool:
-        success = self.loot_manager.update_entry(
-            entry_id=entry_id,
-            title=title,
-            content=content,
-            target_ip=target_ip,
-            category=category
-        )
-        if success:
-            self.loot_updated.emit()
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "update", "id": entry_id})
-        return success
+        try:
+            success = self.loot_manager.update_entry(
+                entry_id=entry_id,
+                title=title,
+                content=content,
+                target_ip=target_ip,
+                category=category
+            )
+            if success:
+                self.loot_updated.emit()
+                self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "update", "id": entry_id})
+            return success
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("update_entry", e)
+            return False
 
     def delete_entry(self, entry_id: str) -> bool:
-        success = self.loot_manager.delete_entry(entry_id)
-        if success:
-            self.loot_updated.emit()
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "delete", "id": entry_id})
-        return success
+        try:
+            success = self.loot_manager.delete_entry(entry_id)
+            if success:
+                self.loot_updated.emit()
+                self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "delete", "id": entry_id})
+            return success
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("delete_entry", e)
+            return False
 
     delete_loot = delete_entry
 
     def clear_entries(self, target_ip: Optional[str] = None) -> None:
-        self.loot_manager.clear_entries(target_ip=target_ip)
-        self.loot_updated.emit()
-        self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "clear", "target_ip": target_ip})
+        try:
+            self.loot_manager.clear_entries(target_ip=target_ip)
+            self.loot_updated.emit()
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "clear", "target_ip": target_ip})
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("clear_entries", e)
 
     def clear_loot(self, parent_widget: Optional[QWidget] = None) -> bool:
         if parent_widget:

@@ -7,10 +7,14 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.loot_manager import LootManager
 from core.project_manager import ProjectManager
 from core.report_builder import ReportBuilder
+from core.storage import PersistenceError, StorageError
+from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
 from ui.history_card import HistoryCard
 from ui.styles import CYBER_DARK_QSS
+
+logger = get_logger("history_controller")
 
 
 class HistoryController(QObject):
@@ -35,6 +39,20 @@ class HistoryController(QObject):
         self.current_history_filter: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
 
+    def _notify_persistence_error(self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None) -> None:
+        logger.error(f"Persistence error during {operation}: {error}")
+        target_widget = parent_widget
+        if target_widget is None:
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                target_widget = app.activeWindow()
+        QMessageBox.critical(
+            target_widget,
+            "Speicherfehler",
+            f"Clipboard-Verlauf konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt."
+        )
+
     # ------------------------------------------------------------------ #
     # Pure Domain Methods (UI-Independent)
     # ------------------------------------------------------------------ #
@@ -55,9 +73,12 @@ class HistoryController(QObject):
         )
 
     def add_entry(self, text: str, target_ip: Optional[str] = None) -> None:
-        self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
-        self.history_updated.emit()
-        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "add", "target_ip": target_ip})
+        try:
+            self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
+            self.history_updated.emit()
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "add", "target_ip": target_ip})
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("add_entry", e)
 
     def clear_history(self, parent_widget: Optional[QWidget] = None) -> bool:
         if parent_widget:
@@ -70,15 +91,22 @@ class HistoryController(QObject):
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
-        self.clipboard_watcher.clear_history()
-        self.history_updated.emit()
-        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "clear"})
-        return True
+        try:
+            self.clipboard_watcher.clear_history()
+            self.history_updated.emit()
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "clear"})
+            return True
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("clear_history", e, parent_widget)
+            return False
 
     def delete_entry(self, item_id: str) -> None:
-        self.clipboard_watcher.delete_entry(item_id)
-        self.history_updated.emit()
-        self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "delete", "id": item_id})
+        try:
+            self.clipboard_watcher.delete_entry(item_id)
+            self.history_updated.emit()
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "delete", "id": item_id})
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("delete_entry", e)
 
     def toggle_pause(self) -> bool:
         is_paused = self.clipboard_watcher.toggle_pause()

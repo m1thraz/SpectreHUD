@@ -7,11 +7,16 @@ from PyQt6.QtCore import QObject, QPoint, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QFileDialog, QMessageBox
 
 from core.project_manager import ProjectManager, ProjectExistsError
+from core.project.validator import ProjectError
+from core.storage import PersistenceError, StorageError
+from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
 from core.i18n import t
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
+
+logger = get_logger("project_controller")
 
 
 class ProjectController(QObject):
@@ -221,9 +226,17 @@ class ProjectController(QObject):
             str(self.project_manager.base_dir)
         )
         if folder:
-            pname = self.import_project_folder(folder)
-            if pname:
-                on_switch_project(pname)
+            try:
+                pname = self.import_project_folder(folder)
+                if pname:
+                    on_switch_project(pname)
+            except (ProjectError, PersistenceError, StorageError, OSError) as e:
+                logger.error(f"Failed to import project folder '{folder}': {e}")
+                QMessageBox.critical(
+                    parent_widget,
+                    "Import fehlgeschlagen",
+                    f"Der Projektordner konnte nicht importiert werden:\n{e}"
+                )
 
     def open_new_project_dialog(
         self,
@@ -258,5 +271,13 @@ class ProjectController(QObject):
                     return True
                 except ProjectExistsError as e:
                     QMessageBox.warning(parent_widget, "Projekt existiert bereits", str(e))
+                    return False
+                except (ProjectError, PersistenceError, StorageError, OSError) as e:
+                    logger.error(f"Failed to create project '{pname}': {e}")
+                    QMessageBox.critical(
+                        parent_widget,
+                        "Projekt-Erstellung fehlgeschlagen",
+                        f"Das Projekt konnte nicht erstellt werden:\n{e}"
+                    )
                     return False
         return False

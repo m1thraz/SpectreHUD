@@ -33,7 +33,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
+        self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.base_path = Path(self.temp_dir.name)
         
         self.config_dir = self.base_path / "config"
@@ -58,7 +58,10 @@ class TestWorkflowInvariants(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'window') and self.window:
             self.window.close()
-        self.temp_dir.cleanup()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
 
     # -------------------------------------------------------------------------
     # Invariant 1: Multi-Project Workspace & State Isolation

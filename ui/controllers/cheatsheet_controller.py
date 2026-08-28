@@ -1,13 +1,17 @@
 from typing import Dict, Any, List, Optional, Callable
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMenu
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMenu, QMessageBox
 
 from core.snippet_manager import SnippetManager
+from core.storage import PersistenceError, StorageError
+from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
 from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
 from ui.menu_builder import build_qmenu
+
+logger = get_logger("cheatsheet_controller")
 
 
 CATEGORY_SHORT_NAMES: Dict[str, str] = {
@@ -52,6 +56,20 @@ class CheatsheetController(QObject):
         self._search_expanded: bool = False
         self._last_query: str = ""
 
+    def _notify_persistence_error(self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None) -> None:
+        logger.error(f"Persistence error during {operation}: {error}")
+        target_widget = parent_widget
+        if target_widget is None:
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                target_widget = app.activeWindow()
+        QMessageBox.critical(
+            target_widget,
+            "Speicherfehler",
+            f"Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt."
+        )
+
     # ------------------------------------------------------------------ #
     # Pure Domain Methods (UI-Independent)
     # ------------------------------------------------------------------ #
@@ -76,28 +94,39 @@ class CheatsheetController(QObject):
         description: str = "",
         tags: Optional[List[str]] = None
     ) -> str:
-        new_snip = self.snippet_manager.add_custom_snippet(
-            title=title,
-            category=category,
-            subcategory=subcategory,
-            template=template,
-            description=description,
-            tags=tags or []
-        )
-        self.snippets_updated.emit()
-        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "add", "snippet": new_snip})
-        return new_snip["id"] if isinstance(new_snip, dict) else str(new_snip)
+        try:
+            new_snip = self.snippet_manager.add_custom_snippet(
+                title=title,
+                category=category,
+                subcategory=subcategory,
+                template=template,
+                description=description,
+                tags=tags or []
+            )
+            self.snippets_updated.emit()
+            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "add", "snippet": new_snip})
+            return new_snip["id"] if isinstance(new_snip, dict) else str(new_snip)
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("add_custom_snippet", e)
+            return ""
 
     def delete_snippet(self, snippet_id: str) -> None:
-        self.snippet_manager.delete_snippet(snippet_id)
-        self.snippets_updated.emit()
-        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "delete", "id": snippet_id})
+        try:
+            self.snippet_manager.delete_snippet(snippet_id)
+            self.snippets_updated.emit()
+            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "delete", "id": snippet_id})
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("delete_snippet", e)
 
     def toggle_favorite(self, snippet_id: str) -> bool:
-        is_fav = self.snippet_manager.toggle_favorite(snippet_id)
-        self.snippets_updated.emit()
-        self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "favorite", "id": snippet_id, "is_favorite": is_fav})
-        return is_fav
+        try:
+            is_fav = self.snippet_manager.toggle_favorite(snippet_id)
+            self.snippets_updated.emit()
+            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "favorite", "id": snippet_id, "is_favorite": is_fav})
+            return is_fav
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("toggle_favorite", e)
+            return False
 
     def get_overflow_category_actions(
         self,
