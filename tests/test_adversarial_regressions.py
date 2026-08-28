@@ -207,6 +207,46 @@ class TestAdversarialRegressions(unittest.TestCase):
         persisted_registry = json.loads(restarted_manager.registry_file.read_text(encoding="utf-8"))
         self.assertIn("BoxRestart", persisted_registry)
 
+    def test_two_instances_keep_project_state_valid_and_recover_registry(self):
+        """Concurrent instances may race on metadata, but never corrupt state or lose discoverable projects."""
+        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+
+        first.create_project("BoxInstanceOne")
+        second.create_project("BoxInstanceTwo")
+
+        # Each instance writes independently; a fresh process must recover both
+        # directories from disk even when their in-memory registries were stale.
+        restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        self.assertIn("BoxInstanceOne", restarted_manager.list_projects())
+        self.assertIn("BoxInstanceTwo", restarted_manager.list_projects())
+
+        first.save_project_state("BoxInstanceOne", {"target_ip": "10.10.10.1"})
+        second.save_project_state("BoxInstanceOne", {"target_ip": "10.10.10.2"})
+        state_file = self.projects_dir / "BoxInstanceOne" / "project_state.json"
+        with state_file.open("r", encoding="utf-8") as saved_state:
+            state = json.load(saved_state)
+        self.assertIn(state["target_ip"], {"10.10.10.1", "10.10.10.2"})
+
+    def test_workspace_loss_while_running_fails_closed_without_crashing(self):
+        """Saving after the configured workspace disappears must report failure safely."""
+        self.project_mgr.create_project("BoxWorkspaceLoss")
+        self.project_mgr.activate_project("BoxWorkspaceLoss")
+
+        workspace = self.project_mgr.base_dir
+        for child in workspace.iterdir():
+            if child.is_dir():
+                import shutil
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        workspace.rmdir()
+        workspace.write_text("workspace is unavailable", encoding="utf-8")
+
+        self.assertFalse(
+            self.project_mgr.save_project_state("BoxWorkspaceLoss", {"target_ip": "10.10.10.10"})
+        )
+
     # -------------------------------------------------------------------------
     # 5. P4: Single Source of Truth & No Global State Leakage
     # -------------------------------------------------------------------------
