@@ -24,7 +24,12 @@ class FooterPanel(QFrame):
 
         # 1. Hotkey Status Hint Label
         self.lbl_status = QLabel(
-            t("footer.status", "{hotkey}: Toggle | Ctrl+Super+Q: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide", hotkey="Ctrl+Super+<")
+            t(
+                "footer.status",
+                "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+                hotkey="Ctrl+Super+<",
+                quit_hotkey="Ctrl+Super+Q"
+            )
         )
         self.lbl_status.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_status.setObjectName("FooterText")
@@ -69,8 +74,9 @@ class FooterPanel(QFrame):
     def is_always_on_top(self) -> bool:
         return self.chk_always_on_top.isChecked()
 
-    def update_hotkey_display(self, hotkey_raw: str) -> None:
-        hotkey_display = (
+    @staticmethod
+    def _format_hotkey(hotkey_raw: str) -> str:
+        return (
             hotkey_raw.replace("<ctrl>", "Strg")
             .replace("<cmd>", "Super")
             .replace("<shift>", "Shift")
@@ -79,8 +85,11 @@ class FooterPanel(QFrame):
             .replace(">", "")
             .replace("+", " + ")
         )
+    def update_hotkey_display(self, hotkey_raw: str, quit_hotkey_raw: str = "<ctrl>+<cmd>+q") -> None:
+        hotkey_display = self._format_hotkey(hotkey_raw)
+        quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)
         self.lbl_status.setText(
-            t("footer.status", "{hotkey}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken", hotkey=hotkey_display)
+            t("footer.status", "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide", hotkey=hotkey_display, quit_hotkey=quit_hotkey_display)
         )
         self.chk_always_on_top.setText(t("footer.always_on_top", "Im Vordergrund"))
         self.chk_always_on_top.setToolTip(

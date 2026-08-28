@@ -53,7 +53,7 @@
 
     "privacy.warning": "Privacy Notice: Copied passwords or personal data are logged while REC is active (Pause with Ctrl+P or click REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | Ctrl+Super+Q: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+    "footer.status": "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
     "footer.entries_count": "{count} entries",
     "footer.entry_count_single": "1 entry",
     "footer.always_on_top": "Always on Top",

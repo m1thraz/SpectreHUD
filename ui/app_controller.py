@@ -370,11 +370,12 @@ class AppController(QObject):
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
-        if "hotkey" in new_settings or "snip_hotkey" in new_settings:
+        if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
             self._update_footer_status()
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, {
                 "hotkey": new_settings.get("hotkey", self.config.get("hotkey", "<ctrl>+<cmd>+<")),
                 "snip_hotkey": new_settings.get("snip_hotkey", self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")),
+                "quit_hotkey": new_settings.get("quit_hotkey", self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")),
             })
         if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
             from core.project.validator import validate_workspace_directory, WorkspaceError
@@ -474,4 +475,5 @@ class AppController(QObject):
 
     def _update_footer_status(self) -> None:
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
-        self.footer.update_hotkey_display(hotkey_raw)
+        quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")
+        self.footer.update_hotkey_display(hotkey_raw, quit_hotkey_raw)

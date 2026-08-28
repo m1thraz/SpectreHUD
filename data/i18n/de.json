@@ -53,7 +53,7 @@
 
     "privacy.warning": "Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken",
+    "footer.status": "{hotkey}: Toggle | {quit_hotkey}: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken",
     "footer.entries_count": "{count} Einträge",
     "footer.entry_count_single": "1 Eintrag",
     "footer.always_on_top": "Im Vordergrund",

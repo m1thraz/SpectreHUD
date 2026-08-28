@@ -30,11 +30,12 @@ class TestHotkeys(unittest.TestCase):
         listener = HotkeyListener(hotkey_str="<ctrl>+<alt>+t")
         self.assertEqual(listener.config.toggle, "<ctrl>+<alt>+t")
 
-        new_cfg = HotkeyConfig(toggle="<ctrl>+<shift>+h", screenshot="<f11>")
+        new_cfg = HotkeyConfig(toggle="<ctrl>+<shift>+h", screenshot="<f11>", quit="<ctrl>+<alt>+q")
         updated = listener.update_config(new_cfg)
         self.assertTrue(updated)
         self.assertEqual(listener.config.toggle, "<ctrl>+<shift>+h")
         self.assertEqual(listener.config.screenshot, "<f11>")
+        self.assertEqual(listener.config.quit, "<ctrl>+<alt>+q")
 
     def test_invalid_hotkey_does_not_crash(self):
         listener = HotkeyListener(hotkey_str="invalid+++key+++combo")

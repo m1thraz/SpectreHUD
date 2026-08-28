@@ -16,6 +16,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "wordlist": "/usr/share/wordlists/dirb/common.txt",
     "hotkey": "<ctrl>+<cmd>+<",
     "snip_hotkey": "<ctrl>+<cmd>+x",
+    "quit_hotkey": "<ctrl>+<cmd>+q",
     "auto_hide_on_copy": False,
     "always_on_top": True,
     "theme": "cyber_dark",
