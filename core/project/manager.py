@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
 
 from core.logger import get_logger
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.project.validator import (
     validate_project_name,
     sanitize_project_name,
@@ -32,7 +32,7 @@ class ProjectManager:
         event_bus: Optional[EventBus] = None
     ):
         self.repository = repository or ProjectRepository(base_dir=base_dir, config_dir=config_dir)
-        self.event_bus = event_bus or get_event_bus()
+        self.event_bus = event_bus if event_bus is not None else EventBus()
         self.active_project: str = "Default"
         self._ensure_default_project()
 

@@ -11,7 +11,7 @@ from core.project.validator import ProjectError
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
@@ -33,7 +33,7 @@ class ProjectController(QObject):
     ):
         super().__init__(parent)
         self.project_manager = project_manager
-        self.event_bus = event_bus or get_event_bus()
+        self.event_bus = event_bus if event_bus is not None else EventBus()
 
     # ------------------------------------------------------------------ #
     # Pure Domain & DTO Methods (UI-Independent)

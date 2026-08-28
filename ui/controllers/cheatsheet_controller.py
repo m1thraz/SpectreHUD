@@ -6,7 +6,7 @@ from core.snippet_manager import SnippetManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
@@ -48,7 +48,7 @@ class CheatsheetController(QObject):
     ):
         super().__init__(parent)
         self.snippet_manager = snippet_manager
-        self.event_bus = event_bus or get_event_bus()
+        self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_category_id: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
         self.btn_more: Optional[QPushButton] = None

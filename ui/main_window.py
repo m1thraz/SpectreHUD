@@ -14,6 +14,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
+from core.event_bus import EventBus
 from core.logger import get_logger
 
 from ui.variable_bar import VariableBar
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         if container is not None:
             self.container = container
+            self.event_bus = container.event_bus
             self.config = container.config_manager
             self.snippet_manager = container.snippet_manager
             self.project_manager = container.project_manager
@@ -54,11 +56,12 @@ class MainWindow(QMainWindow):
             self.screenshot_manager = container.screenshot_manager
         else:
             self.container = None
+            self.event_bus = EventBus()
             self.config = config_manager if config_manager is not None else ConfigManager()
             self.snippet_manager = snippet_manager if snippet_manager is not None else SnippetManager()
-            self.project_manager = project_manager if project_manager is not None else ProjectManager(config_manager=self.config)
-            self.loot_manager = loot_manager if loot_manager is not None else LootManager()
-            self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
+            self.project_manager = project_manager if project_manager is not None else ProjectManager(event_bus=self.event_bus)
+            self.loot_manager = loot_manager if loot_manager is not None else LootManager(event_bus=self.event_bus)
+            self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher(event_bus=self.event_bus)
             self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
 
         # Window Frame Manager for Frameless Resize & Dragging
@@ -83,6 +86,7 @@ class MainWindow(QMainWindow):
             clipboard_watcher=self.clipboard_watcher,
             project_manager=self.project_manager,
             screenshot_manager=self.screenshot_manager,
+            event_bus=self.event_bus,
             container=self.container
         )
 

@@ -72,8 +72,10 @@ class TestEventBus(unittest.TestCase):
         self.assertEqual(self.bus.get_subscriber_count(), 0)
 
     def test_singleton_get_event_bus(self):
-        bus1 = get_event_bus()
-        bus2 = get_event_bus()
+        with self.assertWarns(DeprecationWarning):
+            bus1 = get_event_bus()
+        with self.assertWarns(DeprecationWarning):
+            bus2 = get_event_bus()
         self.assertIs(bus1, bus2)
 
 

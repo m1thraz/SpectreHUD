@@ -10,7 +10,7 @@ from pathlib import Path
 import tempfile
 
 from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
-from core.event_bus import EventBus, get_event_bus
+from core.event_bus import EventBus
 from core.config import ConfigManager, get_default_config_dir
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager

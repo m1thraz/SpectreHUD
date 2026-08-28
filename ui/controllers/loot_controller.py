@@ -8,7 +8,7 @@ from core.project_manager import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
@@ -33,7 +33,7 @@ class LootController(QObject):
         super().__init__(parent)
         self.loot_manager = loot_manager
         self.project_manager = project_manager
-        self.event_bus = event_bus or get_event_bus()
+        self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
 

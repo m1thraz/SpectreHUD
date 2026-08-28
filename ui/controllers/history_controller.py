@@ -10,7 +10,7 @@ from core.report_builder import ReportBuilder
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.history_card import HistoryCard
 from ui.styles import CYBER_DARK_QSS
@@ -36,7 +36,7 @@ class HistoryController(QObject):
         self.clipboard_watcher = clipboard_watcher
         self.loot_manager = loot_manager
         self.project_manager = project_manager
-        self.event_bus = event_bus or get_event_bus()
+        self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_history_filter: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
 

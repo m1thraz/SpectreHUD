@@ -18,7 +18,7 @@ from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 from core.container import ServiceContainer
 
 from ui.variable_bar import VariableBar
@@ -95,7 +95,7 @@ class AppController(QObject):
             self.loot_manager = loot_manager if loot_manager is not None else LootManager()
             self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
             self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
-            self.event_bus = event_bus or get_event_bus()
+            self.event_bus = event_bus if event_bus is not None else EventBus()
 
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
