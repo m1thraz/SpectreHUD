@@ -74,5 +74,21 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(self.config_manager.get("quit_hotkey"), "<ctrl>+<shift>+q")
         dlg.close()
 
+    def test_settings_dialog_defers_workspace_persistence_until_runtime_switch(self):
+        """The dialog must not commit a workspace before AppController accepts it."""
+        old_workspace = self.config_manager.get("workspace_dir")
+        new_workspace = Path(self.temp_dir.name) / "new_workspace"
+        new_workspace.mkdir()
+        dlg = SettingsDialog(self.config_manager)
+        emitted_settings = []
+        dlg.settings_applied.connect(emitted_settings.append)
+        dlg.page_general.txt_workspace.setText(str(new_workspace))
+
+        dlg._on_save_settings()
+
+        self.assertEqual(self.config_manager.get("workspace_dir"), old_workspace)
+        self.assertEqual(emitted_settings[0]["workspace_dir"], str(new_workspace))
+        dlg.close()
+
 if __name__ == '__main__':
     unittest.main()

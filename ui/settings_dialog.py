@@ -502,8 +502,13 @@ class SettingsDialog(BaseHudDialog):
                 )
                 return
 
+        # A workspace change also requires a runtime switch in AppController.
+        # Persist the remaining settings now, but let the controller commit the
+        # workspace only after that switch succeeded.
+        settings_to_persist = dict(all_settings)
+        settings_to_persist.pop("workspace_dir", None)
         try:
-            self.config.update(all_settings)
+            self.config.update(settings_to_persist)
         except PersistenceError as e:
             QMessageBox.critical(
                 self,

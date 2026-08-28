@@ -432,6 +432,8 @@ class AppController(QObject):
                         self.load_active_project_state()
                         self.refresh_filter_pills()
                         self.refresh_content()
+                        # Persist only after every runtime operation completed.
+                        self.config.set("workspace_dir", str(new_ws))
                     except Exception as switch_err:
                         # Rollback: restore previous workspace and active project
                         logger.error(f"Workspace switch failed, rolling back: {switch_err}")

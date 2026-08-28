@@ -332,6 +332,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             self.assertEqual(self.project_mgr.base_dir, new_ws.resolve())
             self.assertEqual(self.project_mgr.get_active_project(), "NewWSProject")
             self.assertTrue((new_ws / self.project_mgr.get_active_project()).is_dir())
+            self.assertEqual(self.config_mgr.get("workspace_dir"), str(new_ws.resolve()))
 
     # -------------------------------------------------------------------------
     # Invariant 8 (v15-P0): Workspace switch — rollback on failure restores old state
@@ -348,6 +349,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.project_mgr.create_project("RollbackBox")
         self.project_mgr.activate_project("RollbackBox")
         old_base = self.project_mgr.base_dir
+        self.config_mgr.set("workspace_dir", str(old_base))
 
         new_ws = self.base_path / "new_workspace"
         new_ws.mkdir()
@@ -357,6 +359,7 @@ class TestWorkflowInvariants(unittest.TestCase):
 
         self.assertEqual(self.project_mgr.base_dir, old_base)
         self.assertEqual(self.project_mgr.get_active_project(), "RollbackBox")
+        self.assertEqual(self.config_mgr.get("workspace_dir"), str(old_base))
 
 
 if __name__ == "__main__":
