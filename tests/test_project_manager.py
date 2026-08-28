@@ -113,7 +113,8 @@ class TestProjectManager(unittest.TestCase):
                     self.pm.create_project(name)
 
     def test_path_traversal_prevention_nested_traversal(self):
-        """Invariant: Traversal payloads ('../foo', '....', '..\\..\\') must remain sandboxed."""
+        """Invariant: Traversal payloads ('../foo', '....', '..\\..\\') must be rejected with InvalidProjectNameError."""
+        from core.project_manager import InvalidProjectNameError
         dangerous_names = [
             "..",
             ".",
@@ -122,16 +123,16 @@ class TestProjectManager(unittest.TestCase):
             "..\\evil",
             "../../../../etc",
             "   ",
-            "---",
-            "valid_box-123"
+            "---"
         ]
 
         for name in dangerous_names:
-            proj_dir = self.pm.get_project_dir(name)
-            self.assertTrue(
-                proj_dir.resolve().is_relative_to(self.base_dir.resolve()),
-                f"Project directory for {name!r} escaped workspace: {proj_dir}"
-            )
+            with self.assertRaises(InvalidProjectNameError):
+                self.pm.get_project_dir(name)
+
+        # Valid project name resolves strictly inside workspace
+        valid_dir = self.pm.get_project_dir("valid_box-123")
+        self.assertTrue(valid_dir.resolve().is_relative_to(self.base_dir.resolve()))
 
     def test_create_project_with_custom_base_dir(self):
         with tempfile.TemporaryDirectory() as custom_dir:

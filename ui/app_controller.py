@@ -364,14 +364,25 @@ class AppController(QObject):
                 "snip_hotkey": new_settings.get("snip_hotkey", self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")),
             })
         if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
-            new_ws = Path(new_settings["workspace_dir"]).resolve()
-            if new_ws != self.project_manager.base_dir.resolve():
-                self.project_manager.base_dir = new_ws
-                try:
-                    new_ws.mkdir(parents=True, exist_ok=True)
-                except OSError:
-                    pass
-                self.project_manager.list_projects()
+            from core.project.validator import validate_workspace_directory, WorkspaceError
+            try:
+                new_ws = validate_workspace_directory(new_settings["workspace_dir"])
+                if new_ws != self.project_manager.base_dir.resolve():
+                    self.project_manager.base_dir = new_ws
+                    self.project_manager.list_projects()
+            except WorkspaceError as e:
+                logger.error(f"Failed to switch to new workspace directory: {e}")
+                QMessageBox.warning(
+                    self.window,
+                    "Workspace Error",
+                    f"Failed to set workspace directory:\n{e}"
+                )
+        if "time_format" in new_settings:
+            fmt = new_settings["time_format"]
+            if hasattr(self, "loot_manager") and hasattr(self.loot_manager, "set_time_format"):
+                self.loot_manager.set_time_format(fmt)
+            if hasattr(self, "clipboard_watcher") and hasattr(self.clipboard_watcher, "set_time_format"):
+                self.clipboard_watcher.set_time_format(fmt)
         if "language" in new_settings:
             self.retranslate_ui(new_settings["language"])
         else:

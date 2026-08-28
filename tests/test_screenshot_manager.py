@@ -110,13 +110,14 @@ class TestScreenshotManager(unittest.TestCase):
         parent_win = QWidget()
 
         with patch.object(QPixmap, "save", return_value=False):
-            self.screenshot_mgr._on_snip_completed(
-                cropped_pixmap=pixmap,
-                parent_window=parent_win,
-                project_manager=self.project_mgr,
-                loot_manager=self.loot_mgr,
-                target_ip="10.10.10.55"
-            )
+            with self.assertRaises(Exception):
+                self.screenshot_mgr._on_snip_completed(
+                    cropped_pixmap=pixmap,
+                    parent_window=parent_win,
+                    project_manager=self.project_mgr,
+                    loot_manager=self.loot_mgr,
+                    target_ip="10.10.10.55"
+                )
 
         # Invariant: No loot entries created when disk save fails
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)

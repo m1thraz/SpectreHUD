@@ -4,7 +4,7 @@ Validation and semantic sanitization for project names and workspace paths.
 
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from core.validators import is_windows_reserved_name
 
@@ -27,6 +27,36 @@ class ProjectNotFoundError(KeyError):
 class ProjectCreationError(RuntimeError):
     """Raised when project workspace creation fails transactionally."""
     pass
+
+
+class WorkspaceError(RuntimeError):
+    """Raised when a workspace directory cannot be created, is inaccessible, or is unwritable."""
+    pass
+
+
+def validate_workspace_directory(path: Union[Path, str]) -> Path:
+    """
+    Validates that a workspace path is valid, can be created, and is writable.
+    Performs an active write probe (.spectrehud_write_test) to fail closed on
+    unwritable, read-only, or unavailable paths.
+    """
+    if not path or not str(path).strip():
+        raise WorkspaceError("Workspace directory path cannot be empty.")
+
+    p = Path(path).resolve()
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except (OSError, PermissionError) as e:
+        raise WorkspaceError(f"Could not create workspace directory '{p}': {e}") from e
+
+    probe = p / ".spectrehud_write_test"
+    try:
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink()
+    except (OSError, PermissionError) as e:
+        raise WorkspaceError(f"Workspace directory '{p}' is not writable: {e}") from e
+
+    return p
 
 
 def validate_project_name(name: str) -> str:

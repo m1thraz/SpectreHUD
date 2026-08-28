@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+Alt+S"), self, activated=self.trigger_screenshot)
         QShortcut(QKeySequence("Ctrl+Shift+X"), self, activated=self.trigger_screenshot)
         QShortcut(QKeySequence("Ctrl+P"), self, activated=lambda: self.app._toggle_pause_history())
-        QShortcut(QKeySequence("Ctrl+Q"), self, activated=QApplication.quit)
+        QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.request_quit)
         QShortcut(QKeySequence("Ctrl+,"), self, activated=self.open_settings_dialog)
         QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
         QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
@@ -437,17 +437,69 @@ class MainWindow(QMainWindow):
     def _get_resize_edge(self, pos: QPoint) -> str:
         return self.frame_manager.get_resize_edge(pos)
 
+    def request_quit(self) -> bool:
+        """
+        Unified transactional shutdown path.
+        Validates dirty reports, persists active project state, and safely terminates application.
+        Returns True if shutdown proceeds, False if cancelled or aborted.
+        """
+        from PyQt6.QtWidgets import QMessageBox
+
+        # 1. Dirty report confirmation
+        if hasattr(self, "report_ctrl") and self.report_ctrl and not self.report_ctrl.confirm_discard_if_dirty():
+            return False
+
+        # 2. Persist project state
+        saved = self._save_current_project_state()
+        if not saved:
+            reply = QMessageBox.warning(
+                self,
+                "Speichern fehlgeschlagen",
+                "Der aktuelle Projektstatus konnte nicht auf Datenträger gespeichert werden.\n\n"
+                "Möchten Sie den Vorgang abbrechen (Abbrechen) oder dennoch beenden (Beenden)?",
+                QMessageBox.StandardButton.Abort | QMessageBox.StandardButton.Close,
+                QMessageBox.StandardButton.Abort
+            )
+            if reply == QMessageBox.StandardButton.Abort:
+                return False
+
+        # 3. Flush window geometry
+        try:
+            self.config.update({
+                "window_width": self.width(),
+                "window_height": self.height()
+            })
+        except Exception:
+            pass
+
+        # 4. Quit application
+        app = QApplication.instance()
+        if app:
+            app.quit()
+        return True
+
+    def prepare_for_shutdown(self) -> None:
+        """Safety cleanup hook connected to QApplication.aboutToQuit."""
+        try:
+            if hasattr(self, "hotkey_listener") and self.hotkey_listener:
+                self.hotkey_listener.stop()
+        except Exception:
+            pass
+        try:
+            from core.logger import close_log_handlers
+            close_log_handlers()
+        except Exception:
+            pass
+
     def closeEvent(self, event) -> None:
-        if not self.report_ctrl.confirm_discard_if_dirty():
+        if self.request_quit():
+            event.accept()
+        else:
             event.ignore()
-            return
-        self._save_current_project_state()
-        event.accept()
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self.config.set("window_width", self.width())
-        self.config.set("window_height", self.height())
+        # Note: Window dimensions are persisted in request_quit to avoid excessive disk I/O during drag
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if not self.frame_manager.handle_mouse_press(event):

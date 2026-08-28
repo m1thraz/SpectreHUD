@@ -54,7 +54,8 @@ class LootManager:
         self,
         storage_file: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
-        event_bus: Optional[Any] = None
+        event_bus: Optional[Any] = None,
+        time_format: str = "24h"
     ):
         if storage is not None:
             self.storage = storage
@@ -67,8 +68,13 @@ class LootManager:
             self.storage = InMemoryStorageBackend()
 
         self.event_bus = event_bus
+        self.time_format = time_format if time_format in ("24h", "12h") else "24h"
         self.entries: List[Dict[str, Any]] = []
         self.load_entries()
+
+    def set_time_format(self, time_format: str) -> None:
+        """Sets the active timestamp formatting scheme ('24h' or '12h')."""
+        self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
     def _migrate_entries(self) -> bool:
         """Ensures all entries have a valid category. Returns True if any entry was migrated."""
@@ -100,6 +106,18 @@ class LootManager:
         if self._migrate_entries():
             logger.info("Migrated legacy loot entries to include category and persisted.")
             self.save_entries()
+
+    def replace_entries(self, entries: List[Dict[str, Any]]) -> None:
+        """
+        Replaces in-memory loot entries from session loading without triggering disk writes.
+        Validates, migrates in RAM, and emits EventType.LOOT_UPDATED.
+        """
+        from core.validators import validate_loot_list
+        self.entries = validate_loot_list(entries)
+        self._migrate_entries()
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
 
     def set_entries(self, entries: List[Dict[str, Any]]) -> None:
         """Replaces current entries with a validated list (e.g. on project switch) and migrates immediately."""
@@ -135,7 +153,7 @@ class LootManager:
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
         
         from core.validators import format_timestamp
-        time_format = kwargs.get("time_format", "24h")
+        time_format = kwargs.get("time_format", self.time_format)
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
             "type": normalized_type,

@@ -27,6 +27,7 @@ class ClipboardWatcher(QObject):
         storage_file: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
         event_bus: Optional[Any] = None,
+        time_format: str = "24h",
         parent: Optional[QObject] = None
     ):
         super().__init__(parent)
@@ -41,12 +42,17 @@ class ClipboardWatcher(QObject):
             self.storage = InMemoryStorageBackend()
         
         self.event_bus = event_bus
+        self.time_format = time_format if time_format in ("24h", "12h") else "24h"
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
         self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
         self._current_target_provider = None
         
         self.load_history()
+
+    def set_time_format(self, time_format: str) -> None:
+        """Sets the active timestamp formatting scheme ('24h' or '12h')."""
+        self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
     def set_target_provider(self, provider_func) -> None:
         """Sets a callable that returns the active target IP."""
@@ -109,7 +115,7 @@ class ClipboardWatcher(QObject):
             "id": f"clip_{uuid.uuid4().hex[:8]}",
             "text": clean_text,
             "target_ip": target_ip.strip(),
-            "timestamp": format_timestamp(),
+            "timestamp": format_timestamp(time_format=self.time_format),
             "lines_count": lines_count,
             "char_count": char_count,
             "is_multiline": is_multiline
@@ -138,6 +144,18 @@ class ClipboardWatcher(QObject):
             self.history = validate_clipboard_list(raw_data)
         else:
             self.history = []
+
+    def replace_history(self, history: List[Dict[str, Any]]) -> None:
+        """
+        Replaces in-memory clipboard history from session loading without triggering disk writes.
+        Validates in RAM and emits EventType.HISTORY_UPDATED.
+        """
+        from core.validators import validate_clipboard_list
+        self.history = validate_clipboard_list(history)
+        self._last_copied_text = self.history[0]["text"] if self.history else None
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
 
     def set_history(self, history: List[Dict[str, Any]]) -> None:
         """Replaces history with a validated list (e.g. on project switch)."""

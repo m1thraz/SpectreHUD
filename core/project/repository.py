@@ -99,12 +99,14 @@ class ProjectRepository:
 
     def list_projects(self) -> List[str]:
         """Returns list of all available project directory names across base_dir and custom locations."""
+        from collections import defaultdict
         projects = set()
         resolved_base = self.base_dir.resolve()
 
-        # 1. Base directory projects (auto-discovery)
+        # 1. Base directory projects (auto-discovery with collision detection)
         if self.base_dir.exists():
             try:
+                collision_map = defaultdict(list)
                 for p in self.base_dir.iterdir():
                     if p.name.startswith("."):
                         continue
@@ -125,9 +127,19 @@ class ProjectRepository:
 
                     if p.is_dir():
                         clean = sanitize_project_name(p.name)
-                        projects.add(clean)
-                        if clean not in self.registry:
-                            self.registry[clean] = str(resolved_p)
+                        collision_map[clean].append(resolved_p)
+
+                for clean, cand_paths in collision_map.items():
+                    if len(cand_paths) > 1:
+                        logger.error(
+                            f"Physical directory collision detected for project '{clean}': {cand_paths}. "
+                            "Refusing automatic registration to avoid silent shadowing."
+                        )
+                        continue
+                    resolved_p = cand_paths[0]
+                    projects.add(clean)
+                    if clean not in self.registry:
+                        self.registry[clean] = str(resolved_p)
             except OSError as e:
                 logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
 
@@ -151,12 +163,17 @@ class ProjectRepository:
 
         return sorted(list(projects))
 
-    def get_project_dir(self, name: str) -> Path:
+    def get_project_dir(self, name: Optional[str] = None) -> Path:
         """
         Returns the filesystem path for a project.
         Checks registered paths first, then falls back to base_dir with boundary validation.
+        Raises InvalidProjectNameError if name is invalid or attempts traversal.
         """
-        pname = sanitize_project_name(name)
+        if name is None:
+            pname = "Default"
+        else:
+            pname = validate_project_name(name)
+
         resolved_base = self.base_dir.resolve()
         candidate = self.base_dir / pname
 
@@ -164,7 +181,7 @@ class ProjectRepository:
             logger.warning(
                 f"Ignored malicious symlink masquerading as project in base_dir: {candidate}"
             )
-            return (self.base_dir / "Default").resolve()
+            raise InvalidProjectNameError(f"Project '{pname}' is a malicious symlink.")
 
         if pname in self.registry:
             reg_path = Path(self.registry[pname]).resolve()
@@ -175,9 +192,11 @@ class ProjectRepository:
         if not proj_dir.is_relative_to(resolved_base) or proj_dir == resolved_base:
             logger.error(
                 f"Workspace escape attempt / symlink traversal detected: {name!r} "
-                f"(resolved to {proj_dir}). Falling back to Default."
+                f"(resolved to {proj_dir})."
             )
-            return (self.base_dir / "Default").resolve()
+            raise InvalidProjectNameError(f"Workspace escape attempt detected for project '{name}'.")
+
+        return proj_dir
 
         return proj_dir
 

@@ -133,15 +133,10 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
     
-    lines_count = entry.get("lines_count")
-    if not isinstance(lines_count, int) or lines_count < 1:
-        lines_count = text.count("\n") + 1
-
-    char_count = entry.get("char_count")
-    if not isinstance(char_count, int) or char_count < 0:
-        char_count = len(text)
-
-    is_multiline = bool(entry.get("is_multiline", lines_count > 2 or char_count > 120))
+    # Derive canonical metadata strictly from text content
+    char_count = len(text)
+    lines_count = text.count("\n") + 1
+    is_multiline = ("\n" in text) or (char_count > 120)
 
     return {
         "id": entry_id or _stable_hash_id("clip_gen", text),
@@ -149,7 +144,7 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "target_ip": target_ip,
         "timestamp": timestamp,
         "lines_count": lines_count,
-        "char_count": min(char_count, len(text)),
+        "char_count": char_count,
         "is_multiline": is_multiline
     }
 
@@ -172,7 +167,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
     """
     Validates and normalizes the full project_state.json schema.
     Ensures all expected keys and nested structures (loot list, clipboard list) exist,
-    strictly bounding all string lengths and list sizes.
+    strictly bounding all string lengths and list sizes without corrupting credentials.
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     default_state = {
@@ -197,8 +192,8 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "target_ip": str(data.get("target_ip") or "10.10.10.10")[:MAX_TARGET_IP_LENGTH],
         "attacker_ip": str(data.get("attacker_ip") or "10.10.14.5")[:MAX_TARGET_IP_LENGTH],
         "port": str(data.get("port") or "4444")[:32],
-        "username": str(data.get("username") or "")[:MAX_TARGET_IP_LENGTH],
-        "password": str(data.get("password") or "")[:MAX_TARGET_IP_LENGTH],
+        "username": str(data.get("username") or "")[:1024],
+        "password": str(data.get("password") or "")[:1024],
         "wordlist": str(data.get("wordlist") or "/usr/share/wordlists/dirb/common.txt")[:1024],
         "created_at": str(data.get("created_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "updated_at": str(data.get("updated_at") or now_str)[:MAX_TIMESTAMP_LENGTH],

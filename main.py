@@ -92,8 +92,11 @@ def main():
     hotkey_listener = HotkeyListener(config=hotkey_config)
     hotkey_listener.toggle_requested.connect(window.toggle_visibility)
     hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
-    hotkey_listener.quit_requested.connect(app.quit)
+    hotkey_listener.quit_requested.connect(window.request_quit)
     hotkey_listener.start()
+
+    # Register safety net shutdown hook
+    app.aboutToQuit.connect(window.prepare_for_shutdown)
 
     # System Tray Icon (Default: Paused for privacy)
     tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False)), app)
@@ -119,7 +122,7 @@ def main():
     tray_menu.addAction(act_options)
 
     act_quit = QAction("Beenden (Strg+Super+Q)", tray_menu)
-    act_quit.triggered.connect(app.quit)
+    act_quit.triggered.connect(window.request_quit)
     tray_menu.addAction(act_quit)
 
     tray_icon.setContextMenu(tray_menu)

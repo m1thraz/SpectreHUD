@@ -463,12 +463,33 @@ class SettingsDialog(BaseHudDialog):
 
     def _on_save_settings(self) -> None:
         """Collects all settings from modular pages and saves atomically to config."""
+        from core.storage import PersistenceError
         all_settings: Dict[str, Any] = {}
         all_settings.update(self.page_hotkeys.get_settings())
         all_settings.update(self.page_language.get_settings())
         all_settings.update(self.page_general.get_settings())
 
-        self.config.update(all_settings)
+        if "workspace_dir" in all_settings and all_settings["workspace_dir"]:
+            from core.project.validator import validate_workspace_directory, WorkspaceError
+            try:
+                validate_workspace_directory(all_settings["workspace_dir"])
+            except WorkspaceError as e:
+                QMessageBox.warning(
+                    self,
+                    "Ungültiger Workspace-Pfad",
+                    f"Das ausgewählte Workspace-Verzeichnis ist ungültig oder nicht beschreibbar:\n{e}"
+                )
+                return
+
+        try:
+            self.config.update(all_settings)
+        except PersistenceError as e:
+            QMessageBox.critical(
+                self,
+                "Speichern fehlgeschlagen",
+                f"Die Einstellungen konnten nicht gespeichert werden:\n{e}"
+            )
+            return
 
         if "language" in all_settings:
             from core.i18n import set_locale

@@ -85,14 +85,8 @@ class TestAdversarialRegressions(unittest.TestCase):
             with self.assertRaises(InvalidProjectNameError):
                 self.project_mgr.create_project(bad_name, allow_existing=True)
 
-            proj_dir = self.project_mgr.get_project_dir(bad_name)
-            resolved_proj = proj_dir.resolve()
-
-            # Boundary Invariant: Must be strictly inside projects_dir
-            self.assertTrue(
-                resolved_proj.is_relative_to(resolved_base),
-                f"Adversarial path traversal escape detected for input {bad_name!r}: {resolved_proj}"
-            )
+            with self.assertRaises(InvalidProjectNameError):
+                self.project_mgr.get_project_dir(bad_name)
 
         # File System Invariant: Parent directory of workspace must remain completely untouched
         parent_entries = [p.name for p in self.projects_dir.parent.iterdir() if p.name != "projects"]
@@ -434,13 +428,14 @@ class TestAdversarialRegressions(unittest.TestCase):
         pix = QPixmap.fromImage(img)
 
         with patch.object(QPixmap, "save", return_value=False):
-            snip_mgr._on_snip_completed(
-                cropped_pixmap=pix,
-                parent_window=QWidget(),
-                project_manager=self.project_mgr,
-                loot_manager=self.loot_mgr,
-                target_ip="10.10.10.99"
-            )
+            with self.assertRaises(Exception):
+                snip_mgr._on_snip_completed(
+                    cropped_pixmap=pix,
+                    parent_window=QWidget(),
+                    project_manager=self.project_mgr,
+                    loot_manager=self.loot_mgr,
+                    target_ip="10.10.10.99"
+                )
 
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
 
@@ -807,8 +802,267 @@ class TestAdversarialRegressions(unittest.TestCase):
         from core.logger import get_logger
         test_log = get_logger("isolated_test_module")
         test_log.info("In-memory test message")
-        # Ensure default root logging without configure_file_logging creates no files
         self.assertIsNotNone(test_log)
+
+    # -------------------------------------------------------------------------
+    # 23. Unified Shutdown: Dirty Report Blocks Quit
+    # -------------------------------------------------------------------------
+    def test_quit_blocks_when_report_dirty(self):
+        """
+        Adversarial Lifecycle: If the report editor contains unsaved changes and
+        the user cancels discard, request_quit() must abort without closing or quitting.
+        """
+        from unittest.mock import patch
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        container = ServiceContainer.create_in_memory()
+        window = MainWindow(container=container)
+
+        with patch.object(window.report_ctrl, "confirm_discard_if_dirty", return_value=False):
+            with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
+                res = window.request_quit()
+                self.assertFalse(res, "request_quit must return False when report is dirty and user cancels")
+                mock_quit.assert_not_called()
+
+    # -------------------------------------------------------------------------
+    # 24. Unified Shutdown: Project State Save Failure Aborts Quit
+    # -------------------------------------------------------------------------
+    def test_quit_blocks_when_project_save_fails(self):
+        """
+        Adversarial Lifecycle: If saving project state to disk fails during shutdown,
+        request_quit() must prompt the user and abort when user chooses Abort.
+        """
+        from unittest.mock import patch
+        from PyQt6.QtWidgets import QMessageBox
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        container = ServiceContainer.create_in_memory()
+        window = MainWindow(container=container)
+
+        with patch.object(window, "_save_current_project_state", return_value=False):
+            with patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Abort):
+                with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
+                    res = window.request_quit()
+                    self.assertFalse(res, "request_quit must return False when state save fails and user chooses Abort")
+                    mock_quit.assert_not_called()
+
+    # -------------------------------------------------------------------------
+    # 25. Unified Shutdown: Normal Exit Flushes State
+    # -------------------------------------------------------------------------
+    def test_quit_flushes_project_state_on_clean_exit(self):
+        """
+        Adversarial Lifecycle: Normal request_quit must flush all UI inputs to disk.
+        """
+        from unittest.mock import patch
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        container = ServiceContainer.create_in_memory()
+        window = MainWindow(container=container)
+        window.var_bar.txt_target.setText("192.168.1.77")
+
+        with patch("PyQt6.QtWidgets.QApplication.quit"):
+            res = window.request_quit()
+            self.assertTrue(res)
+            
+            # Verify persisted state
+            state = container.project_manager.load_project_state()
+            self.assertEqual(state.get("target_ip"), "192.168.1.77")
+
+    # -------------------------------------------------------------------------
+    # 26. Close Event Discard Protection
+    # -------------------------------------------------------------------------
+    def test_close_event_does_not_discard_unsaved_state(self):
+        """
+        Adversarial Lifecycle: closeEvent must ignore event if request_quit returns False.
+        """
+        from unittest.mock import patch
+        from PyQt6.QtGui import QCloseEvent
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        container = ServiceContainer.create_in_memory()
+        window = MainWindow(container=container)
+
+        evt = QCloseEvent()
+        with patch.object(window, "request_quit", return_value=False):
+            window.closeEvent(evt)
+            self.assertFalse(evt.isAccepted(), "CloseEvent must be ignored when request_quit returns False")
+
+    # -------------------------------------------------------------------------
+    # 27. Workspace Writability Probe
+    # -------------------------------------------------------------------------
+    def test_workspace_change_rejects_unwritable_directory(self):
+        """
+        Adversarial: Changing workspace directory to an unwritable / invalid path must fail-closed.
+        """
+        from unittest.mock import patch
+        from core.project.validator import validate_workspace_directory, WorkspaceError
+
+        # Empty path
+        with self.assertRaises(WorkspaceError):
+            validate_workspace_directory("")
+
+        # Unwritable path simulation
+        target_p = self.temp_path / "valid_unwritable_probe"
+        with patch("pathlib.Path.write_text", side_effect=PermissionError("Mock Permission Denied")):
+            with self.assertRaises(WorkspaceError):
+                validate_workspace_directory(target_p)
+
+    # -------------------------------------------------------------------------
+    # 28. Directory Collision Handling on Existing Folders
+    # -------------------------------------------------------------------------
+    def test_project_name_collision_on_existing_directories(self):
+        """
+        Adversarial: Having both 'Hack Box' and 'Hack_Box' on disk must detect collision
+        and refuse silent shadowing/overwrite in list_projects.
+        """
+        dir_a = self.projects_dir / "Hack Box"
+        dir_b = self.projects_dir / "Hack_Box"
+        dir_a.mkdir(parents=True, exist_ok=True)
+        dir_b.mkdir(parents=True, exist_ok=True)
+
+        projects = self.project_mgr.list_projects()
+        # Due to collision, the ambiguous alias 'Hack_Box' must not silently shadow both directories
+        self.assertNotIn("Hack Box", projects)
+
+    # -------------------------------------------------------------------------
+    # 29. Invalid Project Lookup Does Not Mutate Default
+    # -------------------------------------------------------------------------
+    def test_invalid_project_lookup_does_not_mutate_default(self):
+        """
+        Adversarial: get_project_dir with path traversal must RAISE InvalidProjectNameError
+        rather than quietly returning the Default project directory.
+        """
+        with self.assertRaises(InvalidProjectNameError):
+            self.project_mgr.get_project_dir("../../../secret")
+
+        with self.assertRaises(InvalidProjectNameError):
+            self.project_mgr.repository.get_project_dir("..\\..\\windows_attack")
+
+    # -------------------------------------------------------------------------
+    # 30. Screenshot Transactional Rollback on Project State Failure
+    # -------------------------------------------------------------------------
+    def test_screenshot_rolls_back_when_project_state_save_fails(self):
+        """
+        Adversarial Transaction: If project_state persistence fails after saving a screenshot PNG,
+        the PNG must be deleted and the in-memory loot entry must be rolled back.
+        """
+        from unittest.mock import MagicMock
+        from PyQt6.QtGui import QPixmap, QImage
+        from core.screenshot_manager import ScreenshotManager, ScreenshotSaveError
+
+        snip_mgr = ScreenshotManager()
+        self.project_mgr.create_project("BoxRollback")
+        self.project_mgr.set_active_project("BoxRollback")
+
+        img = QImage(100, 100, QImage.Format.Format_RGB32)
+        pix = QPixmap.fromImage(img)
+
+        mock_window = MagicMock()
+        mock_window.save_current_project_state.return_value = False
+
+        with self.assertRaises(ScreenshotSaveError):
+            snip_mgr._on_snip_completed(
+                cropped_pixmap=pix,
+                parent_window=mock_window,
+                project_manager=self.project_mgr,
+                loot_manager=self.loot_mgr,
+                target_ip="10.10.10.10"
+            )
+
+        # Invariant 1: No orphaned PNG files in loot directory
+        loot_dir = self.project_mgr.get_project_dir("BoxRollback") / "loot"
+        self.assertEqual(list(loot_dir.glob("*.png")), [])
+
+        # Invariant 2: In-memory loot entry was rolled back
+        self.assertEqual(self.loot_mgr.get_all_entries(), [])
+
+    # -------------------------------------------------------------------------
+    # 31. Session Load Performs Zero Disk Writes
+    # -------------------------------------------------------------------------
+    def test_session_load_does_not_persist(self):
+        """
+        Adversarial: ProjectSessionService.load_project_session must strictly populate
+        in-memory state without triggering storage write operations.
+        """
+        from unittest.mock import MagicMock
+        from core.project_session_service import ProjectSessionService
+
+        mock_storage = MagicMock()
+        self.loot_mgr.storage = mock_storage
+        self.clip_watcher.storage = mock_storage
+
+        session_service = ProjectSessionService(
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            clipboard_watcher=self.clip_watcher
+        )
+
+        self.project_mgr.create_project("BoxLoadNoWrite")
+        mock_storage.save_json.reset_mock()
+
+        session_service.load_project_session("BoxLoadNoWrite")
+        # Load operation must NOT call storage.save_json
+        mock_storage.save_json.assert_not_called()
+
+    # -------------------------------------------------------------------------
+    # 32. Clipboard Metadata Derived From Text
+    # -------------------------------------------------------------------------
+    def test_clipboard_metadata_is_derived_from_text(self):
+        """
+        Adversarial: Stored / untrusted metadata in clipboard entries must be derived
+        from canonical text rather than blindly accepted.
+        """
+        from core.validators import validate_clipboard_entry
+
+        malicious = {
+            "text": "single line command",
+            "char_count": 999999,
+            "lines_count": 999999,
+            "is_multiline": True
+        }
+        res = validate_clipboard_entry(malicious)
+        self.assertIsNotNone(res)
+        self.assertEqual(res["char_count"], len("single line command"))
+        self.assertEqual(res["lines_count"], 1)
+        self.assertFalse(res["is_multiline"])
+
+    # -------------------------------------------------------------------------
+    # 33. Storage Backend Fails Closed on Path Traversal
+    # -------------------------------------------------------------------------
+    def test_storage_backend_rejects_traversal_resource_name(self):
+        """
+        Adversarial: FileStorageBackend must raise ValueError on traversal tokens
+        rather than silently stripping directory parts.
+        """
+        from core.storage import FileStorageBackend
+
+        storage = FileStorageBackend(base_dir=self.temp_path / "strict_storage")
+        with self.assertRaises(ValueError):
+            storage.save_json("../traversal", {"data": 1})
+
+        with self.assertRaises(ValueError):
+            storage.load_json("..\\windows_traversal")
+
+    # -------------------------------------------------------------------------
+    # 34. Isolated EventBus per Container Instance
+    # -------------------------------------------------------------------------
+    def test_event_bus_instances_are_isolated(self):
+        """
+        Adversarial: Separate ServiceContainer instances must have isolated EventBuses.
+        """
+        from core.container import ServiceContainer
+
+        c1 = ServiceContainer.create_production(config_dir=self.temp_path / "c1_cfg")
+        c2 = ServiceContainer.create_production(config_dir=self.temp_path / "c2_cfg")
+
+        self.assertIsNot(c1.event_bus, c2.event_bus, "Container instances must not share singleton EventBus")
+
+        from core.logger import close_log_handlers
+        close_log_handlers()
 
 
 if __name__ == "__main__":

@@ -8,9 +8,11 @@ from core.project.validator import (
     InvalidProjectNameError,
     ProjectNotFoundError,
     ProjectCreationError,
+    WorkspaceError,
     validate_project_name,
     sanitize_project_name,
-    validate_workspace_boundary
+    validate_workspace_boundary,
+    validate_workspace_directory
 )
 from core.project.metadata import (
     DEFAULT_NOTES_TEMPLATE,
@@ -31,9 +33,11 @@ __all__ = [
     "InvalidProjectNameError",
     "ProjectNotFoundError",
     "ProjectCreationError",
+    "WorkspaceError",
     "validate_project_name",
     "sanitize_project_name",
     "validate_workspace_boundary",
+    "validate_workspace_directory",
     "DEFAULT_NOTES_TEMPLATE",
     "create_initial_notes",
     "create_initial_state",

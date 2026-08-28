@@ -63,12 +63,19 @@ class ConfigManager:
     def load_config(self) -> Dict[str, Any]:
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
+            migrated = False
             # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
             if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
                 loaded["hotkey"] = "<ctrl>+<cmd>+<"
+                migrated = True
             cfg = DEFAULT_CONFIG.copy()
             cfg.update(loaded)
             self.data = cfg
+            if migrated:
+                try:
+                    self.save_config()
+                except PersistenceError:
+                    pass
             return cfg
         
         cfg = DEFAULT_CONFIG.copy()

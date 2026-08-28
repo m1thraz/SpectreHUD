@@ -103,7 +103,7 @@ class ProjectManager:
 
     def get_project_dir(self, name: Optional[str] = None) -> Path:
         """Returns the filesystem path for a project."""
-        pname = name or self.active_project
+        pname = name if name is not None else self.active_project
         return self.repository.get_project_dir(pname)
 
     def create_project(

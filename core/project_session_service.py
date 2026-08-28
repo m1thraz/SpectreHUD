@@ -31,11 +31,11 @@ class ProjectSessionService:
         pname = project_name or self.project_manager.get_active_project()
         state = self.project_manager.load_project_state(name=pname)
         if state:
-            self.loot_manager.set_entries(state.get("loot", []))
-            self.clipboard_watcher.set_history(state.get("clipboard_history", []))
+            self.loot_manager.replace_entries(state.get("loot", []))
+            self.clipboard_watcher.replace_history(state.get("clipboard_history", []))
         else:
-            self.loot_manager.set_entries([])
-            self.clipboard_watcher.set_history([])
+            self.loot_manager.replace_entries([])
+            self.clipboard_watcher.replace_history([])
         return state or {}
 
     def save_project_session(self, variables: Dict[str, str], project_name: Optional[str] = None) -> bool:

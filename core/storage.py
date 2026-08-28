@@ -140,7 +140,12 @@ class FileStorageBackend(StorageBackend):
     def _resolve_path(self, resource_name: str) -> Path:
         if self.single_file_path is not None:
             return self.single_file_path
-        sanitized_name = Path(resource_name).name
+        if not resource_name or not str(resource_name).strip():
+            raise ValueError("Resource name cannot be empty.")
+        raw = str(resource_name).strip()
+        if "/" in raw or "\\" in raw or ".." in raw or Path(raw).name != raw:
+            raise ValueError(f"Invalid resource name containing path traversal components: {resource_name!r}")
+        sanitized_name = raw
         if not sanitized_name.endswith(".json"):
             sanitized_name += ".json"
         return self.base_dir / sanitized_name
