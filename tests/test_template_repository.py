@@ -108,6 +108,46 @@ class TestTemplateRepository(unittest.TestCase):
         self.assertNotIn("corrupt", ids)
         self.assertNotIn("huge", ids)
 
+    def test_path_traversal_prevention(self):
+        """Path traversal IDs in dict_to_template, save, get, and delete are strictly rejected."""
+        evil_ids = [
+            "../../../../../../tmp/evil_file",
+            "../victim",
+            "foo/bar",
+            "foo\\bar",
+            "bad*id",
+            "",
+            "a" * 65  # Too long
+        ]
+
+        # 1. dict_to_template rejects evil IDs
+        for bad_id in evil_ids:
+            bad_dict = {
+                "id": bad_id,
+                "name": "Evil Template",
+                "sections": [{"type": "header_metadata"}]
+            }
+            self.assertIsNone(dict_to_template(bad_dict), f"dict_to_template should reject {bad_id}")
+
+        # 2. save_user_template rejects evil template IDs
+        evil_template = ReportTemplate(
+            id="../../../../../tmp/evil_dropped",
+            name="Evil Dropped",
+            language="de",
+            category="ctf",
+            complexity="simple",
+            sections=[TemplateSection(type="header_metadata")]
+        )
+        self.assertFalse(self.repo.save_user_template(evil_template))
+        
+        # Verify file was NOT created outside sandbox
+        potential_escape = Path(tempfile.gettempdir()) / "evil_dropped.json"
+        self.assertFalse(potential_escape.exists())
+
+        # 3. get_template and delete_user_template reject traversal IDs
+        self.assertIsNone(self.repo.get_template("../../something"))
+        self.assertFalse(self.repo.delete_user_template("../../something"))
+
 
 if __name__ == "__main__":
     unittest.main()

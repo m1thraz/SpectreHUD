@@ -5,6 +5,7 @@ Manages discovery, validation, storage, and retrieval of built-in and user-defin
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -18,6 +19,15 @@ from core.atomic_write import atomic_write_json
 from core.logger import get_logger
 
 logger = get_logger("template_repository")
+
+TEMPLATE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+
+
+def is_valid_template_id(template_id: str) -> bool:
+    """Validates that a template ID contains only alphanumeric characters, underscores, and hyphens (1-64 chars)."""
+    if not isinstance(template_id, str):
+        return False
+    return bool(TEMPLATE_ID_PATTERN.match(template_id.strip()))
 
 
 def template_to_dict(template: ReportTemplate) -> Dict[str, Any]:
@@ -48,7 +58,8 @@ def dict_to_template(data: Dict[str, Any], is_builtin: bool = False) -> Optional
 
     template_id = str(data.get("id", "")).strip()
     name = str(data.get("name", "")).strip()
-    if not template_id or not name:
+    if not is_valid_template_id(template_id) or not name:
+        logger.warning(f"dict_to_template rejected template with invalid id ({template_id!r}) or name ({name!r})")
         return None
 
     language = str(data.get("language", "de")).lower()
@@ -165,16 +176,44 @@ class TemplateRepository:
             template_map[t.id] = t
         return list(template_map.values())
 
+    def _get_safe_user_path(self, template_id: str) -> Optional[Path]:
+        """Resolves and validates that the user template path is strictly within user_templates_dir."""
+        if not is_valid_template_id(template_id):
+            logger.warning(f"Rejected template operation with invalid template_id: {template_id!r}")
+            return None
+        path = (self.user_templates_dir / f"{template_id}.json").resolve()
+        try:
+            if not path.is_relative_to(self.user_templates_dir.resolve()):
+                logger.warning(f"Path traversal detected for template_id: {template_id!r}")
+                return None
+        except AttributeError:
+            if self.user_templates_dir.resolve() not in path.parents:
+                return None
+        return path
+
+    def _get_safe_builtin_path(self, template_id: str) -> Optional[Path]:
+        """Resolves and validates that the built-in template path is strictly within builtin_dir."""
+        if not is_valid_template_id(template_id):
+            return None
+        path = (self.builtin_dir / f"{template_id}.json").resolve()
+        try:
+            if not path.is_relative_to(self.builtin_dir.resolve()):
+                return None
+        except AttributeError:
+            if self.builtin_dir.resolve() not in path.parents:
+                return None
+        return path
+
     def get_template(self, template_id: str) -> Optional[ReportTemplate]:
         """Gets a template by its ID, checking user overrides first, then built-ins."""
-        user_path = self.user_templates_dir / f"{template_id}.json"
-        if user_path.exists():
+        user_path = self._get_safe_user_path(template_id)
+        if user_path and user_path.exists():
             t = self._load_template_file(user_path, is_builtin=False)
             if t:
                 return t
 
-        builtin_path = self.builtin_dir / f"{template_id}.json"
-        if builtin_path.exists():
+        builtin_path = self._get_safe_builtin_path(template_id)
+        if builtin_path and builtin_path.exists():
             t = self._load_template_file(builtin_path, is_builtin=True)
             if t:
                 return t
@@ -190,9 +229,12 @@ class TemplateRepository:
 
     def save_user_template(self, template: ReportTemplate) -> bool:
         """Saves a user template as a JSON file atomically."""
-        if not template.id:
+        if not is_valid_template_id(template.id):
+            logger.warning(f"Rejected save_user_template with invalid template ID: {template.id!r}")
             return False
-        user_path = self.user_templates_dir / f"{template.id}.json"
+        user_path = self._get_safe_user_path(template.id)
+        if not user_path:
+            return False
         data = template_to_dict(template)
         data["is_builtin"] = False
         return atomic_write_json(user_path, data)
@@ -202,15 +244,15 @@ class TemplateRepository:
         Deletes a user template.
         If the template is also a built-in, this resets it back to factory defaults.
         """
-        user_path = self.user_templates_dir / f"{template_id}.json"
-        if user_path.exists():
-            try:
-                user_path.unlink()
-                return True
-            except OSError as e:
-                logger.error(f"Failed to delete user template {template_id}: {e}")
-                return False
-        return False
+        user_path = self._get_safe_user_path(template_id)
+        if not user_path or not user_path.exists():
+            return False
+        try:
+            user_path.unlink()
+            return True
+        except OSError as e:
+            logger.error(f"Failed to delete user template {template_id}: {e}")
+            return False
 
     def reset_to_defaults(self, template_id: Optional[str] = None) -> bool:
         """Removes user overrides for a specific template or all templates."""

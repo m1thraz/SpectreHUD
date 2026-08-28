@@ -126,8 +126,8 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
         sev = str(entry.get("severity", "info")).lower()
         if sev != "info":
             findings_count += 1
-            t = entry.get("title", "Unbenannt")
-            cat = entry.get("category", "misc")
+            t = str(entry.get("title", "Unbenannt")).replace("|", "\\|").replace("\n", " ")
+            cat = str(entry.get("category", "misc")).replace("|", "\\|").replace("\n", " ")
             finding_rows.append(f"| {findings_count} | {t} | {sev.upper()} | {cat} | Offen |")
 
     if not finding_rows:
@@ -273,7 +273,7 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
         sev = str(entry.get("severity", "info")).lower()
         if sev in ("critical", "high", "medium", "low"):
             num += 1
-            t = entry.get("title", "Finding")
+            t = str(entry.get("title", "Finding")).replace("|", "\\|").replace("\n", " ")
             priority = {"critical": "P1", "high": "P2", "medium": "P3", "low": "P4"}.get(sev, "P3")
             remed_rows.append(f"| {priority} | {t} | Finding #{num} |")
 

@@ -40,10 +40,6 @@ class TestLootManager(unittest.TestCase):
         updated_fallback = self.loot_mgr.update_entry(entry["id"], severity="invalid_level")
         self.assertEqual(updated_fallback["severity"], "info")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_add_and_get_entry(self):
         entry = self.loot_mgr.add_entry(
             entry_type="credentials",
