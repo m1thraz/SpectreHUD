@@ -3,7 +3,7 @@ from pathlib import Path
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 
-from core.loot_manager import LootManager, LOOT_TYPES, CATEGORIES
+from core.loot_manager import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
 from core.project_manager import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
@@ -91,7 +91,7 @@ class LootController(QObject):
             )
             self.loot_updated.emit()
             return entry
-        except (PersistenceError, StorageError, OSError) as e:
+        except (PersistenceError, StorageError, LootValidationError, OSError) as e:
             self._notify_persistence_error("add_entry", e)
             return {}
 
@@ -121,7 +121,7 @@ class LootController(QObject):
             if success:
                 self.loot_updated.emit()
             return success
-        except (PersistenceError, StorageError, OSError) as e:
+        except (PersistenceError, StorageError, LootValidationError, OSError) as e:
             self._notify_persistence_error("update_entry", e)
             return False
 

@@ -90,6 +90,22 @@ class TestProjectSessionService(unittest.TestCase):
         self.assertEqual(len(self.loot_manager.get_all_entries()), 1)
         self.assertEqual(self.loot_manager.get_all_entries()[0]["title"], "Flag1")
 
+    def test_successful_session_save_round_trips_live_loot_without_loss(self):
+        """A successful save must preserve every user-created live loot entry verbatim."""
+        self.project_manager.create_project("RoundTrip")
+        self.loot_manager.add_entry("note", "First", "alpha", target_ip="10.10.10.10")
+        self.loot_manager.add_entry("flag", "Second", "HTB{beta}", target_ip="10.10.10.10")
+        live_loot = self.loot_manager.get_all_entries()
+
+        self.assertTrue(
+            self.session_service.save_project_session(
+                variables={"target_ip": "10.10.10.10"}, project_name="RoundTrip"
+            )
+        )
+
+        reloaded_state = self.project_manager.load_project_state("RoundTrip")
+        self.assertEqual(reloaded_state["loot"], live_loot)
+
 
 if __name__ == "__main__":
     unittest.main()

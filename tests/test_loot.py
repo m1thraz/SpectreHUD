@@ -3,7 +3,8 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot_manager import LootManager
+from core.loot_manager import LootLimitError, LootManager, LootValidationError
+from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES
 from core.storage import PersistenceError
 from unittest.mock import patch
 
@@ -60,6 +61,26 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(entries[0]["title"], "FTP Admin Login")
         self.assertEqual(entries[0]["content"], "admin:P@ssword123")
         self.assertEqual(entries[0]["category"], "access")
+
+    def test_add_rejects_entry_beyond_persisted_limit(self):
+        """The 1001st live entry must not create state that a session save truncates."""
+        self.loot_mgr.entries = [
+            {"id": f"loot_{index}", "type": "note", "title": "Existing", "content": "safe"}
+            for index in range(MAX_LOOT_ENTRIES)
+        ]
+
+        with self.assertRaises(LootLimitError):
+            self.loot_mgr.add_entry("note", "One too many", "must be rejected")
+
+        self.assertEqual(len(self.loot_mgr.get_all_entries()), MAX_LOOT_ENTRIES)
+
+    def test_add_rejects_content_that_persistence_would_truncate(self):
+        oversized = "x" * (MAX_CONTENT_LENGTH + 1)
+
+        with self.assertRaises(LootValidationError):
+            self.loot_mgr.add_entry("note", "Too large", oversized)
+
+        self.assertEqual(self.loot_mgr.get_all_entries(), [])
 
     def test_category_fallback_on_add(self):
         """Invalid or omitted category falls back to 'misc'."""

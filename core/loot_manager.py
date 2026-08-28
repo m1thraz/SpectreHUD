@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from core.config import get_default_config_dir
 from core.logger import get_logger
 from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
+from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES, MAX_TARGET_IP_LENGTH, MAX_TITLE_LENGTH
 
 logger = get_logger("loot")
 
@@ -30,6 +31,14 @@ CATEGORIES = [
 ]
 
 VALID_CATEGORY_IDS = {c["id"] for c in CATEGORIES}
+
+
+class LootValidationError(ValueError):
+    """Raised when user-authored loot cannot be persisted without data loss."""
+
+
+class LootLimitError(LootValidationError):
+    """Raised when the active session reached its maximum number of loot entries."""
 
 TYPE_ALIASES = {
     "cred": "credentials",
@@ -89,6 +98,16 @@ class LootManager:
                     "entries": self.get_all_entries(),
                 },
             )
+
+    @staticmethod
+    def _validate_user_text(value: Any, field_name: str, max_length: int) -> str:
+        """Reject user input that persistence would otherwise silently truncate."""
+        text = str(value or "").strip()
+        if len(text) > max_length:
+            raise LootValidationError(
+                f"{field_name} exceeds the maximum persistable length of {max_length} characters."
+            )
+        return text
 
     def _migrate_entries(self, entries: Optional[List[Dict[str, Any]]] = None) -> bool:
         """Normalizes entries in place and returns whether any entry was migrated."""
@@ -183,11 +202,18 @@ class LootManager:
         **kwargs
     ) -> Dict[str, Any]:
         """Creates and stores a new loot entry with category and severity classification."""
+        if len(self.entries) >= MAX_LOOT_ENTRIES:
+            raise LootLimitError(
+                f"The active project already contains the maximum of {MAX_LOOT_ENTRIES} loot entries."
+            )
         from core.validators import VALID_SEVERITIES
         normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
         sev_clean = str(severity).lower().strip() if severity else "info"
         sev_id = sev_clean if sev_clean in VALID_SEVERITIES else "info"
+        clean_title = self._validate_user_text(title, "Loot title", MAX_TITLE_LENGTH)
+        clean_content = self._validate_user_text(content, "Loot content", MAX_CONTENT_LENGTH)
+        clean_target_ip = self._validate_user_text(target_ip, "Target IP", MAX_TARGET_IP_LENGTH)
         
         from core.validators import format_timestamp
         time_format = kwargs.get("time_format", self.time_format)
@@ -196,9 +222,9 @@ class LootManager:
             "type": normalized_type,
             "category": cat_id,
             "severity": sev_id,
-            "title": title.strip() or "Unbenannter Eintrag",
-            "content": content.strip(),
-            "target_ip": target_ip.strip(),
+            "title": clean_title or "Unbenannter Eintrag",
+            "content": clean_content,
+            "target_ip": clean_target_ip,
             "timestamp": format_timestamp(time_format=time_format)
         }
         new_entries = [entry, *self.entries]
@@ -225,11 +251,17 @@ class LootManager:
                     raw_type = fields["type"]
                     entry["type"] = TYPE_ALIASES.get(raw_type.lower(), raw_type) if raw_type else "note"
                 if "title" in fields:
-                    entry["title"] = fields["title"].strip() or "Unbenannter Eintrag"
+                    entry["title"] = self._validate_user_text(
+                        fields["title"], "Loot title", MAX_TITLE_LENGTH
+                    ) or "Unbenannter Eintrag"
                 if "content" in fields:
-                    entry["content"] = fields["content"].strip()
+                    entry["content"] = self._validate_user_text(
+                        fields["content"], "Loot content", MAX_CONTENT_LENGTH
+                    )
                 if "target_ip" in fields:
-                    entry["target_ip"] = fields["target_ip"].strip()
+                    entry["target_ip"] = self._validate_user_text(
+                        fields["target_ip"], "Target IP", MAX_TARGET_IP_LENGTH
+                    )
                 updated_entry = entry
                 break
         
