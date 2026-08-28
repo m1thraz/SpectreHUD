@@ -71,6 +71,12 @@ graph TD
   lock and read-merge-write step so concurrent project imports are retained. Concurrent
   edits to the *same* project state remain last-writer-wins; they are valid but not a
   collaborative merge protocol.
+- **Application Instance Boundary**: SpectreHUD acquires a process-wide Qt
+  `QLockFile` before its service container, workspace, or UI are initialized, so only
+  one interactive SpectreHUD instance can run at a time. The registry lock remains
+  intentional: it protects crash recovery and registry files that may be touched by
+  interrupted or external processes; it is not relied upon for normal multi-instance
+  application operation.
 
 ### 2.6 Virtual Qt Item Models (`ui/models/`)
 - Replaces manual widget row creation with virtualized Qt item models:
