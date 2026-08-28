@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Tuple, List, Any
+from typing import Optional, Tuple, List
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt, QRect
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QGuiApplication, QPixmap, QPainter, QColor
@@ -29,9 +29,8 @@ class ScreenshotManager(QObject):
     """
     screenshot_saved = pyqtSignal(dict)
 
-    def __init__(self, event_bus: Optional[Any] = None, parent: Optional[QObject] = None):
+    def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
-        self.event_bus = event_bus
         self._active_overlay: Optional[SnippingOverlay] = None
 
     def capture_virtual_desktop(self) -> Tuple[Optional[QPixmap], Optional[VirtualDesktopBoundingBox]]:
@@ -220,12 +219,8 @@ class ScreenshotManager(QObject):
             )
             loot_entry["file_path"] = str(filepath)
 
-            # Emit signal — project state persistence is the caller's responsibility
-            # (AppController._on_screenshot_saved is the sole owner of the save)
+            # AppController owns both the state commit and the single domain event.
             self.screenshot_saved.emit(loot_entry)
-            if self.event_bus:
-                from core.event_bus import EventType
-                self.event_bus.publish(EventType.SCREENSHOT_SAVED, loot_entry)
         except (OSError, RuntimeError) as e:
             logger.error(f"Error handling completed snip: {e}", exc_info=True)
             raise

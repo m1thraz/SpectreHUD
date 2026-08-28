@@ -80,7 +80,7 @@ class ServiceContainer:
         session_storage = InMemoryStorageBackend()
         loot_manager = LootManager(storage=session_storage, event_bus=event_bus, time_format=time_format)
         clipboard_watcher = ClipboardWatcher(storage=session_storage, event_bus=event_bus, time_format=time_format)
-        screenshot_manager = ScreenshotManager(event_bus=event_bus)
+        screenshot_manager = ScreenshotManager()
 
         return cls(
             config_manager=config_manager,
@@ -131,7 +131,7 @@ class ServiceContainer:
         project_manager = ProjectManager(base_dir=temp_base_dir, config_dir=temp_cfg_dir, event_bus=actual_event_bus)
         loot_manager = LootManager(storage=actual_storage, event_bus=actual_event_bus, time_format=time_format)
         clipboard_watcher = ClipboardWatcher(storage=actual_storage, event_bus=actual_event_bus, time_format=time_format)
-        screenshot_manager = ScreenshotManager(event_bus=actual_event_bus)
+        screenshot_manager = ScreenshotManager()
 
         return cls(
             config_manager=config_manager,

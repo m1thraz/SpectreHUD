@@ -11,6 +11,7 @@ from PyQt6.QtGui import QPixmap, QImage, QColor
 from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.screenshot_manager import ScreenshotManager
+from core.event_bus import EventBus, EventType
 
 
 class TestScreenshotManager(unittest.TestCase):
@@ -121,6 +122,31 @@ class TestScreenshotManager(unittest.TestCase):
 
         # Invariant: No loot entries created when disk save fails
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
+
+    def test_screenshot_publishes_exactly_one_domain_event(self):
+        """The app boundary publishes one canonical event after the manager signal."""
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        img.fill(QColor("green"))
+        pixmap = QPixmap.fromImage(img)
+        event_bus = EventBus()
+        received = []
+        event_bus.subscribe(EventType.SCREENSHOT_SAVED, received.append)
+
+        # This mirrors AppController's sole event-bus responsibility.
+        self.screenshot_mgr.screenshot_saved.connect(
+            lambda entry: event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": entry})
+        )
+        self.screenshot_mgr._on_snip_completed(
+            cropped_pixmap=pixmap,
+            parent_window=QWidget(),
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            target_ip="10.10.10.55",
+        )
+
+        self.assertEqual(len(received), 1)
+        self.assertEqual(set(received[0]), {"entry"})
+        self.assertEqual(received[0]["entry"]["type"], "screenshot")
 
 
 if __name__ == "__main__":
