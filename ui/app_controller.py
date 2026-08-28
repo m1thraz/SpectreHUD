@@ -359,6 +359,21 @@ class AppController(QObject):
         # ScreenshotManager only saves the PNG and emits the signal.
         if not self.save_current_project_state():
             logger.error("Project state save failed after screenshot capture.")
+            screenshot_id = loot_entry.get("id")
+            if screenshot_id:
+                entries_before_screenshot = [
+                    entry for entry in self.loot_manager.get_all_entries()
+                    if entry.get("id") != screenshot_id
+                ]
+                self.loot_manager.replace_entries(entries_before_screenshot)
+
+            file_path = loot_entry.get("file_path")
+            if file_path:
+                try:
+                    Path(file_path).unlink(missing_ok=True)
+                except OSError as exc:
+                    logger.error("Failed to remove screenshot PNG after session rollback: %s", exc)
+            return
         self.switch_mode("loot")
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
 

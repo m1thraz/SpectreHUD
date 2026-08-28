@@ -1174,6 +1174,42 @@ class TestAdversarialRegressions(unittest.TestCase):
         # Invariant: ScreenshotManager must NOT call save_current_project_state
         parent.save_current_project_state.assert_not_called()
 
+    def test_screenshot_session_save_failure_rolls_back_loot_and_png(self):
+        """A failed session commit must not leave screenshot data orphaned."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        from core.event_bus import EventBus, EventType
+        from ui.app_controller import AppController
+
+        self.project_mgr.create_project("BoxScreenshotRollback")
+        self.project_mgr.activate_project("BoxScreenshotRollback")
+        original_entry = self.loot_mgr.add_entry("note", "Keep me", "existing loot")
+        loot_dir = self.project_mgr.get_project_dir("BoxScreenshotRollback") / "loot"
+        loot_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_path = loot_dir / "screenshot_rollback.png"
+        screenshot_path.write_bytes(b"png data")
+        screenshot_entry = self.loot_mgr.add_entry(
+            "screenshot", "Rollback screenshot", "![Screenshot](loot/screenshot_rollback.png)"
+        )
+        screenshot_entry["file_path"] = str(screenshot_path)
+
+        event_bus = EventBus()
+        published = []
+        event_bus.subscribe(EventType.SCREENSHOT_SAVED, published.append)
+        controller = SimpleNamespace(
+            loot_manager=self.loot_mgr,
+            save_current_project_state=MagicMock(return_value=False),
+            switch_mode=MagicMock(),
+            event_bus=event_bus,
+        )
+
+        AppController._on_screenshot_saved(controller, screenshot_entry)
+
+        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [original_entry["id"]])
+        self.assertFalse(screenshot_path.exists())
+        controller.switch_mode.assert_not_called()
+        self.assertEqual(published, [])
+
     # -------------------------------------------------------------------------
     # 38. v15-P0: set_active_project issues DeprecationWarning
     # -------------------------------------------------------------------------
