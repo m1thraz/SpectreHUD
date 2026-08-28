@@ -6,7 +6,7 @@ Nutzt denselben Pfad (proj_dir / "report.md"), den auch der Export
 standardmäßig verwendet.
 """
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from core.report_builder import ReportBuilder
 from core.logger import get_logger
@@ -101,7 +101,7 @@ class ReportFileManager:
             return False
         return self.save(content, project_name)
 
-    def regenerate(self, loot_manager, clipboard_watcher, project_name: Optional[str] = None) -> str:
+    def regenerate(self, loot_manager, clipboard_watcher, project_name: Optional[str] = None, template: Optional[Any] = None) -> str:
         """
         Sichert den aktuellen Stand (falls vorhanden) als report.md.bak.
         Fail-Closed: Schlägt das Backup fehl, wird ReportBackupError geworfen
@@ -118,7 +118,7 @@ class ReportFileManager:
             clipboard_watcher=clipboard_watcher,
             project_manager=self.project_manager
         )
-        content = builder.build(project_name=pname)
+        content = builder.build(project_name=pname, template=template)
         if not self.save(content, project_name=pname):
             logger.error(f"Speichern des regenerierten Reports für {pname} fehlgeschlagen.")
             raise ReportSaveError(f"Speichern des regenerierten Reports für Projekt '{pname}' fehlgeschlagen.")

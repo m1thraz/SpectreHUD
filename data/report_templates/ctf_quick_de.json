@@ -1,0 +1,13 @@
+{
+  "id": "ctf_quick_de",
+  "name": "CTF Kurzbericht (DE)",
+  "language": "de",
+  "category": "ctf",
+  "complexity": "simple",
+  "is_builtin": true,
+  "sections": [
+    { "type": "header_metadata", "title": "CTF Quick-Summary" },
+    { "type": "phase_section", "category_id": "access", "title": "Initial Access" },
+    { "type": "phase_section", "category_id": "privesc", "title": "Privilege Escalation" }
+  ]
+}

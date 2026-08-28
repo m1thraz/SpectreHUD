@@ -1,0 +1,17 @@
+{
+  "id": "ctf_walkthrough_en",
+  "name": "CTF Walkthrough (EN)",
+  "language": "en",
+  "category": "ctf",
+  "complexity": "complex",
+  "is_builtin": true,
+  "sections": [
+    { "type": "header_metadata", "title": "CTF Challenge Walkthrough" },
+    { "type": "phase_section", "category_id": "recon", "title": "1. Reconnaissance & Port Scanning" },
+    { "type": "phase_section", "category_id": "access", "title": "2. Initial Access & User Flag" },
+    { "type": "phase_section", "category_id": "privesc", "title": "3. Privilege Escalation & Root Flag" },
+    { "type": "phase_section", "category_id": "postex", "title": "4. Post-Exploitation" },
+    { "type": "phase_section", "category_id": "scripts", "title": "5. Custom Exploits & Scripts" },
+    { "type": "appendix", "title": "Appendix (Command History & Screenshots)" }
+  ]
+}

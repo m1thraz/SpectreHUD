@@ -14,6 +14,18 @@ from core.reporting.markdown import (
 )
 from core.reporting.template import render_report_html
 from core.reporting.charts import render_severity_badge, render_metrics_summary
+from core.reporting.template_engine import (
+    TemplateSection,
+    ReportTemplate,
+    ReportContext,
+    TemplateRenderer,
+    LEGACY_DEFAULT_TEMPLATE
+)
+from core.reporting.template_repository import (
+    TemplateRepository,
+    template_to_dict,
+    dict_to_template
+)
 
 __all__ = [
     "HtmlReportExporter",
@@ -26,5 +38,13 @@ __all__ = [
     "convert_markdown_to_html",
     "render_report_html",
     "render_severity_badge",
-    "render_metrics_summary"
+    "render_metrics_summary",
+    "TemplateSection",
+    "ReportTemplate",
+    "ReportContext",
+    "TemplateRenderer",
+    "LEGACY_DEFAULT_TEMPLATE",
+    "TemplateRepository",
+    "template_to_dict",
+    "dict_to_template"
 ]

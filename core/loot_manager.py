@@ -77,7 +77,8 @@ class LootManager:
         self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
     def _migrate_entries(self) -> bool:
-        """Ensures all entries have a valid category. Returns True if any entry was migrated."""
+        """Ensures all entries have a valid category and severity. Returns True if any entry was migrated."""
+        from core.validators import VALID_SEVERITIES
         migrated = False
         for entry in self.entries:
             cat = entry.get("category")
@@ -85,6 +86,15 @@ class LootManager:
                 entry["category"] = "misc"
                 migrated = True
             
+            # Normalize severity if missing or invalid
+            sev = entry.get("severity")
+            norm_sev = str(sev).lower().strip() if sev else "info"
+            if norm_sev not in VALID_SEVERITIES:
+                norm_sev = "info"
+            if norm_sev != sev:
+                entry["severity"] = norm_sev
+                migrated = True
+
             # Also normalize type if needed
             entry_type = entry.get("type")
             norm_type = TYPE_ALIASES.get(str(entry_type).lower(), entry_type)
@@ -104,7 +114,7 @@ class LootManager:
 
         # Automatic migration of legacy entries lacking category or with invalid category
         if self._migrate_entries():
-            logger.info("Migrated legacy loot entries to include category and persisted.")
+            logger.info("Migrated legacy loot entries to include category/severity and persisted.")
             self.save_entries()
 
     def replace_entries(self, entries: List[Dict[str, Any]]) -> None:
@@ -146,11 +156,15 @@ class LootManager:
         content: str, 
         target_ip: str = "", 
         category: str = "misc",
+        severity: str = "info",
         **kwargs
     ) -> Dict[str, Any]:
-        """Creates and stores a new loot entry with category classification."""
+        """Creates and stores a new loot entry with category and severity classification."""
+        from core.validators import VALID_SEVERITIES
         normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
+        sev_clean = str(severity).lower().strip() if severity else "info"
+        sev_id = sev_clean if sev_clean in VALID_SEVERITIES else "info"
         
         from core.validators import format_timestamp
         time_format = kwargs.get("time_format", self.time_format)
@@ -158,6 +172,7 @@ class LootManager:
             "id": f"loot_{uuid.uuid4().hex[:8]}",
             "type": normalized_type,
             "category": cat_id,
+            "severity": sev_id,
             "title": title.strip() or "Unbenannter Eintrag",
             "content": content.strip(),
             "target_ip": target_ip.strip(),
@@ -174,6 +189,7 @@ class LootManager:
 
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
         """Updates fields of an existing entry by ID and persists changes."""
+        from core.validators import VALID_SEVERITIES
         new_entries = [dict(e) for e in self.entries]
         updated_entry = None
         for entry in new_entries:
@@ -181,6 +197,9 @@ class LootManager:
                 if "category" in fields:
                     cat = fields["category"]
                     entry["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
+                if "severity" in fields:
+                    raw_sev = str(fields["severity"]).lower().strip() if fields["severity"] else "info"
+                    entry["severity"] = raw_sev if raw_sev in VALID_SEVERITIES else "info"
                 if "type" in fields:
                     raw_type = fields["type"]
                     entry["type"] = TYPE_ALIASES.get(raw_type.lower(), raw_type) if raw_type else "note"
@@ -193,15 +212,13 @@ class LootManager:
                 updated_entry = entry
                 break
         
-        if updated_entry is None:
-            return None
-
-        if not self.storage.save_json("loot", new_entries):
-            raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
-        self.entries = new_entries
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        if updated_entry is not None:
+            if not self.storage.save_json("loot", new_entries):
+                raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
+            self.entries = new_entries
+            if self.event_bus:
+                from core.event_bus import EventType
+                self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
         return updated_entry
 
     def delete_entry(self, entry_id: str) -> bool:

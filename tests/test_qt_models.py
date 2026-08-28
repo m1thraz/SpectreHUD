@@ -40,18 +40,19 @@ class TestQtModels(unittest.TestCase):
 
         # Dimensions
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.columnCount(), 7)
 
         # Headers
         self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "Type")
-        self.assertEqual(model.headerData(2, Qt.Orientation.Horizontal), "Title")
+        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "Severity")
+        self.assertEqual(model.headerData(3, Qt.Orientation.Horizontal), "Title")
         self.assertEqual(model.headerData(0, Qt.Orientation.Vertical), "1")
 
         # Cell Data (DisplayRole)
         idx_type = model.index(0, 0)
         self.assertEqual(model.data(idx_type, Qt.ItemDataRole.DisplayRole), "Credentials")
 
-        idx_title = model.index(0, 2)
+        idx_title = model.index(0, 3)
         self.assertEqual(model.data(idx_title, Qt.ItemDataRole.DisplayRole), "SSH Admin")
 
         # Cell Data (UserRole - raw dictionary)

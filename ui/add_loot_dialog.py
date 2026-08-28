@@ -42,6 +42,7 @@ class AddLootDialog(BaseHudDialog):
         self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
         self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
         self.initial_category = default_category or initial_category or category or kwargs.get("cat", "misc")
+        self.initial_severity = kwargs.get("default_severity") or kwargs.get("initial_severity") or kwargs.get("severity") or "info"
         self.initial_title = default_title or initial_title or title or kwargs.get("name", "")
         self.initial_content = default_content or initial_content or content or kwargs.get("text", "")
         
@@ -50,14 +51,14 @@ class AddLootDialog(BaseHudDialog):
     def _init_form(self) -> None:
         layout = self.body_layout
 
-        # 1. Type and Category Selection (Side by Side)
+        # 1. Type, Severity, and Category Selection (Side by Side)
         select_row = QHBoxLayout()
-        select_row.setSpacing(12)
+        select_row.setSpacing(10)
 
         # 1a. Type
         type_col = QVBoxLayout()
         type_col.setSpacing(4)
-        lbl_type = QLabel("Typ des Eintrags:")
+        lbl_type = QLabel("Typ:")
         lbl_type.setProperty("class", "FormLabel")
         type_col.addWidget(lbl_type)
 
@@ -69,10 +70,32 @@ class AddLootDialog(BaseHudDialog):
         type_col.addWidget(self.combo_type)
         select_row.addLayout(type_col, stretch=1)
 
-        # 1b. Pentest Category
+        # 1b. Severity / Schweregrad
+        sev_col = QVBoxLayout()
+        sev_col.setSpacing(4)
+        lbl_sev = QLabel("Severity:")
+        lbl_sev.setProperty("class", "FormLabel")
+        sev_col.addWidget(lbl_sev)
+
+        self.combo_severity = QComboBox()
+        severities = [
+            ("🔵 Info", "info"),
+            ("🟢 Low", "low"),
+            ("🟡 Medium", "medium"),
+            ("🟠 High", "high"),
+            ("🔴 Critical", "critical")
+        ]
+        for i, (s_label, s_id) in enumerate(severities):
+            self.combo_severity.addItem(s_label, s_id)
+            if s_id == self.initial_severity.lower():
+                self.combo_severity.setCurrentIndex(i)
+        sev_col.addWidget(self.combo_severity)
+        select_row.addLayout(sev_col, stretch=1)
+
+        # 1c. Pentest Category
         cat_col = QVBoxLayout()
         cat_col.setSpacing(4)
-        lbl_cat = QLabel("Pentest-Phase / Kategorie:")
+        lbl_cat = QLabel("Kategorie / Phase:")
         lbl_cat.setProperty("class", "FormLabel")
         cat_col.addWidget(lbl_cat)
 
@@ -82,7 +105,7 @@ class AddLootDialog(BaseHudDialog):
             if c['id'] == self.initial_category:
                 self.combo_category.setCurrentIndex(i)
         cat_col.addWidget(self.combo_category)
-        select_row.addLayout(cat_col, stretch=1)
+        select_row.addLayout(cat_col, stretch=2)
 
         layout.addLayout(select_row)
 
@@ -150,6 +173,7 @@ class AddLootDialog(BaseHudDialog):
     def get_data(self) -> Dict[str, Any]:
         data = {
             "type": self.combo_type.currentData(),
+            "severity": self.combo_severity.currentData(),
             "category": self.combo_category.currentData(),
             "title": self.txt_title.text().strip(),
             "content": self.txt_content.toPlainText().strip(),

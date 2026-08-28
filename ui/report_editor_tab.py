@@ -13,6 +13,7 @@ Widget kennt nur "lade Text rein / hol Text raus", die eigentliche
 Backup-vor-Regenerierung-Logik lebt im FileManager, nicht hier - damit
 sie ohne Qt testbar bleibt.
 """
+from enum import Enum
 import urllib.parse
 from pathlib import Path
 from typing import Optional, Dict
@@ -25,6 +26,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QImage
 
 from core.report_file_manager import ReportFileManager
+from core.reporting.template_engine import ReportTemplate
+from core.reporting.template_repository import TemplateRepository
+from ui.template_manager_dialog import TemplateManagerDialog
 from core.logger import get_logger
 from ui.styles import CYBER_DARK_QSS
 
@@ -34,6 +38,27 @@ PREVIEW_DEBOUNCE_MS = 300
 
 
 MAX_PREVIEW_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB
+
+
+class ViewMode(Enum):
+    EDITOR = "editor"
+    SPLIT = "split"
+    PREVIEW = "preview"
+
+
+class ReportPreviewEdit(QTextEdit):
+    """Custom QTextEdit for live Markdown preview and editing with sandbox protection against unvalidated drag/drop and image insertions."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setAcceptDrops(False)
+
+    def insertFromMimeData(self, source):
+        # Prevent pasting images directly into the editable preview to maintain sandbox integrity
+        if source and (source.hasImage() or (source.hasUrls() and any(u.toLocalFile().lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) for u in source.urls()))):
+            logger.warning("Blocked raw image paste/drop into editable preview document.")
+            return
+        super().insertFromMimeData(source)
 
 
 class ReportDocument(QTextDocument):
@@ -134,7 +159,6 @@ class ReportEditorTab(QWidget):
     """Editierbarer Markdown-Report mit Live-Vorschau für das aktive Projekt."""
 
     # Für main_window: signalisiert, ob ungespeicherte Änderungen vorliegen
-    # (z.B. um beim Moduswechsel/Schließen nachzufragen).
     dirty_changed = pyqtSignal(bool)
 
     def __init__(self, report_file_manager: ReportFileManager, loot_manager, clipboard_watcher,
@@ -143,8 +167,12 @@ class ReportEditorTab(QWidget):
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
+        self.template_repo = TemplateRepository()
+        self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
         self._dirty = False
+        self._view_mode = ViewMode.SPLIT
+        self._preview_markdown_snapshot: Optional[str] = None
 
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
@@ -152,6 +180,7 @@ class ReportEditorTab(QWidget):
         self._preview_timer.timeout.connect(self._update_preview)
 
         self._build_ui()
+        self._populate_templates()
 
     # ------------------------------------------------------------------ #
     # UI-Aufbau
@@ -169,12 +198,44 @@ class ReportEditorTab(QWidget):
         toolbar.addWidget(self.lbl_status)
         toolbar.addStretch()
 
+        # View Mode Switch Buttons
+        self.btn_mode_editor = QPushButton("📝 Editor")
+        self.btn_mode_editor.setProperty("class", "SecondaryBtn")
+        self.btn_mode_editor.setToolTip("Nur Markdown-Quelltext anzeigen (Strg+1)")
+        self.btn_mode_editor.clicked.connect(lambda: self._set_view_mode(ViewMode.EDITOR))
+        toolbar.addWidget(self.btn_mode_editor)
+
+        self.btn_mode_split = QPushButton("◫ Split")
+        self.btn_mode_split.setProperty("class", "SecondaryBtn")
+        self.btn_mode_split.setToolTip("Geteilte Ansicht: Editor & Vorschau nebeneinander (Strg+2)")
+        self.btn_mode_split.clicked.connect(lambda: self._set_view_mode(ViewMode.SPLIT))
+        toolbar.addWidget(self.btn_mode_split)
+
+        self.btn_mode_preview = QPushButton("👁️ Live-Ansicht")
+        self.btn_mode_preview.setProperty("class", "SecondaryBtn")
+        self.btn_mode_preview.setToolTip("Editierbare Live-Ansicht im Vollbild (Strg+3)")
+        self.btn_mode_preview.clicked.connect(lambda: self._set_view_mode(ViewMode.PREVIEW))
+        toolbar.addWidget(self.btn_mode_preview)
+
+        # Template Selector Dropdown & Manager Button
+        from PyQt6.QtWidgets import QComboBox
+        self.combo_templates = QComboBox()
+        self.combo_templates.setToolTip("Wähle das Report-Template für die Regenerierung aus")
+        self.combo_templates.currentIndexChanged.connect(self._on_template_combo_changed)
+        toolbar.addWidget(self.combo_templates)
+
+        self.btn_manage_templates = QPushButton("🎨 Templates...")
+        self.btn_manage_templates.setProperty("class", "SecondaryBtn")
+        self.btn_manage_templates.setToolTip("Report-Templates verwalten, anpassen oder neue erstellen")
+        self.btn_manage_templates.clicked.connect(self._open_template_manager)
+        toolbar.addWidget(self.btn_manage_templates)
+
         self.btn_regenerate = QPushButton("Regenerate from Loot")
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
         self.btn_regenerate.setToolTip(
             "Ersetzt den Report-Text durch eine frische Generierung aus Loot "
-            "und Clipboard-Verlauf. Der bisherige Stand wird vorher als "
-            "report.md.bak gesichert."
+            "und Clipboard-Verlauf basierend auf dem gewählten Template. "
+            "Der bisherige Stand wird vorher als report.md.bak gesichert."
         )
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
@@ -193,14 +254,14 @@ class ReportEditorTab(QWidget):
 
         self.btn_save = QPushButton("Save")
         self.btn_save.setProperty("class", "PrimaryBtn")
-        self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+Umschalt+S)")
+        self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+S)")
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
 
         layout.addLayout(toolbar)
 
         # --- Editor | Vorschau ---
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self.editor = QPlainTextEdit()
         self.editor.setPlaceholderText(
@@ -211,7 +272,7 @@ class ReportEditorTab(QWidget):
         )
         self.editor.setProperty("class", "ReportSourceEditor")
         self.editor.textChanged.connect(self._on_text_changed)
-        splitter.addWidget(self.editor)
+        self.splitter.addWidget(self.editor)
 
         self.preview_document = ReportDocument(parent=self)
         
@@ -236,21 +297,35 @@ class ReportEditorTab(QWidget):
             p { margin: 6px 0; }
         """)
 
-        self.preview = QTextEdit()
+        self.preview = ReportPreviewEdit()
         self.preview.setDocument(self.preview_document)
         self.preview.setReadOnly(True)
         self.preview.setProperty("class", "ReportPreview")
-        splitter.addWidget(self.preview)
+        self.splitter.addWidget(self.preview)
 
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        layout.addWidget(splitter, stretch=1)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 1)
+        layout.addWidget(self.splitter, stretch=1)
 
-        # Strg+Umschalt+S zum Speichern, unabhängig vom Fokus innerhalb des Tabs
+        # Shortcuts für Speichern und View-Modi
         sc_save = QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save)
         sc_save.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         sc_save_shift = QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
         sc_save_shift.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_cycle = QShortcut(QKeySequence("Ctrl+Shift+V"), self, activated=self._cycle_view_mode)
+        sc_cycle.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_mode1 = QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self._set_view_mode(ViewMode.EDITOR))
+        sc_mode1.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_mode2 = QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self._set_view_mode(ViewMode.SPLIT))
+        sc_mode2.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_mode3 = QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW))
+        sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        self._apply_view_mode(self._view_mode)
 
     # ------------------------------------------------------------------ #
     # Projekt-Wechsel / Laden
@@ -324,13 +399,87 @@ class ReportEditorTab(QWidget):
         self._set_dirty(True)
         self._preview_timer.start()  # debounced
 
-    # ------------------------------------------------------------------ #
-    # Aktionen
-    # ------------------------------------------------------------------ #
+    def _enter_preview_mode(self) -> None:
+        """Enters editable live preview mode and takes a markdown baseline snapshot."""
+        self._preview_markdown_snapshot = self.editor.toPlainText()
+        self.preview.setReadOnly(False)
+        self.preview.setFocus()
+
+    def _commit_preview_to_markdown(self) -> None:
+        """Commits rich-text edits from the preview document back to the markdown editor."""
+        new_markdown = self.preview_document.toMarkdown()
+        old_len = len(self._preview_markdown_snapshot or "")
+        new_len = len(new_markdown)
+
+        # Sanity check against severe conversion loss
+        if old_len > 200 and new_len < old_len * 0.6:
+            reply = QMessageBox.warning(
+                self.window() if self else None,
+                "Ungewöhnlich große Änderung",
+                "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt "
+                "(möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                # Discard: reset preview to previous markdown
+                self._update_preview()
+                self._preview_markdown_snapshot = None
+                return
+
+        if new_markdown != self._preview_markdown_snapshot:
+            self.editor.blockSignals(True)
+            self.editor.setPlainText(new_markdown)
+            self.editor.blockSignals(False)
+            self._set_dirty(True)
+
+        self._preview_markdown_snapshot = None
+
+    def _set_view_mode(self, mode: ViewMode) -> None:
+        """Switches the view mode and handles preview commit / readonly transitions."""
+        if mode == self._view_mode:
+            return
+
+        # Leaving PREVIEW mode -> commit edits and make preview read-only
+        if self._view_mode == ViewMode.PREVIEW:
+            self._commit_preview_to_markdown()
+            self.preview.setReadOnly(True)
+
+        # Entering PREVIEW mode -> make editable and take snapshot
+        if mode == ViewMode.PREVIEW:
+            self._enter_preview_mode()
+
+        self._view_mode = mode
+        self._apply_view_mode(mode)
+        self._update_status_label()
+
+    def _apply_view_mode(self, mode: ViewMode) -> None:
+        """Applies visibility and splitter layout for the selected view mode."""
+        if mode == ViewMode.EDITOR:
+            self.editor.setVisible(True)
+            self.preview.setVisible(False)
+        elif mode == ViewMode.PREVIEW:
+            self.editor.setVisible(False)
+            self.preview.setVisible(True)
+        elif mode == ViewMode.SPLIT:
+            self.editor.setVisible(True)
+            self.preview.setVisible(True)
+            total_w = self.splitter.width() or 800
+            self.splitter.setSizes([total_w // 2, total_w // 2])
+
+    def _cycle_view_mode(self) -> None:
+        """Cycles through EDITOR -> SPLIT -> PREVIEW -> EDITOR."""
+        modes = [ViewMode.EDITOR, ViewMode.SPLIT, ViewMode.PREVIEW]
+        idx = modes.index(self._view_mode)
+        self._set_view_mode(modes[(idx + 1) % len(modes)])
 
     def save(self) -> bool:
         if not self.current_project:
             return False
+
+        if self._view_mode == ViewMode.PREVIEW:
+            self._commit_preview_to_markdown()
+
         ok = self.report_file_manager.save(self.editor.toPlainText(), project_name=self.current_project)
         if ok:
             self._set_dirty(False)
@@ -369,7 +518,10 @@ class ReportEditorTab(QWidget):
         from core.report_file_manager import ReportBackupError, ReportSaveError
         try:
             new_content = self.report_file_manager.regenerate(
-                self.loot_manager, self.clipboard_watcher, project_name=self.current_project
+                self.loot_manager,
+                self.clipboard_watcher,
+                project_name=self.current_project,
+                template=self.active_template
             )
             self.editor.blockSignals(True)
             self.editor.setPlainText(new_content)
@@ -398,6 +550,45 @@ class ReportEditorTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
+
+    def _populate_templates(self) -> None:
+        """Loads all available templates into the toolbar combo box."""
+        if not hasattr(self, "combo_templates"):
+            return
+        self.combo_templates.blockSignals(True)
+        self.combo_templates.clear()
+        all_templates = self.template_repo.get_all_templates()
+        for t in all_templates:
+            self.combo_templates.addItem(f"{t.name} [{t.language.upper()}]", t.id)
+
+        if self.active_template:
+            idx = self.combo_templates.findData(self.active_template.id)
+            if idx >= 0:
+                self.combo_templates.setCurrentIndex(idx)
+        elif all_templates:
+            self.active_template = all_templates[0]
+            self.combo_templates.setCurrentIndex(0)
+
+        self.combo_templates.blockSignals(False)
+
+    def _on_template_combo_changed(self) -> None:
+        """Handles selection of a template from the toolbar combo box."""
+        tid = self.combo_templates.currentData()
+        if tid:
+            self.active_template = self.template_repo.get_template(tid)
+
+    def _open_template_manager(self) -> None:
+        """Opens the template management dialog."""
+        from PyQt6.QtWidgets import QDialog
+        dlg = TemplateManagerDialog(repository=self.template_repo, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted and dlg.selected_template:
+            self.active_template = dlg.selected_template
+            self._populate_templates()
+            idx = self.combo_templates.findData(self.active_template.id)
+            if idx >= 0:
+                self.combo_templates.setCurrentIndex(idx)
+        else:
+            self._populate_templates()
 
     def _on_export_copy_clicked(self) -> None:
         from core.atomic_write import atomic_write_text
@@ -471,7 +662,7 @@ class ReportEditorTab(QWidget):
             msg.exec()
 
     # ------------------------------------------------------------------ #
-    # Vorschau
+    # Vorschau & Status
     # ------------------------------------------------------------------ #
 
     def _update_preview(self) -> None:
@@ -485,4 +676,9 @@ class ReportEditorTab(QWidget):
             self.lbl_status.setText("")
             return
         marker = "● Ungespeicherte Änderungen" if self._dirty else "✓ Gespeichert"
-        self.lbl_status.setText(f"{self.current_project} — {marker}")
+        mode_label = {
+            ViewMode.EDITOR: "Editor",
+            ViewMode.SPLIT: "Split",
+            ViewMode.PREVIEW: "Live-Ansicht"
+        }.get(self._view_mode, "Split")
+        self.lbl_status.setText(f"{self.current_project} — {marker} · [{mode_label}]")

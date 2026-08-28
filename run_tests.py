@@ -12,6 +12,12 @@ import unittest
 import time
 from pathlib import Path
 
+# Force UTF-8 stdout/stderr on Windows consoles to prevent UnicodeEncodeError
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Ensure project root is on sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -55,8 +61,9 @@ def run_all_tests() -> int:
             failed_suites.append((test_file.stem, f"Import Error: {e}"))
             continue
 
-        runner = unittest.TextTestRunner(verbosity=0, stream=open(os.devnull, "w"))
-        result = runner.run(suite)
+        with open(os.devnull, "w", encoding="utf-8", errors="replace") as null_stream:
+            runner = unittest.TextTestRunner(verbosity=0, stream=null_stream)
+            result = runner.run(suite)
         elapsed = time.time() - suite_start
         total_tests_run += result.testsRun
 

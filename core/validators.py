@@ -17,6 +17,7 @@ MAX_SNIPPETS_FILE_SIZE: int = 5 * 1024 * 1024        # 5 MB
 MAX_CONFIG_FILE_SIZE: int = 1 * 1024 * 1024          # 1 MB
 MAX_REGISTRY_FILE_SIZE: int = 2 * 1024 * 1024        # 2 MB
 MAX_REPORT_FILE_SIZE: int = 10 * 1024 * 1024         # 10 MB
+MAX_TEMPLATE_FILE_SIZE: int = 512 * 1024             # 512 KB
 
 # Content & payload size bounds (defense against bloated / malicious project states)
 MAX_LOOT_ENTRIES: int = 1000
@@ -29,6 +30,8 @@ MAX_CLIPBOARD_TEXT_LENGTH: int = 64 * 1024  # 64 KB (matches live recorder)
 MAX_TARGET_IP_LENGTH: int = 128
 MAX_TIMESTAMP_LENGTH: int = 64
 MAX_PROJECT_NAME_LENGTH: int = 128
+
+VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 
 # Windows reserved device names (case-insensitive, including stem checks like CON.txt)
 WINDOWS_RESERVED_DEVICE_NAMES = {
@@ -58,10 +61,10 @@ def format_timestamp(dt: Optional[datetime] = None, time_format: str = "24h") ->
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def is_file_size_valid(file_path, max_bytes: int) -> bool:
+def is_file_size_valid(file_path: Any, max_bytes: int) -> bool:
     """
-    Checks if a file exists and its size on disk is within max_bytes.
-    Returns False if file exceeds max_bytes or cannot be stated.
+    Checks if file exists and does not exceed maximum allowable byte size.
+    Returns False if file does not exist or exceeds limit.
     """
     try:
         from pathlib import Path
@@ -87,6 +90,8 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     entry_id = str(entry.get("id") or "")[:64]
     entry_type = str(entry.get("type") or "note").strip().lower()[:32]
     category = str(entry.get("category") or "misc").strip().lower()[:32]
+    raw_sev = str(entry.get("severity") or "info").strip().lower()[:16]
+    severity = raw_sev if raw_sev in VALID_SEVERITIES else "info"
     title = str(entry.get("title") or "Unbenannter Eintrag").strip()[:MAX_TITLE_LENGTH]
     content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
@@ -96,6 +101,7 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "id": entry_id or _stable_hash_id("loot_gen", f"{title}:{content}"),
         "type": entry_type or "note",
         "category": category or "misc",
+        "severity": severity,
         "title": title or "Unbenannter Eintrag",
         "content": content,
         "target_ip": target_ip,

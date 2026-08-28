@@ -1,0 +1,17 @@
+{
+  "id": "ctf_walkthrough_de",
+  "name": "CTF Walkthrough (DE)",
+  "language": "de",
+  "category": "ctf",
+  "complexity": "complex",
+  "is_builtin": true,
+  "sections": [
+    { "type": "header_metadata", "title": "CTF Walkthrough & Writeup" },
+    { "type": "phase_section", "category_id": "recon", "title": "1. Reconnaissance & Port-Scan" },
+    { "type": "phase_section", "category_id": "access", "title": "2. Initial Foothold & Flags" },
+    { "type": "phase_section", "category_id": "privesc", "title": "3. Privilege Escalation & Root" },
+    { "type": "phase_section", "category_id": "postex", "title": "4. Post-Exploitation" },
+    { "type": "phase_section", "category_id": "scripts", "title": "5. Custom Exploits & Automation" },
+    { "type": "appendix", "title": "Anhang (Befehlsverlauf & Screenshots)" }
+  ]
+}

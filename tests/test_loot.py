@@ -17,7 +17,32 @@ class TestLootManager(unittest.TestCase):
 
     def tearDown(self):
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        self.temp_dir.cleanup()
+        try:
+            self.temp_dir.cleanup()
+        except Exception:
+            pass
+
+    def test_add_and_update_with_severity(self):
+        """Tests adding and updating entries with severity levels."""
+        entry = self.loot_mgr.add_entry(
+            entry_type="credentials",
+            title="Domain Admin Creds",
+            content="admin:Pass123",
+            severity="critical"
+        )
+        self.assertEqual(entry["severity"], "critical")
+
+        # Update severity
+        updated = self.loot_mgr.update_entry(entry["id"], severity="high")
+        self.assertEqual(updated["severity"], "high")
+
+        # Fallback on invalid severity
+        updated_fallback = self.loot_mgr.update_entry(entry["id"], severity="invalid_level")
+        self.assertEqual(updated_fallback["severity"], "info")
+
+
+if __name__ == "__main__":
+    unittest.main()
 
     def test_add_and_get_entry(self):
         entry = self.loot_mgr.add_entry(

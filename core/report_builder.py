@@ -60,22 +60,24 @@ class ReportBuilder:
     # Public API
     # ------------------------------------------------------------------ #
 
-    def build(self, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
-        """Baut den kompletten Report-String nach dem neuen professionellen Pentest-Template."""
-        now = datetime.now()
-        date_str = now.strftime("%Y-%m-%d")
-        time_str = now.strftime("%H:%M:%S")
+    def build(self, target_ip: Optional[str] = None, project_name: Optional[str] = None, template: Optional[Any] = None) -> str:
+        """Baut den kompletten Report-String unter Verwendung der Template-Engine."""
+        from core.reporting.template_engine import TemplateRenderer, LEGACY_DEFAULT_TEMPLATE, ReportContext
+        
+        all_loot = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        all_clips = self.clipboard_watcher.get_history(target_ip=target_ip) if self.clipboard_watcher else []
+        pname = project_name or (self.project_manager.get_active_project() if self.project_manager else "Default")
+        tip = target_ip or ""
 
-        lines: List[str] = []
-        lines.extend(self._render_header(target_ip, project_name, date_str))
-        lines.extend(self._render_executive_summary())
-        lines.extend(self._render_scope_limitations())
-        lines.extend(self._render_loot_sections(target_ip))
-        lines.extend(self._render_remediation_plan())
-        lines.extend(self._render_command_history(target_ip))
-        lines.extend(self._render_screenshots_appendix(target_ip))
-        lines.extend(self._render_footer(date_str, time_str))
-        return "\n".join(lines)
+        context = ReportContext(
+            loot_entries=all_loot,
+            clipboard_history=all_clips,
+            project_name=pname,
+            target_ip=tip
+        )
+
+        active_template = template or LEGACY_DEFAULT_TEMPLATE
+        return TemplateRenderer().render(active_template, context)
 
     def export(self, output_path: Path, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
         """Baut den Report und schreibt ihn atomar nach output_path (.md erzwungen)."""
@@ -120,18 +122,35 @@ class ReportBuilder:
         ]
 
     def _render_executive_summary(self) -> List[str]:
+        all_entries = self.loot_manager.get_entries() if self.loot_manager else []
+        critical = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "critical")
+        high = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "high")
+        medium = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "medium")
+        low = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "low")
+
+        finding_rows = []
+        findings_count = 0
+        for entry in all_entries:
+            sev = str(entry.get("severity", "info")).lower()
+            if sev != "info":
+                findings_count += 1
+                title = entry.get("title", "Unbenannt")
+                cat = entry.get("category", "misc")
+                finding_rows.append(f"| {findings_count} | {title} | {sev.upper()} | {cat} | Offen |")
+
+        if not finding_rows:
+            finding_rows = ["| | | | | |"]
+
         return [
             "## Executive Summary",
-            "",
-            "> _Freitext für nicht-technische Leser: Was wurde getestet, was war das Gesamtergebnis, wie kritisch ist die Lage insgesamt._",
             "",
             "### Findings-Übersicht",
             "",
             "| # | Finding | Severity | Phase | Status |",
             "|---|---------|----------|-------|--------|",
-            "| | | | | |",
+            *finding_rows,
             "",
-            "**Gesamt:** 🔴 0 Critical · 🟠 0 High · 🟡 0 Medium · 🟢 0 Low",
+            f"**Gesamt:** 🔴 {critical} Critical · 🟠 {high} High · 🟡 {medium} Medium · 🟢 {low} Low",
             "",
             "### Kernaussagen",
             "",
@@ -189,12 +208,18 @@ class ReportBuilder:
         return lines
 
     def _render_loot_entry(self, entry: Dict[str, Any]) -> List[str]:
-        """Rendert einen einzelnen Loot-Eintrag passend zu seinem `type`."""
+        """Rendert einen einzelnen Loot-Eintrag passend zu seinem `type` und `severity`."""
         entry_type = entry.get("type", "note")
+        severity = str(entry.get("severity", "info")).lower()
         title = entry.get("title", "Unbenannter Eintrag")
         content = (entry.get("content") or "").strip()
 
-        lines = [f"### {title}"]
+        sev_badge = ""
+        if severity and severity != "info":
+            from core.reporting.charts import render_severity_badge
+            sev_badge = f"{render_severity_badge(severity)} "
+
+        lines = [f"### {sev_badge}{title}"]
         meta = []
         if entry.get("target_ip"):
             meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")

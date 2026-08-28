@@ -23,6 +23,7 @@ class LootTableModel(QAbstractTableModel):
 
     COLUMNS = [
         "Type",
+        "Severity",
         "Category",
         "Title",
         "Content",
@@ -55,33 +56,36 @@ class LootTableModel(QAbstractTableModel):
             if col == 0:
                 return entry.get("type", "note").capitalize()
             elif col == 1:
-                return entry.get("category", "misc").upper()
+                return entry.get("severity", "info").upper()
             elif col == 2:
-                return entry.get("title", "")
+                return entry.get("category", "misc").upper()
             elif col == 3:
+                return entry.get("title", "")
+            elif col == 4:
                 content = entry.get("content", "")
                 # Truncate content for single-line table display
                 first_line = content.split("\n")[0].strip()
                 if len(first_line) > 80 or "\n" in content:
                     return first_line[:77] + "..." if len(first_line) > 80 else first_line + "..."
                 return first_line
-            elif col == 4:
-                return entry.get("target_ip", "")
             elif col == 5:
+                return entry.get("target_ip", "")
+            elif col == 6:
                 return entry.get("timestamp", "")
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             full_content = entry.get("content", "")
             title = entry.get("title", "")
             entry_type = entry.get("type", "")
-            return f"[{entry_type.upper()}] {title}\n{full_content}"
+            sev = entry.get("severity", "info").upper()
+            return f"[{entry_type.upper()}] [{sev}] {title}\n{full_content}"
 
         elif role == Qt.ItemDataRole.UserRole:
             # Returns the raw dictionary item
             return entry
 
         elif role == Qt.ItemDataRole.TextAlignmentRole:
-            if col in (0, 1, 4, 5):
+            if col in (0, 1, 2, 5, 6):
                 return Qt.AlignmentFlag.AlignCenter.value
             return Qt.AlignmentFlag.AlignLeft.value
 

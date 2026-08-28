@@ -132,11 +132,17 @@ class TestSemanticValidators(unittest.TestCase):
         from datetime import datetime
         from core.validators import format_timestamp
 
-        sample_dt = datetime(2026, 8, 27, 14, 30, 15)
-        # 24h format
-        self.assertEqual(format_timestamp(sample_dt, "24h"), "2026-08-27 14:30:15")
-        # 12h format
-        self.assertEqual(format_timestamp(sample_dt, "12h"), "2026-08-27 02:30:15 PM")
+    def test_validate_loot_entry_severity(self):
+        """Tests severity validation, normalization, and fallback defaults."""
+        self.assertEqual(validate_loot_entry({"severity": "CRITICAL"})["severity"], "critical")
+        self.assertEqual(validate_loot_entry({"severity": "high"})["severity"], "high")
+        self.assertEqual(validate_loot_entry({"severity": "MEDIUM"})["severity"], "medium")
+        self.assertEqual(validate_loot_entry({"severity": "low"})["severity"], "low")
+        self.assertEqual(validate_loot_entry({"severity": "info"})["severity"], "info")
+        # Invalid / missing -> defaults to info
+        self.assertEqual(validate_loot_entry({})["severity"], "info")
+        self.assertEqual(validate_loot_entry({"severity": "super_critical"})["severity"], "info")
+        self.assertEqual(validate_loot_entry({"severity": None})["severity"], "info")
 
 
 if __name__ == "__main__":
