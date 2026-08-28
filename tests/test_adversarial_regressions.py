@@ -553,10 +553,9 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertNotIn("EvilSymlink", project_list)
         self.assertNotIn("EvilSymlink", self.project_mgr.registry)
 
-        # 2. get_project_dir("EvilSymlink") must NOT return outside_dir
-        resolved_dir = self.project_mgr.get_project_dir("EvilSymlink")
-        self.assertNotEqual(resolved_dir, outside_dir)
-        self.assertTrue(resolved_dir.is_relative_to(self.projects_dir.resolve()))
+        # 2. get_project_dir("EvilSymlink") must strictly reject symlink with InvalidProjectNameError
+        with self.assertRaises(InvalidProjectNameError):
+            self.project_mgr.get_project_dir("EvilSymlink")
 
     # -------------------------------------------------------------------------
     # 16. Report-Preview Sandbox & Arbitrary Local File Disclosure Defense
