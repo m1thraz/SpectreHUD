@@ -82,6 +82,20 @@ graph TD
   - `dialogs.py`: Modal dialogues, form layouts, and inputs.
   - `theme.py`: Aggregator generating the complete `CYBER_DARK_QSS` theme.
 
+### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
+- **`ReportTemplate` & `TemplateSection` (`models.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.
+- **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
+- **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity.
+- **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
+
+### 2.9 Archival & Standalone Export Subsystems (`core/`)
+- **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives with path traversal and Zip-Slip prevention.
+- **`HtmlReportExporter` (`core/html_report_exporter.py`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts, and Cyber-Dark styling for offline client delivery.
+
+### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
+- **`I18nManager`**: Thread-safe internationalization runtime supporting live locale switching (`de` / `en`) without application restart.
+- **Parametric Interpolation**: Supports variable substitution (e.g. `{count}`, `{target}`) and fallback defaults across all 4 main views, panels, and 6 modal dialogs.
+
 ---
 
 ## 3. Security & Resilience Architecture
@@ -89,15 +103,16 @@ graph TD
 1. **Path Traversal & Symlink Escape Protection**:
    - `core/validators.py` sanitizes project names, output paths, and snippet titles, preventing directory traversal outside project sandboxes.
    - `core/project/repository.py` validates workspace boundaries for both created and imported projects, actively rejecting pre-existing symlinked subdirectories (`recon/`, `exploit/`, `loot/`).
+   - `core/reporting/template_repository.py` validates template IDs and verifies safe sandbox paths with `Path.is_relative_to()`.
 2. **File Size Guards & Memory Bomb Prevention**:
-   - Maximum file size thresholds on all JSON imports, registries, notes, and screenshots (`MAX_SNIPPETS_FILE_SIZE`, `MAX_REGISTRY_FILE_SIZE`, `MAX_IMAGE_FILE_SIZE`).
+   - Maximum file size thresholds on all JSON imports, registries, templates, notes, and screenshots (`MAX_SNIPPETS_FILE_SIZE`, `MAX_REGISTRY_FILE_SIZE`, `MAX_TEMPLATE_FILE_SIZE`, `MAX_IMAGE_FILE_SIZE`).
 3. **Atomic File Persistence**:
    - `core/atomic_write.py` ensures power-loss and crash resilience by writing to unique temp files before atomically replacing target JSON/markdown files.
 4. **Single Source of Truth for Session Data**:
    - `project_state.json` inside each project folder is the sole source of truth for loot, variables, and clipboard history.
    - `LootManager` and `ClipboardWatcher` operate as session buffers in RAM, avoiding redundant and conflicting global storage files.
-5. **Code Fence XSS Immunity**:
-   - Markdown exporter strictly sanitizes and HTML-escapes code-fence language specifiers to prevent attribute injection and script execution.
+5. **Code Fence & Table Injection Immunity**:
+   - Markdown exporter strictly sanitizes code-fence language specifiers and escapes table pipes to prevent format breakage or injection.
 6. **Structured & Rotating Logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
 
@@ -113,7 +128,7 @@ graph TD
 ## 5. Testing & CI/CD Strategy
 
 - **Master Test Runner (`run_tests.py`)**:
-  - Automatically discovers and executes all 36 test suites across `tests/`.
+  - Automatically discovers and executes all **40 test suites** (244 tests) across `tests/`.
   - Runs in headless mode (`QT_QPA_PLATFORM=offscreen`).
 - **GitHub Actions CI (`.github/workflows/ci.yml`)**:
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.
