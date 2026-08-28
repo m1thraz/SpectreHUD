@@ -69,10 +69,11 @@ grün, ohne Zugriffe auf Benutzerpfade.
 
 **Abnahme:** Wheel und EXE entstehen reproduzierbar und bestehen Installation sowie CLI-Smoke-Test.
 
-**Lokaler Stand (28.08.2026):** Das vorhandene `spectrehud-2.0.0`-Wheel besteht
-`scripts/verify_wheel.py` (110 Dateien). Ein *frischer* Wheel-Build ist in der
-aktuellen Offline-Umgebung nicht möglich, weil das `wheel`-Backend nicht installiert
-ist; dieser Schritt bleibt verbindlich für CI bzw. die Release-Build-Umgebung.
+**Lokaler Stand (28.08.2026):** Ein frisches `spectrehud-2.0.0`-Wheel und das
+Quellarchiv wurden gebaut. `scripts/verify_wheel.py` bestätigt 109 Dateien im Wheel.
+Eine frische virtuelle Umgebung installierte das Wheel samt Abhängigkeiten erfolgreich;
+`spectrehud --version` liefert `SpectreHUD 2.0.0` und `spectrehud --help` funktioniert.
+Der Windows-EXE-Build und die vollständige CI-Matrix bleiben vor dem Release offen.
 
 ---
 
@@ -129,7 +130,7 @@ Der offizielle Release darf nur erfolgen, wenn alle Punkte erfüllt sind:
 - [ ] Versionsnummer überall einheitlich
 - [x] Vollständiger, isolierter Testlauf grün *(280 Tests, lokal am 28.08.2026)*
 - [ ] CI auf unterstützten Plattformen grün
-- [ ] Wheel und EXE erfolgreich gebaut und getestet
+- [ ] Wheel und EXE erfolgreich gebaut und getestet *(Wheel: gebaut, verifiziert und frisch installiert; EXE-Test steht noch aus.)*
 - [ ] Manuelle Windows-Abnahme ohne Blocker
 - [ ] Sicherheitsregression grün
 - [ ] Release Notes und bekannte Einschränkungen veröffentlicht
