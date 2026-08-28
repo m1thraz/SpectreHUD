@@ -8,7 +8,7 @@ from core.project_manager import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
-from core.event_bus import EventBus, EventType
+from core.event_bus import EventBus
 from core.i18n import t
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
@@ -90,7 +90,6 @@ class LootController(QObject):
                 severity=severity,
             )
             self.loot_updated.emit()
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "add", "entry": entry})
             return entry
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("add_entry", e)
@@ -121,7 +120,6 @@ class LootController(QObject):
             success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
-                self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "update", "id": entry_id})
             return success
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("update_entry", e)
@@ -132,7 +130,6 @@ class LootController(QObject):
             success = self.loot_manager.delete_entry(entry_id)
             if success:
                 self.loot_updated.emit()
-                self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "delete", "id": entry_id})
             return success
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_entry", e)
@@ -142,9 +139,8 @@ class LootController(QObject):
 
     def clear_entries(self, target_ip: Optional[str] = None) -> None:
         try:
-            self.loot_manager.clear_entries(target_ip=target_ip)
+            self.loot_manager.clear_session(target_ip=target_ip)
             self.loot_updated.emit()
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "clear", "target_ip": target_ip})
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("clear_entries", e)
 

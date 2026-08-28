@@ -55,6 +55,19 @@ class ClipboardWatcher(QObject):
         """Sets the active timestamp formatting scheme ('24h' or '12h')."""
         self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
+    def _publish_updated(self, action: str, entry: Optional[Dict[str, Any]] = None) -> None:
+        """Publishes the single canonical event for a successful history mutation."""
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(
+                EventType.HISTORY_UPDATED,
+                {
+                    "action": action,
+                    "entry": dict(entry) if entry is not None else None,
+                    "history": self.get_all_history(),
+                },
+            )
+
     def set_target_provider(self, provider_func) -> None:
         """Sets a callable that returns the active target IP."""
         self._current_target_provider = provider_func
@@ -154,9 +167,7 @@ class ClipboardWatcher(QObject):
         # object arguments and would otherwise fall back to a direct UI callback.
         self.entry_added.emit(entry)
 
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+        self._publish_updated("add", entry)
         return entry
 
     def load_history(self) -> None:
@@ -176,9 +187,7 @@ class ClipboardWatcher(QObject):
         from core.validators import validate_clipboard_list
         self.history = validate_clipboard_list(history)
         self._last_copied_text = self.history[0]["text"] if self.history else None
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+        self._publish_updated("replace")
 
     def replace_history_and_persist(self, history: List[Dict[str, Any]]) -> None:
         """Replaces history in memory and immediately persists the validated result."""
@@ -188,9 +197,7 @@ class ClipboardWatcher(QObject):
             raise PersistenceError("Could not persist replacement clipboard history to storage.")
         self.history = validated
         self._last_copied_text = self.history[0]["text"] if self.history else None
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+        self._publish_updated("replace")
 
     def set_history(self, history: List[Dict[str, Any]]) -> None:
         """Deprecated compatibility alias for :meth:`replace_history_and_persist`."""
@@ -213,15 +220,14 @@ class ClipboardWatcher(QObject):
 
     def delete_entry(self, entry_id: str) -> bool:
         """Removes an entry by ID."""
+        deleted_entry = next((entry for entry in self.history if entry.get("id") == entry_id), None)
         new_history = [e for e in self.history if e.get("id") != entry_id]
         if len(new_history) == len(self.history):
             return False
         if not self.storage.save_json("clipboard", new_history):
             raise PersistenceError(f"Could not persist deletion of clipboard entry {entry_id}.")
         self.history = new_history
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+        self._publish_updated("delete", deleted_entry)
         return True
 
     def clear_history(self) -> int:
@@ -231,9 +237,7 @@ class ClipboardWatcher(QObject):
             raise PersistenceError("Could not persist cleared clipboard history.")
         self.history = []
         self._last_copied_text = None
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+        self._publish_updated("clear")
         return count
 
     def get_history(self, search_query: str = "", target_ip: Optional[str] = None, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:

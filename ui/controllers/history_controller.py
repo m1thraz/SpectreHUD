@@ -75,9 +75,9 @@ class HistoryController(QObject):
 
     def add_entry(self, text: str, target_ip: Optional[str] = None) -> None:
         try:
-            self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
-            self.history_updated.emit()
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "add", "target_ip": target_ip})
+            entry = self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
+            if entry is not None:
+                self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("add_entry", e)
 
@@ -95,7 +95,6 @@ class HistoryController(QObject):
         try:
             self.clipboard_watcher.clear_history()
             self.history_updated.emit()
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "clear"})
             return True
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("clear_history", e, parent_widget)
@@ -103,9 +102,8 @@ class HistoryController(QObject):
 
     def delete_entry(self, item_id: str) -> None:
         try:
-            self.clipboard_watcher.delete_entry(item_id)
-            self.history_updated.emit()
-            self.event_bus.publish(EventType.HISTORY_UPDATED, {"action": "delete", "id": item_id})
+            if self.clipboard_watcher.delete_entry(item_id):
+                self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_entry", e)
 

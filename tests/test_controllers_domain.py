@@ -30,8 +30,8 @@ class TestControllersDomain(unittest.TestCase):
         self.event_bus = EventBus()
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.snippet_mgr = SnippetManager(user_snippets_path=self.temp_path / "user_snippets.json")
-        self.loot_mgr = LootManager(storage_file=self.temp_path / "loot.json")
-        self.clip_watcher = ClipboardWatcher(storage_file=self.temp_path / "clipboard.json")
+        self.loot_mgr = LootManager(storage_file=self.temp_path / "loot.json", event_bus=self.event_bus)
+        self.clip_watcher = ClipboardWatcher(storage_file=self.temp_path / "clipboard.json", event_bus=self.event_bus)
 
         self.project_ctrl = ProjectController(self.project_mgr, event_bus=self.event_bus)
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_mgr, event_bus=self.event_bus)
@@ -119,6 +119,8 @@ class TestControllersDomain(unittest.TestCase):
         self.assertTrue(bool(eid))
         self.assertEqual(len(loot_events), 1)
         self.assertEqual(loot_events[0]["action"], "add")
+        self.assertEqual(set(loot_events[0]), {"action", "entry", "entries"})
+        self.assertEqual(loot_events[0]["entry"]["id"], eid)
 
         entries = self.loot_ctrl.get_entries(target_ip="10.10.10.55")
         self.assertEqual(len(entries), 1)
@@ -140,6 +142,7 @@ class TestControllersDomain(unittest.TestCase):
         )
         self.assertEqual(len(loot_events), 2)
         self.assertEqual(loot_events[1]["action"], "update")
+        self.assertEqual(loot_events[1]["entry"]["id"], eid)
 
         updated_entries = self.loot_ctrl.get_entries()
         self.assertEqual(updated_entries[0]["title"], "Updated Root Cred")
@@ -149,7 +152,16 @@ class TestControllersDomain(unittest.TestCase):
         self.loot_ctrl.delete_entry(eid)
         self.assertEqual(len(loot_events), 3)
         self.assertEqual(loot_events[2]["action"], "delete")
+        self.assertEqual(loot_events[2]["entry"]["id"], eid)
+        self.assertEqual(loot_events[2]["entries"], [])
         self.assertEqual(len(self.loot_ctrl.get_entries()), 0)
+
+        self.loot_ctrl.add_entry("note", "Clear me", "temporary")
+        self.loot_ctrl.clear_entries()
+        self.assertEqual(len(loot_events), 5)
+        self.assertEqual(loot_events[4]["action"], "clear")
+        self.assertIsNone(loot_events[4]["entry"])
+        self.assertEqual(loot_events[4]["entries"], [])
 
     def test_loot_add_dialog_accepts_new_button_prefill_arguments(self):
         """Loot and History New actions can pass their target and dialog defaults."""
@@ -200,9 +212,16 @@ class TestControllersDomain(unittest.TestCase):
         self.history_ctrl.add_entry("whoami", target_ip="10.10.10.55")
         self.history_ctrl.add_entry("id", target_ip="10.10.10.55")
         self.assertEqual(len(history_events), 2)
+        self.assertEqual(set(history_events[0]), {"action", "entry", "history"})
+        self.assertEqual(history_events[0]["action"], "add")
 
         history = self.history_ctrl.get_history()
         self.assertEqual(len(history), 2)
+
+        self.history_ctrl.delete_entry(history[0]["id"])
+        self.assertEqual(len(history_events), 3)
+        self.assertEqual(history_events[2]["action"], "delete")
+        self.assertEqual(history_events[2]["entry"]["id"], history[0]["id"])
 
         # Toggle pause
         initial_paused = self.history_ctrl.is_paused()
@@ -217,8 +236,10 @@ class TestControllersDomain(unittest.TestCase):
         # Clear
         self.history_ctrl.clear_history()
         self.assertEqual(len(self.history_ctrl.get_history()), 0)
-        self.assertEqual(len(history_events), 3)
-        self.assertEqual(history_events[2]["action"], "clear")
+        self.assertEqual(len(history_events), 4)
+        self.assertEqual(history_events[3]["action"], "clear")
+        self.assertIsNone(history_events[3]["entry"])
+        self.assertEqual(history_events[3]["history"], [])
 
 
 if __name__ == "__main__":

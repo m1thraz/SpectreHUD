@@ -77,6 +77,19 @@ class LootManager:
         """Sets the active timestamp formatting scheme ('24h' or '12h')."""
         self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
+    def _publish_updated(self, action: str, entry: Optional[Dict[str, Any]] = None) -> None:
+        """Publishes the single canonical event for a successful loot mutation."""
+        if self.event_bus:
+            from core.event_bus import EventType
+            self.event_bus.publish(
+                EventType.LOOT_UPDATED,
+                {
+                    "action": action,
+                    "entry": dict(entry) if entry is not None else None,
+                    "entries": self.get_all_entries(),
+                },
+            )
+
     def _migrate_entries(self, entries: Optional[List[Dict[str, Any]]] = None) -> bool:
         """Normalizes entries in place and returns whether any entry was migrated."""
         from core.validators import VALID_SEVERITIES
@@ -127,9 +140,7 @@ class LootManager:
         from core.validators import validate_loot_list
         self.entries = validate_loot_list(entries)
         self._migrate_entries()
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        self._publish_updated("replace")
 
     def replace_entries_and_persist(self, entries: List[Dict[str, Any]]) -> None:
         """Persist a validated replacement before committing it to in-memory state."""
@@ -140,9 +151,7 @@ class LootManager:
         if not self.storage.save_json("loot", validated_entries):
             raise PersistenceError("Could not persist replacement loot entries to storage.")
         self.entries = validated_entries
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        self._publish_updated("replace")
 
     def set_entries(self, entries: List[Dict[str, Any]]) -> None:
         """Deprecated compatibility alias for :meth:`replace_entries_and_persist`."""
@@ -196,9 +205,7 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist new loot entry to storage.")
         self.entries = new_entries
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        self._publish_updated("add", entry)
         return entry
 
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
@@ -230,22 +237,19 @@ class LootManager:
             if not self.storage.save_json("loot", new_entries):
                 raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
             self.entries = new_entries
-            if self.event_bus:
-                from core.event_bus import EventType
-                self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+            self._publish_updated("update", updated_entry)
         return updated_entry
 
     def delete_entry(self, entry_id: str) -> bool:
         """Deletes an entry by ID."""
+        deleted_entry = next((entry for entry in self.entries if entry.get("id") == entry_id), None)
         new_entries = [e for e in self.entries if e.get("id") != entry_id]
         if len(new_entries) == len(self.entries):
             return False
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError(f"Could not persist deletion for loot entry {entry_id}.")
         self.entries = new_entries
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        self._publish_updated("delete", deleted_entry)
         return True
 
     def clear_session(self, target_ip: Optional[str] = None) -> int:
@@ -259,9 +263,7 @@ class LootManager:
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist cleared session loot to storage.")
         self.entries = new_entries
-        if self.event_bus:
-            from core.event_bus import EventType
-            self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+        self._publish_updated("clear")
         return deleted_count
 
     def get_entries(

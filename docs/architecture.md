@@ -50,6 +50,11 @@ graph TD
 - Provides loose coupling between services and controllers via publish/subscribe.
 - **`EventType` Events**: `PROJECT_CHANGED`, `LOOT_UPDATED`, `HISTORY_UPDATED`, `SNIPPETS_UPDATED`, `CONFIG_UPDATED`, `VARIABLE_CHANGED`.
 - **Thread-Safe & Fault-Tolerant**: Protected by `threading.RLock`, with exception isolation so a failing subscriber cannot crash the publisher or other listeners.
+- **State-Mutation Contract**: Each successful loot or clipboard-history mutation emits
+  exactly one domain event, published by its owning service rather than a controller.
+  `LOOT_UPDATED` payloads always contain `action`, `entry`, and `entries`;
+  `HISTORY_UPDATED` payloads always contain `action`, `entry`, and `history`.
+  `entry` is `null` for whole-collection actions such as `clear` and `replace`.
 
 ### 2.4 Dependency Injection & Service Container (`core/container.py`)
 - **`ServiceContainer`**: Coordinates all core managers, storage backends, and event buses in one place.
