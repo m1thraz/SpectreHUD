@@ -128,6 +128,10 @@ graph TD
 
 - **Default Workspace (`workspace_dir`)**: Configures the base directory where newly created CTF box projects are stored by default.
 - **Multi-Location Registry (`projects_registry.json`)**: Allows projects to reside across multiple locations (e.g. secondary drives, mounted network shares, imported folders) without moving them into the default workspace. Changing `workspace_dir` in Settings updates the default path for future boxes while preserving existing registered project locations.
+- **Workspace Commit Boundary**: Candidate workspace discovery is read-only until the
+  runtime session and `workspace_dir` config commit both succeed. Only afterwards is
+  the registry synchronized, so a failed workspace switch cannot persist discovered
+  entries from the candidate workspace.
 
 ---
 

@@ -1,4 +1,5 @@
 import os
+import json
 import unittest
 import tempfile
 from pathlib import Path
@@ -336,15 +337,12 @@ class TestWorkflowInvariants(unittest.TestCase):
             self.assertEqual(self.config_mgr.get("workspace_dir"), str(new_ws.resolve()))
 
     # -------------------------------------------------------------------------
-    # Invariant 8 (v15-P0): Workspace switch — rollback on failure restores old state
+    # Invariant 8 (v15-P0): Workspace switch — pre-commit rollback restores old state
     # -------------------------------------------------------------------------
-    def test_workspace_switch_rolls_back_on_invalid_path(self):
+    def test_workspace_switch_rolls_back_on_precommit_failure(self):
         """
-        v15-P0: If the new workspace directory is invalid (does not exist, fails validation),
-        base_dir must be rolled back to the previous value.
+        A runtime failure before the workspace config commit must restore the old backend.
         """
-        from core.project.validator import WorkspaceError
-
         from unittest.mock import patch
 
         self.project_mgr.create_project("RollbackBox")
@@ -354,7 +352,11 @@ class TestWorkflowInvariants(unittest.TestCase):
 
         new_ws = self.base_path / "new_workspace"
         new_ws.mkdir()
-        with patch.object(self.project_mgr, "sync_registry", side_effect=RuntimeError("registry failure")):
+        with patch.object(
+            self.window.app,
+            "load_active_project_state",
+            side_effect=[RuntimeError("session failure"), None],
+        ):
             with patch("ui.app_controller.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
 
@@ -394,6 +396,24 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [old_loot["id"]])
         self.assertEqual([entry["id"] for entry in self.clip_watcher.get_all_history()], [old_history["id"]])
         self.assertEqual(self.window.var_bar.txt_target.text(), "10.10.10.10")
+
+    def test_workspace_config_failure_does_not_persist_new_workspace_registry(self):
+        """A failed workspace commit must not leave discovered projects in the registry."""
+        old_base = self.project_mgr.base_dir
+        self.config_mgr.set("workspace_dir", str(old_base))
+        new_workspace = self.base_path / "registry_side_effect_workspace"
+        new_config = self.base_path / "registry_side_effect_config"
+        new_manager = ProjectManager(base_dir=new_workspace, config_dir=new_config)
+        new_manager.create_project("BoxRegistrySideEffect")
+
+        with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
+            with patch("ui.app_controller.QMessageBox.warning"):
+                self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
+
+        self.assertEqual(self.project_mgr.base_dir, old_base)
+        self.assertNotIn("BoxRegistrySideEffect", self.project_mgr.registry)
+        with self.project_mgr.registry_file.open(encoding="utf-8") as registry_file:
+            self.assertNotIn("BoxRegistrySideEffect", json.load(registry_file))
 
 
 if __name__ == "__main__":

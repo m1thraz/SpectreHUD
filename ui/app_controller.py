@@ -409,10 +409,10 @@ class AppController(QObject):
                     try:
                         # 1. Switch workspace
                         self.project_manager.base_dir = new_ws
-                        # 2. Discover projects in new workspace
-                        # Discovery and its registry update are explicit so the
-                        # in-memory registry cannot diverge from the persisted one.
-                        available = self.project_manager.sync_registry()
+                        # 2. Discover projects without mutating the shared
+                        # registry.  Registry persistence is deferred until the
+                        # workspace config commit succeeds below.
+                        available = self.project_manager.list_projects()
                         # Registered projects may live outside the configured default
                         # workspace.  A workspace change, however, must select a
                         # project physically contained in the new workspace.
@@ -429,10 +429,9 @@ class AppController(QObject):
                                     f"switched to '{workspace_projects[0]}'."
                                 )
                             else:
-                                # A freshly selected workspace starts with a real Default
-                                # project, never a dangling active-project reference.
-                                self.project_manager.create_project("Default", allow_existing=True)
-                                self.project_manager.sync_registry()
+                                # ``list_projects()`` exposes the Default fallback
+                                # without writing the registry.  The directory is
+                                # created only after the config commit succeeds.
                                 self.project_manager.activate_project("Default")
                         # 4. Reload session into UI
                         self.load_active_project_state()
@@ -440,6 +439,14 @@ class AppController(QObject):
                         self.refresh_content()
                         # Persist only after every runtime operation completed.
                         self.config.set("workspace_dir", str(new_ws))
+                        if not workspace_projects:
+                            self.project_manager.create_project("Default", allow_existing=True)
+                        try:
+                            self.project_manager.sync_registry()
+                        except Exception:
+                            # The workspace has already committed successfully;
+                            # discovery persistence can safely be retried later.
+                            logger.exception("Workspace switched, but registry synchronization was deferred.")
                     except Exception as switch_err:
                         # Rollback the entire runtime session, not merely the
                         # project backend.  The new session may already have
