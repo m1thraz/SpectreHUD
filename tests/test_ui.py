@@ -380,7 +380,7 @@ class TestUI(unittest.TestCase):
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
         project_manager.create_project("BoxToArchive", target_ip="10.10.10.99")
-        project_manager.set_active_project("BoxToArchive")
+        project_manager.activate_project("BoxToArchive")
 
         window = MainWindow(
             config_manager=config_manager,

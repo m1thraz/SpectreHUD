@@ -200,5 +200,17 @@
     "tray.rec_start": "Enable Clipboard Logger (Ctrl+P)",
     "tray.rec_pause": "Pause Clipboard Logger (Ctrl+P)",
     "tray.options": "Options & Hotkeys... (Ctrl+,)",
-    "tray.quit": "Quit (Ctrl+Super+Q)"
+    "tray.quit": "Quit (Ctrl+Super+Q)",
+
+    "quit.save_failed_title": "Save Failed",
+    "quit.save_failed_text": "The current project state could not be saved to disk.\n\nWhat would you like to do?",
+    "quit.retry": "Retry Save",
+    "quit.discard": "Quit Without Saving",
+    "quit.cancel": "Cancel",
+
+    "general.error": "Error",
+    "general.workspace_error": "Workspace Error",
+    "general.workspace_switch_failed": "Failed to switch workspace directory.\n\nThe previous workspace has been restored.",
+    "general.save_failed": "Save Failed",
+    "project.not_found_msg": "Project does not exist and cannot be activated."
 }

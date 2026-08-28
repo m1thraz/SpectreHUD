@@ -200,5 +200,17 @@
     "tray.rec_start": "Clipboard-Logger aktivieren (Ctrl+P)",
     "tray.rec_pause": "Clipboard-Logger pausieren (Ctrl+P)",
     "tray.options": "Optionen & Hotkeys... (Ctrl+,)",
-    "tray.quit": "Beenden (Strg+Super+Q)"
+    "tray.quit": "Beenden (Strg+Super+Q)",
+
+    "quit.save_failed_title": "Speichern fehlgeschlagen",
+    "quit.save_failed_text": "Der aktuelle Projektstatus konnte nicht auf Datenträger gespeichert werden.\n\nWas möchten Sie tun?",
+    "quit.retry": "Erneut versuchen",
+    "quit.discard": "Beenden ohne Speichern",
+    "quit.cancel": "Abbrechen",
+
+    "general.error": "Fehler",
+    "general.workspace_error": "Workspace-Fehler",
+    "general.workspace_switch_failed": "Workspace-Wechsel fehlgeschlagen.\n\nDer vorherige Workspace wurde wiederhergestellt.",
+    "general.save_failed": "Speichern fehlgeschlagen",
+    "project.not_found_msg": "Das Projekt existiert nicht und kann nicht aktiviert werden."
 }

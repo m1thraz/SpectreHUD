@@ -29,7 +29,7 @@ class TestScreenshotManager(unittest.TestCase):
         self.screenshot_mgr = ScreenshotManager()
 
         self.project_mgr.create_project("BoxSnip")
-        self.project_mgr.set_active_project("BoxSnip")
+        self.project_mgr.activate_project("BoxSnip")
 
     def tearDown(self):
         self.temp_dir.cleanup()

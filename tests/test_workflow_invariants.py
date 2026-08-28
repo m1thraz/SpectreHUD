@@ -171,7 +171,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         """
         rfm = ReportFileManager(self.project_mgr)
         self.project_mgr.create_project("BoxBackupTest")
-        self.project_mgr.set_active_project("BoxBackupTest")
+        self.project_mgr.activate_project("BoxBackupTest")
 
         # Step 1: User writes manual writeup notes
         manual_notes = "# Custom Writeup Notes\n\n- Manual exploit chain step 1\n- Critical pivot notes"
@@ -306,6 +306,57 @@ class TestWorkflowInvariants(unittest.TestCase):
         config_dir = self.config_mgr.config_dir
         self.assertFalse((config_dir / "loot_sessions.json").exists())
         self.assertFalse((config_dir / "clipboard_history.json").exists())
+
+
+    # -------------------------------------------------------------------------
+    # Invariant 7 (v15-P0): Workspace switch — active project validated in new workspace
+    # -------------------------------------------------------------------------
+    def test_workspace_switch_validates_active_project(self):
+        """
+        v15-P0: After switching base_dir to a new workspace that does not contain the
+        current active_project, the active project must be reset to an available project
+        (not left pointing to a non-existent location).
+        """
+        self.project_mgr.create_project("BoxOldWS")
+        self.project_mgr.activate_project("BoxOldWS")
+
+        # Second workspace with a different project
+        import tempfile
+        with tempfile.TemporaryDirectory() as new_ws_tmp:
+            new_ws = Path(new_ws_tmp) / "projects"
+            new_ws.mkdir(parents=True, exist_ok=True)
+            (new_ws / "NewWSProject").mkdir()
+
+            self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
+
+            self.assertEqual(self.project_mgr.base_dir, new_ws.resolve())
+            self.assertEqual(self.project_mgr.get_active_project(), "NewWSProject")
+            self.assertTrue((new_ws / self.project_mgr.get_active_project()).is_dir())
+
+    # -------------------------------------------------------------------------
+    # Invariant 8 (v15-P0): Workspace switch — rollback on failure restores old state
+    # -------------------------------------------------------------------------
+    def test_workspace_switch_rolls_back_on_invalid_path(self):
+        """
+        v15-P0: If the new workspace directory is invalid (does not exist, fails validation),
+        base_dir must be rolled back to the previous value.
+        """
+        from core.project.validator import WorkspaceError
+
+        from unittest.mock import patch
+
+        self.project_mgr.create_project("RollbackBox")
+        self.project_mgr.activate_project("RollbackBox")
+        old_base = self.project_mgr.base_dir
+
+        new_ws = self.base_path / "new_workspace"
+        new_ws.mkdir()
+        with patch.object(self.project_mgr, "sync_registry", side_effect=RuntimeError("registry failure")):
+            with patch("ui.app_controller.QMessageBox.warning"):
+                self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
+
+        self.assertEqual(self.project_mgr.base_dir, old_base)
+        self.assertEqual(self.project_mgr.get_active_project(), "RollbackBox")
 
 
 if __name__ == "__main__":

@@ -452,16 +452,34 @@ class MainWindow(QMainWindow):
         # 2. Persist project state
         saved = self._save_current_project_state()
         if not saved:
-            reply = QMessageBox.warning(
-                self,
-                "Speichern fehlgeschlagen",
-                "Der aktuelle Projektstatus konnte nicht auf Datenträger gespeichert werden.\n\n"
-                "Möchten Sie den Vorgang abbrechen (Abbrechen) oder dennoch beenden (Beenden)?",
-                QMessageBox.StandardButton.Abort | QMessageBox.StandardButton.Close,
-                QMessageBox.StandardButton.Abort
+            from core.i18n import t as _t
+            msg = QMessageBox(self)
+            msg.setWindowTitle(_t("quit.save_failed_title", "Save Failed"))
+            msg.setText(
+                _t(
+                    "quit.save_failed_text",
+                    "The current project state could not be saved to disk.\n\n"
+                    "What would you like to do?"
+                )
             )
-            if reply == QMessageBox.StandardButton.Abort:
-                return False
+            msg.setIcon(QMessageBox.Icon.Warning)
+            retry_btn   = msg.addButton(_t("quit.retry",   "Retry Save"),            QMessageBox.ButtonRole.ActionRole)
+            discard_btn = msg.addButton(_t("quit.discard", "Quit Without Saving"),    QMessageBox.ButtonRole.DestructiveRole)
+            cancel_btn  = msg.addButton(_t("quit.cancel",  "Cancel"),                 QMessageBox.ButtonRole.RejectRole)
+            msg.setDefaultButton(cancel_btn)
+            try:
+                from ui.styles import CYBER_DARK_QSS
+                msg.setStyleSheet(CYBER_DARK_QSS)
+            except Exception:
+                pass
+            msg.exec()
+            clicked = msg.clickedButton()
+            if clicked == retry_btn:
+                # One retry attempt
+                if not self._save_current_project_state():
+                    return False  # Still failed — let user try again via UI
+            elif clicked != discard_btn:
+                return False  # Cancel or window closed
 
         # 3. Flush window geometry
         try:

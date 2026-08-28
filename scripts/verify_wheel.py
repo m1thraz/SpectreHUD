@@ -15,6 +15,10 @@ REQUIRED_FILES = [
     "data/default_snippets.json",
     "data/icon.ico",
     "data/icon.svg",
+    # i18n locale data
+    "data/i18n/en.json",
+    "data/i18n/de.json",
+    # Core managers
     "core/config.py",
     "core/snippet_manager.py",
     "core/loot_manager.py",
@@ -26,8 +30,21 @@ REQUIRED_FILES = [
     "core/atomic_write.py",
     "core/report_builder.py",
     "core/report_file_manager.py",
+    "core/box_archiver.py",
+    "core/html_report_exporter.py",
     "core/i18n.py",
     "core/display_geometry.py",
+    # Reporting subsystem
+    "core/reporting/__init__.py",
+    "core/reporting/models.py",
+    "core/reporting/template_engine.py",
+    "core/reporting/template_repository.py",
+    "core/reporting/charts.py",
+    # Project subsystem
+    "core/project/__init__.py",
+    "core/project/repository.py",
+    "core/project/validator.py",
+    # UI controllers
     "ui/main_window.py",
     "ui/controllers/__init__.py",
     "ui/controllers/cheatsheet_controller.py",

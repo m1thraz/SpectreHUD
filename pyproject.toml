@@ -4,14 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spectrehud"
-version = "1.0.0"
-description = "Tactical CTF & CLI Cheatsheet Desktop Overlay"
+version = "2.0.0"
+description = "Tactical CTF & Pentest Overlay — Cheatsheet, Loot Manager, Template-Engine, and Live Report HUD"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
     { name = "m1thraz" }
 ]
+keywords = ["ctf", "pentesting", "hud", "overlay", "cheatsheet", "report", "hackthebox", "tryhackme"]
 dependencies = [
     "PyQt6>=6.6.0",
     "pynput>=1.7.6",
@@ -22,6 +23,7 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
     "pyinstaller>=6.0.0",
+    "flake8>=6.0.0",
 ]
 
 [project.urls]

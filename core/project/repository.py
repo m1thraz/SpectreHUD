@@ -98,7 +98,12 @@ class ProjectRepository:
         return clean in self.list_projects() or proj_dir.exists()
 
     def list_projects(self) -> List[str]:
-        """Returns list of all available project directory names across base_dir and custom locations."""
+        """
+        Returns list of all available project directory names across base_dir and custom locations.
+
+        This method is **read-only**: it does not mutate ``self.registry``.
+        Call :meth:`sync_registry` explicitly to persist newly discovered projects to the registry.
+        """
         from collections import defaultdict
         projects = set()
         resolved_base = self.base_dir.resolve()
@@ -136,10 +141,7 @@ class ProjectRepository:
                             "Refusing automatic registration to avoid silent shadowing."
                         )
                         continue
-                    resolved_p = cand_paths[0]
                     projects.add(clean)
-                    if clean not in self.registry:
-                        self.registry[clean] = str(resolved_p)
             except OSError as e:
                 logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
 
@@ -148,8 +150,7 @@ class ProjectRepository:
             try:
                 candidate_in_base = self.base_dir / name
                 if candidate_in_base.exists() and candidate_in_base.is_symlink():
-                    logger.warning(f"Purging compromised symlinked registry entry: {name} -> {path_str}")
-                    del self.registry[name]
+                    logger.warning(f"Skipping compromised symlinked registry entry during list: {name} -> {path_str}")
                     continue
 
                 p = Path(path_str)
@@ -161,6 +162,75 @@ class ProjectRepository:
         if not projects:
             projects.add("Default")
 
+        return sorted(list(projects))
+
+    def sync_registry(self) -> List[str]:
+        """
+        Discovers all projects from ``base_dir`` and explicitly registers newly found entries into
+        ``self.registry``, then persists the registry to disk.
+
+        Unlike :meth:`list_projects`, this method **mutates** ``self.registry`` and writes to disk.
+        Call after workspace changes, project creation/import, or on startup bootstrap.
+
+        Returns the sorted list of discovered project names.
+        """
+        from collections import defaultdict
+        projects = set()
+        resolved_base = self.base_dir.resolve()
+
+        if self.base_dir.exists():
+            try:
+                collision_map = defaultdict(list)
+                for p in self.base_dir.iterdir():
+                    if p.name.startswith("."):
+                        continue
+                    if p.is_symlink():
+                        logger.warning(f"Ignoring symlinked project folder inside base_dir during sync: {p}")
+                        continue
+                    try:
+                        resolved_p = p.resolve()
+                    except (OSError, RuntimeError):
+                        continue
+                    if not resolved_p.is_relative_to(resolved_base) or resolved_p == resolved_base:
+                        continue
+                    if p.is_dir():
+                        clean = sanitize_project_name(p.name)
+                        collision_map[clean].append(resolved_p)
+
+                for clean, cand_paths in collision_map.items():
+                    if len(cand_paths) > 1:
+                        logger.error(
+                            f"Physical directory collision detected for project '{clean}': {cand_paths}. "
+                            "Skipping registration."
+                        )
+                        continue
+                    resolved_p = cand_paths[0]
+                    projects.add(clean)
+                    if clean not in self.registry:
+                        self.registry[clean] = str(resolved_p)
+                        logger.debug(f"sync_registry: registered new project '{clean}' at {resolved_p}")
+
+            except OSError as e:
+                logger.error(f"Failed to sync registry from {self.base_dir}: {e}", exc_info=True)
+
+        # Purge compromised symlinked registry entries
+        for name in list(self.registry.keys()):
+            try:
+                candidate_in_base = self.base_dir / name
+                if candidate_in_base.exists() and candidate_in_base.is_symlink():
+                    logger.warning(f"Purging compromised symlinked registry entry during sync: {name}")
+                    del self.registry[name]
+                    continue
+                p = Path(self.registry.get(name, ""))
+                if p.exists() and p.is_dir():
+                    projects.add(name)
+            except OSError:
+                pass
+
+        if not projects:
+            projects.add("Default")
+
+        self._save_registry()
         return sorted(list(projects))
 
     def get_project_dir(self, name: Optional[str] = None) -> Path:

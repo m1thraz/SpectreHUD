@@ -84,7 +84,18 @@ class WorkspaceCoordinator(QObject):
                 self.project_ctrl.update_project_combo()
                 return False
 
-        self.project_manager.set_active_project(project_name)
+        try:
+            self.project_manager.activate_project(project_name)
+        except Exception as activate_err:
+            logger.error(f"Failed to activate project '{project_name}': {activate_err}")
+            QMessageBox.critical(
+                window,
+                t("general.error", "Error"),
+                t("project.not_found_msg", f"Project '{project_name}' does not exist and cannot be activated.\n\n{activate_err}")
+            )
+            self.project_ctrl.update_project_combo()
+            return False
+
         self.report_ctrl.load_project(project_name)
 
         if on_success_callback:

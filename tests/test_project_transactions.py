@@ -51,6 +51,23 @@ class TestProjectTransactions(unittest.TestCase):
             # Original project path must remain untouched in registry
             self.assertEqual(pm.registry["Box"], original_path)
 
+    def test_deprecated_activation_cannot_create_an_unknown_project(self):
+        """v15-P0: old activation API warns but preserves strict activation semantics."""
+        from core.project import ProjectNotFoundError
+        import warnings
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pm = ProjectManager(
+                base_dir=Path(tmpdir) / "projects",
+                config_dir=Path(tmpdir) / "config"
+            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                with self.assertRaises(ProjectNotFoundError):
+                    pm.set_active_project("MissingBox")
+
+            self.assertFalse((pm.base_dir / "MissingBox").exists())
+
 
 if __name__ == '__main__':
     unittest.main()

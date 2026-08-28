@@ -94,7 +94,7 @@ class ServiceContainer:
         )
 
     @classmethod
-    def create_in_memory(
+    def create_isolated_test_container(
         cls,
         initial_config: Optional[Dict[str, Any]] = None,
         language: str = "en",
@@ -104,8 +104,12 @@ class ServiceContainer:
         event_bus: Optional[EventBus] = None
     ) -> "ServiceContainer":
         """
-        Creates a pure in-memory service container with zero unwanted disk pollution.
-        Ideal for unit testing, test fakes, and headless test runners.
+        Creates a test service container with isolated temporary directories and in-memory storage.
+
+        Note: Uses ``tempfile.mkdtemp()`` for filesystem-dependent managers
+        (``ProjectManager``, ``ReportFileManager``). This is **not zero-disk I/O** — it is
+        designed for test isolation, not in-process memory-only execution.
+        Ideal for unit testing, headless test runners, and CI environments.
         """
         init_data: Dict[str, Any] = {}
         if initial_config:
@@ -114,7 +118,7 @@ class ServiceContainer:
         actual_storage = storage or InMemoryStorageBackend(initial_data=init_data)
         actual_event_bus = event_bus or EventBus()
 
-        temp_dir = tempfile.mkdtemp(prefix="spectrehud_in_mem_")
+        temp_dir = tempfile.mkdtemp(prefix="spectrehud_test_")
         temp_cfg_dir = config_dir or (Path(temp_dir) / "config")
         temp_base_dir = base_dir or (Path(temp_dir) / "projects")
 
@@ -139,3 +143,6 @@ class ServiceContainer:
             storage=actual_storage,
             event_bus=actual_event_bus
         )
+
+    # Backward-compatible alias
+    create_in_memory = create_isolated_test_container

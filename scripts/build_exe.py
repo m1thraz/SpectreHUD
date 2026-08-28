@@ -24,6 +24,8 @@ data_dir = repo_dir / "data"
 
 datas = [
     (str(data_dir / "default_snippets.json"), "data"),
+    (str(data_dir / "i18n"), "data/i18n"),
+    (str(data_dir / "templates"), "data/templates"),
     (str(data_dir / "icon.ico"), "data"),
     (str(data_dir / "icon.svg"), "data"),
 ]

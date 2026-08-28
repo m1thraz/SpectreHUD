@@ -35,6 +35,14 @@ class TestClipboardWatcher(unittest.TestCase):
         self.assertIsNotNone(e3)
         self.assertEqual(len(self.watcher.history), 2)
 
+    def test_non_persistent_add_keeps_storage_untouched(self):
+        """Live clipboard callbacks must keep filesystem I/O out of their path."""
+        entry = self.watcher.add_entry("whoami", persist=False)
+
+        self.assertIsNotNone(entry)
+        self.assertEqual(len(self.watcher.history), 1)
+        self.assertFalse(self.storage_file.exists())
+
     def test_filter_and_search(self):
         self.watcher.add_entry("gobuster dir -u http://10.10.10.50/ -w /usr/share/wordlists/dirb/common.txt", target_ip="10.10.10.50")
         self.watcher.add_entry("LinPEAS output:\n[+] SUID Binaries found:\n/usr/bin/pkexec\n/usr/bin/sudo", target_ip="10.10.10.50")

@@ -34,6 +34,19 @@ class EventBus:
     """
     Lightweight, thread-safe publish-subscribe event broker.
     Supports pure Python callbacks and exception isolation.
+
+    Thread Safety Contract
+    ----------------------
+    ``publish()`` executes all subscriber callbacks **synchronously in the calling thread**.
+
+    **Rule:** EventBus is domain-level only. Subscribers must not directly mutate Qt widgets
+    from a background thread. UI updates triggered by domain events must cross the Qt signal
+    boundary first (e.g. ``QMetaObject.invokeMethod(..., Qt.ConnectionType.QueuedConnection)``
+    or a ``pyqtSignal`` connection with ``Qt.ConnectionType.QueuedConnection``).
+
+    Background publishers in SpectreHUD (``ClipboardWatcher``, ``HotkeyListener``) emit
+    Qt signals to transfer control to the main thread before any widget interaction occurs.
+    Subscribers that update UI state must follow the same pattern.
     """
 
     def __init__(self):

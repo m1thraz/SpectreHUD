@@ -88,14 +88,20 @@ class ProjectManager:
         else:
             self.repository.registry["Default"] = str(default_dir.resolve())
             self.repository._save_registry()
+        # Bootstrap: sync discovered projects into registry at startup
+        self.repository.sync_registry()
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
         """Returns True if a project with the given or sanitized name already exists."""
         return self.repository.project_exists(name, base_dir=base_dir)
 
     def list_projects(self) -> List[str]:
-        """Returns list of all available project directory names."""
+        """Returns list of all available project directory names (read-only, no registry mutation)."""
         return self.repository.list_projects()
+
+    def sync_registry(self) -> List[str]:
+        """Discovers and registers new projects, then persists the registry to disk."""
+        return self.repository.sync_registry()
 
     def get_active_project(self) -> str:
         """Returns the name of the currently active project."""
@@ -170,19 +176,22 @@ class ProjectManager:
             self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": clean_name})
         return clean_name
 
-    def set_active_project(self, name: str) -> None:
+    def set_active_project(self, name: str) -> str:
         """
-        Switches the active project context (creating it if it does not exist for backward compatibility).
-        """
-        clean_name = sanitize_project_name(name)
-        if clean_name in self.list_projects():
-            self.active_project = clean_name
-        else:
-            self.create_project(clean_name)
-            self.active_project = clean_name
+        Deprecated compatibility wrapper for strict project activation.
 
-        if self.event_bus:
-            self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": self.active_project})
+        .. deprecated::
+            Use :meth:`activate_project` instead, which raises ``ProjectNotFoundError`` on
+            unknown project names rather than silently creating a new project.
+        """
+        import warnings
+        warnings.warn(
+            "set_active_project() is deprecated and will be removed in a future release. "
+            "Use activate_project() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.activate_project(name)
 
     def open_project_folder(self, name: Optional[str] = None) -> bool:
         """Opens the project folder in OS file manager."""

@@ -104,7 +104,7 @@ class TestAdversarialRegressions(unittest.TestCase):
         second must generate distinct filenames and never overwrite previous evidence.
         """
         self.project_mgr.create_project("BoxTarget")
-        self.project_mgr.set_active_project("BoxTarget")
+        self.project_mgr.activate_project("BoxTarget")
 
         dummy_widget = QWidget()
         img = QImage(50, 50, QImage.Format.Format_RGB32)
@@ -422,7 +422,7 @@ class TestAdversarialRegressions(unittest.TestCase):
 
         snip_mgr = ScreenshotManager()
         self.project_mgr.create_project("BoxSnipFail")
-        self.project_mgr.set_active_project("BoxSnipFail")
+        self.project_mgr.activate_project("BoxSnipFail")
 
         img = QImage(10, 10, QImage.Format.Format_RGB32)
         pix = QPixmap.fromImage(img)
@@ -830,7 +830,7 @@ class TestAdversarialRegressions(unittest.TestCase):
     def test_quit_blocks_when_project_save_fails(self):
         """
         Adversarial Lifecycle: If saving project state to disk fails during shutdown,
-        request_quit() must prompt the user and abort when user chooses Abort.
+        request_quit() must prompt the user and abort when the user cancels.
         """
         from unittest.mock import patch
         from PyQt6.QtWidgets import QMessageBox
@@ -841,11 +841,12 @@ class TestAdversarialRegressions(unittest.TestCase):
         window = MainWindow(container=container)
 
         with patch.object(window, "_save_current_project_state", return_value=False):
-            with patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Abort):
-                with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
-                    res = window.request_quit()
-                    self.assertFalse(res, "request_quit must return False when state save fails and user chooses Abort")
-                    mock_quit.assert_not_called()
+            with patch.object(QMessageBox, "exec", return_value=0):
+                with patch.object(QMessageBox, "clickedButton", return_value=None):
+                    with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
+                        res = window.request_quit()
+                        self.assertFalse(res, "request_quit must return False when state save fails and user cancels")
+                        mock_quit.assert_not_called()
 
     # -------------------------------------------------------------------------
     # 25. Unified Shutdown: Normal Exit Flushes State
@@ -942,20 +943,21 @@ class TestAdversarialRegressions(unittest.TestCase):
             self.project_mgr.repository.get_project_dir("..\\..\\windows_attack")
 
     # -------------------------------------------------------------------------
-    # 30. Screenshot Transactional Rollback on Project State Failure
+    # 30. Screenshot save ownership belongs to AppController
     # -------------------------------------------------------------------------
-    def test_screenshot_rolls_back_when_project_state_save_fails(self):
+    def test_screenshot_manager_defers_project_state_persistence(self):
         """
-        Adversarial Transaction: If project_state persistence fails after saving a screenshot PNG,
-        the PNG must be deleted and the in-memory loot entry must be rolled back.
+        The ScreenshotManager must not call a parent-window persistence hook or own
+        rollback semantics; the AppController persists the completed session after
+        receiving the screenshot_saved signal.
         """
         from unittest.mock import MagicMock
         from PyQt6.QtGui import QPixmap, QImage
-        from core.screenshot_manager import ScreenshotManager, ScreenshotSaveError
+        from core.screenshot_manager import ScreenshotManager
 
         snip_mgr = ScreenshotManager()
         self.project_mgr.create_project("BoxRollback")
-        self.project_mgr.set_active_project("BoxRollback")
+        self.project_mgr.activate_project("BoxRollback")
 
         img = QImage(100, 100, QImage.Format.Format_RGB32)
         pix = QPixmap.fromImage(img)
@@ -963,21 +965,20 @@ class TestAdversarialRegressions(unittest.TestCase):
         mock_window = MagicMock()
         mock_window.save_current_project_state.return_value = False
 
-        with self.assertRaises(ScreenshotSaveError):
-            snip_mgr._on_snip_completed(
-                cropped_pixmap=pix,
-                parent_window=mock_window,
-                project_manager=self.project_mgr,
-                loot_manager=self.loot_mgr,
-                target_ip="10.10.10.10"
-            )
+        snip_mgr._on_snip_completed(
+            cropped_pixmap=pix,
+            parent_window=mock_window,
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            target_ip="10.10.10.10"
+        )
 
-        # Invariant 1: No orphaned PNG files in loot directory
+        mock_window.save_current_project_state.assert_not_called()
+
+        # The capture remains available for the AppController to persist.
         loot_dir = self.project_mgr.get_project_dir("BoxRollback") / "loot"
-        self.assertEqual(list(loot_dir.glob("*.png")), [])
-
-        # Invariant 2: In-memory loot entry was rolled back
-        self.assertEqual(self.loot_mgr.get_all_entries(), [])
+        self.assertEqual(len(list(loot_dir.glob("*.png"))), 1)
+        self.assertEqual(len(self.loot_mgr.get_all_entries()), 1)
 
     # -------------------------------------------------------------------------
     # 31. Session Load Performs Zero Disk Writes
@@ -1133,6 +1134,140 @@ class TestAdversarialRegressions(unittest.TestCase):
         # 3. get_template and delete_user_template reject traversal attempts
         self.assertIsNone(repo.get_template("../../victim_file"))
         self.assertFalse(repo.delete_user_template("../../victim_file"))
+
+    # =========================================================================
+    # v15 Regression Tests
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # 37. v15-P0: ScreenshotManager emits signal without saving project state
+    # -------------------------------------------------------------------------
+    def test_screenshot_manager_does_not_save_project_state(self):
+        """
+        v15-P0: ScreenshotManager._on_snip_completed() must NOT call
+        save_current_project_state() — project state persistence is exclusively
+        owned by AppController._on_screenshot_saved().
+        """
+        from PyQt6.QtGui import QImage, QPixmap
+        from PyQt6.QtWidgets import QWidget
+        from unittest.mock import MagicMock, patch
+
+        self.project_mgr.create_project("BoxSnipOwnership")
+        self.project_mgr.activate_project("BoxSnipOwnership")
+
+        img = QImage(10, 10, QImage.Format.Format_RGB32)
+        pix = QPixmap.fromImage(img)
+        parent = QWidget()
+
+        # Attach a mock save_current_project_state to the parent window
+        parent.save_current_project_state = MagicMock(return_value=True)
+
+        snip_mgr = ScreenshotManager()
+        snip_mgr._on_snip_completed(
+            cropped_pixmap=pix,
+            parent_window=parent,
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            target_ip="10.10.10.10"
+        )
+
+        # Invariant: ScreenshotManager must NOT call save_current_project_state
+        parent.save_current_project_state.assert_not_called()
+
+    # -------------------------------------------------------------------------
+    # 38. v15-P0: set_active_project issues DeprecationWarning
+    # -------------------------------------------------------------------------
+    def test_set_active_project_issues_deprecation_warning(self):
+        """
+        v15-P0: set_active_project() must emit a DeprecationWarning,
+        directing callers to use activate_project() instead.
+        """
+        import warnings
+        self.project_mgr.create_project("BoxDeprecated")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.project_mgr.set_active_project("BoxDeprecated")
+            deprecation_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+            self.assertTrue(
+                len(deprecation_warnings) > 0,
+                "set_active_project() must emit a DeprecationWarning"
+            )
+            self.assertIn("activate_project", str(deprecation_warnings[0].message))
+
+    def test_deprecated_set_active_project_does_not_create_unknown_project(self):
+        """v15-P0: deprecated activation must no longer create projects implicitly."""
+        from core.project import ProjectNotFoundError
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            with self.assertRaises(ProjectNotFoundError):
+                self.project_mgr.set_active_project("UnknownBox")
+
+        self.assertNotIn("UnknownBox", self.project_mgr.list_projects())
+        self.assertFalse((self.projects_dir / "UnknownBox").exists())
+
+    # -------------------------------------------------------------------------
+    # 39. v15-P1: list_projects() does not mutate registry
+    # -------------------------------------------------------------------------
+    def test_list_projects_does_not_mutate_registry(self):
+        """
+        v15-P1: ProjectRepository.list_projects() must be read-only —
+        it must NOT write new entries into self.registry.
+        """
+        self.project_mgr.create_project("BoxReadOnly1")
+
+        # Create a second project directory WITHOUT registration
+        phantom_dir = self.projects_dir / "PhantomProject"
+        phantom_dir.mkdir(parents=True, exist_ok=True)
+
+        # Record registry state before list_projects
+        registry_before = dict(self.project_mgr.registry)
+
+        # list_projects must discover PhantomProject but NOT register it
+        projects = self.project_mgr.list_projects()
+
+        registry_after = dict(self.project_mgr.registry)
+
+        self.assertIn("PhantomProject", projects,
+                      "list_projects must discover PhantomProject from disk")
+        self.assertEqual(
+            registry_before, registry_after,
+            "list_projects() must not mutate self.registry (read-only invariant violated)"
+        )
+
+    # -------------------------------------------------------------------------
+    # 40. v15-P1: sync_registry() registers and persists new discoveries
+    # -------------------------------------------------------------------------
+    def test_sync_registry_registers_and_persists(self):
+        """
+        v15-P1: ProjectRepository.sync_registry() must register newly discovered
+        projects into self.registry AND persist the registry to disk.
+        """
+        self.project_mgr.create_project("BoxSyncBase")
+
+        # Create an unregistered directory
+        new_dir = self.projects_dir / "NewlyDiscovered"
+        new_dir.mkdir(parents=True, exist_ok=True)
+
+        # Ensure it's not in registry before sync
+        self.assertNotIn("NewlyDiscovered", self.project_mgr.registry)
+
+        # Run sync
+        synced = self.project_mgr.sync_registry()
+
+        # Invariant 1: synced list includes newly discovered project
+        self.assertIn("NewlyDiscovered", synced)
+
+        # Invariant 2: registry in memory now includes it
+        self.assertIn("NewlyDiscovered", self.project_mgr.registry)
+
+        # Invariant 3: registry was persisted to disk
+        import json
+        registry_file = self.project_mgr.registry_file
+        self.assertTrue(registry_file.exists(), "Registry file must exist after sync_registry()")
+        disk_registry = json.loads(registry_file.read_text(encoding="utf-8"))
+        self.assertIn("NewlyDiscovered", disk_registry)
 
 
 if __name__ == "__main__":

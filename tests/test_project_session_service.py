@@ -33,7 +33,7 @@ class TestProjectSessionService(unittest.TestCase):
     def test_save_and_load_session(self):
         """Tests that saving session state populates file and loading restores loot and clipboard."""
         self.project_manager.create_project("Box1")
-        self.project_manager.set_active_project("Box1")
+        self.project_manager.activate_project("Box1")
 
         self.loot_manager.add_entry(
             entry_type="credentials",

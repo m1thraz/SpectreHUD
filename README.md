@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange?style=for-the-badge" alt="Windows & Linux">
   <img src="https://img.shields.io/badge/Focus-TryHackMe%20%7C%20HTB%20%7C%20CTFs-red?style=for-the-badge" alt="CTF Focus">
   <img src="https://img.shields.io/badge/i18n-English%20%7C%20German-purple?style=for-the-badge" alt="i18n English & German">
-  <img src="https://img.shields.io/badge/Tests-40%20Suites%20%7C%20244%20Passed-brightgreen?style=for-the-badge" alt="40 Suites / 244 Tests">
+  <img src="https://img.shields.io/badge/Tests-40%20Suites%20%7C%20253%20Passed-brightgreen?style=for-the-badge" alt="40 Suites / 253 Tests">
   <img src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" alt="MIT License">
 </p>
 
@@ -88,7 +88,7 @@ SpectreHUD is hardened against adversarial input, directory traversal, and data 
 2. **ZIP Archiver Path Sanitization**: Archive creation normalizes internal file paths and prevents Zip-Slip vulnerabilities.
 3. **Atomic Persistence & Rollback**: Writes to project states, user snippets, and Markdown reports utilize atomic file replacement (`.tmp_*` -> target rename) to protect against crashes or disk interruptions.
 4. **Drag & Drop Security**: Image insertion into the report preview is strictly sandboxed to project `loot/` subdirectories with size limits (15 MB), preventing local file disclosure.
-5. **Comprehensive Test Suite**: 40 test suites containing 244 unit, integration, and adversarial regression tests verified on every release.
+5. **Comprehensive Test Suite**: 40 test suites containing 253 unit, integration, and adversarial regression tests verified on every release.
 
 > [!WARNING]
 > SpectreHUD is intended as a local productivity tool for CTF challenges, training laboratories, and authorized penetration testing engagements. Session loot and clipboard logs are stored in **plaintext JSON** inside your local project folders for transparent inspection and easy export. Keep the clipboard recorder paused outside active sessions (`Ctrl + P`).
@@ -141,7 +141,7 @@ cd SpectreHUD
 # Install in editable mode with development dependencies
 pip install -e ".[dev]"
 
-# Run full test suite (40 suites / 244 tests)
+# Run full test suite (40 suites / 253 tests)
 python run_tests.py
 # Or via pytest
 pytest

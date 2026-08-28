@@ -79,7 +79,7 @@ def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
 
 def main():
     if "--version" in sys.argv or "-v" in sys.argv:
-        print("SpectreHUD 1.0.0")
+        print("SpectreHUD 2.0.0")
         sys.exit(0)
     if "--help" in sys.argv or "-h" in sys.argv:
         print("SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD")

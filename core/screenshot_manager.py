@@ -220,33 +220,8 @@ class ScreenshotManager(QObject):
             )
             loot_entry["file_path"] = str(filepath)
 
-            # Persist project state if parent_window / controller supports it
-            save_failed = False
-            if hasattr(parent_window, "save_current_project_state"):
-                try:
-                    if not parent_window.save_current_project_state():
-                        save_failed = True
-                except Exception as save_err:
-                    save_failed = True
-                    logger.error(f"Project state save failed after screenshot: {save_err}")
-            elif hasattr(parent_window, "app") and hasattr(parent_window.app, "save_current_project_state"):
-                try:
-                    if not parent_window.app.save_current_project_state():
-                        save_failed = True
-                except Exception as save_err:
-                    save_failed = True
-                    logger.error(f"Project state save failed after screenshot: {save_err}")
-
-            if save_failed:
-                # Transactional rollback: Delete created PNG from disk and remove loot entry from RAM
-                try:
-                    if filepath.exists():
-                        filepath.unlink()
-                except OSError:
-                    pass
-                loot_manager.delete_entry(loot_entry["id"])
-                raise ScreenshotSaveError(f"Failed to persist project state for screenshot {filepath}")
-
+            # Emit signal — project state persistence is the caller's responsibility
+            # (AppController._on_screenshot_saved is the sole owner of the save)
             self.screenshot_saved.emit(loot_entry)
             if self.event_bus:
                 from core.event_bus import EventType

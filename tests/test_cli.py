@@ -23,7 +23,7 @@ class TestCLI(unittest.TestCase):
         """Tests that invoking main.py --version exits with 0 and prints version."""
         res = subprocess.run([sys.executable, str(self.main_script), "--version"], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
-        self.assertIn("SpectreHUD 1.0.0", res.stdout)
+        self.assertIn("SpectreHUD 2.0.0", res.stdout)
 
 
 if __name__ == "__main__":

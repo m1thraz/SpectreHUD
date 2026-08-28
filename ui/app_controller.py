@@ -171,7 +171,12 @@ class AppController(QObject):
         self.clipboard_coord.loot_mutated.connect(self._on_loot_data_updated)
 
         self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
-        self.clipboard_watcher.entry_added.connect(self._on_clipboard_entry_added)
+        # Clipboard callbacks may originate outside the GUI thread.  Always
+        # cross the Qt boundary before the coordinator touches UI state.
+        self.clipboard_watcher.entry_added.connect(
+            self._on_clipboard_entry_added,
+            Qt.ConnectionType.QueuedConnection
+        )
         self.clipboard_watcher.logging_state_changed.connect(self.header.update_rec_indicator)
         get_i18n().locale_changed.connect(self.retranslate_ui)
 
@@ -350,7 +355,10 @@ class AppController(QObject):
         )
 
     def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:
-        self.save_current_project_state()
+        # AppController is the sole owner of project state persistence after screenshot.
+        # ScreenshotManager only saves the PNG and emits the signal.
+        if not self.save_current_project_state():
+            logger.error("Project state save failed after screenshot capture.")
         self.switch_mode("loot")
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
 
@@ -370,16 +378,63 @@ class AppController(QObject):
             })
         if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
             from core.project.validator import validate_workspace_directory, WorkspaceError
+            from core.project import ProjectNotFoundError
             try:
                 new_ws = validate_workspace_directory(new_settings["workspace_dir"])
                 if new_ws != self.project_manager.base_dir.resolve():
-                    self.project_manager.base_dir = new_ws
-                    self.project_manager.list_projects()
+                    old_base = self.project_manager.base_dir
+                    old_active = self.project_manager.get_active_project()
+                    try:
+                        # 1. Switch workspace
+                        self.project_manager.base_dir = new_ws
+                        # 2. Discover projects in new workspace
+                        # Discovery and its registry update are explicit so the
+                        # in-memory registry cannot diverge from the persisted one.
+                        available = self.project_manager.sync_registry()
+                        # Registered projects may live outside the configured default
+                        # workspace.  A workspace change, however, must select a
+                        # project physically contained in the new workspace.
+                        workspace_projects = [
+                            name for name in available
+                            if (new_ws / name).is_dir() and not (new_ws / name).is_symlink()
+                        ]
+                        # 3. Validate or reset active project
+                        if old_active not in workspace_projects:
+                            if workspace_projects:
+                                self.project_manager.activate_project(workspace_projects[0])
+                                logger.info(
+                                    f"Active project '{old_active}' not found in new workspace; "
+                                    f"switched to '{workspace_projects[0]}'."
+                                )
+                            else:
+                                # A freshly selected workspace starts with a real Default
+                                # project, never a dangling active-project reference.
+                                self.project_manager.create_project("Default", allow_existing=True)
+                                self.project_manager.sync_registry()
+                                self.project_manager.activate_project("Default")
+                        # 4. Reload session into UI
+                        self.load_active_project_state()
+                        self.refresh_filter_pills()
+                        self.refresh_content()
+                    except Exception as switch_err:
+                        # Rollback: restore previous workspace and active project
+                        logger.error(f"Workspace switch failed, rolling back: {switch_err}")
+                        self.project_manager.base_dir = old_base
+                        try:
+                            self.project_manager.activate_project(old_active)
+                        except Exception:
+                            pass
+                        QMessageBox.warning(
+                            self.window,
+                            t("general.workspace_error", "Workspace Error"),
+                            t("general.workspace_switch_failed",
+                              f"Failed to switch workspace directory:\n{switch_err}\n\nThe previous workspace has been restored.")
+                        )
             except WorkspaceError as e:
                 logger.error(f"Failed to switch to new workspace directory: {e}")
                 QMessageBox.warning(
                     self.window,
-                    "Workspace Error",
+                    t("general.workspace_error", "Workspace Error"),
                     f"Failed to set workspace directory:\n{e}"
                 )
         if "time_format" in new_settings:

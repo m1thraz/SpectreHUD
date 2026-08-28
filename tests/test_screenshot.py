@@ -27,7 +27,7 @@ class TestScreenshot(unittest.TestCase):
         self.base_dir = self.temp_path / "projects"
         self.pm = ProjectManager(base_dir=self.base_dir)
         self.pm.create_project("BoxAlpha", target_ip="10.10.10.77")
-        self.pm.set_active_project("BoxAlpha")
+        self.pm.activate_project("BoxAlpha")
 
         self.loot_file = self.temp_path / "config" / "loot.json"
         self.loot_mgr = LootManager(storage_file=self.loot_file)

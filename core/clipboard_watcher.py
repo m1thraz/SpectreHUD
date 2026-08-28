@@ -85,12 +85,26 @@ class ClipboardWatcher(QObject):
                 except (TypeError, ValueError, AttributeError) as e:
                     logger.debug(f"Error resolving target_ip in clipboard provider: {e}")
 
-            self.add_entry(text, target_ip=target_ip)
+            # Clipboard callbacks must not perform filesystem I/O.  The
+            # AppController persists the in-memory session after entry_added.
+            self.add_entry(text, target_ip=target_ip, persist=False)
         except (RuntimeError, OSError) as e:
             logger.error(f"Error reading clipboard content: {e}", exc_info=True)
 
-    def add_entry(self, text: str, target_ip: str = "") -> Optional[Dict[str, Any]]:
-        """Adds a new sanitized entry if not a consecutive duplicate."""
+    def add_entry(
+        self,
+        text: str,
+        target_ip: str = "",
+        *,
+        persist: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """Adds a sanitized entry, optionally persisting standalone history storage.
+
+        Clipboard callbacks pass ``persist=False`` so their thread only updates the
+        in-memory session.  The UI-side project-session save is triggered by
+        ``entry_added``.  Direct, standalone callers retain the legacy persistence
+        behaviour by default.
+        """
         if not text or not text.strip():
             return None
 
@@ -125,12 +139,20 @@ class ClipboardWatcher(QObject):
         if len(new_history) > 500:
             new_history = new_history[:500]
 
-        if not self.storage.save_json("clipboard", new_history):
+        # Standalone callers may opt into the legacy storage backend.  The live
+        # clipboard callback deliberately skips this I/O path.
+        if persist and not self.storage.save_json("clipboard", new_history):
             raise PersistenceError("Could not persist clipboard entry to storage.")
-        
+
         self._last_copied_text = clean_text
         self.history = new_history
+
+        # Qt automatically queues this signal for QObject receivers living in a
+        # different thread (the AppController lives on the GUI thread).  Avoid
+        # QMetaObject.invokeMethod here: arbitrary Python dicts are not Qt meta
+        # object arguments and would otherwise fall back to a direct UI callback.
         self.entry_added.emit(entry)
+
         if self.event_bus:
             from core.event_bus import EventType
             self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})

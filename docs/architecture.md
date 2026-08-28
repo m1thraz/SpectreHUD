@@ -83,7 +83,7 @@ graph TD
   - `theme.py`: Aggregator generating the complete `CYBER_DARK_QSS` theme.
 
 ### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
-- **`ReportTemplate` & `TemplateSection` (`models.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.
+- **`ReportTemplate` & `TemplateSection` (`template_engine.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.
 - **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
 - **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
@@ -128,7 +128,7 @@ graph TD
 ## 5. Testing & CI/CD Strategy
 
 - **Master Test Runner (`run_tests.py`)**:
-  - Automatically discovers and executes all **40 test suites** (244 tests) across `tests/`.
+  - Automatically discovers and executes all **40 test suites** (253 tests) across `tests/`.
   - Runs in headless mode (`QT_QPA_PLATFORM=offscreen`).
 - **GitHub Actions CI (`.github/workflows/ci.yml`)**:
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.

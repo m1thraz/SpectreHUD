@@ -57,10 +57,10 @@ class TestProjectManager(unittest.TestCase):
 
     def test_active_project_switch(self):
         self.pm.create_project("Lame", target_ip="10.10.10.3")
-        self.pm.set_active_project("Lame")
+        self.pm.activate_project("Lame")
         self.assertEqual(self.pm.get_active_project(), "Lame")
 
-        self.pm.set_active_project("Default")
+        self.pm.activate_project("Default")
         self.assertEqual(self.pm.get_active_project(), "Default")
 
     def test_activate_project_strict(self):
@@ -187,4 +187,3 @@ class TestProjectManager(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
