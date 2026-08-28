@@ -96,8 +96,13 @@ class ProjectRepository:
                 os.write(lock_fd, str(os.getpid()).encode("ascii"))
             except FileExistsError:
                 try:
-                    # A process crash must not block future application starts forever.
-                    if time.time() - lock_path.stat().st_mtime > 30:
+                    # A crashed owner must not block future application starts
+                    # forever.  Age alone is insufficient: a suspended or slow
+                    # process can legitimately hold the lock for over 30 seconds.
+                    if (
+                        time.time() - lock_path.stat().st_mtime > 30
+                        and not self._registry_lock_owner_is_alive(lock_path)
+                    ):
                         lock_path.unlink()
                         continue
                 except OSError:
@@ -114,6 +119,43 @@ class ProjectRepository:
                 lock_path.unlink()
             except OSError:
                 pass
+
+    @staticmethod
+    def _registry_lock_owner_is_alive(lock_path: Path) -> bool:
+        """Return whether the PID stored in a registry lock still owns a live process."""
+        try:
+            pid = int(lock_path.read_text(encoding="ascii").strip())
+        except (OSError, ValueError):
+            return False
+        if pid <= 0:
+            return False
+
+        if os.name == "nt":
+            try:
+                import ctypes
+
+                process_query_limited_information = 0x1000
+                handle = ctypes.windll.kernel32.OpenProcess(
+                    process_query_limited_information, False, pid
+                )
+                if handle:
+                    ctypes.windll.kernel32.CloseHandle(handle)
+                    return True
+                # Access denied still proves that the process exists.
+                return ctypes.get_last_error() == 5
+            except (AttributeError, OSError):
+                # Failing closed prevents concurrent writers if the platform API
+                # is unavailable or cannot determine process ownership.
+                return True
+
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        else:
+            return True
 
     def _update_registry(
         self,

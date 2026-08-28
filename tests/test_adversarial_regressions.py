@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import unittest
 import tempfile
 from pathlib import Path
@@ -13,6 +14,7 @@ from PyQt6.QtGui import QImage, QPixmap, QColor
 from core.config import ConfigManager
 from core.project_manager import ProjectManager, InvalidProjectNameError, ProjectCreationError
 from core.loot_manager import LootManager
+from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
@@ -301,6 +303,36 @@ class TestAdversarialRegressions(unittest.TestCase):
         restarted = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
         self.assertNotIn("ExternalX", restarted.registry)
         self.assertEqual(restarted.registry["ExternalY"], str(external_y))
+
+    def test_stale_registry_lock_with_live_owner_is_not_removed(self):
+        """An old lock owned by this live process remains protected until timeout."""
+        repository = self.project_mgr.repository
+        lock_path = repository.registry_file.with_name(f".{repository.registry_file.name}.lock")
+        lock_path.write_text(str(os.getpid()), encoding="ascii")
+        stale_time = time.time() - 31
+        os.utime(lock_path, (stale_time, stale_time))
+
+        with patch("core.project.repository.time.monotonic", side_effect=[0.0, 6.0]):
+            with self.assertRaises(PersistenceError):
+                with repository._registry_write_lock():
+                    pass
+
+        self.assertTrue(lock_path.exists())
+        lock_path.unlink()
+
+    def test_stale_registry_lock_with_dead_owner_is_recovered(self):
+        """A stale lock from a non-existent PID is replaced and released normally."""
+        repository = self.project_mgr.repository
+        lock_path = repository.registry_file.with_name(f".{repository.registry_file.name}.lock")
+        lock_path.write_text(str(2_147_483_647), encoding="ascii")
+        stale_time = time.time() - 31
+        os.utime(lock_path, (stale_time, stale_time))
+
+        with repository._registry_write_lock():
+            self.assertTrue(lock_path.exists())
+            self.assertEqual(lock_path.read_text(encoding="ascii"), str(os.getpid()))
+
+        self.assertFalse(lock_path.exists())
 
     def test_workspace_loss_while_running_fails_closed_without_crashing(self):
         """Saving after the configured workspace disappears must report failure safely."""
