@@ -123,6 +123,57 @@ class TestScreenshotManager(unittest.TestCase):
         # Invariant: No loot entries created when disk save fails
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
 
+    def test_screenshot_save_failure_restores_hidden_hud(self):
+        """A PNG failure must restore the HUD through the completion finally-path."""
+        from unittest.mock import MagicMock, patch
+        from PyQt6.QtCore import Qt
+
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        pixmap = QPixmap.fromImage(img)
+        parent_win = MagicMock()
+        parent_win.windowState.return_value = Qt.WindowState.WindowNoState
+
+        with patch.object(QPixmap, "save", return_value=False):
+            with self.assertRaises(Exception):
+                self.screenshot_mgr._on_snip_completed(
+                    cropped_pixmap=pixmap,
+                    parent_window=parent_win,
+                    project_manager=self.project_mgr,
+                    loot_manager=self.loot_mgr,
+                    target_ip="10.10.10.55",
+                )
+
+        parent_win.show.assert_called_once()
+        parent_win.raise_.assert_called_once()
+        parent_win.activateWindow.assert_called_once()
+        parent_win.switch_mode.assert_not_called()
+
+    def test_loot_failure_restores_hidden_hud(self):
+        """A loot persistence error must restore the HUD through the same finally-path."""
+        from unittest.mock import MagicMock
+        from PyQt6.QtCore import Qt
+
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        pixmap = QPixmap.fromImage(img)
+        parent_win = MagicMock()
+        parent_win.windowState.return_value = Qt.WindowState.WindowNoState
+        failing_loot_manager = MagicMock()
+        failing_loot_manager.add_entry.side_effect = RuntimeError("loot write failed")
+
+        with self.assertRaises(RuntimeError):
+            self.screenshot_mgr._on_snip_completed(
+                cropped_pixmap=pixmap,
+                parent_window=parent_win,
+                project_manager=self.project_mgr,
+                loot_manager=failing_loot_manager,
+                target_ip="10.10.10.55",
+            )
+
+        parent_win.show.assert_called_once()
+        parent_win.raise_.assert_called_once()
+        parent_win.activateWindow.assert_called_once()
+        parent_win.switch_mode.assert_not_called()
+
     def test_screenshot_publishes_exactly_one_domain_event(self):
         """The app boundary publishes one canonical event after the manager signal."""
         img = QImage(50, 50, QImage.Format.Format_RGB32)
