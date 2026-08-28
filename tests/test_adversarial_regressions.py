@@ -191,6 +191,22 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.clip_watcher.add_entry("ls -la")
         self.assertEqual(len(self.clip_watcher.get_all_history()), 1)
 
+    def test_restart_recovers_from_corrupt_registry_and_project_state(self):
+        """A new process instance must recover safely from corrupted persisted JSON."""
+        self.project_mgr.create_project("BoxRestart")
+        project_dir = self.project_mgr.get_project_dir("BoxRestart")
+        (project_dir / "project_state.json").write_text("{not valid json", encoding="utf-8")
+        self.project_mgr.registry_file.write_text("[not a registry]", encoding="utf-8")
+
+        restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
+        recovered_state = restarted_manager.load_project_state("BoxRestart")
+
+        self.assertIn("BoxRestart", restarted_manager.list_projects())
+        self.assertEqual(recovered_state["name"], "BoxRestart")
+        self.assertEqual(recovered_state["loot"], [])
+        persisted_registry = json.loads(restarted_manager.registry_file.read_text(encoding="utf-8"))
+        self.assertIn("BoxRestart", persisted_registry)
+
     # -------------------------------------------------------------------------
     # 5. P4: Single Source of Truth & No Global State Leakage
     # -------------------------------------------------------------------------
