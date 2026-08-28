@@ -392,7 +392,7 @@ class ProjectRepository:
     def load_project_state(self, name: str) -> Dict[str, Any]:
         """Loads and semantically validates state data for a project."""
         from core.validators import validate_project_state, is_file_size_valid, MAX_PROJECT_STATE_FILE_SIZE
-        pname = sanitize_project_name(name)
+        pname = validate_project_name(name)
         state_file = self.get_project_dir(pname) / "project_state.json"
         if state_file.exists():
             if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
@@ -413,7 +413,7 @@ class ProjectRepository:
         """Persists state data for a project."""
         from core.validators import validate_project_state
         from core.atomic_write import atomic_write_json
-        pname = sanitize_project_name(name)
+        pname = validate_project_name(name)
         proj_dir = self.get_project_dir(pname)
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)

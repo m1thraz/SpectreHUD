@@ -167,7 +167,7 @@ class ProjectManager:
         Explicitly activates an existing project.
         Raises ProjectNotFoundError if the project does not exist on disk.
         """
-        clean_name = sanitize_project_name(name)
+        clean_name = validate_project_name(name)
         if clean_name not in self.list_projects():
             raise ProjectNotFoundError(f"Project '{name}' (resolved: '{clean_name}') does not exist.")
 

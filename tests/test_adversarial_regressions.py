@@ -95,6 +95,21 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertNotIn("exploit", parent_entries)
         self.assertNotIn("notes.md", parent_entries)
 
+    def test_invalid_project_operations_do_not_mutate_default(self):
+        """Mutating or loading with an invalid name must never silently target Default."""
+        self.project_mgr.save_project_state("Default", {"target_ip": "10.10.10.10"})
+        before = self.project_mgr.load_project_state("Default")
+
+        for invalid_name in ("../../evil", "..\\evil", "   "):
+            with self.assertRaises(InvalidProjectNameError):
+                self.project_mgr.activate_project(invalid_name)
+            with self.assertRaises(InvalidProjectNameError):
+                self.project_mgr.load_project_state(invalid_name)
+            with self.assertRaises(InvalidProjectNameError):
+                self.project_mgr.save_project_state(invalid_name, {"target_ip": "9.9.9.9"})
+
+        self.assertEqual(self.project_mgr.load_project_state("Default"), before)
+
     # -------------------------------------------------------------------------
     # 2. P2: Screenshot Filename Collisions
     # -------------------------------------------------------------------------
