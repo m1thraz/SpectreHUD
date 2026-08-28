@@ -1,0 +1,24 @@
+"""Shared pytest isolation for SpectreHUD's filesystem-backed services."""
+
+import os
+
+import pytest
+
+
+# Qt must be configured before a QApplication is constructed by an imported
+# test module. Individual tests may still override this for platform checks.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+
+@pytest.fixture(autouse=True)
+def isolate_spectrehud_user_data(tmp_path, monkeypatch):
+    """Route every test's implicit app paths into fresh temporary folders.
+
+    Tests that need custom paths can still set the variables themselves, but
+    no test can accidentally fall back to the user's real configuration or
+    project workspace after another test cleans up its environment variables.
+    """
+    config_dir = tmp_path / "config"
+    projects_dir = tmp_path / "projects"
+    monkeypatch.setenv("SPECTRE_CONFIG_DIR", str(config_dir))
+    monkeypatch.setenv("SPECTRE_PROJECTS_DIR", str(projects_dir))

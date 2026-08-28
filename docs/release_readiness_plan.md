@@ -1,4 +1,4 @@
-# Release-Readiness-Plan: SpectreHUD 1.0.0
+# Release-Readiness-Plan: SpectreHUD v2.0.0
 
 ## Ziel
 
@@ -8,15 +8,11 @@ sondern nur Release-Härtung, Qualitätssicherung und Veröffentlichungsvorberei
 
 ## Entscheidung vor dem Start
 
-### Release-Version festlegen
+### Release-Version festgelegt: v2.0.0
 
-Der Paketstand in `pyproject.toml` ist aktuell `2.0.0`, während der geplante
-offizielle Release als `1.0.0` bezeichnet wird.
-
-- Entscheidung treffen, ob der erste öffentliche Stable-Release `v1.0.0` oder
-  `v2.0.0` heißt.
-- `pyproject.toml`, `main.py --version`, Dokumentation, Build-Artefakte und Git-Tag
-  müssen anschließend dieselbe Version verwenden.
+Der erste öffentliche Stable-Release wird als `v2.0.0` veröffentlicht.
+`pyproject.toml` und `main.py --version` verwenden bereits diese Version; die
+weiteren Release-Artefakte und der finale Git-Tag müssen sie ebenfalls tragen.
 
 **Abnahme:** Ein Versions-Check über `spectrehud --version` und Paketmetadaten liefert
 exakt die veröffentlichte Release-Version.
@@ -24,6 +20,10 @@ exakt die veröffentlichte Release-Version.
 ---
 
 ## Phase 1: Test-Isolation und Zuverlässigkeit
+
+**Status: erledigt.** Die gemeinsame pytest-Fixture isoliert die impliziten
+Konfigurations- und Projektpfade pro Test. `run_tests.py` delegiert an dieselbe
+pytest-Sammlung wie CI. Lokale Abnahme: 256 Tests erfolgreich im Einzelprozess.
 
 ### 1.1 Globale Testzustände entfernen
 
