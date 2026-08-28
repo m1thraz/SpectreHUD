@@ -55,7 +55,8 @@ graph TD
 - **`ServiceContainer`**: Coordinates all core managers, storage backends, and event buses in one place.
 - **Factory Methods**:
   - `ServiceContainer.create_production(...)`: Instantiates filesystem-backed storage, default config directories, and locale settings.
-  - `ServiceContainer.create_in_memory(...)`: Instantiates 100% in-memory fakes (0 disk I/O, sub-millisecond execution) for unit and regression testing.
+  - `ServiceContainer.create_isolated_test_container(...)`: Uses in-memory storage for configuration and session data, plus isolated temporary filesystem directories for filesystem-dependent services such as `ProjectManager` and `ReportFileManager`. It is designed for test isolation and does not guarantee zero disk I/O.
+  - `ServiceContainer.create_in_memory(...)`: Backward-compatible legacy alias for `create_isolated_test_container(...)`; new tests should use the explicit name.
 
 ### 2.5 Storage Abstraction Layer (`core/storage.py`)
 - **`StorageBackend` Interface**:
