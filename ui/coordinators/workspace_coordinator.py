@@ -96,7 +96,24 @@ class WorkspaceCoordinator(QObject):
             self.project_ctrl.update_project_combo()
             return False
 
-        self.report_ctrl.load_project(project_name)
+        try:
+            self.report_ctrl.load_project(project_name)
+        except Exception as report_err:
+            logger.error(
+                f"Failed to load report for project '{project_name}', rolling back project switch: {report_err}",
+                exc_info=True,
+            )
+            try:
+                self.project_manager.activate_project(current_proj)
+            except Exception:
+                logger.exception("Failed to restore the previous project after report load failure")
+            QMessageBox.critical(
+                window,
+                t("general.error", "Error"),
+                f"Failed to load the report for project '{project_name}'. The previous project has been restored.\n\n{report_err}",
+            )
+            self.project_ctrl.update_project_combo()
+            return False
 
         if on_success_callback:
             on_success_callback(project_name)

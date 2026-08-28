@@ -247,6 +247,95 @@ class TestAdversarialRegressions(unittest.TestCase):
             self.project_mgr.save_project_state("BoxWorkspaceLoss", {"target_ip": "10.10.10.10"})
         )
 
+    def test_project_switch_rolls_back_when_report_load_fails(self):
+        """A broken report must not leave the application switched to a half-loaded project."""
+        from unittest.mock import MagicMock, patch
+        from core.event_bus import EventBus, EventType
+        from ui.coordinators.workspace_coordinator import WorkspaceCoordinator
+
+        self.project_mgr.create_project("BoxReportOld")
+        self.project_mgr.create_project("BoxReportBroken")
+        self.project_mgr.activate_project("BoxReportOld")
+        report_ctrl = MagicMock()
+        report_ctrl.confirm_discard_if_dirty.return_value = True
+        report_ctrl.load_project.side_effect = RuntimeError("corrupted report.md")
+        project_ctrl = MagicMock()
+        event_bus = EventBus()
+        events = []
+        event_bus.subscribe(EventType.PROJECT_CHANGED, events.append)
+        coordinator = WorkspaceCoordinator(
+            project_manager=self.project_mgr,
+            session_service=MagicMock(save_project_session=MagicMock(return_value=True)),
+            project_ctrl=project_ctrl,
+            report_ctrl=report_ctrl,
+            event_bus=event_bus,
+        )
+
+        with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical"):
+            switched = coordinator.switch_to_project(
+                "BoxReportBroken", QWidget(), variables_provider=lambda: {}
+            )
+
+        self.assertFalse(switched)
+        self.assertEqual(self.project_mgr.get_active_project(), "BoxReportOld")
+        project_ctrl.update_project_combo.assert_called_once()
+        self.assertEqual(events, [])
+
+    def test_rapid_project_switches_keep_clipboard_data_isolated(self):
+        """Repeated project switches must not leak clipboard data across sessions."""
+        self.project_mgr.create_project("BoxRapidOne")
+        self.project_mgr.create_project("BoxRapidTwo")
+
+        self.session_service.load_project_session("BoxRapidOne")
+        self.clip_watcher.add_entry("first-project-command", persist=False)
+        self.assertTrue(self.session_service.save_project_session({}, "BoxRapidOne"))
+
+        for iteration in range(3):
+            self.session_service.load_project_session("BoxRapidTwo")
+            expected_history = [] if iteration == 0 else ["second-project-command"]
+            self.assertEqual(
+                [entry["text"] for entry in self.clip_watcher.get_all_history()], expected_history
+            )
+            self.clip_watcher.add_entry("second-project-command", persist=False)
+            self.assertTrue(self.session_service.save_project_session({}, "BoxRapidTwo"))
+
+            self.session_service.load_project_session("BoxRapidOne")
+            self.assertEqual(
+                [entry["text"] for entry in self.clip_watcher.get_all_history()],
+                ["first-project-command"],
+            )
+
+        self.session_service.load_project_session("BoxRapidTwo")
+        self.assertEqual(
+            [entry["text"] for entry in self.clip_watcher.get_all_history()],
+            ["second-project-command"],
+        )
+
+    def test_screenshot_commit_survives_immediate_shutdown_save(self):
+        """A completed screenshot remains in project state when shutdown follows immediately."""
+        from unittest.mock import MagicMock
+        from PyQt6.QtCore import Qt
+
+        self.project_mgr.create_project("BoxShutdownScreenshot")
+        self.project_mgr.activate_project("BoxShutdownScreenshot")
+        image = QImage(10, 10, QImage.Format.Format_RGB32)
+        image.fill(QColor("red"))
+        parent_window = MagicMock()
+        parent_window.windowState.return_value = Qt.WindowState.WindowNoState
+        manager = ScreenshotManager()
+        manager.screenshot_saved.connect(
+            lambda _entry: self.session_service.save_project_session({}, "BoxShutdownScreenshot")
+        )
+
+        manager._on_snip_completed(
+            QPixmap.fromImage(image), parent_window, self.project_mgr, self.loot_mgr, target_ip=""
+        )
+        self.assertTrue(self.session_service.save_project_session({}, "BoxShutdownScreenshot"))
+
+        state = self.project_mgr.load_project_state("BoxShutdownScreenshot")
+        self.assertEqual(len(state["loot"]), 1)
+        self.assertEqual(state["loot"][0]["type"], "screenshot")
+
     # -------------------------------------------------------------------------
     # 5. P4: Single Source of Truth & No Global State Leakage
     # -------------------------------------------------------------------------
