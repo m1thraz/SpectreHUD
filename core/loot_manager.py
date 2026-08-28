@@ -77,11 +77,12 @@ class LootManager:
         """Sets the active timestamp formatting scheme ('24h' or '12h')."""
         self.time_format = time_format if time_format in ("24h", "12h") else "24h"
 
-    def _migrate_entries(self) -> bool:
-        """Ensures all entries have a valid category and severity. Returns True if any entry was migrated."""
+    def _migrate_entries(self, entries: Optional[List[Dict[str, Any]]] = None) -> bool:
+        """Normalizes entries in place and returns whether any entry was migrated."""
         from core.validators import VALID_SEVERITIES
         migrated = False
-        for entry in self.entries:
+        target_entries = self.entries if entries is None else entries
+        for entry in target_entries:
             cat = entry.get("category")
             if not cat or cat not in VALID_CATEGORY_IDS:
                 entry["category"] = "misc"
@@ -131,12 +132,14 @@ class LootManager:
             self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
 
     def replace_entries_and_persist(self, entries: List[Dict[str, Any]]) -> None:
-        """Replaces entries in memory and immediately persists the validated result."""
+        """Persist a validated replacement before committing it to in-memory state."""
         from core.validators import validate_loot_list
-        self.entries = validate_loot_list(entries)
-        if self._migrate_entries():
+        validated_entries = validate_loot_list(entries)
+        if self._migrate_entries(validated_entries):
             logger.info("Migrated replacement loot entries and persisted them to disk.")
-        self.save_entries()
+        if not self.storage.save_json("loot", validated_entries):
+            raise PersistenceError("Could not persist replacement loot entries to storage.")
+        self.entries = validated_entries
         if self.event_bus:
             from core.event_bus import EventType
             self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})

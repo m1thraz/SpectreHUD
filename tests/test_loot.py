@@ -4,6 +4,8 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.loot_manager import LootManager
+from core.storage import PersistenceError
+from unittest.mock import patch
 
 class TestLootManager(unittest.TestCase):
 
@@ -156,6 +158,21 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(disk_data[0]["category"], "misc")
         self.assertEqual(disk_data[1]["category"], "misc")
         self.assertEqual(disk_data[1]["type"], "directory")
+
+    def test_replace_entries_persist_failure_does_not_mutate_memory(self):
+        """A failed replacement write preserves both the prior RAM and disk state."""
+        previous = self.loot_mgr.add_entry("note", "Previous", "must survive")
+        replacement = [{"id": "loot_new", "type": "note", "title": "New", "content": "must not commit"}]
+
+        with patch.object(self.loot_mgr.storage, "save_json", return_value=False):
+            with self.assertRaises(PersistenceError):
+                self.loot_mgr.replace_entries_and_persist(replacement)
+
+        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [previous["id"]])
+        self.assertEqual(
+            [entry["id"] for entry in self.loot_mgr.storage.load_json("loot")],
+            [previous["id"]],
+        )
 
     def test_set_entries_is_a_deprecated_persistent_alias(self):
         """Legacy callers receive a clear migration warning without changing behavior."""
