@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.report_file_manager import ReportFileManager
+from core.validators import MAX_REPORT_FILE_SIZE
 
 
 class FakeClipboardWatcher:
@@ -72,6 +73,21 @@ class TestReportFileManager(unittest.TestCase):
 
         loaded = self.report_mgr.load("BoxBeta")
         self.assertEqual(loaded, content)
+
+    def test_save_rejects_report_larger_than_its_read_limit(self):
+        self.project_mgr.create_project("OversizedReport")
+        content = "x" * (MAX_REPORT_FILE_SIZE + 1)
+
+        self.assertFalse(self.report_mgr.save(content, "OversizedReport"))
+        self.assertFalse(self.report_mgr.exists("OversizedReport"))
+
+    def test_failed_oversized_save_preserves_previous_report(self):
+        self.project_mgr.create_project("ProtectedReport")
+        previous_content = "# Important report\nThis content must survive."
+        self.assertTrue(self.report_mgr.save(previous_content, "ProtectedReport"))
+
+        self.assertFalse(self.report_mgr.save("x" * (MAX_REPORT_FILE_SIZE + 1), "ProtectedReport"))
+        self.assertEqual(self.report_mgr.load("ProtectedReport"), previous_content)
 
     def test_backup(self):
         self.project_mgr.create_project("BoxBeta")

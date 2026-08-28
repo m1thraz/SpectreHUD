@@ -70,9 +70,24 @@ class ReportFileManager:
         return content if content is not None else ""
 
     def save(self, content: str, project_name: Optional[str] = None) -> bool:
-        """Speichert den Inhalt atomar in die report.md des Projekts."""
+        """Saves only report content that can subsequently be loaded safely."""
         from core.atomic_write import atomic_write_text
+        from core.validators import MAX_REPORT_FILE_SIZE
         path = self.get_report_path(project_name)
+        try:
+            encoded_content = content.encode("utf-8")
+        except UnicodeEncodeError as exc:
+            logger.error("Report content for %s cannot be encoded as UTF-8: %s", path, exc)
+            return False
+
+        if len(encoded_content) > MAX_REPORT_FILE_SIZE:
+            logger.error(
+                "Refusing to save oversized report %s (%d bytes; maximum %d bytes).",
+                path,
+                len(encoded_content),
+                MAX_REPORT_FILE_SIZE,
+            )
+            return False
         try:
             return atomic_write_text(path, content, encoding="utf-8")
         except OSError as e:
