@@ -147,7 +147,7 @@ python run_tests.py
 pytest
 
 # Build distribution wheel & verify
-pip wheel . --no-deps -w dist/
+pip wheel . --no-deps --no-build-isolation -w dist/
 python scripts/verify_wheel.py dist/
 ```
 

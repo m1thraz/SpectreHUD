@@ -6,6 +6,7 @@ Verifies all necessary files, package data, controllers, and entry points exist 
 
 import sys
 import zipfile
+import re
 from pathlib import Path
 
 REQUIRED_FILES = [
@@ -39,7 +40,6 @@ REQUIRED_FILES = [
     # ReportTemplate, TemplateSection, and ReportContext live here.  The
     # former reporting/models.py module was removed during the refactor.
     "core/reporting/template_engine.py",
-    "core/reporting/template_engine.py",
     "core/reporting/template_repository.py",
     "core/reporting/charts.py",
     # Project subsystem
@@ -58,6 +58,15 @@ REQUIRED_FILES = [
     "ui/base_dialog.py",
     "ui/settings_dialog.py",
 ]
+
+
+def get_project_version() -> str:
+    """Reads the release version without importing application code."""
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+    if not match:
+        raise RuntimeError("Could not determine the project version from pyproject.toml")
+    return match.group(1)
 
 def verify_wheel(wheel_path: Path) -> bool:
     print(f"[*] Inspecting Wheel: {wheel_path.name}")
@@ -97,9 +106,13 @@ def verify_wheel(wheel_path: Path) -> bool:
 def main():
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dist")
     if target.is_dir():
-        wheels = list(target.glob("*.whl"))
+        version = get_project_version()
+        wheels = list(target.glob(f"spectrehud-{version}-*.whl"))
         if not wheels:
-            print(f"[-] No .whl files found in directory: {target}")
+            print(f"[-] No SpectreHUD {version} wheel found in directory: {target}")
+            sys.exit(1)
+        if len(wheels) > 1:
+            print(f"[-] Expected exactly one SpectreHUD {version} wheel in: {target}")
             sys.exit(1)
         wheel_path = wheels[0]
     else:
