@@ -136,7 +136,7 @@ class LootManager:
         from core.validators import validate_loot_list
         validated_entries = validate_loot_list(entries)
         if self._migrate_entries(validated_entries):
-            logger.info("Migrated replacement loot entries and persisted them to disk.")
+            logger.info("Migrated replacement loot entries before persistence.")
         if not self.storage.save_json("loot", validated_entries):
             raise PersistenceError("Could not persist replacement loot entries to storage.")
         self.entries = validated_entries
