@@ -27,6 +27,9 @@ def acquire_application_lock(config_dir: Optional[Path] = None) -> Optional[QLoc
     lock.setStaleLockTime(STALE_LOCK_TIME_MS)
     if lock.tryLock(0):
         return lock
+    # On Windows, explicitly closing a failed QLockFile attempt prevents its
+    # transient file handle from keeping a live owner's lock file undeletable.
+    lock.unlock()
     return None
 
 
