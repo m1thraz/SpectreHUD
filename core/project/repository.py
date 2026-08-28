@@ -6,8 +6,6 @@ import json
 import os
 import sys
 import subprocess
-import time
-from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
@@ -84,101 +82,22 @@ class ProjectRepository:
                 logger.warning(f"Could not load projects registry from {self.registry_file}: {e}")
         return {}
 
-    @contextmanager
-    def _registry_write_lock(self):
-        """Serializes registry read-merge-write operations across application processes."""
-        lock_path = self.registry_file.with_name(f".{self.registry_file.name}.lock")
-        lock_fd = None
-        deadline = time.monotonic() + 5.0
-        while lock_fd is None:
-            try:
-                lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(lock_fd, str(os.getpid()).encode("ascii"))
-            except FileExistsError:
-                try:
-                    # A crashed owner must not block future application starts
-                    # forever.  Age alone is insufficient: a suspended or slow
-                    # process can legitimately hold the lock for over 30 seconds.
-                    if (
-                        time.time() - lock_path.stat().st_mtime > 30
-                        and not self._registry_lock_owner_is_alive(lock_path)
-                    ):
-                        lock_path.unlink()
-                        continue
-                except OSError:
-                    pass
-                if time.monotonic() >= deadline:
-                    raise PersistenceError(f"Timed out waiting for registry lock {lock_path}.")
-                time.sleep(0.02)
-        try:
-            yield
-        finally:
-            if lock_fd is not None:
-                os.close(lock_fd)
-            try:
-                lock_path.unlink()
-            except OSError:
-                pass
-
-    @staticmethod
-    def _registry_lock_owner_is_alive(lock_path: Path) -> bool:
-        """Return whether the PID stored in a registry lock still owns a live process."""
-        try:
-            pid = int(lock_path.read_text(encoding="ascii").strip())
-        except (OSError, ValueError):
-            return False
-        if pid <= 0:
-            return False
-
-        if os.name == "nt":
-            try:
-                import ctypes
-
-                process_query_limited_information = 0x1000
-                handle = ctypes.windll.kernel32.OpenProcess(
-                    process_query_limited_information, False, pid
-                )
-                if handle:
-                    ctypes.windll.kernel32.CloseHandle(handle)
-                    return True
-                # Access denied still proves that the process exists.
-                return ctypes.get_last_error() == 5
-            except (AttributeError, OSError):
-                # Failing closed prevents concurrent writers if the platform API
-                # is unavailable or cannot determine process ownership.
-                return True
-
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        else:
-            return True
-
     def _update_registry(
         self,
         additions: Optional[Dict[str, str]] = None,
         removals: Optional[set[str]] = None,
     ) -> None:
-        """Atomically apply explicit registry additions and removals across processes.
-
-        A registry snapshot cannot represent a deletion when another process has a
-        stale copy.  This method therefore reloads the latest disk state while
-        holding the cross-process lock and applies the requested mutations to that
-        state before committing it.
-        """
+        """Atomically persist explicit changes to the active application's registry."""
         additions = dict(additions or {})
         removals = set(removals or set())
         try:
-            with self._registry_write_lock():
-                disk_registry = self._load_registry()
-                for name in removals:
-                    disk_registry.pop(name, None)
-                disk_registry.update(additions)
-                atomic_write_json(self.registry_file, disk_registry, indent=2, ensure_ascii=False)
-                self.registry = disk_registry
+            updated_registry = dict(self.registry)
+            for name in removals:
+                updated_registry.pop(name, None)
+            updated_registry.update(additions)
+            if not atomic_write_json(self.registry_file, updated_registry, indent=2, ensure_ascii=False):
+                raise OSError("Atomic registry write returned false.")
+            self.registry = updated_registry
         except Exception as e:
             logger.error(f"Failed to update projects registry at {self.registry_file}: {e}", exc_info=True)
             raise PersistenceError(f"Failed to update projects registry at {self.registry_file}: {e}") from e

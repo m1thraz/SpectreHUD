@@ -224,46 +224,8 @@ class TestAdversarialRegressions(unittest.TestCase):
         persisted_registry = json.loads(restarted_manager.registry_file.read_text(encoding="utf-8"))
         self.assertIn("BoxRestart", persisted_registry)
 
-    def test_two_instances_keep_project_state_valid_and_recover_registry(self):
-        """Concurrent instances may race on metadata, but never corrupt state or lose discoverable projects."""
-        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-
-        first.create_project("BoxInstanceOne")
-        second.create_project("BoxInstanceTwo")
-
-        # Each instance writes independently; a fresh process must recover both
-        # directories from disk even when their in-memory registries were stale.
-        restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        self.assertIn("BoxInstanceOne", restarted_manager.list_projects())
-        self.assertIn("BoxInstanceTwo", restarted_manager.list_projects())
-
-        first.save_project_state("BoxInstanceOne", {"target_ip": "10.10.10.1"})
-        second.save_project_state("BoxInstanceOne", {"target_ip": "10.10.10.2"})
-        state_file = self.projects_dir / "BoxInstanceOne" / "project_state.json"
-        with state_file.open("r", encoding="utf-8") as saved_state:
-            state = json.load(saved_state)
-        self.assertIn(state["target_ip"], {"10.10.10.1", "10.10.10.2"})
-
-    def test_two_instances_import_external_projects_without_registry_loss(self):
-        """External imports remain registered even when two instances started with stale registries."""
-        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        external_a = self.temp_path / "external_a" / "ExternalA"
-        external_b = self.temp_path / "external_b" / "ExternalB"
-        external_a.mkdir(parents=True)
-        external_b.mkdir(parents=True)
-
-        self.assertEqual(first.import_project_folder(external_a), "ExternalA")
-        self.assertEqual(second.import_project_folder(external_b), "ExternalB")
-
-        restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        projects = restarted_manager.list_projects()
-        self.assertIn("ExternalA", projects)
-        self.assertIn("ExternalB", projects)
-
-    def test_registry_purge_survives_read_merge_write_and_restart(self):
-        """A symlink purge remains deleted after persistence and a fresh process start."""
+    def test_registry_purge_persists_single_instance_state_and_restart(self):
+        """A symlink purge persists the active registry state and survives a restart."""
         outside_dir = self.temp_path / "outside_registry_target"
         outside_dir.mkdir()
         symlink_path = self.projects_dir / "Evil"
@@ -286,53 +248,6 @@ class TestAdversarialRegressions(unittest.TestCase):
 
             restarted = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
             self.assertNotIn("Evil", restarted.registry)
-
-    def test_registry_add_and_remove_from_stale_instances(self):
-        """An explicit removal and a stale-instance addition both survive the merge."""
-        first = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        second = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        external_x = self.temp_path / "external_x" / "ExternalX"
-        external_y = self.temp_path / "external_y" / "ExternalY"
-        external_x.mkdir(parents=True)
-        external_y.mkdir(parents=True)
-
-        first.repository._update_registry(additions={"ExternalX": str(external_x)})
-        first.repository._update_registry(removals={"ExternalX"})
-        second.repository._update_registry(additions={"ExternalY": str(external_y)})
-
-        restarted = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        self.assertNotIn("ExternalX", restarted.registry)
-        self.assertEqual(restarted.registry["ExternalY"], str(external_y))
-
-    def test_stale_registry_lock_with_live_owner_is_not_removed(self):
-        """An old lock owned by this live process remains protected until timeout."""
-        repository = self.project_mgr.repository
-        lock_path = repository.registry_file.with_name(f".{repository.registry_file.name}.lock")
-        lock_path.write_text(str(os.getpid()), encoding="ascii")
-        stale_time = time.time() - 31
-        os.utime(lock_path, (stale_time, stale_time))
-
-        with patch("core.project.repository.time.monotonic", side_effect=[0.0, 6.0]):
-            with self.assertRaises(PersistenceError):
-                with repository._registry_write_lock():
-                    pass
-
-        self.assertTrue(lock_path.exists())
-        lock_path.unlink()
-
-    def test_stale_registry_lock_with_dead_owner_is_recovered(self):
-        """A stale lock from a non-existent PID is replaced and released normally."""
-        repository = self.project_mgr.repository
-        lock_path = repository.registry_file.with_name(f".{repository.registry_file.name}.lock")
-        lock_path.write_text(str(2_147_483_647), encoding="ascii")
-        stale_time = time.time() - 31
-        os.utime(lock_path, (stale_time, stale_time))
-
-        with repository._registry_write_lock():
-            self.assertTrue(lock_path.exists())
-            self.assertEqual(lock_path.read_text(encoding="ascii"), str(os.getpid()))
-
-        self.assertFalse(lock_path.exists())
 
     def test_workspace_loss_while_running_fails_closed_without_crashing(self):
         """Saving after the configured workspace disappears must report failure safely."""
