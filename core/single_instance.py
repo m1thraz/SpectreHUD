@@ -12,6 +12,10 @@ LOCK_FILENAME = "spectrehud.lock"
 STALE_LOCK_TIME_MS = 30_000
 
 
+class ApplicationLockError(RuntimeError):
+    """Raised when SpectreHUD cannot create or access its application lock."""
+
+
 def acquire_application_lock(config_dir: Optional[Path] = None) -> Optional[QLockFile]:
     """Atomically acquires SpectreHUD's process-wide lock, if available.
 
@@ -21,7 +25,12 @@ def acquire_application_lock(config_dir: Optional[Path] = None) -> Optional[QLoc
     :func:`release_application_lock`.
     """
     lock_dir = Path(config_dir) if config_dir is not None else get_default_config_dir()
-    lock_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        lock_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ApplicationLockError(
+            f"Das Konfigurationsverzeichnis für den Single-Instance-Lock konnte nicht erstellt werden: {lock_dir}"
+        ) from exc
 
     lock = QLockFile(str(lock_dir / LOCK_FILENAME))
     lock.setStaleLockTime(STALE_LOCK_TIME_MS)
@@ -29,7 +38,12 @@ def acquire_application_lock(config_dir: Optional[Path] = None) -> Optional[QLoc
         return lock
     # On Windows, explicitly closing a failed QLockFile attempt prevents its
     # transient file handle from keeping a live owner's lock file undeletable.
+    error = lock.error()
     lock.unlock()
+    if error != QLockFile.LockError.LockFailedError:
+        raise ApplicationLockError(
+            f"Der Single-Instance-Lock konnte nicht angelegt werden ({error.name})."
+        )
     return None
 
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from core.single_instance import (
+    ApplicationLockError,
     LOCK_FILENAME,
     acquire_application_lock,
     release_application_lock,
@@ -71,6 +72,12 @@ if lock is not None:
             self.assertIsNotNone(second_lock)
             release_application_lock(second_lock)
 
+    def test_unavailable_lock_directory_raises_controlled_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch("core.single_instance.Path.mkdir", side_effect=OSError("access denied")):
+                with self.assertRaises(ApplicationLockError):
+                    acquire_application_lock(Path(temp_dir) / "unavailable")
+
     def test_simultaneous_starts_allow_exactly_one_process_to_hold_lock(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_dir = Path(temp_dir)
@@ -123,6 +130,21 @@ if lock is not None:
             patch.object(main, "acquire_application_lock", return_value=None),
             patch.object(main, "_create_production_container") as create_container,
             patch.object(main.QMessageBox, "information") as show_message,
+        ):
+            main.main()
+
+        create_container.assert_not_called()
+        show_message.assert_called_once()
+
+    def test_lock_creation_failure_stops_before_container_initialization(self):
+        import main
+
+        app = MagicMock()
+        with (
+            patch.object(main, "QApplication", return_value=app),
+            patch.object(main, "acquire_application_lock", side_effect=ApplicationLockError("access denied")),
+            patch.object(main, "_create_production_container") as create_container,
+            patch.object(main.QMessageBox, "critical") as show_message,
         ):
             main.main()
 

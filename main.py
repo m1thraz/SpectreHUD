@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
-from core.single_instance import acquire_application_lock, release_application_lock
+from core.single_instance import ApplicationLockError, acquire_application_lock, release_application_lock
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
@@ -94,7 +94,17 @@ def main():
 
     # Acquire this before creating services that access the registry, workspace,
     # clipboard or UI.  QLockFile also handles stale locks left by crashed runs.
-    application_lock = acquire_application_lock()
+    try:
+        application_lock = acquire_application_lock()
+    except ApplicationLockError as exc:
+        logger.error("Could not acquire SpectreHUD application lock: %s", exc, exc_info=True)
+        QMessageBox.critical(
+            None,
+            "SpectreHUD konnte nicht starten",
+            "SpectreHUD konnte den Single-Instance-Lock nicht anlegen. "
+            "Bitte prüfe, ob das Konfigurationsverzeichnis verfügbar und beschreibbar ist.",
+        )
+        return
     if application_lock is None:
         QMessageBox.information(
             None,
