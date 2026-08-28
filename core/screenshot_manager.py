@@ -183,7 +183,6 @@ class ScreenshotManager(QObject):
         target_ip: str
     ) -> None:
         """Saves cropped pixmap to project loot directory and creates Loot entry."""
-        completed = False
         try:
             active_proj = project_manager.get_active_project()
             proj_dir = project_manager.get_project_dir(active_proj)
@@ -222,14 +221,13 @@ class ScreenshotManager(QObject):
 
             # AppController owns both the state commit and the single domain event.
             self.screenshot_saved.emit(loot_entry)
-            completed = True
         except (OSError, RuntimeError) as e:
             logger.error(f"Error handling completed snip: {e}", exc_info=True)
             raise
         finally:
-            self._restore_parent_window(parent_window, switch_to_loot=completed)
+            self._restore_parent_window(parent_window)
 
-    def _restore_parent_window(self, parent_window: QWidget, switch_to_loot: bool = False) -> None:
+    def _restore_parent_window(self, parent_window: QWidget) -> None:
         """Restore the HUD after a completed or failed screenshot lifecycle."""
         try:
             parent_window.show()
@@ -237,12 +235,6 @@ class ScreenshotManager(QObject):
             parent_window.raise_()
             parent_window.activateWindow()
 
-            if switch_to_loot and hasattr(parent_window, "switch_mode"):
-                parent_window.switch_mode("loot")
-            if switch_to_loot and hasattr(parent_window, "refresh_filter_pills"):
-                parent_window.refresh_filter_pills()
-            if switch_to_loot and hasattr(parent_window, "refresh_content"):
-                parent_window.refresh_content()
         except RuntimeError as e:
             logger.error(f"Error restoring parent window after screenshot: {e}")
 

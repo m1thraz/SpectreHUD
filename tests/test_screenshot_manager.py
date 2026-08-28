@@ -174,6 +174,39 @@ class TestScreenshotManager(unittest.TestCase):
         parent_win.activateWindow.assert_called_once()
         parent_win.switch_mode.assert_not_called()
 
+    def test_session_save_failure_signal_path_does_not_switch_to_loot(self):
+        """The manager must not treat a rolled-back controller transaction as successful."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        from PyQt6.QtCore import Qt
+        from ui.app_controller import AppController
+        from core.event_bus import EventBus
+
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        pixmap = QPixmap.fromImage(img)
+        parent_win = MagicMock()
+        parent_win.windowState.return_value = Qt.WindowState.WindowNoState
+        controller = SimpleNamespace(
+            loot_manager=self.loot_mgr,
+            save_current_project_state=MagicMock(return_value=False),
+            switch_mode=MagicMock(),
+            event_bus=EventBus(),
+        )
+        self.screenshot_mgr.screenshot_saved.connect(
+            lambda entry: AppController._on_screenshot_saved(controller, entry)
+        )
+
+        self.screenshot_mgr._on_snip_completed(
+            cropped_pixmap=pixmap,
+            parent_window=parent_win,
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            target_ip="10.10.10.55",
+        )
+
+        controller.switch_mode.assert_not_called()
+        parent_win.switch_mode.assert_not_called()
+
     def test_screenshot_publishes_exactly_one_domain_event(self):
         """The app boundary publishes one canonical event after the manager signal."""
         img = QImage(50, 50, QImage.Format.Format_RGB32)
