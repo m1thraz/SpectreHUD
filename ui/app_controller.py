@@ -7,7 +7,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QPushButton
+from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager

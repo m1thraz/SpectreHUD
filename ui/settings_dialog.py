@@ -3,7 +3,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QPushButton, QComboBox, QCheckBox, 
-    QStackedWidget, QFrame, QScrollArea, QFileDialog
+    QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.config import ConfigManager
