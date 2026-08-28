@@ -23,6 +23,17 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
         curr = curr.parentWidget()
     return False
 
+
+def is_empty_background_widget(widget: Optional[QWidget], top_window: Optional[QWidget] = None) -> bool:
+    """Returns whether a widget is a safe empty area for window gestures.
+
+    Labels are deliberately excluded even when they are not selectable: a
+    double-click on visible text must never unexpectedly change window state.
+    """
+    if isinstance(widget, QLabel):
+        return False
+    return not is_interactive_widget(widget, top_window)
+
 class WindowFrameManager(QObject):
     """
     Handles frameless window drag-to-move, 8-zone edge resizing, and dynamic cursor updates.
@@ -155,6 +166,21 @@ class WindowFrameManager(QObject):
             return True
         return False
 
+    def _process_mouse_double_click(self, local_pt: QPoint, button: Qt.MouseButton) -> bool:
+        """Toggles fullscreen only when the double-click lands on empty HUD chrome."""
+        if button != Qt.MouseButton.LeftButton or self.get_resize_edge(local_pt):
+            return False
+
+        clicked_widget = self.window.childAt(local_pt)
+        if not is_empty_background_widget(clicked_widget, self.window):
+            return False
+
+        toggle_fullscreen = getattr(self.window, "toggle_fullscreen", None)
+        if callable(toggle_fullscreen):
+            toggle_fullscreen()
+            return True
+        return False
+
     # -------------------------------------------------------------------------
     # Event Filter & Event Handler Adaptors
     # -------------------------------------------------------------------------
@@ -178,6 +204,11 @@ class WindowFrameManager(QObject):
             if self._process_mouse_release(event.button()):
                 return True
 
+        elif event.type() == QEvent.Type.MouseButtonDblClick and hasattr(event, "position"):
+            local_pt = self.window.mapFromGlobal(event.globalPosition().toPoint())
+            if self._process_mouse_double_click(local_pt, event.button()):
+                return True
+
         return super().eventFilter(watched, event)
 
     def handle_mouse_press(self, event: QMouseEvent) -> bool:
@@ -198,6 +229,13 @@ class WindowFrameManager(QObject):
 
     def handle_mouse_release(self, event: QMouseEvent) -> bool:
         handled = self._process_mouse_release(event.button())
+        if handled:
+            event.accept()
+        return handled
+
+    def handle_mouse_double_click(self, event: QMouseEvent) -> bool:
+        local_pt = event.pos()
+        handled = self._process_mouse_double_click(local_pt, event.button())
         if handled:
             event.accept()
         return handled

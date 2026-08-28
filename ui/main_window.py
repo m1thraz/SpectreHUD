@@ -185,6 +185,8 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
         QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.switch_mode("report"))
+        self.shortcut_fullscreen = QShortcut(QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen)
+        self.shortcut_fullscreen.setContext(Qt.ShortcutContext.WindowShortcut)
 
     def _center_on_screen(self) -> None:
         screen = QGuiApplication.primaryScreen()
@@ -431,6 +433,13 @@ class MainWindow(QMainWindow):
             self.activateWindow()
             self.search_panel.set_focus()
 
+    def toggle_fullscreen(self) -> None:
+        """Toggles fullscreen without changing the user's saved normal window size."""
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
     # -------------------------------------------------------------
     # Frameless Window Event Routing Delegated to WindowFrameManager
     # -------------------------------------------------------------
@@ -531,6 +540,10 @@ class MainWindow(QMainWindow):
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if not self.frame_manager.handle_mouse_release(event):
             super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        if not self.frame_manager.handle_mouse_double_click(event):
+            super().mouseDoubleClickEvent(event)
 
     def leaveEvent(self, event: QEvent) -> None:
         self.frame_manager.handle_leave(event)
