@@ -60,6 +60,14 @@ grün, ohne Zugriffe auf Benutzerpfade.
 
 **Abnahme:** Der relevante CI-Workflow ist auf dem Release-Commit vollständig grün.
 
+**Implementierungsstand (28.08.2026):** Die zuvor überlappenden Workflows wurden
+in `ci.yml` zusammengeführt: Windows und Linux werden jeweils mit Python 3.10 bis
+3.13 getestet; der Linux-3.11-Lauf erzeugt zusätzlich den Coverage-Bericht. Nach
+der Matrix validiert ein gezielter Windows-3.11-Job Syntax, Wheel-Installation und
+Windows-EXE. Der Release-Workflow nutzt denselben isolierten Wheel-Build und lehnt
+Tags ab, deren Version nicht mit `pyproject.toml` übereinstimmt. Die erste grüne
+Ausführung auf GitHub bleibt die noch ausstehende Abnahme.
+
 ### 2.2 Release-Artefakte validieren
 
 - Wheel ohne Netzwerkabhängigkeit bauen.
