@@ -1414,6 +1414,10 @@ class TestAdversarialRegressions(unittest.TestCase):
         AppController._on_screenshot_saved(controller, screenshot_entry)
 
         self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [original_entry["id"]])
+        self.assertEqual(
+            [entry["id"] for entry in self.loot_mgr.storage.load_json("loot")],
+            [original_entry["id"]],
+        )
         self.assertFalse(screenshot_path.exists())
         controller.switch_mode.assert_not_called()
         self.assertEqual(published, [])

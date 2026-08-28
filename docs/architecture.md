@@ -66,6 +66,11 @@ graph TD
   - `exists(file_or_key)`
 - **`FileStorageBackend`**: Uses atomic writes (`core/atomic_write.py`) with temporary file swapping (`.tmp_*` -> rename) and maximum file size guards (`core/validators.py`).
 - **`InMemoryStorageBackend`**: Pure memory store with deep-copy isolation.
+- **Process Concurrency**: Project-state files use atomic replacement, so interrupted
+  writes never expose partial JSON. Registry mutations additionally use a cross-process
+  lock and read-merge-write step so concurrent project imports are retained. Concurrent
+  edits to the *same* project state remain last-writer-wins; they are valid but not a
+  collaborative merge protocol.
 
 ### 2.6 Virtual Qt Item Models (`ui/models/`)
 - Replaces manual widget row creation with virtualized Qt item models:

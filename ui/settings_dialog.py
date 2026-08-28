@@ -483,7 +483,11 @@ class SettingsDialog(BaseHudDialog):
             btn.style().polish(btn)
 
     def _on_save_settings(self) -> None:
-        """Collects all settings from modular pages and saves atomically to config."""
+        """Commits non-workspace settings, then requests runtime workspace activation.
+
+        ``workspace_dir`` is intentionally not written here: AppController commits it
+        only after the corresponding runtime switch has completed successfully.
+        """
         from core.storage import PersistenceError
         all_settings: Dict[str, Any] = {}
         all_settings.update(self.page_hotkeys.get_settings())

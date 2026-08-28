@@ -365,7 +365,7 @@ class AppController(QObject):
                     entry for entry in self.loot_manager.get_all_entries()
                     if entry.get("id") != screenshot_id
                 ]
-                self.loot_manager.replace_entries(entries_before_screenshot)
+                self.loot_manager.replace_entries_and_persist(entries_before_screenshot)
 
             file_path = loot_entry.get("file_path")
             if file_path:
