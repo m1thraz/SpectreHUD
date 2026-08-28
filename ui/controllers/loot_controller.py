@@ -77,7 +77,8 @@ class LootController(QObject):
         title: str,
         content: str,
         target_ip: str = "",
-        category: str = "misc"
+        category: str = "misc",
+        severity: str = "info",
     ) -> Dict[str, Any]:
         try:
             entry = self.loot_manager.add_entry(
@@ -85,7 +86,8 @@ class LootController(QObject):
                 title=title,
                 content=content,
                 target_ip=target_ip,
-                category=category
+                category=category,
+                severity=severity,
             )
             self.loot_updated.emit()
             self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "add", "entry": entry})
@@ -100,16 +102,23 @@ class LootController(QObject):
         title: str,
         content: str,
         target_ip: str = "",
-        category: str = "misc"
+        category: str = "misc",
+        entry_type: Optional[str] = None,
+        severity: Optional[str] = None,
     ) -> bool:
         try:
-            success = self.loot_manager.update_entry(
-                entry_id=entry_id,
-                title=title,
-                content=content,
-                target_ip=target_ip,
-                category=category
-            )
+            fields: Dict[str, Any] = {
+                "entry_id": entry_id,
+                "title": title,
+                "content": content,
+                "target_ip": target_ip,
+                "category": category,
+            }
+            if entry_type is not None:
+                fields["type"] = entry_type
+            if severity is not None:
+                fields["severity"] = severity
+            success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
                 self.event_bus.publish(EventType.LOOT_UPDATED, {"action": "update", "id": entry_id})
@@ -282,8 +291,27 @@ class LootController(QObject):
 
         return rendered_cards
 
-    def open_add_dialog(self, parent_widget: QWidget, default_target: str = "") -> bool:
-        dlg = AddLootDialog(default_target=default_target, parent=parent_widget)
+    def open_add_dialog(
+        self,
+        parent_widget: QWidget,
+        target_ip: str = "",
+        default_target: str = "",
+        default_type: str = "note",
+        default_category: str = "misc",
+        default_title: str = "",
+        default_content: str = "",
+        default_severity: str = "info",
+    ) -> bool:
+        """Open the loot dialog with optional values prefilled by its caller."""
+        dlg = AddLootDialog(
+            parent=parent_widget,
+            target_ip=target_ip or default_target,
+            default_type=default_type,
+            default_category=default_category,
+            default_title=default_title,
+            default_content=default_content,
+            default_severity=default_severity,
+        )
         if dlg.exec():
             data = dlg.get_data()
             self.add_entry(
@@ -291,13 +319,24 @@ class LootController(QObject):
                 title=data["title"],
                 content=data["content"],
                 target_ip=data["target_ip"],
-                category=data.get("category", "misc")
+                category=data.get("category", "misc"),
+                severity=data.get("severity", "info"),
             )
             return True
         return False
 
     def open_edit_dialog(self, parent_widget: QWidget, entry: Dict[str, Any]) -> bool:
-        dlg = AddLootDialog(entry_to_edit=entry, parent=parent_widget)
+        dlg = AddLootDialog(
+            parent=parent_widget,
+            entry_id=entry.get("id"),
+            is_edit=True,
+            target_ip=entry.get("target_ip", ""),
+            default_type=entry.get("type", "note"),
+            default_category=entry.get("category", "misc"),
+            default_title=entry.get("title", ""),
+            default_content=entry.get("content", ""),
+            default_severity=entry.get("severity", "info"),
+        )
         if dlg.exec():
             data = dlg.get_data()
             self.update_entry(
@@ -305,7 +344,9 @@ class LootController(QObject):
                 title=data["title"],
                 content=data["content"],
                 target_ip=data["target_ip"],
-                category=data.get("category", "misc")
+                category=data.get("category", "misc"),
+                entry_type=data.get("type"),
+                severity=data.get("severity"),
             )
             return True
         return False

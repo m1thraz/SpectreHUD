@@ -6,6 +6,7 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from core.menu_actions import MenuAction
 from core.snippet_manager import SnippetManager
@@ -149,6 +150,45 @@ class TestControllersDomain(unittest.TestCase):
         self.assertEqual(len(loot_events), 3)
         self.assertEqual(loot_events[2]["action"], "delete")
         self.assertEqual(len(self.loot_ctrl.get_entries()), 0)
+
+    def test_loot_add_dialog_accepts_new_button_prefill_arguments(self):
+        """Loot and History New actions can pass their target and dialog defaults."""
+        dialog_data = {
+            "type": "note",
+            "severity": "info",
+            "category": "recon",
+            "title": "New note",
+            "content": "Captured from history",
+            "target_ip": "10.10.10.55",
+        }
+        with patch("ui.controllers.loot_controller.AddLootDialog") as dialog_class:
+            dialog = dialog_class.return_value
+            dialog.exec.return_value = True
+            dialog.get_data.return_value = dialog_data
+
+            self.assertTrue(
+                self.loot_ctrl.open_add_dialog(
+                    parent_widget=None,
+                    target_ip="10.10.10.55",
+                    default_type="note",
+                    default_category="recon",
+                    default_title="New note",
+                    default_content="Captured from history",
+                )
+            )
+
+        dialog_class.assert_called_once_with(
+            parent=None,
+            target_ip="10.10.10.55",
+            default_type="note",
+            default_category="recon",
+            default_title="New note",
+            default_content="Captured from history",
+            default_severity="info",
+        )
+        entries = self.loot_ctrl.get_entries(target_ip="10.10.10.55")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["title"], "New note")
 
     def test_history_controller_domain(self):
         """HistoryController manages clipboard history, filter actions, and publishes events."""
