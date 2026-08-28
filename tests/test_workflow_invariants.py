@@ -17,6 +17,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
+from core.storage import PersistenceError
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
 
@@ -360,6 +361,39 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertEqual(self.project_mgr.base_dir, old_base)
         self.assertEqual(self.project_mgr.get_active_project(), "RollbackBox")
         self.assertEqual(self.config_mgr.get("workspace_dir"), str(old_base))
+
+    def test_workspace_config_failure_restores_old_session_and_ui(self):
+        """A failed final workspace commit must reload the old session into the UI."""
+        self.project_mgr.create_project("BoxOldSession", target_ip="10.10.10.10")
+        self.window._switch_to_project("BoxOldSession")
+        old_loot = self.loot_mgr.add_entry("note", "Old loot", "root.txt", target_ip="10.10.10.10")
+        old_history = self.clip_watcher.add_entry("whoami", target_ip="10.10.10.10")
+        self.window._save_current_project_state()
+        old_base = self.project_mgr.base_dir
+        self.config_mgr.set("workspace_dir", str(old_base))
+
+        new_workspace = self.base_path / "new_workspace"
+        new_config = self.base_path / "new_workspace_config"
+        new_manager = ProjectManager(base_dir=new_workspace, config_dir=new_config)
+        new_manager.create_project("BoxNewSession", target_ip="10.10.10.20")
+        new_manager.save_project_state(
+            "BoxNewSession",
+            {
+                "target_ip": "10.10.10.20",
+                "loot": [{"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}],
+                "clipboard_history": [{"id": "clip_new", "text": "id", "target_ip": "10.10.10.20"}],
+            },
+        )
+
+        with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
+            with patch("ui.app_controller.QMessageBox.warning"):
+                self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
+
+        self.assertEqual(self.project_mgr.base_dir, old_base)
+        self.assertEqual(self.project_mgr.get_active_project(), "BoxOldSession")
+        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [old_loot["id"]])
+        self.assertEqual([entry["id"] for entry in self.clip_watcher.get_all_history()], [old_history["id"]])
+        self.assertEqual(self.window.var_bar.txt_target.text(), "10.10.10.10")
 
 
 if __name__ == "__main__":

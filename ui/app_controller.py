@@ -441,13 +441,30 @@ class AppController(QObject):
                         # Persist only after every runtime operation completed.
                         self.config.set("workspace_dir", str(new_ws))
                     except Exception as switch_err:
-                        # Rollback: restore previous workspace and active project
+                        # Rollback the entire runtime session, not merely the
+                        # project backend.  The new session may already have
+                        # populated loot, clipboard and visible UI state when
+                        # the final config commit fails.
                         logger.error(f"Workspace switch failed, rolling back: {switch_err}")
-                        self.project_manager.base_dir = old_base
                         try:
+                            self.project_manager.base_dir = old_base
                             self.project_manager.activate_project(old_active)
-                        except Exception:
-                            pass
+                            self.load_active_project_state()
+                            self.refresh_filter_pills()
+                            self.refresh_content()
+                        except Exception as restore_err:
+                            logger.exception("Failed to restore previous workspace session after switch failure.")
+                            QMessageBox.critical(
+                                self.window,
+                                t("general.workspace_error", "Workspace Error"),
+                                t(
+                                    "general.workspace_restore_failed",
+                                    "The workspace switch failed and the previous session could not be restored safely. "
+                                    "Please restart SpectreHUD before making further changes.\n\n"
+                                    f"Switch error: {switch_err}\nRestore error: {restore_err}",
+                                ),
+                            )
+                            return
                         QMessageBox.warning(
                             self.window,
                             t("general.workspace_error", "Workspace Error"),
