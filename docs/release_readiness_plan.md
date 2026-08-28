@@ -23,7 +23,7 @@ exakt die veröffentlichte Release-Version.
 
 **Status: lokal erledigt (28.08.2026).** Die gemeinsame pytest-Fixture isoliert die impliziten
 Konfigurations- und Projektpfade pro Test. `run_tests.py` delegiert an dieselbe
-pytest-Sammlung wie CI. Lokale Abnahme: 280 Tests erfolgreich im Einzelprozess;
+pytest-Sammlung wie CI. Lokale Abnahme: 291 Tests erfolgreich im Einzelprozess;
 `compileall` für `core`, `ui`, `data`, `main.py` und `scripts` erfolgreich.
 
 ### 1.1 Globale Testzustände entfernen
@@ -78,7 +78,7 @@ Ausführung auf GitHub bleibt die noch ausstehende Abnahme.
 **Abnahme:** Wheel und EXE entstehen reproduzierbar und bestehen Installation sowie CLI-Smoke-Test.
 
 **Lokaler Stand (28.08.2026):** Ein frisches `spectrehud-2.0.0`-Wheel und das
-Quellarchiv wurden gebaut. `scripts/verify_wheel.py` bestätigt 109 Dateien im Wheel.
+Quellarchiv wurden gebaut. `scripts/verify_wheel.py` bestätigt 111 Dateien im Wheel.
 Eine frische virtuelle Umgebung installierte das Wheel samt Abhängigkeiten erfolgreich;
 `spectrehud --version` liefert `SpectreHUD 2.0.0` und `spectrehud --help` funktioniert.
 Der Windows-EXE-Build und die vollständige CI-Matrix bleiben vor dem Release offen.
@@ -136,7 +136,7 @@ Die folgende Checkliste wird auf einer normalen Windows-Desktop-Sitzung ausgefü
 Der offizielle Release darf nur erfolgen, wenn alle Punkte erfüllt sind:
 
 - [ ] Versionsnummer überall einheitlich
-- [x] Vollständiger, isolierter Testlauf grün *(280 Tests, lokal am 28.08.2026)*
+- [x] Vollständiger, isolierter Testlauf grün *(291 Tests, lokal am 28.08.2026)*
 - [ ] CI auf unterstützten Plattformen grün
 - [ ] Wheel und EXE erfolgreich gebaut und getestet *(Wheel: gebaut, verifiziert und frisch installiert; EXE-Test steht noch aus.)*
 - [ ] Manuelle Windows-Abnahme ohne Blocker
