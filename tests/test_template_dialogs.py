@@ -50,6 +50,15 @@ class TestTemplateDialogs(unittest.TestCase):
         self.assertEqual(configured.title, "Special Recon")
         self.assertEqual(configured.category_id, "recon")
 
+    def test_template_editor_uses_high_contrast_control_styles(self):
+        """The editor keeps form labels and the section list readable in dark mode."""
+        dlg = TemplateEditorDialog()
+
+        self.assertEqual(dlg.objectName(), "TemplateEditorDialog")
+        self.assertEqual(dlg.list_sections.objectName(), "TemplateSectionList")
+        self.assertIn("QListWidget#TemplateSectionList", dlg.styleSheet())
+        self.assertIn("color: #f0f6fc", dlg.styleSheet())
+
     def test_template_editor_dialog_validation_and_save(self):
         """Tests template editor validation and output creation."""
         dlg = TemplateEditorDialog()
