@@ -152,6 +152,48 @@
     "settings.lbl_default_target": "Standard Target IP:",
     "settings.lbl_default_attacker": "Standard LHOST IP:",
     "settings.lbl_default_wordlist": "Standard Wordlist-Pfad:",
+    "settings.lbl_default_workspace": "Standard-Projektordner / Workspace:",
+
+    "cheatsheet.empty_state": "Keine Befehle gefunden. Drücke Ctrl+N zum Hinzufügen.",
+    "cheatsheet.more_categories": "Mehr ▾",
+    "cheatsheet.more_categories_tip": "Weitere Kategorien anzeigen",
+    "cheatsheet.expand_results": "▾ Weitere {remaining} Treffer anzeigen (Insgesamt {total})",
+
+    "loot.empty_state": "Kein Session-Loot vorhanden. Drücke Ctrl+N um Notizen/Creds anzulegen oder Snip für Screenshots.",
+    "loot.clear_title": "Loot leeren",
+    "loot.clear_confirm": "Möchtest du wirklich den gesamten Session-Loot dieses Projekts löschen?",
+
+    "history.empty_state": "Keine Clipboard-Historie vorhanden. Aktiviere REC (Ctrl+P) und kopiere Befehle im Terminal.",
+    "history.clear_title": "Historie leeren",
+    "history.clear_confirm": "Möchtest du wirklich den gesamten aufgezeichneten Verlauf dieses Projekts löschen?",
+
+    "report.editor_placeholder": "Noch kein Report für dieses Projekt vorhanden.\n\nKlicke oben auf 'Aus Loot neu generieren', um mit dem automatisch zusammengestellten Report zu starten - oder schreib direkt hier los.",
+    "report.mode_editor": "📝 Editor",
+    "report.mode_editor_tip": "Nur Markdown-Quelltext anzeigen (Strg+1)",
+    "report.mode_split": "◫ Split",
+    "report.mode_split_tip": "Geteilte Ansicht: Editor & Vorschau nebeneinander (Strg+2)",
+    "report.mode_preview": "👁️ Live-Ansicht",
+    "report.mode_preview_tip": "Editierbare Live-Ansicht im Vollbild (Strg+3)",
+    "report.templates_tip": "Wähle das Report-Template für die Regenerierung aus",
+    "report.manage_templates": "🎨 Templates...",
+    "report.manage_templates_tip": "Report-Templates verwalten, anpassen oder neue erstellen",
+    "report.export_html": "Export HTML...",
+    "report.export_html_tip": "Exportiert den Report als eigenständige HTML-Datei mit Cyber-Dark Theme und eingebetteten Screenshots.",
+
+    "project_dialog.btn_hint": "↵ Enter: Anlegen | Esc: Abbrechen",
+    "project_dialog.select_dir_title": "Basis-Verzeichnis für Projekte auswählen",
+    "project_dialog.err_exists_title": "Projekt existiert bereits",
+    "project_dialog.err_exists_msg": "Ein Projekt mit dem Namen '{name}' existiert bereits im gewählten Workspace.\n\nBitte wähle einen eindeutigen Projektnamen.",
+
+    "snippet_dialog.btn_hint": "↵ Enter: Speichern | Esc: Abbrechen",
+
+    "settings.shortcut_esc": "HUD-Overlay verstecken",
+    "settings.shortcut_ctrl_f": "Spotlight-Befehlssuche fokussieren",
+    "settings.shortcut_ctrl_n": "Neuen Befehl / Snippet hinzufügen",
+    "settings.shortcut_ctrl_p": "Clipboard-Recorder pausieren / fortsetzen",
+    "settings.shortcut_ctrl_s": "Bereichs-Screenshot aufnehmen",
+    "settings.shortcut_modes": "Modus wechseln (Cheatsheet, Loot, History, Report)",
+    "settings.shortcut_options": "Einstellungen / Optionen öffnen",
 
     "tray.show": "SpectreHUD anzeigen ({hotkey})",
     "tray.snip": "Screenshot aufnehmen (Strg+Super+X)",

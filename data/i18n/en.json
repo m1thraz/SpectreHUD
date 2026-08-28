@@ -152,6 +152,48 @@
     "settings.lbl_default_target": "Default Target IP:",
     "settings.lbl_default_attacker": "Default LHOST IP:",
     "settings.lbl_default_wordlist": "Default Wordlist Path:",
+    "settings.lbl_default_workspace": "Default Workspace / Projects Directory:",
+
+    "cheatsheet.empty_state": "No commands found. Press Ctrl+N to add a new command.",
+    "cheatsheet.more_categories": "More ▾",
+    "cheatsheet.more_categories_tip": "Show more categories",
+    "cheatsheet.expand_results": "▾ Show {remaining} more results (Total {total})",
+
+    "loot.empty_state": "No session loot captured yet. Press Ctrl+N to add notes/credentials or Snip for screenshots.",
+    "loot.clear_title": "Clear Loot",
+    "loot.clear_confirm": "Are you sure you want to delete all session loot for this project?",
+
+    "history.empty_state": "No clipboard history recorded yet. Enable REC (Ctrl+P) and copy commands in your terminal.",
+    "history.clear_title": "Clear History",
+    "history.clear_confirm": "Are you sure you want to delete all recorded clipboard history for this project?",
+
+    "report.editor_placeholder": "No report available for this project yet.\n\nClick 'Regenerate from Loot' above to start with an auto-generated report, or write your markdown directly here.",
+    "report.mode_editor": "📝 Editor",
+    "report.mode_editor_tip": "Show Markdown source editor only (Ctrl+1)",
+    "report.mode_split": "◫ Split",
+    "report.mode_split_tip": "Split view: Editor & Live Preview side by side (Ctrl+2)",
+    "report.mode_preview": "👁️ Live Preview",
+    "report.mode_preview_tip": "Editable full-screen Live Preview (Ctrl+3)",
+    "report.templates_tip": "Select report template for regeneration",
+    "report.manage_templates": "🎨 Templates...",
+    "report.manage_templates_tip": "Manage, customize or create report templates",
+    "report.export_html": "Export HTML...",
+    "report.export_html_tip": "Export report as standalone HTML document with Cyber-Dark theme and embedded screenshots.",
+
+    "project_dialog.btn_hint": "↵ Enter: Create | Esc: Cancel",
+    "project_dialog.select_dir_title": "Select Base Directory for Projects",
+    "project_dialog.err_exists_title": "Project Already Exists",
+    "project_dialog.err_exists_msg": "A project named '{name}' already exists in the selected workspace.\n\nPlease choose a unique project name.",
+
+    "snippet_dialog.btn_hint": "↵ Enter: Save | Esc: Cancel",
+
+    "settings.shortcut_esc": "Hide HUD overlay",
+    "settings.shortcut_ctrl_f": "Focus spotlight command search",
+    "settings.shortcut_ctrl_n": "Add new command / snippet",
+    "settings.shortcut_ctrl_p": "Pause / resume clipboard recorder",
+    "settings.shortcut_ctrl_s": "Capture region screenshot",
+    "settings.shortcut_modes": "Switch active mode (Cheatsheet, Loot, History, Report)",
+    "settings.shortcut_options": "Open settings & options",
 
     "tray.show": "Show SpectreHUD ({hotkey})",
     "tray.snip": "Capture Screenshot (Ctrl+Super+X)",

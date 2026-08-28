@@ -7,6 +7,7 @@ from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
+from core.i18n import t
 from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
 from ui.menu_builder import build_qmenu
@@ -254,15 +255,15 @@ class CheatsheetController(QObject):
             self._overflow_cat_ids = [c.get("id") for c in overflow_cats]
 
             is_overflow_active = self.current_category_id in self._overflow_cat_ids
-            more_label = "Mehr ▾"
+            more_label = t("cheatsheet.more_categories", "More ▾")
             if is_overflow_active:
-                short = CATEGORY_SHORT_NAMES.get(self.current_category_id, "Mehr")
+                short = CATEGORY_SHORT_NAMES.get(self.current_category_id, "More")
                 more_label = f"{short} ▾"
 
             self.btn_more = QPushButton(more_label)
             self.btn_more.setProperty("class", "FilterPillActive" if is_overflow_active else "FilterPill")
             self.btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.btn_more.setToolTip("Weitere Kategorien anzeigen")
+            self.btn_more.setToolTip(t("cheatsheet.more_categories_tip", "Show more categories"))
 
             actions = self.get_overflow_category_actions(on_select_category)
             self._more_menu = build_qmenu(actions, parent_widget=self.btn_more)
@@ -295,7 +296,9 @@ class CheatsheetController(QObject):
         )
 
         if not all_matching:
-            show_empty_state_fn("Keine Befehle gefunden. Drücke Ctrl+N zum Hinzufügen.")
+            show_empty_state_fn(
+                t("cheatsheet.empty_state", "No commands found. Press Ctrl+N to add a new command.")
+            )
             return []
 
         # When searching, cap at top 25 unless expanded
@@ -313,7 +316,9 @@ class CheatsheetController(QObject):
         # If capped, render expander button
         if is_capped:
             remaining = len(all_matching) - len(snippets)
-            btn_expand = QPushButton(f"▾ Weitere {remaining} Treffer anzeigen (Insgesamt {len(all_matching)})")
+            btn_expand = QPushButton(
+                t("cheatsheet.expand_results", "▾ Show {remaining} more results (Total {total})", remaining=remaining, total=len(all_matching))
+            )
             btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_expand.setStyleSheet("""
                 QPushButton {

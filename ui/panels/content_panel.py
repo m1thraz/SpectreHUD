@@ -1,6 +1,7 @@
 from typing import Optional, List
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
 from PyQt6.QtCore import Qt
+from core.i18n import t
 
 
 class ContentPanel(QWidget):
@@ -24,14 +25,17 @@ class ContentPanel(QWidget):
         self.privacy_banner.setObjectName("PrivacyWarningBanner")
         banner_layout = QHBoxLayout(self.privacy_banner)
         banner_layout.setContentsMargins(10, 4, 10, 4)
-        lbl_warn = QLabel(
-            "Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, "
-            "solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf REC: ON)."
+        self.lbl_warn = QLabel(
+            t(
+                "privacy.warning",
+                "Privacy Notice: Copied passwords or personal data are logged while REC is active "
+                "(Pause with Ctrl+P or click REC: ON)."
+            )
         )
-        lbl_warn.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_warn.setObjectName("PrivacyWarningText")
-        lbl_warn.setWordWrap(True)
-        banner_layout.addWidget(lbl_warn)
+        self.lbl_warn.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_warn.setObjectName("PrivacyWarningText")
+        self.lbl_warn.setWordWrap(True)
+        banner_layout.addWidget(self.lbl_warn)
         self.privacy_banner.setVisible(False)
         outer_layout.addWidget(self.privacy_banner)
 

@@ -30,6 +30,7 @@ from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from ui.template_manager_dialog import TemplateManagerDialog
 from core.logger import get_logger
+from core.i18n import t
 from ui.styles import CYBER_DARK_QSS
 
 logger = get_logger("report_editor")
@@ -199,62 +200,67 @@ class ReportEditorTab(QWidget):
         toolbar.addStretch()
 
         # View Mode Switch Buttons
-        self.btn_mode_editor = QPushButton("📝 Editor")
+        self.btn_mode_editor = QPushButton(t("report.mode_editor", "📝 Editor"))
         self.btn_mode_editor.setProperty("class", "SecondaryBtn")
-        self.btn_mode_editor.setToolTip("Nur Markdown-Quelltext anzeigen (Strg+1)")
+        self.btn_mode_editor.setToolTip(t("report.mode_editor_tip", "Show Markdown source editor only (Ctrl+1)"))
         self.btn_mode_editor.clicked.connect(lambda: self._set_view_mode(ViewMode.EDITOR))
         toolbar.addWidget(self.btn_mode_editor)
 
-        self.btn_mode_split = QPushButton("◫ Split")
+        self.btn_mode_split = QPushButton(t("report.mode_split", "◫ Split"))
         self.btn_mode_split.setProperty("class", "SecondaryBtn")
-        self.btn_mode_split.setToolTip("Geteilte Ansicht: Editor & Vorschau nebeneinander (Strg+2)")
+        self.btn_mode_split.setToolTip(t("report.mode_split_tip", "Split view: Editor & Live Preview side by side (Ctrl+2)"))
         self.btn_mode_split.clicked.connect(lambda: self._set_view_mode(ViewMode.SPLIT))
         toolbar.addWidget(self.btn_mode_split)
 
-        self.btn_mode_preview = QPushButton("👁️ Live-Ansicht")
+        self.btn_mode_preview = QPushButton(t("report.mode_preview", "👁️ Live-Ansicht"))
         self.btn_mode_preview.setProperty("class", "SecondaryBtn")
-        self.btn_mode_preview.setToolTip("Editierbare Live-Ansicht im Vollbild (Strg+3)")
+        self.btn_mode_preview.setToolTip(t("report.mode_preview_tip", "Editable full-screen Live Preview (Ctrl+3)"))
         self.btn_mode_preview.clicked.connect(lambda: self._set_view_mode(ViewMode.PREVIEW))
         toolbar.addWidget(self.btn_mode_preview)
 
         # Template Selector Dropdown & Manager Button
         from PyQt6.QtWidgets import QComboBox
         self.combo_templates = QComboBox()
-        self.combo_templates.setToolTip("Wähle das Report-Template für die Regenerierung aus")
+        self.combo_templates.setToolTip(t("report.templates_tip", "Select report template for regeneration"))
         self.combo_templates.currentIndexChanged.connect(self._on_template_combo_changed)
         toolbar.addWidget(self.combo_templates)
 
-        self.btn_manage_templates = QPushButton("🎨 Templates...")
+        self.btn_manage_templates = QPushButton(t("report.manage_templates", "🎨 Templates..."))
         self.btn_manage_templates.setProperty("class", "SecondaryBtn")
-        self.btn_manage_templates.setToolTip("Report-Templates verwalten, anpassen oder neue erstellen")
+        self.btn_manage_templates.setToolTip(t("report.manage_templates_tip", "Manage, customize or create report templates"))
         self.btn_manage_templates.clicked.connect(self._open_template_manager)
         toolbar.addWidget(self.btn_manage_templates)
 
-        self.btn_regenerate = QPushButton("Regenerate from Loot")
+        self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
         self.btn_regenerate.setToolTip(
-            "Ersetzt den Report-Text durch eine frische Generierung aus Loot "
-            "und Clipboard-Verlauf basierend auf dem gewählten Template. "
-            "Der bisherige Stand wird vorher als report.md.bak gesichert."
+            t(
+                "report.regenerate_tip",
+                "Updates report structure and appends new loot entries"
+            )
         )
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
-        self.btn_export_copy = QPushButton("Export Copy...")
+        self.btn_export_copy = QPushButton(t("report.export_copy", "Export Copy..."))
         self.btn_export_copy.setProperty("class", "SecondaryBtn")
-        self.btn_export_copy.setToolTip("Speichert eine Kopie des aktuellen Report-Texts an einem beliebigen Ort.")
+        self.btn_export_copy.setToolTip(
+            t("report.export_copy_tip", "Creates a new copy based on current session loot")
+        )
         self.btn_export_copy.clicked.connect(self._on_export_copy_clicked)
         toolbar.addWidget(self.btn_export_copy)
 
-        self.btn_export_html = QPushButton("Export HTML...")
+        self.btn_export_html = QPushButton(t("report.export_html", "Export HTML..."))
         self.btn_export_html.setProperty("class", "SecondaryBtn")
-        self.btn_export_html.setToolTip("Exportiert den Report als eigenständige HTML-Datei mit Cyber-Dark Theme und eingebetteten Screenshots.")
+        self.btn_export_html.setToolTip(
+            t("report.export_html_tip", "Export report as standalone HTML document")
+        )
         self.btn_export_html.clicked.connect(self._on_export_html_clicked)
         toolbar.addWidget(self.btn_export_html)
 
-        self.btn_save = QPushButton("Save")
+        self.btn_save = QPushButton(t("report.save", "Save"))
         self.btn_save.setProperty("class", "PrimaryBtn")
-        self.btn_save.setToolTip("Speichert die Änderungen in die projekt-lokale report.md (Strg+S)")
+        self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
 
@@ -265,10 +271,12 @@ class ReportEditorTab(QWidget):
 
         self.editor = QPlainTextEdit()
         self.editor.setPlaceholderText(
-            "Noch kein Report für dieses Projekt vorhanden.\n\n"
-            "Klicke oben auf 'Regenerate from Loot', um mit dem "
-            "automatisch zusammengestellten Report zu starten - oder "
-            "schreib direkt hier los."
+            t(
+                "report.editor_placeholder",
+                "No report available for this project yet.\n\n"
+                "Click 'Regenerate from Loot' above to start with an "
+                "auto-generated report, or write your markdown directly here."
+            )
         )
         self.editor.setProperty("class", "ReportSourceEditor")
         self.editor.textChanged.connect(self._on_text_changed)

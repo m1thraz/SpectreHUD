@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
 from core.project_manager import get_default_projects_dir
+from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 
 class NewProjectDialog(BaseHudDialog):
@@ -22,7 +23,10 @@ class NewProjectDialog(BaseHudDialog):
         project_manager: Optional[Any] = None,
         **kwargs
     ):
-        super().__init__(title="SPECTRE // NEUES PROJEKT / BOX ERSTELLEN", parent=parent)
+        super().__init__(
+            title=t("project_dialog.title", "SPECTRE // CREATE NEW PROJECT / BOX"),
+            parent=parent
+        )
         self.setMinimumWidth(520)
         self.resize(540, 380)
         
@@ -39,26 +43,30 @@ class NewProjectDialog(BaseHudDialog):
         layout = self.body_layout
 
         # 1. Project Name
-        lbl_name = QLabel("Projekt- / Box-Name:")
+        lbl_name = QLabel(t("project_dialog.lbl_name", "Project / Box Name:"))
         lbl_name.setProperty("class", "FormLabel")
         layout.addWidget(lbl_name)
 
         self.txt_name = QLineEdit(self.default_name)
-        self.txt_name.setPlaceholderText("z. B. PickleRick, Blue, Lame, InternalAudit...")
+        self.txt_name.setPlaceholderText(
+            t("project_dialog.ph_name", "e.g. PickleRick, Blue, Lame, InternalAudit...")
+        )
         self.txt_name.textChanged.connect(self._update_path_preview)
         layout.addWidget(self.txt_name)
 
         # 2. Target IP
-        lbl_ip = QLabel("Target IP:")
+        lbl_ip = QLabel(t("project_dialog.lbl_target", "Target IP:"))
         lbl_ip.setProperty("class", "FormLabel")
         layout.addWidget(lbl_ip)
 
         self.txt_target = QLineEdit(self.default_target)
-        self.txt_target.setPlaceholderText("z. B. 10.10.10.80")
+        self.txt_target.setPlaceholderText(
+            t("project_dialog.ph_target", "e.g. 10.10.10.80")
+        )
         layout.addWidget(self.txt_target)
 
         # 3. Base Directory / Location
-        lbl_dir = QLabel("Basis-Verzeichnis für Projekte:")
+        lbl_dir = QLabel(t("project_dialog.lbl_dir", "Base Directory for Projects:"))
         lbl_dir.setProperty("class", "FormLabel")
         layout.addWidget(lbl_dir)
 
@@ -66,11 +74,13 @@ class NewProjectDialog(BaseHudDialog):
         dir_row.setSpacing(8)
 
         self.txt_dir = QLineEdit(str(self.base_projects_dir))
-        self.txt_dir.setPlaceholderText("Pfad zum Workspace-Ordner...")
+        self.txt_dir.setPlaceholderText(
+            t("project_dialog.ph_dir", "Path to workspace directory...")
+        )
         self.txt_dir.textChanged.connect(self._update_path_preview)
         dir_row.addWidget(self.txt_dir, stretch=1)
 
-        self.btn_browse = QPushButton("Durchsuchen...")
+        self.btn_browse = QPushButton(t("dialog.browse", "Browse..."))
         self.btn_browse.setProperty("class", "BrowseBtn")
         self.btn_browse.clicked.connect(self._on_browse_directory)
         dir_row.addWidget(self.btn_browse)
@@ -78,7 +88,9 @@ class NewProjectDialog(BaseHudDialog):
         layout.addLayout(dir_row)
 
         # 4. Target Directory Preview
-        self.lbl_path_preview = QLabel(f"Zielpfad: {self.base_projects_dir / (self.default_name or 'Projektname')}")
+        self.lbl_path_preview = QLabel(
+            t("project_dialog.preview_path", "Destination path: {path}", path=self.base_projects_dir / (self.default_name or "Projektname"))
+        )
         self.lbl_path_preview.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
         layout.addWidget(self.lbl_path_preview)
@@ -87,17 +99,17 @@ class NewProjectDialog(BaseHudDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        lbl_hint = QLabel("↵ Enter: Anlegen | Esc: Abbrechen")
+        lbl_hint = QLabel(t("project_dialog.btn_hint", "↵ Enter: Create | Esc: Cancel"))
         lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_create = QPushButton("Projekt erstellen")
+        self.btn_create = QPushButton(t("dialog.create", "Create Project"))
         self.btn_create.setProperty("class", "PrimaryBtn")
         self.btn_create.clicked.connect(self._on_create)
         btn_layout.addWidget(self.btn_create)
@@ -107,7 +119,7 @@ class NewProjectDialog(BaseHudDialog):
     def _on_browse_directory(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
             self, 
-            "Basis-Verzeichnis für Projekte auswählen", 
+            t("project_dialog.select_dir_title", "Select Base Directory for Projects"), 
             self.txt_dir.text().strip() or str(self.base_projects_dir)
         )
         if chosen:
@@ -126,16 +138,24 @@ class NewProjectDialog(BaseHudDialog):
             exists = target_path.exists()
 
         if exists and clean_name != "Default":
-            self.lbl_path_preview.setText(f"Zielpfad: {target_path} (⚠️ existiert bereits)")
+            self.lbl_path_preview.setText(
+                t("project_dialog.preview_path", "Destination path: {path}", path=f"{target_path} (⚠️)")
+            )
             self.lbl_path_preview.setStyleSheet("color: #ff5555; font-size: 11px; font-family: monospace;")
         else:
-            self.lbl_path_preview.setText(f"Zielpfad: {target_path}")
+            self.lbl_path_preview.setText(
+                t("project_dialog.preview_path", "Destination path: {path}", path=target_path)
+            )
             self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
 
     def _on_create(self) -> None:
         name = self.txt_name.text().strip()
         if not name:
-            QMessageBox.warning(self, "Fehler", "Bitte gib einen Namen für das Projekt / die Box ein.")
+            QMessageBox.warning(
+                self,
+                t("dialog.error", "Error"),
+                t("project_dialog.err_name", "Please enter a name for the project / box.")
+            )
             return
 
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
@@ -143,9 +163,12 @@ class NewProjectDialog(BaseHudDialog):
             clean = self.project_manager._sanitize_name(name)
             QMessageBox.warning(
                 self, 
-                "Projekt existiert bereits", 
-                f"Ein Projekt mit dem bereinigten Namen '{clean}' existiert bereits im gewählten Workspace.\n\n"
-                "Bitte wähle einen eindeutigen Projektnamen."
+                t("project_dialog.err_exists_title", "Project Already Exists"), 
+                t(
+                    "project_dialog.err_exists_msg",
+                    "A project named '{name}' already exists in the selected workspace.\n\nPlease choose a unique project name.",
+                    name=clean
+                )
             )
             return
 

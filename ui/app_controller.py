@@ -16,7 +16,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project_manager import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
-from core.i18n import get_i18n, get_locale
+from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType, get_event_bus
 from core.container import ServiceContainer
@@ -217,25 +217,30 @@ class AppController(QObject):
         query = self.search.get_query()
         variables = self.var_bar.get_variables() if self.var_bar else {}
 
+        def _format_count(n: int) -> str:
+            if n == 1:
+                return t("footer.entry_count_single", "1 entry")
+            return t("footer.entries_count", "{count} entries", count=n)
+
         if self.active_mode == "cheatsheet":
             self.cards = self.cheatsheet_ctrl.render_content(
                 content_layout, query, variables, self._on_snippet_deleted, self.window, self.content.show_empty_state
             )
-            self.footer.set_count(f"{len(self.cards)} Befehle")
+            self.footer.set_count(_format_count(len(self.cards)))
         elif self.active_mode == "loot":
             proj_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
             self.cards = self.loot_ctrl.render_content(
                 content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                 self.window, self.content.show_empty_state
             )
-            self.footer.set_count(f"{len(self.cards)} Loot-Einträge")
+            self.footer.set_count(_format_count(len(self.cards)))
         else:
             self.cards = self.history_ctrl.render_content(
                 content_layout, query, variables.get("target_ip"),
                 lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
                 self.clipboard_coord.delete_history_entry, self.window, self.content.show_empty_state
             )
-            self.footer.set_count(f"{len(self.cards)} Verlaufseinträge")
+            self.footer.set_count(_format_count(len(self.cards)))
         self.content_refreshed.emit()
 
     def _select_category(self, cat_id: str) -> None:

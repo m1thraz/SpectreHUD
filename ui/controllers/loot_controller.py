@@ -9,6 +9,7 @@ from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
+from core.i18n import t
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
 from ui.styles import CYBER_DARK_QSS
@@ -142,8 +143,8 @@ class LootController(QObject):
         if parent_widget:
             reply = QMessageBox.question(
                 parent_widget,
-                "Loot leeren",
-                "Möchtest du wirklich den gesamten Session-Loot dieses Projekts löschen?",
+                t("loot.clear_title", "Clear Loot"),
+                t("loot.clear_confirm", "Are you sure you want to delete all session loot for this project?"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
@@ -253,7 +254,12 @@ class LootController(QObject):
         )
 
         if not loot_entries:
-            show_empty_state_fn("Kein Session-Loot vorhanden. Drücke Ctrl+N um Notizen/Creds anzulegen oder Snip für Screenshots.")
+            show_empty_state_fn(
+                t(
+                    "loot.empty_state",
+                    "No session loot captured yet. Press Ctrl+N to add notes/credentials or Snip for screenshots."
+                )
+            )
             return []
 
         rendered_cards: List[QWidget] = []

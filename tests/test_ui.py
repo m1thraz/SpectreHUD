@@ -443,7 +443,7 @@ class TestUI(unittest.TestCase):
             expander_btn = window.cards[-1]
             from PyQt6.QtWidgets import QPushButton
             self.assertIsInstance(expander_btn, QPushButton)
-            self.assertIn("Weitere", expander_btn.text())
+            self.assertTrue("Weitere" in expander_btn.text() or "more" in expander_btn.text().lower())
 
             # Click expander -> now all matching items are rendered
             expander_btn.click()

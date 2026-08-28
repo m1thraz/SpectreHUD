@@ -11,6 +11,7 @@ from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType, get_event_bus
+from core.i18n import t
 from ui.history_card import HistoryCard
 from ui.styles import CYBER_DARK_QSS
 
@@ -84,8 +85,8 @@ class HistoryController(QObject):
         if parent_widget:
             reply = QMessageBox.question(
                 parent_widget,
-                "Historie leeren",
-                "Möchtest du wirklich den gesamten aufgezeichneten Verlauf dieses Projekts löschen?",
+                t("history.clear_title", "Clear History"),
+                t("history.clear_confirm", "Are you sure you want to delete all recorded clipboard history for this project?"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
@@ -214,7 +215,12 @@ class HistoryController(QObject):
         )
 
         if not history_items:
-            show_empty_state_fn("Keine Clipboard-Historie vorhanden. Aktiviere REC (Ctrl+P) und kopiere Befehle im Terminal.")
+            show_empty_state_fn(
+                t(
+                    "history.empty_state",
+                    "No clipboard history recorded yet. Enable REC (Ctrl+P) and copy commands in your terminal."
+                )
+            )
             return []
 
         rendered_cards: List[QWidget] = []

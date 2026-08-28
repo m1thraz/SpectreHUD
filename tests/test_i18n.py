@@ -89,6 +89,28 @@ class TestI18n(unittest.TestCase):
         self.i18n.set_locale("en")
         self.assertEqual(len(changed_locales), 1)
 
+    def test_dialog_and_view_translations(self):
+        """Verifies translations for newly localized dialogs, views, and empty states."""
+        # 1. German
+        self.i18n.set_locale("de")
+        self.assertIn("Keine Befehle gefunden", self.i18n.t("cheatsheet.empty_state"))
+        self.assertIn("Kein Session-Loot vorhanden", self.i18n.t("loot.empty_state"))
+        self.assertIn("Keine Clipboard-Historie vorhanden", self.i18n.t("history.empty_state"))
+        self.assertIn("Datenschutz-Hinweis", self.i18n.t("privacy.warning"))
+        self.assertEqual(self.i18n.t("project_dialog.lbl_name"), "Projekt- / Box-Name:")
+        self.assertEqual(self.i18n.t("snippet_dialog.lbl_title"), "Titel / Name des Befehls:")
+        self.assertEqual(self.i18n.t("settings.save_apply"), "Speichern & Übernehmen")
+
+        # 2. English
+        self.i18n.set_locale("en")
+        self.assertIn("No commands found", self.i18n.t("cheatsheet.empty_state"))
+        self.assertIn("No session loot captured yet", self.i18n.t("loot.empty_state"))
+        self.assertIn("No clipboard history recorded yet", self.i18n.t("history.empty_state"))
+        self.assertIn("Privacy Notice", self.i18n.t("privacy.warning"))
+        self.assertEqual(self.i18n.t("project_dialog.lbl_name"), "Project / Box Name:")
+        self.assertEqual(self.i18n.t("snippet_dialog.lbl_title"), "Title / Command Name:")
+        self.assertEqual(self.i18n.t("settings.save_apply"), "Save & Apply")
+
 
 if __name__ == '__main__':
     unittest.main()

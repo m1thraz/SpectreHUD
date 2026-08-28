@@ -7,20 +7,21 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.config import ConfigManager
+from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 
 HOTKEY_PRESETS = [
-    {"label": "Strg + Super + < (Standard)", "value": "<ctrl>+<cmd>+<"},
-    {"label": "Strg + Super + Leertaste", "value": "<ctrl>+<cmd>+<space>"},
-    {"label": "Strg + Alt + S", "value": "<ctrl>+<alt>+s"},
-    {"label": "Strg + Shift + H", "value": "<ctrl>+<shift>+h"},
-    {"label": "F12 (Einzeltaste)", "value": "<f12>"},
+    {"label": "Ctrl + Super + < (Standard)", "value": "<ctrl>+<cmd>+<"},
+    {"label": "Ctrl + Super + Space", "value": "<ctrl>+<cmd>+<space>"},
+    {"label": "Ctrl + Alt + S", "value": "<ctrl>+<alt>+s"},
+    {"label": "Ctrl + Shift + H", "value": "<ctrl>+<shift>+h"},
+    {"label": "F12 (Single Key)", "value": "<f12>"},
 ]
 
 SNIP_PRESETS = [
-    {"label": "Strg + Super + X (Standard)", "value": "<ctrl>+<cmd>+x"},
-    {"label": "Strg + Super + S", "value": "<ctrl>+<cmd>+s"},
-    {"label": "F11 (Einzeltaste)", "value": "<f11>"},
+    {"label": "Ctrl + Super + X (Standard)", "value": "<ctrl>+<cmd>+x"},
+    {"label": "Ctrl + Super + S", "value": "<ctrl>+<cmd>+s"},
+    {"label": "F11 (Single Key)", "value": "<f11>"},
 ]
 
 
@@ -48,7 +49,7 @@ class HotkeySettingsPage(QWidget):
         layout.setSpacing(14)
 
         # 1. Global Hotkeys Section
-        lbl_global = QLabel("Globale Tastenkombinationen (Systemweit)")
+        lbl_global = QLabel(t("settings.lbl_global_hotkeys", "Global Shortcuts (System-wide)"))
         lbl_global.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_global)
 
@@ -59,7 +60,7 @@ class HotkeySettingsPage(QWidget):
 
         # Overlay Toggle Hotkey
         row_toggle = QHBoxLayout()
-        lbl_toggle = QLabel("SpectreHUD Ein-/Ausblenden:")
+        lbl_toggle = QLabel(t("settings.lbl_toggle_hotkey", "SpectreHUD Toggle Overlay:"))
         lbl_toggle.setProperty("class", "FormLabel")
         row_toggle.addWidget(lbl_toggle, stretch=1)
 
@@ -75,7 +76,7 @@ class HotkeySettingsPage(QWidget):
 
         # Snip Tool Hotkey
         row_snip = QHBoxLayout()
-        lbl_snip = QLabel("Screenshot Snip-Tool:")
+        lbl_snip = QLabel(t("settings.lbl_snip_hotkey", "Screenshot Snip-Tool:"))
         lbl_snip.setProperty("class", "FormLabel")
         row_snip.addWidget(lbl_snip, stretch=1)
 
@@ -91,11 +92,11 @@ class HotkeySettingsPage(QWidget):
 
         # Quit Shortcut
         row_quit = QHBoxLayout()
-        lbl_quit = QLabel("SpectreHUD vollständig beenden:")
+        lbl_quit = QLabel(t("settings.lbl_quit_shortcut", "Quit SpectreHUD Completely:"))
         lbl_quit.setProperty("class", "FormLabel")
         row_quit.addWidget(lbl_quit, stretch=1)
 
-        lbl_quit_val = QLabel("Strg + Super + Q")
+        lbl_quit_val = QLabel("Ctrl + Super + Q")
         lbl_quit_val.setProperty("class", "ShortcutKeyBadge")
         lbl_quit_val.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row_quit.addWidget(lbl_quit_val, alignment=Qt.AlignmentFlag.AlignRight)
@@ -104,7 +105,7 @@ class HotkeySettingsPage(QWidget):
         layout.addWidget(card_global)
 
         # 2. Local Overlay Shortcuts
-        lbl_local = QLabel("HUD-Interne Tastenkombinationen (Im Fenster)")
+        lbl_local = QLabel(t("settings.lbl_local_shortcuts", "In-App Shortcuts (Inside HUD)"))
         lbl_local.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_local)
 
@@ -114,13 +115,13 @@ class HotkeySettingsPage(QWidget):
         local_layout.setSpacing(10)
 
         shortcuts = [
-            ("Esc", "HUD-Overlay verstecken"),
-            ("Ctrl + F", "Spotlight-Befehlssuche fokussieren"),
-            ("Ctrl + N", "Neuen Befehl / Snippet hinzufügen"),
-            ("Ctrl + P", "Clipboard-Recorder pausieren / fortsetzen"),
-            ("Ctrl + S", "Bereichs-Screenshot aufnehmen"),
-            ("Ctrl + 1 / 2 / 3 / 4", "Modus wechseln (Cheatsheet, Loot, History, Report)"),
-            ("Ctrl + ,", "Einstellungen / Optionen öffnen"),
+            ("Esc", t("settings.shortcut_esc", "Hide HUD overlay")),
+            ("Ctrl + F", t("settings.shortcut_ctrl_f", "Focus spotlight command search")),
+            ("Ctrl + N", t("settings.shortcut_ctrl_n", "Add new command / snippet")),
+            ("Ctrl + P", t("settings.shortcut_ctrl_p", "Pause / resume clipboard recorder")),
+            ("Ctrl + S", t("settings.shortcut_ctrl_s", "Capture region screenshot")),
+            ("Ctrl + 1 / 2 / 3 / 4", t("settings.shortcut_modes", "Switch active mode (Cheatsheet, Loot, History, Report)")),
+            ("Ctrl + ,", t("settings.shortcut_options", "Open settings & options")),
         ]
 
         for key_text, desc_text in shortcuts:
@@ -141,10 +142,11 @@ class HotkeySettingsPage(QWidget):
         # Reset button
         row_reset = QHBoxLayout()
         row_reset.addStretch()
-        self.btn_reset_defaults = QPushButton("Standard-Hotkeys wiederherstellen")
+        self.btn_reset_defaults = QPushButton(t("settings.btn_reset_defaults", "Restore Default Hotkeys"))
         self.btn_reset_defaults.setProperty("class", "SecondaryBtn")
         self.btn_reset_defaults.clicked.connect(self._reset_defaults)
         row_reset.addWidget(self.btn_reset_defaults)
+        layout.addLayout(row_reset)
         layout.addLayout(row_reset)
 
         layout.addStretch()
@@ -175,7 +177,7 @@ class LanguageSettingsPage(QWidget):
         layout.setContentsMargins(8, 4, 12, 8)
         layout.setSpacing(14)
 
-        lbl_lang = QLabel("Sprach- und Regionaleinstellungen")
+        lbl_lang = QLabel(t("settings.lbl_language_section", "Language and Regional Settings"))
         lbl_lang.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_lang)
 
@@ -186,7 +188,7 @@ class LanguageSettingsPage(QWidget):
 
         # Language dropdown
         row_lang = QHBoxLayout()
-        lbl_select = QLabel("Oberflächensprache / UI Language:")
+        lbl_select = QLabel(t("settings.lbl_ui_language", "User Interface Language:"))
         lbl_select.setProperty("class", "FormLabel")
         row_lang.addWidget(lbl_select, stretch=1)
 
@@ -202,7 +204,7 @@ class LanguageSettingsPage(QWidget):
 
         # Date Format
         row_date = QHBoxLayout()
-        lbl_date = QLabel("Datums- und Zeitformat:")
+        lbl_date = QLabel(t("settings.lbl_date_format", "Date & Time Format:"))
         lbl_date.setProperty("class", "FormLabel")
         row_date.addWidget(lbl_date, stretch=1)
 
@@ -250,7 +252,7 @@ class GeneralSettingsPage(QWidget):
         layout.setSpacing(14)
 
         # 1. Behavior Section
-        lbl_behavior = QLabel("Overlay-Verhalten & Anzeige")
+        lbl_behavior = QLabel(t("settings.lbl_behavior_section", "Overlay Behavior & Display"))
         lbl_behavior.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_behavior)
 
@@ -259,18 +261,22 @@ class GeneralSettingsPage(QWidget):
         b_layout = QVBoxLayout(card_behavior)
         b_layout.setSpacing(10)
 
-        self.chk_always_on_top = QCheckBox("Overlay immer über allen anderen Fenstern im Vordergrund halten")
+        self.chk_always_on_top = QCheckBox(
+            t("settings.chk_always_on_top", "Keep overlay always in foreground over other windows")
+        )
         self.chk_always_on_top.setChecked(self.config.get("always_on_top", True))
         b_layout.addWidget(self.chk_always_on_top)
 
-        self.chk_auto_hide = QCheckBox("Overlay nach dem Kopieren eines Befehls automatisch minimieren")
+        self.chk_auto_hide = QCheckBox(
+            t("settings.chk_auto_hide", "Automatically minimize overlay after copying command")
+        )
         self.chk_auto_hide.setChecked(self.config.get("auto_hide_on_copy", False))
         b_layout.addWidget(self.chk_auto_hide)
 
         layout.addWidget(card_behavior)
 
         # 2. Defaults Section
-        lbl_defaults = QLabel("Standard-Parameter")
+        lbl_defaults = QLabel(t("settings.lbl_defaults_section", "Default Parameters"))
         lbl_defaults.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_defaults)
 
@@ -284,7 +290,7 @@ class GeneralSettingsPage(QWidget):
         row_ips.setSpacing(12)
 
         col_target = QVBoxLayout()
-        lbl_t = QLabel("Standard Target IP:")
+        lbl_t = QLabel(t("settings.lbl_default_target", "Default Target IP:"))
         lbl_t.setProperty("class", "FormLabel")
         col_target.addWidget(lbl_t)
         self.txt_default_target = QLineEdit(self.config.get("target_ip", "10.10.10.10"))
@@ -292,7 +298,7 @@ class GeneralSettingsPage(QWidget):
         row_ips.addLayout(col_target, stretch=1)
 
         col_attacker = QVBoxLayout()
-        lbl_a = QLabel("Standard LHOST IP:")
+        lbl_a = QLabel(t("settings.lbl_default_attacker", "Default LHOST IP:"))
         lbl_a.setProperty("class", "FormLabel")
         col_attacker.addWidget(lbl_a)
         self.txt_default_attacker = QLineEdit(self.config.get("attacker_ip", "10.10.14.5"))
@@ -302,7 +308,7 @@ class GeneralSettingsPage(QWidget):
         d_layout.addLayout(row_ips)
 
         # Default Wordlist
-        lbl_w = QLabel("Standard Wordlist-Pfad:")
+        lbl_w = QLabel(t("settings.lbl_default_wordlist", "Default Wordlist Path:"))
         lbl_w.setProperty("class", "FormLabel")
         d_layout.addWidget(lbl_w)
 
@@ -310,14 +316,14 @@ class GeneralSettingsPage(QWidget):
         self.txt_wordlist = QLineEdit(self.config.get("wordlist", "/usr/share/wordlists/dirb/common.txt"))
         row_w.addWidget(self.txt_wordlist, stretch=1)
 
-        btn_browse_w = QPushButton("Durchsuchen...")
+        btn_browse_w = QPushButton(t("dialog.browse", "Browse..."))
         btn_browse_w.setProperty("class", "BrowseBtn")
         btn_browse_w.clicked.connect(self._on_browse_wordlist)
         row_w.addWidget(btn_browse_w)
         d_layout.addLayout(row_w)
 
         # Default Workspace Directory
-        lbl_ws = QLabel("Standard-Projektordner / Workspace:")
+        lbl_ws = QLabel(t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:"))
         lbl_ws.setProperty("class", "FormLabel")
         d_layout.addWidget(lbl_ws)
 
@@ -325,7 +331,7 @@ class GeneralSettingsPage(QWidget):
         self.txt_workspace = QLineEdit(self.config.get("workspace_dir", str(Path.home() / "spectre_projects")))
         row_ws.addWidget(self.txt_workspace, stretch=1)
 
-        btn_browse_ws = QPushButton("Durchsuchen...")
+        btn_browse_ws = QPushButton(t("dialog.browse", "Browse..."))
         btn_browse_ws.setProperty("class", "BrowseBtn")
         btn_browse_ws.clicked.connect(self._on_browse_workspace)
         row_ws.addWidget(btn_browse_ws)
@@ -337,12 +343,12 @@ class GeneralSettingsPage(QWidget):
         outer_layout.addWidget(scroll)
 
     def _on_browse_wordlist(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, "Wordlist auswählen", self.txt_wordlist.text().strip())
+        file_path, _ = QFileDialog.getOpenFileName(self, t("settings.lbl_default_wordlist", "Default Wordlist Path:"), self.txt_wordlist.text().strip())
         if file_path:
             self.txt_wordlist.setText(file_path)
 
     def _on_browse_workspace(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Workspace-Verzeichnis auswählen", self.txt_workspace.text().strip())
+        folder = QFileDialog.getExistingDirectory(self, t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:"), self.txt_workspace.text().strip())
         if folder:
             self.txt_workspace.setText(folder)
 
@@ -366,7 +372,10 @@ class SettingsDialog(BaseHudDialog):
     settings_applied = pyqtSignal(dict)
 
     def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
-        super().__init__(title="SPECTRE // EINSTELLUNGEN & OPTIONEN", parent=parent)
+        super().__init__(
+            title=t("settings.title", "SPECTRE // SETTINGS & OPTIONS"),
+            parent=parent
+        )
         self.config = config_manager
         self.setMinimumWidth(720)
         self.setMinimumHeight(480)
@@ -392,17 +401,17 @@ class SettingsDialog(BaseHudDialog):
         sidebar_layout.setContentsMargins(8, 12, 8, 12)
         sidebar_layout.setSpacing(6)
 
-        self.btn_nav_hotkeys = QPushButton("Hotkeys & Shortcuts")
+        self.btn_nav_hotkeys = QPushButton(t("settings.nav_hotkeys", "Hotkeys & Shortcuts"))
         self.btn_nav_hotkeys.setProperty("class", "SettingsNavBtnActive")
         self.btn_nav_hotkeys.clicked.connect(lambda: self.switch_page(0))
         sidebar_layout.addWidget(self.btn_nav_hotkeys)
 
-        self.btn_nav_language = QPushButton("Sprache & Region")
+        self.btn_nav_language = QPushButton(t("settings.nav_language", "Language & Region"))
         self.btn_nav_language.setProperty("class", "SettingsNavBtn")
         self.btn_nav_language.clicked.connect(lambda: self.switch_page(1))
         sidebar_layout.addWidget(self.btn_nav_language)
 
-        self.btn_nav_general = QPushButton("Allgemein & Verhalten")
+        self.btn_nav_general = QPushButton(t("settings.nav_general", "General & Behavior"))
         self.btn_nav_general.setProperty("class", "SettingsNavBtn")
         self.btn_nav_general.clicked.connect(lambda: self.switch_page(2))
         sidebar_layout.addWidget(self.btn_nav_general)
@@ -433,17 +442,17 @@ class SettingsDialog(BaseHudDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        lbl_hint = QLabel("↵ Enter: Speichern | Esc: Abbrechen")
+        lbl_hint = QLabel(t("snippet_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
         lbl_hint.setStyleSheet("color: #8b949e; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_save = QPushButton("Speichern & Übernehmen")
+        self.btn_save = QPushButton(t("settings.save_apply", "Save & Apply"))
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.clicked.connect(self._on_save_settings)
         btn_layout.addWidget(self.btn_save)

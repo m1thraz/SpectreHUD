@@ -23,7 +23,9 @@ class FooterPanel(QFrame):
         layout.setContentsMargins(14, 4, 6, 4)
 
         # 1. Hotkey Status Hint Label
-        self.lbl_status = QLabel("Strg+Super+<: Toggle | Strg+Super+Q: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken")
+        self.lbl_status = QLabel(
+            t("footer.status", "{hotkey}: Toggle | Ctrl+Super+Q: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide", hotkey="Ctrl+Super+<")
+        )
         self.lbl_status.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_status.setObjectName("FooterText")
         layout.addWidget(self.lbl_status)
@@ -31,7 +33,7 @@ class FooterPanel(QFrame):
         layout.addStretch()
 
         # 2. Item Count Label
-        self.lbl_count = QLabel("0 Einträge")
+        self.lbl_count = QLabel(t("footer.entries_count", "{count} entries", count=0))
         self.lbl_count.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_count.setObjectName("FooterText")
         layout.addWidget(self.lbl_count)
