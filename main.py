@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
-from core.config import ConfigManager
+from core.single_instance import acquire_application_lock, release_application_lock
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
@@ -67,6 +67,13 @@ def create_tray_icon_pixmap(is_recording: bool, app_icon: QIcon | None = None) -
     painter.end()
     return recording_pixmap
 
+
+def _create_production_container():
+    """Defers container imports until the single-instance lock is held."""
+    from core.container import ServiceContainer
+
+    return ServiceContainer.create_production()
+
 def main():
     if "--version" in sys.argv or "-v" in sys.argv:
         print("SpectreHUD 2.0.0")
@@ -85,95 +92,109 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     app.setStyleSheet(CYBER_DARK_QSS)
 
+    # Acquire this before creating services that access the registry, workspace,
+    # clipboard or UI.  QLockFile also handles stale locks left by crashed runs.
+    application_lock = acquire_application_lock()
+    if application_lock is None:
+        QMessageBox.information(
+            None,
+            "SpectreHUD läuft bereits",
+            "SpectreHUD läuft bereits. Bitte schließe die vorhandene Instanz, bevor du es erneut startest.",
+        )
+        return
+
     app_icon = get_app_icon()
-    if not app_icon.isNull():
-        app.setWindowIcon(app_icon)
+    hotkey_listener = None
+    try:
+        if not app_icon.isNull():
+            app.setWindowIcon(app_icon)
 
-    from core.container import ServiceContainer
+        # Initialize Service Container
+        container = _create_production_container()
+        container.clipboard_watcher.start_listening()
 
-    # Initialize Service Container
-    container = ServiceContainer.create_production()
-    container.clipboard_watcher.start_listening()
+        # Main Window
+        window = MainWindow(container=container)
+        if not app_icon.isNull():
+            window.setWindowIcon(app_icon)
+        window.show()
 
-    # Main Window
-    window = MainWindow(container=container)
-    if not app_icon.isNull():
-        window.setWindowIcon(app_icon)
-    window.show()
+        # Global Hotkey Listener
+        from core.hotkey_listener import HotkeyConfig
+        from core.event_bus import EventType
 
-    # Global Hotkey Listener
-    from core.hotkey_listener import HotkeyConfig
-    from core.event_bus import EventType
+        hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
+        hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
+        hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
+        hotkey_config = HotkeyConfig(toggle=hotkey_toggle, screenshot=hotkey_snip, quit=hotkey_quit)
+        
+        hotkey_listener = HotkeyListener(config=hotkey_config)
+        hotkey_listener.toggle_requested.connect(window.toggle_visibility)
+        hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
+        hotkey_listener.quit_requested.connect(window.request_quit)
+        hotkey_listener.start()
 
-    hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
-    hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
-    hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
-    hotkey_config = HotkeyConfig(toggle=hotkey_toggle, screenshot=hotkey_snip, quit=hotkey_quit)
-    
-    hotkey_listener = HotkeyListener(config=hotkey_config)
-    hotkey_listener.toggle_requested.connect(window.toggle_visibility)
-    hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
-    hotkey_listener.quit_requested.connect(window.request_quit)
-    hotkey_listener.start()
+        # Register safety net shutdown hook
+        app.aboutToQuit.connect(window.prepare_for_shutdown)
 
-    # Register safety net shutdown hook
-    app.aboutToQuit.connect(window.prepare_for_shutdown)
+        # System Tray Icon (Default: Paused for privacy)
+        tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app)
+        tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
+        tray_menu = QMenu()
+        
+        act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
+        act_toggle.triggered.connect(window.toggle_visibility)
+        tray_menu.addAction(act_toggle)
 
-    # System Tray Icon (Default: Paused for privacy)
-    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app)
-    tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
-    tray_menu = QMenu()
-    
-    act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
-    act_toggle.triggered.connect(window.toggle_visibility)
-    tray_menu.addAction(act_toggle)
+        act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
+        act_snip.triggered.connect(window.trigger_screenshot)
+        tray_menu.addAction(act_snip)
 
-    act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
-    act_snip.triggered.connect(window.trigger_screenshot)
-    tray_menu.addAction(act_snip)
+        act_rec_toggle = QAction("Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
+        act_rec_toggle.triggered.connect(window._toggle_pause_history)
+        tray_menu.addAction(act_rec_toggle)
 
-    act_rec_toggle = QAction("Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
-    act_rec_toggle.triggered.connect(window._toggle_pause_history)
-    tray_menu.addAction(act_rec_toggle)
+        tray_menu.addSeparator()
 
-    tray_menu.addSeparator()
+        act_options = QAction("Optionen & Hotkeys... (Ctrl+,)", tray_menu)
+        act_options.triggered.connect(window.open_settings_dialog)
+        tray_menu.addAction(act_options)
 
-    act_options = QAction("Optionen & Hotkeys... (Ctrl+,)", tray_menu)
-    act_options.triggered.connect(window.open_settings_dialog)
-    tray_menu.addAction(act_options)
+        act_quit = QAction(f"Beenden ({hotkey_quit})", tray_menu)
+        act_quit.triggered.connect(window.request_quit)
+        tray_menu.addAction(act_quit)
 
-    act_quit = QAction(f"Beenden ({hotkey_quit})", tray_menu)
-    act_quit.triggered.connect(window.request_quit)
-    tray_menu.addAction(act_quit)
+        tray_icon.setContextMenu(tray_menu)
+        tray_icon.activated.connect(lambda reason: window.toggle_visibility() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
+        tray_icon.show()
 
-    tray_icon.setContextMenu(tray_menu)
-    tray_icon.activated.connect(lambda reason: window.toggle_visibility() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
-    tray_icon.show()
+        def update_tray_state(is_active: bool):
+            tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon)))
+            status = "REC: ON" if is_active else "REC: Paused"
+            tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
+            act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
 
-    def update_tray_state(is_active: bool):
-        tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon)))
-        status = "REC: ON" if is_active else "REC: Paused"
-        tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
-        act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
+        container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
 
-    container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
+        def on_hotkeys_changed(data: dict):
+            new_toggle = data.get("hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<"))
+            new_snip = data.get("snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x"))
+            new_quit = data.get("quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q"))
+            new_cfg = HotkeyConfig(toggle=new_toggle, screenshot=new_snip, quit=new_quit)
+            hotkey_listener.update_config(new_cfg)
+            act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
+            act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
+            act_quit.setText(f"Beenden ({new_quit})")
 
-    def on_hotkeys_changed(data: dict):
-        new_toggle = data.get("hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<"))
-        new_snip = data.get("snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x"))
-        new_quit = data.get("quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q"))
-        new_cfg = HotkeyConfig(toggle=new_toggle, screenshot=new_snip, quit=new_quit)
-        hotkey_listener.update_config(new_cfg)
-        act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
-        act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
-        act_quit.setText(f"Beenden ({new_quit})")
+        container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
 
-    container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
+        exit_code = app.exec()
+        logger.info("SpectreHUD shutting down cleanly.")
+    finally:
+        if hotkey_listener is not None:
+            hotkey_listener.stop()
+        release_application_lock(application_lock)
 
-    # Clean exit
-    exit_code = app.exec()
-    logger.info("SpectreHUD shutting down cleanly.")
-    hotkey_listener.stop()
     sys.exit(exit_code)
 
 if __name__ == "__main__":
