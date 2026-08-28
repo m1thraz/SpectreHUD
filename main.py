@@ -9,7 +9,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
-from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QFont
+from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
 from core.config import ConfigManager
@@ -21,7 +21,7 @@ from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
 
-from ui.styles import CYBER_DARK_QSS
+from ui.styles import CYBER_DARK_QSS, get_app_icon
 
 logger = get_logger("app")
 
@@ -49,33 +49,23 @@ def global_exception_hook(exctype, value, tb):
 
 sys.excepthook = global_exception_hook
 
-def create_tray_icon_pixmap(is_recording: bool = True) -> QPixmap:
-    """Generates a clean programmatic icon with visual recording status."""
-    pixmap = QPixmap(32, 32)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    
-    # Outer circle/box
-    bg_color = QColor("#00e5ff") if is_recording else QColor("#484f58")
-    painter.setBrush(bg_color)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.drawRoundedRect(2, 2, 28, 28, 6, 6)
-    
-    # Symbol
-    painter.setPen(QColor("#0d1117") if is_recording else QColor("#c9d1d9"))
-    font = QFont("Segoe UI", 16, QFont.Weight.Bold)
-    painter.setFont(font)
-    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "S")
+def create_tray_icon_pixmap(is_recording: bool, app_icon: QIcon | None = None) -> QPixmap:
+    """Returns the SpectreHUD logo, tinted red while clipboard recording is active."""
+    icon = app_icon if app_icon is not None and not app_icon.isNull() else get_app_icon()
+    pixmap = icon.pixmap(32, 32)
+    if pixmap.isNull() or not is_recording:
+        return pixmap
 
-    # Visual Red Recording Dot in top-right corner if recording
-    if is_recording:
-        painter.setBrush(QColor("#f85149"))
-        painter.setPen(QColor("#ffffff"))
-        painter.drawEllipse(20, 2, 10, 10)
-
+    # Preserve the logo's silhouette and transparency while making the active
+    # recording state unmistakable in the system tray.
+    recording_pixmap = QPixmap(pixmap.size())
+    recording_pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(recording_pixmap)
+    painter.drawPixmap(0, 0, pixmap)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+    painter.fillRect(recording_pixmap.rect(), QColor("#f85149"))
     painter.end()
-    return pixmap
+    return recording_pixmap
 
 def main():
     if "--version" in sys.argv or "-v" in sys.argv:
@@ -95,7 +85,6 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     app.setStyleSheet(CYBER_DARK_QSS)
 
-    from ui.styles import get_app_icon
     app_icon = get_app_icon()
     if not app_icon.isNull():
         app.setWindowIcon(app_icon)
@@ -131,7 +120,7 @@ def main():
     app.aboutToQuit.connect(window.prepare_for_shutdown)
 
     # System Tray Icon (Default: Paused for privacy)
-    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False)), app)
+    tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app)
     tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
     tray_menu = QMenu()
     
@@ -162,7 +151,7 @@ def main():
     tray_icon.show()
 
     def update_tray_state(is_active: bool):
-        tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active)))
+        tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon)))
         status = "REC: ON" if is_active else "REC: Paused"
         tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
         act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
