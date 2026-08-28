@@ -6,6 +6,7 @@ from ui.add_snippet_dialog import AddSnippetDialog
 from ui.add_loot_dialog import AddLootDialog
 from ui.project_dialog import NewProjectDialog
 from ui.param_prompt_dialog import ParamPromptDialog
+from ui.command_edit_dialog import CommandEditDialog
 
 app = QApplication.instance() or QApplication([])
 
@@ -71,6 +72,13 @@ class TestHudDialogs(unittest.TestCase):
         
         self.assertEqual(dlg.get_values()["ENDPOINT"], "api/v1/users")
         self.assertEqual(dlg.txt_preview.toPlainText(), "curl http://10.10.10.10:8080/api/v1/users")
+        dlg.close()
+
+    def test_command_edit_dialog_data(self):
+        dlg = CommandEditDialog("nmap -sV 10.10.10.10")
+        dlg.txt_command.setPlainText("nmap -sV -Pn 10.10.10.10")
+
+        self.assertEqual(dlg.get_command(), "nmap -sV -Pn 10.10.10.10")
         dlg.close()
 
 if __name__ == '__main__':

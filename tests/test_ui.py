@@ -284,7 +284,8 @@ class TestUI(unittest.TestCase):
 
     def test_inline_command_tweaker_interaction(self):
         from ui.snippet_card import SnippetCard
-        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtWidgets import QApplication, QDialog
+        from unittest.mock import patch
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
@@ -304,18 +305,16 @@ class TestUI(unittest.TestCase):
         card = window.cards[0]
         self.assertIsInstance(card, SnippetCard)
 
-        # 1. Tweaker starts hidden
-        self.assertTrue(card.tweak_container.isHidden())
+        self.assertFalse(hasattr(card, "tweak_container"))
 
-        # 2. Click Tweak button (✏️) -> container becomes unhidden with rendered command
-        card.btn_tweak.click()
-        self.assertFalse(card.tweak_container.isHidden())
-        self.assertEqual(card.txt_tweak.text(), card._rendered_command)
+        # Edit and confirm the new modal command editor.
+        tweaked_cmd = card._rendered_command + " --proxy socks5://127.0.0.1:9050"
+        def accept_edited_command(dialog):
+            dialog.txt_command.setPlainText(tweaked_cmd)
+            return QDialog.DialogCode.Accepted
 
-        # 3. Modify text and copy via tweaked copy button
-        tweaked_cmd = card.txt_tweak.text() + " --proxy socks5://127.0.0.1:9050"
-        card.txt_tweak.setText(tweaked_cmd)
-        card.btn_tweak_copy.click()
+        with patch("ui.snippet_card.CommandEditDialog.exec", accept_edited_command):
+            card.btn_tweak.click()
 
         # Check clipboard content
         clipboard = QApplication.clipboard()

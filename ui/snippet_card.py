@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy, QLineEdit
+    QPushButton, QWidget, QApplication, QSizePolicy
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any, Optional
 from core.template_engine import TemplateEngine
 from ui.param_prompt_dialog import ParamPromptDialog
+from ui.command_edit_dialog import CommandEditDialog
 import pyperclip
 
 class SnippetCard(QFrame):
@@ -100,7 +101,7 @@ class SnippetCard(QFrame):
         self.btn_tweak.setToolTip("Befehl anpassen vor dem Kopieren")
         self.btn_tweak.setFixedWidth(34)
         self.btn_tweak.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_tweak.clicked.connect(self._toggle_tweak_bar)
+        self.btn_tweak.clicked.connect(self._open_command_editor)
         cmd_row.addWidget(self.btn_tweak, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         self.btn_copy = QPushButton("Copy")
@@ -112,60 +113,13 @@ class SnippetCard(QFrame):
 
         layout.addLayout(cmd_row)
 
-        # Expandable Inline Command Tweaker Row
-        self.tweak_container = QFrame()
-        self.tweak_container.setObjectName("TweakContainer")
-        self.tweak_container.setVisible(False)
-        tweak_layout = QHBoxLayout(self.tweak_container)
-        tweak_layout.setContentsMargins(4, 4, 4, 4)
-        tweak_layout.setSpacing(6)
-
-        self.txt_tweak = QLineEdit()
-        self.txt_tweak.setObjectName("TweakInput")
-        self.txt_tweak.setProperty("class", "TweakLineEdit")
-        self.txt_tweak.setPlaceholderText("Befehl frei anpassen...")
-        self.txt_tweak.returnPressed.connect(self._copy_tweaked_command)
-        tweak_layout.addWidget(self.txt_tweak, stretch=1)
-
-        self.btn_tweak_copy = QPushButton("Copy")
-        self.btn_tweak_copy.setProperty("class", "CopyBtn")
-        self.btn_tweak_copy.setFixedWidth(75)
-        self.btn_tweak_copy.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_tweak_copy.clicked.connect(self._copy_tweaked_command)
-        tweak_layout.addWidget(self.btn_tweak_copy)
-
-        self.btn_tweak_cancel = QPushButton("✕")
-        self.btn_tweak_cancel.setProperty("class", "DangerBtn")
-        self.btn_tweak_cancel.setFixedWidth(28)
-        self.btn_tweak_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_tweak_cancel.setToolTip("Abbrechen")
-        self.btn_tweak_cancel.clicked.connect(lambda: self.tweak_container.setVisible(False))
-        tweak_layout.addWidget(self.btn_tweak_cancel)
-
-        layout.addWidget(self.tweak_container)
-
-    def _toggle_tweak_bar(self) -> None:
-        """Toggles visibility of the inline command tweaker bar."""
-        will_show = self.tweak_container.isHidden()
-        self.tweak_container.setVisible(will_show)
-        self.btn_tweak.setProperty("class", "TweakBtnActive" if will_show else "TweakBtn")
-        self.btn_tweak.style().unpolish(self.btn_tweak)
-        self.btn_tweak.style().polish(self.btn_tweak)
-
-        if will_show:
-            self.txt_tweak.setText(self._rendered_command)
-            self.txt_tweak.setFocus()
-            self.txt_tweak.selectAll()
-
-    def _copy_tweaked_command(self) -> None:
-        """Copies the ad-hoc tweaked command from the inline line edit."""
-        text_to_copy = self.txt_tweak.text().strip()
-        if text_to_copy:
-            self._perform_clipboard_copy(text_to_copy, target_btn=self.btn_tweak_copy)
-            QTimer.singleShot(400, lambda: self.tweak_container.setVisible(False))
-            self.btn_tweak.setProperty("class", "TweakBtn")
-            self.btn_tweak.style().unpolish(self.btn_tweak)
-            self.btn_tweak.style().polish(self.btn_tweak)
+    def _open_command_editor(self) -> None:
+        """Opens a roomy modal editor before copying an ad-hoc command variant."""
+        dialog = CommandEditDialog(self._rendered_command, parent=self.window())
+        if dialog.exec():
+            text_to_copy = dialog.get_command()
+            if text_to_copy:
+                self._perform_clipboard_copy(text_to_copy, target_btn=self.btn_tweak)
 
     def update_variables(self, variables: Dict[str, Any]) -> None:
         """Rerenders the command template with current variables."""
@@ -173,8 +127,6 @@ class SnippetCard(QFrame):
         template = self.snippet.get("template", "")
         self._rendered_command = TemplateEngine.render(template, variables)
         self.lbl_command.setText(self._rendered_command)
-        if self.tweak_container.isHidden():
-            self.txt_tweak.setText(self._rendered_command)
 
     def _perform_clipboard_copy(self, text_to_copy: str, target_btn: Optional[QPushButton] = None) -> None:
         """Helper to copy text to clipboard and trigger visual feedback."""
