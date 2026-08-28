@@ -491,13 +491,16 @@ class MainWindow(QMainWindow):
                 return False  # Cancel or window closed
 
         # 3. Flush window geometry
+        from core.storage import PersistenceError
         try:
             self.config.update({
                 "window_width": self.width(),
                 "window_height": self.height()
             })
+        except PersistenceError as exc:
+            logger.warning("Could not persist window geometry during shutdown: %s", exc)
         except Exception:
-            pass
+            logger.exception("Unexpected error while persisting window geometry during shutdown")
 
         # 4. Quit application
         if quit_app:

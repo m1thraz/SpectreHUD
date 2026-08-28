@@ -871,6 +871,37 @@ class TestAdversarialRegressions(unittest.TestCase):
             state = container.project_manager.load_project_state()
             self.assertEqual(state.get("target_ip"), "192.168.1.77")
 
+    def test_quit_logs_geometry_persistence_error_without_blocking_shutdown(self):
+        """A normal geometry persistence failure is visible but never blocks shutdown."""
+        from unittest.mock import patch
+        from core.storage import PersistenceError
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        window = MainWindow(container=ServiceContainer.create_in_memory())
+        with patch.object(window, "_save_current_project_state", return_value=True):
+            with patch.object(window.config, "update", side_effect=PersistenceError("disk full")):
+                with patch("ui.main_window.logger.warning") as warning:
+                    self.assertTrue(window.request_quit(quit_app=False))
+
+        warning.assert_called_once()
+        self.assertIn("window geometry", warning.call_args.args[0])
+
+    def test_quit_logs_unexpected_geometry_error_without_blocking_shutdown(self):
+        """Unexpected geometry errors include diagnostics but never block shutdown."""
+        from unittest.mock import patch
+        from ui.main_window import MainWindow
+        from core.container import ServiceContainer
+
+        window = MainWindow(container=ServiceContainer.create_in_memory())
+        with patch.object(window, "_save_current_project_state", return_value=True):
+            with patch.object(window.config, "update", side_effect=ValueError("invalid geometry")):
+                with patch("ui.main_window.logger.exception") as exception:
+                    self.assertTrue(window.request_quit(quit_app=False))
+
+        exception.assert_called_once()
+        self.assertIn("window geometry", exception.call_args.args[0])
+
     # -------------------------------------------------------------------------
     # 26. Close Event Discard Protection
     # -------------------------------------------------------------------------
