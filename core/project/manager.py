@@ -68,9 +68,6 @@ class ProjectManager:
     def registry(self, val: Dict[str, str]) -> None:
         self.repository.registry = val
 
-    def _save_registry(self) -> None:
-        self.repository._save_registry()
-
     def _load_registry(self) -> Dict[str, str]:
         return self.repository._load_registry()
 

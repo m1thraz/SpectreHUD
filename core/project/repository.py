@@ -183,14 +183,6 @@ class ProjectRepository:
             logger.error(f"Failed to update projects registry at {self.registry_file}: {e}", exc_info=True)
             raise PersistenceError(f"Failed to update projects registry at {self.registry_file}: {e}") from e
 
-    def _save_registry(self) -> None:
-        """Persist the current registry as add-only legacy snapshot compatibility.
-
-        New registry code must call :meth:`_update_registry` with explicit
-        additions/removals so that deletes survive a concurrent read-merge-write.
-        """
-        self._update_registry(additions=self.registry)
-
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
         """Returns whether a project with the strictly validated name exists."""
         clean = validate_project_name(name)
