@@ -425,15 +425,18 @@ class ProjectRepository:
         return validate_project_state(None, fallback_name=pname)
 
     def save_project_state(self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
-        """Persists state data for a project."""
+        """Persists state data for an existing project without recreating it."""
         from core.validators import validate_project_state
         from core.atomic_write import atomic_write_json
         pname = validate_project_name(name)
         proj_dir = self.get_project_dir(pname)
-        try:
-            proj_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.error(f"Failed to ensure project dir {proj_dir}: {e}", exc_info=True)
+        if not proj_dir.exists() or not proj_dir.is_dir():
+            logger.error(
+                "Refusing to save project '%s': expected project directory is unavailable at %s. "
+                "It may have been moved or deleted outside SpectreHUD.",
+                pname,
+                proj_dir,
+            )
             return False
 
         state_file = proj_dir / "project_state.json"

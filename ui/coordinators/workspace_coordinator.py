@@ -70,12 +70,20 @@ class WorkspaceCoordinator(QObject):
         variables = variables_provider() if variables_provider else {}
         if not self.save_current_project_session(variables):
             logger.error(f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'")
+            project_unavailable = not self.project_manager.project_exists(current_proj)
             msg = QMessageBox(window)
             msg.setWindowTitle(t("general.save_failed", "Speichern fehlgeschlagen"))
-            msg.setText(
-                f"Der Zustand des aktuellen Projekts '{current_proj}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
-                "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
-            )
+            if project_unavailable:
+                msg.setText(
+                    f"Der Projektordner des aktiven Projekts '{current_proj}' wurde außerhalb von SpectreHUD "
+                    "verschoben oder gelöscht. SpectreHUD hat ihn nicht neu erstellt.\n\n"
+                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
+                )
+            else:
+                msg.setText(
+                    f"Der Zustand des aktuellen Projekts '{current_proj}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
+                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
+                )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
             msg.setDefaultButton(QMessageBox.StandardButton.Cancel)

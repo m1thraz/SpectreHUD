@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 import tempfile
 from pathlib import Path
@@ -54,6 +55,26 @@ class TestProjectManager(unittest.TestCase):
         self.assertEqual(len(reloaded["loot"]), 1)
         self.assertEqual(reloaded["loot"][0]["title"], "Admin Pass")
         self.assertEqual(len(reloaded["clipboard_history"]), 1)
+
+    def test_save_does_not_recreate_deleted_active_project(self):
+        """A deleted active project is an integrity failure, never a create request."""
+        project_dir = self.pm.create_project("Victim")
+        self.pm.activate_project("Victim")
+        shutil.rmtree(project_dir)
+
+        self.assertFalse(self.pm.save_project_state())
+        self.assertFalse(project_dir.exists())
+
+    def test_save_does_not_fork_externally_renamed_active_project(self):
+        """Saving after an external rename must not recreate the old project path."""
+        project_dir = self.pm.create_project("Box")
+        self.pm.activate_project("Box")
+        renamed_dir = project_dir.with_name("BoxRenamed")
+        project_dir.rename(renamed_dir)
+
+        self.assertFalse(self.pm.save_project_state())
+        self.assertFalse(project_dir.exists())
+        self.assertTrue(renamed_dir.exists())
 
     def test_active_project_switch(self):
         self.pm.create_project("Lame", target_ip="10.10.10.3")
