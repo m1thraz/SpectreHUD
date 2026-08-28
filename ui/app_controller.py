@@ -20,6 +20,7 @@ from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType
 from core.container import ServiceContainer
+from core.storage import PersistenceError
 
 from ui.variable_bar import VariableBar
 from ui.panels.header_panel import HeaderPanel
@@ -365,7 +366,12 @@ class AppController(QObject):
                     entry for entry in self.loot_manager.get_all_entries()
                     if entry.get("id") != screenshot_id
                 ]
-                self.loot_manager.replace_entries_and_persist(entries_before_screenshot)
+                try:
+                    self.loot_manager.replace_entries_and_persist(entries_before_screenshot)
+                except PersistenceError:
+                    # Recovery is best-effort: a failed loot rollback must not
+                    # prevent independent cleanup of the image file below.
+                    logger.exception("Failed to roll back loot after screenshot session-save failure.")
 
             file_path = loot_entry.get("file_path")
             if file_path:
