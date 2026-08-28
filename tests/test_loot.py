@@ -138,13 +138,13 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(migrated_disk_data[0]["category"], "misc")
         self.assertEqual(migrated_disk_data[1]["category"], "misc")
 
-    def test_set_entries_migration_and_immediate_persistence(self):
-        """Calling set_entries (e.g. on project switch) migrates legacy entries and immediately saves to disk."""
+    def test_replace_entries_and_persist_migrates_and_immediately_saves(self):
+        """The explicitly persistent replacement API migrates entries and saves them."""
         legacy_list = [
             {"id": "l_switch_1", "type": "credentials", "title": "Project Switch Cred", "content": "pass123"},
             {"id": "l_switch_2", "type": "dir", "category": "bad_cat", "title": "Dir", "content": "/uploads"}
         ]
-        self.loot_mgr.set_entries(legacy_list)
+        self.loot_mgr.replace_entries_and_persist(legacy_list)
         self.assertEqual(len(self.loot_mgr.entries), 2)
         self.assertEqual(self.loot_mgr.entries[0]["category"], "misc")
         self.assertEqual(self.loot_mgr.entries[1]["category"], "misc")
@@ -156,6 +156,14 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(disk_data[0]["category"], "misc")
         self.assertEqual(disk_data[1]["category"], "misc")
         self.assertEqual(disk_data[1]["type"], "directory")
+
+    def test_set_entries_is_a_deprecated_persistent_alias(self):
+        """Legacy callers receive a clear migration warning without changing behavior."""
+        import warnings
+
+        with self.assertWarns(DeprecationWarning):
+            self.loot_mgr.set_entries([])
+        self.assertEqual(self.loot_mgr.get_all_entries(), [])
 
     def test_search_and_filter(self):
         self.loot_mgr.add_entry("credentials", "SSH Root", "root:toor", "10.10.10.50", category="access")

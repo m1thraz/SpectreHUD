@@ -1,5 +1,6 @@
 import json
 import uuid
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -129,16 +130,26 @@ class LootManager:
             from core.event_bus import EventType
             self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
 
-    def set_entries(self, entries: List[Dict[str, Any]]) -> None:
-        """Replaces current entries with a validated list (e.g. on project switch) and migrates immediately."""
+    def replace_entries_and_persist(self, entries: List[Dict[str, Any]]) -> None:
+        """Replaces entries in memory and immediately persists the validated result."""
         from core.validators import validate_loot_list
         self.entries = validate_loot_list(entries)
         if self._migrate_entries():
-            logger.info("Migrated entries set on project switch and persisted to disk.")
+            logger.info("Migrated replacement loot entries and persisted them to disk.")
         self.save_entries()
         if self.event_bus:
             from core.event_bus import EventType
             self.event_bus.publish(EventType.LOOT_UPDATED, {"entries": self.get_all_entries()})
+
+    def set_entries(self, entries: List[Dict[str, Any]]) -> None:
+        """Deprecated compatibility alias for :meth:`replace_entries_and_persist`."""
+        warnings.warn(
+            "set_entries() is deprecated; use replace_entries() for in-memory replacement "
+            "or replace_entries_and_persist() to write immediately.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.replace_entries_and_persist(entries)
 
     def get_all_entries(self) -> List[Dict[str, Any]]:
         """Returns defensive copies of all entries."""

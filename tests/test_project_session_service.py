@@ -56,8 +56,8 @@ class TestProjectSessionService(unittest.TestCase):
         self.session_service.save_project_session(variables=variables, project_name="Box1")
 
         # Clear active memory
-        self.loot_manager.set_entries([])
-        self.clipboard_watcher.set_history([])
+        self.loot_manager.replace_entries([])
+        self.clipboard_watcher.replace_history([])
 
         # Load session
         loaded_state = self.session_service.load_project_session("Box1")

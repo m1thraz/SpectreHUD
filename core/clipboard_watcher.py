@@ -1,5 +1,6 @@
 import json
 import uuid
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -179,17 +180,27 @@ class ClipboardWatcher(QObject):
             from core.event_bus import EventType
             self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
 
-    def set_history(self, history: List[Dict[str, Any]]) -> None:
-        """Replaces history with a validated list (e.g. on project switch)."""
+    def replace_history_and_persist(self, history: List[Dict[str, Any]]) -> None:
+        """Replaces history in memory and immediately persists the validated result."""
         from core.validators import validate_clipboard_list
         validated = validate_clipboard_list(history)
         if not self.storage.save_json("clipboard", validated):
-            raise PersistenceError("Could not persist set_history to storage.")
+            raise PersistenceError("Could not persist replacement clipboard history to storage.")
         self.history = validated
         self._last_copied_text = self.history[0]["text"] if self.history else None
         if self.event_bus:
             from core.event_bus import EventType
             self.event_bus.publish(EventType.HISTORY_UPDATED, {"history": self.get_all_history()})
+
+    def set_history(self, history: List[Dict[str, Any]]) -> None:
+        """Deprecated compatibility alias for :meth:`replace_history_and_persist`."""
+        warnings.warn(
+            "set_history() is deprecated; use replace_history() for in-memory replacement "
+            "or replace_history_and_persist() to write immediately.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.replace_history_and_persist(history)
 
     def get_all_history(self) -> List[Dict[str, Any]]:
         """Returns defensive copies of all history items."""
