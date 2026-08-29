@@ -10,13 +10,15 @@ SpectreHUD follows a **layered, decoupled architecture** built upon Qt 6 (PyQt6)
 
 ```mermaid
 graph TD
-    UI[UI Shell / Panels: MainWindow, Panels, Dialogs] --> AppCtrl[AppController]
+    Bootstrap[main.py: QApplication + QLockFile] --> UI[UI Shell / Panels: MainWindow, Panels, Dialogs]
+    UI --> AppCtrl[AppController]
     AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, History, Project, Report]
     DomainCtrls --> EventBus[EventBus (core/event_bus.py)]
     DomainCtrls --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, etc.]
     AppCtrl --> Container[ServiceContainer (core/container.py)]
     Container --> Services
     Services --> Storage[StorageBackend: FileStorageBackend / InMemoryStorageBackend]
+    Services --> Security[ProjectLockService + crypto_service]
     Storage --> Filesystem[(Atomic Filesystem / OS)]
 ```
 
@@ -25,14 +27,14 @@ graph TD
 ## 2. Architectural Layers & Components
 
 ### 2.1 UI Presentation Layer (`ui/`)
-- **`MainWindow` (`ui/main_window.py`)**: Frameless, transparent, Spotlight-style overlay shell. Handles native window movement, geometry positioning, and global keyboard shortcuts.
+- **`MainWindow` (`ui/main_window.py`)**: Frameless, transparent, Spotlight-style overlay shell. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
 - **Panels (`ui/panels/`)**:
   - `HeaderPanel`: Title, project switcher dropdown, language toggle, and action buttons.
   - `SearchPanel`: Real-time fuzzy query input with filter tags.
   - `VariableBar`: Dynamic template parameter substitutions (`{target_ip}`, `{lhost}`, `{lport}`, `{wordlist}`, etc.).
   - `ContentPanel`: Multi-mode view container (Cheatsheet, Loot, History, Report Editor).
   - `FooterPanel`: Status bar, shortcut hints, and active recording indicators.
-- **Dialogs (`ui/`)**: Modal forms for adding snippets, loot entries, custom variables, and application settings.
+- **Dialogs (`ui/`)**: Modal forms for snippets, loot, custom variables, settings, template management and Pentest-Mode unlock. Dialog text is resolved through the active locale where available.
 
 ### 2.2 Domain & Workflow Controllers (`ui/controllers/`)
 - **`AppController` (`ui/app_controller.py`)**: The central coordinator connecting UI signals, mode switching, and domain controllers.
@@ -41,7 +43,7 @@ graph TD
   - `LootController`: Loot CRUD operations, tabular search, and export generation.
   - `HistoryController`: Clipboard command log ingestion, filtering, and loot promotions.
   - `ProjectController`: Project creation, switching, validation, and metadata persistence.
-  - `ReportController`: Pentest / CTF markdown report assembly and live editing.
+  - `ReportController`: Lazily constructs the report tab on first use, then coordinates report loading, Markdown editing and export.
 - **UI Decoupling with DTOs (`core/menu_actions.py` & `ui/menu_builder.py`)**:
   - Controllers build context menus using pure Python `MenuAction` data transfer objects (`label`, `callback`, `icon`, `is_separator`, `is_enabled`).
   - `MenuBuilder.build_qmenu()` converts these DTOs into Qt `QMenu` instances at the view boundary, making controller logic 100% unit-testable in headless environments.
@@ -61,7 +63,7 @@ graph TD
 - **Factory Methods**:
   - `ServiceContainer.create_production(...)`: Instantiates filesystem-backed storage, default config directories, and locale settings.
   - `ServiceContainer.create_isolated_test_container(...)`: Uses in-memory storage for configuration and session data, plus isolated temporary filesystem directories for filesystem-dependent services such as `ProjectManager` and `ReportFileManager`. It is designed for test isolation and does not guarantee zero disk I/O.
-  - `ServiceContainer.create_in_memory(...)`: Backward-compatible legacy alias for `create_isolated_test_container(...)`; new tests should use the explicit name.
+  - `ServiceContainer.create_in_memory(...)`: Compatibility alias for `create_isolated_test_container(...)`. It shares the same isolated temporary-directory behaviour.
 
 ### 2.5 Storage Abstraction Layer (`core/storage.py`)
 - **`StorageBackend` Interface**:
@@ -103,10 +105,11 @@ graph TD
 - **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
 - **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
+- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Provides a Markdown source editor, split preview and live preview through one Change View menu. Its formatting toolbar writes Markdown for headings, emphasis, code, lists, links and tables; find/replace, debounced rendering and autosave support editing workflows.
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
 - **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives with path traversal and Zip-Slip prevention.
-- **`HtmlReportExporter` (`core/html_report_exporter.py`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts, and Cyber-Dark styling for offline client delivery.
+- **`HtmlReportExporter` (`core/html_report_exporter.py`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts and selectable Dark or Light client/print styling. Generated HTML permits in-browser body editing and image resizing, and can save a cleaned edited copy without its editing controls.
 
 ### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
 - **`I18nManager`**: Thread-safe internationalization runtime supporting live locale switching (`de` / `en`) without application restart.
@@ -131,6 +134,9 @@ graph TD
    - Markdown exporter strictly sanitizes code-fence language specifiers and escapes table pipes to prevent format breakage or injection.
 6. **Structured & Rotating Logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
+7. **Optional Pentest-Mode State Encryption**:
+   - `ProjectRepository` encrypts only a Pentest-Mode project's `project_state.json` with authenticated Fernet encryption. `crypto_service.py` derives a key using PBKDF2-SHA256; `ProjectLockService` retains that key only for the unlocked process session.
+   - `security_meta.json` contains the salt, safe KDF parameters and an encrypted verifier, never a password or usable project key. `report.md`, notes, screenshots and user-selected plaintext exports are intentionally outside this scope. See [Pentest Mode](pentest_mode.md).
 
 ---
 
@@ -148,10 +154,10 @@ graph TD
 ## 5. Testing & CI/CD Strategy
 
 - **Master Test Runner (`run_tests.py`)**:
-  - Automatically discovers and executes all **40 test suites** (253 tests) across `tests/`.
-  - Runs in headless mode (`QT_QPA_PLATFORM=offscreen`).
+  - Delegates to the pytest collection under `tests/` and runs headlessly (`QT_QPA_PLATFORM=offscreen`).
+  - Test counts are intentionally not treated as release documentation: parametrization and regression additions change them. The current CI result is the release evidence.
 - **GitHub Actions CI (`.github/workflows/ci.yml`)**:
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.
   - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.
   - Linux headless display setup using `xvfb-run`.
-  - Automated `flake8` syntax validation and `coverage` reporting.
+  - Automated `flake8` syntax validation, pytest execution and Linux coverage reporting.

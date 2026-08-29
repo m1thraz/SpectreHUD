@@ -59,7 +59,9 @@ class TestWorkflowInvariants(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self, 'window') and self.window:
-            self.window.close()
+            from unittest.mock import patch
+            with patch("PyQt6.QtWidgets.QMessageBox.exec", return_value=0):
+                self.window.close()
         try:
             self.temp_dir.cleanup()
         except Exception:
@@ -322,19 +324,20 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.project_mgr.create_project("BoxOldWS")
         self.project_mgr.activate_project("BoxOldWS")
 
-        # Second workspace with a different project
-        import tempfile
-        with tempfile.TemporaryDirectory() as new_ws_tmp:
-            new_ws = Path(new_ws_tmp) / "projects"
-            new_ws.mkdir(parents=True, exist_ok=True)
-            (new_ws / "NewWSProject").mkdir()
+        # Second workspace with a different project under self.base_path so it survives tearDown
+        new_ws = self.base_path / "valid_second_workspace"
+        new_ws.mkdir(parents=True, exist_ok=True)
+        new_proj_dir = new_ws / "NewWSProject"
+        new_proj_dir.mkdir(parents=True, exist_ok=True)
+        (new_proj_dir / "loot").mkdir(parents=True, exist_ok=True)
+        (new_proj_dir / "reports").mkdir(parents=True, exist_ok=True)
 
-            self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
+        self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
 
-            self.assertEqual(self.project_mgr.base_dir, new_ws.resolve())
-            self.assertEqual(self.project_mgr.get_active_project(), "NewWSProject")
-            self.assertTrue((new_ws / self.project_mgr.get_active_project()).is_dir())
-            self.assertEqual(self.config_mgr.get("workspace_dir"), str(new_ws.resolve()))
+        self.assertEqual(self.project_mgr.base_dir, new_ws.resolve())
+        self.assertEqual(self.project_mgr.get_active_project(), "NewWSProject")
+        self.assertTrue((new_ws / self.project_mgr.get_active_project()).is_dir())
+        self.assertEqual(self.config_mgr.get("workspace_dir"), str(new_ws.resolve()))
 
     # -------------------------------------------------------------------------
     # Invariant 8 (v15-P0): Workspace switch — pre-commit rollback restores old state

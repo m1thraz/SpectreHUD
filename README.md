@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange?style=for-the-badge" alt="Windows & Linux">
   <img src="https://img.shields.io/badge/Focus-TryHackMe%20%7C%20HTB%20%7C%20CTFs-red?style=for-the-badge" alt="CTF Focus">
   <img src="https://img.shields.io/badge/i18n-English%20%7C%20German-purple?style=for-the-badge" alt="i18n English & German">
-  <img src="https://img.shields.io/badge/Tests-45%20Suites%20%7C%20292%20Passed-brightgreen?style=for-the-badge" alt="45 Suites / 292 Tests">
+  <img src="https://img.shields.io/badge/Tests-pytest%20suite-brightgreen?style=for-the-badge" alt="pytest test suite">
   <img src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" alt="MIT License">
 </p>
 
@@ -34,16 +34,15 @@ SpectreHUD is a frameless PyQt6 HUD overlay for CTFs and authorized penetration-
 - **Severity-Aware Session Loot** — Credentials, hashes, directories, flags, and notes are classified by pentest phase (*Recon, Initial Access, Privilege Escalation, Post-Exploitation, Custom Scripts, Misc*) and **Severity Level** (*Critical, High, Medium, Low, Info*), automatically calculating risk metrics summaries and severity badges.
 - **Native Screenshot Snipping** — Region capture tool saves snippets directly into the active project's `loot/` directory and embeds them automatically into your reports and live previews.
 - **Privacy-Conscious, Opt-in Clipboard Logger** — Starts **paused** by default (`REC: Off`) to protect your credentials. A single shortcut (`Ctrl + P`) or click activates logging exclusively for the active project session.
-- **Report Editor V2 with Triple View Modes**:
-  - **📝 Source Editor (`Ctrl + 1`)** — Monospace Markdown source editor for precise markup tweaks.
-  - **◫ Split View (`Ctrl + 2`)** — Side-by-side synchronized Markdown editing and live rendering.
-  - **👁️ Live Preview (`Ctrl + 3`)** — Fullscreen interactive HTML preview with WYSIWYG live editing and drag & drop image security sandboxing.
+- **Report Editor V2** — A compact **Change View** menu selects source editor, synchronized split view, or live preview (the `Ctrl + 1` / `2` / `3` shortcuts remain available). The Markdown toolbar supports headings, emphasis, code, lists, links and tables; find/replace, debounced preview updates and periodic autosave keep longer reports manageable.
+- **Interactive Report Preview & Client-Friendly Export** — Edit text directly in the standalone HTML preview, resize embedded images, print to PDF, or save an edited HTML copy. Before export, choose **Dark — SpectreHUD** or the print-friendly **Light — Client / Print** design.
 - **Structured Template Engine & Template Manager** — Choose from built-in industry templates (*Standard CTF Box, Web Application Pentest, Active Directory Assessment, Executive Summary*) or create custom user templates with JSON schema validation, dynamic placeholders, and structured sections.
 - **1-Click HTML & ZIP Export**:
   - **Standalone HTML Exporter** — Generates self-contained, offline HTML reports with Cyber-Dark styling and embedded screenshots.
   - **Box Archiver** — Compresses the entire project workspace (`recon/`, `exploit/`, `loot/`, `report.md`, `project_state.json`) into a clean ZIP archive with path-traversal safeguards.
-- **Full Internationalization (i18n)** — Dynamic language switching between **English (US)** and **German (Standard)** across all views, forms, dialogs, and reports.
-- **Modular Settings & Hotkey Configuration** — Customize every global hotkey, always-on-top behavior, workspace and default variables in a cyber glassmorphism dialog (`Ctrl + ,`).
+- **German & English Interface** — The interface can be switched live between **English (US)** and **German (Standard)**. Core forms, report actions and user-facing error prompts use the active locale.
+- **Pentest Mode (Optional Encryption)** — Per-project encryption protects `project_state.json` (variables, loot and clipboard history) with a password-derived key that exists only for the unlocked session. See [Pentest Mode](docs/pentest_mode.md) for scope and limitations.
+- **Modular Settings & Hotkey Configuration** — Customize global hotkeys, font families for app/code/report output, always-on-top behavior, workspace and default variables in the settings dialog (`Ctrl + ,`).
 
 ![Add Command Dialog](assets/spectrehud_add_command.png)
 
@@ -66,7 +65,7 @@ The template subsystem (`core/reporting/`) generates structured penetration test
 5. **Post-Exploitation & Lateral Movement** — Internal subnets, pivoting notes, additional host accounts.
 6. **Remediation & Hardening** — Actionable defensive countermeasures prioritized by severity.
 
-Edit your report in the **Report Tab** (`Ctrl + 4`), customize templates in the **Template Manager** (`🎨 Templates...`), and save with `Ctrl + S`.
+Edit your report in the **Report Tab** (`Ctrl + 4`), customize templates in the **Template Manager** (`🎨 Templates...`), and save with `Ctrl + S`. Use **Change View** for Editor, Split, or Live Preview; `Ctrl + 1` / `2` / `3` are retained as report-editor shortcuts.
 
 ---
 
@@ -79,7 +78,7 @@ Edit your report in the **Report Tab** (`Ctrl + 4`), customize templates in the 
 | `Ctrl + Super + Q` | Global | Quit SpectreHUD completely |
 | `Esc` | In-App | Hide HUD overlay / Close modal dialog |
 | `Ctrl + 1` / `2` / `3` / `4` | In-App | Switch Mode: Cheatsheet / Loot / History / Report Editor |
-| `Ctrl + 1` / `2` / `3` | Report View | Switch View Mode: 📝 Editor / ◫ Split / 👁️ Live Preview |
+| `Ctrl + 1` / `2` / `3` | Report tab | Switch view: Editor / Split / Live Preview (also available via **Change View**) |
 | `Ctrl + F` | In-App | Focus spotlight command search |
 | `Ctrl + N` | In-App | Add new command snippet or loot entry |
 | `Ctrl + S` | In-App | Capture screenshot (or Save Report in Report tab) |
@@ -98,10 +97,10 @@ SpectreHUD is hardened against adversarial input, directory traversal, and data 
 4. **Drag & Drop Security**: Image insertion into the report preview is strictly sandboxed to project `loot/` subdirectories with size limits (15 MB), preventing local file disclosure.
 5. **Single-Instance Guard**: A Qt `QLockFile` is acquired before the service container, workspace and UI start. A second launch exits with a clear message; crashed owners and stale locks are recovered safely.
 6. **Consistent Domain Events**: Loot and clipboard-history changes each publish exactly one event with a stable payload contract, avoiding duplicate UI refreshes and ambiguous state updates.
-7. **Comprehensive Test Suite**: 45 test suites containing 292 unit, integration and adversarial regression tests are verified for the current release candidate.
+7. **Regression Coverage**: The pytest suite covers unit, integration, workflow-invariant and adversarial regression cases. The release gate is the actual CI result rather than a hard-coded test count; see the [release-readiness plan](docs/release_readiness_plan.md).
 
 > [!WARNING]
-> SpectreHUD is intended as a local productivity tool for CTF challenges, training laboratories, and authorized penetration testing engagements. Session loot and clipboard logs are stored in **plaintext JSON** inside your local project folders for transparent inspection and easy export. Keep the clipboard recorder paused outside active sessions (`Ctrl + P`).
+> SpectreHUD is intended as a local productivity tool for CTF challenges, training laboratories, and authorized penetration-testing engagements. By default, session loot and clipboard logs are stored in **plaintext JSON** inside local project folders for transparent inspection and easy export. Enable Pentest Mode when `project_state.json` needs encryption; reports, notes and screenshots remain outside that encryption scope. Keep the clipboard recorder paused outside active sessions (`Ctrl + P`).
 
 ---
 
@@ -151,7 +150,7 @@ cd SpectreHUD
 # Install in editable mode with development dependencies
 pip install -e ".[dev]"
 
-# Run full test suite (45 suites / 292 tests)
+# Run the full test suite
 python run_tests.py
 # Or via pytest
 pytest

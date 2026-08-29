@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
+    "pytest-timeout>=2.1.0",
     "pyinstaller>=6.0.0",
     "flake8>=6.0.0",
 ]
@@ -51,4 +52,5 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v"
+addopts = "-v --tb=short"
+timeout = 60
