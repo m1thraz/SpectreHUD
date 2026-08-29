@@ -18,14 +18,60 @@ from ui.template_editor_dialog import TemplateEditorDialog
 from ui.styles import CYBER_DARK_QSS
 
 
+# QTableWidget is not covered by the app-wide stylesheet.  On Windows it used
+# the platform palette (dark rows with grey/black text), unlike the adjacent
+# report generation and template editor dialogs.
+TEMPLATE_MANAGER_QSS = CYBER_DARK_QSS + """
+QDialog#TemplateManagerDialog {
+    background-color: #161b22;
+    color: #f0f6fc;
+}
+
+QDialog#TemplateManagerDialog QLabel {
+    color: #f0f6fc;
+    background-color: transparent;
+}
+
+QTableWidget#TemplateTable {
+    background-color: #0d1117;
+    color: #f0f6fc;
+    border: 1px solid #3d444d;
+    border-radius: 6px;
+    gridline-color: #30363d;
+    selection-background-color: #1f6feb;
+    selection-color: #ffffff;
+    alternate-background-color: #161b22;
+}
+
+QTableWidget#TemplateTable::item {
+    color: #f0f6fc;
+    padding: 5px;
+}
+
+QTableWidget#TemplateTable::item:hover {
+    background-color: #21262d;
+}
+
+QHeaderView::section {
+    background-color: #21262d;
+    color: #f0f6fc;
+    border: none;
+    border-bottom: 1px solid #3d444d;
+    padding: 6px;
+    font-weight: bold;
+}
+"""
+
+
 class TemplateManagerDialog(QDialog):
     """Management dialog for viewing, customizing, and selecting Report Templates."""
 
     def __init__(self, repository: Optional[TemplateRepository] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        self.setObjectName("TemplateManagerDialog")
         self.setWindowTitle("Report-Templates verwalten")
         self.resize(750, 420)
-        self.setStyleSheet(CYBER_DARK_QSS)
+        self.setStyleSheet(TEMPLATE_MANAGER_QSS)
 
         self.repo = repository or TemplateRepository()
         self.selected_template: Optional[ReportTemplate] = None
@@ -42,6 +88,7 @@ class TemplateManagerDialog(QDialog):
         layout.addWidget(lbl)
 
         self.table = QTableWidget()
+        self.table.setObjectName("TemplateTable")
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
             "Name", "ID", "Sprache", "Kategorie", "Komplexität", "Typ"
@@ -54,6 +101,7 @@ class TemplateManagerDialog(QDialog):
         self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.table.setAlternatingRowColors(True)
         self.table.itemDoubleClicked.connect(self._on_table_double_clicked)
         self.table.itemSelectionChanged.connect(self._update_button_states)
         layout.addWidget(self.table)

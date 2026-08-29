@@ -123,6 +123,13 @@ class TestTemplateDialogs(unittest.TestCase):
 
         self.assertIsNone(self.repo.get_template("dup_test_1"))
 
+    def test_template_manager_uses_high_contrast_table_styles(self):
+        dlg = TemplateManagerDialog(repository=self.repo)
+        self.assertEqual(dlg.objectName(), "TemplateManagerDialog")
+        self.assertEqual(dlg.table.objectName(), "TemplateTable")
+        self.assertIn("QTableWidget#TemplateTable", dlg.styleSheet())
+        self.assertIn("color: #f0f6fc", dlg.styleSheet())
+
 
 if __name__ == "__main__":
     unittest.main()
