@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
 from core.project_manager import get_default_projects_dir
 from core.logger import get_logger
+from core.i18n import t
 import pyperclip
 
 logger = get_logger("loot_card")
@@ -59,7 +60,7 @@ class LootCard(QFrame):
         lbl_cat = QLabel(cat_short_name)
         lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
         lbl_cat.setProperty("class", "CategoryBadge")
-        lbl_cat.setToolTip(f"Pentest-Phase: {cat_info['name']}")
+        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=cat_info["name"]))
         header_layout.addWidget(lbl_cat)
 
         # 3. Title
@@ -89,27 +90,27 @@ class LootCard(QFrame):
         # 6. Edit Button
         btn_edit = QPushButton("✎")
         btn_edit.setProperty("class", "EditBtn")
-        btn_edit.setToolTip("Diesen Eintrag bearbeiten / umkategorisieren")
+        btn_edit.setToolTip(t("loot.edit_tip", "Edit or recategorize this entry"))
         btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
         header_layout.addWidget(btn_edit)
 
         # 7. Export Button
         self.btn_export_file = QPushButton("⇩")
         self.btn_export_file.setProperty("class", "SecondaryBtn")
-        self.btn_export_file.setToolTip("Diesen Loot-Eintrag als Textdatei ins Projekt exportieren")
+        self.btn_export_file.setToolTip(t("loot.export_file_tip", "Export this loot entry to a text file in the project"))
         self.btn_export_file.clicked.connect(lambda: self.export_requested.emit(self.entry.get("id", "")))
         header_layout.addWidget(self.btn_export_file)
 
         self.btn_export_obsidian = QPushButton("O")
         self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
-        self.btn_export_obsidian.setToolTip("Diesen Loot-Eintrag an die Obsidian-Projektnotiz anhängen")
+        self.btn_export_obsidian.setToolTip(t("loot.export_obsidian_tip", "Append this loot entry to the Obsidian project note"))
         self.btn_export_obsidian.clicked.connect(lambda: self.obsidian_export_requested.emit(self.entry.get("id", "")))
         header_layout.addWidget(self.btn_export_obsidian)
 
         # 8. Delete Button
         btn_delete = QPushButton("✕")
         btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setToolTip("Diesen Eintrag löschen")
+        btn_delete.setToolTip(t("loot.delete_tip", "Delete this entry"))
         btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
         header_layout.addWidget(btn_delete)
 
@@ -131,7 +132,7 @@ class LootCard(QFrame):
 
             btn_open_img = QPushButton("Open")
             btn_open_img.setProperty("class", "SecondaryBtn")
-            btn_open_img.setToolTip("Screenshot in Standard-Bildbetrachter öffnen")
+            btn_open_img.setToolTip(t("loot.open_screenshot_tip", "Open screenshot in the default image viewer"))
             btn_open_img.clicked.connect(lambda: self._open_image(img_path))
             thumb_row.addWidget(btn_open_img, alignment=Qt.AlignmentFlag.AlignVCenter)
 

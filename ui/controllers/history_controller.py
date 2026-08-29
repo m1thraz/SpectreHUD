@@ -193,7 +193,7 @@ class HistoryController(QObject):
 
         btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
-        btn_clear.setToolTip("Clipboard-Historie dieses Projekts leeren")
+        btn_clear.setToolTip(t("history.clear_tip", "Clear this project's clipboard history"))
         btn_clear.clicked.connect(on_clear)
         pills_layout.addWidget(btn_clear)
 

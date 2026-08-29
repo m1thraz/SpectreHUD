@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QFrame
 )
 from ui.styles import CYBER_DARK_QSS
+from core.i18n import t
 
 
 class BaseHudDialog(QDialog):
@@ -66,7 +67,7 @@ class BaseHudDialog(QDialog):
 
         self.btn_dialog_close = QPushButton("✕")
         self.btn_dialog_close.setProperty("class", "DangerBtn")
-        self.btn_dialog_close.setToolTip("Schließen (Esc)")
+        self.btn_dialog_close.setToolTip(t("dialog.close_tip", "Close (Esc)"))
         self.btn_dialog_close.clicked.connect(self.reject)
         header_layout.addWidget(self.btn_dialog_close)
 

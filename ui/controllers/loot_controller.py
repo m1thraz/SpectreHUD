@@ -323,7 +323,7 @@ class LootController(QObject):
 
         btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
-        btn_clear.setToolTip("Session-Loot dieses Projekts leeren")
+        btn_clear.setToolTip(t("loot.clear_tip", "Clear this project's session loot"))
         btn_clear.clicked.connect(on_clear)
         pills_layout.addWidget(btn_clear)
 

@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
+from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 
 class AddLootDialog(BaseHudDialog):
@@ -33,7 +34,10 @@ class AddLootDialog(BaseHudDialog):
     ):
         self.entry_id = entry_id or kwargs.get("id")
         self.is_edit = is_edit or bool(self.entry_id)
-        dialog_title = "SPECTRE // SESSION-LOOT BEARBEITEN" if self.is_edit else "SPECTRE // NEUEN SESSION-LOOT ERFASSEN"
+        dialog_title = t(
+            "loot_dialog.title_edit" if self.is_edit else "loot_dialog.title_new",
+            "SPECTRE // EDIT SESSION LOOT" if self.is_edit else "SPECTRE // CAPTURE SESSION LOOT",
+        )
         
         super().__init__(title=dialog_title, parent=parent)
         self.setMinimumWidth(540)
@@ -58,14 +62,14 @@ class AddLootDialog(BaseHudDialog):
         # 1a. Type
         type_col = QVBoxLayout()
         type_col.setSpacing(4)
-        lbl_type = QLabel("Typ:")
+        lbl_type = QLabel(t("loot_dialog.lbl_type", "Entry Type:"))
         lbl_type.setProperty("class", "FormLabel")
         type_col.addWidget(lbl_type)
 
         self.combo_type = QComboBox()
-        for i, t in enumerate(LOOT_TYPES):
-            self.combo_type.addItem(t['name'], t['id'])
-            if t['id'] == self.initial_type:
+        for i, loot_type in enumerate(LOOT_TYPES):
+            self.combo_type.addItem(loot_type['name'], loot_type['id'])
+            if loot_type['id'] == self.initial_type:
                 self.combo_type.setCurrentIndex(i)
         type_col.addWidget(self.combo_type)
         select_row.addLayout(type_col, stretch=1)
@@ -73,7 +77,7 @@ class AddLootDialog(BaseHudDialog):
         # 1b. Severity / Schweregrad
         sev_col = QVBoxLayout()
         sev_col.setSpacing(4)
-        lbl_sev = QLabel("Severity:")
+        lbl_sev = QLabel(t("loot_dialog.lbl_severity", "Severity:"))
         lbl_sev.setProperty("class", "FormLabel")
         sev_col.addWidget(lbl_sev)
 
@@ -95,7 +99,7 @@ class AddLootDialog(BaseHudDialog):
         # 1c. Pentest Category
         cat_col = QVBoxLayout()
         cat_col.setSpacing(4)
-        lbl_cat = QLabel("Kategorie / Phase:")
+        lbl_cat = QLabel(t("loot_dialog.lbl_category", "Pentest Phase / Category:"))
         lbl_cat.setProperty("class", "FormLabel")
         cat_col.addWidget(lbl_cat)
 
@@ -110,28 +114,28 @@ class AddLootDialog(BaseHudDialog):
         layout.addLayout(select_row)
 
         # 2. Title
-        lbl_title = QLabel("Titel / Bezeichner:")
+        lbl_title = QLabel(t("loot_dialog.lbl_name", "Title / Identifier:"))
         lbl_title.setProperty("class", "FormLabel")
         layout.addWidget(lbl_title)
 
         self.txt_title = QLineEdit(self.initial_title)
-        self.txt_title.setPlaceholderText("z.B. SSH Key user 'alice', MySQL Root Password, user.txt")
+        self.txt_title.setPlaceholderText(t("loot_dialog.ph_name", "e.g. SSH Key user 'alice', MySQL Root Password, user.txt"))
         layout.addWidget(self.txt_title)
 
         # 3. Content / Value
-        lbl_content = QLabel("Inhalt / Passwort / Hash / Flag / Notiz:")
+        lbl_content = QLabel(t("loot_dialog.lbl_content", "Content / Password / Hash / Flag / Note:"))
         lbl_content.setProperty("class", "FormLabel")
         layout.addWidget(lbl_content)
 
         self.txt_content = QPlainTextEdit()
         self.txt_content.setObjectName("CommandBox")
         self.txt_content.setPlainText(self.initial_content)
-        self.txt_content.setPlaceholderText("z.B. admin:SuperSecretPass! oder THM{fl4g_h3r3}")
+        self.txt_content.setPlaceholderText(t("loot_dialog.ph_content", "e.g. admin:SuperSecretPass! or THM{fl4g_h3r3}"))
         self.txt_content.setFixedHeight(100)
         layout.addWidget(self.txt_content)
 
         # 4. Target IP
-        lbl_target = QLabel("Zugehöriges Target (optional):")
+        lbl_target = QLabel(t("loot_dialog.lbl_target", "Associated Target (optional):"))
         lbl_target.setProperty("class", "FormLabel")
         layout.addWidget(lbl_target)
 
@@ -143,17 +147,17 @@ class AddLootDialog(BaseHudDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        lbl_hint = QLabel("↵ Enter: Speichern | Esc: Abbrechen")
+        lbl_hint = QLabel(t("loot_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
         lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        save_label = "Aktualisieren" if self.is_edit else "Speichern"
+        save_label = t("dialog.update", "Update") if self.is_edit else t("dialog.save", "Save")
         self.btn_save = QPushButton(save_label)
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.clicked.connect(self._on_save)
@@ -163,10 +167,10 @@ class AddLootDialog(BaseHudDialog):
 
     def _on_save(self) -> None:
         if not self.txt_title.text().strip():
-            QMessageBox.warning(self, "Fehler", "Bitte gib einen Titel für den Eintrag ein.")
+            QMessageBox.warning(self, t("dialog.error", "Error"), t("loot_dialog.err_title", "Please enter a title for the loot entry."))
             return
         if not self.txt_content.toPlainText().strip():
-            QMessageBox.warning(self, "Fehler", "Bitte gib den Inhalt / Wert ein.")
+            QMessageBox.warning(self, t("dialog.error", "Error"), t("loot_dialog.err_content", "Please enter the content / value."))
             return
         self.accept()
 

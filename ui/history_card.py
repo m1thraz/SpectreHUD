@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any
 import pyperclip
 from core.logger import get_logger
+from core.i18n import t
 
 logger = get_logger(__name__)
 
@@ -64,7 +65,7 @@ class HistoryCard(QFrame):
         # Delete Button
         btn_delete = QPushButton("✕")
         btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setToolTip("Diesen Verlaufseintrag löschen")
+        btn_delete.setToolTip(t("history.delete_tip", "Delete this history entry"))
         btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
         header_layout.addWidget(btn_delete)
 
@@ -97,7 +98,7 @@ class HistoryCard(QFrame):
 
         self.btn_to_loot = QPushButton("+ Loot")
         self.btn_to_loot.setProperty("class", "SecondaryBtn")
-        self.btn_to_loot.setToolTip("Diesen Text als Credential/Notiz in Session-Loot übernehmen")
+        self.btn_to_loot.setToolTip(t("history.add_to_loot_tip", "Add this text to session loot as a credential or note"))
         self.btn_to_loot.setMinimumWidth(90)
         self.btn_to_loot.clicked.connect(lambda: self.transfer_to_loot.emit(self.entry))
         action_col.addWidget(self.btn_to_loot)
