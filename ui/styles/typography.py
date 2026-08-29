@@ -11,6 +11,18 @@ QWidget#CentralWidget {
     color: #c9d1d9;
 }
 
+/* Native tooltips do not reliably inherit the application's text colour on
+   Windows. Give every hover hint an explicit, high-contrast treatment. */
+QToolTip {
+    background-color: #161b22;
+    color: #f0f6fc;
+    border: 1px solid #00e5ff;
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-family: {ui_font};
+    font-size: 12px;
+}
+
 /* Card & Snippet Typography */
 QLabel#SnippetTitle {
     color: #f0f6fc;

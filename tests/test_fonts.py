@@ -27,6 +27,8 @@ def test_qss_uses_selected_ui_and_code_fonts():
     qss = build_app_theme("inter", "jetbrains_mono")
     assert UI_FONT_STACKS["inter"] in qss
     assert CODE_FONT_STACKS["jetbrains_mono"] in qss
+    assert "QToolTip" in qss
+    assert "color: #f0f6fc;" in qss
 
 
 def test_invalid_font_preferences_fall_back_to_safe_defaults():
