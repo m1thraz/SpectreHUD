@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QFrame, QApplication
 )
-from PyQt6.QtCore import Qt, QPoint, QEvent
+from PyQt6.QtCore import Qt, QPoint, QEvent, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
 
 from core.config import ConfigManager
@@ -104,8 +104,13 @@ class MainWindow(QMainWindow):
         self._startup_mark(started_at, "project state loaded")
         self.app.refresh_filter_pills()
         self._startup_mark(started_at, "filter pills built")
-        self.app.refresh_content()
-        self._startup_mark(started_at, "initial content rendered")
+        # Rendering all initial Cheatsheet cards is intentionally deferred
+        # until the native window is visible. This gets the HUD on screen
+        # sooner while keeping the first content render on the GUI thread.
+        self._startup_started_at = started_at
+        self._initial_content_pending = True
+        self.app.content_refreshed.connect(self._mark_initial_content_rendered)
+        self._startup_mark(started_at, "initial content deferred")
         self._center_on_screen()
         self._startup_mark(started_at, "complete")
 
@@ -115,6 +120,21 @@ class MainWindow(QMainWindow):
         if os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
             elapsed_ms = (time.perf_counter() - started_at) * 1_000
             print(f"[SpectreHUD startup] MainWindow {stage}: {elapsed_ms:.1f} ms", flush=True)
+
+    def _mark_initial_content_rendered(self) -> None:
+        """Clear the deferred-render marker if another UI action rendered first."""
+        self._initial_content_pending = False
+
+    def _render_initial_content(self) -> None:
+        if not self._initial_content_pending:
+            return
+        self.app.refresh_content()
+        self._startup_mark(self._startup_started_at, "initial content rendered")
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if self._initial_content_pending:
+            QTimer.singleShot(0, self._render_initial_content)
 
     # -------------------------------------------------------------
     # Window & Panel Layout Construction
@@ -233,6 +253,10 @@ class MainWindow(QMainWindow):
 
     @property
     def cards(self) -> List[QWidget]:
+        # Preserve the established programmatic contract for callers that
+        # inspect cards before the window has ever been shown (notably tests).
+        if getattr(self, "_initial_content_pending", False):
+            self._render_initial_content()
         return self.app.cards
 
     @cards.setter
