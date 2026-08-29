@@ -12,6 +12,7 @@ from core.project.validator import (
     WorkspaceError,
     validate_project_name,
     sanitize_project_name,
+    sanitize_filename_component,
     validate_workspace_boundary,
     validate_workspace_directory
 )
@@ -38,6 +39,7 @@ __all__ = [
     "WorkspaceError",
     "validate_project_name",
     "sanitize_project_name",
+    "sanitize_filename_component",
     "validate_workspace_boundary",
     "validate_workspace_directory",
     "DEFAULT_NOTES_TEMPLATE",

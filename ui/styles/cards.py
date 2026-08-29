@@ -46,6 +46,20 @@ QFrame#SnippetCard:hover {
     background-color: rgba(26, 33, 44, 0.9);
 }
 
+/* Kanban columns reuse LootCards while retaining clear phase boundaries. */
+QFrame[class="LootBoardColumn"] {
+    background-color: rgba(13, 17, 23, 0.72);
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    border-radius: 8px;
+}
+
+QLabel[class="LootBoardColumnTitle"] {
+    color: #00e5ff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px;
+}
+
 /* Command Code Display Box */
 QLabel#CommandLabel {
     background-color: rgba(9, 13, 18, 0.95);

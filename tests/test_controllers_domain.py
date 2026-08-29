@@ -163,6 +163,42 @@ class TestControllersDomain(unittest.TestCase):
         self.assertIsNone(loot_events[4]["entry"])
         self.assertEqual(loot_events[4]["entries"], [])
 
+    def test_loot_entry_file_export_uses_category_folder_and_safe_filename(self):
+        entry = self.loot_ctrl.add_entry(
+            entry_type="note",
+            title="../ Nmap Scan: 10.10.10.55",
+            content="nmap -sC -sV 10.10.10.55",
+            category="scripts",
+        )
+
+        exported = self.loot_ctrl.export_entry_to_file(entry["id"])
+
+        project_dir = self.project_mgr.get_project_dir()
+        self.assertTrue(exported.is_file())
+        self.assertTrue(exported.is_relative_to(project_dir / "scripts"))
+        self.assertNotIn("..", exported.name)
+        self.assertIn("Nmap_Scan_10.10.10.55", exported.name)
+        self.assertIn("nmap -sC -sV 10.10.10.55", exported.read_text(encoding="utf-8"))
+
+        second_export = self.loot_ctrl.export_entry_to_file(entry["id"])
+        self.assertNotEqual(exported, second_export)
+        self.assertTrue(second_export.is_file())
+
+    def test_loot_controller_moves_entry_between_categories(self):
+        entry = self.loot_ctrl.add_entry("note", "Move me", "content", category="recon")
+
+        self.assertTrue(self.loot_ctrl.move_entry_to_category(entry["id"], "postex"))
+        self.assertEqual(self.loot_ctrl.get_entries()[0]["category"], "postex")
+        self.assertFalse(self.loot_ctrl.move_entry_to_category(entry["id"], "not-a-category"))
+
+    def test_loot_entry_file_export_surfaces_atomic_write_failure(self):
+        from core.storage import PersistenceError
+
+        entry = self.loot_ctrl.add_entry("note", "Cannot write", "content", category="recon")
+        with patch("ui.controllers.loot_controller.atomic_write_text", side_effect=OSError("disk full")):
+            with self.assertRaises(PersistenceError):
+                self.loot_ctrl.export_entry_to_file(entry["id"])
+
     def test_loot_add_dialog_accepts_new_button_prefill_arguments(self):
         """Loot and History New actions can pass their target and dialog defaults."""
         dialog_data = {

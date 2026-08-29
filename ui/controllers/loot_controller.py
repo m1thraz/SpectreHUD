@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
@@ -6,11 +7,14 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 from core.loot_manager import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
 from core.project_manager import ProjectManager
 from core.storage import PersistenceError, StorageError
+from core.atomic_write import atomic_write_text
+from core.project.validator import sanitize_filename_component, validate_workspace_boundary
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus
 from core.i18n import t
 from ui.loot_card import LootCard
+from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
 from ui.styles import CYBER_DARK_QSS
 
@@ -125,6 +129,22 @@ class LootController(QObject):
             self._notify_persistence_error("update_entry", e)
             return False
 
+    def move_entry_to_category(
+        self, entry_id: str, category: str, parent_widget: Optional[QWidget] = None
+    ) -> bool:
+        """Moves one entry between Kanban columns and persists its category."""
+        if category not in {item["id"] for item in CATEGORIES}:
+            return False
+        try:
+            updated = self.loot_manager.update_entry(entry_id, category=category)
+            if updated is None:
+                return False
+            self.loot_updated.emit()
+            return True
+        except (PersistenceError, StorageError, LootValidationError, OSError) as exc:
+            self._notify_persistence_error("move_entry_to_category", exc, parent_widget)
+            return False
+
     def delete_entry(self, entry_id: str) -> bool:
         try:
             success = self.loot_manager.delete_entry(entry_id)
@@ -160,6 +180,63 @@ class LootController(QObject):
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
         return self.loot_manager.export_loot(output_path, target_ip=target_ip)
+
+    def export_entry_to_file(self, entry_id: str) -> Path:
+        """Writes one loot entry as a human-readable, project-local text file."""
+        entry = next((item for item in self.loot_manager.get_all_entries() if item.get("id") == entry_id), None)
+        if entry is None:
+            raise ValueError(f"Loot entry '{entry_id}' does not exist.")
+
+        category = entry.get("category", "misc")
+        if category not in {item["id"] for item in CATEGORIES}:
+            category = "misc"
+
+        project_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
+        category_dir = validate_workspace_boundary(project_dir / category, project_dir)
+        if category_dir.exists() and category_dir.is_symlink():
+            raise PersistenceError(f"Refusing to export through symlinked category directory: {category}")
+        category_dir.mkdir(parents=True, exist_ok=True)
+        category_dir = validate_workspace_boundary(category_dir, project_dir)
+        if category_dir.is_symlink() or not category_dir.is_dir():
+            raise PersistenceError(f"Invalid project category directory: {category}")
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        clean_title = sanitize_filename_component(str(entry.get("title", "loot")), fallback="loot")
+        target = category_dir / f"{timestamp}_{clean_title}.txt"
+        suffix = 1
+        while target.exists():
+            target = category_dir / f"{timestamp}_{clean_title}_{suffix:02d}.txt"
+            suffix += 1
+        target = validate_workspace_boundary(target, project_dir)
+
+        contents = "\n".join([
+            f"Title: {entry.get('title', '')}",
+            f"Type: {entry.get('type', 'note')}",
+            f"Category: {category}",
+            f"Target: {entry.get('target_ip', '')}",
+            f"Captured: {entry.get('timestamp', '')}",
+            "",
+            str(entry.get("content", "")),
+            "",
+        ])
+        try:
+            if not atomic_write_text(target, contents):
+                raise PersistenceError(f"Could not write loot export to {target}")
+        except OSError as exc:
+            raise PersistenceError(f"Could not write loot export to {target}: {exc}") from exc
+        return target
+
+    def export_entry_to_file_with_feedback(self, entry_id: str, parent_widget: Optional[QWidget] = None) -> Optional[Path]:
+        """Exports one entry and reports the outcome to the user."""
+        try:
+            output_path = self.export_entry_to_file(entry_id)
+        except (PersistenceError, OSError, ValueError) as exc:
+            logger.error("Loot file export failed for %s: %s", entry_id, exc, exc_info=True)
+            QMessageBox.warning(parent_widget, "Export fehlgeschlagen", f"Loot-Datei konnte nicht exportiert werden:\n{exc}")
+            return None
+
+        QMessageBox.information(parent_widget, "Loot-Datei exportiert", f"Gespeichert unter:\n{output_path}")
+        return output_path
 
     def get_type_filter_actions(
         self,
@@ -249,6 +326,7 @@ class LootController(QObject):
         proj_dir: Path,
         on_delete_loot: Callable[[str], None],
         on_edit_loot: Callable[[Dict[str, Any]], None],
+        on_export_loot: Callable[[str], None],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None]
     ) -> List[QWidget]:
@@ -282,10 +360,40 @@ class LootController(QObject):
                 card = LootCard(entry, proj_dir, parent=parent_widget)
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
+                card.export_requested.connect(on_export_loot)
                 content_layout.addWidget(card)
                 rendered_cards.append(card)
 
         return rendered_cards
+
+    def render_board_content(
+        self,
+        content_layout: QVBoxLayout,
+        search_query: str,
+        proj_dir: Path,
+        on_delete_loot: Callable[[str], None],
+        on_edit_loot: Callable[[Dict[str, Any]], None],
+        on_export_loot: Callable[[str], None],
+        on_move_loot: Callable[[str, str], bool],
+        parent_widget: QWidget,
+    ) -> List[QWidget]:
+        """Renders the alternate Kanban presentation using the same LootCards."""
+        loot_entries = self.get_entries(
+            target_ip=None,
+            entry_type=self.current_loot_type,
+            search_query=search_query,
+        )
+        board = LootBoard(
+            entries=loot_entries,
+            project_dir=proj_dir,
+            on_delete=on_delete_loot,
+            on_edit=on_edit_loot,
+            on_export=on_export_loot,
+            on_move=on_move_loot,
+            parent=parent_widget,
+        )
+        content_layout.addWidget(board)
+        return [board]
 
     def open_add_dialog(
         self,

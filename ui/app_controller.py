@@ -235,10 +235,17 @@ class AppController(QObject):
             self.footer.set_count(_format_count(len(self.cards)))
         elif self.active_mode == "loot":
             proj_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
-            self.cards = self.loot_ctrl.render_content(
-                content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
-                self.window, self.content.show_empty_state
-            )
+            if self.config.get("loot_view_mode", "list") == "board":
+                self.cards = self.loot_ctrl.render_board_content(
+                    content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
+                    self._on_export_loot_entry, self._on_move_loot_category, self.window
+                )
+            else:
+                self.cards = self.loot_ctrl.render_content(
+                    content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
+                    self._on_export_loot_entry,
+                    self.window, self.content.show_empty_state
+                )
             self.footer.set_count(_format_count(len(self.cards)))
         else:
             self.cards = self.history_ctrl.render_content(
@@ -280,6 +287,12 @@ class AppController(QObject):
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         if self.loot_ctrl.open_edit_dialog(self.window, entry):
             self._on_loot_data_updated()
+
+    def _on_export_loot_entry(self, entry_id: str) -> None:
+        self.loot_ctrl.export_entry_to_file_with_feedback(entry_id, self.window)
+
+    def _on_move_loot_category(self, entry_id: str, category: str) -> bool:
+        return self.loot_ctrl.move_entry_to_category(entry_id, category, self.window)
 
     def _on_snippet_deleted(self, snippet_id: str) -> None:
         self.cheatsheet_ctrl.delete_snippet(snippet_id)
@@ -391,6 +404,8 @@ class AppController(QObject):
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
+        if "loot_view_mode" in new_settings and self.active_mode == "loot":
+            self.refresh_content()
         if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
             self._update_footer_status()
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, {

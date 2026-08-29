@@ -285,6 +285,15 @@ class GeneralSettingsPage(QWidget):
         self.chk_auto_hide.setChecked(self.config.get("auto_hide_on_copy", False))
         b_layout.addWidget(self.chk_auto_hide)
 
+        self.chk_loot_board = QCheckBox(
+            t("settings.chk_loot_board", "Show Loot as Kanban board")
+        )
+        self.chk_loot_board.setToolTip(
+            t("settings.chk_loot_board_tip", "Organize loot by pentest phase and move entries between columns.")
+        )
+        self.chk_loot_board.setChecked(self.config.get("loot_view_mode", "list") == "board")
+        b_layout.addWidget(self.chk_loot_board)
+
         layout.addWidget(card_behavior)
 
         # 2. Defaults Section
@@ -368,6 +377,7 @@ class GeneralSettingsPage(QWidget):
         return {
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
+            "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
             "target_ip": self.txt_default_target.text().strip(),
             "attacker_ip": self.txt_default_attacker.text().strip(),
             "wordlist": self.txt_wordlist.text().strip(),

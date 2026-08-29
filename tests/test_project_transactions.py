@@ -18,11 +18,11 @@ class TestProjectTransactions(unittest.TestCase):
             config_dir = Path(tmpdir) / "config"
             pm = ProjectManager(base_dir=base_dir, config_dir=config_dir)
 
-            # Pre-create a folder with a conflicting file where 'exploit' subfolder would be
+            # Pre-create a conflicting file where a category subfolder would be.
             broken_dest = base_dir / "BrokenBox"
             broken_dest.mkdir(parents=True)
-            exploit_file = broken_dest / "exploit"
-            exploit_file.write_text("I am a file, not a directory", encoding="utf-8")
+            category_file = broken_dest / "access"
+            category_file.write_text("I am a file, not a directory", encoding="utf-8")
 
             with self.assertRaises(ProjectCreationError):
                 pm.create_project("BrokenBox", allow_existing=True)

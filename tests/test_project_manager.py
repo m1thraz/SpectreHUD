@@ -4,6 +4,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.project_manager import ProjectManager, InvalidProjectNameError
+from core.loot_manager import CATEGORIES
 
 class TestProjectManager(unittest.TestCase):
 
@@ -22,8 +23,8 @@ class TestProjectManager(unittest.TestCase):
         self.assertIn("Default", projects)
 
         default_dir = self.pm.get_project_dir("Default")
-        self.assertTrue((default_dir / "recon").exists())
-        self.assertTrue((default_dir / "exploit").exists())
+        for category in CATEGORIES:
+            self.assertTrue((default_dir / category["id"]).is_dir())
         self.assertTrue((default_dir / "loot").exists())
         self.assertTrue((default_dir / "notes.md").exists())
         self.assertTrue((default_dir / "project_state.json").exists())
@@ -41,6 +42,15 @@ class TestProjectManager(unittest.TestCase):
         notes = (proj_dir / "notes.md").read_text(encoding="utf-8")
         self.assertIn("PickleRick", notes)
         self.assertIn("10.10.10.80", notes)
+
+    def test_imported_project_gains_all_category_and_screenshot_folders(self):
+        imported_dir = self.base_dir / "ImportedBox"
+        imported_dir.mkdir()
+
+        self.assertEqual(self.pm.import_project_folder(imported_dir), "ImportedBox")
+        for category in CATEGORIES:
+            self.assertTrue((imported_dir / category["id"]).is_dir())
+        self.assertTrue((imported_dir / "loot").is_dir())
 
     def test_save_and_load_state(self):
         self.pm.create_project("Blue", target_ip="10.10.10.40")

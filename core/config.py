@@ -19,6 +19,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "quit_hotkey": "<ctrl>+<cmd>+q",
     "auto_hide_on_copy": False,
     "always_on_top": True,
+    "loot_view_mode": "list",
     "theme": "cyber_dark",
     "language": "en",
     "time_format": "24h",

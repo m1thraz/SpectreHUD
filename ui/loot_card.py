@@ -6,8 +6,8 @@ from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QWidget, QApplication, QSizePolicy
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt
-from PyQt6.QtGui import QPixmap, QMouseEvent
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
+from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
 from core.project_manager import get_default_projects_dir
@@ -22,6 +22,7 @@ class LootCard(QFrame):
     copied = pyqtSignal(str)
     deleted = pyqtSignal(str)
     edit_requested = pyqtSignal(dict)
+    export_requested = pyqtSignal(str)
     loot_deleted = deleted
 
     def __init__(self, entry: Dict[str, Any], project_dir: Optional[Path] = None, parent: QWidget = None):
@@ -29,6 +30,7 @@ class LootCard(QFrame):
         self.setObjectName("SnippetCard")
         self.entry = entry
         self.project_dir = project_dir
+        self._drag_start_position = None
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -90,7 +92,14 @@ class LootCard(QFrame):
         btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
         header_layout.addWidget(btn_edit)
 
-        # 7. Delete Button
+        # 7. Export Button
+        self.btn_export_file = QPushButton("⇩")
+        self.btn_export_file.setProperty("class", "SecondaryBtn")
+        self.btn_export_file.setToolTip("Diesen Loot-Eintrag als Textdatei ins Projekt exportieren")
+        self.btn_export_file.clicked.connect(lambda: self.export_requested.emit(self.entry.get("id", "")))
+        header_layout.addWidget(self.btn_export_file)
+
+        # 8. Delete Button
         btn_delete = QPushButton("✕")
         btn_delete.setProperty("class", "DangerBtn")
         btn_delete.setToolTip("Diesen Eintrag löschen")
@@ -151,6 +160,30 @@ class LootCard(QFrame):
             event.accept()
         else:
             super().mouseDoubleClickEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_position = event.position().toPoint()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if (
+            self._drag_start_position is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+            and (event.position().toPoint() - self._drag_start_position).manhattanLength()
+            >= QApplication.startDragDistance()
+        ):
+            entry_id = str(self.entry.get("id", ""))
+            if entry_id:
+                mime_data = QMimeData()
+                mime_data.setData("application/x-spectrehud-loot-entry", entry_id.encode("utf-8"))
+                drag = QDrag(self)
+                drag.setMimeData(mime_data)
+                drag.exec(Qt.DropAction.MoveAction)
+            self._drag_start_position = None
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
 
     def _resolve_image_path(self) -> Optional[Path]:
         """

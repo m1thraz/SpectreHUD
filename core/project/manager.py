@@ -118,7 +118,7 @@ class ProjectManager:
         allow_existing: bool = False
     ) -> Path:
         """
-        Creates an isolated project workspace with subfolders (recon, exploit, loot),
+        Creates an isolated project workspace with category subfolders and loot,
         notes.md, and project_state.json, and registers its path.
         """
         clean_name = validate_project_name(name)

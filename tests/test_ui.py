@@ -252,6 +252,31 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_loot_board_view_uses_configured_alternate_presentation(self):
+        from ui.loot_board import LootBoard
+
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        config_manager.set("loot_view_mode", "board")
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        loot_manager = LootManager(storage_file=self.loot_file)
+        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            project_manager=project_manager,
+        )
+        loot_manager.add_entry("note", "Board item", "visible in a column", category="access")
+        window.switch_mode("loot")
+
+        self.assertEqual(len(window.cards), 1)
+        self.assertIsInstance(window.cards[0], LootBoard)
+        self.assertEqual(window.cards[0].columns["access"].entry_ids, [loot_manager.get_entries()[0]["id"]])
+        window.close()
+
     def test_cheatsheet_favorites_ui_interaction(self):
         from ui.snippet_card import SnippetCard
         config_manager = ConfigManager(config_dir=self.config_dir)

@@ -82,9 +82,7 @@ def validate_project_name(name: str) -> str:
     if is_windows_reserved_name(raw):
         raise InvalidProjectNameError(f"Project name '{name}' is a Windows reserved device name.")
 
-    # Replace invalid path characters with underscore (collapsing consecutive invalid chars)
-    clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', raw)
-    clean = clean.strip("._")
+    clean = _normalize_safe_identifier(raw)
 
     if not clean or clean in {".", ".."} or not re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$', clean):
         raise InvalidProjectNameError(f"Project name '{name}' contains no valid identifier characters.")
@@ -95,6 +93,12 @@ def validate_project_name(name: str) -> str:
     return clean
 
 
+def _normalize_safe_identifier(value: str) -> str:
+    """Normalizes a human label into the conservative project/file identifier alphabet."""
+    clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', value)
+    return clean.strip("._")
+
+
 def sanitize_project_name(name: str, fallback: str = "Default") -> str:
     """
     Safe sanitization helper for internal lookups.
@@ -102,6 +106,15 @@ def sanitize_project_name(name: str, fallback: str = "Default") -> str:
     """
     try:
         return validate_project_name(name)
+    except InvalidProjectNameError:
+        return fallback
+
+
+def sanitize_filename_component(value: str, fallback: str = "export") -> str:
+    """Creates a safe, readable filename component without accepting path traversal."""
+    clean = _normalize_safe_identifier(str(value or "").strip())
+    try:
+        return validate_project_name(clean)
     except InvalidProjectNameError:
         return fallback
 

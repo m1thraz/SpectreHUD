@@ -31,6 +31,8 @@ from core.project.metadata import create_initial_notes, create_initial_state
 
 logger = get_logger("projects")
 
+PROJECT_LOOT_SUBDIRECTORIES = ("recon", "access", "privesc", "postex", "scripts", "misc", "loot")
+
 
 def get_default_projects_dir() -> Path:
     """Returns the default projects workspace directory, checking SPECTRE_PROJECTS_DIR env var first."""
@@ -308,7 +310,7 @@ class ProjectRepository:
 
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)
-            for sub in ("recon", "exploit", "loot"):
+            for sub in PROJECT_LOOT_SUBDIRECTORIES:
                 sub_p = proj_dir / sub
                 if sub_p.is_symlink():
                     raise ProjectCreationError(f"Project directory contains symlinked subdirectory: {sub}")
@@ -381,7 +383,7 @@ class ProjectRepository:
                 )
 
         try:
-            for sub in ("recon", "exploit", "loot"):
+            for sub in PROJECT_LOOT_SUBDIRECTORIES:
                 sub_p = target_path / sub
                 if sub_p.is_symlink():
                     raise ProjectCreationError(f"Imported project contains symlinked subdirectory: {sub}")

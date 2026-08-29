@@ -14,6 +14,7 @@ from core.project import (
     get_default_config_dir,
     validate_project_name,
     sanitize_project_name,
+    sanitize_filename_component,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "get_default_config_dir",
     "validate_project_name",
     "sanitize_project_name",
+    "sanitize_filename_component",
 ]

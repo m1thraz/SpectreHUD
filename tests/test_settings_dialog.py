@@ -47,11 +47,13 @@ class TestSettingsDialog(unittest.TestCase):
         page = GeneralSettingsPage(self.config_manager)
         page.chk_always_on_top.setChecked(False)
         page.chk_auto_hide.setChecked(True)
+        page.chk_loot_board.setChecked(True)
         page.txt_default_target.setText("192.168.1.100")
         
         settings = page.get_settings()
         self.assertFalse(settings["always_on_top"])
         self.assertTrue(settings["auto_hide_on_copy"])
+        self.assertEqual(settings["loot_view_mode"], "board")
         self.assertEqual(settings["target_ip"], "192.168.1.100")
 
     def test_settings_dialog_save_and_apply(self):
