@@ -376,13 +376,37 @@ class ReportEditorTab(QWidget):
         self.btn_export_cherrytree.clicked.connect(self._on_export_cherrytree_clicked)
         toolbar.addWidget(self.btn_export_cherrytree)
 
+        # Formatting belongs with the primary editing/export actions.  The
+        # source-only controls are still hidden while the rich live preview is
+        # active (see _apply_view_mode).
+        self.format_toolbar_widget = QWidget()
+        format_toolbar = QHBoxLayout(self.format_toolbar_widget)
+        format_toolbar.setContentsMargins(0, 0, 0, 0)
+        format_toolbar.setSpacing(3)
+        self._add_format_button(format_toolbar, "H1", "report.format_h1", "Heading 1", lambda: self._format_heading(1))
+        self._add_format_button(format_toolbar, "H2", "report.format_h2", "Heading 2", lambda: self._format_heading(2))
+        self._add_format_button(format_toolbar, "H3", "report.format_h3", "Heading 3", lambda: self._format_heading(3))
+        self._add_format_button(format_toolbar, "B", "report.format_bold", "Bold", lambda: self._format_wrap("**", "**"))
+        self._add_format_button(format_toolbar, "I", "report.format_italic", "Italic", lambda: self._format_wrap("*", "*"))
+        self._add_format_button(format_toolbar, "</>", "report.format_code", "Inline Code", lambda: self._format_wrap("`", "`"))
+        self._add_format_button(format_toolbar, "```", "report.format_code_block", "Code Block", self._format_code_block)
+        self._add_format_button(format_toolbar, "•", "report.format_list", "Bullet List", lambda: self._format_list(False))
+        self._add_format_button(format_toolbar, "1.", "report.format_numbered_list", "Numbered List", lambda: self._format_list(True))
+        self._add_format_button(format_toolbar, "🔗", "report.format_link", "Link", self._format_link)
+        self._add_format_button(format_toolbar, "▦", "report.format_table", "Table", self._format_table)
+        toolbar.addWidget(self.format_toolbar_widget)
+
         self.btn_save = QPushButton(t("report.save", "Save"))
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
         self.btn_save.clicked.connect(self.save)
-        toolbar.addWidget(self.btn_save)
 
         layout.addLayout(toolbar)
+
+        save_row = QHBoxLayout()
+        save_row.addStretch()
+        save_row.addWidget(self.btn_save)
+        layout.addLayout(save_row)
 
         self.find_bar = QWidget()
         find_layout = QHBoxLayout(self.find_bar)
@@ -412,23 +436,6 @@ class ReportEditorTab(QWidget):
             find_layout.addWidget(widget)
         self.find_bar.hide()
         layout.addWidget(self.find_bar)
-
-        self.format_toolbar_widget = QWidget()
-        format_toolbar = QHBoxLayout(self.format_toolbar_widget)
-        format_toolbar.setContentsMargins(0, 0, 0, 0)
-        self._add_format_button(format_toolbar, "H1", "report.format_h1", "Heading 1", lambda: self._format_heading(1))
-        self._add_format_button(format_toolbar, "H2", "report.format_h2", "Heading 2", lambda: self._format_heading(2))
-        self._add_format_button(format_toolbar, "H3", "report.format_h3", "Heading 3", lambda: self._format_heading(3))
-        self._add_format_button(format_toolbar, "B", "report.format_bold", "Bold", lambda: self._format_wrap("**", "**"))
-        self._add_format_button(format_toolbar, "I", "report.format_italic", "Italic", lambda: self._format_wrap("*", "*"))
-        self._add_format_button(format_toolbar, "</>", "report.format_code", "Inline Code", lambda: self._format_wrap("`", "`"))
-        self._add_format_button(format_toolbar, "```", "report.format_code_block", "Code Block", self._format_code_block)
-        self._add_format_button(format_toolbar, "•", "report.format_list", "Bullet List", lambda: self._format_list(False))
-        self._add_format_button(format_toolbar, "1.", "report.format_numbered_list", "Numbered List", lambda: self._format_list(True))
-        self._add_format_button(format_toolbar, "🔗", "report.format_link", "Link", self._format_link)
-        self._add_format_button(format_toolbar, "▦", "report.format_table", "Table", self._format_table)
-        format_toolbar.addStretch()
-        layout.addWidget(self.format_toolbar_widget)
 
         # --- Editor | Vorschau ---
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
