@@ -76,6 +76,17 @@ def create_tray_icon_pixmap(is_recording: bool, app_icon: QIcon | None = None) -
     return recording_pixmap
 
 
+def handle_tray_quit(window, _checked: bool = False) -> bool:
+    """Quit from a QAction without forwarding QAction's checked state.
+
+    ``QAction.triggered`` emits a boolean.  Passing it directly to
+    ``MainWindow.request_quit(quit_app=True)`` turns a normal unchecked menu
+    action into ``request_quit(False)``: state is saved, but the event loop is
+    never stopped.
+    """
+    return window.request_quit()
+
+
 def _create_production_container():
     """Defers container imports until the single-instance lock is held."""
     from core.container import ServiceContainer
@@ -190,7 +201,7 @@ def main():
         tray_menu.addAction(act_options)
 
         act_quit = QAction(f"Beenden ({hotkey_quit})", tray_menu)
-        act_quit.triggered.connect(window.request_quit)
+        act_quit.triggered.connect(lambda checked=False: handle_tray_quit(window, checked))
         tray_menu.addAction(act_quit)
 
         tray_icon.setContextMenu(tray_menu)
