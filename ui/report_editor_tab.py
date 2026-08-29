@@ -21,7 +21,7 @@ from typing import Optional, Dict
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit, QMenu,
+    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit, QMenu, QSpinBox,
     QComboBox, QFormLayout
 )
 from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence, QTextDocument, QTextCursor, QImage
@@ -49,6 +49,22 @@ class ViewMode(Enum):
     EDITOR = "editor"
     SPLIT = "split"
     PREVIEW = "preview"
+
+
+class MarkdownTableDialog(QDialog):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setWindowTitle(t("report.table_title", "Insert Table"))
+        self.setStyleSheet(CYBER_DARK_QSS)
+        layout = QVBoxLayout(self)
+        self.rows = QSpinBox(); self.rows.setRange(1, 10); self.rows.setValue(2)
+        self.columns = QSpinBox(); self.columns.setRange(1, 10); self.columns.setValue(3)
+        layout.addWidget(QLabel(t("report.table_rows", "Rows:"))); layout.addWidget(self.rows)
+        layout.addWidget(QLabel(t("report.table_columns", "Columns:"))); layout.addWidget(self.columns)
+        buttons = QHBoxLayout(); buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel")); cancel.clicked.connect(self.reject); buttons.addWidget(cancel)
+        insert = QPushButton(t("report.table_insert", "Insert Table")); insert.setProperty("class", "PrimaryBtn"); insert.clicked.connect(self.accept); buttons.addWidget(insert)
+        layout.addLayout(buttons)
 
 
 class ReportPreviewEdit(QTextEdit):
@@ -381,6 +397,23 @@ class ReportEditorTab(QWidget):
         self.find_bar.hide()
         layout.addWidget(self.find_bar)
 
+        self.format_toolbar_widget = QWidget()
+        format_toolbar = QHBoxLayout(self.format_toolbar_widget)
+        format_toolbar.setContentsMargins(0, 0, 0, 0)
+        self._add_format_button(format_toolbar, "H1", "report.format_h1", "Heading 1", lambda: self._format_heading(1))
+        self._add_format_button(format_toolbar, "H2", "report.format_h2", "Heading 2", lambda: self._format_heading(2))
+        self._add_format_button(format_toolbar, "H3", "report.format_h3", "Heading 3", lambda: self._format_heading(3))
+        self._add_format_button(format_toolbar, "B", "report.format_bold", "Bold", lambda: self._format_wrap("**", "**"))
+        self._add_format_button(format_toolbar, "I", "report.format_italic", "Italic", lambda: self._format_wrap("*", "*"))
+        self._add_format_button(format_toolbar, "</>", "report.format_code", "Inline Code", lambda: self._format_wrap("`", "`"))
+        self._add_format_button(format_toolbar, "```", "report.format_code_block", "Code Block", self._format_code_block)
+        self._add_format_button(format_toolbar, "•", "report.format_list", "Bullet List", lambda: self._format_list(False))
+        self._add_format_button(format_toolbar, "1.", "report.format_numbered_list", "Numbered List", lambda: self._format_list(True))
+        self._add_format_button(format_toolbar, "🔗", "report.format_link", "Link", self._format_link)
+        self._add_format_button(format_toolbar, "▦", "report.format_table", "Table", self._format_table)
+        format_toolbar.addStretch()
+        layout.addWidget(self.format_toolbar_widget)
+
         # --- Editor | Vorschau ---
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -435,11 +468,47 @@ class ReportEditorTab(QWidget):
         self._shortcut_find.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self._shortcut_find_close = QShortcut(QKeySequence("Esc"), self.find_bar, activated=self._close_find_bar)
         self._shortcut_find_close.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        for sequence, callback in (("Ctrl+B", lambda: self._format_wrap("**", "**")), ("Ctrl+I", lambda: self._format_wrap("*", "*")), ("Ctrl+K", lambda: self._format_wrap("`", "`"))):
+            shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
+            shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._apply_view_mode(self._view_mode)
 
     def _ui_font_key(self) -> str:
         return self.config.get("ui_font", "segoe_ui") if self.config else "segoe_ui"
+
+    def _add_format_button(self, layout: QHBoxLayout, label: str, key: str, fallback: str, callback) -> None:
+        button = QPushButton(label)
+        button.setProperty("class", "SecondaryBtn")
+        button.setToolTip(t(key, fallback))
+        button.clicked.connect(callback)
+        layout.addWidget(button)
+
+    def _format_heading(self, level: int) -> None:
+        from ui.markdown_toolbar_actions import set_heading
+        set_heading(self.editor, level)
+
+    def _format_wrap(self, prefix: str, suffix: str) -> None:
+        from ui.markdown_toolbar_actions import wrap_selection
+        wrap_selection(self.editor, prefix, suffix)
+
+    def _format_code_block(self) -> None:
+        from ui.markdown_toolbar_actions import insert_fenced_code
+        insert_fenced_code(self.editor)
+
+    def _format_list(self, numbered: bool) -> None:
+        from ui.markdown_toolbar_actions import prefix_lines
+        prefix_lines(self.editor, numbered)
+
+    def _format_link(self) -> None:
+        from ui.markdown_toolbar_actions import insert_link
+        insert_link(self.editor)
+
+    def _format_table(self) -> None:
+        dialog = MarkdownTableDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            from ui.markdown_toolbar_actions import insert_table
+            insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
 
     def _code_font_key(self) -> str:
         return self.config.get("code_font", "consolas") if self.config else "consolas"
@@ -666,6 +735,7 @@ class ReportEditorTab(QWidget):
         """Applies visibility and splitter layout for the selected view mode."""
         for action_mode, action in self._view_actions.items():
             action.setChecked(action_mode == mode)
+        self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
         if mode == ViewMode.EDITOR:
             self.editor.setVisible(True)
             self.preview.setVisible(False)
