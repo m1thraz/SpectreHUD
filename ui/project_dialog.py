@@ -1,7 +1,7 @@
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPushButton, QWidget, QMessageBox, QFileDialog
+    QLineEdit, QPushButton, QWidget, QMessageBox, QFileDialog, QCheckBox
 )
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
@@ -87,7 +87,22 @@ class NewProjectDialog(BaseHudDialog):
 
         layout.addLayout(dir_row)
 
-        # 4. Target Directory Preview
+        # 4. Optional encrypted project state (Pentest Mode)
+        self.chk_pentest_mode = QCheckBox("Pentest-Modus (project_state.json verschlüsseln)")
+        self.chk_pentest_mode.toggled.connect(self._toggle_pentest_mode_fields)
+        layout.addWidget(self.chk_pentest_mode)
+
+        self.txt_pentest_password = QLineEdit()
+        self.txt_pentest_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.txt_pentest_password.setPlaceholderText("Passwort für Pentest-Modus")
+        self.txt_pentest_password_confirm = QLineEdit()
+        self.txt_pentest_password_confirm.setEchoMode(QLineEdit.EchoMode.Password)
+        self.txt_pentest_password_confirm.setPlaceholderText("Passwort bestätigen")
+        layout.addWidget(self.txt_pentest_password)
+        layout.addWidget(self.txt_pentest_password_confirm)
+        self._toggle_pentest_mode_fields(False)
+
+        # 5. Target Directory Preview
         self.lbl_path_preview = QLabel(
             t("project_dialog.preview_path", "Destination path: {path}", path=self.base_projects_dir / (self.default_name or "Projektname"))
         )
@@ -95,7 +110,7 @@ class NewProjectDialog(BaseHudDialog):
         self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
         layout.addWidget(self.lbl_path_preview)
 
-        # 5. Buttons
+        # 6. Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
@@ -115,6 +130,13 @@ class NewProjectDialog(BaseHudDialog):
         btn_layout.addWidget(self.btn_create)
 
         layout.addLayout(btn_layout)
+
+    def _toggle_pentest_mode_fields(self, enabled: bool) -> None:
+        self.txt_pentest_password.setVisible(enabled)
+        self.txt_pentest_password_confirm.setVisible(enabled)
+        if not enabled:
+            self.txt_pentest_password.clear()
+            self.txt_pentest_password_confirm.clear()
 
     def _on_browse_directory(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -172,6 +194,15 @@ class NewProjectDialog(BaseHudDialog):
             )
             return
 
+        if self.chk_pentest_mode.isChecked():
+            password = self.txt_pentest_password.text()
+            if not password:
+                QMessageBox.warning(self, "Passwort fehlt", "Für den Pentest-Modus ist ein Passwort erforderlich.")
+                return
+            if password != self.txt_pentest_password_confirm.text():
+                QMessageBox.warning(self, "Passwörter stimmen nicht überein", "Bitte bestätige das gleiche Passwort.")
+                return
+
         self.accept()
 
     def get_data(self) -> Dict[str, Any]:
@@ -180,5 +211,46 @@ class NewProjectDialog(BaseHudDialog):
             "target_ip": self.txt_target.text().strip(),
             "attacker_ip": self.default_attacker,
             "port": self.default_port,
-            "base_dir": Path(self.txt_dir.text().strip()) if self.txt_dir.text().strip() else self.base_projects_dir
+            "base_dir": Path(self.txt_dir.text().strip()) if self.txt_dir.text().strip() else self.base_projects_dir,
+            "pentest_mode": self.chk_pentest_mode.isChecked(),
+            "pentest_password": self.txt_pentest_password.text() if self.chk_pentest_mode.isChecked() else None,
         }
+
+
+class ProjectUnlockDialog(BaseHudDialog):
+    """Minimal password prompt for an encrypted Pentest-Mode project."""
+
+    def __init__(self, project_name: str, parent: Optional[QWidget] = None):
+        super().__init__(title="SPECTRE // PENTEST-MODUS ENTSPERREN", parent=parent)
+        self.project_name = project_name
+        self.setMinimumWidth(420)
+        layout = self.body_layout
+        layout.addWidget(QLabel(
+            f"Das Projekt '{project_name}' verwendet den Pentest-Modus.\n"
+            "Gib das Passwort ein, um dessen project_state.json zu entsperren."
+        ))
+        self.txt_password = QLineEdit()
+        self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.txt_password.setPlaceholderText("Passwort")
+        self.txt_password.returnPressed.connect(self._on_unlock)
+        layout.addWidget(self.txt_password)
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton("Abbrechen")
+        cancel.setProperty("class", "SecondaryBtn")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        unlock = QPushButton("Entsperren")
+        unlock.setProperty("class", "PrimaryBtn")
+        unlock.clicked.connect(self._on_unlock)
+        buttons.addWidget(unlock)
+        layout.addLayout(buttons)
+
+    def _on_unlock(self) -> None:
+        if not self.txt_password.text():
+            QMessageBox.warning(self, "Passwort fehlt", "Bitte gib das Projektpasswort ein.")
+            return
+        self.accept()
+
+    def get_password(self) -> str:
+        return self.txt_password.text()

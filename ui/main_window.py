@@ -563,6 +563,11 @@ class MainWindow(QMainWindow):
     def prepare_for_shutdown(self) -> None:
         """Safety cleanup hook connected to QApplication.aboutToQuit."""
         try:
+            if hasattr(self, "project_manager"):
+                self.project_manager.clear_project_key()
+        except Exception:
+            logger.exception("Failed to clear Pentest-Mode session key during shutdown")
+        try:
             if hasattr(self, "hotkey_listener") and self.hotkey_listener:
                 self.hotkey_listener.stop()
         except Exception:

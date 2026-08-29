@@ -345,7 +345,7 @@ class AppController(QObject):
     def load_active_project_state(self) -> None:
         active_proj = self.project_manager.get_active_project()
         self.header.set_project_title(active_proj)
-        state = self.workspace_coord.load_active_project_session()
+        state = self.workspace_coord.load_active_project_session(self.window)
         if self.var_bar:
             self.var_bar.set_variables(state)
 

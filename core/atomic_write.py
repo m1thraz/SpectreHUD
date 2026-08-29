@@ -58,6 +58,29 @@ def atomic_write_text(filepath: Union[str, Path], content: str, encoding: str = 
         raise e
 
 
+def atomic_write_bytes(filepath: Union[str, Path], content: bytes) -> bool:
+    """Atomically write raw bytes with the same durability guarantees as text."""
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.tmp_{uuid.uuid4().hex[:8]}")
+    try:
+        with open(temp_path, "wb") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        _secure_chmod(temp_path, 0o600)
+        _replace_file_with_retry(temp_path, path)
+        _secure_chmod(path, 0o600)
+        return True
+    except OSError as e:
+        if temp_path.exists():
+            try:
+                temp_path.unlink()
+            except OSError:
+                pass
+        raise e
+
+
 def atomic_write_json(filepath: Union[str, Path], data: Any, indent: int = 2, ensure_ascii: bool = False) -> bool:
     """
     Atomically writes data as formatted JSON to target filepath with restrictive permissions (0o600).

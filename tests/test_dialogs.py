@@ -63,6 +63,17 @@ class TestHudDialogs(unittest.TestCase):
         self.assertIn("BoxBravoModified", dlg.lbl_path_preview.text())
         dlg.close()
 
+    def test_new_project_dialog_includes_pentest_mode_password(self):
+        dlg = NewProjectDialog(default_name="SecureBox")
+        dlg.chk_pentest_mode.setChecked(True)
+        dlg.txt_pentest_password.setText("correct password")
+        dlg.txt_pentest_password_confirm.setText("correct password")
+
+        data = dlg.get_data()
+        self.assertTrue(data["pentest_mode"])
+        self.assertEqual(data["pentest_password"], "correct password")
+        dlg.close()
+
     def test_param_prompt_dialog_data(self):
         template = "curl http://{{TARGET_IP}}:{{PORT}}/{{ENDPOINT}}"
         vars = {"target_ip": "10.10.10.10", "port": "8080"}

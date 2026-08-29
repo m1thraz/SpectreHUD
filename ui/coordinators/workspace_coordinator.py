@@ -15,6 +15,8 @@ from core.i18n import t
 from core.logger import get_logger
 from ui.styles import CYBER_DARK_QSS
 from ui.controllers.project_controller import ProjectController
+from ui.project_dialog import ProjectUnlockDialog
+from core.project_lock_service import ProjectSecurityMetaError
 from ui.controllers.report_controller import ReportController
 
 logger = get_logger(__name__)
@@ -41,10 +43,41 @@ class WorkspaceCoordinator(QObject):
         self.report_ctrl = report_ctrl
         self.event_bus = event_bus
 
-    def load_active_project_session(self) -> Dict[str, str]:
+    def load_active_project_session(self, window: Optional[QWidget] = None) -> Dict[str, str]:
         """Loads and returns the variable state for the currently active project."""
         active_proj = self.project_manager.get_active_project()
+        if not self._unlock_project_if_needed(active_proj, window):
+            return {}
         return self.session_service.load_project_session(active_proj)
+
+    def _unlock_project_if_needed(self, project_name: str, window: Optional[QWidget]) -> bool:
+        """Prompt only when a Pentest-Mode project lacks its in-memory session key."""
+        try:
+            needs_unlock = (
+                self.project_manager.is_pentest_mode(project_name)
+                and not self.project_manager.is_project_unlocked(project_name)
+            )
+        except ProjectSecurityMetaError as exc:
+            logger.error("Invalid Pentest-Mode metadata for '%s': %s", project_name, exc)
+            if window is not None:
+                QMessageBox.critical(window, "Pentest-Modus fehlerhaft", str(exc))
+                return False
+            raise
+        if not needs_unlock:
+            return True
+        if window is None:
+            return False
+        while True:
+            dialog = ProjectUnlockDialog(project_name, parent=window)
+            if not dialog.exec():
+                return False
+            try:
+                if self.project_manager.unlock_project(project_name, dialog.get_password()):
+                    return True
+            except ProjectSecurityMetaError as exc:
+                QMessageBox.critical(window, "Pentest-Modus fehlerhaft", str(exc))
+                return False
+            QMessageBox.warning(window, "Entsperren fehlgeschlagen", "Das Passwort ist nicht korrekt.")
 
     def save_current_project_session(self, variables: Dict[str, str]) -> bool:
         """Persists the variable state for the currently active project."""
@@ -101,6 +134,11 @@ class WorkspaceCoordinator(QObject):
                 t("general.error", "Error"),
                 t("project.not_found_msg", f"Project '{project_name}' does not exist and cannot be activated.\n\n{activate_err}")
             )
+            self.project_ctrl.update_project_combo()
+            return False
+
+        # The target is verified before the active project's key is cleared.
+        if not self._unlock_project_if_needed(project_name, window):
             self.project_ctrl.update_project_combo()
             return False
 

@@ -27,6 +27,7 @@ from core.project.repository import (
     get_default_config_dir
 )
 from core.project.manager import ProjectManager
+from core.project_lock_service import ProjectLockedError, ProjectSecurityMetaError
 
 __all__ = [
     "ProjectManager",
@@ -36,6 +37,8 @@ __all__ = [
     "InvalidProjectNameError",
     "ProjectNotFoundError",
     "ProjectCreationError",
+    "ProjectLockedError",
+    "ProjectSecurityMetaError",
     "WorkspaceError",
     "validate_project_name",
     "sanitize_project_name",

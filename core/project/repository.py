@@ -2,6 +2,7 @@
 Filesystem storage and project registry persistence layer.
 """
 
+import base64
 import json
 import os
 import sys
@@ -12,7 +13,12 @@ from typing import Dict, Any, Optional, List, Union
 
 from core.logger import get_logger
 from core.storage import PersistenceError
-from core.atomic_write import atomic_write_json, atomic_write_text
+from core.atomic_write import atomic_write_bytes, atomic_write_json, atomic_write_text
+from core.crypto_service import (
+    KDF_ITERATIONS, create_verifier, decrypt_bytes, derive_key, encrypt_bytes,
+    verify_password,
+)
+from core.project_lock_service import ProjectLockService, ProjectLockedError, ProjectSecurityMetaError
 from core.validators import (
     validate_project_state,
     is_file_size_valid,
@@ -53,7 +59,10 @@ def get_default_config_dir() -> Path:
 class ProjectRepository:
     """Handles disk operations, directory structures, and registry persistence for CTF projects."""
 
-    def __init__(self, base_dir: Optional[Path] = None, config_dir: Optional[Path] = None):
+    def __init__(
+        self, base_dir: Optional[Path] = None, config_dir: Optional[Path] = None,
+        lock_service: Optional[ProjectLockService] = None,
+    ):
         self.base_dir = Path(base_dir) if base_dir else get_default_projects_dir()
         try:
             self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -68,6 +77,114 @@ class ProjectRepository:
 
         self.registry_file = self.config_dir / "projects_registry.json"
         self.registry: Dict[str, str] = self._load_registry()
+        self.lock_service = lock_service or ProjectLockService()
+
+    @staticmethod
+    def _security_meta_path(proj_dir: Path) -> Path:
+        return proj_dir / "security_meta.json"
+
+    def _load_security_meta(self, proj_dir: Path) -> Optional[Dict[str, Any]]:
+        """Load and strictly validate the unencrypted Pentest-Mode sidecar."""
+        meta_path = self._security_meta_path(proj_dir)
+        if not meta_path.exists():
+            return None
+        try:
+            with open(meta_path, "r", encoding="utf-8") as file:
+                meta = json.load(file)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
+            raise ProjectSecurityMetaError(f"Security metadata for '{proj_dir.name}' is unreadable.") from exc
+        if not isinstance(meta, dict) or not isinstance(meta.get("pentest_mode"), bool):
+            raise ProjectSecurityMetaError("Security metadata has an invalid pentest_mode field.")
+        if not meta["pentest_mode"]:
+            return meta
+        salt = meta.get("kdf_salt")
+        iterations = meta.get("kdf_iterations")
+        verifier = meta.get("verifier")
+        if not isinstance(salt, str) or not isinstance(iterations, int) or not isinstance(verifier, str):
+            raise ProjectSecurityMetaError("Security metadata is missing required encryption fields.")
+        if iterations < KDF_ITERATIONS or not verifier:
+            raise ProjectSecurityMetaError("Security metadata contains unsafe encryption parameters.")
+        try:
+            decoded_salt = base64.b64decode(salt.encode("ascii"), validate=True)
+        except (ValueError, UnicodeEncodeError) as exc:
+            raise ProjectSecurityMetaError("Security metadata contains an invalid KDF salt.") from exc
+        if len(decoded_salt) < 16:
+            raise ProjectSecurityMetaError("Security metadata contains an unsafe KDF salt.")
+        return meta
+
+    def _save_security_meta(self, proj_dir: Path, meta: Dict[str, Any]) -> bool:
+        """Persist validated Pentest-Mode metadata without exposing a key/password."""
+        # Validate the exact structure before committing it to disk.
+        self._validate_security_meta(meta)
+        return atomic_write_json(self._security_meta_path(proj_dir), meta, indent=2, ensure_ascii=False)
+
+    def _validate_security_meta(self, meta: Dict[str, Any]) -> None:
+        """Validate arbitrary metadata by applying the same strict sidecar rules."""
+        if not isinstance(meta, dict) or meta.get("pentest_mode") is not True:
+            raise ProjectSecurityMetaError("Pentest-mode metadata must explicitly enable pentest_mode.")
+        salt, iterations, verifier = meta.get("kdf_salt"), meta.get("kdf_iterations"), meta.get("verifier")
+        if not isinstance(salt, str) or not isinstance(iterations, int) or not isinstance(verifier, str):
+            raise ProjectSecurityMetaError("Security metadata is missing required encryption fields.")
+        try:
+            decoded_salt = base64.b64decode(salt.encode("ascii"), validate=True)
+        except (ValueError, UnicodeEncodeError) as exc:
+            raise ProjectSecurityMetaError("Security metadata contains an invalid KDF salt.") from exc
+        if len(decoded_salt) < 16 or iterations < KDF_ITERATIONS or not verifier:
+            raise ProjectSecurityMetaError("Security metadata contains unsafe encryption parameters.")
+
+    def is_pentest_mode(self, name: str) -> bool:
+        meta = self._load_security_meta(self.get_project_dir(validate_project_name(name)))
+        return bool(meta and meta.get("pentest_mode"))
+
+    def unlock_project(self, name: str, password: str) -> bool:
+        pname = validate_project_name(name)
+        meta = self._load_security_meta(self.get_project_dir(pname))
+        if not meta or not meta.get("pentest_mode"):
+            return True
+        salt = base64.b64decode(meta["kdf_salt"].encode("ascii"), validate=True)
+        key = derive_key(password, salt, meta["kdf_iterations"])
+        if not verify_password(key, meta["verifier"]):
+            return False
+        self.lock_service.set_session_key(pname, key)
+        return True
+
+    def enable_pentest_mode(self, name: str, password: str) -> None:
+        """Encrypt an existing state file and retain its key for this session."""
+        pname = validate_project_name(name)
+        proj_dir = self.get_project_dir(pname)
+        if self._load_security_meta(proj_dir) is not None:
+            raise ProjectSecurityMetaError("Pentest mode is already configured for this project.")
+        # Read the ordinary state before the sidecar marks it as encrypted.
+        state = self.load_project_state(pname)
+        salt = os.urandom(16)
+        key = derive_key(password, salt, KDF_ITERATIONS)
+        meta = {
+            "pentest_mode": True,
+            "kdf_salt": base64.b64encode(salt).decode("ascii"),
+            "kdf_iterations": KDF_ITERATIONS,
+            "verifier": create_verifier(key),
+        }
+        self._save_security_meta(proj_dir, meta)
+        self.lock_service.set_session_key(pname, key)
+        try:
+            self._write_project_state(proj_dir / "project_state.json", state, key)
+        except Exception:
+            self.lock_service.clear()
+            try:
+                self._security_meta_path(proj_dir).unlink(missing_ok=True)
+            except OSError:
+                logger.exception("Failed to roll back Pentest-Mode metadata for %s", pname)
+            raise
+
+    @staticmethod
+    def _serialize_state(state: Dict[str, Any]) -> bytes:
+        return json.dumps(state, indent=2, ensure_ascii=False).encode("utf-8")
+
+    def _write_project_state(self, state_file: Path, state: Dict[str, Any], key: Optional[bytes]) -> bool:
+        serialized = self._serialize_state(state)
+        if key is not None:
+            return atomic_write_bytes(state_file, encrypt_bytes(key, serialized))
+        return atomic_write_json(state_file, state, indent=2, ensure_ascii=False)
 
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
@@ -410,15 +527,26 @@ class ProjectRepository:
         """Loads and semantically validates state data for a project."""
         from core.validators import validate_project_state, is_file_size_valid, MAX_PROJECT_STATE_FILE_SIZE
         pname = validate_project_name(name)
-        state_file = self.get_project_dir(pname) / "project_state.json"
+        proj_dir = self.get_project_dir(pname)
+        state_file = proj_dir / "project_state.json"
+        meta = self._load_security_meta(proj_dir)
+        key: Optional[bytes] = None
+        if meta and meta.get("pentest_mode"):
+            key = self.lock_service.get_session_key(pname)
+            if key is None:
+                raise ProjectLockedError(f"Project '{pname}' is locked. Enter its Pentest-Mode password first.")
         if state_file.exists():
             if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
                 logger.error(f"Project state file {state_file} exceeds maximum size limit of {MAX_PROJECT_STATE_FILE_SIZE} bytes. Rejecting oversized file and using default state.")
                 return validate_project_state(None, fallback_name=pname)
             try:
-                with open(state_file, "r", encoding="utf-8") as f:
-                    raw_data = json.load(f)
-                    return validate_project_state(raw_data, fallback_name=pname)
+                if key is not None:
+                    raw_bytes = state_file.read_bytes()
+                    raw_data = json.loads(decrypt_bytes(key, raw_bytes).decode("utf-8"))
+                else:
+                    with open(state_file, "r", encoding="utf-8") as f:
+                        raw_data = json.load(f)
+                return validate_project_state(raw_data, fallback_name=pname)
             except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted project_state.json for {pname}: {e}")
             except (OSError, UnicodeDecodeError) as e:
@@ -442,7 +570,17 @@ class ProjectRepository:
             return False
 
         state_file = proj_dir / "project_state.json"
-        final_state = self.load_project_state(pname) or {}
+        meta = self._load_security_meta(proj_dir)
+        key: Optional[bytes] = None
+        if meta and meta.get("pentest_mode"):
+            key = self.lock_service.get_session_key(pname)
+            if key is None:
+                logger.error("Refusing to save locked Pentest-Mode project '%s'.", pname)
+                return False
+        try:
+            final_state = self.load_project_state(pname) or {}
+        except ProjectLockedError:
+            return False
         if state:
             final_state.update(state)
         if kwargs:
@@ -453,7 +591,7 @@ class ProjectRepository:
         valid_state = validate_project_state(final_state, fallback_name=pname)
 
         try:
-            return atomic_write_json(state_file, valid_state, indent=2, ensure_ascii=False)
+            return self._write_project_state(state_file, valid_state, key)
         except OSError as e:
             logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
             return False

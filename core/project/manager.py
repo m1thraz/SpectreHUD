@@ -17,6 +17,7 @@ from core.project.validator import (
     ProjectCreationError
 )
 from core.project.repository import ProjectRepository, get_default_projects_dir, get_default_config_dir
+from core.project_lock_service import ProjectLockService
 
 logger = get_logger("projects")
 
@@ -31,7 +32,12 @@ class ProjectManager:
         repository: Optional[ProjectRepository] = None,
         event_bus: Optional[EventBus] = None
     ):
-        self.repository = repository or ProjectRepository(base_dir=base_dir, config_dir=config_dir)
+        self.lock_service = ProjectLockService()
+        self.repository = repository or ProjectRepository(
+            base_dir=base_dir, config_dir=config_dir, lock_service=self.lock_service
+        )
+        if repository is not None:
+            self.repository.lock_service = self.lock_service
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.active_project: str = "Default"
         self._ensure_default_project()
@@ -115,7 +121,8 @@ class ProjectManager:
         attacker_ip: str = "",
         port: str = "4444",
         base_dir: Optional[Path] = None,
-        allow_existing: bool = False
+        allow_existing: bool = False,
+        pentest_password: Optional[str] = None,
     ) -> Path:
         """
         Creates an isolated project workspace with category subfolders and loot,
@@ -130,6 +137,8 @@ class ProjectManager:
             base_dir=base_dir,
             allow_existing=allow_existing
         )
+        if pentest_password is not None:
+            self.repository.enable_pentest_mode(clean_name, pentest_password)
         if self.event_bus:
             self.event_bus.publish(EventType.PROJECT_CREATED, {
                 "name": clean_name,
@@ -153,6 +162,18 @@ class ProjectManager:
         pname = name or self.active_project
         return self.repository.load_project_state(pname)
 
+    def is_pentest_mode(self, name: Optional[str] = None) -> bool:
+        return self.repository.is_pentest_mode(name or self.active_project)
+
+    def is_project_unlocked(self, name: Optional[str] = None) -> bool:
+        return self.lock_service.is_unlocked(name or self.active_project)
+
+    def unlock_project(self, name: str, password: str) -> bool:
+        return self.repository.unlock_project(name, password)
+
+    def clear_project_key(self) -> None:
+        self.lock_service.clear()
+
     def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
         """Persists state data for a project."""
         pname = name or self.active_project
@@ -168,6 +189,7 @@ class ProjectManager:
             raise ProjectNotFoundError(f"Project '{name}' (resolved: '{clean_name}') does not exist.")
 
         self.active_project = clean_name
+        self.lock_service.retain_only(clean_name)
         if self.event_bus:
             self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": clean_name})
         return clean_name

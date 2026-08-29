@@ -51,14 +51,16 @@ class ProjectController(QObject):
         target_ip: str = "",
         attacker_ip: str = "",
         port: str = "4444",
-        base_dir: Optional[Path] = None
+        base_dir: Optional[Path] = None,
+        pentest_password: Optional[str] = None,
     ) -> str:
         self.project_manager.create_project(
             name=name,
             target_ip=target_ip,
             attacker_ip=attacker_ip,
             port=port,
-            base_dir=base_dir
+            base_dir=base_dir,
+            pentest_password=pentest_password,
         )
         clean_name = self.project_manager._sanitize_name(name)
         self.project_created.emit(clean_name)
@@ -265,7 +267,8 @@ class ProjectController(QObject):
                         target_ip=data.get("target_ip", ""),
                         attacker_ip=data.get("attacker_ip", ""),
                         port=data.get("port", "4444"),
-                        base_dir=Path(custom_base) if custom_base else None
+                        base_dir=Path(custom_base) if custom_base else None,
+                        pentest_password=data.get("pentest_password"),
                     )
                     on_project_created(clean_name)
                     return True
