@@ -63,13 +63,7 @@ The goal is not to replace your notes application.
 
 The goal is to remove the repetitive workflow around it.
 
-With SpectreHUD, you do not need to turn a general-purpose knowledge base into a dedicated CTF environment with additional capture workflows, engagement variables, templates and session-specific organization.
 
-Use SpectreHUD for the engagement.
-
-Use Obsidian, CherryTree or your preferred knowledge system for long-term refinement, linking and retention.
-
-> **Work fast in SpectreHUD. Keep your knowledge base clean.**
 
 ---
 
@@ -97,39 +91,7 @@ SpectreHUD is deliberately optimized for this loop instead of trying to become a
 
 ---
 
-## Spotlight Command Search
 
-Bring SpectreHUD to the foreground instantly and search your command library without leaving the current workflow.
-
-* Fast global HUD access
-* Searchable command snippets
-* Categories and filters
-* Custom commands
-* Copy-to-clipboard workflow
-* Variable substitution before execution
-
-Example command:
-
-```bash
-nmap -sC -sV {{TARGET_IP}} -p {{PORT}}
-```
-
-With:
-
-```text
-TARGET_IP = 10.10.11.42
-PORT      = 8080
-```
-
-SpectreHUD gives you:
-
-```bash
-nmap -sC -sV 10.10.11.42 -p 8080
-```
-
-No repeated search-and-replace across notes and terminals.
-
----
 
 ## Project Context and Live Variables
 
@@ -183,12 +145,6 @@ Severity levels provide additional prioritization:
 ```text
 Critical · High · Medium · Low · Info
 ```
-
-The goal is simple:
-
-> When something important appears during the engagement, recording it should take seconds rather than interrupting the workflow.
-
-![Add Command Dialog](assets/spectrehud_add_command.png)
 
 ---
 
@@ -317,22 +273,6 @@ Exported notes can also be opened directly in Obsidian.
 
 Export engagement material for use in CherryTree through portable interchange formats rather than depending on CherryTree's internal storage model.
 
-### Project Archive
-
-Package the complete SpectreHUD workspace into a ZIP archive for backup or transfer.
-
-```text
-project/
-├── recon/
-├── exploit/
-├── loot/
-├── notes/
-├── report.md
-└── project_state.json
-```
-
----
-
 ## Knowledge Base Integration
 
 SpectreHUD is designed to complement long-term knowledge-management tools rather than replace them.
@@ -355,55 +295,7 @@ This allows the operational workflow to remain separate from the knowledge base.
 
 You can work the box in SpectreHUD without turning Obsidian or CherryTree into a dedicated capture environment, then transfer the material worth keeping when the engagement is ready.
 
-### Obsidian Integration
 
-SpectreHUD supports direct export into an Obsidian vault.
-
-The integration can be used to:
-
-* Export the current report
-* Transfer relevant screenshots and attachments
-* Generate useful frontmatter and metadata
-* Export session loot
-* Append findings to an existing project note
-* Open the resulting note directly in Obsidian
-
-The workflow intentionally remains one-way:
-
-```text
-SpectreHUD → Obsidian
-```
-
-SpectreHUD remains responsible for the active engagement.
-
-Obsidian remains responsible for long-term organization, linking, refinement and knowledge retention.
-
-This means your Obsidian setup can remain lightweight instead of requiring a dedicated stack of CTF capture plugins, engagement-variable tooling and session-specific templates.
-
-> **Work the engagement in SpectreHUD. Keep the knowledge in Obsidian.**
-
-### CherryTree Integration
-
-SpectreHUD also supports exporting engagement material for use in CherryTree.
-
-Rather than writing directly to CherryTree's internal database format, SpectreHUD relies on portable output formats that fit into the existing CherryTree workflow.
-
-The same separation applies:
-
-> Capture and structure the active engagement in SpectreHUD, then move the material worth keeping into your long-term documentation system.
-
----
-
-## English and German
-
-SpectreHUD supports runtime switching between:
-
-* English
-* German
-
-The interface, dialogs and report-related workflows are internationalized.
-
----
 
 ## Keyboard-Driven Workflow
 
