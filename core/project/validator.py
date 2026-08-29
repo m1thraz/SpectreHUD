@@ -39,6 +39,11 @@ class WorkspaceError(ProjectError, RuntimeError):
     pass
 
 
+class ProjectPathChangedError(ProjectError, RuntimeError):
+    """Raised when an externally registered project's filesystem path identity has been modified (e.g. replaced with a symlink or redirected)."""
+    pass
+
+
 def validate_workspace_directory(path: Union[Path, str]) -> Path:
     """
     Validates that a workspace path is valid, can be created, and is writable.
