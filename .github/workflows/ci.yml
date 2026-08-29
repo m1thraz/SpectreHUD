@@ -15,6 +15,8 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Prevent a stuck Qt/background-thread test from blocking the whole matrix.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -55,14 +57,14 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m pytest
+          python -m pytest --timeout=120 --timeout-method=thread
 
       - name: Run test suite with coverage
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          xvfb-run -a coverage run -m pytest
+          xvfb-run -a coverage run -m pytest --timeout=120 --timeout-method=thread
           coverage report -m
 
   package:
