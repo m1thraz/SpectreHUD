@@ -14,6 +14,7 @@ from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
+from core.i18n import t
 from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode, ReportPreviewEdit, ReportGenerationDialog
 
 app = QApplication.instance() or QApplication(sys.argv)
@@ -65,7 +66,7 @@ class TestReportEditorTab(unittest.TestCase):
             parent=self.tab,
         )
         self.assertGreater(dialog.combo_templates.count(), 0)
-        self.assertIn("Report aus Loot erzeugen", dialog.windowTitle())
+        self.assertEqual(dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot"))
 
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""

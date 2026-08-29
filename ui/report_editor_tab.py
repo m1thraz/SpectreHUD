@@ -173,7 +173,7 @@ class ReportGenerationDialog(QDialog):
         super().__init__(parent)
         self.template_repo = template_repo
         self.selected_template: Optional[ReportTemplate] = selected_template
-        self.setWindowTitle("Report aus Loot erzeugen")
+        self.setWindowTitle(t("report.generate_title", "Generate Report from Loot"))
         self.setMinimumWidth(460)
         self.setStyleSheet(CYBER_DARK_QSS)
         self._build_ui(has_existing_report)
@@ -183,16 +183,14 @@ class ReportGenerationDialog(QDialog):
         layout = QVBoxLayout(self)
 
         description = QLabel(
-            "Erstellt einen strukturierten Report aus dem aktuellen Loot "
-            "und Clipboard-Verlauf."
+            t("report.generate_description", "Creates a structured report from current loot and clipboard history.")
         )
         description.setWordWrap(True)
         layout.addWidget(description)
 
         if has_existing_report:
             warning = QLabel(
-                "Der vorhandene Report wird ersetzt. Vorher wird er als "
-                "<b>report.md.bak</b> gesichert."
+                t("report.generate_warning", "The existing report will be replaced. It is backed up as <b>report.md.bak</b> first.")
             )
             warning.setWordWrap(True)
             warning.setStyleSheet("color: #f0b429; margin-top: 6px;")
@@ -200,21 +198,21 @@ class ReportGenerationDialog(QDialog):
 
         form = QFormLayout()
         self.combo_templates = QComboBox()
-        self.combo_templates.setToolTip("Vorlage für den neu erzeugten Report auswählen")
-        form.addRow("Report-Vorlage:", self.combo_templates)
+        self.combo_templates.setToolTip(t("report.template_tip", "Select a template for the newly generated report"))
+        form.addRow(t("report.template_label", "Report Template:"), self.combo_templates)
         layout.addLayout(form)
 
-        self.btn_manage_templates = QPushButton("Templates verwalten...")
+        self.btn_manage_templates = QPushButton(t("report.manage_templates", "🎨 Templates..."))
         self.btn_manage_templates.setProperty("class", "SecondaryBtn")
         self.btn_manage_templates.clicked.connect(self._open_template_manager)
         layout.addWidget(self.btn_manage_templates, alignment=Qt.AlignmentFlag.AlignLeft)
 
         buttons = QHBoxLayout()
         buttons.addStretch()
-        btn_cancel = QPushButton("Abbrechen")
+        btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         btn_cancel.clicked.connect(self.reject)
         buttons.addWidget(btn_cancel)
-        btn_generate = QPushButton("Report erzeugen")
+        btn_generate = QPushButton(t("report.generate", "Generate Report"))
         btn_generate.setProperty("class", "PrimaryBtn")
         btn_generate.clicked.connect(self._accept_selection)
         buttons.addWidget(btn_generate)
@@ -245,7 +243,7 @@ class ReportGenerationDialog(QDialog):
         template_id = self.combo_templates.currentData()
         template = self.template_repo.get_template(template_id) if template_id else None
         if template is None:
-            QMessageBox.warning(self, "Keine Vorlage", "Bitte wähle eine Report-Vorlage aus.")
+            QMessageBox.warning(self, t("report.no_template_title", "No Template"), t("report.no_template_message", "Please select a report template."))
             return
         self.selected_template = template
         self.accept()
@@ -522,11 +520,8 @@ class ReportEditorTab(QWidget):
             return True
 
         msg = QMessageBox(self.window() if self else None)
-        msg.setWindowTitle("Ungespeicherte Änderungen")
-        msg.setText(
-            "Der Report wurde bearbeitet, aber noch nicht gespeichert.\n\n"
-            "Änderungen jetzt speichern?"
-        )
+        msg.setWindowTitle(t("report.unsaved_prompt_title", "Unsaved Changes"))
+        msg.setText(t("report.unsaved_prompt_message", "The report has unsaved changes.\n\nSave them now?"))
         msg.setIcon(QMessageBox.Icon.Question)
         msg.setStandardButtons(
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
@@ -699,8 +694,8 @@ class ReportEditorTab(QWidget):
             self._set_dirty(False)
         else:
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Fehler")
-            msg.setText("Report konnte nicht gespeichert werden. Details im Log.")
+            msg.setWindowTitle(t("dialog.error", "Error"))
+            msg.setText(t("report.save_error", "The report could not be saved. Details are in the log."))
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
@@ -716,13 +711,13 @@ class ReportEditorTab(QWidget):
             ok = self.report_file_manager.save(self.editor.toPlainText(), project_name=self.current_project)
         except Exception:
             logger.exception("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText("Autosave fehlgeschlagen — bitte manuell speichern")
+            self.lbl_status.setText(t("report.autosave_failed", "Autosave failed — please save manually"))
             return
         if ok:
             self._set_dirty(False)
         else:
             logger.error("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText("Autosave fehlgeschlagen — bitte manuell speichern")
+            self.lbl_status.setText(t("report.autosave_failed", "Autosave failed — please save manually"))
 
     def closeEvent(self, event) -> None:
         self._autosave_timer.stop()
@@ -865,12 +860,12 @@ class ReportEditorTab(QWidget):
     def _select_html_export_theme(self) -> Optional[str]:
         """Asks which visual design the standalone HTML report should use."""
         msg = QMessageBox(self.window() if self else None)
-        msg.setWindowTitle("HTML-Design wählen")
-        msg.setText("In welchem Design soll der HTML-Report exportiert werden?")
-        msg.setInformativeText("Light eignet sich besonders für Auftraggeber und Ausdrucke.")
+        msg.setWindowTitle(t("report.html_theme_title", "Choose HTML Design"))
+        msg.setText(t("report.html_theme_message", "Which design should the HTML report use?"))
+        msg.setInformativeText(t("report.html_theme_hint", "Light is especially suitable for clients and printouts."))
         msg.setIcon(QMessageBox.Icon.Question)
-        dark_button = msg.addButton("Dark — SpectreHUD", QMessageBox.ButtonRole.AcceptRole)
-        light_button = msg.addButton("Light — Kunde / Druck", QMessageBox.ButtonRole.ActionRole)
+        dark_button = msg.addButton(t("report.html_theme_dark", "Dark — SpectreHUD"), QMessageBox.ButtonRole.AcceptRole)
+        light_button = msg.addButton(t("report.html_theme_light", "Light — Client / Print"), QMessageBox.ButtonRole.ActionRole)
         msg.addButton(QMessageBox.StandardButton.Cancel)
         msg.setDefaultButton(dark_button)
         msg.setStyleSheet(CYBER_DARK_QSS)
