@@ -141,6 +141,12 @@ class HotkeyListener(QObject):
         if self._listener:
             try:
                 self._listener.stop()
+                # pynput uses a native hook thread on Windows.  Waiting a
+                # bounded amount here prevents it from outliving application
+                # shutdown while keeping quit responsive if the OS hook is
+                # already unavailable.
+                if self._listener.is_alive():
+                    self._listener.join(timeout=1.0)
             except (RuntimeError, OSError) as e:
                 logger.debug(f"Error stopping hotkey listener: {e}")
             self._listener = None

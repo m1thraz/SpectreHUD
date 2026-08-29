@@ -120,6 +120,12 @@ if lock is not None:
                 self.assertIsNone(acquire_application_lock(config_dir))
             finally:
                 self._stop_process(holder)
+                # A terminated owner can leave QLockFile metadata behind for a
+                # moment on Windows.  Reacquire and cleanly release it before
+                # TemporaryDirectory removes the lock directory.
+                recovered_lock = acquire_application_lock(config_dir)
+                if recovered_lock is not None:
+                    release_application_lock(recovered_lock)
 
     def test_existing_instance_stops_before_container_initialization(self):
         import main

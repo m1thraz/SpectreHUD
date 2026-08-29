@@ -71,10 +71,16 @@ Tags ab, deren Version nicht mit `pyproject.toml` übereinstimmt. Die erste grü
 Ausführung auf GitHub bleibt die noch ausstehende Abnahme.
 
 **Lokaler CI-Abgleich (2026-08-29):** Die vollständige pytest-Sammlung umfasst
-342 Tests (ein erwarteter Skip). Der CI-Lint-Gate mit `flake8` für kritische
+345 Tests (ein erwarteter Skip). Der CI-Lint-Gate mit `flake8` für kritische
 Syntax- und Namensfehler sowie `compileall` für `core`, `ui`, `data`, `main.py`
 und `scripts` liefen ohne Befund. Die plattformübergreifende GitHub-Ausführung
 bleibt dennoch erforderlich.
+
+**RC-Commit-Abgleich (2026-08-29):** Auf dem lokalen GitHub-Commit wurde der
+vollständige Lauf erneut ausgeführt: 344 bestanden, 1 erwartet übersprungen,
+ohne hängenden pytest-Prozess. Eine Windows-spezifische Lock-Testbereinigung
+wurde dabei korrigiert; die betroffene Single-Instance-Suite besteht vollständig
+(8/8). Der finale CI-Lauf muss diesen Korrektur-Commit abdecken.
 
 ### 2.2 Release-Artefakte validieren
 
@@ -161,7 +167,7 @@ und Datenschutzgrenzen.
 Der offizielle Release darf nur erfolgen, wenn alle Punkte erfüllt sind:
 
 - [ ] Versionsnummer überall einheitlich *(finaler Tag steht noch aus)*
-- [x] Vollständiger, isolierter Testlauf lokal grün *(342 Tests, 1 erwarteter Skip; RC-Commit erneut prüfen)*
+- [x] Vollständiger, isolierter Testlauf lokal grün *(345 Tests, 1 erwarteter Skip; RC-Commit erneut prüfen)*
 - [ ] CI auf unterstützten Plattformen grün
 - [x] Wheel und EXE lokal erfolgreich gebaut und getestet
 - [ ] Manuelle Windows-Abnahme ohne Blocker

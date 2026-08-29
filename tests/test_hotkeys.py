@@ -3,6 +3,7 @@ Tests for Global Hotkey Listener and Dynamic Hotkey Configuration.
 """
 
 import unittest
+from unittest.mock import patch
 from core.hotkey_listener import (
     HotkeyConfig,
     HotkeyListener,
@@ -39,9 +40,24 @@ class TestHotkeys(unittest.TestCase):
 
     def test_invalid_hotkey_does_not_crash(self):
         listener = HotkeyListener(hotkey_str="invalid+++key+++combo")
-        # Starting with an invalid key should log error without throwing unhandled exception
-        listener.start()
+        # Unit tests must not install a real system-wide keyboard hook.
+        with patch("pynput.keyboard.GlobalHotKeys", side_effect=ValueError("invalid hotkey")):
+            listener.start()
         listener.stop()
+        self.assertFalse(listener._running)
+
+    def test_stop_waits_for_active_listener_thread(self):
+        listener = HotkeyListener()
+        hook = unittest.mock.MagicMock()
+        hook.is_alive.return_value = True
+        listener._listener = hook
+        listener._running = True
+
+        listener.stop()
+
+        hook.stop.assert_called_once()
+        hook.join.assert_called_once_with(timeout=1.0)
+        self.assertFalse(listener._running)
 
     def test_signal_emission_helpers(self):
         listener = HotkeyListener()
