@@ -3,6 +3,7 @@ HTML Document Template Assembly for SpectreHUD Reports.
 """
 
 import html
+import json
 from datetime import datetime
 from typing import Optional
 
@@ -19,6 +20,16 @@ def render_report_html(
     pname = project_name or "Target"
     now_str = timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     target_str = target_ip if target_ip and target_ip != "all" else "N/A"
+    safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip("-_")
+    download_filename = json.dumps(f"report_edited_{safe_project_name or 'report'}.html")
+    # JSON alone permits literal '<', which an HTML parser could interpret as
+    # a closing script tag inside the inline script below.
+    download_filename = (
+        download_filename
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="de">
@@ -48,9 +59,10 @@ def render_report_html(
 
         <div class="action-bar no-print">
             <button class="btn-action" onclick="window.print()">🖨 Drucken / PDF Exportieren</button>
+            <button class="btn-action" onclick="downloadEditedHtml()">💾 Bearbeitete Version speichern</button>
         </div>
 
-        <main class="report-body">
+        <main class="report-body" contenteditable="true" spellcheck="false">
             {body_html}
         </main>
 
@@ -59,6 +71,23 @@ def render_report_html(
             <span>{now_str}</span>
         </footer>
     </div>
+    <script data-report-editor>
+        function downloadEditedHtml() {{
+            const clone = document.documentElement.cloneNode(true);
+            const body = clone.querySelector('main.report-body');
+            if (body) body.removeAttribute('contenteditable');
+            clone.querySelectorAll('.no-print, script[data-report-editor]').forEach((element) => element.remove());
+
+            const html = '<!DOCTYPE html>\\n' + clone.outerHTML;
+            const blob = new Blob([html], {{ type: 'text/html' }});
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = {download_filename};
+            anchor.click();
+            setTimeout(() => URL.revokeObjectURL(url), 0);
+        }}
+    </script>
 </body>
 </html>
 """

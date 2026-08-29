@@ -92,6 +92,10 @@ curl -i http://10.10.10.10/admin
         self.assertIn("10.10.10.200", content)
         self.assertIn("<h1>Complete Report</h1>", content)
         self.assertIn("window.print()", content)
+        self.assertIn('contenteditable="true"', content)
+        self.assertIn("resize: both", content)
+        self.assertIn("downloadEditedHtml", content)
+        self.assertIn('report_edited_TestBox.html', content)
 
     def test_xss_prevention_in_images_and_links(self):
         """Verifies that malicious image src and link href payloads cannot execute XSS or inject attributes."""
@@ -131,6 +135,16 @@ curl -i http://10.10.10.10/admin
         html_safe = HtmlReportExporter.markdown_to_html(md_safe, project_dir=self.proj_dir)
         self.assertIn('href="https://example.com/docs"', html_safe)
         self.assertIn('href="mailto:test@example.com"', html_safe)
+
+    def test_download_filename_is_safe_for_the_inline_script(self):
+        full_html = HtmlReportExporter.build_full_html(
+            "# Report",
+            project_dir=self.proj_dir,
+            project_name='Evil</script><script>alert(1)</script>',
+        )
+
+        self.assertNotIn("Evil</script>", full_html)
+        self.assertIn('report_edited_Evilscriptscriptalert1script.html', full_html)
 
     def test_protocol_relative_urls_blocked(self):
         """Finding 11: Protocol-relative URLs must be blocked in both links and images."""

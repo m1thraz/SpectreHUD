@@ -284,6 +284,14 @@ a:hover {
     margin: 0 auto;
 }
 
+/* Editable exports allow evidence images to be resized directly in-browser. */
+main.report-body img {
+    resize: both;
+    overflow: hidden;
+    max-width: 100%;
+    display: inline-block;
+}
+
 .screenshot-caption {
     font-size: 11px;
     color: var(--text-muted);
@@ -358,6 +366,10 @@ tr:nth-child(even) {
 
     .action-bar, .no-print {
         display: none !important;
+    }
+
+    main.report-body img {
+        resize: none;
     }
 
     .report-header {
