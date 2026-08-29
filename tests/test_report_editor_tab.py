@@ -70,6 +70,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertGreater(dialog.combo_templates.count(), 0)
         self.assertEqual(dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot"))
 
+    def test_html_export_theme_buttons_have_room_for_their_labels(self):
+        """The two long theme labels must not be elided in the export chooser."""
+        with patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
+            self.assertIsNone(self.tab._select_html_export_theme())
+
+        dialogs = self.tab.window().findChildren(QMessageBox)
+        self.assertEqual(len(dialogs), 1)
+        dialog = dialogs[0]
+        self.assertGreaterEqual(dialog.minimumWidth(), 640)
+        buttons = {button.text(): button for button in dialog.buttons()}
+        self.assertGreaterEqual(buttons[t("report.html_theme_dark", "Dark — SpectreHUD")].minimumWidth(), 190)
+        self.assertGreaterEqual(buttons[t("report.html_theme_light", "Light — Client / Print")].minimumWidth(), 190)
+
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""
         # 1. Switch to EDITOR mode

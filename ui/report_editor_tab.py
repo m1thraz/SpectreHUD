@@ -1055,9 +1055,15 @@ class ReportEditorTab(QWidget):
         msg.setIcon(QMessageBox.Icon.Question)
         dark_button = msg.addButton(t("report.html_theme_dark", "Dark — SpectreHUD"), QMessageBox.ButtonRole.AcceptRole)
         light_button = msg.addButton(t("report.html_theme_light", "Light — Client / Print"), QMessageBox.ButtonRole.ActionRole)
-        msg.addButton(QMessageBox.StandardButton.Cancel)
+        cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
         msg.setDefaultButton(dark_button)
         msg.setStyleSheet(CYBER_DARK_QSS)
+        # QMessageBox otherwise calculates its width from the text labels and
+        # can elide the two longer theme choices on Windows.
+        msg.setMinimumWidth(640)
+        dark_button.setMinimumWidth(190)
+        light_button.setMinimumWidth(190)
+        cancel_button.setMinimumWidth(100)
         msg.exec()
 
         if msg.clickedButton() is dark_button:
