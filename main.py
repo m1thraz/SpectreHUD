@@ -1,6 +1,7 @@
 import sys
 import os
 import traceback
+import time
 from pathlib import Path
 
 # Force UTF-8 stdout/stderr on Windows consoles to prevent UnicodeEncodeError
@@ -10,7 +11,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 
 from core.single_instance import ApplicationLockError, acquire_application_lock, release_application_lock
 from core.snippet_manager import SnippetManager
@@ -24,6 +25,13 @@ from ui.main_window import MainWindow
 from ui.styles import CYBER_DARK_QSS, get_app_icon
 
 logger = get_logger("app")
+
+
+def _startup_mark(started_at: float, stage: str) -> None:
+    """Emits opt-in startup timing marks for real desktop profiling."""
+    if os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
+        elapsed_ms = (time.perf_counter() - started_at) * 1_000
+        print(f"[SpectreHUD startup] {stage}: {elapsed_ms:.1f} ms", flush=True)
 
 def global_exception_hook(exctype, value, tb):
     """
@@ -86,8 +94,10 @@ def main():
         print("  -v, --version  Show version and exit")
         sys.exit(0)
 
+    started_at = time.perf_counter()
     logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)
+    _startup_mark(started_at, "QApplication ready")
     app.setApplicationName("SpectreHUD")
     app.setQuitOnLastWindowClosed(False)
     app.setStyleSheet(CYBER_DARK_QSS)
@@ -105,6 +115,7 @@ def main():
             "Bitte prüfe, ob das Konfigurationsverzeichnis verfügbar und beschreibbar ist.",
         )
         return
+    _startup_mark(started_at, "application lock acquired")
     if application_lock is None:
         QMessageBox.information(
             None,
@@ -121,13 +132,16 @@ def main():
 
         # Initialize Service Container
         container = _create_production_container()
+        _startup_mark(started_at, "service container ready")
         container.clipboard_watcher.start_listening()
 
         # Main Window
         window = MainWindow(container=container)
+        _startup_mark(started_at, "MainWindow constructed")
         if not app_icon.isNull():
             window.setWindowIcon(app_icon)
         window.show()
+        _startup_mark(started_at, "MainWindow shown")
 
         # Global Hotkey Listener
         from core.hotkey_listener import HotkeyConfig
@@ -143,6 +157,7 @@ def main():
         hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
+        _startup_mark(started_at, "hotkey listener started")
 
         # Register safety net shutdown hook
         app.aboutToQuit.connect(window.prepare_for_shutdown)
@@ -177,6 +192,7 @@ def main():
         tray_icon.setContextMenu(tray_menu)
         tray_icon.activated.connect(lambda reason: window.toggle_visibility() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
         tray_icon.show()
+        _startup_mark(started_at, "system tray ready")
 
         def update_tray_state(is_active: bool):
             tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon)))
@@ -197,6 +213,12 @@ def main():
             act_quit.setText(f"Beenden ({new_quit})")
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
+
+        _startup_mark(started_at, "application ready")
+        if os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
+            profile_exit_ms = int(os.environ.get("SPECTREHUD_PROFILE_EXIT_MS", "0"))
+            if profile_exit_ms > 0:
+                QTimer.singleShot(profile_exit_ms, app.quit)
 
         exit_code = app.exec()
         logger.info("SpectreHUD shutting down cleanly.")

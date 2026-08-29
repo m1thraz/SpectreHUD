@@ -135,6 +135,22 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_report_editor_is_created_only_when_report_mode_opens(self):
+        """Startup must not construct the expensive report editor in Cheatsheet mode."""
+        window = MainWindow(
+            config_manager=ConfigManager(config_dir=self.config_dir),
+            snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=ProjectManager(base_dir=self.projects_dir),
+        )
+
+        self.assertIsNone(window.report_ctrl.report_editor_tab)
+
+        window.switch_mode("report")
+        self.assertIsInstance(window.report_ctrl.report_editor_tab, ReportEditorTab)
+        window.close()
+
     def test_report_editor_tab_smoke(self):
         """Smoke test verifying ReportEditorTab lifecycle, editing, dirty flag and saving."""
         project_manager = ProjectManager(base_dir=self.projects_dir)
