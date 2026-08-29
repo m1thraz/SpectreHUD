@@ -430,7 +430,7 @@ REPORT_LIGHT_CSS = """
 
 .report-wrapper { box-shadow: 0 8px 24px rgba(31, 35, 40, 0.12); }
 .report-header { background: linear-gradient(135deg, #f6f8fa 0%, #ddf4ff 100%); }
-.brand-title, h1, h2, h3, h4 { color: #1f2328; }
+.brand-title, h1, h2, h3, h4 { color: #000000; }
 .meta-item, .action-bar { background-color: #f6f8fa; }
 .btn-action { background-color: #ffffff; color: #1f2328; }
 pre { background-color: #f6f8fa; border-color: #d0d7de; }

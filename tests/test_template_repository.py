@@ -1,7 +1,9 @@
 import unittest
 import tempfile
 import json
+import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from core.reporting.template_repository import (
     TemplateRepository,
@@ -48,6 +50,25 @@ class TestTemplateRepository(unittest.TestCase):
             self.assertIn(t.category, ("ctf", "pentest"))
             self.assertIn(t.complexity, ("simple", "complex"))
             self.assertGreater(len(t.sections), 0)
+
+    def test_frozen_build_reads_bundled_report_templates(self):
+        """The one-file EXE must use its unpacked report template directory."""
+        bundle_dir = self.temp_path / "bundle"
+        bundled_templates = bundle_dir / "data" / "report_templates"
+        bundled_templates.mkdir(parents=True)
+        (bundled_templates / "only_bundle.json").write_text(
+            json.dumps({
+                "id": "only_bundle", "name": "Bundled", "language": "en",
+                "category": "ctf", "complexity": "simple",
+                "sections": [{"type": "header_metadata"}],
+            }),
+            encoding="utf-8",
+        )
+
+        with patch.object(sys, "frozen", True, create=True), patch.object(sys, "_MEIPASS", str(bundle_dir), create=True):
+            repo = TemplateRepository(user_templates_dir=self.user_dir)
+            self.assertEqual(repo.builtin_dir, bundled_templates)
+            self.assertEqual([template.id for template in repo.get_builtin_templates()], ["only_bundle"])
 
     def test_save_and_load_user_template(self):
         """User can create and persist custom templates."""

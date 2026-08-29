@@ -6,6 +6,7 @@ Manages discovery, validation, storage, and retrieval of built-in and user-defin
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -116,7 +117,13 @@ class TemplateRepository:
         if builtin_dir:
             self.builtin_dir = Path(builtin_dir)
         else:
-            self.builtin_dir = Path(__file__).resolve().parent.parent.parent / "data" / "report_templates"
+            # PyInstaller one-file builds unpack data into ``_MEIPASS``;
+            # source and wheel installations retain the normal repository
+            # layout next to ``core``.
+            if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+                self.builtin_dir = Path(sys._MEIPASS) / "data" / "report_templates"
+            else:
+                self.builtin_dir = Path(__file__).resolve().parent.parent.parent / "data" / "report_templates"
 
         if user_templates_dir:
             self.user_templates_dir = Path(user_templates_dir)

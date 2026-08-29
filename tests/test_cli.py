@@ -1,7 +1,10 @@
 import sys
 import subprocess
 import unittest
+from unittest.mock import patch
 from pathlib import Path
+
+import main
 
 
 class TestCLI(unittest.TestCase):
@@ -24,6 +27,11 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run([sys.executable, str(self.main_script), "--version"], capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
         self.assertIn("SpectreHUD 2.0.0", res.stdout)
+
+    def test_cli_output_is_safe_when_windowed_exe_has_no_stdout(self):
+        """PyInstaller windowed builds provide no stdout for CLI switches."""
+        with patch.object(sys, "stdout", None):
+            main._write_cli(["SpectreHUD 2.0.0"])
 
 
 if __name__ == "__main__":

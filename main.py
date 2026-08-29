@@ -4,6 +4,46 @@ import traceback
 import time
 from pathlib import Path
 
+
+def _write_cli(lines: list[str]) -> None:
+    """Writes CLI output when a console stream exists.
+
+    A PyInstaller ``console=False`` executable has no ``sys.stdout`` on
+    Windows. CLI switches must still terminate successfully in that build,
+    even though there is nowhere to display their text.
+    """
+    stream = sys.stdout
+    if stream is None:
+        return
+    try:
+        stream.write("\n".join(lines) + "\n")
+        stream.flush()
+    except (AttributeError, OSError, ValueError):
+        return
+
+
+def _exit_for_cli_argument(argv: list[str]) -> None:
+    """Handles CLI-only invocations before any GUI or application import."""
+    if "--version" in argv or "-v" in argv:
+        _write_cli(["SpectreHUD 2.0.0"])
+        raise SystemExit(0)
+    if "--help" in argv or "-h" in argv:
+        _write_cli([
+            "SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD",
+            "Usage: spectrehud [OPTIONS]",
+            "",
+            "Options:",
+            "  -h, --help     Show this message and exit",
+            "  -v, --version  Show version and exit",
+        ])
+        raise SystemExit(0)
+
+
+# Keep executable smoke tests and package metadata commands independent from
+# PyQt, global locks and all other production-side initialization.
+if __name__ == "__main__":
+    _exit_for_cli_argument(sys.argv)
+
 # Force UTF-8 stdout/stderr on Windows consoles to prevent UnicodeEncodeError
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -94,17 +134,9 @@ def _create_production_container():
     return ServiceContainer.create_production()
 
 def main():
-    if "--version" in sys.argv or "-v" in sys.argv:
-        print("SpectreHUD 2.0.0")
-        sys.exit(0)
-    if "--help" in sys.argv or "-h" in sys.argv:
-        print("SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD")
-        print("Usage: spectrehud [OPTIONS]")
-        print("\nOptions:")
-        print("  -h, --help     Show this message and exit")
-        print("  -v, --version  Show version and exit")
-        sys.exit(0)
-
+    # Retain correct behaviour for callers importing ``main`` and invoking it
+    # directly; the module entry path has already handled this even earlier.
+    _exit_for_cli_argument(sys.argv)
     started_at = time.perf_counter()
     logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)

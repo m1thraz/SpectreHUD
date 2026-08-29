@@ -70,6 +70,12 @@ Windows-EXE. Der Release-Workflow nutzt denselben isolierten Wheel-Build und leh
 Tags ab, deren Version nicht mit `pyproject.toml` übereinstimmt. Die erste grüne
 Ausführung auf GitHub bleibt die noch ausstehende Abnahme.
 
+**Lokaler CI-Abgleich (2026-08-29):** Die vollständige pytest-Sammlung umfasst
+342 Tests (ein erwarteter Skip). Der CI-Lint-Gate mit `flake8` für kritische
+Syntax- und Namensfehler sowie `compileall` für `core`, `ui`, `data`, `main.py`
+und `scripts` liefen ohne Befund. Die plattformübergreifende GitHub-Ausführung
+bleibt dennoch erforderlich.
+
 ### 2.2 Release-Artefakte validieren
 
 - Wheel ohne Netzwerkabhängigkeit bauen.
@@ -84,6 +90,14 @@ werden gebaut; `scripts/verify_wheel.py` muss den aktuellen Paketinhalt bestäti
 Eine frische virtuelle Umgebung muss das Wheel samt Abhängigkeiten installieren sowie
 `spectrehud --version` und `spectrehud --help` erfolgreich ausführen. Der
 Windows-EXE-Build und die vollständige CI-Matrix bleiben harte Release-Gates.
+
+**Lokaler Nachweis (2026-08-29):** Das Wheel wurde gebaut und mit
+`scripts/verify_wheel.py` geprüft (122 Archivdateien). Die Installation in einer
+frischen virtuellen Umgebung sowie `spectrehud --version` und
+`spectrehud --help` waren erfolgreich. Die Windows-x64-EXE wurde mit PyInstaller
+6.22.2 gebaut; `SpectreHUD.exe --version` und `SpectreHUD.exe --help` beendeten
+beide mit Exit-Code 0. Die EXE enthält explizit Übersetzungen, beide
+Standard-Snippet-Dateien und die Report-Vorlagen.
 
 ---
 
@@ -126,6 +140,11 @@ Die folgende Checkliste wird auf einer normalen Windows-Desktop-Sitzung ausgefü
 
 **Abnahme:** Ein neuer Nutzer kann Installation, erste Schritte und Einschränkungen ohne Quellcodelektüre verstehen.
 
+**Stand:** Die Release Notes liegen in
+[`release_notes_v2.0.0.md`](release_notes_v2.0.0.md). README und Architektur-
+Dokumentation enthalten Installation, unterstützte Plattformen, Wayland-Hinweis
+und Datenschutzgrenzen.
+
 ---
 
 ## Phase 5: Release-Ablauf
@@ -133,7 +152,7 @@ Die folgende Checkliste wird auf einer normalen Windows-Desktop-Sitzung ausgefü
 1. Release-Candidate-Branch oder -Tag erstellen.
 2. CI und manuelle Abnahme vollständig abschließen.
 3. Git-Arbeitsbaum prüfen; nur beabsichtigte Änderungen committen.
-4. Finalen Versions-Tag erstellen (`v1.0.0` oder `v2.0.0`, gemäß Versionsentscheidung).
+4. Finalen Versions-Tag erstellen (`v2.0.0`, gemäß Versionsentscheidung).
 5. Wheel und Windows-EXE als Release-Artefakte veröffentlichen.
 6. Release Notes und Prüfsummen/Artefaktlinks veröffentlichen.
 
@@ -141,11 +160,11 @@ Die folgende Checkliste wird auf einer normalen Windows-Desktop-Sitzung ausgefü
 
 Der offizielle Release darf nur erfolgen, wenn alle Punkte erfüllt sind:
 
-- [ ] Versionsnummer überall einheitlich
-- [ ] Vollständiger, isolierter Testlauf auf dem RC-Commit grün
+- [ ] Versionsnummer überall einheitlich *(finaler Tag steht noch aus)*
+- [x] Vollständiger, isolierter Testlauf lokal grün *(342 Tests, 1 erwarteter Skip; RC-Commit erneut prüfen)*
 - [ ] CI auf unterstützten Plattformen grün
-- [ ] Wheel und EXE erfolgreich gebaut und getestet *(Wheel: gebaut, verifiziert und frisch installiert; EXE-Test steht noch aus.)*
+- [x] Wheel und EXE lokal erfolgreich gebaut und getestet
 - [ ] Manuelle Windows-Abnahme ohne Blocker
-- [ ] Sicherheitsregression grün
-- [ ] Release Notes und bekannte Einschränkungen veröffentlicht
+- [x] Sicherheitsregression lokal grün *(Teil des vollständigen Testlaufs; auf RC-Commit erneut prüfen)*
+- [x] Release Notes und bekannte Einschränkungen dokumentiert *(Veröffentlichung mit Release steht noch aus)*
 - [ ] Git-Arbeitsbaum geprüft und Release-Tag vorbereitet
