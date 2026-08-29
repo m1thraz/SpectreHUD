@@ -3,7 +3,7 @@ import sys
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -14,7 +14,7 @@ from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
-from ui.report_editor_tab import ReportEditorTab, ViewMode, ReportPreviewEdit, ReportGenerationDialog
+from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode, ReportPreviewEdit, ReportGenerationDialog
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -151,6 +151,36 @@ class TestReportEditorTab(unittest.TestCase):
         edit.insertFromMimeData(mime)
         # Text should remain empty because image drop was rejected
         self.assertEqual(edit.toPlainText().strip(), "")
+
+    def test_find_replace_and_autosave(self):
+        self.tab.editor.setPlainText("alpha beta alpha")
+        self.tab.editor.setFocus()
+        self.tab._open_find_bar()
+        self.tab.find_input.setText("alpha")
+        self.assertTrue(self.tab.find_bar.isVisible())
+        self.assertEqual(self.tab.find_count_label.text(), "2 Treffer")
+        self.tab.replace_input.setText("omega")
+        self.tab._replace_all()
+        self.assertEqual(self.tab.editor.toPlainText(), "omega beta omega")
+        self.tab._close_find_bar()
+        self.assertFalse(self.tab.find_bar.isVisible())
+
+        self.tab.report_file_manager.save = MagicMock(return_value=True)
+        self.tab._set_dirty(False)
+        self.tab._autosave()
+        self.tab.report_file_manager.save.assert_not_called()
+        self.tab._set_dirty(True)
+        self.tab._autosave()
+        self.tab.report_file_manager.save.assert_called_once()
+        self.assertEqual(self.tab._autosave_timer.interval(), AUTOSAVE_INTERVAL_MS)
+
+    def test_autosave_failure_is_non_modal(self):
+        self.tab._set_dirty(True)
+        self.tab.report_file_manager.save = MagicMock(return_value=False)
+        with patch.object(QMessageBox, "exec") as message_exec:
+            self.tab._autosave()
+        message_exec.assert_not_called()
+        self.assertTrue(self.tab.is_dirty())
 
 
 if __name__ == "__main__":

@@ -21,10 +21,10 @@ from typing import Optional, Dict
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog,
+    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit,
     QComboBox, QFormLayout
 )
-from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QImage
+from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QTextCursor, QImage
 
 from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
@@ -39,6 +39,7 @@ from ui.styles.fonts import get_report_font_stack
 logger = get_logger("report_editor")
 
 PREVIEW_DEBOUNCE_MS = 300
+AUTOSAVE_INTERVAL_MS = 45_000
 
 
 MAX_PREVIEW_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB
@@ -275,6 +276,11 @@ class ReportEditorTab(QWidget):
         self._preview_timer.setInterval(PREVIEW_DEBOUNCE_MS)
         self._preview_timer.timeout.connect(self._update_preview)
 
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setInterval(AUTOSAVE_INTERVAL_MS)
+        self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_timer.start()
+
         self._build_ui()
         self._ensure_active_template()
 
@@ -348,6 +354,35 @@ class ReportEditorTab(QWidget):
 
         layout.addLayout(toolbar)
 
+        self.find_bar = QWidget()
+        find_layout = QHBoxLayout(self.find_bar)
+        find_layout.setContentsMargins(4, 2, 4, 2)
+        self.find_input = QLineEdit()
+        self.find_input.setPlaceholderText("Suchen …")
+        self.find_input.textChanged.connect(self._update_find_count)
+        self.find_input.returnPressed.connect(self._find_next)
+        self.replace_input = QLineEdit()
+        self.replace_input.setPlaceholderText("Ersetzen durch …")
+        self.find_count_label = QLabel("0 Treffer")
+        btn_previous = QPushButton("↑")
+        btn_previous.setToolTip("Vorheriger Treffer")
+        btn_previous.clicked.connect(self._find_previous)
+        btn_next = QPushButton("↓")
+        btn_next.setToolTip("Nächster Treffer")
+        btn_next.clicked.connect(self._find_next)
+        btn_replace = QPushButton("Ersetzen")
+        btn_replace.clicked.connect(self._replace_current)
+        btn_replace_all = QPushButton("Alle ersetzen")
+        btn_replace_all.clicked.connect(self._replace_all)
+        btn_close_find = QPushButton("×")
+        btn_close_find.setToolTip("Suche schließen (Esc)")
+        btn_close_find.clicked.connect(self._close_find_bar)
+        for widget in (self.find_input, self.replace_input, self.find_count_label, btn_previous,
+                       btn_next, btn_replace, btn_replace_all, btn_close_find):
+            find_layout.addWidget(widget)
+        self.find_bar.hide()
+        layout.addWidget(self.find_bar)
+
         # --- Editor | Vorschau ---
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
@@ -362,6 +397,8 @@ class ReportEditorTab(QWidget):
         )
         self.editor.setProperty("class", "ReportSourceEditor")
         self.editor.textChanged.connect(self._on_text_changed)
+        from ui.markdown_highlighter import MarkdownHighlighter
+        self._highlighter = MarkdownHighlighter(self.editor.document())
         self.splitter.addWidget(self.editor)
 
         self.preview_document = ReportDocument(parent=self)
@@ -395,6 +432,11 @@ class ReportEditorTab(QWidget):
 
         sc_mode3 = QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW))
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        self._shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self.editor, activated=self._open_find_bar)
+        self._shortcut_find.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._shortcut_find_close = QShortcut(QKeySequence("Esc"), self.find_bar, activated=self._close_find_bar)
+        self._shortcut_find_close.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._apply_view_mode(self._view_mode)
 
@@ -509,6 +551,68 @@ class ReportEditorTab(QWidget):
         self._set_dirty(True)
         self._preview_timer.start()  # debounced
 
+    def _open_find_bar(self) -> None:
+        self.find_bar.show()
+        self.find_input.setFocus()
+        self.find_input.selectAll()
+        self._update_find_count()
+
+    def _close_find_bar(self) -> None:
+        self.find_bar.hide()
+        self.editor.setFocus()
+
+    def _update_find_count(self) -> None:
+        needle = self.find_input.text()
+        if not needle:
+            self.find_count_label.setText("0 Treffer")
+            return
+        document = self.editor.document()
+        cursor = document.find(needle)
+        count = 0
+        while not cursor.isNull():
+            count += 1
+            cursor = document.find(needle, cursor)
+        self.find_count_label.setText(f"{count} Treffer")
+
+    def _find(self, backwards: bool = False) -> None:
+        needle = self.find_input.text()
+        if not needle:
+            return
+        flags = QTextDocument.FindFlag.FindBackward if backwards else QTextDocument.FindFlag(0)
+        cursor = self.editor.document().find(needle, self.editor.textCursor(), flags)
+        if cursor.isNull():
+            cursor = self.editor.document().find(needle, QTextCursor(), flags)
+        if not cursor.isNull():
+            self.editor.setTextCursor(cursor)
+
+    def _find_next(self) -> None:
+        self._find(False)
+
+    def _find_previous(self) -> None:
+        self._find(True)
+
+    def _replace_current(self) -> None:
+        cursor = self.editor.textCursor()
+        if cursor.hasSelection() and cursor.selectedText() == self.find_input.text():
+            cursor.insertText(self.replace_input.text())
+        self._find_next()
+
+    def _replace_all(self) -> None:
+        needle = self.find_input.text()
+        if not needle:
+            return
+        cursor = self.editor.textCursor()
+        cursor.beginEditBlock()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        while True:
+            match = self.editor.document().find(needle, cursor)
+            if match.isNull():
+                break
+            match.insertText(self.replace_input.text())
+            cursor = match
+        cursor.endEditBlock()
+        self._update_find_count()
+
     def _enter_preview_mode(self) -> None:
         """Enters editable live preview mode and takes a markdown baseline snapshot."""
         self._preview_markdown_snapshot = self.editor.toPlainText()
@@ -601,6 +705,28 @@ class ReportEditorTab(QWidget):
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
         return ok
+
+    def _autosave(self) -> None:
+        """Persist a dirty report without interrupting the user on failures."""
+        if not self.is_dirty() or not self.current_project:
+            return
+        if self._view_mode == ViewMode.PREVIEW:
+            self._commit_preview_to_markdown()
+        try:
+            ok = self.report_file_manager.save(self.editor.toPlainText(), project_name=self.current_project)
+        except Exception:
+            logger.exception("Autosave failed for report '%s'", self.current_project)
+            self.lbl_status.setText("Autosave fehlgeschlagen — bitte manuell speichern")
+            return
+        if ok:
+            self._set_dirty(False)
+        else:
+            logger.error("Autosave failed for report '%s'", self.current_project)
+            self.lbl_status.setText("Autosave fehlgeschlagen — bitte manuell speichern")
+
+    def closeEvent(self, event) -> None:
+        self._autosave_timer.stop()
+        super().closeEvent(event)
 
     def _on_regenerate_clicked(self) -> None:
         if not self.current_project:
