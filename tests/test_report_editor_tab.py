@@ -54,6 +54,8 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab.preview.isVisible())
         self.assertTrue(self.tab.preview.isReadOnly())
         self.assertIn("Split", self.tab.lbl_status.text())
+        self.assertTrue(self.tab._view_actions[ViewMode.SPLIT].isChecked())
+        self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
     def test_template_selection_is_in_report_generation_dialog(self):
         """Templates are selected immediately before report generation, not in the toolbar."""
@@ -77,6 +79,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(self.tab.preview.isVisible())
         self.assertTrue(self.tab.preview.isReadOnly())
         self.assertIn("Editor", self.tab.lbl_status.text())
+        self.assertTrue(self.tab._view_actions[ViewMode.EDITOR].isChecked())
 
         # 2. Switch to PREVIEW mode (editable)
         self.tab._set_view_mode(ViewMode.PREVIEW)

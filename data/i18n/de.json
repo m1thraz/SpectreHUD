@@ -234,5 +234,7 @@
     "report.html_theme_message": "In welchem Design soll der HTML-Report exportiert werden?",
     "report.html_theme_hint": "Light eignet sich besonders für Auftraggeber und Ausdrucke.",
     "report.html_theme_dark": "Dark — SpectreHUD",
-    "report.html_theme_light": "Light — Kunde / Druck"
+    "report.html_theme_light": "Light — Kunde / Druck",
+    "report.change_view": "Ansicht ändern",
+    "report.change_view_tip": "Layout des Report-Editors auswählen"
 }

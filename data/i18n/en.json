@@ -234,5 +234,7 @@
     "report.html_theme_message": "Which design should the HTML report use?",
     "report.html_theme_hint": "Light is especially suitable for clients and printouts.",
     "report.html_theme_dark": "Dark — SpectreHUD",
-    "report.html_theme_light": "Light — Client / Print"
+    "report.html_theme_light": "Light — Client / Print",
+    "report.change_view": "Change View",
+    "report.change_view_tip": "Choose report editor layout"
 }

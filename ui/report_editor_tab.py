@@ -21,10 +21,10 @@ from typing import Optional, Dict
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit,
+    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit, QMenu,
     QComboBox, QFormLayout
 )
-from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QTextCursor, QImage
+from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence, QTextDocument, QTextCursor, QImage
 
 from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
@@ -298,24 +298,24 @@ class ReportEditorTab(QWidget):
         toolbar.addWidget(self.lbl_status)
         toolbar.addStretch()
 
-        # View Mode Switch Buttons
-        self.btn_mode_editor = QPushButton(t("report.mode_editor", "📝 Editor"))
-        self.btn_mode_editor.setProperty("class", "SecondaryBtn")
-        self.btn_mode_editor.setToolTip(t("report.mode_editor_tip", "Show Markdown source editor only (Ctrl+1)"))
-        self.btn_mode_editor.clicked.connect(lambda: self._set_view_mode(ViewMode.EDITOR))
-        toolbar.addWidget(self.btn_mode_editor)
-
-        self.btn_mode_split = QPushButton(t("report.mode_split", "◫ Split"))
-        self.btn_mode_split.setProperty("class", "SecondaryBtn")
-        self.btn_mode_split.setToolTip(t("report.mode_split_tip", "Split view: Editor & Live Preview side by side (Ctrl+2)"))
-        self.btn_mode_split.clicked.connect(lambda: self._set_view_mode(ViewMode.SPLIT))
-        toolbar.addWidget(self.btn_mode_split)
-
-        self.btn_mode_preview = QPushButton(t("report.mode_preview", "👁️ Live-Ansicht"))
-        self.btn_mode_preview.setProperty("class", "SecondaryBtn")
-        self.btn_mode_preview.setToolTip(t("report.mode_preview_tip", "Editable full-screen Live Preview (Ctrl+3)"))
-        self.btn_mode_preview.clicked.connect(lambda: self._set_view_mode(ViewMode.PREVIEW))
-        toolbar.addWidget(self.btn_mode_preview)
+        # Compact view selector; shortcuts remain available for power users.
+        self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
+        self.btn_change_view.setProperty("class", "SecondaryBtn")
+        self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
+        self.view_menu = QMenu(self.btn_change_view)
+        self._view_actions = {}
+        for mode, key, fallback in (
+            (ViewMode.EDITOR, "report.mode_editor", "📝 Editor"),
+            (ViewMode.SPLIT, "report.mode_split", "◫ Split"),
+            (ViewMode.PREVIEW, "report.mode_preview", "👁️ Live Preview"),
+        ):
+            action = QAction(t(key, fallback), self.view_menu)
+            action.setCheckable(True)
+            action.triggered.connect(lambda _checked=False, selected=mode: self._set_view_mode(selected))
+            self.view_menu.addAction(action)
+            self._view_actions[mode] = action
+        self.btn_change_view.setMenu(self.view_menu)
+        toolbar.addWidget(self.btn_change_view)
 
         self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
@@ -664,6 +664,8 @@ class ReportEditorTab(QWidget):
 
     def _apply_view_mode(self, mode: ViewMode) -> None:
         """Applies visibility and splitter layout for the selected view mode."""
+        for action_mode, action in self._view_actions.items():
+            action.setChecked(action_mode == mode)
         if mode == ViewMode.EDITOR:
             self.editor.setVisible(True)
             self.preview.setVisible(False)
