@@ -382,6 +382,8 @@ class TestUI(unittest.TestCase):
         # Check fields exist on VariableBar
         self.assertTrue(hasattr(window.var_bar, "txt_user"))
         self.assertTrue(hasattr(window.var_bar, "txt_pass"))
+        self.assertEqual(window.var_bar.txt_user.width(), window.var_bar.txt_target.width())
+        self.assertEqual(window.var_bar.txt_pass.width(), window.var_bar.txt_target.width())
         self.assertTrue(hasattr(window.var_bar, "btn_toggle_pass"))
 
         # Password initially in Password mode
