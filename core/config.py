@@ -26,7 +26,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "theme": "cyber_dark",
     "language": "en",
     "time_format": "24h",
-    "workspace_dir": str(Path.home() / "spectre_projects")
+    "workspace_dir": str(Path.home() / "spectre_projects"),
+    "obsidian_vault_path": "",
+    "obsidian_export_folder": "CTF/SpectreHUD",
+    "obsidian_open_after_export": False,
 }
 
 def get_default_config_dir() -> Path:

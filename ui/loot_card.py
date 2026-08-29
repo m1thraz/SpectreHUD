@@ -23,6 +23,7 @@ class LootCard(QFrame):
     deleted = pyqtSignal(str)
     edit_requested = pyqtSignal(dict)
     export_requested = pyqtSignal(str)
+    obsidian_export_requested = pyqtSignal(str)
     loot_deleted = deleted
 
     def __init__(self, entry: Dict[str, Any], project_dir: Optional[Path] = None, parent: QWidget = None):
@@ -98,6 +99,12 @@ class LootCard(QFrame):
         self.btn_export_file.setToolTip("Diesen Loot-Eintrag als Textdatei ins Projekt exportieren")
         self.btn_export_file.clicked.connect(lambda: self.export_requested.emit(self.entry.get("id", "")))
         header_layout.addWidget(self.btn_export_file)
+
+        self.btn_export_obsidian = QPushButton("O")
+        self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
+        self.btn_export_obsidian.setToolTip("Diesen Loot-Eintrag an die Obsidian-Projektnotiz anhängen")
+        self.btn_export_obsidian.clicked.connect(lambda: self.obsidian_export_requested.emit(self.entry.get("id", "")))
+        header_layout.addWidget(self.btn_export_obsidian)
 
         # 8. Delete Button
         btn_delete = QPushButton("✕")

@@ -42,6 +42,8 @@ SpectreHUD is a frameless PyQt6 HUD overlay for CTFs and authorized penetration-
   - **Box Archiver** — Compresses the entire project workspace (`recon/`, `exploit/`, `loot/`, `report.md`, `project_state.json`) into a clean ZIP archive with path-traversal safeguards.
 - **German & English Interface** — The interface can be switched live between **English (US)** and **German (Standard)**. Core forms, report actions and user-facing error prompts use the active locale.
 - **Pentest Mode (Optional Encryption)** — Per-project encryption protects `project_state.json` (variables, loot and clipboard history) with a password-derived key that exists only for the unlocked session. See [Pentest Mode](docs/pentest_mode.md) for scope and limitations.
+- **Obsidian Export (One Way)** — Export the active report, its local screenshots and safe project metadata to an existing Obsidian vault; append full-session or individual loot without overwriting manually edited notes. See [Obsidian Export](docs/obsidian_export.md).
+- **CherryTree Package Export** — Generate a portable `report.html`, `loot.html` and relative-image package for CherryTree import, without touching `.ctb` databases. See [CherryTree Export](docs/cherrytree_export.md).
 - **Modular Settings & Hotkey Configuration** — Customize global hotkeys, font families for app/code/report output, always-on-top behavior, workspace and default variables in the settings dialog (`Ctrl + ,`).
 
 ![Add Command Dialog](assets/spectrehud_add_command.png)

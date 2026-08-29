@@ -283,7 +283,8 @@ class LootController(QObject):
         on_select_type: Callable[[str], None],
         on_export: Callable[[], None],
         on_clear: Callable[[], None],
-        export_tooltip: str
+        export_tooltip: str,
+        on_export_obsidian: Optional[Callable[[], None]] = None,
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
@@ -294,10 +295,10 @@ class LootController(QObject):
         self.filter_buttons["all"] = all_btn
         pills_layout.addWidget(all_btn)
 
-        for t in LOOT_TYPES:
-            tid = t["id"]
+        for loot_type in LOOT_TYPES:
+            tid = loot_type["id"]
             count = counts.get(tid, 0)
-            btn = QPushButton(f"{t['name']} ({count})")
+            btn = QPushButton(f"{loot_type['name']} ({count})")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty("class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill")
             btn.clicked.connect(lambda checked=False, type_id=tid: on_select_type(type_id))
@@ -312,6 +313,13 @@ class LootController(QObject):
         btn_export.setToolTip(export_tooltip)
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
+
+        if on_export_obsidian is not None:
+            btn_obsidian = QPushButton("Obsidian")
+            btn_obsidian.setProperty("class", "MiniActionBtn")
+            btn_obsidian.setToolTip(t("loot.export_obsidian_tip", "Append the current loot to the exported Obsidian project note"))
+            btn_obsidian.clicked.connect(on_export_obsidian)
+            pills_layout.addWidget(btn_obsidian)
 
         btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
@@ -328,7 +336,8 @@ class LootController(QObject):
         on_edit_loot: Callable[[Dict[str, Any]], None],
         on_export_loot: Callable[[str], None],
         parent_widget: QWidget,
-        show_empty_state_fn: Callable[[str], None]
+        show_empty_state_fn: Callable[[str], None],
+        on_export_obsidian: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         loot_entries = self.get_entries(
             target_ip=None,
@@ -361,6 +370,8 @@ class LootController(QObject):
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 card.export_requested.connect(on_export_loot)
+                if on_export_obsidian is not None:
+                    card.obsidian_export_requested.connect(on_export_obsidian)
                 content_layout.addWidget(card)
                 rendered_cards.append(card)
 
@@ -376,6 +387,7 @@ class LootController(QObject):
         on_export_loot: Callable[[str], None],
         on_move_loot: Callable[[str, str], bool],
         parent_widget: QWidget,
+        on_export_obsidian: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         """Renders the alternate Kanban presentation using the same LootCards."""
         loot_entries = self.get_entries(
@@ -390,6 +402,7 @@ class LootController(QObject):
             on_edit=on_edit_loot,
             on_export=on_export_loot,
             on_move=on_move_loot,
+            on_export_obsidian=on_export_obsidian,
             parent=parent_widget,
         )
         content_layout.addWidget(board)

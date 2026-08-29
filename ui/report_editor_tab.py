@@ -360,6 +360,22 @@ class ReportEditorTab(QWidget):
         self.btn_export_html.clicked.connect(self._on_export_html_clicked)
         toolbar.addWidget(self.btn_export_html)
 
+        self.btn_export_obsidian = QPushButton(t("report.export_obsidian", "Export to Obsidian..."))
+        self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
+        self.btn_export_obsidian.setToolTip(
+            t("report.export_obsidian_tip", "Export this report and its screenshots to the configured Obsidian vault")
+        )
+        self.btn_export_obsidian.clicked.connect(self._on_export_obsidian_clicked)
+        toolbar.addWidget(self.btn_export_obsidian)
+
+        self.btn_export_cherrytree = QPushButton(t("report.export_cherrytree", "Export CherryTree Package..."))
+        self.btn_export_cherrytree.setProperty("class", "SecondaryBtn")
+        self.btn_export_cherrytree.setToolTip(
+            t("report.export_cherrytree_tip", "Create portable report.html, loot.html and images for CherryTree import")
+        )
+        self.btn_export_cherrytree.clicked.connect(self._on_export_cherrytree_clicked)
+        toolbar.addWidget(self.btn_export_cherrytree)
+
         self.btn_save = QPushButton(t("report.save", "Save"))
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
@@ -928,6 +944,101 @@ class ReportEditorTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
+
+    def _on_export_obsidian_clicked(self) -> None:
+        """Exports the current editor state without coupling core export to Qt."""
+        from core.exporters import ExternalExportError, ObsidianExporter
+        from PyQt6.QtGui import QDesktopServices
+
+        if not self.current_project:
+            return
+        if self.config is None or not self.config.get("obsidian_vault_path", "").strip():
+            msg = QMessageBox(self)
+            msg.setWindowTitle(t("report.obsidian_not_configured_title", "Obsidian is not configured"))
+            msg.setText(t("report.obsidian_not_configured", "Choose an existing Obsidian vault in Settings before exporting."))
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
+            return
+
+        try:
+            exporter = ObsidianExporter(
+                self.config.get("obsidian_vault_path"),
+                self.config.get("obsidian_export_folder", "CTF/SpectreHUD"),
+            )
+            project_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
+            project_state = self.report_file_manager.project_manager.load_project_state(self.current_project)
+            result = exporter.export_report(
+                project_name=self.current_project,
+                project_dir=project_dir,
+                markdown=self.editor.toPlainText(),
+                project_state=project_state,
+                overwrite="copy",
+            )
+        except (ExternalExportError, OSError, RuntimeError) as exc:
+            logger.error("Obsidian report export failed: %s", exc, exc_info=True)
+            msg = QMessageBox(self)
+            msg.setWindowTitle(t("report.obsidian_export_failed_title", "Obsidian export failed"))
+            msg.setText(t("report.obsidian_export_failed", "The report could not be exported to Obsidian:\n{error}", error=str(exc)))
+            msg.setIcon(QMessageBox.Icon.Warning)
+            msg.setStyleSheet(CYBER_DARK_QSS)
+            msg.exec()
+            return
+
+        message = t("report.obsidian_exported", "Exported to Obsidian:\n{path}", path=str(result.note_path))
+        if result.warnings:
+            message += "\n\n" + t("report.obsidian_attachment_warning", "Some attachments could not be copied.")
+        msg = QMessageBox(self)
+        msg.setWindowTitle(t("report.obsidian_exported_title", "Obsidian export complete"))
+        msg.setText(message)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setStyleSheet(CYBER_DARK_QSS)
+        msg.exec()
+
+        if self.config.get("obsidian_open_after_export", False):
+            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
+                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)
+
+    def _on_export_cherrytree_clicked(self) -> None:
+        """Creates a portable HTML package; no CherryTree database is touched."""
+        from core.exporters import CherryTreeExporter, ExternalExportError
+
+        if not self.current_project:
+            return
+        project_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
+        default_directory = project_dir / "exports"
+        destination = QFileDialog.getExistingDirectory(
+            self,
+            t("report.cherrytree_directory_title", "Choose CherryTree export directory"),
+            str(default_directory if default_directory.exists() else project_dir),
+        )
+        if not destination:
+            return
+        try:
+            result = CherryTreeExporter(destination).export_package(
+                project_name=self.current_project,
+                project_dir=project_dir,
+                report_markdown=self.editor.toPlainText(),
+                loot_entries=self.loot_manager.get_all_entries(),
+                report_font=self._report_font_key(),
+            )
+        except (ExternalExportError, OSError, RuntimeError) as exc:
+            logger.error("CherryTree package export failed: %s", exc, exc_info=True)
+            QMessageBox.warning(
+                self,
+                t("report.cherrytree_export_failed_title", "CherryTree export failed"),
+                t("report.cherrytree_export_failed", "The CherryTree package could not be created:\n{error}", error=str(exc)),
+            )
+            return
+
+        message = t("report.cherrytree_exported", "CherryTree HTML package created:\n{path}", path=str(result.note_path.parent))
+        if result.warnings:
+            message += "\n\n" + t("report.cherrytree_attachment_warning", "Some images could not be copied.")
+        QMessageBox.information(
+            self,
+            t("report.cherrytree_exported_title", "CherryTree package complete"),
+            message,
+        )
 
     def _select_html_export_theme(self) -> Optional[str]:
         """Asks which visual design the standalone HTML report should use."""
