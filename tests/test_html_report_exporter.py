@@ -97,6 +97,18 @@ curl -i http://10.10.10.10/admin
         self.assertIn("downloadEditedHtml", content)
         self.assertIn('report_edited_TestBox.html', content)
 
+    def test_light_theme_uses_client_friendly_colours(self):
+        light_html = HtmlReportExporter.build_full_html(
+            "# Client Report", project_dir=self.proj_dir, project_name="TestBox", theme="light"
+        )
+        dark_html = HtmlReportExporter.build_full_html(
+            "# Technical Report", project_dir=self.proj_dir, project_name="TestBox", theme="dark"
+        )
+
+        self.assertIn("--bg-color: #f6f8fa", light_html)
+        self.assertIn("Light export theme", light_html)
+        self.assertNotIn("Light export theme", dark_html)
+
     def test_xss_prevention_in_images_and_links(self):
         """Verifies that malicious image src and link href payloads cannot execute XSS or inject attributes."""
         # 1. Block Image attribute breakout PoC

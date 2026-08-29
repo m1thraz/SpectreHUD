@@ -7,19 +7,21 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from core.reporting.assets import REPORT_CSS
+from core.reporting.assets import get_report_css
 
 
 def render_report_html(
     body_html: str,
     project_name: Optional[str] = None,
     target_ip: Optional[str] = None,
-    timestamp: Optional[str] = None
+    timestamp: Optional[str] = None,
+    theme: str = "dark"
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
     now_str = timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     target_str = target_ip if target_ip and target_ip != "all" else "N/A"
+    report_css = get_report_css(theme)
     safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip("-_")
     download_filename = json.dumps(f"report_edited_{safe_project_name or 'report'}.html")
     # JSON alone permits literal '<', which an HTML parser could interpret as
@@ -38,7 +40,7 @@ def render_report_html(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpectreHUD // Pentest Report - {html.escape(pname)}</title>
     <style>
-{REPORT_CSS}
+{report_css}
     </style>
 </head>
 <body>

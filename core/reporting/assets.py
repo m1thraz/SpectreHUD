@@ -415,6 +415,39 @@ tr:nth-child(even) {
 """
 
 
+REPORT_LIGHT_CSS = """
+/* Light export theme: optimized for client review and printed hand-outs. */
+:root {
+    --bg-color: #f6f8fa;
+    --container-bg: #ffffff;
+    --card-bg: #f6f8fa;
+    --border-color: #d0d7de;
+    --text-main: #1f2328;
+    --text-muted: #57606a;
+    --code-bg: #f6f8fa;
+}
+
+.report-wrapper { box-shadow: 0 8px 24px rgba(31, 35, 40, 0.12); }
+.report-header { background: linear-gradient(135deg, #f6f8fa 0%, #ddf4ff 100%); }
+.brand-title, h1 { color: #1f2328; }
+.meta-item, .action-bar { background-color: #f6f8fa; }
+.btn-action { background-color: #ffffff; color: #1f2328; }
+pre { background-color: #f6f8fa; border-color: #d0d7de; }
+code { color: #1a7f37; }
+p code, li code, blockquote code, td code { background-color: #eff1f3; border-color: #d0d7de; color: #9a6700; }
+blockquote { background-color: #f6f8fa; }
+.screenshot-container { background-color: #f6f8fa; border-color: #d0d7de; }
+.report-footer { background-color: #ffffff; border-color: #d0d7de; }
+th { background-color: #f6f8fa; }
+tr:nth-child(even) { background-color: #f6f8fa; }
+"""
+
+
+def get_report_css(theme: str = "dark") -> str:
+    """Returns report CSS for the selected standalone export theme."""
+    return REPORT_CSS + (REPORT_LIGHT_CSS if theme.lower() == "light" else "")
+
+
 def encode_image_base64(image_path: Path) -> Optional[str]:
     """Encodes an image file to a base64 data URI."""
     try:

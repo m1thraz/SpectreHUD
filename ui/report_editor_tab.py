@@ -669,6 +669,10 @@ class ReportEditorTab(QWidget):
     def _on_export_html_clicked(self) -> None:
         from core.html_report_exporter import HtmlReportExporter
         from PyQt6.QtGui import QDesktopServices
+        theme = self._select_html_export_theme()
+        if theme is None:
+            return
+
         default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(".html")
         file_path, _ = QFileDialog.getSaveFileName(
             self, "HTML-Report exportieren", str(default_path), "HTML (*.html)"
@@ -686,7 +690,8 @@ class ReportEditorTab(QWidget):
             output_path=target,
             project_dir=proj_dir,
             project_name=self.current_project,
-            target_ip=""
+            target_ip="",
+            theme=theme
         )
         if success:
             msg = QMessageBox(self.window() if self else None)
@@ -706,6 +711,26 @@ class ReportEditorTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
+
+    def _select_html_export_theme(self) -> Optional[str]:
+        """Asks which visual design the standalone HTML report should use."""
+        msg = QMessageBox(self.window() if self else None)
+        msg.setWindowTitle("HTML-Design wählen")
+        msg.setText("In welchem Design soll der HTML-Report exportiert werden?")
+        msg.setInformativeText("Light eignet sich besonders für Auftraggeber und Ausdrucke.")
+        msg.setIcon(QMessageBox.Icon.Question)
+        dark_button = msg.addButton("Dark — SpectreHUD", QMessageBox.ButtonRole.AcceptRole)
+        light_button = msg.addButton("Light — Kunde / Druck", QMessageBox.ButtonRole.ActionRole)
+        msg.addButton(QMessageBox.StandardButton.Cancel)
+        msg.setDefaultButton(dark_button)
+        msg.setStyleSheet(CYBER_DARK_QSS)
+        msg.exec()
+
+        if msg.clickedButton() is dark_button:
+            return "dark"
+        if msg.clickedButton() is light_button:
+            return "light"
+        return None
 
     # ------------------------------------------------------------------ #
     # Vorschau & Status

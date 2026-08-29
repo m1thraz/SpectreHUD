@@ -58,7 +58,8 @@ class HtmlReportExporter:
         markdown_content: str, 
         project_dir: Optional[Path] = None, 
         project_name: Optional[str] = None,
-        target_ip: Optional[str] = None
+        target_ip: Optional[str] = None,
+        theme: str = "dark"
     ) -> str:
         """Generates the full, styled HTML document ready for export."""
         body_html = cls.markdown_to_html(markdown_content, project_dir=project_dir)
@@ -66,7 +67,8 @@ class HtmlReportExporter:
         return render_report_html(
             body_html=body_html,
             project_name=pname,
-            target_ip=target_ip
+            target_ip=target_ip,
+            theme=theme
         )
 
     @classmethod
@@ -76,7 +78,8 @@ class HtmlReportExporter:
         output_path: Path, 
         project_dir: Optional[Path] = None,
         project_name: Optional[str] = None,
-        target_ip: Optional[str] = None
+        target_ip: Optional[str] = None,
+        theme: str = "dark"
     ) -> bool:
         """Renders HTML from Markdown and writes it atomically to output_path."""
         out = Path(output_path)
@@ -87,7 +90,8 @@ class HtmlReportExporter:
             markdown_content=markdown_content,
             project_dir=project_dir,
             project_name=project_name,
-            target_ip=target_ip
+            target_ip=target_ip,
+            theme=theme
         )
         try:
             return atomic_write_text(out, full_html, encoding="utf-8")

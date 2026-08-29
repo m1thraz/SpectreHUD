@@ -211,6 +211,7 @@ class TestReportFileManager(unittest.TestCase):
 
         out_html = self.temp_path / "exported_test.html"
         with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_html), "HTML (*.html)")), \
+             patch.object(tab, "_select_html_export_theme", return_value="light"), \
              patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
             tab.btn_export_html.click()
 
@@ -218,6 +219,7 @@ class TestReportFileManager(unittest.TestCase):
         content = out_html.read_text(encoding="utf-8")
         self.assertIn("<h1>HTML Export Test</h1>", content)
         self.assertIn("BoxHtmlTest", content)
+        self.assertIn("Light export theme", content)
 
         tab.deleteLater()
 
