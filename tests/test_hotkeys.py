@@ -3,7 +3,9 @@ Tests for Global Hotkey Listener and Dynamic Hotkey Configuration.
 """
 
 import unittest
-from unittest.mock import patch
+import sys
+from types import ModuleType
+from unittest.mock import MagicMock, patch
 from core.hotkey_listener import (
     HotkeyConfig,
     HotkeyListener,
@@ -40,8 +42,13 @@ class TestHotkeys(unittest.TestCase):
 
     def test_invalid_hotkey_does_not_crash(self):
         listener = HotkeyListener(hotkey_str="invalid+++key+++combo")
-        # Unit tests must not install a real system-wide keyboard hook.
-        with patch("pynput.keyboard.GlobalHotKeys", side_effect=ValueError("invalid hotkey")):
+        # Unit tests must neither install a real system-wide keyboard hook nor
+        # import pynput's platform backend (which requires X11 on Linux).
+        fake_keyboard = ModuleType("pynput.keyboard")
+        fake_keyboard.GlobalHotKeys = MagicMock(side_effect=ValueError("invalid hotkey"))
+        fake_pynput = ModuleType("pynput")
+        fake_pynput.keyboard = fake_keyboard
+        with patch.dict(sys.modules, {"pynput": fake_pynput, "pynput.keyboard": fake_keyboard}):
             listener.start()
         listener.stop()
         self.assertFalse(listener._running)
