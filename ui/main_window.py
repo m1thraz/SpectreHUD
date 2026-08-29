@@ -23,7 +23,7 @@ from ui.variable_bar import VariableBar
 from ui.panels import HeaderPanel, SearchPanel, ContentPanel, FooterPanel
 from ui.app_controller import AppController
 from ui.controllers.window_frame_manager import WindowFrameManager
-from ui.styles import CYBER_DARK_QSS, get_app_icon
+from ui.styles import CYBER_DARK_QSS, build_app_theme, get_app_icon
 
 from core.container import ServiceContainer
 
@@ -154,7 +154,10 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setStyleSheet(CYBER_DARK_QSS)
+        self.setStyleSheet(build_app_theme(
+            self.config.get("ui_font", "segoe_ui"),
+            self.config.get("code_font", "consolas")
+        ))
 
         app_icon = get_app_icon()
         if not app_icon.isNull():

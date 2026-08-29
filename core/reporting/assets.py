@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from core.logger import get_logger
+from ui.styles.fonts import get_report_font_stack
 
 logger = get_logger(__name__)
 
@@ -60,7 +61,7 @@ REPORT_CSS = """
 body {
     background-color: var(--bg-color);
     color: var(--text-main);
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-family: __REPORT_FONT_STACK__;
     font-size: 14px;
     line-height: 1.6;
     padding: 24px 16px;
@@ -443,9 +444,10 @@ tr:nth-child(even) { background-color: #f6f8fa; }
 """
 
 
-def get_report_css(theme: str = "dark") -> str:
+def get_report_css(theme: str = "dark", report_font_key: str = "segoe_ui") -> str:
     """Returns report CSS for the selected standalone export theme."""
-    return REPORT_CSS + (REPORT_LIGHT_CSS if theme.lower() == "light" else "")
+    report_css = REPORT_CSS.replace("__REPORT_FONT_STACK__", get_report_font_stack(report_font_key))
+    return report_css + (REPORT_LIGHT_CSS if theme.lower() == "light" else "")
 
 
 def encode_image_base64(image_path: Path) -> Optional[str]:

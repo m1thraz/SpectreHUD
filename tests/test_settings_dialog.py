@@ -49,12 +49,18 @@ class TestSettingsDialog(unittest.TestCase):
         page.chk_auto_hide.setChecked(True)
         page.chk_loot_board.setChecked(True)
         page.txt_default_target.setText("192.168.1.100")
+        page.combo_ui_font.setCurrentIndex(1)
+        page.combo_code_font.setCurrentIndex(3)
+        page.combo_report_font.setCurrentIndex(3)
         
         settings = page.get_settings()
         self.assertFalse(settings["always_on_top"])
         self.assertTrue(settings["auto_hide_on_copy"])
         self.assertEqual(settings["loot_view_mode"], "board")
         self.assertEqual(settings["target_ip"], "192.168.1.100")
+        self.assertEqual(settings["ui_font"], "inter")
+        self.assertEqual(settings["code_font"], "jetbrains_mono")
+        self.assertEqual(settings["report_font"], "georgia")
 
     def test_settings_dialog_save_and_apply(self):
         dlg = SettingsDialog(self.config_manager)

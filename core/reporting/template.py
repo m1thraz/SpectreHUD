@@ -15,13 +15,14 @@ def render_report_html(
     project_name: Optional[str] = None,
     target_ip: Optional[str] = None,
     timestamp: Optional[str] = None,
-    theme: str = "dark"
+    theme: str = "dark",
+    report_font: str = "segoe_ui"
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
     now_str = timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     target_str = target_ip if target_ip and target_ip != "all" else "N/A"
-    report_css = get_report_css(theme)
+    report_css = get_report_css(theme, report_font)
     safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip("-_")
     download_filename = json.dumps(f"report_edited_{safe_project_name or 'report'}.html")
     # JSON alone permits literal '<', which an HTML parser could interpret as

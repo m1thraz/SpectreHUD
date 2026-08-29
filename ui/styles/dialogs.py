@@ -31,7 +31,7 @@ QLineEdit.CompactVarInput {
     border-radius: 5px;
     color: #58a6ff;
     padding: 3px 8px;
-    font-family: 'Consolas', monospace;
+    font-family: {code_font};
     font-size: 12px;
     font-weight: 600;
 }
@@ -243,7 +243,7 @@ QPlainTextEdit.ReportSourceEditor {
     border: 1px solid #30363d;
     border-radius: 8px;
     padding: 10px;
-    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-family: {code_font};
     font-size: 12px;
 }
 
@@ -257,7 +257,7 @@ QTextEdit.ReportPreview {
     border: 1px solid #30363d;
     border-radius: 8px;
     padding: 14px;
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+    font-family: {ui_font};
     font-size: 13px;
     line-height: 1.6;
 }
@@ -266,7 +266,7 @@ QTextEdit.ReportPreview {
 QDialog, QMessageBox {
     background-color: #161b22;
     color: #f0f6fc;
-    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-family: {ui_font};
     font-size: 13px;
     border: 1px solid #30363d;
 }
@@ -299,3 +299,7 @@ QMessageBox QPushButton:focus, QDialogButtonBox QPushButton:focus, QDialog QPush
     outline: none;
 }
 """
+
+
+def get_dialogs_qss(ui_font: str, code_font: str) -> str:
+    return DIALOGS_QSS.replace("{ui_font}", ui_font).replace("{code_font}", code_font)

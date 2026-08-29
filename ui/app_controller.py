@@ -7,7 +7,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox, QApplication
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
@@ -109,7 +109,10 @@ class AppController(QObject):
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, event_bus=self.event_bus, parent=self)
         self.loot_ctrl = LootController(self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
         self.history_ctrl = HistoryController(self.clipboard_watcher, self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
-        self.report_ctrl = ReportController(self.project_manager, self.loot_manager, self.clipboard_watcher, parent_widget=self.window)
+        self.report_ctrl = ReportController(
+            self.project_manager, self.loot_manager, self.clipboard_watcher,
+            parent_widget=self.window, config_manager=self.config
+        )
         self.project_ctrl = ProjectController(self.project_manager, event_bus=self.event_bus, parent=self)
 
         # Specialized Coordinators
@@ -402,6 +405,18 @@ class AppController(QObject):
         dlg.exec()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
+        if any(key in new_settings for key in ("ui_font", "code_font")):
+            from ui.styles import build_app_theme
+            stylesheet = build_app_theme(
+                self.config.get("ui_font", "segoe_ui"),
+                self.config.get("code_font", "consolas")
+            )
+            app = QApplication.instance()
+            if app is not None:
+                app.setStyleSheet(stylesheet)
+            self.window.setStyleSheet(stylesheet)
+        if "report_font" in new_settings:
+            self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
         if "loot_view_mode" in new_settings and self.active_mode == "loot":

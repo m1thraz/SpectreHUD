@@ -27,12 +27,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QTextDocument, QImage
 
 from core.report_file_manager import ReportFileManager
+from core.config import ConfigManager
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from ui.template_manager_dialog import TemplateManagerDialog
 from core.logger import get_logger
 from core.i18n import t
-from ui.styles import CYBER_DARK_QSS
+from ui.styles import CYBER_DARK_QSS, build_app_theme
+from ui.styles.fonts import get_report_font_stack
 
 logger = get_logger("report_editor")
 
@@ -255,11 +257,12 @@ class ReportEditorTab(QWidget):
     dirty_changed = pyqtSignal(bool)
 
     def __init__(self, report_file_manager: ReportFileManager, loot_manager, clipboard_watcher,
-                 parent: QWidget = None):
+                 parent: QWidget = None, config_manager: Optional[ConfigManager] = None):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
+        self.config = config_manager
         self.template_repo = TemplateRepository()
         self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
@@ -362,27 +365,8 @@ class ReportEditorTab(QWidget):
         self.splitter.addWidget(self.editor)
 
         self.preview_document = ReportDocument(parent=self)
-        
-        # Crisp typography for Markdown live preview
-        preview_font = QFont("Segoe UI", 10)
-        preview_font.setStyleHint(QFont.StyleHint.SansSerif)
-        self.preview_document.setDefaultFont(preview_font)
-        self.preview_document.setDefaultStyleSheet("""
-            body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-size: 13px; color: #f0f6fc; line-height: 1.6; }
-            h1, h2, h3, h4, h5, h6 { color: #58a6ff; font-family: 'Segoe UI', sans-serif; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
-            h1 { font-size: 18px; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
-            h2 { font-size: 15px; border-bottom: 1px solid #21262d; padding-bottom: 3px; color: #79c0ff; }
-            h3 { font-size: 14px; color: #a5d6ff; }
-            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: #161b22; color: #7ee787; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
-            pre { background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; }
-            blockquote { border-left: 3px solid #388bfd; margin: 8px 0; padding-left: 10px; color: #8b949e; }
-            hr { border: 0; border-top: 1px solid #30363d; margin: 14px 0; }
-            a { color: #58a6ff; text-decoration: none; }
-            img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin: 8px 0; }
-            ul, ol { padding-left: 20px; margin: 6px 0; }
-            li { margin: 3px 0; }
-            p { margin: 6px 0; }
-        """)
+        self._apply_preview_font()
+        self.setStyleSheet(build_app_theme(self._ui_font_key(), self._code_font_key()))
 
         self.preview = ReportPreviewEdit()
         self.preview.setDocument(self.preview_document)
@@ -413,6 +397,45 @@ class ReportEditorTab(QWidget):
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._apply_view_mode(self._view_mode)
+
+    def _ui_font_key(self) -> str:
+        return self.config.get("ui_font", "segoe_ui") if self.config else "segoe_ui"
+
+    def _code_font_key(self) -> str:
+        return self.config.get("code_font", "consolas") if self.config else "consolas"
+
+    def _report_font_key(self) -> str:
+        return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"
+
+    def _apply_preview_font(self) -> None:
+        """Apply the report font to the rich-text live preview."""
+        report_font = get_report_font_stack(self._report_font_key())
+        primary_font = report_font.split(",", 1)[0].strip().strip("'\"")
+        preview_font = QFont(primary_font, 10)
+        preview_font.setStyleHint(QFont.StyleHint.SansSerif)
+        self.preview_document.setDefaultFont(preview_font)
+        self.preview_document.setDefaultStyleSheet("""
+            body { font-family: __REPORT_FONT_STACK__; font-size: 13px; color: #f0f6fc; line-height: 1.6; }
+            h1, h2, h3, h4, h5, h6 { color: #58a6ff; font-family: __REPORT_FONT_STACK__; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
+            h1 { font-size: 18px; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
+            h2 { font-size: 15px; border-bottom: 1px solid #21262d; padding-bottom: 3px; color: #79c0ff; }
+            h3 { font-size: 14px; color: #a5d6ff; }
+            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: #161b22; color: #7ee787; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
+            pre { background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; }
+            blockquote { border-left: 3px solid #388bfd; margin: 8px 0; padding-left: 10px; color: #8b949e; }
+            hr { border: 0; border-top: 1px solid #30363d; margin: 14px 0; }
+            a { color: #58a6ff; text-decoration: none; }
+            img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin: 8px 0; }
+            ul, ol { padding-left: 20px; margin: 6px 0; }
+            li { margin: 3px 0; }
+            p { margin: 6px 0; }
+        """.replace("__REPORT_FONT_STACK__", report_font))
+
+    def refresh_font_configuration(self) -> None:
+        """Refresh QSS and preview typography after settings are saved."""
+        self.setStyleSheet(build_app_theme(self._ui_font_key(), self._code_font_key()))
+        self._apply_preview_font()
+        self._update_preview()
 
     # ------------------------------------------------------------------ #
     # Projekt-Wechsel / Laden
@@ -691,7 +714,8 @@ class ReportEditorTab(QWidget):
             project_dir=proj_dir,
             project_name=self.current_project,
             target_ip="",
-            theme=theme
+            theme=theme,
+            report_font=self._report_font_key()
         )
         if success:
             msg = QMessageBox(self.window() if self else None)

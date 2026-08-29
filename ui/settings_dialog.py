@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from core.config import ConfigManager
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
+from ui.styles.fonts import UI_FONT_OPTIONS, CODE_FONT_OPTIONS, REPORT_FONT_OPTIONS
 
 HOTKEY_PRESETS = [
     {"label": "Ctrl + Super + < (Standard)", "value": "<ctrl>+<cmd>+<"},
@@ -296,7 +297,33 @@ class GeneralSettingsPage(QWidget):
 
         layout.addWidget(card_behavior)
 
-        # 2. Defaults Section
+        # 2. Appearance Section
+        lbl_appearance = QLabel(t("settings.lbl_appearance_section", "Appearance"))
+        lbl_appearance.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_appearance)
+
+        card_appearance = QFrame()
+        card_appearance.setProperty("class", "SettingsCard")
+        appearance_layout = QVBoxLayout(card_appearance)
+        appearance_layout.setSpacing(10)
+
+        self.combo_ui_font = self._font_combo(UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui"))
+        self.combo_code_font = self._font_combo(CODE_FONT_OPTIONS, self.config.get("code_font", "consolas"))
+        self.combo_report_font = self._font_combo(REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui"))
+        for label, combo in (
+            ("App-Schrift:", self.combo_ui_font),
+            ("Code-Schrift:", self.combo_code_font),
+            ("Report-Schrift (Vorschau & HTML-Export):", self.combo_report_font),
+        ):
+            row = QHBoxLayout()
+            label_widget = QLabel(label)
+            label_widget.setProperty("class", "FormLabel")
+            row.addWidget(label_widget)
+            row.addWidget(combo, stretch=1)
+            appearance_layout.addLayout(row)
+        layout.addWidget(card_appearance)
+
+        # 3. Defaults Section
         lbl_defaults = QLabel(t("settings.lbl_defaults_section", "Default Parameters"))
         lbl_defaults.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_defaults)
@@ -363,6 +390,15 @@ class GeneralSettingsPage(QWidget):
         scroll.setWidget(content)
         outer_layout.addWidget(scroll)
 
+    @staticmethod
+    def _font_combo(options, selected_key: str) -> QComboBox:
+        combo = QComboBox()
+        for key, label in options:
+            combo.addItem(label, key)
+        index = combo.findData(selected_key)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+        return combo
+
     def _on_browse_wordlist(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(self, t("settings.lbl_default_wordlist", "Default Wordlist Path:"), self.txt_wordlist.text().strip())
         if file_path:
@@ -378,6 +414,9 @@ class GeneralSettingsPage(QWidget):
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
             "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
+            "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
+            "code_font": self.combo_code_font.currentData() or "consolas",
+            "report_font": self.combo_report_font.currentData() or "segoe_ui",
             "target_ip": self.txt_default_target.text().strip(),
             "attacker_ip": self.txt_default_attacker.text().strip(),
             "wordlist": self.txt_wordlist.text().strip(),

@@ -6,6 +6,7 @@ from core.project_manager import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
+from core.config import ConfigManager
 
 if TYPE_CHECKING:
     from ui.report_editor_tab import ReportEditorTab
@@ -19,12 +20,14 @@ class ReportController(QObject):
         project_manager: ProjectManager,
         loot_manager: LootManager,
         clipboard_watcher: ClipboardWatcher,
-        parent_widget: Optional[QWidget] = None
+        parent_widget: Optional[QWidget] = None,
+        config_manager: Optional[ConfigManager] = None
     ):
         super().__init__(parent_widget)
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
+        self.config_manager = config_manager
 
         self.report_file_manager = ReportFileManager(self.project_manager)
         self.parent_widget = parent_widget
@@ -41,7 +44,8 @@ class ReportController(QObject):
                 self.report_file_manager,
                 self.loot_manager,
                 self.clipboard_watcher,
-                parent=self.parent_widget
+                parent=self.parent_widget,
+                config_manager=self.config_manager
             )
             self.report_editor_tab.load_project(self.project_manager.get_active_project())
         return self.report_editor_tab
@@ -73,3 +77,7 @@ class ReportController(QObject):
         if self.report_editor_tab is not None and self.report_editor_tab.parent() is not None:
             content_layout.removeWidget(self.report_editor_tab)
             self.report_editor_tab.setParent(None)
+
+    def refresh_font_configuration(self) -> None:
+        if self.report_editor_tab is not None:
+            self.report_editor_tab.refresh_font_configuration()

@@ -22,7 +22,7 @@ from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
 
-from ui.styles import CYBER_DARK_QSS, get_app_icon
+from ui.styles import CYBER_DARK_QSS, build_app_theme, get_app_icon
 
 logger = get_logger("app")
 
@@ -133,6 +133,10 @@ def main():
         # Initialize Service Container
         container = _create_production_container()
         _startup_mark(started_at, "service container ready")
+        app.setStyleSheet(build_app_theme(
+            container.config_manager.get("ui_font", "segoe_ui"),
+            container.config_manager.get("code_font", "consolas")
+        ))
         container.clipboard_watcher.start_listening()
 
         # Main Window

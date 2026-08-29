@@ -5,20 +5,27 @@ from pathlib import Path
 from typing import Optional
 from PyQt6.QtGui import QIcon
 
-from ui.styles.typography import TYPOGRAPHY_QSS
+from ui.styles.typography import get_typography_qss
 from ui.styles.buttons import BUTTONS_QSS
 from ui.styles.tables import TABLES_QSS
-from ui.styles.cards import CARDS_QSS
-from ui.styles.dialogs import DIALOGS_QSS
+from ui.styles.cards import get_cards_qss
+from ui.styles.dialogs import get_dialogs_qss
+from ui.styles.fonts import get_code_font_stack, get_ui_font_stack
 
-# Compiled complete stylesheet
-APP_THEME = "\n".join([
-    TYPOGRAPHY_QSS,
-    BUTTONS_QSS,
-    TABLES_QSS,
-    CARDS_QSS,
-    DIALOGS_QSS
-])
+def build_app_theme(ui_font_key: str = "segoe_ui", code_font_key: str = "consolas") -> str:
+    """Builds the application QSS from validated curated font keys."""
+    ui_font = get_ui_font_stack(ui_font_key)
+    code_font = get_code_font_stack(code_font_key)
+    return "\n".join([
+        get_typography_qss(ui_font, code_font),
+        BUTTONS_QSS,
+        TABLES_QSS,
+        get_cards_qss(code_font),
+        get_dialogs_qss(ui_font, code_font),
+    ])
+
+
+APP_THEME = build_app_theme()
 
 # Backward-compatibility alias
 CYBER_DARK_QSS = APP_THEME

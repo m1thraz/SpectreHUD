@@ -66,7 +66,7 @@ QLabel#CommandLabel {
     border: 1px solid rgba(48, 54, 61, 0.8);
     border-radius: 6px;
     color: #39d353;
-    font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
+    font-family: {code_font};
     font-size: 12px;
     padding: 8px 12px;
     selection-background-color: #1f3d29;
@@ -77,7 +77,7 @@ QPlainTextEdit#CommandBox {
     border: 1px solid rgba(33, 38, 45, 0.8);
     border-radius: 6px;
     color: #39d353;
-    font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
+    font-family: {code_font};
     font-size: 12px;
     padding: 6px 8px;
     selection-background-color: #1f3d29;
@@ -97,7 +97,7 @@ QLineEdit.TweakLineEdit {
     color: #39d353;
     border: 1px solid rgba(48, 54, 61, 0.8);
     border-radius: 5px;
-    font-family: 'Consolas', 'Cascadia Code', 'Fira Code', monospace;
+    font-family: {code_font};
     font-size: 12px;
     padding: 4px 8px;
 }
@@ -133,3 +133,7 @@ QFrame.SettingsCard {
     padding: 12px 14px;
 }
 """
+
+
+def get_cards_qss(code_font: str) -> str:
+    return CARDS_QSS.replace("{code_font}", code_font)

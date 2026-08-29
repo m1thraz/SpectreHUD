@@ -6,7 +6,7 @@ TYPOGRAPHY_QSS = """
 /* Transparent Base Container & Global Fonts */
 QWidget#CentralWidget {
     background-color: transparent;
-    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-family: {ui_font};
     font-size: 13px;
     color: #c9d1d9;
 }
@@ -136,7 +136,7 @@ QLabel.ShortcutKeyBadge {
     border: 1px solid rgba(56, 139, 253, 0.5);
     border-radius: 5px;
     padding: 3px 10px;
-    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-family: {code_font};
     font-size: 11px;
     font-weight: bold;
     min-height: 18px;
@@ -160,3 +160,7 @@ QLabel.ReportStatusLabel {
     font-weight: 500;
 }
 """
+
+
+def get_typography_qss(ui_font: str, code_font: str) -> str:
+    return TYPOGRAPHY_QSS.replace("{ui_font}", ui_font).replace("{code_font}", code_font)

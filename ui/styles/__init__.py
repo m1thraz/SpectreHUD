@@ -3,11 +3,12 @@ SpectreHUD Modular Styles Package.
 Exports APP_THEME, CYBER_DARK_QSS, get_app_icon, get_app_icon_path, and palette design tokens.
 """
 from ui.styles.palette import *
-from ui.styles.theme import APP_THEME, CYBER_DARK_QSS, get_app_icon, get_app_icon_path
+from ui.styles.theme import APP_THEME, CYBER_DARK_QSS, build_app_theme, get_app_icon, get_app_icon_path
 
 __all__ = [
     "APP_THEME",
     "CYBER_DARK_QSS",
+    "build_app_theme",
     "get_app_icon",
     "get_app_icon_path"
 ]
