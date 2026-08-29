@@ -1,3 +1,5 @@
+import os
+import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -44,6 +46,7 @@ class MainWindow(QMainWindow):
         screenshot_manager: Optional[ScreenshotManager] = None,
         container: Optional[ServiceContainer] = None
     ):
+        started_at = time.perf_counter()
         super().__init__()
         if container is not None:
             self.container = container
@@ -63,14 +66,19 @@ class MainWindow(QMainWindow):
             self.loot_manager = loot_manager if loot_manager is not None else LootManager(event_bus=self.event_bus)
             self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher(event_bus=self.event_bus)
             self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+        self._startup_mark(started_at, "services assigned")
 
         # Window Frame Manager for Frameless Resize & Dragging
         self.frame_manager = WindowFrameManager(self, self.config)
+        self._startup_mark(started_at, "frame manager ready")
 
         # Build UI Structure & Panels
         self._init_window()
+        self._startup_mark(started_at, "window configured")
         self._build_ui()
+        self._startup_mark(started_at, "panels built")
         self._setup_shortcuts()
+        self._startup_mark(started_at, "shortcuts registered")
 
         # Initialize Central App Coordinator
         self.app = AppController(
@@ -89,12 +97,24 @@ class MainWindow(QMainWindow):
             event_bus=self.event_bus,
             container=self.container
         )
+        self._startup_mark(started_at, "app controller ready")
 
         # Load Initial Project State and Content
         self.app.load_active_project_state()
+        self._startup_mark(started_at, "project state loaded")
         self.app.refresh_filter_pills()
+        self._startup_mark(started_at, "filter pills built")
         self.app.refresh_content()
+        self._startup_mark(started_at, "initial content rendered")
         self._center_on_screen()
+        self._startup_mark(started_at, "complete")
+
+    @staticmethod
+    def _startup_mark(started_at: float, stage: str) -> None:
+        """Emit fine-grained startup timings only when explicitly requested."""
+        if os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
+            elapsed_ms = (time.perf_counter() - started_at) * 1_000
+            print(f"[SpectreHUD startup] MainWindow {stage}: {elapsed_ms:.1f} ms", flush=True)
 
     # -------------------------------------------------------------
     # Window & Panel Layout Construction
