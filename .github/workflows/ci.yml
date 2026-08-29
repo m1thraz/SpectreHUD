@@ -15,6 +15,9 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # Catches hangs outside an individual pytest case (for example during Qt
+    # shutdown) that pytest-timeout cannot attribute to one test.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -69,6 +72,7 @@ jobs:
     name: Package validation (Windows, Python 3.11)
     needs: test
     runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
