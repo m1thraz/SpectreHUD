@@ -311,8 +311,6 @@ class ReportEditorTab(QWidget):
         toolbar = QHBoxLayout()
         self.lbl_status = QLabel("")
         self.lbl_status.setProperty("class", "ReportStatusLabel")
-        toolbar.addWidget(self.lbl_status)
-        toolbar.addStretch()
 
         # Compact view selector; shortcuts remain available for power users.
         self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
@@ -400,13 +398,14 @@ class ReportEditorTab(QWidget):
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
         self.btn_save.clicked.connect(self.save)
+        toolbar.addWidget(self.btn_save)
 
         layout.addLayout(toolbar)
 
-        save_row = QHBoxLayout()
-        save_row.addStretch()
-        save_row.addWidget(self.btn_save)
-        layout.addLayout(save_row)
+        status_row = QHBoxLayout()
+        status_row.addWidget(self.lbl_status)
+        status_row.addStretch()
+        layout.addLayout(status_row)
 
         self.find_bar = QWidget()
         find_layout = QHBoxLayout(self.find_bar)
