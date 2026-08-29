@@ -69,6 +69,10 @@
 
     "report.regenerate": "Aus Loot neu generieren",
     "report.regenerate_tip": "Aktualisiert die Struktur und fügt neue Loot-Einträge ein",
+    "report.export": "Exportieren...",
+    "report.export_tip": "Exportformat für den aktuellen Report auswählen",
+    "report.export_dialog_title": "Report exportieren",
+    "report.export_dialog_message": "Wähle ein Exportformat für den aktuellen Report aus.",
     "report.export_copy": "Kopie exportieren...",
     "report.export_copy_tip": "Erstellt eine neue Kopie basierend auf dem aktuellen Loot",
     "report.save": "Speichern",

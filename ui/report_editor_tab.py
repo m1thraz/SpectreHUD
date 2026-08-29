@@ -342,37 +342,11 @@ class ReportEditorTab(QWidget):
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
-        self.btn_export_copy = QPushButton(t("report.export_copy", "Export Copy..."))
-        self.btn_export_copy.setProperty("class", "SecondaryBtn")
-        self.btn_export_copy.setToolTip(
-            t("report.export_copy_tip", "Creates a new copy based on current session loot")
-        )
-        self.btn_export_copy.clicked.connect(self._on_export_copy_clicked)
-        toolbar.addWidget(self.btn_export_copy)
-
-        self.btn_export_html = QPushButton(t("report.export_html", "Export HTML..."))
-        self.btn_export_html.setProperty("class", "SecondaryBtn")
-        self.btn_export_html.setToolTip(
-            t("report.export_html_tip", "Export report as standalone HTML document")
-        )
-        self.btn_export_html.clicked.connect(self._on_export_html_clicked)
-        toolbar.addWidget(self.btn_export_html)
-
-        self.btn_export_obsidian = QPushButton(t("report.export_obsidian", "Export to Obsidian..."))
-        self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
-        self.btn_export_obsidian.setToolTip(
-            t("report.export_obsidian_tip", "Export this report and its screenshots to the configured Obsidian vault")
-        )
-        self.btn_export_obsidian.clicked.connect(self._on_export_obsidian_clicked)
-        toolbar.addWidget(self.btn_export_obsidian)
-
-        self.btn_export_cherrytree = QPushButton(t("report.export_cherrytree", "Export CherryTree Package..."))
-        self.btn_export_cherrytree.setProperty("class", "SecondaryBtn")
-        self.btn_export_cherrytree.setToolTip(
-            t("report.export_cherrytree_tip", "Create portable report.html, loot.html and images for CherryTree import")
-        )
-        self.btn_export_cherrytree.clicked.connect(self._on_export_cherrytree_clicked)
-        toolbar.addWidget(self.btn_export_cherrytree)
+        self.btn_export = QPushButton(t("report.export", "Export..."))
+        self.btn_export.setProperty("class", "SecondaryBtn")
+        self.btn_export.setToolTip(t("report.export_tip", "Choose how to export the current report"))
+        self.btn_export.clicked.connect(self._on_export_clicked)
+        toolbar.addWidget(self.btn_export)
 
         # Formatting belongs with the primary editing/export actions.  The
         # source-only controls are still hidden while the rich live preview is
@@ -873,6 +847,45 @@ class ReportEditorTab(QWidget):
         templates = self.template_repo.get_all_templates()
         if self.active_template is None and templates:
             self.active_template = templates[0]
+
+    def _on_export_clicked(self) -> None:
+        """Opens the single export chooser and delegates to the selected workflow."""
+        export_type = self._select_export_type()
+        if export_type == "markdown":
+            self._on_export_copy_clicked()
+        elif export_type == "html":
+            self._on_export_html_clicked()
+        elif export_type == "obsidian":
+            self._on_export_obsidian_clicked()
+        elif export_type == "cherrytree":
+            self._on_export_cherrytree_clicked()
+
+    def _select_export_type(self) -> Optional[str]:
+        """Returns the selected export workflow without duplicating export logic."""
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle(t("report.export_dialog_title", "Export Report"))
+        dialog.setText(t("report.export_dialog_message", "Choose an export format for the current report."))
+        dialog.setIcon(QMessageBox.Icon.Question)
+        dialog.setStyleSheet(CYBER_DARK_QSS)
+
+        choices = (
+            ("markdown", t("report.export_copy", "Export Copy...")),
+            ("html", t("report.export_html", "Export HTML...")),
+            ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
+            ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
+        )
+        buttons = {
+            export_type: dialog.addButton(label, QMessageBox.ButtonRole.ActionRole)
+            for export_type, label in choices
+        }
+        dialog.addButton(QMessageBox.StandardButton.Cancel)
+        dialog.exec()
+
+        selected_button = dialog.clickedButton()
+        return next(
+            (export_type for export_type, button in buttons.items() if button is selected_button),
+            None,
+        )
 
     def _on_export_copy_clicked(self) -> None:
         from core.atomic_write import atomic_write_text
