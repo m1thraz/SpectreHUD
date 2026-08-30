@@ -133,8 +133,10 @@ network-facing service. Its primary quality goal is preserving the user's work
 through ordinary desktop failures—interrupted writes, corrupted local state,
 and failed project switches. The safeguards below document implementation
 behaviour; they are not presented as a defence against a realistic remote or
-same-user adversary. See the [desktop threat model](threat_model.md) for the
-test and scope rationale.
+same-user adversary. Customer-facing exports are the deliberate exception:
+target-derived report content crosses into a recipient's browser or knowledge
+base and is escaped accordingly. See the [desktop threat model](threat_model.md)
+for the two trust boundaries and their test rationale.
 
 1. **Name and workspace validation**:
    - `core/validators.py` keeps project names, output paths, and template IDs valid for the local workspace.
@@ -148,6 +150,8 @@ test and scope rationale.
    - `LootManager` and `ClipboardWatcher` operate as session buffers in RAM, avoiding redundant and conflicting global storage files.
 5. **Stable report formatting**:
    - The Markdown exporter adapts code fences and escapes table pipes so captured command output does not break a generated report.
+6. **Safe customer-facing exports**:
+   - HTML export escapes active content and unsafe URL schemes, while image and attachment resolution stays within the active project and selected export destination.
 6. **Structured and rotating logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
 7. **Optional Pentest-Mode state encryption**:
@@ -186,4 +190,4 @@ test and scope rationale.
 - The product is designed for normal workstation inputs selected by its user. It does not claim to defend against malware running as that user, intentionally hostile local files, or a compromised operating system.
 - Screenshot behaviour on Linux depends on the display server and compositor; Wayland can restrict direct capture.
 - Pentest Mode encrypts `project_state.json` only. Screenshots, reports, notes, and user-selected exports remain deliberately plaintext so they can be used in the surrounding workflow.
-- `core.project_manager`, `core.html_report_exporter`, `get_event_bus()` and the remaining legacy method aliases are retained only as public compatibility surfaces. Internal code uses the canonical modules and explicit APIs; removing these importable facades is reserved for a documented major release.
+- `core.html_report_exporter`, `get_event_bus()` and the remaining legacy method aliases are retained only as public compatibility surfaces. Internal project-management imports use the canonical `core.project` package; the unused `core.project_manager` facade has been removed.

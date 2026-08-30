@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 
-# Raw file size bounds before JSON decoding (defense against parsing Gigabyte JSON bombs)
+# Product size limits reject accidentally selected, corrupt, or impractically large files.
 MAX_PROJECT_STATE_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
 MAX_LOOT_FILE_SIZE: int = 10 * 1024 * 1024           # 10 MB
 MAX_CLIPBOARD_FILE_SIZE: int = 5 * 1024 * 1024       # 5 MB
@@ -19,7 +19,7 @@ MAX_REGISTRY_FILE_SIZE: int = 2 * 1024 * 1024        # 2 MB
 MAX_REPORT_FILE_SIZE: int = 10 * 1024 * 1024         # 10 MB
 MAX_TEMPLATE_FILE_SIZE: int = 512 * 1024             # 512 KB
 
-# Content & payload size bounds (defense against bloated / malicious project states)
+# Persisted collection and field limits keep normal project files responsive.
 MAX_LOOT_ENTRIES: int = 1000
 MAX_CLIPBOARD_ENTRIES: int = 500
 MAX_USER_SNIPPETS: int = 500

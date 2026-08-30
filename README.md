@@ -43,8 +43,9 @@ Terminal / Browser / VM
 SpectreHUD is intentionally a **single-user desktop application**. Its quality
 work focuses on data integrity and normal desktop failure modes: atomic writes,
 rollback during failed project changes, recovery from corrupted local state,
-and a single application instance. It does not position itself as a network
-service or a hostile-file processing system.
+and a single application instance. It is not a network service or a hostile
+local-file processor. Customer-facing exports are treated separately because
+captured target content may be opened later in a recipient's browser.
 
 For the implementation details, see:
 

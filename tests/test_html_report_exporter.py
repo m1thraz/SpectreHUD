@@ -2,6 +2,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.html_report_exporter import HtmlReportExporter
+from core.reporting.assets import ImageEmbeddingBudget
 
 
 class TestHtmlReportExporter(unittest.TestCase):
@@ -65,6 +66,7 @@ curl -i http://10.10.10.10/admin
         self.assertIn('alt="Proof Screenshot"', html_out)
 
     def test_sandbox_path_traversal_image_blocked(self):
+        """An exported report must not embed files outside its project directory."""
         # Image outside sandbox
         outside_file = Path(self.temp_dir.name) / "secret.png"
         outside_file.write_bytes(b'\x89PNG\r\n\x1a\nfake')
@@ -111,7 +113,7 @@ curl -i http://10.10.10.10/admin
         self.assertNotIn("Light export theme", dark_html)
 
     def test_xss_prevention_in_images_and_links(self):
-        """Verifies that malicious image src and link href payloads cannot execute XSS or inject attributes."""
+        """Target-derived Markdown stays inert when a customer opens the HTML report."""
         # 1. Block Image attribute breakout PoC
         md_img_block = '![pwned](x" onerror=alert(document.cookie) x=")'
         html_out = HtmlReportExporter.markdown_to_html(md_img_block, project_dir=self.proj_dir)
@@ -150,6 +152,7 @@ curl -i http://10.10.10.10/admin
         self.assertIn('href="mailto:test@example.com"', html_safe)
 
     def test_download_filename_is_safe_for_the_inline_script(self):
+        """The generated download filename cannot break out of the exporter script."""
         full_html = HtmlReportExporter.build_full_html(
             "# Report",
             project_dir=self.proj_dir,
@@ -160,7 +163,7 @@ curl -i http://10.10.10.10/admin
         self.assertIn('report_edited_Evilscriptscriptalert1script.html', full_html)
 
     def test_protocol_relative_urls_blocked(self):
-        """Finding 11: Protocol-relative URLs must be blocked in both links and images."""
+        """Protocol-relative target content is blocked in exported links and images."""
         md_link_pr = '[Evil](//attacker.com/evil.js)'
         html_out_link = HtmlReportExporter.markdown_to_html(md_link_pr, project_dir=self.proj_dir)
         self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
@@ -169,22 +172,20 @@ curl -i http://10.10.10.10/admin
         html_out_img = HtmlReportExporter.markdown_to_html(md_img_pr, project_dir=self.proj_dir)
         self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
 
-    def test_image_embedding_budget_limit(self):
-        """Finding 10: Image embedding must obey global session budget limits."""
-        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa75\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82'
-        
-        # Create 30 small images
-        md_lines = []
-        for i in range(30):
-            img_p = self.loot_dir / f"snip_{i}.png"
-            img_p.write_bytes(png_bytes)
-            md_lines.append(f"![Snip {i}](snip_{i}.png)")
+    def test_image_embedding_respects_product_size_limit(self):
+        """The report-size policy caps image count and aggregate bytes."""
+        budget = ImageEmbeddingBudget(max_images=1, max_total_bytes=10)
 
-        md_text = "\n\n".join(md_lines)
-        html_out = HtmlReportExporter.markdown_to_html(md_text, project_dir=self.proj_dir)
+        self.assertTrue(budget.can_embed(6))
+        budget.record(6)
+        self.assertFalse(budget.can_embed(1))
+
+        byte_limited = ImageEmbeddingBudget(max_images=2, max_total_bytes=10)
+        byte_limited.record(6)
+        self.assertFalse(byte_limited.can_embed(5))
 
     def test_code_fence_language_is_html_escaped(self):
-        """CRITICAL: Code fence language metadata must be sanitized and HTML escaped against attribute injection."""
+        """Target-derived code-fence metadata stays inert in customer-facing HTML."""
         # 1. Attribute injection attempt via double quote and mouse handler
         md_attr = '```" onmouseover="alert(1)\nhello\n```'
         html_out = HtmlReportExporter.markdown_to_html(md_attr, project_dir=self.proj_dir)

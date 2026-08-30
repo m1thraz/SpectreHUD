@@ -28,7 +28,6 @@ REQUIRED_FILES = [
     "core/snippet_manager.py",
     "core/loot_manager.py",
     "core/clipboard_watcher.py",
-    "core/project_manager.py",
     "core/screenshot_manager.py",
     "core/project_session_service.py",
     "core/validators.py",

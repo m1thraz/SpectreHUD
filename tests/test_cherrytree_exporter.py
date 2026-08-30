@@ -28,7 +28,8 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
     assert "SMB signing disabled" in (package / "loot.html").read_text(encoding="utf-8")
 
 
-def test_cherrytree_export_rejects_missing_project_and_unsafe_name(package_workspace):
+def test_cherrytree_export_validates_name_and_existing_project(package_workspace):
+    """Normal validation rejects invalid package names and missing source folders."""
     project, output = package_workspace
     with pytest.raises(ExternalExportError):
         CherryTreeExporter(output).export_package(

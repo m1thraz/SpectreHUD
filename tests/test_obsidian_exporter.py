@@ -46,6 +46,7 @@ def test_obsidian_export_preserves_existing_note_by_default(workspace):
 
 
 def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
+    """Export destinations and copied attachments must stay inside the selected vault."""
     vault, project = workspace
     with pytest.raises(ExternalExportError):
         ObsidianExporter(vault, "../../outside")

@@ -75,13 +75,15 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(loaded, content)
 
     def test_save_rejects_report_larger_than_its_read_limit(self):
+        """The configured report-size product limit applies consistently to writes."""
         self.project_mgr.create_project("OversizedReport")
         content = "x" * (MAX_REPORT_FILE_SIZE + 1)
 
         self.assertFalse(self.report_mgr.save(content, "OversizedReport"))
         self.assertFalse(self.report_mgr.exists("OversizedReport"))
 
-    def test_failed_oversized_save_preserves_previous_report(self):
+    def test_failed_save_preserves_previous_report(self):
+        """A rejected replacement must leave the last committed report intact."""
         self.project_mgr.create_project("ProtectedReport")
         previous_content = "# Important report\nThis content must survive."
         self.assertTrue(self.report_mgr.save(previous_content, "ProtectedReport"))

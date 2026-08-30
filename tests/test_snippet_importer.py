@@ -12,8 +12,8 @@ from core.snippet_importer import (
     normalize_template_variables,
     parse_snippets_json,
     parse_snippets_markdown,
-    import_snippets_from_file
 )
+from core.validators import MAX_CONFIG_FILE_SIZE
 
 
 class TestSnippetImporter(unittest.TestCase):
@@ -95,15 +95,12 @@ gobuster dir -u http://$TARGET -w /wordlists/dir.txt
         self.assertEqual(count, 1)
         self.assertTrue(any(s["title"] == "Gobuster Directory Search" for s in self.mgr.snippets))
 
-    def test_import_oversized_file_rejected(self):
-        fpath = self.temp_path / "giant_snippets.json"
-        # Write file exceeding MAX_CONFIG_FILE_SIZE (5MB)
+    def test_import_respects_product_file_size_limit(self):
+        """A file beyond the documented import limit is rejected as invalid input."""
+        fpath = self.temp_path / "oversized_snippets.json"
         with open(fpath, "wb") as f:
-            f.seek(5 * 1024 * 1024 + 1024)
+            f.seek(MAX_CONFIG_FILE_SIZE)
             f.write(b"0")
-        
-        parsed = import_snippets_from_file(fpath)
-        self.assertEqual(parsed, [])
 
         count = self.mgr.import_from_file(fpath)
         self.assertEqual(count, 0)

@@ -12,8 +12,9 @@
   packages.
 - **Pentest Mode:** optional encrypted `project_state.json` storage for projects
   containing sensitive data.
-- **Usability and security:** consistent German/English interface, single-instance
-  protection, atomic persistence, and extensive adversarial regression coverage.
+- **Reliability and output safety:** consistent German/English interface,
+  single-instance protection, atomic persistence, and inert customer-facing
+  report exports.
 
 ## Compatibility
 

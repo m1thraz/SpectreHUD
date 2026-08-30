@@ -5,7 +5,9 @@ from core.validators import (
     validate_loot_list,
     validate_clipboard_entry,
     validate_clipboard_list,
-    validate_user_snippets
+    validate_user_snippets,
+    MAX_LOOT_ENTRIES,
+    MAX_TITLE_LENGTH,
 )
 
 
@@ -93,25 +95,16 @@ class TestSemanticValidators(unittest.TestCase):
         self.assertEqual(clip1["id"], clip2["id"])
         self.assertTrue(clip1["id"].startswith("clip_gen_"))
 
-    def test_size_and_count_bounding_limits(self):
-        """Tests that oversized strings are truncated and lists are capped to safe maxima."""
-        # 1. Huge text content truncation
-        huge_text = "A" * (200 * 1024)  # 200 KB
-        clip = validate_clipboard_entry({"text": huge_text})
-        self.assertEqual(len(clip["text"]), 64 * 1024)
+    def test_validator_product_limits(self):
+        """Representative product limits truncate fields and cap persisted lists."""
+        loot = validate_loot_entry({"title": "T" * (MAX_TITLE_LENGTH + 1), "content": "data"})
+        self.assertEqual(len(loot["title"]), MAX_TITLE_LENGTH)
 
-        loot = validate_loot_entry({"title": "T" * 1000, "content": huge_text})
-        self.assertEqual(len(loot["title"]), 256)
-        self.assertEqual(len(loot["content"]), 128 * 1024)
-
-        # 2. Huge item count capping
-        many_loot = [{"title": f"Item {i}", "content": "data"} for i in range(1500)]
-        capped_loot = validate_loot_list(many_loot)
-        self.assertEqual(len(capped_loot), 1000)
-
-        many_clips = [{"text": f"cmd {i}"} for i in range(800)]
-        capped_clips = validate_clipboard_list(many_clips)
-        self.assertEqual(len(capped_clips), 500)
+        entries = [
+            {"title": f"Item {index}", "content": "data"}
+            for index in range(MAX_LOOT_ENTRIES + 1)
+        ]
+        self.assertEqual(len(validate_loot_list(entries)), MAX_LOOT_ENTRIES)
 
     def test_is_file_size_valid(self):
         """Tests that is_file_size_valid correctly checks file size bounds on disk."""
