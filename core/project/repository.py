@@ -94,19 +94,6 @@ class ProjectRepository:
     def registry(self, value: Dict[str, str]) -> None:
         self.project_registry.entries = value
 
-    @staticmethod
-    def _security_meta_path(proj_dir: Path) -> Path:
-        return ProjectStateStore.security_meta_path(proj_dir)
-
-    def _load_security_meta(self, proj_dir: Path) -> Optional[Dict[str, Any]]:
-        """Load and strictly validate the unencrypted Pentest-Mode sidecar."""
-        return self.state_store.load_security_meta(proj_dir)
-    def _save_security_meta(self, proj_dir: Path, meta: Dict[str, Any]) -> bool:
-        """Persist validated Pentest-Mode metadata without exposing a key/password."""
-        return self.state_store.save_security_meta(proj_dir, meta)
-    def _validate_security_meta(self, meta: Dict[str, Any]) -> None:
-        """Validate Pentest-Mode sidecar data through the state store."""
-        self.state_store.validate_security_meta(meta)
     def is_pentest_mode(self, name: str) -> bool:
         return self.state_store.is_pentest_mode(name)
 
@@ -115,13 +102,6 @@ class ProjectRepository:
     def enable_pentest_mode(self, name: str, password: str) -> None:
         """Encrypt an existing state file and retain its key for this session."""
         self.state_store.enable_pentest_mode(name, password)
-    @staticmethod
-    def _serialize_state(state: Dict[str, Any]) -> bytes:
-        return ProjectStateStore.serialize(state)
-
-    def _write_project_state(self, state_file: Path, state: Dict[str, Any], key: Optional[bytes]) -> bool:
-        return self.state_store.write(state_file, state, key)
-
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
         return self.project_registry.load()
