@@ -63,13 +63,7 @@ The goal is not to replace your notes application.
 
 The goal is to remove the repetitive workflow around it.
 
-With SpectreHUD, you do not need to turn a general-purpose knowledge base into a dedicated CTF environment with additional capture workflows, engagement variables, templates and session-specific organization.
 
-Use SpectreHUD for the engagement.
-
-Use Obsidian, CherryTree or your preferred knowledge system for long-term refinement, linking and retention.
-
-> **Work fast in SpectreHUD. Keep your knowledge base clean.**
 
 ---
 
@@ -97,39 +91,7 @@ SpectreHUD is deliberately optimized for this loop instead of trying to become a
 
 ---
 
-## Spotlight Command Search
 
-Bring SpectreHUD to the foreground instantly and search your command library without leaving the current workflow.
-
-* Fast global HUD access
-* Searchable command snippets
-* Categories and filters
-* Custom commands
-* Copy-to-clipboard workflow
-* Variable substitution before execution
-
-Example command:
-
-```bash
-nmap -sC -sV {{TARGET_IP}} -p {{PORT}}
-```
-
-With:
-
-```text
-TARGET_IP = 10.10.11.42
-PORT      = 8080
-```
-
-SpectreHUD gives you:
-
-```bash
-nmap -sC -sV 10.10.11.42 -p 8080
-```
-
-No repeated search-and-replace across notes and terminals.
-
----
 
 ## Project Context and Live Variables
 
@@ -183,12 +145,6 @@ Severity levels provide additional prioritization:
 ```text
 Critical · High · Medium · Low · Info
 ```
-
-The goal is simple:
-
-> When something important appears during the engagement, recording it should take seconds rather than interrupting the workflow.
-
-![Add Command Dialog](assets/spectrehud_add_command.png)
 
 ---
 
@@ -317,22 +273,6 @@ Exported notes can also be opened directly in Obsidian.
 
 Export engagement material for use in CherryTree through portable interchange formats rather than depending on CherryTree's internal storage model.
 
-### Project Archive
-
-Package the complete SpectreHUD workspace into a ZIP archive for backup or transfer.
-
-```text
-project/
-├── recon/
-├── exploit/
-├── loot/
-├── notes/
-├── report.md
-└── project_state.json
-```
-
----
-
 ## Knowledge Base Integration
 
 SpectreHUD is designed to complement long-term knowledge-management tools rather than replace them.
@@ -355,55 +295,7 @@ This allows the operational workflow to remain separate from the knowledge base.
 
 You can work the box in SpectreHUD without turning Obsidian or CherryTree into a dedicated capture environment, then transfer the material worth keeping when the engagement is ready.
 
-### Obsidian Integration
 
-SpectreHUD supports direct export into an Obsidian vault.
-
-The integration can be used to:
-
-* Export the current report
-* Transfer relevant screenshots and attachments
-* Generate useful frontmatter and metadata
-* Export session loot
-* Append findings to an existing project note
-* Open the resulting note directly in Obsidian
-
-The workflow intentionally remains one-way:
-
-```text
-SpectreHUD → Obsidian
-```
-
-SpectreHUD remains responsible for the active engagement.
-
-Obsidian remains responsible for long-term organization, linking, refinement and knowledge retention.
-
-This means your Obsidian setup can remain lightweight instead of requiring a dedicated stack of CTF capture plugins, engagement-variable tooling and session-specific templates.
-
-> **Work the engagement in SpectreHUD. Keep the knowledge in Obsidian.**
-
-### CherryTree Integration
-
-SpectreHUD also supports exporting engagement material for use in CherryTree.
-
-Rather than writing directly to CherryTree's internal database format, SpectreHUD relies on portable output formats that fit into the existing CherryTree workflow.
-
-The same separation applies:
-
-> Capture and structure the active engagement in SpectreHUD, then move the material worth keeping into your long-term documentation system.
-
----
-
-## English and German
-
-SpectreHUD supports runtime switching between:
-
-* English
-* German
-
-The interface, dialogs and report-related workflows are internationalized.
-
----
 
 ## Keyboard-Driven Workflow
 
@@ -510,98 +402,6 @@ python scripts/build_exe.py
 
 ---
 
-## Project Philosophy
-
-SpectreHUD intentionally does not try to become another general-purpose knowledge-management platform.
-
-The project follows a few simple principles.
-
-### Stay Focused
-
-Features should improve the active CTF or security-lab workflow.
-
-### Reduce Context Switching
-
-Information that belongs to the current engagement should be accessible without repeatedly reorganizing windows, notes and tools.
-
-### Capture Now, Refine Later
-
-Recording something during a box should be cheap.
-
-The active engagement belongs in SpectreHUD.
-
-Long-term refinement, linking and knowledge retention can happen afterwards in Obsidian, CherryTree or another knowledge system.
-
-### Keep the Knowledge Base Lean
-
-SpectreHUD handles the operational capture workflow so your long-term notes system does not need to become a heavily customized CTF workspace.
-
-Use each tool for what it is best at:
-
-```text
-SpectreHUD
-→ active engagement
-→ capture
-→ context
-→ loot
-→ screenshots
-→ reporting
-
-Obsidian / CherryTree
-→ refinement
-→ organization
-→ linking
-→ long-term knowledge
-```
-
-### Keep the Output Portable
-
-Markdown, HTML, images and normal project files should remain usable outside SpectreHUD.
-
-### Prefer Workflow Over Configuration
-
-A useful CTF environment should work without first spending an evening constructing one.
-
----
-
-## Quality
-
-SpectreHUD has an extensive automated test suite covering both normal operation and adversarial failure scenarios.
-
-The tests include areas such as:
-
-* Project and session isolation
-* Persistence and recovery
-* Report generation
-* Template handling
-* Screenshot workflows
-* Clipboard behavior
-* Workspace transitions
-* Import and export behavior
-* Filesystem edge cases
-
-Implementation and architecture details are documented separately in [`docs/architecture.md`](docs/architecture.md).
-
----
-
-## Direction
-
-SpectreHUD is currently focused on refining the engagement workflow and its integration with existing knowledge-management tools rather than continuously adding unrelated features.
-
-Current development priorities include:
-
-* Continued refinement of the Obsidian export workflow
-* Continued refinement of the CherryTree export workflow
-* Better attachment and loot handoff
-* Report workflow improvements
-* Search and knowledge reuse across previous projects
-* Continued UX refinement based on real CTF usage
-
-The goal remains the same:
-
-> **Spend more time working the box and less time managing the tools around it.**
-
----
 
 ## License
 
