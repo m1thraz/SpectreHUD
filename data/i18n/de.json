@@ -275,6 +275,7 @@
     "report.obsidian_not_configured": "Wähle vor dem Export in den Einstellungen einen bestehenden Obsidian-Vault aus.",
     "report.obsidian_export_failed_title": "Obsidian-Export fehlgeschlagen",
     "report.obsidian_export_failed": "Der Report konnte nicht nach Obsidian exportiert werden:\n{error}",
+    "report.obsidian_export_unavailable": "Der Obsidian-Exportdienst ist nicht verfügbar.",
     "report.obsidian_exported_title": "Obsidian-Export abgeschlossen",
     "report.obsidian_exported": "Nach Obsidian exportiert:\n{path}",
     "report.obsidian_attachment_warning": "Einige Anhänge konnten nicht kopiert werden.",

@@ -136,6 +136,9 @@ class AppController(QObject):
             history_ctrl=self.history_ctrl, target_provider=self._target_provider,
             config_manager=self.config, parent=self
         )
+        self.report_ctrl.set_obsidian_export_handler(
+            self.export_coord.export_report_to_obsidian
+        )
 
         self._wire_signals()
 

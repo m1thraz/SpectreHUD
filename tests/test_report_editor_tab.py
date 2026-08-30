@@ -59,6 +59,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab._view_actions[ViewMode.SPLIT].isChecked())
         self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
+    def test_obsidian_export_delegates_current_editor_state(self):
+        handler = MagicMock()
+        self.tab.obsidian_export_handler = handler
+        self.tab.editor.setPlainText("# Current report\nEvidence")
+
+        self.tab._on_export_obsidian_clicked()
+
+        handler.assert_called_once_with(
+            self.tab,
+            "TestBox",
+            "# Current report\nEvidence",
+        )
+
     def test_template_selection_is_in_report_generation_dialog(self):
         """Templates are selected immediately before report generation, not in the toolbar."""
         self.assertFalse(hasattr(self.tab, "combo_templates"))

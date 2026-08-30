@@ -15,7 +15,7 @@ sie ohne Qt testbar bleibt.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -55,12 +55,14 @@ class ReportEditorTab(QWidget):
     dirty_changed = pyqtSignal(bool)
 
     def __init__(self, report_file_manager: ReportFileManager, loot_manager, clipboard_watcher,
-                 parent: QWidget = None, config_manager: Optional[ConfigManager] = None):
+                 parent: QWidget = None, config_manager: Optional[ConfigManager] = None,
+                 obsidian_export_handler: Optional[Callable[[QWidget, str, str], None]] = None):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
         self.config = config_manager
+        self.obsidian_export_handler = obsidian_export_handler
         self.template_repo = TemplateRepository()
         self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
@@ -648,55 +650,22 @@ class ReportEditorTab(QWidget):
             msg.exec()
 
     def _on_export_obsidian_clicked(self) -> None:
-        """Exports the current editor state without coupling core export to Qt."""
-        from core.exporters import ExternalExportError, ObsidianExporter
-        from PyQt6.QtGui import QDesktopServices
-
+        """Delegate the current editor document to the shared export coordinator."""
         if not self.current_project:
             return
-        if self.config is None or not self.config.get("obsidian_vault_path", "").strip():
-            msg = QMessageBox(self)
-            msg.setWindowTitle(t("report.obsidian_not_configured_title", "Obsidian is not configured"))
-            msg.setText(t("report.obsidian_not_configured", "Choose an existing Obsidian vault in Settings before exporting."))
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.exec()
-            return
-
-        try:
-            exporter = ObsidianExporter(
-                self.config.get("obsidian_vault_path"),
-                self.config.get("obsidian_export_folder", "CTF/SpectreHUD"),
+        if self.obsidian_export_handler is None:
+            logger.error("Obsidian report export requested without a configured handler.")
+            QMessageBox.warning(
+                self,
+                t("report.obsidian_export_failed_title", "Obsidian export failed"),
+                t("report.obsidian_export_unavailable", "The Obsidian export service is unavailable."),
             )
-            project_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
-            project_state = self.report_file_manager.project_manager.load_project_state(self.current_project)
-            result = exporter.export_report(
-                project_name=self.current_project,
-                project_dir=project_dir,
-                markdown=self.editor.toPlainText(),
-                project_state=project_state,
-                overwrite="copy",
-            )
-        except (ExternalExportError, OSError, RuntimeError) as exc:
-            logger.error("Obsidian report export failed: %s", exc, exc_info=True)
-            msg = QMessageBox(self)
-            msg.setWindowTitle(t("report.obsidian_export_failed_title", "Obsidian export failed"))
-            msg.setText(t("report.obsidian_export_failed", "The report could not be exported to Obsidian:\n{error}", error=str(exc)))
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.exec()
             return
-
-        message = t("report.obsidian_exported", "Exported to Obsidian:\n{path}", path=str(result.note_path))
-        if result.warnings:
-            message += "\n\n" + t("report.obsidian_attachment_warning", "Some attachments could not be copied.")
-        msg = QMessageBox(self)
-        msg.setWindowTitle(t("report.obsidian_exported_title", "Obsidian export complete"))
-        msg.setText(message)
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.exec()
-
-        if self.config.get("obsidian_open_after_export", False):
-            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
-                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)
+        self.obsidian_export_handler(
+            self,
+            self.current_project,
+            self.editor.toPlainText(),
+        )
 
     def _on_export_cherrytree_clicked(self) -> None:
         """Creates a portable HTML package; no CherryTree database is touched."""

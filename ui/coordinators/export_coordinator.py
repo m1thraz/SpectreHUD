@@ -58,19 +58,113 @@ class ExportCoordinator(QObject):
         """Append active-session loot without rewriting a user's report note."""
         self.append_loot_entries_to_obsidian(window, self.loot_manager.get_all_entries())
 
-    def append_loot_entries_to_obsidian(self, window: QWidget, entries: List[Dict[str, Any]]) -> None:
-        """Append selected entries to the current project note with deduplication."""
+    def _configured_obsidian_exporter(
+        self,
+        window: QWidget,
+        *,
+        scope: str,
+    ) -> Optional[ObsidianExporter]:
+        """Return the shared configured exporter or explain the missing setup."""
+        is_loot = scope == "loot"
         vault_path = str(self.config.get("obsidian_vault_path", "") or "").strip()
         if not vault_path:
             QMessageBox.information(
                 window,
-                t("loot.obsidian_not_configured_title", "Obsidian is not configured"),
-                t("loot.obsidian_not_configured", "Choose an existing Obsidian vault in Settings before exporting loot."),
+                t(f"{scope}.obsidian_not_configured_title", "Obsidian is not configured"),
+                t(
+                    f"{scope}.obsidian_not_configured",
+                    "Choose an existing Obsidian vault in Settings before exporting loot."
+                    if is_loot else
+                    "Choose an existing Obsidian vault in Settings before exporting.",
+                ),
             )
+            return None
+        try:
+            return ObsidianExporter(
+                vault_path,
+                self.config.get("obsidian_export_folder", "CTF/SpectreHUD"),
+            )
+        except ExternalExportError as exc:
+            logger.warning("Invalid Obsidian export configuration: %s", exc)
+            QMessageBox.warning(
+                window,
+                t(f"{scope}.obsidian_export_failed_title", "Obsidian export failed"),
+                t(
+                    f"{scope}.obsidian_export_failed",
+                    "Loot could not be sent to Obsidian:\n{error}"
+                    if is_loot else
+                    "The report could not be exported to Obsidian:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return None
+
+    def export_report_to_obsidian(
+        self,
+        window: QWidget,
+        project_name: str,
+        markdown: str,
+    ) -> None:
+        """Export the current editor document through the shared Obsidian workflow."""
+        exporter = self._configured_obsidian_exporter(
+            window,
+            scope="report",
+        )
+        if exporter is None:
+            return
+
+        try:
+            project_dir = self.project_manager.get_project_dir(project_name)
+            project_state = self.project_manager.load_project_state(project_name)
+            result = exporter.export_report(
+                project_name=project_name,
+                project_dir=project_dir,
+                markdown=markdown,
+                project_state=project_state,
+                overwrite="copy",
+            )
+        except (ExternalExportError, OSError, RuntimeError) as exc:
+            logger.error("Obsidian report export failed: %s", exc, exc_info=True)
+            QMessageBox.warning(
+                window,
+                t("report.obsidian_export_failed_title", "Obsidian export failed"),
+                t(
+                    "report.obsidian_export_failed",
+                    "The report could not be exported to Obsidian:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+
+        message = t(
+            "report.obsidian_exported",
+            "Exported to Obsidian:\n{path}",
+            path=str(result.note_path),
+        )
+        if result.warnings:
+            message += "\n\n" + t(
+                "report.obsidian_attachment_warning",
+                "Some attachments could not be copied.",
+            )
+        QMessageBox.information(
+            window,
+            t("report.obsidian_exported_title", "Obsidian export complete"),
+            message,
+        )
+        if self.config.get("obsidian_open_after_export", False):
+            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
+                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)
+
+    def append_loot_entries_to_obsidian(self, window: QWidget, entries: List[Dict[str, Any]]) -> None:
+        """Append selected entries to the current project note with deduplication."""
+        exporter = self._configured_obsidian_exporter(
+            window,
+            scope="loot",
+        )
+        if exporter is None:
             return
         project_name = self.project_manager.get_active_project()
         try:
-            exporter = ObsidianExporter(vault_path, self.config.get("obsidian_export_folder", "CTF/SpectreHUD"))
             note_path = exporter.note_path_for(project_name)
             if not note_path.exists():
                 raise ExternalExportError(

@@ -1,4 +1,4 @@
-from typing import Optional, List, TYPE_CHECKING
+from typing import Callable, Optional, List, TYPE_CHECKING
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
@@ -21,13 +21,15 @@ class ReportController(QObject):
         loot_manager: LootManager,
         clipboard_watcher: ClipboardWatcher,
         parent_widget: Optional[QWidget] = None,
-        config_manager: Optional[ConfigManager] = None
+        config_manager: Optional[ConfigManager] = None,
+        obsidian_export_handler: Optional[Callable[[QWidget, str, str], None]] = None,
     ):
         super().__init__(parent_widget)
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
         self.config_manager = config_manager
+        self.obsidian_export_handler = obsidian_export_handler
 
         self.report_file_manager = ReportFileManager(self.project_manager)
         self.parent_widget = parent_widget
@@ -45,10 +47,20 @@ class ReportController(QObject):
                 self.loot_manager,
                 self.clipboard_watcher,
                 parent=self.parent_widget,
-                config_manager=self.config_manager
+                config_manager=self.config_manager,
+                obsidian_export_handler=self.obsidian_export_handler,
             )
             self.report_editor_tab.load_project(self.project_manager.get_active_project())
         return self.report_editor_tab
+
+    def set_obsidian_export_handler(
+        self,
+        handler: Callable[[QWidget, str, str], None],
+    ) -> None:
+        """Inject the shared application export workflow into the lazy editor."""
+        self.obsidian_export_handler = handler
+        if self.report_editor_tab is not None:
+            self.report_editor_tab.obsidian_export_handler = handler
 
     def load_project(self, project_name: str) -> None:
         if self.report_editor_tab is not None:
