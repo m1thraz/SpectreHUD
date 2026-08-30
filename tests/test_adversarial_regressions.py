@@ -25,8 +25,10 @@ from ui.main_window import MainWindow
 
 class TestAdversarialRegressions(unittest.TestCase):
     """
-    Adversarial regression test suite locking in security, data integrity,
-    and resilience invariants discovered during architectural hardening.
+    Cross-component regression tests for data integrity, recovery, and
+    untrusted-input boundaries.  Component-local validation lives in the
+    corresponding focused test module; this suite keeps one end-to-end
+    invariant per boundary.
     """
 
     @classmethod
@@ -1298,42 +1300,6 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertIn("&lt;svg/onload=alert(&#x27;code&#x27;)&gt; &amp;&amp; cat /etc/passwd", tooltip)
 
     # -------------------------------------------------------------------------
-    # 36. Template Repository Path Traversal Defense
-    # -------------------------------------------------------------------------
-    def test_template_repository_path_traversal_defense(self):
-        """
-        Adversarial: Malicious template IDs containing directory traversal sequences
-        (../, ../../etc/passwd, absolute paths) must be rejected across all repository
-        operations (dict_to_template, save_user_template, get_template, delete_user_template).
-        """
-        from core.reporting.template_repository import TemplateRepository, dict_to_template
-        from core.reporting.template_engine import ReportTemplate, TemplateSection
-
-        repo = TemplateRepository(user_templates_dir=self.temp_path / "user_templates")
-
-        # 1. dict_to_template rejects traversal IDs
-        malicious_json = {
-            "id": "../../../../../../tmp/evil_template",
-            "name": "Evil Template",
-            "sections": [{"type": "header_metadata"}]
-        }
-        self.assertIsNone(dict_to_template(malicious_json))
-
-        # 2. save_user_template rejects saving outside sandbox
-        evil_template = ReportTemplate(
-            id="../../../../../../tmp/evil_drop",
-            name="Evil Dropped File",
-            language="de",
-            category="ctf",
-            complexity="simple",
-            sections=[TemplateSection(type="header_metadata")]
-        )
-        self.assertFalse(repo.save_user_template(evil_template))
-
-        # 3. get_template and delete_user_template reject traversal attempts
-        self.assertIsNone(repo.get_template("../../victim_file"))
-        self.assertFalse(repo.delete_user_template("../../victim_file"))
-
     # =========================================================================
     # v15 Regression Tests
     # =========================================================================

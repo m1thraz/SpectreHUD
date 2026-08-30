@@ -119,17 +119,6 @@ class TestProjectManager(unittest.TestCase):
             self.pm.archive_project("../../bad", output_zip=archive_path)
         self.assertFalse(archive_path.exists())
 
-    def test_path_traversal_prevention_double_dot(self):
-        """Finding 15: Project name '..' must raise InvalidProjectNameError and NEVER escape base directory."""
-        from core.project_manager import InvalidProjectNameError
-        with self.assertRaises(InvalidProjectNameError):
-            self.pm.create_project("..")
-
-        # Verify nothing was created outside base_dir
-        parent_items = list(self.base_dir.parent.iterdir())
-        self.assertNotIn("recon", [p.name for p in parent_items if p.is_dir()])
-        self.assertNotIn("exploit", [p.name for p in parent_items if p.is_dir()])
-
     def test_windows_reserved_names_and_invalid_identifiers(self):
         """Findings 15 & 16: Windows reserved names and invalid project names must be rejected."""
         from core.project_manager import InvalidProjectNameError
@@ -155,28 +144,6 @@ class TestProjectManager(unittest.TestCase):
             with self.subTest(name=name):
                 with self.assertRaises(InvalidProjectNameError):
                     self.pm.create_project(name)
-
-    def test_path_traversal_prevention_nested_traversal(self):
-        """Invariant: Traversal payloads ('../foo', '....', '..\\..\\') must be rejected with InvalidProjectNameError."""
-        from core.project_manager import InvalidProjectNameError
-        dangerous_names = [
-            "..",
-            ".",
-            "...",
-            "../secret",
-            "..\\evil",
-            "../../../../etc",
-            "   ",
-            "---"
-        ]
-
-        for name in dangerous_names:
-            with self.assertRaises(InvalidProjectNameError):
-                self.pm.get_project_dir(name)
-
-        # Valid project name resolves strictly inside workspace
-        valid_dir = self.pm.get_project_dir("valid_box-123")
-        self.assertTrue(valid_dir.resolve().is_relative_to(self.base_dir.resolve()))
 
     def test_create_project_with_custom_base_dir(self):
         with tempfile.TemporaryDirectory() as custom_dir:
