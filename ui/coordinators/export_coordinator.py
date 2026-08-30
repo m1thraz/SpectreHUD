@@ -52,7 +52,7 @@ class ExportCoordinator(QObject):
         """Exports report copy using HistoryController."""
         target_ip = self.target_provider()
         active_proj = self.project_manager.get_active_project()
-        self.history_ctrl.export_report(window, target_ip, active_proj)
+        self.history_ctrl.export_report_dialog(window, target_ip, active_proj)
 
     def export_loot_to_obsidian(self, window: QWidget) -> None:
         """Append active-session loot without rewriting a user's report note."""

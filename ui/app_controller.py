@@ -437,92 +437,14 @@ class AppController(QObject):
                 "quit_hotkey": new_settings.get("quit_hotkey", self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")),
             })
         if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
-            from core.project.validator import validate_workspace_directory, WorkspaceError
-            from core.project import ProjectNotFoundError
-            try:
-                new_ws = validate_workspace_directory(new_settings["workspace_dir"])
-                if new_ws != self.project_manager.base_dir.resolve():
-                    old_base = self.project_manager.base_dir
-                    old_active = self.project_manager.get_active_project()
-                    try:
-                        # 1. Switch workspace
-                        self.project_manager.base_dir = new_ws
-                        # 2. Discover projects without mutating the shared
-                        # registry.  Registry persistence is deferred until the
-                        # workspace config commit succeeds below.
-                        available = self.project_manager.list_projects()
-                        # Registered projects may live outside the configured default
-                        # workspace.  A workspace change, however, must select a
-                        # project physically contained in the new workspace.
-                        workspace_projects = [
-                            name for name in available
-                            if (new_ws / name).is_dir() and not (new_ws / name).is_symlink()
-                        ]
-                        # 3. Validate or reset active project
-                        if old_active not in workspace_projects:
-                            if workspace_projects:
-                                self.project_manager.activate_project(workspace_projects[0])
-                                logger.info(
-                                    f"Active project '{old_active}' not found in new workspace; "
-                                    f"switched to '{workspace_projects[0]}'."
-                                )
-                            else:
-                                # ``list_projects()`` exposes the Default fallback
-                                # without writing the registry.  The directory is
-                                # created only after the config commit succeeds.
-                                self.project_manager.activate_project("Default")
-                        # 4. Reload session into UI
-                        self.load_active_project_state()
-                        self.refresh_filter_pills()
-                        self.refresh_content()
-                        # Persist only after every runtime operation completed.
-                        self.config.set("workspace_dir", str(new_ws))
-                        if not workspace_projects:
-                            self.project_manager.create_project("Default", allow_existing=True)
-                        try:
-                            self.project_manager.sync_registry()
-                        except Exception:
-                            # The workspace has already committed successfully;
-                            # discovery persistence can safely be retried later.
-                            logger.exception("Workspace switched, but registry synchronization was deferred.")
-                    except Exception as switch_err:
-                        # Rollback the entire runtime session, not merely the
-                        # project backend.  The new session may already have
-                        # populated loot, clipboard and visible UI state when
-                        # the final config commit fails.
-                        logger.error(f"Workspace switch failed, rolling back: {switch_err}")
-                        try:
-                            self.project_manager.base_dir = old_base
-                            self.project_manager.activate_project(old_active)
-                            self.load_active_project_state()
-                            self.refresh_filter_pills()
-                            self.refresh_content()
-                        except Exception as restore_err:
-                            logger.exception("Failed to restore previous workspace session after switch failure.")
-                            QMessageBox.critical(
-                                self.window,
-                                t("general.workspace_error", "Workspace Error"),
-                                t(
-                                    "general.workspace_restore_failed",
-                                    "The workspace switch failed and the previous session could not be restored safely. "
-                                    "Please restart SpectreHUD before making further changes.\n\n"
-                                    f"Switch error: {switch_err}\nRestore error: {restore_err}",
-                                ),
-                            )
-                            return
-                        QMessageBox.warning(
-                            self.window,
-                            t("general.workspace_error", "Workspace Error"),
-                            t("general.workspace_switch_failed",
-                              f"Failed to switch workspace directory:\n{switch_err}\n\nThe previous workspace has been restored.")
-                        )
-            except WorkspaceError as e:
-                logger.error(f"Failed to switch to new workspace directory: {e}")
-                QMessageBox.warning(
-                    self.window,
-                    t("general.workspace_error", "Workspace Error"),
-                    f"Failed to set workspace directory:\n{e}"
-                )
+            self.workspace_coord.apply_workspace_setting(
+                workspace_dir=new_settings["workspace_dir"],
+                config=self.config,
+                window=self.window,
+                load_session=self.load_active_project_state,
+                refresh_filters=self.refresh_filter_pills,
+                refresh_content=self.refresh_content,
+            )
         if "time_format" in new_settings:
             fmt = new_settings["time_format"]
             if hasattr(self, "loot_manager") and hasattr(self.loot_manager, "set_time_format"):

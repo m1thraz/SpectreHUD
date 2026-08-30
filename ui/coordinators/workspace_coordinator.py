@@ -9,6 +9,8 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.project import ProjectManager
+from core.project.validator import WorkspaceError, validate_workspace_directory
+from core.config import ConfigManager
 from core.project_session_service import ProjectSessionService
 from core.event_bus import EventBus, EventType
 from core.i18n import t
@@ -167,6 +169,91 @@ class WorkspaceCoordinator(QObject):
         self.project_changed.emit(project_name)
         self.event_bus.publish(EventType.PROJECT_CHANGED, {"project_name": project_name})
         return True
+
+    def apply_workspace_setting(
+        self,
+        workspace_dir: str,
+        config: ConfigManager,
+        window: QWidget,
+        load_session: Callable[[], None],
+        refresh_filters: Callable[[], None],
+        refresh_content: Callable[[], None],
+    ) -> bool:
+        """Apply and persist a workspace switch as one rollback-capable transaction."""
+        try:
+            new_workspace = validate_workspace_directory(workspace_dir)
+        except WorkspaceError as exc:
+            logger.error("Failed to switch to new workspace directory: %s", exc)
+            QMessageBox.warning(
+                window,
+                t("general.workspace_error", "Workspace Error"),
+                f"Failed to set workspace directory:\n{exc}",
+            )
+            return False
+
+        if new_workspace == self.project_manager.base_dir.resolve():
+            return True
+
+        old_base = self.project_manager.base_dir
+        old_active = self.project_manager.get_active_project()
+        try:
+            self.project_manager.base_dir = new_workspace
+            available = self.project_manager.list_projects()
+            workspace_projects = [
+                name for name in available
+                if (new_workspace / name).is_dir() and not (new_workspace / name).is_symlink()
+            ]
+            if old_active not in workspace_projects:
+                selected = workspace_projects[0] if workspace_projects else "Default"
+                self.project_manager.activate_project(selected)
+                if workspace_projects:
+                    logger.info(
+                        "Active project '%s' not found in new workspace; switched to '%s'.",
+                        old_active,
+                        selected,
+                    )
+
+            load_session()
+            refresh_filters()
+            refresh_content()
+            config.set("workspace_dir", str(new_workspace))
+            if not workspace_projects:
+                self.project_manager.create_project("Default", allow_existing=True)
+            try:
+                self.project_manager.sync_registry()
+            except Exception:
+                logger.exception("Workspace switched, but registry synchronization was deferred.")
+            return True
+        except Exception as switch_err:
+            logger.error("Workspace switch failed, rolling back: %s", switch_err)
+            try:
+                self.project_manager.base_dir = old_base
+                self.project_manager.activate_project(old_active)
+                load_session()
+                refresh_filters()
+                refresh_content()
+            except Exception as restore_err:
+                logger.exception("Failed to restore previous workspace session after switch failure.")
+                QMessageBox.critical(
+                    window,
+                    t("general.workspace_error", "Workspace Error"),
+                    t(
+                        "general.workspace_restore_failed",
+                        "The workspace switch failed and the previous session could not be restored safely. "
+                        "Please restart SpectreHUD before making further changes.\n\n"
+                        f"Switch error: {switch_err}\nRestore error: {restore_err}",
+                    ),
+                )
+                return False
+            QMessageBox.warning(
+                window,
+                t("general.workspace_error", "Workspace Error"),
+                t(
+                    "general.workspace_switch_failed",
+                    f"Failed to switch workspace directory:\n{switch_err}\n\nThe previous workspace has been restored.",
+                ),
+            )
+            return False
 
     def show_project_menu(
         self,

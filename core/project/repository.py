@@ -2,29 +2,16 @@
 Filesystem storage and project registry persistence layer.
 """
 
-import base64
-import json
 import os
 import sys
 import subprocess
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
 from core.logger import get_logger
 from core.storage import PersistenceError
-from core.atomic_write import atomic_write_bytes, atomic_write_json, atomic_write_text
-from core.crypto_service import (
-    KDF_ITERATIONS, create_verifier, decrypt_bytes, derive_key, encrypt_bytes,
-    verify_password,
-)
-from core.project_lock_service import ProjectLockService, ProjectLockedError, ProjectSecurityMetaError
-from core.validators import (
-    validate_project_state,
-    is_file_size_valid,
-    MAX_PROJECT_STATE_FILE_SIZE,
-    MAX_REGISTRY_FILE_SIZE
-)
+from core.atomic_write import atomic_write_json, atomic_write_text
+from core.project_lock_service import ProjectLockService
 from core.project.validator import (
     sanitize_project_name,
     validate_project_name,
@@ -34,6 +21,8 @@ from core.project.validator import (
     ProjectCreationError
 )
 from core.project.metadata import create_initial_notes, create_initial_state
+from core.project.registry import ProjectRegistry
+from core.project.state_store import ProjectStateStore
 
 logger = get_logger("projects")
 
@@ -75,131 +64,67 @@ class ProjectRepository:
         except OSError:
             pass
 
-        self.registry_file = self.config_dir / "projects_registry.json"
-        self.registry: Dict[str, str] = self._load_registry()
-        self.lock_service = lock_service or ProjectLockService()
+        self.project_registry = ProjectRegistry(self.config_dir / "projects_registry.json")
+        self._lock_service = lock_service or ProjectLockService()
+        self.state_store = ProjectStateStore(self.get_project_dir, self._lock_service)
+
+    @property
+    def lock_service(self) -> ProjectLockService:
+        return self._lock_service
+
+    @lock_service.setter
+    def lock_service(self, value: ProjectLockService) -> None:
+        self._lock_service = value
+        if hasattr(self, "state_store"):
+            self.state_store.lock_service = value
+
+    @property
+    def registry_file(self) -> Path:
+        return self.project_registry.registry_file
+
+    @registry_file.setter
+    def registry_file(self, value: Path) -> None:
+        self.project_registry.registry_file = Path(value)
+
+    @property
+    def registry(self) -> Dict[str, str]:
+        return self.project_registry.entries
+
+    @registry.setter
+    def registry(self, value: Dict[str, str]) -> None:
+        self.project_registry.entries = value
 
     @staticmethod
     def _security_meta_path(proj_dir: Path) -> Path:
-        return proj_dir / "security_meta.json"
+        return ProjectStateStore.security_meta_path(proj_dir)
 
     def _load_security_meta(self, proj_dir: Path) -> Optional[Dict[str, Any]]:
         """Load and strictly validate the unencrypted Pentest-Mode sidecar."""
-        meta_path = self._security_meta_path(proj_dir)
-        if not meta_path.exists():
-            return None
-        try:
-            with open(meta_path, "r", encoding="utf-8") as file:
-                meta = json.load(file)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
-            raise ProjectSecurityMetaError(f"Security metadata for '{proj_dir.name}' is unreadable.") from exc
-        if not isinstance(meta, dict) or not isinstance(meta.get("pentest_mode"), bool):
-            raise ProjectSecurityMetaError("Security metadata has an invalid pentest_mode field.")
-        if not meta["pentest_mode"]:
-            return meta
-        salt = meta.get("kdf_salt")
-        iterations = meta.get("kdf_iterations")
-        verifier = meta.get("verifier")
-        if not isinstance(salt, str) or not isinstance(iterations, int) or not isinstance(verifier, str):
-            raise ProjectSecurityMetaError("Security metadata is missing required encryption fields.")
-        if iterations < KDF_ITERATIONS or not verifier:
-            raise ProjectSecurityMetaError("Security metadata contains unsafe encryption parameters.")
-        try:
-            decoded_salt = base64.b64decode(salt.encode("ascii"), validate=True)
-        except (ValueError, UnicodeEncodeError) as exc:
-            raise ProjectSecurityMetaError("Security metadata contains an invalid KDF salt.") from exc
-        if len(decoded_salt) < 16:
-            raise ProjectSecurityMetaError("Security metadata contains an unsafe KDF salt.")
-        return meta
-
+        return self.state_store.load_security_meta(proj_dir)
     def _save_security_meta(self, proj_dir: Path, meta: Dict[str, Any]) -> bool:
         """Persist validated Pentest-Mode metadata without exposing a key/password."""
-        # Validate the exact structure before committing it to disk.
-        self._validate_security_meta(meta)
-        return atomic_write_json(self._security_meta_path(proj_dir), meta, indent=2, ensure_ascii=False)
-
+        return self.state_store.save_security_meta(proj_dir, meta)
     def _validate_security_meta(self, meta: Dict[str, Any]) -> None:
-        """Validate arbitrary metadata by applying the same strict sidecar rules."""
-        if not isinstance(meta, dict) or meta.get("pentest_mode") is not True:
-            raise ProjectSecurityMetaError("Pentest-mode metadata must explicitly enable pentest_mode.")
-        salt, iterations, verifier = meta.get("kdf_salt"), meta.get("kdf_iterations"), meta.get("verifier")
-        if not isinstance(salt, str) or not isinstance(iterations, int) or not isinstance(verifier, str):
-            raise ProjectSecurityMetaError("Security metadata is missing required encryption fields.")
-        try:
-            decoded_salt = base64.b64decode(salt.encode("ascii"), validate=True)
-        except (ValueError, UnicodeEncodeError) as exc:
-            raise ProjectSecurityMetaError("Security metadata contains an invalid KDF salt.") from exc
-        if len(decoded_salt) < 16 or iterations < KDF_ITERATIONS or not verifier:
-            raise ProjectSecurityMetaError("Security metadata contains unsafe encryption parameters.")
-
+        """Validate Pentest-Mode sidecar data through the state store."""
+        self.state_store.validate_security_meta(meta)
     def is_pentest_mode(self, name: str) -> bool:
-        meta = self._load_security_meta(self.get_project_dir(validate_project_name(name)))
-        return bool(meta and meta.get("pentest_mode"))
+        return self.state_store.is_pentest_mode(name)
 
     def unlock_project(self, name: str, password: str) -> bool:
-        pname = validate_project_name(name)
-        meta = self._load_security_meta(self.get_project_dir(pname))
-        if not meta or not meta.get("pentest_mode"):
-            return True
-        salt = base64.b64decode(meta["kdf_salt"].encode("ascii"), validate=True)
-        key = derive_key(password, salt, meta["kdf_iterations"])
-        if not verify_password(key, meta["verifier"]):
-            return False
-        self.lock_service.set_session_key(pname, key)
-        return True
-
+        return self.state_store.unlock(name, password)
     def enable_pentest_mode(self, name: str, password: str) -> None:
         """Encrypt an existing state file and retain its key for this session."""
-        pname = validate_project_name(name)
-        proj_dir = self.get_project_dir(pname)
-        if self._load_security_meta(proj_dir) is not None:
-            raise ProjectSecurityMetaError("Pentest mode is already configured for this project.")
-        # Read the ordinary state before the sidecar marks it as encrypted.
-        state = self.load_project_state(pname)
-        salt = os.urandom(16)
-        key = derive_key(password, salt, KDF_ITERATIONS)
-        meta = {
-            "pentest_mode": True,
-            "kdf_salt": base64.b64encode(salt).decode("ascii"),
-            "kdf_iterations": KDF_ITERATIONS,
-            "verifier": create_verifier(key),
-        }
-        self._save_security_meta(proj_dir, meta)
-        self.lock_service.set_session_key(pname, key)
-        try:
-            self._write_project_state(proj_dir / "project_state.json", state, key)
-        except Exception:
-            self.lock_service.clear()
-            try:
-                self._security_meta_path(proj_dir).unlink(missing_ok=True)
-            except OSError:
-                logger.exception("Failed to roll back Pentest-Mode metadata for %s", pname)
-            raise
-
+        self.state_store.enable_pentest_mode(name, password)
     @staticmethod
     def _serialize_state(state: Dict[str, Any]) -> bytes:
-        return json.dumps(state, indent=2, ensure_ascii=False).encode("utf-8")
+        return ProjectStateStore.serialize(state)
 
     def _write_project_state(self, state_file: Path, state: Dict[str, Any], key: Optional[bytes]) -> bool:
-        serialized = self._serialize_state(state)
-        if key is not None:
-            return atomic_write_bytes(state_file, encrypt_bytes(key, serialized))
-        return atomic_write_json(state_file, state, indent=2, ensure_ascii=False)
+        return self.state_store.write(state_file, state, key)
 
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
-        if self.registry_file.exists():
-            if not is_file_size_valid(self.registry_file, MAX_REGISTRY_FILE_SIZE):
-                logger.warning(f"Project registry file {self.registry_file} exceeds maximum size limit. Ignoring.")
-                return {}
-            try:
-                with open(self.registry_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        return {str(k): str(v) for k, v in data.items()}
-            except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as e:
-                logger.warning(f"Could not load projects registry from {self.registry_file}: {e}")
-        return {}
+        return self.project_registry.load()
 
     def _update_registry(
         self,
@@ -207,19 +132,7 @@ class ProjectRepository:
         removals: Optional[set[str]] = None,
     ) -> None:
         """Atomically persist explicit changes to the active application's registry."""
-        additions = dict(additions or {})
-        removals = set(removals or set())
-        try:
-            updated_registry = dict(self.registry)
-            for name in removals:
-                updated_registry.pop(name, None)
-            updated_registry.update(additions)
-            if not atomic_write_json(self.registry_file, updated_registry, indent=2, ensure_ascii=False):
-                raise OSError("Atomic registry write returned false.")
-            self.registry = updated_registry
-        except Exception as e:
-            logger.error(f"Failed to update projects registry at {self.registry_file}: {e}", exc_info=True)
-            raise PersistenceError(f"Failed to update projects registry at {self.registry_file}: {e}") from e
+        self.project_registry.update(additions=additions, removals=removals)
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
         """Returns whether a project with the strictly validated name exists."""
@@ -229,143 +142,11 @@ class ProjectRepository:
         return clean in self.list_projects() or proj_dir.exists()
 
     def list_projects(self) -> List[str]:
-        """
-        Returns list of all available project directory names across base_dir and custom locations.
-
-        This method is **read-only**: it does not mutate ``self.registry``.
-        Call :meth:`sync_registry` explicitly to persist newly discovered projects to the registry.
-        """
-        from collections import defaultdict
-        projects = set()
-        resolved_base = self.base_dir.resolve()
-
-        # 1. Base directory projects (auto-discovery with collision detection)
-        if self.base_dir.exists():
-            try:
-                collision_map = defaultdict(list)
-                for p in self.base_dir.iterdir():
-                    if p.name.startswith("."):
-                        continue
-
-                    # Defense against Symlinks and Junctions within default workspace
-                    if p.is_symlink():
-                        logger.warning(f"Ignoring symlinked project folder inside base_dir: {p}")
-                        continue
-
-                    try:
-                        resolved_p = p.resolve()
-                    except (OSError, RuntimeError):
-                        continue
-
-                    if not resolved_p.is_relative_to(resolved_base) or resolved_p == resolved_base:
-                        logger.warning(f"Ignoring escaping directory/junction inside base_dir: {p} -> {resolved_p}")
-                        continue
-
-                    if p.is_dir():
-                        clean = sanitize_project_name(p.name)
-                        collision_map[clean].append(resolved_p)
-
-                for clean, cand_paths in collision_map.items():
-                    if len(cand_paths) > 1:
-                        logger.error(
-                            f"Physical directory collision detected for project '{clean}': {cand_paths}. "
-                            "Refusing automatic registration to avoid silent shadowing."
-                        )
-                        continue
-                    projects.add(clean)
-            except OSError as e:
-                logger.error(f"Failed to list projects from {self.base_dir}: {e}", exc_info=True)
-
-        # 2. Registered projects (filtered by existence on disk and invalid base_dir symlinks)
-        for name, path_str in list(self.registry.items()):
-            try:
-                candidate_in_base = self.base_dir / name
-                if candidate_in_base.exists() and candidate_in_base.is_symlink():
-                    logger.warning(f"Skipping compromised symlinked registry entry during list: {name} -> {path_str}")
-                    continue
-
-                p = Path(path_str)
-                if p.exists() and p.is_dir():
-                    projects.add(name)
-            except OSError:
-                pass
-
-        if not projects:
-            projects.add("Default")
-
-        return sorted(list(projects))
-
+        """Return discovered and registered projects without persisting changes."""
+        return self.project_registry.list_projects(self.base_dir)
     def sync_registry(self) -> List[str]:
-        """
-        Discovers all projects from ``base_dir`` and explicitly registers newly found entries into
-        ``self.registry``, then persists the registry to disk.
-
-        Unlike :meth:`list_projects`, this method **mutates** ``self.registry`` and writes to disk.
-        Call after workspace changes, project creation/import, or on startup bootstrap.
-
-        Returns the sorted list of discovered project names.
-        """
-        from collections import defaultdict
-        additions: Dict[str, str] = {}
-        removals: set[str] = set()
-        projects = set()
-        resolved_base = self.base_dir.resolve()
-
-        if self.base_dir.exists():
-            try:
-                collision_map = defaultdict(list)
-                for p in self.base_dir.iterdir():
-                    if p.name.startswith("."):
-                        continue
-                    if p.is_symlink():
-                        logger.warning(f"Ignoring symlinked project folder inside base_dir during sync: {p}")
-                        continue
-                    try:
-                        resolved_p = p.resolve()
-                    except (OSError, RuntimeError):
-                        continue
-                    if not resolved_p.is_relative_to(resolved_base) or resolved_p == resolved_base:
-                        continue
-                    if p.is_dir():
-                        clean = sanitize_project_name(p.name)
-                        collision_map[clean].append(resolved_p)
-
-                for clean, cand_paths in collision_map.items():
-                    if len(cand_paths) > 1:
-                        logger.error(
-                            f"Physical directory collision detected for project '{clean}': {cand_paths}. "
-                            "Skipping registration."
-                        )
-                        continue
-                    resolved_p = cand_paths[0]
-                    projects.add(clean)
-                    if clean not in self.registry:
-                        additions[clean] = str(resolved_p)
-                        logger.debug(f"sync_registry: registered new project '{clean}' at {resolved_p}")
-
-            except OSError as e:
-                logger.error(f"Failed to sync registry from {self.base_dir}: {e}", exc_info=True)
-
-        # Purge compromised symlinked registry entries
-        for name in list(self.registry.keys()):
-            try:
-                candidate_in_base = self.base_dir / name
-                if candidate_in_base.exists() and candidate_in_base.is_symlink():
-                    logger.warning(f"Purging compromised symlinked registry entry during sync: {name}")
-                    removals.add(name)
-                    continue
-                p = Path(self.registry.get(name, ""))
-                if p.exists() and p.is_dir():
-                    projects.add(name)
-            except OSError:
-                pass
-
-        if not projects:
-            projects.add("Default")
-
-        self._update_registry(additions=additions, removals=removals)
-        return sorted(list(projects))
-
+        """Discover workspace projects and atomically persist registry changes."""
+        return self.project_registry.sync(self.base_dir)
     def get_project_dir(self, name: Optional[str] = None) -> Path:
         """
         Returns the filesystem path for a project.
@@ -524,81 +305,11 @@ class ProjectRepository:
             return None
 
     def load_project_state(self, name: str) -> Dict[str, Any]:
-        """Loads and semantically validates state data for a project."""
-        from core.validators import validate_project_state, is_file_size_valid, MAX_PROJECT_STATE_FILE_SIZE
-        pname = validate_project_name(name)
-        proj_dir = self.get_project_dir(pname)
-        state_file = proj_dir / "project_state.json"
-        meta = self._load_security_meta(proj_dir)
-        key: Optional[bytes] = None
-        if meta and meta.get("pentest_mode"):
-            key = self.lock_service.get_session_key(pname)
-            if key is None:
-                raise ProjectLockedError(f"Project '{pname}' is locked. Enter its Pentest-Mode password first.")
-        if state_file.exists():
-            if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
-                logger.error(f"Project state file {state_file} exceeds maximum size limit of {MAX_PROJECT_STATE_FILE_SIZE} bytes. Rejecting oversized file and using default state.")
-                return validate_project_state(None, fallback_name=pname)
-            try:
-                if key is not None:
-                    raw_bytes = state_file.read_bytes()
-                    raw_data = json.loads(decrypt_bytes(key, raw_bytes).decode("utf-8"))
-                else:
-                    with open(state_file, "r", encoding="utf-8") as f:
-                        raw_data = json.load(f)
-                return validate_project_state(raw_data, fallback_name=pname)
-            except (json.JSONDecodeError, RecursionError) as e:
-                logger.error(f"Corrupted project_state.json for {pname}: {e}")
-            except (OSError, UnicodeDecodeError) as e:
-                logger.error(f"Error loading state for {pname}: {e}")
-
-        return validate_project_state(None, fallback_name=pname)
-
+        """Load validated plain or encrypted state through the state store."""
+        return self.state_store.load(name)
     def save_project_state(self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
-        """Persists state data for an existing project without recreating it."""
-        from core.validators import validate_project_state
-        from core.atomic_write import atomic_write_json
-        pname = validate_project_name(name)
-        proj_dir = self.get_project_dir(pname)
-        if not proj_dir.exists() or not proj_dir.is_dir():
-            logger.error(
-                "Refusing to save project '%s': expected project directory is unavailable at %s. "
-                "It may have been moved or deleted outside SpectreHUD.",
-                pname,
-                proj_dir,
-            )
-            return False
-
-        state_file = proj_dir / "project_state.json"
-        meta = self._load_security_meta(proj_dir)
-        key: Optional[bytes] = None
-        if meta and meta.get("pentest_mode"):
-            key = self.lock_service.get_session_key(pname)
-            if key is None:
-                logger.error("Refusing to save locked Pentest-Mode project '%s'.", pname)
-                return False
-        try:
-            final_state = self.load_project_state(pname) or {}
-        except ProjectLockedError:
-            return False
-        if state:
-            final_state.update(state)
-        if kwargs:
-            final_state.update(kwargs)
-
-        final_state["name"] = pname
-        final_state["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        valid_state = validate_project_state(final_state, fallback_name=pname)
-
-        try:
-            return self._write_project_state(state_file, valid_state, key)
-        except OSError as e:
-            logger.error(f"OS error saving state for {pname} to {state_file}: {e}", exc_info=True)
-            return False
-        except (TypeError, ValueError) as e:
-            logger.error(f"JSON serialization error saving state for {pname}: {e}")
-            return False
-
+        """Persist validated plain or encrypted state through the state store."""
+        return self.state_store.save(name, state=state, **kwargs)
     def open_project_folder(self, name: str) -> bool:
         """Opens the project folder in OS file manager."""
         folder = self.get_project_dir(name)

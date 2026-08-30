@@ -114,7 +114,7 @@ graph TD
 - **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
 - **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
-- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Provides a Markdown source editor, split preview and live preview through one Change View menu. Its formatting toolbar writes Markdown for headings, emphasis, code, lists, links and tables; find/replace, debounced rendering and autosave support editing workflows.
+- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, view state, autosave and export workflow. Report dialogs, preview/document handling, formatting-toolbar construction and find/replace live in focused modules under `ui/report/`.
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
 - **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives while retaining their project-relative layout.
@@ -151,7 +151,7 @@ test and scope rationale.
 6. **Structured and rotating logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
 7. **Optional Pentest-Mode state encryption**:
-   - `ProjectRepository` encrypts only a Pentest-Mode project's `project_state.json` with authenticated Fernet encryption. `crypto_service.py` derives a key using PBKDF2-SHA256; `ProjectLockService` retains that key only for the unlocked process session.
+   - `ProjectStateStore` encrypts only a Pentest-Mode project's `project_state.json` with authenticated Fernet encryption. `crypto_service.py` derives a key using PBKDF2-SHA256; `ProjectLockService` retains that key only for the unlocked process session.
    - `security_meta.json` contains the salt, safe KDF parameters and an encrypted verifier, never a password or usable project key. `report.md`, notes, screenshots and user-selected plaintext exports are intentionally outside this scope. See [Pentest Mode](pentest_mode.md).
 
 ---
@@ -186,3 +186,4 @@ test and scope rationale.
 - The product is designed for normal workstation inputs selected by its user. It does not claim to defend against malware running as that user, intentionally hostile local files, or a compromised operating system.
 - Screenshot behaviour on Linux depends on the display server and compositor; Wayland can restrict direct capture.
 - Pentest Mode encrypts `project_state.json` only. Screenshots, reports, notes, and user-selected exports remain deliberately plaintext so they can be used in the surrounding workflow.
+- `core.project_manager`, `core.html_report_exporter`, `get_event_bus()` and the remaining legacy method aliases are retained only as public compatibility surfaces. Internal code uses the canonical modules and explicit APIs; removing these importable facades is reserved for a documented major release.

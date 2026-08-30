@@ -480,10 +480,9 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         self.project_mgr.create_project("BoxSaveErr")
 
-        # atomic_write_json is a top-level import in core.project.repository,
-        # so we must patch it there (where it is actually bound at call time).
-        with patch("core.project.repository.atomic_write_json", return_value=False), \
-             patch("core.project.repository.atomic_write_bytes", return_value=False):
+        # State writes are owned by ProjectStateStore after the repository split.
+        with patch("core.project.state_store.atomic_write_json", return_value=False), \
+             patch("core.project.state_store.atomic_write_bytes", return_value=False):
             saved = self.project_mgr.save_project_state("BoxSaveErr", {"target_ip": "1.2.3.4"})
             self.assertFalse(saved)
 
