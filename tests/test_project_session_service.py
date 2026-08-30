@@ -2,7 +2,7 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project_session_service import ProjectSessionService

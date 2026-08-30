@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QWidget
 
 from core.clipboard_watcher import ClipboardWatcher
 from core.loot_manager import LootManager
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.logger import get_logger
 from ui.controllers.history_controller import HistoryController
 from ui.controllers.loot_controller import LootController

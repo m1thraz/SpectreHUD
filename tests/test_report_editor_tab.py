@@ -10,12 +10,14 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import QMimeData, QUrl
 
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
 from core.i18n import t
-from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode, ReportPreviewEdit, ReportGenerationDialog
+from ui.report.dialogs import ReportGenerationDialog
+from ui.report.preview import ReportPreviewEdit
+from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -172,15 +174,15 @@ class TestReportEditorTab(unittest.TestCase):
     def test_find_replace_and_autosave(self):
         self.tab.editor.setPlainText("alpha beta alpha")
         self.tab.editor.setFocus()
-        self.tab._open_find_bar()
-        self.tab.find_input.setText("alpha")
-        self.assertTrue(self.tab.find_bar.isVisible())
-        self.assertEqual(self.tab.find_count_label.text(), "2 Treffer")
-        self.tab.replace_input.setText("omega")
-        self.tab._replace_all()
+        self.tab.find_replace.open()
+        self.tab.find_replace.find_input.setText("alpha")
+        self.assertTrue(self.tab.find_replace.isVisible())
+        self.assertEqual(self.tab.find_replace.count_label.text(), "2 Treffer")
+        self.tab.find_replace.replace_input.setText("omega")
+        self.tab.find_replace.replace_all()
         self.assertEqual(self.tab.editor.toPlainText(), "omega beta omega")
-        self.tab._close_find_bar()
-        self.assertFalse(self.tab.find_bar.isVisible())
+        self.tab.find_replace.close_bar()
+        self.assertFalse(self.tab.find_replace.isVisible())
 
         self.tab.report_file_manager.save = MagicMock(return_value=True)
         self.tab._set_dirty(False)

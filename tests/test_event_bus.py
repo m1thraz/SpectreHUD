@@ -1,5 +1,5 @@
 import unittest
-from core.event_bus import EventBus, EventType, get_event_bus
+from core.event_bus import EventBus, EventType
 
 
 class TestEventBus(unittest.TestCase):
@@ -71,12 +71,14 @@ class TestEventBus(unittest.TestCase):
         self.bus.clear()
         self.assertEqual(self.bus.get_subscriber_count(), 0)
 
-    def test_singleton_get_event_bus(self):
-        with self.assertWarns(DeprecationWarning):
-            bus1 = get_event_bus()
-        with self.assertWarns(DeprecationWarning):
-            bus2 = get_event_bus()
-        self.assertIs(bus1, bus2)
+    def test_event_bus_instances_are_isolated(self):
+        other_bus = EventBus()
+        received = []
+        self.bus.subscribe(EventType.MODE_CHANGED, received.append)
+
+        other_bus.publish(EventType.MODE_CHANGED, {"mode": "loot"})
+
+        self.assertEqual(received, [])
 
 
 if __name__ == "__main__":

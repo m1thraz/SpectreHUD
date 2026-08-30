@@ -5,7 +5,7 @@ from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 
 from core.loot_manager import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.atomic_write import atomic_write_text
 from core.project.validator import sanitize_filename_component, validate_workspace_boundary

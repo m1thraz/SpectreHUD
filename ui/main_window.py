@@ -13,7 +13,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
 from core.event_bus import EventBus
@@ -222,16 +222,16 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Esc"), self, activated=self.hide)
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_panel.set_focus)
         QShortcut(QKeySequence("Ctrl+N"), self, activated=lambda: self.app._on_add_button_clicked())
-        QShortcut(QKeySequence("Ctrl+Alt+S"), self, activated=self.trigger_screenshot)
-        QShortcut(QKeySequence("Ctrl+Shift+X"), self, activated=self.trigger_screenshot)
+        QShortcut(QKeySequence("Ctrl+Alt+S"), self, activated=lambda: self.app.trigger_screenshot())
+        QShortcut(QKeySequence("Ctrl+Shift+X"), self, activated=lambda: self.app.trigger_screenshot())
         QShortcut(QKeySequence("Ctrl+P"), self, activated=lambda: self.app._toggle_pause_history())
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.request_quit)
-        QShortcut(QKeySequence("Ctrl+,"), self, activated=self.open_settings_dialog)
-        QShortcut(QKeySequence("Tab"), self, activated=self.toggle_mode)
-        QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.switch_mode("cheatsheet"))
-        QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.switch_mode("loot"))
-        QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.switch_mode("history"))
-        QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.switch_mode("report"))
+        QShortcut(QKeySequence("Ctrl+,"), self, activated=lambda: self.app.open_settings_dialog())
+        QShortcut(QKeySequence("Tab"), self, activated=lambda: self.app.toggle_mode())
+        QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.app.switch_mode("cheatsheet"))
+        QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.app.switch_mode("loot"))
+        QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.app.switch_mode("history"))
+        QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.app.switch_mode("report"))
         self.shortcut_fullscreen = QShortcut(QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen)
         self.shortcut_fullscreen.setContext(Qt.ShortcutContext.WindowShortcut)
 
@@ -247,14 +247,6 @@ class MainWindow(QMainWindow):
     # App Delegation & Backward-Compatibility Properties
     # -------------------------------------------------------------
     @property
-    def active_mode(self) -> str:
-        return self.app.active_mode
-
-    @active_mode.setter
-    def active_mode(self, val: str) -> None:
-        self.app.active_mode = val
-
-    @property
     def cards(self) -> List[QWidget]:
         # Preserve the established programmatic contract for callers that
         # inspect cards before the window has ever been shown (notably tests).
@@ -267,212 +259,21 @@ class MainWindow(QMainWindow):
         self.app.cards = val
 
     @property
-    def session_service(self):
-        return self.app.session_service
-
-    @property
-    def cheatsheet_ctrl(self):
-        return self.app.cheatsheet_ctrl
-
-    @property
-    def loot_ctrl(self):
-        return self.app.loot_ctrl
-
-    @property
-    def history_ctrl(self):
-        return self.app.history_ctrl
-
-    @property
-    def report_ctrl(self):
-        return self.app.report_ctrl
-
-    @property
-    def project_ctrl(self):
-        return self.app.project_ctrl
-
-    @property
-    def search_bar(self):
-        return self.search_panel.search_bar
-
-    @property
-    def pills_frame(self):
-        return self.search_panel.pills_frame
-
-    @property
-    def pills_layout(self):
-        return self.search_panel.pills_layout
-
-    @property
-    def content_layout(self):
-        return self.content_panel.content_layout
-
-    @property
-    def content_container(self):
-        return self.content_panel.content_container
-
-    @property
-    def scroll_area(self):
-        return self.content_panel.scroll_area
-
-    @property
-    def privacy_banner(self):
-        return self.content_panel.privacy_banner
-
-    @property
-    def header_bar(self):
-        return self.header_panel
-
-    @property
-    def btn_project(self):
-        return self.header_panel.btn_project
-
-    @property
-    def btn_mode_cheatsheet(self):
-        return self.header_panel.btn_mode_cheatsheet
-
-    @property
-    def btn_mode_loot(self):
-        return self.header_panel.btn_mode_loot
-
-    @property
-    def btn_mode_history(self):
-        return self.header_panel.btn_mode_history
-
-    @property
-    def btn_mode_report(self):
-        return self.header_panel.btn_mode_report
-
-    @property
-    def btn_screenshot(self):
-        return self.header_panel.btn_screenshot
-
-    @property
-    def btn_rec_indicator(self):
-        return self.header_panel.btn_rec_indicator
-
-    @property
-    def btn_settings(self):
-        return self.header_panel.btn_settings
-
-    @property
-    def footer_frame(self):
-        return self.footer_panel
-
-    @property
-    def lbl_status(self):
-        return self.footer_panel.lbl_status
-
-    @property
-    def lbl_count(self):
-        return self.footer_panel.lbl_count
-
-    @property
-    def chk_always_on_top(self):
-        return self.footer_panel.chk_always_on_top
-
-    @property
-    def size_grip(self):
-        return self.footer_panel.size_grip
-
-    @property
     def filter_buttons(self) -> Dict[str, Any]:
-        if self.active_mode == "cheatsheet":
-            return self.cheatsheet_ctrl.filter_buttons
-        elif self.active_mode == "loot":
-            return self.loot_ctrl.filter_buttons
-        elif self.active_mode == "history":
-            return self.history_ctrl.filter_buttons
+        if self.app.active_mode == "cheatsheet":
+            return self.app.cheatsheet_ctrl.filter_buttons
+        elif self.app.active_mode == "loot":
+            return self.app.loot_ctrl.filter_buttons
+        elif self.app.active_mode == "history":
+            return self.app.history_ctrl.filter_buttons
         return {}
 
     @property
-    def current_category_id(self) -> str:
-        return self.cheatsheet_ctrl.current_category_id
-
-    @current_category_id.setter
-    def current_category_id(self, val: str) -> None:
-        self.cheatsheet_ctrl.current_category_id = val
-
-    @property
-    def current_loot_type(self) -> str:
-        return self.loot_ctrl.current_loot_type
-
-    @current_loot_type.setter
-    def current_loot_type(self, val: str) -> None:
-        self.loot_ctrl.current_loot_type = val
-
-    @property
-    def current_history_filter(self) -> str:
-        return self.history_ctrl.current_history_filter
-
-    @current_history_filter.setter
-    def current_history_filter(self, val: str) -> None:
-        self.history_ctrl.current_history_filter = val
-
-    @property
-    def report_file_manager(self) -> ReportFileManager:
-        return self.report_ctrl.report_file_manager
-
-    @property
     def report_editor_tab(self):
-        return self.report_ctrl.get_tab_widget()
-
-    # Methods delegated to AppController
-    def switch_mode(self, mode: str) -> None:
-        self.app.switch_mode(mode)
-
-    def toggle_mode(self) -> None:
-        self.app.toggle_mode()
-
-    def refresh_filter_pills(self) -> None:
-        self.app.refresh_filter_pills()
-
-    def refresh_content(self) -> None:
-        self.app.refresh_content()
-
-    def trigger_screenshot(self) -> None:
-        self.app.trigger_screenshot()
-
-    def open_settings_dialog(self) -> None:
-        self.app.open_settings_dialog()
-
-    def _select_category(self, category_id: str) -> None:
-        self.app._select_category(category_id)
-
-    def _select_loot_type(self, type_id: str) -> None:
-        self.app._select_loot_type(type_id)
-
-    def _select_history_filter(self, filter_id: str) -> None:
-        self.app._select_history_filter(filter_id)
-
-    def _switch_to_project(self, project_name: str) -> None:
-        self.app.switch_to_project(project_name)
-
-    def _save_current_project_state(self) -> bool:
-        return self.app.save_current_project_state()
-
-    def _load_active_project_state(self) -> None:
-        self.app.load_active_project_state()
+        return self.app.report_ctrl.get_tab_widget()
 
     def _show_empty_state(self, message: str) -> None:
         self.content_panel.show_empty_state(message)
-
-    def _toggle_pause_history(self) -> None:
-        self.app._toggle_pause_history()
-
-    def _on_add_button_clicked(self) -> None:
-        self.app._on_add_button_clicked()
-
-    def _export_report(self) -> None:
-        self.app._export_report()
-
-    def _export_loot(self) -> None:
-        self.app._export_loot()
-
-    def _clear_loot(self) -> None:
-        self.app._clear_loot()
-
-    def _clear_history(self) -> None:
-        self.app._clear_history()
 
     def toggle_visibility(self) -> None:
         if self.isVisible() and not self.isMinimized():
@@ -506,11 +307,11 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QMessageBox
 
         # 1. Dirty report confirmation
-        if hasattr(self, "report_ctrl") and self.report_ctrl and not self.report_ctrl.confirm_discard_if_dirty():
+        if self.app.report_ctrl and not self.app.report_ctrl.confirm_discard_if_dirty():
             return False
 
         # 2. Persist project state
-        saved = self._save_current_project_state()
+        saved = self.app.save_current_project_state()
         if not saved:
             from core.i18n import t as _t
             msg = QMessageBox(self)
@@ -536,7 +337,7 @@ class MainWindow(QMainWindow):
             clicked = msg.clickedButton()
             if clicked == retry_btn:
                 # One retry attempt
-                if not self._save_current_project_state():
+                if not self.app.save_current_project_state():
                     return False  # Still failed — let user try again via UI
             elif clicked != discard_btn:
                 return False  # Cancel or window closed

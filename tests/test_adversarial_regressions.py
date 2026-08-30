@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
-from core.project_manager import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
 from core.loot_manager import LootManager
 from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
@@ -81,7 +81,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         ]
 
         resolved_base = self.projects_dir.resolve()
-        from core.project_manager import InvalidProjectNameError
+        from core.project import InvalidProjectNameError
 
         for bad_name in malicious_names:
             with self.assertRaises(InvalidProjectNameError):
@@ -498,7 +498,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         Adversarial: Creating 'hack box' and then 'hack_box' must not silently merge
         workspaces or overwrite state. The second creation must be rejected with ProjectExistsError.
         """
-        from core.project_manager import ProjectExistsError, InvalidProjectNameError
+        from core.project import ProjectExistsError, InvalidProjectNameError
 
         # Create original project with spaces
         dir1 = self.project_mgr.create_project("hack box", target_ip="10.10.10.50")
@@ -532,7 +532,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         """
         from PyQt6.QtCore import QUrl
         from PyQt6.QtGui import QTextDocument
-        from ui.report_editor_tab import ReportDocument
+        from ui.report.preview import ReportDocument
 
         # Create an image outside the project workspace.
         secret_outside = self.temp_path / "secret_victim_data.png"
@@ -668,10 +668,10 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_in_memory()
+        container = ServiceContainer.create_isolated_test_container()
         window = MainWindow(container=container)
 
-        with patch.object(window.report_ctrl, "confirm_discard_if_dirty", return_value=False):
+        with patch.object(window.app.report_ctrl, "confirm_discard_if_dirty", return_value=False):
             with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
                 res = window.request_quit()
                 self.assertFalse(res, "request_quit must return False when report is dirty and user cancels")
@@ -690,10 +690,10 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_in_memory()
+        container = ServiceContainer.create_isolated_test_container()
         window = MainWindow(container=container)
 
-        with patch.object(window, "_save_current_project_state", return_value=False):
+        with patch.object(window.app, "save_current_project_state", return_value=False):
             with patch.object(QMessageBox, "exec", return_value=0):
                 with patch.object(QMessageBox, "clickedButton", return_value=None):
                     with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
@@ -712,7 +712,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_in_memory()
+        container = ServiceContainer.create_isolated_test_container()
         window = MainWindow(container=container)
         window.var_bar.txt_target.setText("192.168.1.77")
 
@@ -731,8 +731,8 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        window = MainWindow(container=ServiceContainer.create_in_memory())
-        with patch.object(window, "_save_current_project_state", return_value=True):
+        window = MainWindow(container=ServiceContainer.create_isolated_test_container())
+        with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=PersistenceError("disk full")):
                 with patch("ui.main_window.logger.warning") as warning:
                     self.assertTrue(window.request_quit(quit_app=False))
@@ -746,8 +746,8 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        window = MainWindow(container=ServiceContainer.create_in_memory())
-        with patch.object(window, "_save_current_project_state", return_value=True):
+        window = MainWindow(container=ServiceContainer.create_isolated_test_container())
+        with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=ValueError("invalid geometry")):
                 with patch("ui.main_window.logger.exception") as exception:
                     self.assertTrue(window.request_quit(quit_app=False))
@@ -767,7 +767,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_in_memory()
+        container = ServiceContainer.create_isolated_test_container()
         window = MainWindow(container=container)
 
         evt = QCloseEvent()
@@ -1052,34 +1052,18 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.assertEqual(published, [])
 
     # -------------------------------------------------------------------------
-    # 38. v15-P0: set_active_project issues DeprecationWarning
+    # 38. Strict project activation
     # -------------------------------------------------------------------------
-    def test_set_active_project_issues_deprecation_warning(self):
-        """
-        v15-P0: set_active_project() must emit a DeprecationWarning,
-        directing callers to use activate_project() instead.
-        """
-        import warnings
+    def test_activate_project_selects_existing_project(self):
+        """Explicit activation selects an existing project without side effects."""
         self.project_mgr.create_project("BoxDeprecated")
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            self.project_mgr.set_active_project("BoxDeprecated")
-            deprecation_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-            self.assertTrue(
-                len(deprecation_warnings) > 0,
-                "set_active_project() must emit a DeprecationWarning"
-            )
-            self.assertIn("activate_project", str(deprecation_warnings[0].message))
+        self.assertEqual(self.project_mgr.activate_project("BoxDeprecated"), "BoxDeprecated")
 
-    def test_deprecated_set_active_project_does_not_create_unknown_project(self):
-        """v15-P0: deprecated activation must no longer create projects implicitly."""
+    def test_activate_project_does_not_create_unknown_project(self):
+        """Strict activation must not create projects implicitly."""
         from core.project import ProjectNotFoundError
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            with self.assertRaises(ProjectNotFoundError):
-                self.project_mgr.set_active_project("UnknownBox")
+        with self.assertRaises(ProjectNotFoundError):
+            self.project_mgr.activate_project("UnknownBox")
 
         self.assertNotIn("UnknownBox", self.project_mgr.list_projects())
         self.assertFalse((self.projects_dir / "UnknownBox").exists())

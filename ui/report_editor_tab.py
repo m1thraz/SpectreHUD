@@ -14,27 +14,28 @@ Backup-vor-Regenerierung-Logik lebt im FileManager, nicht hier - damit
 sie ohne Qt testbar bleibt.
 """
 from enum import Enum
-import urllib.parse
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QTextEdit, QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QLineEdit, QMenu, QSpinBox,
-    QComboBox, QFormLayout
+    QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QMenu
 )
-from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence, QTextDocument, QTextCursor, QImage
+from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence
 
 from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
-from ui.template_manager_dialog import TemplateManagerDialog
 from core.logger import get_logger
 from core.i18n import t
 from ui.styles import CYBER_DARK_QSS, build_app_theme
 from ui.styles.fonts import get_report_font_stack
+from ui.report.dialogs import MarkdownTableDialog, ReportGenerationDialog
+from ui.report.find_replace import FindReplaceBar
+from ui.report.preview import ReportDocument, ReportPreviewEdit
+from ui.report.toolbar import build_format_toolbar
 
 logger = get_logger("report_editor")
 
@@ -42,227 +43,10 @@ PREVIEW_DEBOUNCE_MS = 300
 AUTOSAVE_INTERVAL_MS = 45_000
 
 
-MAX_PREVIEW_IMAGE_FILE_SIZE: int = 15 * 1024 * 1024  # 15 MB
-
-
 class ViewMode(Enum):
     EDITOR = "editor"
     SPLIT = "split"
     PREVIEW = "preview"
-
-
-class MarkdownTableDialog(QDialog):
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self.setWindowTitle(t("report.table_title", "Insert Table"))
-        self.setStyleSheet(CYBER_DARK_QSS)
-        layout = QVBoxLayout(self)
-        self.rows = QSpinBox(); self.rows.setRange(1, 10); self.rows.setValue(2)
-        self.columns = QSpinBox(); self.columns.setRange(1, 10); self.columns.setValue(3)
-        layout.addWidget(QLabel(t("report.table_rows", "Rows:"))); layout.addWidget(self.rows)
-        layout.addWidget(QLabel(t("report.table_columns", "Columns:"))); layout.addWidget(self.columns)
-        buttons = QHBoxLayout(); buttons.addStretch()
-        cancel = QPushButton(t("dialog.cancel", "Cancel")); cancel.clicked.connect(self.reject); buttons.addWidget(cancel)
-        insert = QPushButton(t("report.table_insert", "Insert Table")); insert.setProperty("class", "PrimaryBtn"); insert.clicked.connect(self.accept); buttons.addWidget(insert)
-        layout.addLayout(buttons)
-
-
-class ReportPreviewEdit(QTextEdit):
-    """Custom QTextEdit for live Markdown preview and editing with sandbox protection against unvalidated drag/drop and image insertions."""
-
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self.setAcceptDrops(False)
-
-    def insertFromMimeData(self, source):
-        # Prevent pasting images directly into the editable preview to maintain sandbox integrity
-        if source and (source.hasImage() or (source.hasUrls() and any(u.toLocalFile().lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) for u in source.urls()))):
-            logger.warning("Blocked raw image paste/drop into editable preview document.")
-            return
-        super().insertFromMimeData(source)
-
-
-class ReportDocument(QTextDocument):
-    """Custom QTextDocument that dynamically resolves project-relative image paths and loot screenshots within the project sandbox."""
-
-    def __init__(self, project_dir: Optional[Path] = None, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self.project_dir = Path(project_dir) if project_dir else None
-        self._image_cache: Dict[str, QImage] = {}
-
-    def set_project_dir(self, project_dir: Optional[Path]) -> None:
-        new_dir = Path(project_dir) if project_dir else None
-        if self.project_dir != new_dir:
-            self.project_dir = new_dir
-            self._image_cache.clear()
-            if self.project_dir and self.project_dir.exists():
-                try:
-                    self.setBaseUrl(QUrl.fromLocalFile(str(self.project_dir.resolve()) + "/"))
-                except OSError:
-                    pass
-
-    def loadResource(self, r_type: int, name: QUrl):
-        if r_type == int(QTextDocument.ResourceType.ImageResource) or r_type == 2:
-            url_str = name.toString() if hasattr(name, "toString") else str(name)
-            if url_str in self._image_cache:
-                return self._image_cache[url_str]
-
-            if not self.project_dir:
-                return super().loadResource(r_type, name)
-
-            try:
-                proj_resolved = self.project_dir.resolve()
-            except (OSError, RuntimeError) as e:
-                logger.warning(f"Could not resolve project directory: {e}")
-                return super().loadResource(r_type, name)
-
-            clean_path = urllib.parse.unquote(url_str).strip()
-            if clean_path.startswith("file:///"):
-                clean_path = clean_path[8:]
-            elif clean_path.startswith("file://"):
-                clean_path = clean_path[7:]
-
-            p = Path(clean_path)
-            candidate_paths = []
-            if p.is_absolute():
-                candidate_paths.append(p)
-            else:
-                candidate_paths.append(self.project_dir / p)
-                candidate_paths.append(self.project_dir / "loot" / p.name)
-
-            for candidate in candidate_paths:
-                try:
-                    cand_resolved = candidate.resolve()
-                except (OSError, RuntimeError):
-                    continue
-
-                # STRICT SANDBOX BOUNDARY CHECK:
-                # Disallow any path traversal escaping the active project workspace
-                try:
-                    if not cand_resolved.is_relative_to(proj_resolved):
-                        logger.warning(
-                            f"Blocked path traversal image preview attempt outside project sandbox: {candidate} -> {cand_resolved}"
-                        )
-                        continue
-                except (ValueError, AttributeError):
-                    continue
-
-                # Must exist and be a regular file
-                if not cand_resolved.exists() or not cand_resolved.is_file():
-                    continue
-
-                # DoS Protection: Size limit check before decoding
-                try:
-                    file_size = cand_resolved.stat().st_size
-                    if file_size > MAX_PREVIEW_IMAGE_FILE_SIZE or file_size == 0:
-                        logger.warning(
-                            f"Rejected oversized/empty image preview file ({file_size} bytes): {cand_resolved}"
-                        )
-                        continue
-                except OSError:
-                    continue
-
-                # Load and decode image
-                img = QImage(str(cand_resolved))
-                if not img.isNull():
-                    # Downscale oversized screenshots for preview performance & clean rendering
-                    if img.width() > 1400:
-                        img = img.scaledToWidth(1400, Qt.TransformationMode.SmoothTransformation)
-                    self._image_cache[url_str] = img
-                    return img
-                else:
-                    logger.warning(f"Could not decode QImage from candidate: {cand_resolved}")
-
-        return super().loadResource(r_type, name)
-
-
-class ReportGenerationDialog(QDialog):
-    """Choose a report template immediately before generating from loot."""
-
-    def __init__(
-        self,
-        template_repo: TemplateRepository,
-        selected_template: Optional[ReportTemplate] = None,
-        has_existing_report: bool = False,
-        parent: Optional[QWidget] = None,
-    ):
-        super().__init__(parent)
-        self.template_repo = template_repo
-        self.selected_template: Optional[ReportTemplate] = selected_template
-        self.setWindowTitle(t("report.generate_title", "Generate Report from Loot"))
-        self.setMinimumWidth(460)
-        self.setStyleSheet(CYBER_DARK_QSS)
-        self._build_ui(has_existing_report)
-        self._populate_templates()
-
-    def _build_ui(self, has_existing_report: bool) -> None:
-        layout = QVBoxLayout(self)
-
-        description = QLabel(
-            t("report.generate_description", "Creates a structured report from current loot and clipboard history.")
-        )
-        description.setWordWrap(True)
-        layout.addWidget(description)
-
-        if has_existing_report:
-            warning = QLabel(
-                t("report.generate_warning", "The existing report will be replaced. It is backed up as <b>report.md.bak</b> first.")
-            )
-            warning.setWordWrap(True)
-            warning.setStyleSheet("color: #f0b429; margin-top: 6px;")
-            layout.addWidget(warning)
-
-        form = QFormLayout()
-        self.combo_templates = QComboBox()
-        self.combo_templates.setToolTip(t("report.template_tip", "Select a template for the newly generated report"))
-        form.addRow(t("report.template_label", "Report Template:"), self.combo_templates)
-        layout.addLayout(form)
-
-        self.btn_manage_templates = QPushButton(t("report.manage_templates", "🎨 Templates..."))
-        self.btn_manage_templates.setProperty("class", "SecondaryBtn")
-        self.btn_manage_templates.clicked.connect(self._open_template_manager)
-        layout.addWidget(self.btn_manage_templates, alignment=Qt.AlignmentFlag.AlignLeft)
-
-        buttons = QHBoxLayout()
-        buttons.addStretch()
-        btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
-        btn_cancel.clicked.connect(self.reject)
-        buttons.addWidget(btn_cancel)
-        btn_generate = QPushButton(t("report.generate", "Generate Report"))
-        btn_generate.setProperty("class", "PrimaryBtn")
-        btn_generate.clicked.connect(self._accept_selection)
-        buttons.addWidget(btn_generate)
-        layout.addLayout(buttons)
-
-    def _populate_templates(self) -> None:
-        selected_id = self.selected_template.id if self.selected_template else None
-        templates = self.template_repo.get_all_templates()
-        self.combo_templates.blockSignals(True)
-        self.combo_templates.clear()
-        for template in templates:
-            self.combo_templates.addItem(f"{template.name} [{template.language.upper()}]", template.id)
-
-        index = self.combo_templates.findData(selected_id) if selected_id else -1
-        if index >= 0:
-            self.combo_templates.setCurrentIndex(index)
-        elif templates:
-            self.combo_templates.setCurrentIndex(0)
-        self.combo_templates.blockSignals(False)
-
-    def _open_template_manager(self) -> None:
-        dialog = TemplateManagerDialog(repository=self.template_repo, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_template:
-            self.selected_template = dialog.selected_template
-        self._populate_templates()
-
-    def _accept_selection(self) -> None:
-        template_id = self.combo_templates.currentData()
-        template = self.template_repo.get_template(template_id) if template_id else None
-        if template is None:
-            QMessageBox.warning(self, t("report.no_template_title", "No Template"), t("report.no_template_message", "Please select a report template."))
-            return
-        self.selected_template = template
-        self.accept()
 
 
 class ReportEditorTab(QWidget):
@@ -351,21 +135,19 @@ class ReportEditorTab(QWidget):
         # Formatting belongs with the primary editing/export actions.  The
         # source-only controls are still hidden while the rich live preview is
         # active (see _apply_view_mode).
-        self.format_toolbar_widget = QWidget()
-        format_toolbar = QHBoxLayout(self.format_toolbar_widget)
-        format_toolbar.setContentsMargins(0, 0, 0, 0)
-        format_toolbar.setSpacing(3)
-        self._add_format_button(format_toolbar, "H1", "report.format_h1", "Heading 1", lambda: self._format_heading(1))
-        self._add_format_button(format_toolbar, "H2", "report.format_h2", "Heading 2", lambda: self._format_heading(2))
-        self._add_format_button(format_toolbar, "H3", "report.format_h3", "Heading 3", lambda: self._format_heading(3))
-        self._add_format_button(format_toolbar, "B", "report.format_bold", "Bold", lambda: self._format_wrap("**", "**"))
-        self._add_format_button(format_toolbar, "I", "report.format_italic", "Italic", lambda: self._format_wrap("*", "*"))
-        self._add_format_button(format_toolbar, "</>", "report.format_code", "Inline Code", lambda: self._format_wrap("`", "`"))
-        self._add_format_button(format_toolbar, "```", "report.format_code_block", "Code Block", self._format_code_block)
-        self._add_format_button(format_toolbar, "•", "report.format_list", "Bullet List", lambda: self._format_list(False))
-        self._add_format_button(format_toolbar, "1.", "report.format_numbered_list", "Numbered List", lambda: self._format_list(True))
-        self._add_format_button(format_toolbar, "🔗", "report.format_link", "Link", self._format_link)
-        self._add_format_button(format_toolbar, "▦", "report.format_table", "Table", self._format_table)
+        self.format_toolbar_widget = build_format_toolbar(self, {
+            "heading_1": lambda: self._format_heading(1),
+            "heading_2": lambda: self._format_heading(2),
+            "heading_3": lambda: self._format_heading(3),
+            "bold": lambda: self._format_wrap("**", "**"),
+            "italic": lambda: self._format_wrap("*", "*"),
+            "code": lambda: self._format_wrap("`", "`"),
+            "code_block": self._format_code_block,
+            "list": lambda: self._format_list(False),
+            "numbered_list": lambda: self._format_list(True),
+            "link": self._format_link,
+            "table": self._format_table,
+        })
         toolbar.addWidget(self.format_toolbar_widget)
 
         self.btn_save = QPushButton(t("report.save", "Save"))
@@ -380,35 +162,6 @@ class ReportEditorTab(QWidget):
         status_row.addWidget(self.lbl_status)
         status_row.addStretch()
         layout.addLayout(status_row)
-
-        self.find_bar = QWidget()
-        find_layout = QHBoxLayout(self.find_bar)
-        find_layout.setContentsMargins(4, 2, 4, 2)
-        self.find_input = QLineEdit()
-        self.find_input.setPlaceholderText("Suchen …")
-        self.find_input.textChanged.connect(self._update_find_count)
-        self.find_input.returnPressed.connect(self._find_next)
-        self.replace_input = QLineEdit()
-        self.replace_input.setPlaceholderText("Ersetzen durch …")
-        self.find_count_label = QLabel("0 Treffer")
-        btn_previous = QPushButton("↑")
-        btn_previous.setToolTip("Vorheriger Treffer")
-        btn_previous.clicked.connect(self._find_previous)
-        btn_next = QPushButton("↓")
-        btn_next.setToolTip("Nächster Treffer")
-        btn_next.clicked.connect(self._find_next)
-        btn_replace = QPushButton("Ersetzen")
-        btn_replace.clicked.connect(self._replace_current)
-        btn_replace_all = QPushButton("Alle ersetzen")
-        btn_replace_all.clicked.connect(self._replace_all)
-        btn_close_find = QPushButton("×")
-        btn_close_find.setToolTip("Suche schließen (Esc)")
-        btn_close_find.clicked.connect(self._close_find_bar)
-        for widget in (self.find_input, self.replace_input, self.find_count_label, btn_previous,
-                       btn_next, btn_replace, btn_replace_all, btn_close_find):
-            find_layout.addWidget(widget)
-        self.find_bar.hide()
-        layout.addWidget(self.find_bar)
 
         # --- Editor | Vorschau ---
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -426,6 +179,8 @@ class ReportEditorTab(QWidget):
         self.editor.textChanged.connect(self._on_text_changed)
         from ui.markdown_highlighter import MarkdownHighlighter
         self._highlighter = MarkdownHighlighter(self.editor.document())
+        self.find_replace = FindReplaceBar(self.editor, self)
+        layout.addWidget(self.find_replace)
         self.splitter.addWidget(self.editor)
 
         self.preview_document = ReportDocument(parent=self)
@@ -460,9 +215,9 @@ class ReportEditorTab(QWidget):
         sc_mode3 = QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW))
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
-        self._shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self.editor, activated=self._open_find_bar)
+        self._shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open)
         self._shortcut_find.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self._shortcut_find_close = QShortcut(QKeySequence("Esc"), self.find_bar, activated=self._close_find_bar)
+        self._shortcut_find_close = QShortcut(QKeySequence("Esc"), self.find_replace, activated=self.find_replace.close_bar)
         self._shortcut_find_close.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         for sequence, callback in (("Ctrl+B", lambda: self._format_wrap("**", "**")), ("Ctrl+I", lambda: self._format_wrap("*", "*")), ("Ctrl+K", lambda: self._format_wrap("`", "`"))):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
@@ -472,13 +227,6 @@ class ReportEditorTab(QWidget):
 
     def _ui_font_key(self) -> str:
         return self.config.get("ui_font", "segoe_ui") if self.config else "segoe_ui"
-
-    def _add_format_button(self, layout: QHBoxLayout, label: str, key: str, fallback: str, callback) -> None:
-        button = QPushButton(label)
-        button.setProperty("class", "SecondaryBtn")
-        button.setToolTip(t(key, fallback))
-        button.clicked.connect(callback)
-        layout.addWidget(button)
 
     def _format_heading(self, level: int) -> None:
         from ui.markdown_toolbar_actions import set_heading
@@ -610,68 +358,6 @@ class ReportEditorTab(QWidget):
     def _on_text_changed(self) -> None:
         self._set_dirty(True)
         self._preview_timer.start()  # debounced
-
-    def _open_find_bar(self) -> None:
-        self.find_bar.show()
-        self.find_input.setFocus()
-        self.find_input.selectAll()
-        self._update_find_count()
-
-    def _close_find_bar(self) -> None:
-        self.find_bar.hide()
-        self.editor.setFocus()
-
-    def _update_find_count(self) -> None:
-        needle = self.find_input.text()
-        if not needle:
-            self.find_count_label.setText("0 Treffer")
-            return
-        document = self.editor.document()
-        cursor = document.find(needle)
-        count = 0
-        while not cursor.isNull():
-            count += 1
-            cursor = document.find(needle, cursor)
-        self.find_count_label.setText(f"{count} Treffer")
-
-    def _find(self, backwards: bool = False) -> None:
-        needle = self.find_input.text()
-        if not needle:
-            return
-        flags = QTextDocument.FindFlag.FindBackward if backwards else QTextDocument.FindFlag(0)
-        cursor = self.editor.document().find(needle, self.editor.textCursor(), flags)
-        if cursor.isNull():
-            cursor = self.editor.document().find(needle, QTextCursor(), flags)
-        if not cursor.isNull():
-            self.editor.setTextCursor(cursor)
-
-    def _find_next(self) -> None:
-        self._find(False)
-
-    def _find_previous(self) -> None:
-        self._find(True)
-
-    def _replace_current(self) -> None:
-        cursor = self.editor.textCursor()
-        if cursor.hasSelection() and cursor.selectedText() == self.find_input.text():
-            cursor.insertText(self.replace_input.text())
-        self._find_next()
-
-    def _replace_all(self) -> None:
-        needle = self.find_input.text()
-        if not needle:
-            return
-        cursor = self.editor.textCursor()
-        cursor.beginEditBlock()
-        cursor.movePosition(cursor.MoveOperation.Start)
-        while True:
-            match = self.editor.document().find(needle, cursor)
-            if match.isNull():
-                break
-            match.insertText(self.replace_input.text())
-            cursor = match
-        cursor.endEditBlock()
-        self._update_find_count()
 
     def _enter_preview_mode(self) -> None:
         """Enters editable live preview mode and takes a markdown baseline snapshot."""

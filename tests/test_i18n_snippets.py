@@ -6,7 +6,7 @@ from core.i18n import get_i18n, set_locale, get_locale, DEFAULT_LOCALE
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 
 
 class TestI18nSnippets(unittest.TestCase):
@@ -98,17 +98,17 @@ class TestI18nSnippets(unittest.TestCase):
 
         # Initial state should be English
         self.assertEqual(window.snippet_manager.language, "en")
-        self.assertIn("Search", window.search_bar.txt_search.placeholderText())
+        self.assertIn("Search", window.search_panel.search_bar.txt_search.placeholderText())
 
         # Switch to German
         set_locale("de")
         self.assertEqual(window.snippet_manager.language, "de")
-        self.assertIn("suchen", window.search_bar.txt_search.placeholderText().lower())
+        self.assertIn("suchen", window.search_panel.search_bar.txt_search.placeholderText().lower())
 
         # Switch back to English
         set_locale("en")
         self.assertEqual(window.snippet_manager.language, "en")
-        self.assertIn("Search", window.search_bar.txt_search.placeholderText())
+        self.assertIn("Search", window.search_panel.search_bar.txt_search.placeholderText())
 
         window.close()
 

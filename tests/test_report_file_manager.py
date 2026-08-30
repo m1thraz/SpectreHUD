@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any
 # Ensure project root is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.report_file_manager import ReportFileManager
 from core.validators import MAX_REPORT_FILE_SIZE
@@ -169,7 +169,7 @@ class TestReportFileManager(unittest.TestCase):
         """Tests that ReportDocument successfully resolves project-relative loot screenshots."""
         from PyQt6.QtCore import QUrl
         from PyQt6.QtGui import QImage, QTextDocument, QColor
-        from ui.report_editor_tab import ReportDocument
+        from ui.report.preview import ReportDocument
 
         self.project_mgr.create_project("BoxImageTest")
         proj_dir = self.project_mgr.get_project_dir("BoxImageTest")

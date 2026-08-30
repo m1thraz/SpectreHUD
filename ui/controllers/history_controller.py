@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 
 from core.clipboard_watcher import ClipboardWatcher
 from core.loot_manager import LootManager
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.report_builder import ReportBuilder
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger

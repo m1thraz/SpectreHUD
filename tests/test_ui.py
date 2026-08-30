@@ -9,7 +9,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
 from ui.main_window import MainWindow
@@ -67,50 +67,50 @@ class TestUI(unittest.TestCase):
         )
         
         # 1. Mode: Cheatsheet
-        self.assertEqual(window.active_mode, "cheatsheet")
+        self.assertEqual(window.app.active_mode, "cheatsheet")
         self.assertGreater(len(window.cards), 0)
 
         # 2. Mode: Loot
-        window.switch_mode("loot")
-        self.assertEqual(window.active_mode, "loot")
+        window.app.switch_mode("loot")
+        self.assertEqual(window.app.active_mode, "loot")
 
         # 3. Mode: History
-        window.switch_mode("history")
-        self.assertEqual(window.active_mode, "history")
+        window.app.switch_mode("history")
+        self.assertEqual(window.app.active_mode, "history")
 
         # 4. Mode: Report
-        window.switch_mode("report")
-        self.assertEqual(window.active_mode, "report")
-        self.assertFalse(window.search_bar.isVisible())
+        window.app.switch_mode("report")
+        self.assertEqual(window.app.active_mode, "report")
+        self.assertFalse(window.search_panel.search_bar.isVisible())
         self.assertFalse(window.var_bar.isVisible())
-        self.assertFalse(window.pills_frame.isVisible())
+        self.assertFalse(window.search_panel.pills_frame.isVisible())
 
         # Tab cycling stays within cheatsheet/loot/history (does not cycle to report)
-        window.switch_mode("cheatsheet")
-        window.toggle_mode()
-        self.assertEqual(window.active_mode, "loot")
-        window.toggle_mode()
-        self.assertEqual(window.active_mode, "history")
-        window.toggle_mode()
-        self.assertEqual(window.active_mode, "cheatsheet")
+        window.app.switch_mode("cheatsheet")
+        window.app.toggle_mode()
+        self.assertEqual(window.app.active_mode, "loot")
+        window.app.toggle_mode()
+        self.assertEqual(window.app.active_mode, "history")
+        window.app.toggle_mode()
+        self.assertEqual(window.app.active_mode, "cheatsheet")
 
         # 5. Project Workspace Switch
         project_manager.create_project("BoxOmega", target_ip="10.10.10.123")
-        window._switch_to_project("BoxOmega")
+        window.app.switch_to_project("BoxOmega")
         self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.123")
         self.assertEqual(project_manager.get_active_project(), "BoxOmega")
 
         # Add loot to BoxOmega
         loot_manager.add_entry("credentials", "Omega User", "omega:pass123", "10.10.10.123")
-        window._save_current_project_state()
+        window.app.save_current_project_state()
 
         # Switch back to Default
-        window._switch_to_project("Default")
+        window.app.switch_to_project("Default")
         self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.10")
         self.assertEqual(len(loot_manager.get_entries()), 0)
 
         # Switch back to BoxOmega -> Loot is restored!
-        window._switch_to_project("BoxOmega")
+        window.app.switch_to_project("BoxOmega")
         self.assertEqual(window.var_bar.txt_target.text(), "10.10.10.123")
         self.assertEqual(len(loot_manager.get_entries()), 1)
 
@@ -127,10 +127,10 @@ class TestUI(unittest.TestCase):
         self.assertEqual(edge_center, "")
 
         # 7. Always on Top Toggle
-        self.assertTrue(window.chk_always_on_top.isChecked())
-        window.chk_always_on_top.setChecked(False)
+        self.assertTrue(window.footer_panel.chk_always_on_top.isChecked())
+        window.footer_panel.chk_always_on_top.setChecked(False)
         self.assertFalse(config_manager.get("always_on_top"))
-        window.chk_always_on_top.setChecked(True)
+        window.footer_panel.chk_always_on_top.setChecked(True)
         self.assertTrue(config_manager.get("always_on_top"))
 
         window.close()
@@ -145,10 +145,10 @@ class TestUI(unittest.TestCase):
             project_manager=ProjectManager(base_dir=self.projects_dir),
         )
 
-        self.assertIsNone(window.report_ctrl.report_editor_tab)
+        self.assertIsNone(window.app.report_ctrl.report_editor_tab)
 
-        window.switch_mode("report")
-        self.assertIsInstance(window.report_ctrl.report_editor_tab, ReportEditorTab)
+        window.app.switch_mode("report")
+        self.assertIsInstance(window.app.report_ctrl.report_editor_tab, ReportEditorTab)
         window.close()
 
     def test_report_editor_tab_smoke(self):
@@ -208,21 +208,21 @@ class TestUI(unittest.TestCase):
         loot_manager.add_entry("credentials", "Admin SSH", "root:secret", category="access")
         loot_manager.add_entry("note", "General Hint", "Check port 8080", category="misc")
 
-        window.switch_mode("loot")
+        window.app.switch_mode("loot")
 
         def get_current_headers():
             return [
-                window.content_layout.itemAt(i).widget()
-                for i in range(window.content_layout.count())
-                if isinstance(window.content_layout.itemAt(i).widget(), QLabel)
-                and window.content_layout.itemAt(i).widget().property("class") == "LootSectionHeader"
+                window.content_panel.content_layout.itemAt(i).widget()
+                for i in range(window.content_panel.content_layout.count())
+                if isinstance(window.content_panel.content_layout.itemAt(i).widget(), QLabel)
+                and window.content_panel.content_layout.itemAt(i).widget().property("class") == "LootSectionHeader"
             ]
 
         def get_current_cards():
             return [
-                window.content_layout.itemAt(i).widget()
-                for i in range(window.content_layout.count())
-                if isinstance(window.content_layout.itemAt(i).widget(), LootCard)
+                window.content_panel.content_layout.itemAt(i).widget()
+                for i in range(window.content_panel.content_layout.count())
+                if isinstance(window.content_panel.content_layout.itemAt(i).widget(), LootCard)
             ]
 
         headers = get_current_headers()
@@ -240,13 +240,13 @@ class TestUI(unittest.TestCase):
         self.assertEqual(len(cards), 3)
 
         # 4. Filter by credentials: only access category header should remain
-        window._select_loot_type("credentials")
+        window.app._select_loot_type("credentials")
         filtered_headers = get_current_headers()
         self.assertEqual(len(filtered_headers), 1)
         self.assertIn("Initial Access", filtered_headers[0].text())
 
         # 5. Reset filter to 'all' -> all 3 headers return
-        window._select_loot_type("all")
+        window.app._select_loot_type("all")
         reset_headers = get_current_headers()
         self.assertEqual(len(reset_headers), 3)
 
@@ -270,7 +270,7 @@ class TestUI(unittest.TestCase):
             project_manager=project_manager,
         )
         loot_manager.add_entry("note", "Board item", "visible in a column", category="access")
-        window.switch_mode("loot")
+        window.app.switch_mode("loot")
 
         self.assertEqual(len(window.cards), 1)
         self.assertIsInstance(window.cards[0], LootBoard)
@@ -293,12 +293,12 @@ class TestUI(unittest.TestCase):
             project_manager=project_manager
         )
 
-        window.switch_mode("cheatsheet")
+        window.app.switch_mode("cheatsheet")
         self.assertGreater(len(window.cards), 2)
         
         # Check that favorites filter pill exists
-        self.assertIn("favorites", window.cheatsheet_ctrl.filter_buttons)
-        fav_btn = window.cheatsheet_ctrl.filter_buttons["favorites"]
+        self.assertIn("favorites", window.app.cheatsheet_ctrl.filter_buttons)
+        fav_btn = window.app.cheatsheet_ctrl.filter_buttons["favorites"]
         self.assertIn("★", fav_btn.text())
         
         # Find a non-favorite card to toggle ON
@@ -312,7 +312,7 @@ class TestUI(unittest.TestCase):
         self.assertTrue(snippet_manager.is_favorite(snippet_id))
         
         # Filter by favorites
-        window._select_category("favorites")
+        window.app._select_category("favorites")
         fav_ids = [c.snippet.get("id") for c in window.cards if isinstance(c, SnippetCard)]
         self.assertIn(snippet_id, fav_ids)
         
@@ -341,7 +341,7 @@ class TestUI(unittest.TestCase):
             project_manager=project_manager
         )
 
-        window.switch_mode("cheatsheet")
+        window.app.switch_mode("cheatsheet")
         self.assertGreater(len(window.cards), 0)
         card = window.cards[0]
         self.assertIsInstance(card, SnippetCard)
@@ -435,7 +435,7 @@ class TestUI(unittest.TestCase):
         out_zip = self.temp_path / "BoxToArchive.zip"
         with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_zip), "ZIP Archives (*.zip)")), \
              patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
-            window.project_ctrl._on_archive_project(window)
+            window.app.project_ctrl._on_archive_project(window)
 
         self.assertTrue(out_zip.exists())
         import zipfile
@@ -460,23 +460,23 @@ class TestUI(unittest.TestCase):
         )
 
         # 1. Typo Search: 'nmp' finds nmap (and snmp)
-        window.search_bar.txt_search.setText("nmp")
-        window.search_bar._emit_search_changed()
+        window.search_panel.search_bar.txt_search.setText("nmp")
+        window.search_panel.search_bar._emit_search_changed()
 
         self.assertGreater(len(window.cards), 0)
         found_nmap = any("nmap" in (c.snippet["title"] + c.snippet["template"]).lower() for c in window.cards if hasattr(c, "snippet"))
         self.assertTrue(found_nmap)
 
         # Exact Tool Search: 'nmap' puts nmap at the top
-        window.search_bar.txt_search.setText("nmap")
-        window.search_bar._emit_search_changed()
+        window.search_panel.search_bar.txt_search.setText("nmap")
+        window.search_panel.search_bar._emit_search_changed()
         self.assertGreater(len(window.cards), 0)
         first_card = window.cards[0]
         self.assertIn("nmap", first_card.snippet["title"].lower() + first_card.snippet["template"].lower())
 
         # 2. Broad search with > 25 matches triggers capping
-        window.search_bar.txt_search.setText("e")
-        window.search_bar._emit_search_changed()
+        window.search_panel.search_bar.txt_search.setText("e")
+        window.search_panel.search_bar._emit_search_changed()
 
         matching_total = len(snippet_manager.get_snippets(search_query="e"))
         if matching_total > 25:

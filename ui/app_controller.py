@@ -13,7 +13,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
@@ -133,7 +133,8 @@ class AppController(QObject):
         )
         self.export_coord = ExportCoordinator(
             project_manager=self.project_manager, loot_manager=self.loot_manager,
-            history_ctrl=self.history_ctrl, target_provider=self._target_provider, parent=self
+            history_ctrl=self.history_ctrl, target_provider=self._target_provider,
+            config_manager=self.config, parent=self
         )
 
         self._wire_signals()
@@ -204,7 +205,7 @@ class AppController(QObject):
                 pills_layout, self._select_loot_type,
                 lambda: self.export_coord.export_loot(self.window),
                 self._clear_loot, EXPORT_COPY_TOOLTIP,
-                self._export_loot_to_obsidian,
+                lambda: self.export_coord.export_loot_to_obsidian(self.window),
             )
         elif self.active_mode == "history":
             self.history_ctrl.build_filter_pills(
@@ -243,13 +244,14 @@ class AppController(QObject):
                 self.cards = self.loot_ctrl.render_board_content(
                     content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                     self._on_export_loot_entry, self._on_move_loot_category, self.window,
-                    self._export_single_loot_to_obsidian,
+                    lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
                 )
             else:
                 self.cards = self.loot_ctrl.render_content(
                     content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                     self._on_export_loot_entry,
-                    self.window, self.content.show_empty_state, self._export_single_loot_to_obsidian,
+                    self.window, self.content.show_empty_state,
+                    lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
                 )
             self.footer.set_count(_format_count(len(self.cards)))
         else:
@@ -295,64 +297,6 @@ class AppController(QObject):
 
     def _on_export_loot_entry(self, entry_id: str) -> None:
         self.loot_ctrl.export_entry_to_file_with_feedback(entry_id, self.window)
-
-    def _export_loot_to_obsidian(self) -> None:
-        """Append the active session's loot without rewriting a user's note."""
-        self._append_loot_entries_to_obsidian(self.loot_manager.get_all_entries())
-
-    def _append_loot_entries_to_obsidian(self, entries: List[Dict[str, Any]]) -> None:
-        """Append selected entries without regenerating manual Obsidian content."""
-        from core.exporters import ExternalExportError, ObsidianExporter
-        from PyQt6.QtGui import QDesktopServices
-
-        vault_path = str(self.config.get("obsidian_vault_path", "") or "").strip()
-        if not vault_path:
-            QMessageBox.information(
-                self.window,
-                t("loot.obsidian_not_configured_title", "Obsidian is not configured"),
-                t("loot.obsidian_not_configured", "Choose an existing Obsidian vault in Settings before exporting loot."),
-            )
-            return
-        project_name = self.project_manager.get_active_project()
-        try:
-            exporter = ObsidianExporter(vault_path, self.config.get("obsidian_export_folder", "CTF/SpectreHUD"))
-            note_path = exporter.note_path_for(project_name)
-            if not note_path.exists():
-                raise ExternalExportError(
-                    "Export the report to Obsidian first so SpectreHUD can append loot without creating an incomplete note."
-                )
-            result = exporter.append_loot(
-                project_name=project_name,
-                entries=entries,
-                note_path=note_path,
-            )
-        except ExternalExportError as exc:
-            logger.warning("Obsidian loot export failed: %s", exc)
-            QMessageBox.warning(
-                self.window,
-                t("loot.obsidian_export_failed_title", "Obsidian export failed"),
-                t("loot.obsidian_export_failed", "Loot could not be sent to Obsidian:\n{error}", error=str(exc)),
-            )
-            return
-
-        if result.skipped_entry_ids:
-            message = t(
-                "loot.obsidian_exported_duplicates",
-                "Loot is already up to date in Obsidian ({count} duplicate entries skipped).",
-                count=len(result.skipped_entry_ids),
-            )
-        else:
-            message = t("loot.obsidian_exported", "Loot appended to Obsidian:\n{path}", path=str(result.note_path))
-        QMessageBox.information(self.window, t("loot.obsidian_exported_title", "Obsidian updated"), message)
-        if self.config.get("obsidian_open_after_export", False):
-            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
-                logger.warning("Obsidian could not open loot export URI: %s", result.obsidian_uri)
-
-    def _export_single_loot_to_obsidian(self, entry_id: str) -> None:
-        entry = next((item for item in self.loot_manager.get_all_entries() if item.get("id") == entry_id), None)
-        if entry is None:
-            return
-        self._append_loot_entries_to_obsidian([entry])
 
     def _on_move_loot_category(self, entry_id: str, category: str) -> bool:
         return self.loot_ctrl.move_entry_to_category(entry_id, category, self.window)

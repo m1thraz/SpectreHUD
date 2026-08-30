@@ -13,7 +13,7 @@ from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 
 
 class FailingStorageBackend(StorageBackend):

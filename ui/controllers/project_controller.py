@@ -6,7 +6,7 @@ from pathlib import Path
 from PyQt6.QtCore import QObject, QPoint, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QFileDialog, QMessageBox
 
-from core.project_manager import ProjectManager, ProjectExistsError
+from core.project import ProjectManager, ProjectExistsError
 from core.project.validator import ProjectError
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger

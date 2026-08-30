@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
-from core.project_manager import get_default_projects_dir
+from core.project import get_default_projects_dir
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 

@@ -43,16 +43,15 @@ class TestClipboardWatcher(unittest.TestCase):
         self.assertEqual(len(self.watcher.history), 1)
         self.assertFalse(self.storage_file.exists())
 
-    def test_replace_history_and_persist_is_explicit_and_set_history_is_legacy(self):
-        """Persistent replacement has an explicit API; the old name warns callers."""
+    def test_replace_history_and_persist_is_explicit(self):
+        """Persistent replacement uses the explicit domain API."""
         history = [{"id": "clip_test", "text": "whoami", "timestamp": "2026-08-28 12:00:00"}]
 
         self.watcher.replace_history_and_persist(history)
         self.assertTrue(self.storage_file.exists())
         self.assertEqual(self.watcher.get_all_history()[0]["text"], "whoami")
 
-        with self.assertWarns(DeprecationWarning):
-            self.watcher.set_history([])
+        self.watcher.replace_history_and_persist([])
         self.assertEqual(self.watcher.get_all_history(), [])
 
     def test_filter_and_search(self):

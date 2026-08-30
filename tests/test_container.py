@@ -54,8 +54,8 @@ class TestContainer(unittest.TestCase):
             from core.logger import close_log_handlers
             close_log_handlers()
 
-    def test_service_container_create_in_memory(self):
-        container = ServiceContainer.create_in_memory(
+    def test_service_container_create_isolated_test_container(self):
+        container = ServiceContainer.create_isolated_test_container(
             initial_config={"target_ip": "192.168.1.100", "theme": "cyber_dark"},
             language="en"
         )
@@ -77,7 +77,7 @@ class TestContainer(unittest.TestCase):
     def test_pure_in_memory_isolation_no_disk_pollution(self):
         """Finding 5: In-memory container must use InMemoryStorageBackend without touching user default paths."""
         from core.storage import InMemoryStorageBackend
-        container = ServiceContainer.create_in_memory()
+        container = ServiceContainer.create_isolated_test_container()
         self.assertIsInstance(container.storage, InMemoryStorageBackend)
         
         # Adding entries in memory should not create user files on disk
@@ -86,7 +86,7 @@ class TestContainer(unittest.TestCase):
         self.assertEqual(len(container.clipboard_watcher.get_all_history()), 1)
 
     def test_main_window_with_in_memory_container(self):
-        container = ServiceContainer.create_in_memory(
+        container = ServiceContainer.create_isolated_test_container(
             initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"},
             language="en"
         )

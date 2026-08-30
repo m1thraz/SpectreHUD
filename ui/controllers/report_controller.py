@@ -2,7 +2,7 @@ from typing import Optional, List, TYPE_CHECKING
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager

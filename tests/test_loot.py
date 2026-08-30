@@ -195,12 +195,8 @@ class TestLootManager(unittest.TestCase):
             [previous["id"]],
         )
 
-    def test_set_entries_is_a_deprecated_persistent_alias(self):
-        """Legacy callers receive a clear migration warning without changing behavior."""
-        import warnings
-
-        with self.assertWarns(DeprecationWarning):
-            self.loot_mgr.set_entries([])
+    def test_replace_entries_and_persist_replaces_stored_entries(self):
+        self.loot_mgr.replace_entries_and_persist([])
         self.assertEqual(self.loot_mgr.get_all_entries(), [])
 
     def test_search_and_filter(self):

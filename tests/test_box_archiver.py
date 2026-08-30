@@ -3,7 +3,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 from core.box_archiver import BoxArchiver
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 
 
 class TestBoxArchiver(unittest.TestCase):

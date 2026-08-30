@@ -57,7 +57,7 @@ from core.single_instance import ApplicationLockError, acquire_application_lock,
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
@@ -201,7 +201,7 @@ def main():
         
         hotkey_listener = HotkeyListener(config=hotkey_config)
         hotkey_listener.toggle_requested.connect(window.toggle_visibility)
-        hotkey_listener.screenshot_requested.connect(window.trigger_screenshot)
+        hotkey_listener.screenshot_requested.connect(window.app.trigger_screenshot)
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
         _startup_mark(started_at, "hotkey listener started")
@@ -219,17 +219,17 @@ def main():
         tray_menu.addAction(act_toggle)
 
         act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
-        act_snip.triggered.connect(window.trigger_screenshot)
+        act_snip.triggered.connect(window.app.trigger_screenshot)
         tray_menu.addAction(act_snip)
 
         act_rec_toggle = QAction("Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
-        act_rec_toggle.triggered.connect(window._toggle_pause_history)
+        act_rec_toggle.triggered.connect(window.app._toggle_pause_history)
         tray_menu.addAction(act_rec_toggle)
 
         tray_menu.addSeparator()
 
         act_options = QAction("Optionen & Hotkeys... (Ctrl+,)", tray_menu)
-        act_options.triggered.connect(window.open_settings_dialog)
+        act_options.triggered.connect(window.app.open_settings_dialog)
         tray_menu.addAction(act_options)
 
         act_quit = QAction(f"Beenden ({hotkey_quit})", tray_menu)

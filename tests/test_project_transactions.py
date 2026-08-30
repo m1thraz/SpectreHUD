@@ -7,7 +7,7 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from core.project_manager import ProjectManager, ProjectExistsError, ProjectCreationError
+from core.project import ProjectManager, ProjectExistsError, ProjectCreationError
 
 
 class TestProjectTransactions(unittest.TestCase):
@@ -51,20 +51,17 @@ class TestProjectTransactions(unittest.TestCase):
             # Original project path must remain untouched in registry
             self.assertEqual(pm.registry["Box"], original_path)
 
-    def test_deprecated_activation_cannot_create_an_unknown_project(self):
-        """v15-P0: old activation API warns but preserves strict activation semantics."""
+    def test_activation_cannot_create_an_unknown_project(self):
+        """Strict activation preserves the workspace when the project is unknown."""
         from core.project import ProjectNotFoundError
-        import warnings
 
         with tempfile.TemporaryDirectory() as tmpdir:
             pm = ProjectManager(
                 base_dir=Path(tmpdir) / "projects",
                 config_dir=Path(tmpdir) / "config"
             )
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                with self.assertRaises(ProjectNotFoundError):
-                    pm.set_active_project("MissingBox")
+            with self.assertRaises(ProjectNotFoundError):
+                pm.activate_project("MissingBox")
 
             self.assertFalse((pm.base_dir / "MissingBox").exists())
 

@@ -6,7 +6,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QPixmap, QColor
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.screenshot_manager import ScreenshotManager
 from ui.loot_card import LootCard

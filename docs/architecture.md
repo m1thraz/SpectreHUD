@@ -55,11 +55,11 @@ graph TD
   - `ReportController`: Lazily constructs the report tab on first use, then coordinates report loading, Markdown editing and export.
 - **UI Decoupling with DTOs (`core/menu_actions.py` & `ui/menu_builder.py`)**:
   - Controllers build context menus using pure Python `MenuAction` data transfer objects (`label`, `callback`, `icon`, `is_separator`, `is_enabled`).
-  - `MenuBuilder.build_qmenu()` converts these DTOs into Qt `QMenu` instances at the view boundary, making controller logic 100% unit-testable in headless environments.
+  - `MenuBuilder.build_qmenu()` converts these DTOs into Qt `QMenu` instances at the view boundary. Menu construction can therefore be tested without showing a window; controllers that own dialogs or cards still require Qt-aware tests.
 
 ### 2.3 Reactive Event Bus (`core/event_bus.py`)
 - Provides loose coupling between services and controllers via publish/subscribe.
-- **`EventType` Events**: `PROJECT_CHANGED`, `LOOT_UPDATED`, `HISTORY_UPDATED`, `SNIPPETS_UPDATED`, `CONFIG_UPDATED`, `VARIABLE_CHANGED`.
+- **`EventType` Events**: `PROJECT_CHANGED`, `PROJECT_CREATED`, `PROJECT_ACTIVATED`, `LOOT_UPDATED`, `HISTORY_UPDATED`, `SNIPPETS_UPDATED`, `LOGGING_STATE_CHANGED`, `MODE_CHANGED`, `SCREENSHOT_SAVED`, `LANGUAGE_CHANGED`, `SEARCH_CHANGED`, `VARIABLES_CHANGED`, and `HOTKEY_SETTINGS_CHANGED`.
 - **Thread-Safe & Fault-Tolerant**: Protected by `threading.RLock`, with exception isolation so a failing subscriber cannot crash the publisher or other listeners.
 - **State-Mutation Contract**: Each successful loot or clipboard-history mutation emits
   exactly one domain event, published by its owning service rather than a controller.
@@ -122,7 +122,7 @@ graph TD
 
 ### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
 - **`I18nManager`**: Thread-safe internationalization runtime supporting live locale switching (`de` / `en`) without application restart.
-- **Parametric Interpolation**: Supports variable substitution (e.g. `{count}`, `{target}`) and fallback defaults across all 4 main views, panels, and 6 modal dialogs.
+- **Parametric Interpolation**: Supports variable substitution (e.g. `{count}`, `{target}`) and fallback defaults for the application surfaces that use the active locale. Remaining literal dialog text is tracked as UI-localization work rather than implied to be universally translated.
 
 ---
 

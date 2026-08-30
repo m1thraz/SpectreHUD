@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.project_session_service import ProjectSessionService
 from core.event_bus import EventBus, EventType
 from core.i18n import t

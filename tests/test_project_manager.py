@@ -3,7 +3,7 @@ import shutil
 import unittest
 import tempfile
 from pathlib import Path
-from core.project_manager import ProjectManager, InvalidProjectNameError
+from core.project import ProjectManager, InvalidProjectNameError
 from core.loot_manager import CATEGORIES
 
 class TestProjectManager(unittest.TestCase):
@@ -121,7 +121,7 @@ class TestProjectManager(unittest.TestCase):
 
     def test_windows_reserved_names_and_invalid_identifiers(self):
         """Findings 15 & 16: Windows reserved names and invalid project names must be rejected."""
-        from core.project_manager import InvalidProjectNameError
+        from core.project import InvalidProjectNameError
         invalid_names = [
             "",
             "   ",
@@ -181,7 +181,7 @@ class TestProjectManager(unittest.TestCase):
 
     def test_project_sanitization_collision_prevention(self):
         """Invariant: Creating 'foo bar' and then 'foo_bar' must reject the second creation."""
-        from core.project_manager import ProjectExistsError
+        from core.project import ProjectExistsError
 
         self.pm.create_project("foo bar")
         self.assertIn("foo_bar", self.pm.list_projects())

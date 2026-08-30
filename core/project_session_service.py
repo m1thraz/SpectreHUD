@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.logger import get_logger

@@ -15,7 +15,7 @@ from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
 from core.storage import PersistenceError
@@ -77,7 +77,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         """
         # 1. Setup Project Alpha
         self.project_mgr.create_project("BoxAlpha", target_ip="10.10.10.101", attacker_ip="10.10.14.1", port="4444")
-        self.window._switch_to_project("BoxAlpha")
+        self.window.app.switch_to_project("BoxAlpha")
         
         self.loot_mgr.add_entry(
             entry_type="credentials",
@@ -87,11 +87,11 @@ class TestWorkflowInvariants(unittest.TestCase):
             target_ip="10.10.10.101"
         )
         self.clip_watcher.add_entry("nmap -sC -sV 10.10.10.101", target_ip="10.10.10.101")
-        self.window._save_current_project_state()
+        self.window.app.save_current_project_state()
 
         # 2. Setup Project Beta
         self.project_mgr.create_project("BoxBeta", target_ip="10.10.10.202", attacker_ip="10.10.14.2", port="8080")
-        self.window._switch_to_project("BoxBeta")
+        self.window.app.switch_to_project("BoxBeta")
         
         # Verify BoxBeta starts clean and isolated
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0, "BoxBeta must not inherit BoxAlpha loot")
@@ -107,10 +107,10 @@ class TestWorkflowInvariants(unittest.TestCase):
             target_ip="10.10.10.202"
         )
         self.clip_watcher.add_entry("gobuster dir -u http://10.10.10.202", target_ip="10.10.10.202")
-        self.window._save_current_project_state()
+        self.window.app.save_current_project_state()
 
         # 3. Switch back to BoxAlpha -> Invariant: Complete Restoration of Alpha
-        self.window._switch_to_project("BoxAlpha")
+        self.window.app.switch_to_project("BoxAlpha")
         alpha_loot = self.loot_mgr.get_all_entries()
         alpha_clip = self.clip_watcher.get_all_history()
         
@@ -124,7 +124,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertEqual(self.window.var_bar.txt_port.text(), "4444")
 
         # 4. Switch back to BoxBeta -> Invariant: Complete Restoration of Beta
-        self.window._switch_to_project("BoxBeta")
+        self.window.app.switch_to_project("BoxBeta")
         beta_loot = self.loot_mgr.get_all_entries()
         beta_clip = self.clip_watcher.get_all_history()
         
@@ -157,10 +157,10 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertEqual(rfm.load("BoxBeta"), beta_text)
 
         # Verify UI editor tab synchronization on switch
-        self.window._switch_to_project("BoxAlpha")
+        self.window.app.switch_to_project("BoxAlpha")
         self.assertEqual(self.window.report_editor_tab.editor.toPlainText(), alpha_text)
 
-        self.window._switch_to_project("BoxBeta")
+        self.window.app.switch_to_project("BoxBeta")
         self.assertEqual(self.window.report_editor_tab.editor.toPlainText(), beta_text)
 
     # -------------------------------------------------------------------------
@@ -224,7 +224,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         """
         self.project_mgr.create_project("BoxDirty1")
         self.project_mgr.create_project("BoxDirty2")
-        self.window._switch_to_project("BoxDirty1")
+        self.window.app.switch_to_project("BoxDirty1")
 
         editor_tab = self.window.report_editor_tab
         self.assertFalse(editor_tab.is_dirty())
@@ -235,7 +235,7 @@ class TestWorkflowInvariants(unittest.TestCase):
 
         # Simulate user cancelling discard when switching project
         with patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
-            self.window._switch_to_project("BoxDirty2")
+            self.window.app.switch_to_project("BoxDirty2")
             # Invariant: Project switch was aborted to protect unsaved work
             self.assertEqual(self.project_mgr.get_active_project(), "BoxDirty1")
             self.assertEqual(editor_tab.editor.toPlainText(), "Unsaved critical pentest notes...")
@@ -245,7 +245,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertFalse(editor_tab.is_dirty(), "Editor must not be dirty after save")
 
         # Now switch should succeed without prompt
-        self.window._switch_to_project("BoxDirty2")
+        self.window.app.switch_to_project("BoxDirty2")
         self.assertEqual(self.project_mgr.get_active_project(), "BoxDirty2")
 
     # -------------------------------------------------------------------------
@@ -259,7 +259,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         - Exported/regenerated report embeds the screenshot path correctly.
         """
         self.project_mgr.create_project("BoxScreenTest")
-        self.window._switch_to_project("BoxScreenTest")
+        self.window.app.switch_to_project("BoxScreenTest")
         proj_dir = self.project_mgr.get_project_dir("BoxScreenTest")
 
         # Simulate screenshot creation
@@ -295,11 +295,11 @@ class TestWorkflowInvariants(unittest.TestCase):
         - No global 'loot_sessions.json' or 'clipboard_history.json' files are created in the root config directory.
         """
         self.project_mgr.create_project("BoxSingleTruth", target_ip="10.10.10.77")
-        self.window._switch_to_project("BoxSingleTruth")
+        self.window.app.switch_to_project("BoxSingleTruth")
 
         self.loot_mgr.add_entry(entry_type="note", title="Secret Note", content="confidential", category="recon")
         self.clip_watcher.add_entry("curl http://10.10.10.77/admin", target_ip="10.10.10.77")
-        self.window._save_current_project_state()
+        self.window.app.save_current_project_state()
 
         # Check project state file
         proj_dir = self.project_mgr.get_project_dir("BoxSingleTruth")
@@ -370,10 +370,10 @@ class TestWorkflowInvariants(unittest.TestCase):
     def test_workspace_config_failure_restores_old_session_and_ui(self):
         """A failed final workspace commit must reload the old session into the UI."""
         self.project_mgr.create_project("BoxOldSession", target_ip="10.10.10.10")
-        self.window._switch_to_project("BoxOldSession")
+        self.window.app.switch_to_project("BoxOldSession")
         old_loot = self.loot_mgr.add_entry("note", "Old loot", "root.txt", target_ip="10.10.10.10")
         old_history = self.clip_watcher.add_entry("whoami", target_ip="10.10.10.10")
-        self.window._save_current_project_state()
+        self.window.app.save_current_project_state()
         old_base = self.project_mgr.base_dir
         self.config_mgr.set("workspace_dir", str(old_base))
 

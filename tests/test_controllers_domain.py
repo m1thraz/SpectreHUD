@@ -12,7 +12,7 @@ from core.menu_actions import MenuAction
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.project_manager import ProjectManager
+from core.project import ProjectManager
 from core.event_bus import EventBus, EventType
 from ui.controllers.project_controller import ProjectController
 from ui.controllers.cheatsheet_controller import CheatsheetController
