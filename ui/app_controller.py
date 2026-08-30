@@ -191,6 +191,10 @@ class AppController(QObject):
     def toggle_mode(self) -> None:
         self.navigation_coord.toggle_mode()
 
+    def _toggle_pause_history(self) -> None:
+        """Toggle clipboard history logging pause state (Ctrl+P / tray action)."""
+        self.clipboard_coord.toggle_pause()
+
     def _on_mode_switched(self, mode: str) -> None:
         self.refresh_filter_pills()
         self.refresh_content()

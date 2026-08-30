@@ -548,30 +548,45 @@ class ReportEditorTab(QWidget):
 
     def _select_export_type(self) -> Optional[str]:
         """Returns the selected export workflow without duplicating export logic."""
-        dialog = QMessageBox(self)
+        dialog = QDialog(self)
         dialog.setWindowTitle(t("report.export_dialog_title", "Export Report"))
-        dialog.setText(t("report.export_dialog_message", "Choose an export format for the current report."))
-        dialog.setIcon(QMessageBox.Icon.Question)
+        dialog.setMinimumWidth(320)
         dialog.setStyleSheet(CYBER_DARK_QSS)
+
+        layout = QVBoxLayout(dialog)
+        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16,16)
+
+        lbl = QLabel(t("report.export_dialog_message", "Choose an export format for the current report."))
+        lbl.setWordWrap(True)
+        layout.addWidget(lbl)
+        layout.addSpacing(4)
 
         choices = (
             ("markdown", t("report.export_copy", "Export Copy...")),
-            ("html", t("report.export_html", "Export HTML...")),
+            ("html",     t("report.export_html", "Export HTML...")),
             ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
             ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
         )
-        buttons = {
-            export_type: dialog.addButton(label, QMessageBox.ButtonRole.ActionRole)
-            for export_type, label in choices
-        }
-        dialog.addButton(QMessageBox.StandardButton.Cancel)
-        dialog.exec()
 
-        selected_button = dialog.clickedButton()
-        return next(
-            (export_type for export_type, button in buttons.items() if button is selected_button),
-            None,
-        )
+        selected: list[Optional[str]] = [None]
+
+        for export_type, label in choices:
+            btn = QPushButton(label)
+            btn.setMinimumHeight(32)
+            btn.setProperty("class", "SecondaryBtn")
+            # capture export_type via default arg to avoid late-binding closure issue
+            btn.clicked.connect(lambda _checked=False, et=export_type: (selected.__setitem__(0, et), dialog.accept()))
+            layout.addWidget(btn)
+
+        layout.addSpacing(4)
+        cancel_btn = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel_btn.setMinimumHeight(32)
+        cancel_btn.clicked.connect(dialog.reject)
+        layout.addWidget(cancel_btn)
+
+        dialog.exec()
+        return selected[0]
 
     def _on_export_copy_clicked(self) -> None:
         from core.atomic_write import atomic_write_text
