@@ -35,13 +35,14 @@ class TestPackagingIntegration(unittest.TestCase):
                 self.assertIn("data/default_snippets.json", names, "default_snippets.json must be in wheel")
                 self.assertIn("data/__init__.py", names)
 
-                # 3. Core modules
+                # 3. Core modules and canonical project package
                 self.assertTrue(any(n.startswith("core/") for n in names))
                 self.assertIn("core/config.py", names)
                 self.assertIn("core/snippet_manager.py", names)
                 self.assertIn("core/loot_manager.py", names)
                 self.assertIn("core/clipboard_watcher.py", names)
-                self.assertIn("core/project_manager.py", names)
+                self.assertIn("core/project/__init__.py", names)
+                self.assertNotIn("core/project_manager.py", names)
 
                 # 4. UI modules & Controllers
                 self.assertTrue(any(n.startswith("ui/") for n in names))
