@@ -15,7 +15,6 @@ from core.project_session_service import ProjectSessionService
 from core.event_bus import EventBus, EventType
 from core.i18n import t
 from core.logger import get_logger
-from ui.styles import CYBER_DARK_QSS
 from ui.controllers.project_controller import ProjectController
 from ui.project_dialog import ProjectUnlockDialog
 from core.project_lock_service import ProjectSecurityMetaError
@@ -122,7 +121,6 @@ class WorkspaceCoordinator(QObject):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
             msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             if msg.exec() != QMessageBox.StandardButton.Yes:
                 self.project_ctrl.update_project_combo()
                 return False

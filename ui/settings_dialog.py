@@ -5,9 +5,11 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPushButton, QComboBox, QCheckBox, 
     QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices
 from core.config import ConfigManager
 from core.i18n import t
+from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
 from ui.styles.fonts import UI_FONT_OPTIONS, CODE_FONT_OPTIONS, REPORT_FONT_OPTIONS
 
@@ -307,6 +309,37 @@ class GeneralSettingsPage(QWidget):
         appearance_layout = QVBoxLayout(card_appearance)
         appearance_layout.setSpacing(10)
 
+        self.theme_loader = ThemeLoader()
+        self.combo_theme = QComboBox()
+        current_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+        for theme in self.theme_loader.list_themes():
+            label = theme["name"]
+            if theme.get("author"):
+                label = f"{label} — {theme['author']}"
+            self.combo_theme.addItem(label, theme["id"])
+        theme_index = self.combo_theme.findData(current_theme)
+        self.combo_theme.setCurrentIndex(theme_index if theme_index >= 0 else 0)
+
+        theme_row = QHBoxLayout()
+        theme_label = QLabel(t("settings.lbl_theme", "Theme:"))
+        theme_label.setProperty("class", "FormLabel")
+        theme_row.addWidget(theme_label)
+        theme_row.addWidget(self.combo_theme, stretch=1)
+        self.btn_open_theme_folder = QPushButton(
+            t("settings.open_theme_folder", "Open custom themes...")
+        )
+        self.btn_open_theme_folder.setProperty("class", "BrowseBtn")
+        self.btn_open_theme_folder.clicked.connect(self._open_theme_folder)
+        theme_row.addWidget(self.btn_open_theme_folder)
+        appearance_layout.addLayout(theme_row)
+
+        restart_hint = QLabel(
+            t("settings.theme_restart_hint", "The selected theme becomes active after the next restart.")
+        )
+        restart_hint.setProperty("class", "HintLabel")
+        restart_hint.setWordWrap(True)
+        appearance_layout.addWidget(restart_hint)
+
         self.combo_ui_font = self._font_combo(UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui"))
         self.combo_code_font = self._font_combo(CODE_FONT_OPTIONS, self.config.get("code_font", "consolas"))
         self.combo_report_font = self._font_combo(REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui"))
@@ -440,11 +473,28 @@ class GeneralSettingsPage(QWidget):
         if folder:
             self.txt_obsidian_vault.setText(folder)
 
+    def _open_theme_folder(self) -> None:
+        try:
+            self.theme_loader.USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                t("settings.theme_folder_error_title", "Theme folder unavailable"),
+                t(
+                    "settings.theme_folder_error_message",
+                    "The custom theme folder could not be created:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.theme_loader.USER_THEMES_DIR)))
+
     def get_settings(self) -> Dict[str, Any]:
         return {
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
             "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
+            "theme": self.combo_theme.currentData() or ThemeLoader.FALLBACK_THEME_ID,
             "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
             "code_font": self.combo_code_font.currentData() or "consolas",
             "report_font": self.combo_report_font.currentData() or "segoe_ui",

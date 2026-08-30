@@ -16,7 +16,6 @@ from core.i18n import t
 from ui.loot_card import LootCard
 from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
-from ui.styles import CYBER_DARK_QSS
 
 logger = get_logger("loot_controller")
 

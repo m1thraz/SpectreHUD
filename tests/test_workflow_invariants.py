@@ -360,7 +360,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             "load_active_project_state",
             side_effect=[RuntimeError("session failure"), None],
         ):
-            with patch("ui.app_controller.QMessageBox.warning"):
+            with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_ws)})
 
         self.assertEqual(self.project_mgr.base_dir, old_base)
@@ -391,7 +391,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         )
 
         with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
-            with patch("ui.app_controller.QMessageBox.warning"):
+            with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
 
         self.assertEqual(self.project_mgr.base_dir, old_base)
@@ -410,7 +410,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         new_manager.create_project("BoxRegistrySideEffect")
 
         with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
-            with patch("ui.app_controller.QMessageBox.warning"):
+            with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
 
         self.assertEqual(self.project_mgr.base_dir, old_base)

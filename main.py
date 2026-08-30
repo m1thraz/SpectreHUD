@@ -62,7 +62,7 @@ from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
 
-from ui.styles import CYBER_DARK_QSS, build_app_theme, get_app_icon
+from ui.styles import build_app_theme, get_app_icon
 
 logger = get_logger("app")
 
@@ -143,7 +143,6 @@ def main():
     _startup_mark(started_at, "QApplication ready")
     app.setApplicationName("SpectreHUD")
     app.setQuitOnLastWindowClosed(False)
-    app.setStyleSheet(CYBER_DARK_QSS)
 
     # Acquire this before creating services that access the registry, workspace,
     # clipboard or UI.  QLockFile also handles stale locks left by crashed runs.
@@ -176,9 +175,15 @@ def main():
         # Initialize Service Container
         container = _create_production_container()
         _startup_mark(started_at, "service container ready")
+        from core.theme_loader import ThemeLoader
+
+        theme_palette = ThemeLoader().load_theme(
+            container.config_manager.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+        )
         app.setStyleSheet(build_app_theme(
+            theme_palette,
             container.config_manager.get("ui_font", "segoe_ui"),
-            container.config_manager.get("code_font", "consolas")
+            container.config_manager.get("code_font", "consolas"),
         ))
         container.clipboard_watcher.start_listening()
 

@@ -2,30 +2,49 @@
 Master Theme Assembler and Icon Provider for SpectreHUD.
 """
 from pathlib import Path
-from typing import Optional
+import re
+from typing import Mapping, Optional
 from PyQt6.QtGui import QIcon
 
-from ui.styles.typography import get_typography_qss
-from ui.styles.buttons import BUTTONS_QSS
-from ui.styles.tables import TABLES_QSS
-from ui.styles.cards import get_cards_qss
-from ui.styles.dialogs import get_dialogs_qss
+from ui.styles.typography import TYPOGRAPHY_QSS_TEMPLATE
+from ui.styles.buttons import BUTTONS_QSS_TEMPLATE
+from ui.styles.tables import TABLES_QSS_TEMPLATE
+from ui.styles.cards import CARDS_QSS_TEMPLATE
+from ui.styles.dialogs import DIALOGS_QSS_TEMPLATE
 from ui.styles.fonts import get_code_font_stack, get_ui_font_stack
+from ui.styles.palette import CYBER_DARK_PALETTE
 
-def build_app_theme(ui_font_key: str = "segoe_ui", code_font_key: str = "consolas") -> str:
-    """Builds the application QSS from validated curated font keys."""
+_TOKEN_PATTERN = re.compile(r"\{([A-Z][A-Z0-9_]*|ui_font|code_font)\}")
+
+
+def build_app_theme(
+    palette: Mapping[str, str],
+    ui_font_key: str = "segoe_ui",
+    code_font_key: str = "consolas",
+) -> str:
+    """Build application QSS from a validated palette and curated font keys."""
     ui_font = get_ui_font_stack(ui_font_key)
     code_font = get_code_font_stack(code_font_key)
-    return "\n".join([
-        get_typography_qss(ui_font, code_font),
-        BUTTONS_QSS,
-        TABLES_QSS,
-        get_cards_qss(code_font),
-        get_dialogs_qss(ui_font, code_font),
+    context = dict(palette)
+    context.update({"ui_font": ui_font, "code_font": code_font})
+    raw = "\n".join([
+        TYPOGRAPHY_QSS_TEMPLATE,
+        BUTTONS_QSS_TEMPLATE,
+        TABLES_QSS_TEMPLATE,
+        CARDS_QSS_TEMPLATE,
+        DIALOGS_QSS_TEMPLATE,
     ])
 
+    def replace_token(match: re.Match[str]) -> str:
+        token = match.group(1)
+        if token not in context:
+            raise KeyError(f"Theme palette is missing required token: {token}")
+        return str(context[token])
 
-APP_THEME = build_app_theme()
+    return _TOKEN_PATTERN.sub(replace_token, raw)
+
+
+APP_THEME = build_app_theme(CYBER_DARK_PALETTE)
 
 # Backward-compatibility alias
 CYBER_DARK_QSS = APP_THEME

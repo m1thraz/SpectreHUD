@@ -27,6 +27,7 @@ datas = [
     (str(data_dir / "default_snippets - EN.json"), "data"),
     (str(data_dir / "i18n"), "data/i18n"),
     (str(data_dir / "report_templates"), "data/report_templates"),
+    (str(data_dir / "themes"), "data/themes"),
     (str(data_dir / "icon.ico"), "data"),
     (str(data_dir / "icon.svg"), "data"),
 ]

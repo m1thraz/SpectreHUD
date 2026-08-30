@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
 
 from core.reporting.template_engine import ReportTemplate, TemplateSection
 from core.loot_manager import CATEGORIES
-from ui.styles import CYBER_DARK_QSS
 
 
 SECTION_TYPE_NAMES = {
@@ -29,61 +28,6 @@ SECTION_TYPE_NAMES = {
 }
 
 
-# The app-wide theme does not style QListWidget instances.  Template sections
-# were therefore rendered with the platform default palette (grey background
-# and black text on Windows), which made the editor hard to read.
-TEMPLATE_EDITOR_QSS = CYBER_DARK_QSS + """
-QDialog#TemplateEditorDialog, QDialog#TemplateSectionEditDialog {
-    background-color: #161b22;
-    color: #f0f6fc;
-}
-
-QDialog#TemplateEditorDialog QLabel, QDialog#TemplateSectionEditDialog QLabel {
-    color: #f0f6fc;
-    background-color: transparent;
-}
-
-QDialog#TemplateEditorDialog QLineEdit, QDialog#TemplateSectionEditDialog QLineEdit,
-QDialog#TemplateEditorDialog QComboBox, QDialog#TemplateSectionEditDialog QComboBox {
-    background-color: #0d1117;
-    color: #f0f6fc;
-    border-color: #3d444d;
-}
-
-QDialog#TemplateEditorDialog QComboBox QAbstractItemView,
-QDialog#TemplateSectionEditDialog QComboBox QAbstractItemView {
-    background-color: #161b22;
-    color: #f0f6fc;
-    border: 1px solid #3d444d;
-    selection-background-color: #1f6feb;
-    selection-color: #ffffff;
-}
-
-QListWidget#TemplateSectionList {
-    background-color: #0d1117;
-    color: #f0f6fc;
-    border: 1px solid #3d444d;
-    border-radius: 6px;
-    padding: 4px;
-    outline: none;
-}
-
-QListWidget#TemplateSectionList::item {
-    color: #f0f6fc;
-    background-color: transparent;
-    border-radius: 4px;
-    padding: 6px 8px;
-}
-
-QListWidget#TemplateSectionList::item:hover {
-    background-color: #21262d;
-}
-
-QListWidget#TemplateSectionList::item:selected {
-    background-color: #1f6feb;
-    color: #ffffff;
-}
-"""
 
 
 class SectionEditDialog(QDialog):
@@ -94,7 +38,6 @@ class SectionEditDialog(QDialog):
         self.setObjectName("TemplateSectionEditDialog")
         self.setWindowTitle("Sektion konfigurieren")
         self.resize(420, 260)
-        self.setStyleSheet(TEMPLATE_EDITOR_QSS)
 
         self._initial_section = section
         self._build_ui()
@@ -175,7 +118,6 @@ class TemplateEditorDialog(QDialog):
         self.setObjectName("TemplateEditorDialog")
         self.setWindowTitle("Template-Editor" if template else "Neues Report-Template erstellen")
         self.resize(600, 520)
-        self.setStyleSheet(TEMPLATE_EDITOR_QSS)
 
         self._template = template
         self.result_template: Optional[ReportTemplate] = None

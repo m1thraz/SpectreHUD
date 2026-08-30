@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QFrame
 )
-from ui.styles import CYBER_DARK_QSS
 from core.i18n import t
 
 
@@ -22,7 +21,6 @@ class BaseHudDialog(QDialog):
         # Frameless translucent dialog window
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet(CYBER_DARK_QSS)
 
         from ui.styles import get_app_icon
         app_icon = get_app_icon()

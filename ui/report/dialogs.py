@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
-from ui.styles import CYBER_DARK_QSS
 from ui.template_manager_dialog import TemplateManagerDialog
 
 
@@ -27,7 +26,6 @@ class MarkdownTableDialog(QDialog):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle(t("report.table_title", "Insert Table"))
-        self.setStyleSheet(CYBER_DARK_QSS)
         layout = QVBoxLayout(self)
         self.rows = QSpinBox(); self.rows.setRange(1, 10); self.rows.setValue(2)
         self.columns = QSpinBox(); self.columns.setRange(1, 10); self.columns.setValue(3)
@@ -54,7 +52,6 @@ class ReportGenerationDialog(QDialog):
         self.selected_template: Optional[ReportTemplate] = selected_template
         self.setWindowTitle(t("report.generate_title", "Generate Report from Loot"))
         self.setMinimumWidth(460)
-        self.setStyleSheet(CYBER_DARK_QSS)
         self._build_ui(has_existing_report)
         self._populate_templates()
 

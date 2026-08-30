@@ -2,6 +2,7 @@
 
 from core.reporting.template import render_report_html
 from ui.styles import build_app_theme
+from ui.styles.palette import CYBER_DARK_PALETTE
 from ui.styles.fonts import (
     CODE_FONT_OPTIONS,
     CODE_FONT_STACKS,
@@ -24,7 +25,7 @@ def test_font_option_keys_are_complete_and_unique():
 
 
 def test_qss_uses_selected_ui_and_code_fonts():
-    qss = build_app_theme("inter", "jetbrains_mono")
+    qss = build_app_theme(CYBER_DARK_PALETTE, "inter", "jetbrains_mono")
     assert UI_FONT_STACKS["inter"] in qss
     assert CODE_FONT_STACKS["jetbrains_mono"] in qss
     assert "QToolTip" in qss
@@ -32,7 +33,7 @@ def test_qss_uses_selected_ui_and_code_fonts():
 
 
 def test_invalid_font_preferences_fall_back_to_safe_defaults():
-    qss = build_app_theme("missing-ui", "missing-code")
+    qss = build_app_theme(CYBER_DARK_PALETTE, "missing-ui", "missing-code")
     assert UI_FONT_STACKS["segoe_ui"] in qss
     assert CODE_FONT_STACKS["consolas"] in qss
 

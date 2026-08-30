@@ -13,7 +13,6 @@ from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.history_card import HistoryCard
-from ui.styles import CYBER_DARK_QSS
 
 logger = get_logger("history_controller")
 

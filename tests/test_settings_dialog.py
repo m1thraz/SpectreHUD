@@ -61,6 +61,7 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(settings["ui_font"], "inter")
         self.assertEqual(settings["code_font"], "jetbrains_mono")
         self.assertEqual(settings["report_font"], "georgia")
+        self.assertEqual(settings["theme"], "cyber_dark")
 
     def test_settings_dialog_save_and_apply(self):
         dlg = SettingsDialog(self.config_manager)
@@ -80,6 +81,7 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(received_signal[0]["quit_hotkey"], "<ctrl>+<shift>+q")
         self.assertEqual(self.config_manager.get("hotkey"), "<ctrl>+<cmd>+<space>")
         self.assertEqual(self.config_manager.get("quit_hotkey"), "<ctrl>+<shift>+q")
+        self.assertEqual(self.config_manager.get("theme"), "cyber_dark")
         dlg.close()
 
     def test_settings_dialog_defers_workspace_persistence_until_runtime_switch(self):

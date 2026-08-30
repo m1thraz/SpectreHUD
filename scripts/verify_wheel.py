@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     # i18n locale data
     "data/i18n/en.json",
     "data/i18n/de.json",
+    "data/themes/cyber_dark.json",
     # Core managers
     "core/config.py",
     "core/snippet_manager.py",
@@ -35,6 +36,7 @@ REQUIRED_FILES = [
     "core/html_report_exporter.py",
     "core/i18n.py",
     "core/display_geometry.py",
+    "core/theme_loader.py",
     # Reporting subsystem
     "core/reporting/__init__.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The

@@ -160,7 +160,6 @@ class ProjectController(QObject):
 
     def _on_archive_project(self, parent_widget: QWidget) -> None:
         """Prompts user to select output zip path and creates a compressed project archive."""
-        from ui.styles import CYBER_DARK_QSS
         from datetime import datetime
         import sys, subprocess, os
 
@@ -199,7 +198,6 @@ class ProjectController(QObject):
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             if msg.exec() == QMessageBox.StandardButton.Yes:
                 folder_to_open = zip_path.parent
                 try:
@@ -217,7 +215,6 @@ class ProjectController(QObject):
             msg.setWindowTitle(t("project.archive_error_title", "Archivierung fehlgeschlagen"))
             msg.setText(f"Fehler beim Erstellen des ZIP-Archivs:\n{err}")
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
 
     def _on_import_project(self, parent_widget: QWidget, on_switch_project: Callable[[str], None]) -> None:

@@ -2,20 +2,20 @@
 Card Containers, Frames, Code Blocks, and HUD Glass Styles for SpectreHUD.
 """
 
-CARDS_QSS = """
+CARDS_QSS_TEMPLATE = """
 /* Outer HUD Frame with Glassmorphism / Acrylic Glow */
 QFrame#HudFrame {
-    background-color: rgba(13, 17, 23, 0.95);
-    border: 1px solid rgba(0, 229, 255, 0.35);
+    background-color: {DARK_A95};
+    border: 1px solid {CYAN_A35};
     border-radius: 14px;
 }
 
 /* Header & Mode Switcher Bar */
 QFrame#HeaderBar {
-    background-color: rgba(22, 27, 34, 0.7);
+    background-color: {SURFACE_A70};
     border-top-left-radius: 14px;
     border-top-right-radius: 14px;
-    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    border-bottom: 1px solid {BORDER_A50};
     padding: 8px 12px;
 }
 
@@ -23,38 +23,38 @@ QFrame#HeaderBar {
 QFrame#FilterPillsFrame {
     background-color: transparent;
     padding: 2px 10px 6px 10px;
-    border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+    border-bottom: 1px solid {BORDER_A40};
 }
 
 /* Compact Variable Status Bar Frame */
 QFrame#CompactVarBar {
-    background-color: rgba(17, 22, 29, 0.8);
-    border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+    background-color: {PANEL_A80};
+    border-bottom: 1px solid {BORDER_A40};
     padding: 5px 12px;
 }
 
 /* Snippet & Loot Cards */
 QFrame#SnippetCard {
-    background-color: rgba(22, 27, 34, 0.85);
-    border: 1px solid rgba(48, 54, 61, 0.7);
+    background-color: {SURFACE_A85};
+    border: 1px solid {BORDER_A70};
     border-radius: 8px;
     padding: 2px;
 }
 
 QFrame#SnippetCard:hover {
-    border: 1px solid rgba(0, 229, 255, 0.5);
-    background-color: rgba(26, 33, 44, 0.9);
+    border: 1px solid {CYAN_A50};
+    background-color: {CARD_HOVER_A90};
 }
 
 /* Kanban columns reuse LootCards while retaining clear phase boundaries. */
 QFrame[class="LootBoardColumn"] {
-    background-color: rgba(13, 17, 23, 0.72);
-    border: 1px solid rgba(48, 54, 61, 0.8);
+    background-color: {DARK_A72};
+    border: 1px solid {BORDER_A80};
     border-radius: 8px;
 }
 
 QLabel[class="LootBoardColumnTitle"] {
-    color: #00e5ff;
+    color: {CYBER_CYAN};
     font-size: 11px;
     font-weight: 700;
     padding: 2px;
@@ -62,40 +62,40 @@ QLabel[class="LootBoardColumnTitle"] {
 
 /* Command Code Display Box */
 QLabel#CommandLabel {
-    background-color: rgba(9, 13, 18, 0.95);
-    border: 1px solid rgba(48, 54, 61, 0.8);
+    background-color: {CODE_A95};
+    border: 1px solid {BORDER_A80};
     border-radius: 6px;
-    color: #39d353;
+    color: {STATUS_SUCCESS};
     font-family: {code_font};
     font-size: 12px;
     padding: 8px 12px;
-    selection-background-color: #1f3d29;
+    selection-background-color: {CODE_SELECTION};
 }
 
 QPlainTextEdit#CommandBox {
-    background-color: rgba(9, 13, 18, 0.9);
-    border: 1px solid rgba(33, 38, 45, 0.8);
+    background-color: {CODE_A90};
+    border: 1px solid {CONTROL_A80};
     border-radius: 6px;
-    color: #39d353;
+    color: {STATUS_SUCCESS};
     font-family: {code_font};
     font-size: 12px;
     padding: 6px 8px;
-    selection-background-color: #1f3d29;
+    selection-background-color: {CODE_SELECTION};
 }
 
 /* Inline Command Tweaker Container */
 QFrame#TweakContainer {
-    background-color: rgba(13, 17, 23, 0.95);
-    border: 1px solid rgba(88, 166, 255, 0.35);
+    background-color: {DARK_A95};
+    border: 1px solid {BLUE_A35};
     border-radius: 6px;
     margin-top: 4px;
     padding: 4px 6px;
 }
 
 QLineEdit.TweakLineEdit {
-    background-color: rgba(9, 13, 18, 0.95);
-    color: #39d353;
-    border: 1px solid rgba(48, 54, 61, 0.8);
+    background-color: {CODE_A95};
+    color: {STATUS_SUCCESS};
+    border: 1px solid {BORDER_A80};
     border-radius: 5px;
     font-family: {code_font};
     font-size: 12px;
@@ -103,14 +103,14 @@ QLineEdit.TweakLineEdit {
 }
 
 QLineEdit.TweakLineEdit:focus {
-    border: 1px solid #00e5ff;
-    background-color: rgba(9, 13, 18, 0.98);
+    border: 1px solid {CYBER_CYAN};
+    background-color: {CODE_A98};
 }
 
 /* Privacy Warning Banner */
 QFrame#PrivacyWarningBanner {
-    background-color: rgba(210, 153, 34, 0.12);
-    border: 1px solid rgba(210, 153, 34, 0.35);
+    background-color: {WARNING_A12};
+    border: 1px solid {WARNING_A35};
     border-radius: 6px;
     padding: 6px 10px;
     margin: 4px 0px;
@@ -118,8 +118,8 @@ QFrame#PrivacyWarningBanner {
 
 /* Minimal HUD Footer Frame */
 QFrame#HudFooter {
-    background-color: rgba(17, 22, 29, 0.7);
-    border-top: 1px solid rgba(48, 54, 61, 0.4);
+    background-color: {PANEL_A70};
+    border-top: 1px solid {BORDER_A40};
     border-bottom-left-radius: 14px;
     border-bottom-right-radius: 14px;
     padding: 5px 14px;
@@ -127,13 +127,9 @@ QFrame#HudFooter {
 
 /* Settings Card */
 QFrame.SettingsCard {
-    background-color: rgba(22, 27, 34, 0.85);
-    border: 1px solid rgba(48, 54, 61, 0.6);
+    background-color: {SURFACE_A85};
+    border: 1px solid {BORDER_A60};
     border-radius: 8px;
     padding: 12px 14px;
 }
 """
-
-
-def get_cards_qss(code_font: str) -> str:
-    return CARDS_QSS.replace("{code_font}", code_font)

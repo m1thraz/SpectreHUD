@@ -30,7 +30,6 @@ from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from core.logger import get_logger
 from core.i18n import t
-from ui.styles import CYBER_DARK_QSS, build_app_theme
 from ui.styles.fonts import get_report_font_stack
 from ui.report.dialogs import MarkdownTableDialog, ReportGenerationDialog
 from ui.report.find_replace import FindReplaceBar
@@ -185,7 +184,6 @@ class ReportEditorTab(QWidget):
 
         self.preview_document = ReportDocument(parent=self)
         self._apply_preview_font()
-        self.setStyleSheet(build_app_theme(self._ui_font_key(), self._code_font_key()))
 
         self.preview = ReportPreviewEdit()
         self.preview.setDocument(self.preview_document)
@@ -225,9 +223,6 @@ class ReportEditorTab(QWidget):
 
         self._apply_view_mode(self._view_mode)
 
-    def _ui_font_key(self) -> str:
-        return self.config.get("ui_font", "segoe_ui") if self.config else "segoe_ui"
-
     def _format_heading(self, level: int) -> None:
         from ui.markdown_toolbar_actions import set_heading
         set_heading(self.editor, level)
@@ -253,9 +248,6 @@ class ReportEditorTab(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             from ui.markdown_toolbar_actions import insert_table
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
-
-    def _code_font_key(self) -> str:
-        return self.config.get("code_font", "consolas") if self.config else "consolas"
 
     def _report_font_key(self) -> str:
         return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"
@@ -285,8 +277,7 @@ class ReportEditorTab(QWidget):
         """.replace("__REPORT_FONT_STACK__", report_font))
 
     def refresh_font_configuration(self) -> None:
-        """Refresh QSS and preview typography after settings are saved."""
-        self.setStyleSheet(build_app_theme(self._ui_font_key(), self._code_font_key()))
+        """Refresh preview typography after settings are saved."""
         self._apply_preview_font()
         self._update_preview()
 
@@ -340,7 +331,6 @@ class ReportEditorTab(QWidget):
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
         )
         msg.setDefaultButton(QMessageBox.StandardButton.Save)
-        msg.setStyleSheet(CYBER_DARK_QSS)
 
         reply = msg.exec()
         if reply == QMessageBox.StandardButton.Save:
@@ -451,7 +441,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle(t("dialog.error", "Error"))
             msg.setText(t("report.save_error", "The report could not be saved. Details are in the log."))
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
         return ok
 
@@ -514,7 +503,6 @@ class ReportEditorTab(QWidget):
                 "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen."
             )
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
         except ReportSaveError as e:
             logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
@@ -525,7 +513,6 @@ class ReportEditorTab(QWidget):
                 "Der bisherige Report bleibt erhalten."
             )
             msg.setIcon(QMessageBox.Icon.Critical)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
 
     def _ensure_active_template(self) -> None:
@@ -551,7 +538,6 @@ class ReportEditorTab(QWidget):
         dialog = QDialog(self)
         dialog.setWindowTitle(t("report.export_dialog_title", "Export Report"))
         dialog.setMinimumWidth(320)
-        dialog.setStyleSheet(CYBER_DARK_QSS)
 
         layout = QVBoxLayout(dialog)
         layout.setSpacing(8)
@@ -607,7 +593,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle("Exportiert")
             msg.setText(f"Kopie gespeichert: {target.name}")
             msg.setIcon(QMessageBox.Icon.Information)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
         else:
             logger.error(f"Export der Report-Kopie nach {target} fehlgeschlagen")
@@ -615,7 +600,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle("Fehler")
             msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
 
     def _on_export_html_clicked(self) -> None:
@@ -653,7 +637,6 @@ class ReportEditorTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             if msg.exec() == QMessageBox.StandardButton.Yes:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve())))
         else:
@@ -662,7 +645,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle("Fehler")
             msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
 
     def _on_export_obsidian_clicked(self) -> None:
@@ -677,7 +659,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle(t("report.obsidian_not_configured_title", "Obsidian is not configured"))
             msg.setText(t("report.obsidian_not_configured", "Choose an existing Obsidian vault in Settings before exporting."))
             msg.setIcon(QMessageBox.Icon.Information)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
             return
 
@@ -701,7 +682,6 @@ class ReportEditorTab(QWidget):
             msg.setWindowTitle(t("report.obsidian_export_failed_title", "Obsidian export failed"))
             msg.setText(t("report.obsidian_export_failed", "The report could not be exported to Obsidian:\n{error}", error=str(exc)))
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStyleSheet(CYBER_DARK_QSS)
             msg.exec()
             return
 
@@ -712,7 +692,6 @@ class ReportEditorTab(QWidget):
         msg.setWindowTitle(t("report.obsidian_exported_title", "Obsidian export complete"))
         msg.setText(message)
         msg.setIcon(QMessageBox.Icon.Information)
-        msg.setStyleSheet(CYBER_DARK_QSS)
         msg.exec()
 
         if self.config.get("obsidian_open_after_export", False):
@@ -771,7 +750,6 @@ class ReportEditorTab(QWidget):
         light_button = msg.addButton(t("report.html_theme_light", "Light — Client / Print"), QMessageBox.ButtonRole.ActionRole)
         cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
         msg.setDefaultButton(dark_button)
-        msg.setStyleSheet(CYBER_DARK_QSS)
         # QMessageBox otherwise calculates its width from the text labels and
         # can elide the two longer theme choices on Windows.
         msg.setMinimumWidth(640)

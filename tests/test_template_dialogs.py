@@ -12,6 +12,7 @@ from core.reporting.template_engine import ReportTemplate, TemplateSection
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog, SectionEditDialog
 from ui.template_manager_dialog import TemplateManagerDialog
+from ui.styles import APP_THEME
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -50,14 +51,14 @@ class TestTemplateDialogs(unittest.TestCase):
         self.assertEqual(configured.title, "Special Recon")
         self.assertEqual(configured.category_id, "recon")
 
-    def test_template_editor_uses_high_contrast_control_styles(self):
-        """The editor keeps form labels and the section list readable in dark mode."""
+    def test_template_editor_inherits_theme_control_styles(self):
+        """The editor uses the app theme instead of blocking user themes locally."""
         dlg = TemplateEditorDialog()
 
         self.assertEqual(dlg.objectName(), "TemplateEditorDialog")
         self.assertEqual(dlg.list_sections.objectName(), "TemplateSectionList")
-        self.assertIn("QListWidget#TemplateSectionList", dlg.styleSheet())
-        self.assertIn("color: #f0f6fc", dlg.styleSheet())
+        self.assertEqual(dlg.styleSheet(), "")
+        self.assertIn("QListWidget#TemplateSectionList", APP_THEME)
 
     def test_template_editor_dialog_validation_and_save(self):
         """Tests template editor validation and output creation."""
@@ -123,12 +124,12 @@ class TestTemplateDialogs(unittest.TestCase):
 
         self.assertIsNone(self.repo.get_template("dup_test_1"))
 
-    def test_template_manager_uses_high_contrast_table_styles(self):
+    def test_template_manager_inherits_theme_table_styles(self):
         dlg = TemplateManagerDialog(repository=self.repo)
         self.assertEqual(dlg.objectName(), "TemplateManagerDialog")
         self.assertEqual(dlg.table.objectName(), "TemplateTable")
-        self.assertIn("QTableWidget#TemplateTable", dlg.styleSheet())
-        self.assertIn("color: #f0f6fc", dlg.styleSheet())
+        self.assertEqual(dlg.styleSheet(), "")
+        self.assertIn("QTableWidget#TemplateTable", APP_THEME)
 
 
 if __name__ == "__main__":

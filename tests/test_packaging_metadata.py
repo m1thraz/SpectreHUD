@@ -14,8 +14,9 @@ def test_project_metadata_uses_pep_621_compatible_license_table():
 
 
 def test_windows_spec_includes_runtime_data_directories():
-    """Translations and report templates must be present in the one-file EXE."""
+    """Translations, templates, and themes must be present in the one-file EXE."""
     spec = (Path(__file__).parent.parent / "SpectreHUD.spec").read_text(encoding="utf-8")
 
     assert '(str(data_dir / "i18n"), "data/i18n")' in spec
     assert '(str(data_dir / "report_templates"), "data/report_templates")' in spec
+    assert '(str(data_dir / "themes"), "data/themes")' in spec

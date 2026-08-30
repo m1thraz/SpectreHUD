@@ -23,7 +23,7 @@ from ui.variable_bar import VariableBar
 from ui.panels import HeaderPanel, SearchPanel, ContentPanel, FooterPanel
 from ui.app_controller import AppController
 from ui.controllers.window_frame_manager import WindowFrameManager
-from ui.styles import CYBER_DARK_QSS, build_app_theme, get_app_icon
+from ui.styles import get_app_icon
 
 from core.container import ServiceContainer
 
@@ -154,10 +154,6 @@ class MainWindow(QMainWindow):
 
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setStyleSheet(build_app_theme(
-            self.config.get("ui_font", "segoe_ui"),
-            self.config.get("code_font", "consolas")
-        ))
 
         app_icon = get_app_icon()
         if not app_icon.isNull():
@@ -328,11 +324,6 @@ class MainWindow(QMainWindow):
             discard_btn = msg.addButton(_t("quit.discard", "Quit Without Saving"),    QMessageBox.ButtonRole.DestructiveRole)
             cancel_btn  = msg.addButton(_t("quit.cancel",  "Cancel"),                 QMessageBox.ButtonRole.RejectRole)
             msg.setDefaultButton(cancel_btn)
-            try:
-                from ui.styles import CYBER_DARK_QSS
-                msg.setStyleSheet(CYBER_DARK_QSS)
-            except Exception:
-                pass
             msg.exec()
             clicked = msg.clickedButton()
             if clicked == retry_btn:

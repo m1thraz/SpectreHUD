@@ -7,7 +7,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, QUrl, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox, QApplication
+from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
@@ -413,16 +413,6 @@ class AppController(QObject):
         dlg.exec()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
-        if any(key in new_settings for key in ("ui_font", "code_font")):
-            from ui.styles import build_app_theme
-            stylesheet = build_app_theme(
-                self.config.get("ui_font", "segoe_ui"),
-                self.config.get("code_font", "consolas")
-            )
-            app = QApplication.instance()
-            if app is not None:
-                app.setStyleSheet(stylesheet)
-            self.window.setStyleSheet(stylesheet)
         if "report_font" in new_settings:
             self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
