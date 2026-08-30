@@ -20,6 +20,9 @@ REQUIRED_FILES = [
     "data/i18n/en.json",
     "data/i18n/de.json",
     "data/themes/cyber_dark.json",
+    "data/themes/nord.json",
+    "data/themes/slate.json",
+    "data/themes/warm_night.json",
     # Core managers
     "core/config.py",
     "core/snippet_manager.py",

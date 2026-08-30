@@ -15,6 +15,30 @@ def test_builtin_cyber_dark_contains_every_required_token():
     assert palette == CYBER_DARK_PALETTE
 
 
+def test_all_builtin_themes_are_discovered_and_complete():
+    loader = ThemeLoader()
+    expected_ids = {"cyber_dark", "nord", "slate", "warm_night"}
+
+    discovered_ids = {theme["id"] for theme in loader.list_themes()}
+
+    assert expected_ids <= discovered_ids
+    for theme_id in expected_ids:
+        palette = loader.load_theme(theme_id)
+        assert set(palette) == loader.get_required_tokens()
+        assert loader.validate_palette(palette) == []
+
+
+def test_builtin_themes_have_distinct_visual_identities():
+    loader = ThemeLoader()
+
+    identities = {
+        (loader.load_theme(theme_id)["BG_DARK"], loader.load_theme(theme_id)["CYBER_CYAN"])
+        for theme_id in ("cyber_dark", "nord", "slate", "warm_night")
+    }
+
+    assert len(identities) == 4
+
+
 def test_missing_theme_falls_back_to_cyber_dark():
     assert ThemeLoader().load_theme("does_not_exist") == CYBER_DARK_PALETTE
 
