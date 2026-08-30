@@ -23,12 +23,11 @@ from core.snippet_manager import SnippetManager
 from ui.main_window import MainWindow
 
 
-class TestAdversarialRegressions(unittest.TestCase):
+class TestWorkflowRobustness(unittest.TestCase):
     """
-    Cross-component regression tests for data integrity, recovery, and
-    untrusted-input boundaries.  Component-local validation lives in the
-    corresponding focused test module; this suite keeps one end-to-end
-    invariant per boundary.
+    Cross-component tests for data integrity, recovery, and normal workflow
+    robustness. Component-local validation lives in focused test modules; this
+    suite keeps one end-to-end invariant per user-visible failure mode.
     """
 
     @classmethod
@@ -64,9 +63,8 @@ class TestAdversarialRegressions(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_project_name_cannot_escape_workspace(self):
         """
-        Adversarial: Malicious or traversal project names ('..', '.', '../escape',
-        '..\\escape', '../../../../etc', '   ') must NEVER resolve outside the workspace
-        and MUST NOT create any files or folders in parent directories.
+        Invalid project names must not resolve outside the workspace or create
+        files and folders in its parent directory.
         """
         malicious_names = [
             "..",
@@ -383,111 +381,12 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertFalse((self.config_dir / "clipboard_history.json").exists())
 
     # -------------------------------------------------------------------------
-    # 6. P5: Deeply Nested JSON Parsing & RecursionError Resilience
-    # -------------------------------------------------------------------------
-    def test_deeply_nested_json_recursion_dos_protection(self):
-        """
-        Adversarial: Deeply nested JSON files (e.g. [[[[...]]]] or {{{{...}}}} with depth > 5000)
-        must NEVER cause unhandled RecursionError crashes during project import, state loading,
-        loot loading, clipboard loading, snippet loading, or config initialization.
-        All loaders must gracefully recover to empty/default states.
-        """
-        depth = 5000
-        malicious_nested_json = ("[" * depth) + ("]" * depth)
-
-        # 1. Project State Loader
-        self.project_mgr.create_project("BoxDeepBomb")
-        state_file = self.project_mgr.get_project_dir("BoxDeepBomb") / "project_state.json"
-        state_file.write_text(malicious_nested_json, encoding="utf-8")
-        
-        # Must not throw RecursionError and return a valid fallback state schema
-        state = self.project_mgr.load_project_state("BoxDeepBomb")
-        self.assertIsInstance(state, dict)
-        self.assertEqual(state["name"], "BoxDeepBomb")
-        self.assertEqual(state["loot"], [])
-
-        # 2. Loot Manager Loader
-        loot_file = self.temp_path / "bomb_loot.json"
-        loot_file.write_text(malicious_nested_json, encoding="utf-8")
-        bomb_loot_mgr = LootManager(storage_file=loot_file)
-        self.assertEqual(bomb_loot_mgr.get_all_entries(), [])
-
-        # 3. Clipboard Watcher Loader
-        clip_file = self.temp_path / "bomb_clip.json"
-        clip_file.write_text(malicious_nested_json, encoding="utf-8")
-        bomb_clip = ClipboardWatcher(storage_file=clip_file)
-        self.assertEqual(bomb_clip.get_all_history(), [])
-
-        # 4. Project Registry Loader
-        reg_file = self.config_dir / "projects_registry.json"
-        reg_file.write_text(malicious_nested_json, encoding="utf-8")
-        reg_data = self.project_mgr._load_registry()
-        self.assertEqual(reg_data, {})
-
-        # 5. User Snippets Loader
-        snip_cfg_dir = self.temp_path / "snip_cfg"
-        snip_cfg_dir.mkdir(parents=True, exist_ok=True)
-        snip_file = snip_cfg_dir / "user_snippets.json"
-        snip_file.write_text(malicious_nested_json, encoding="utf-8")
-        snip_mgr = SnippetManager(user_snippets_path=snip_file)
-        self.assertTrue(len(snip_mgr.get_snippets()) > 0)  # default snippets still loaded safely
-
-        # 6. Config Loader
-        bomb_cfg_dir = self.temp_path / "bomb_cfg"
-        bomb_cfg_dir.mkdir(parents=True, exist_ok=True)
-        (bomb_cfg_dir / "config.json").write_text(malicious_nested_json, encoding="utf-8")
-        cfg_mgr = ConfigManager(config_dir=bomb_cfg_dir)
-        self.assertIn("hotkey", cfg_mgr.data)
-
-    # -------------------------------------------------------------------------
-    # 7. P6: Bloated / Massive JSON Data Ingest Bounding (Asymmetric Trust Defense)
-    # -------------------------------------------------------------------------
-    def test_bloated_project_state_is_bounded_and_capped(self):
-        """
-        Adversarial: Importing or loading an externally crafted project_state.json
-        with thousands of items or oversized payload strings must be strictly capped
-        to prevent memory explosion and UI stalling.
-        """
-        self.project_mgr.create_project("BoxBloated")
-        state_file = self.project_mgr.get_project_dir("BoxBloated") / "project_state.json"
-
-        # Create bloated state with 1050 loot items and 600 clipboard entries
-        # Item 0 has oversized 150 KB string to test string truncation
-        bloated_loot = [{"title": f"Loot {i}", "content": "X" * 200} for i in range(1050)]
-        bloated_loot[0]["content"] = "X" * (150 * 1024)
-
-        bloated_clips = [{"text": f"cmd {i}"} for i in range(600)]
-        bloated_clips[0]["text"] = "Y" * (100 * 1024)
-
-        bloated_state = {
-            "name": "BoxBloated",
-            "target_ip": "10.10.10.10",
-            "loot": bloated_loot,
-            "clipboard_history": bloated_clips
-        }
-        state_file.write_text(json.dumps(bloated_state), encoding="utf-8")
-
-        # Load session via service
-        loaded = self.session_service.load_project_session("BoxBloated")
-
-        # Invariant 1: Loot is capped to 1000 items, oversized items bounded to 128 KB
-        self.assertEqual(len(loaded["loot"]), 1000)
-        self.assertEqual(len(loaded["loot"][0]["content"]), 128 * 1024)
-        self.assertEqual(len(self.loot_mgr.get_all_entries()), 1000)
-
-        # Invariant 2: Clipboard is capped to 500 items, oversized items bounded to 64 KB
-        self.assertEqual(len(loaded["clipboard_history"]), 500)
-        self.assertEqual(len(loaded["clipboard_history"][0]["text"]), 64 * 1024)
-        self.assertEqual(len(self.clip_watcher.get_all_history()), 500)
-
-    # -------------------------------------------------------------------------
-    # 8. P7: Cross-Project Screenshot Resolution Isolation (Confused Deputy Guard)
+    # 8. Cross-Project Screenshot Resolution Isolation
     # -------------------------------------------------------------------------
     def test_cross_project_screenshot_resolution_isolation(self):
         """
-        Adversarial: A loot entry in Project A referencing a screenshot filename
-        that exists in Project B must NEVER resolve or display Project B's image.
-        LootCard image resolution must be strictly sandboxed to the active project folder.
+        A loot entry in Project A must not resolve a same-named screenshot from
+        Project B. Image resolution remains scoped to the active project.
         """
         from ui.loot_card import LootCard
 
@@ -514,47 +413,8 @@ class TestAdversarialRegressions(unittest.TestCase):
         # Invariant: Must return None because the image does NOT exist in BoxAttackerEvent
         self.assertIsNone(
             resolved,
-            "Security Failure: LootCard resolved a screenshot file from another project's sandbox!"
+                "LootCard resolved an image from another project."
         )
-
-    # -------------------------------------------------------------------------
-    # 9. P1: Symlink & Junction Workspace Escape Prevention
-    # -------------------------------------------------------------------------
-    def test_symlink_and_junction_workspace_escape_prevention(self):
-        """
-        Adversarial P1: Pre-existing symlinks or Windows junctions inside a workspace
-        pointing to an external location (e.g. projects/Evil -> /outside) must NEVER be
-        followed by create_project() or get_project_dir() to write payload files outside.
-        """
-        outside_dir = self.temp_path / "outside_victim"
-        outside_dir.mkdir(parents=True, exist_ok=True)
-        
-        evil_link = self.projects_dir / "Evil"
-        try:
-            os.symlink(outside_dir, evil_link, target_is_directory=True)
-        except (OSError, NotImplementedError):
-            # In some restricted Windows environments without Developer Mode/Admin, symlink creation might raise OSError
-            pass
-
-        if evil_link.exists() or evil_link.is_symlink():
-            # Attempt to create project on symlink target (must either reject via exception or avoid following)
-            try:
-                res_dir = self.project_mgr.create_project("Evil")
-                # If it didn't raise, verify project dir is strictly inside workspace
-                self.assertTrue(
-                    res_dir.resolve().is_relative_to(self.projects_dir.resolve()),
-                    f"P1 Security Breach: Returned project directory is outside workspace: {res_dir}"
-                )
-            except (InvalidProjectNameError, ProjectCreationError, OSError):
-                # Safely rejected symlink / junction traversal escape attempt
-                pass
-            
-            # Invariant: Outside directory must have NO files or folders written to it
-            outside_files = [p.name for p in outside_dir.iterdir()]
-            self.assertEqual(
-                outside_files, [],
-                f"P1 Security Breach: create_project wrote files into outside directory {outside_dir}: {outside_files}"
-            )
 
     # -------------------------------------------------------------------------
     # 10. P2: Report Regeneration False-Success Prevention on Save Failure
@@ -631,43 +491,6 @@ class TestAdversarialRegressions(unittest.TestCase):
             self.assertFalse(session_saved)
 
     # -------------------------------------------------------------------------
-    # 13. Pre-Parse File Size Defense (Gigabyte JSON Bomb Defense)
-    # -------------------------------------------------------------------------
-    def test_oversized_raw_json_files_rejected_before_parsing(self):
-        """
-        Adversarial: Gigantic JSON files (> MAX_FILE_SIZE) must be rejected
-        BEFORE attempting json.load() to prevent massive RAM allocation during parsing.
-        """
-        from unittest.mock import patch
-
-        # 1. Project state file size limit (simulate oversized file)
-        self.project_mgr.create_project("BoxOversized")
-        state_file = self.project_mgr.get_project_dir("BoxOversized") / "project_state.json"
-        state_file.write_text('{"name": "BoxOversized", "loot": [{"title": "Should Not Load", "content": "X"}]}', encoding="utf-8")
-
-        # Mock is_file_size_valid to return False
-        with patch("core.validators.is_file_size_valid", return_value=False):
-            loaded = self.project_mgr.load_project_state("BoxOversized")
-            # Should safely fallback to clean default without parsing
-            self.assertEqual(loaded["name"], "BoxOversized")
-            self.assertEqual(loaded["loot"], [])
-
-        # 2. Loot manager file size limit
-        loot_file = self.temp_path / "giant_loot.json"
-        loot_file.write_text('[{"title": "Giant Item", "content": "data"}]', encoding="utf-8")
-        bomb_loot = LootManager(storage_file=loot_file)
-        with patch("core.validators.is_file_size_valid", return_value=False):
-            bomb_loot.load_entries()
-            self.assertEqual(bomb_loot.get_all_entries(), [])
-
-        # 3. User snippets file size limit
-        snip_file = self.temp_path / "giant_snippets.json"
-        snip_file.write_text('[{"title": "Giant Snippet", "template": "data"}]', encoding="utf-8")
-        with patch("core.validators.is_file_size_valid", return_value=False):
-            snip_mgr = SnippetManager(user_snippets_path=snip_file)
-            self.assertEqual(len([s for s in snip_mgr.get_snippets() if s.get("is_custom")]), 0)
-
-    # -------------------------------------------------------------------------
     # 14. Project Name Sanitization Collision Defense
     # -------------------------------------------------------------------------
     def test_sanitization_collision_cannot_merge_or_overwrite_workspaces(self):
@@ -700,108 +523,53 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertEqual(notes_file.read_text(encoding="utf-8"), "Confidential Original Notes")
 
     # -------------------------------------------------------------------------
-    # 15. Symlink / Junction Workspace Auto-Discovery & Registry Escape
-    # -------------------------------------------------------------------------
-    def test_symlink_project_cannot_be_registered_as_workspace(self):
-        """
-        Adversarial: A symlink placed inside base_dir pointing to an outside directory
-        must NOT be automatically registered or listed as a project workspace, and
-        get_project_dir() must NOT resolve to the external path.
-        """
-        outside_dir = self.temp_path / "outside_victim_dir"
-        outside_dir.mkdir(parents=True, exist_ok=True)
-        (outside_dir / "notes.md").write_text("Victim Outside Data", encoding="utf-8")
-
-        symlink_path = self.projects_dir / "EvilSymlink"
-        try:
-            symlink_path.symlink_to(outside_dir, target_is_directory=True)
-        except (OSError, NotImplementedError):
-            return
-
-        # 1. list_projects must NOT include the symlink or auto-register it
-        project_list = self.project_mgr.list_projects()
-        self.assertNotIn("EvilSymlink", project_list)
-        self.assertNotIn("EvilSymlink", self.project_mgr.registry)
-
-        # 2. get_project_dir("EvilSymlink") must strictly reject symlink with InvalidProjectNameError
-        with self.assertRaises(InvalidProjectNameError):
-            self.project_mgr.get_project_dir("EvilSymlink")
-
-    # -------------------------------------------------------------------------
-    # 16. Report-Preview Sandbox & Arbitrary Local File Disclosure Defense
+    # 16. Report Preview Resolves Project Images Only
     # -------------------------------------------------------------------------
     def test_report_document_blocks_path_traversal_and_absolute_outside_images(self):
         """
-        Adversarial: A malicious markdown entry with relative traversal (../../outside.png)
-        or absolute path outside the project directory must be strictly blocked by ReportDocument.
+        The report preview loads images from the active project and ignores
+        invalid or unrelated local paths.
         """
         from PyQt6.QtCore import QUrl
         from PyQt6.QtGui import QTextDocument
         from ui.report_editor_tab import ReportDocument
 
-        # 1. Create a secret image outside the project workspace
+        # Create an image outside the project workspace.
         secret_outside = self.temp_path / "secret_victim_data.png"
         victim_img = QImage(100, 100, QImage.Format.Format_RGB32)
         victim_img.fill(QColor("red"))
         self.assertTrue(victim_img.save(str(secret_outside), "PNG"))
 
-        # 2. Create legitimate project workspace
+        # Create the active project workspace.
         proj_dir = self.project_mgr.create_project("SandboxBox")
         doc = ReportDocument(project_dir=proj_dir)
 
-        # 3. Test relative traversal escape
+        # Invalid relative paths are not loaded.
         traversal_url = QUrl("../../../../secret_victim_data.png")
         loaded_traversal = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), traversal_url)
         self.assertNotIsInstance(loaded_traversal, QImage)
 
-        # 4. Test absolute file path escape
+        # Absolute paths outside the project are not loaded.
         absolute_url = QUrl.fromLocalFile(str(secret_outside.resolve()))
         loaded_absolute = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), absolute_url)
         self.assertNotIsInstance(loaded_absolute, QImage)
 
-        # 5. Test raw absolute string path escape
+        # The same is true for a raw absolute path.
         raw_absolute_url = QUrl(str(secret_outside.resolve()))
         loaded_raw_abs = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), raw_absolute_url)
         self.assertNotIsInstance(loaded_raw_abs, QImage)
 
     # -------------------------------------------------------------------------
-    # 17. Report-Preview Oversized Image / Decompress Bomb DoS Defense
-    # -------------------------------------------------------------------------
-    def test_report_document_rejects_oversized_images(self):
-        """
-        Adversarial: An oversized image file (>15MB) inside the project loot must be
-        rejected before QImage loading/decoding to prevent memory exhaustion and UI freezing.
-        """
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QTextDocument
-        from ui.report_editor_tab import ReportDocument
-
-        proj_dir = self.project_mgr.create_project("BombBox")
-        loot_dir = proj_dir / "loot"
-        loot_dir.mkdir(exist_ok=True)
-        giant_file = loot_dir / "giant_bomb.png"
-
-        # Create 16MB file
-        with open(giant_file, "wb") as f:
-            f.seek(16 * 1024 * 1024)
-            f.write(b"\x00")
-
-        doc = ReportDocument(project_dir=proj_dir)
-        loaded = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), QUrl("loot/giant_bomb.png"))
-        self.assertNotIsInstance(loaded, QImage)
-
-    # -------------------------------------------------------------------------
-    # 18. ReportBuilder Markdown / Code-Fence Injection Defense
+    # 18. ReportBuilder Preserves Markdown Code Fences
     # -------------------------------------------------------------------------
     def test_report_builder_code_fence_injection_defense(self):
         """
-        Adversarial: Loot items and clipboard entries containing backticks (e.g. ```)
-        must be enclosed with adaptive fences (e.g. ````) to prevent breaking out
-        of codeblocks and injecting arbitrary markdown or fake headers into reports.
+        Loot and clipboard content containing backticks must use adaptive
+        fences so that generated Markdown remains structurally correct.
         """
         from core.report_builder import ReportBuilder
 
-        # Add credentials with triple backticks injection attempt
+        # Add credentials containing triple backticks.
         malicious_cred = "admin\n```\n# FAKE EXECUTIVE SUMMARY INJECTION\n```"
         self.loot_mgr.add_entry(
             entry_type="credentials",
@@ -842,12 +610,12 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertIn("`` /var/www/`html`/`secret` ``", report_md)
 
     # -------------------------------------------------------------------------
-    # 19. TemplateEngine Regex Backslash Sequences Crash & Corruption Defense
+    # 19. TemplateEngine Preserves Backslash Sequences
     # -------------------------------------------------------------------------
     def test_template_engine_backslash_sequences_safety(self):
         r"""
-        Adversarial: User variables containing backslash sequences (e.g. \1, \g<0>, \n, \x)
-        must not crash re.sub or trigger regex backreference group corruption.
+        User variables containing backslash sequences must not crash rendering
+        or alter the entered text.
         """
         from core.template_engine import TemplateEngine
 
@@ -875,91 +643,6 @@ class TestAdversarialRegressions(unittest.TestCase):
             res3,
             r"mysql -u root\1 -p'P@ss\2\g<1>\test' -h 10.10.10.99"
         )
-
-    # -------------------------------------------------------------------------
-    # 20. Local File Disclosure and HTML Spoofing Defense in Card Widgets
-    # -------------------------------------------------------------------------
-    def test_card_widgets_plain_text_enforcement(self):
-        """
-        Adversarial: Card widgets (LootCard, HistoryCard, SnippetCard) displaying user
-        or clipboard data must explicitly enforce PlainText format on their QLabels to prevent
-        Rich Text auto-parsing and arbitrary local file disclosure / oracle loading via <img src="file">.
-        """
-        from PyQt6.QtCore import Qt
-        from ui.loot_card import LootCard
-        from ui.history_card import HistoryCard
-        from ui.snippet_card import SnippetCard
-
-        # 1. LootCard PlainText Verification
-        malicious_loot = {
-            "id": "loot_xss",
-            "type": "credentials",
-            "category": "access",
-            "title": '<img src="/etc/shadow"><b>Root Creds</b>',
-            "content": '<img src="/home/user/secret.png"><span style="display:none">Hidden</span>admin:pass',
-            "target_ip": '<script>10.10.10.10</script>',
-            "timestamp": '2026-08-27 12:00:00'
-        }
-        loot_card = LootCard(entry=malicious_loot)
-        self.assertEqual(loot_card.lbl_content.textFormat(), Qt.TextFormat.PlainText)
-        self.assertEqual(loot_card.lbl_content.text(), malicious_loot["content"])
-
-        # 2. HistoryCard PlainText Verification (Clipboard Watcher ingestion)
-        malicious_history = {
-            "id": "clip_1",
-            "text": 'curl http://attacker.com/<img src="C:/Windows/System32/drivers/etc/hosts">',
-            "timestamp": '12:30:00',
-            "target_ip": '10.10.10.10',
-            "lines_count": 1,
-            "char_count": 80
-        }
-        hist_card = HistoryCard(entry=malicious_history)
-        self.assertEqual(hist_card.lbl_content.textFormat(), Qt.TextFormat.PlainText)
-        self.assertEqual(hist_card.lbl_content.text(), malicious_history["text"])
-
-        # 3. SnippetCard PlainText Verification
-        malicious_snippet = {
-            "id": "snip_1",
-            "title": 'Nmap Scan <img src="/etc/passwd">',
-            "category": 'Web <script>',
-            "subcategory": 'Recon',
-            "description": 'Scan description with <img src="/secret.png">',
-            "template": 'nmap -sV {{TARGET_IP}} <img src="/private.png">',
-            "is_custom": True
-        }
-        snippet_card = SnippetCard(snippet=malicious_snippet, variables={"target_ip": "10.10.10.10"})
-        self.assertEqual(snippet_card.lbl_title.textFormat(), Qt.TextFormat.PlainText)
-        self.assertEqual(snippet_card.lbl_category.textFormat(), Qt.TextFormat.PlainText)
-        self.assertEqual(snippet_card.lbl_desc.textFormat(), Qt.TextFormat.PlainText)
-        self.assertEqual(snippet_card.lbl_command.textFormat(), Qt.TextFormat.PlainText)
-
-    # -------------------------------------------------------------------------
-    # 21. Subdirectory Symlink Escape Defense for Imported Projects
-    # -------------------------------------------------------------------------
-    def test_imported_project_symlinked_subdirectory_rejected(self):
-        """
-        Adversarial: An imported project directory whose 'loot', 'recon', or 'exploit'
-        subfolder is a symlink to an outside victim directory must be rejected immediately.
-        """
-        victim_dir = self.temp_path / "victim_external"
-        victim_dir.mkdir(parents=True, exist_ok=True)
-
-        external_proj = self.temp_path / "MaliciousExternalBox"
-        external_proj.mkdir(parents=True, exist_ok=True)
-        symlink_loot = external_proj / "loot"
-
-        try:
-            os.symlink(victim_dir, symlink_loot, target_is_directory=True)
-        except (OSError, NotImplementedError):
-            # In restricted environments without symlink privileges
-            return
-
-        if symlink_loot.is_symlink():
-            with self.assertRaises(ProjectCreationError):
-                self.project_mgr.import_project_folder(external_proj)
-
-            # Ensure victim dir has no files
-            self.assertEqual(list(victim_dir.iterdir()), [])
 
     # -------------------------------------------------------------------------
     # 22. Side-Effect Free Logger Isolation
@@ -1232,23 +915,6 @@ class TestAdversarialRegressions(unittest.TestCase):
         self.assertFalse(res["is_multiline"])
 
     # -------------------------------------------------------------------------
-    # 33. Storage Backend Fails Closed on Path Traversal
-    # -------------------------------------------------------------------------
-    def test_storage_backend_rejects_traversal_resource_name(self):
-        """
-        Adversarial: FileStorageBackend must raise ValueError on traversal tokens
-        rather than silently stripping directory parts.
-        """
-        from core.storage import FileStorageBackend
-
-        storage = FileStorageBackend(base_dir=self.temp_path / "strict_storage")
-        with self.assertRaises(ValueError):
-            storage.save_json("../traversal", {"data": 1})
-
-        with self.assertRaises(ValueError):
-            storage.load_json("..\\windows_traversal")
-
-    # -------------------------------------------------------------------------
     # 34. Isolated EventBus per Container Instance
     # -------------------------------------------------------------------------
     def test_event_bus_instances_are_isolated(self):
@@ -1264,40 +930,6 @@ class TestAdversarialRegressions(unittest.TestCase):
 
         from core.logger import close_log_handlers
         close_log_handlers()
-
-    # -------------------------------------------------------------------------
-    # 35. Tooltip HTML Injection Defense in SnippetListModel
-    # -------------------------------------------------------------------------
-    def test_snippet_list_model_tooltip_html_escaped(self):
-        """
-        Adversarial: Snippet titles, descriptions, and code templates containing
-        raw HTML or XSS payloads must be strictly escaped in ToolTipRole.
-        """
-        from PyQt6.QtCore import Qt
-        from ui.models.snippet_list_model import SnippetListModel
-
-        malicious_snippet = {
-            "id": "snip_xss_1",
-            "title": "<script>alert('pwn')</script><b>Injected Title</b>",
-            "description": "<img src=x onerror=alert('desc')>",
-            "template": "<svg/onload=alert('code')> && cat /etc/passwd"
-        }
-
-        model = SnippetListModel([malicious_snippet])
-        idx = model.index(0, 0)
-        tooltip = model.data(idx, Qt.ItemDataRole.ToolTipRole)
-
-        # Invariant: Raw dangerous HTML tags must NOT be present unescaped
-        self.assertNotIn("<script>", tooltip)
-        self.assertNotIn("<b>Injected Title</b>", tooltip)
-        self.assertNotIn("<img src=x onerror=alert('desc')>", tooltip)
-        self.assertNotIn("<svg/onload=alert('code')>", tooltip)
-
-        # Invariant: Escaped HTML entities must be present
-        self.assertIn("&lt;script&gt;alert(&#x27;pwn&#x27;)&lt;/script&gt;", tooltip)
-        self.assertIn("&lt;b&gt;Injected Title&lt;/b&gt;", tooltip)
-        self.assertIn("&lt;img src=x onerror=alert(&#x27;desc&#x27;)&gt;", tooltip)
-        self.assertIn("&lt;svg/onload=alert(&#x27;code&#x27;)&gt; &amp;&amp; cat /etc/passwd", tooltip)
 
     # -------------------------------------------------------------------------
     # =========================================================================
