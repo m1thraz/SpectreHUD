@@ -1,6 +1,10 @@
 # SpectreHUD Architecture & Technical Guide
 
-This document provides a comprehensive technical overview of SpectreHUD's software architecture, component relationships, design patterns, security guarantees, and technical debt tracking.
+**Last updated:** v2.0.0
+
+This document provides a technical overview of SpectreHUD's software
+architecture, component relationships, design patterns, and intentional
+product boundaries.
 
 ---
 
@@ -113,7 +117,7 @@ graph TD
 - **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Provides a Markdown source editor, split preview and live preview through one Change View menu. Its formatting toolbar writes Markdown for headings, emphasis, code, lists, links and tables; find/replace, debounced rendering and autosave support editing workflows.
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
-- **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives with path traversal and Zip-Slip prevention.
+- **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives while retaining their project-relative layout.
 - **`HtmlReportExporter` (`core/html_report_exporter.py`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts and selectable Dark or Light client/print styling. Generated HTML permits in-browser body editing and image resizing, and can save a cleaned edited copy without its editing controls.
 
 ### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
@@ -122,24 +126,31 @@ graph TD
 
 ---
 
-## 3. Security & Resilience Architecture
+## 3. Reliability & Local Data Handling
 
-1. **Path Traversal & Symlink Escape Protection**:
-   - `core/validators.py` sanitizes project names, output paths, and snippet titles, preventing directory traversal outside project sandboxes.
-   - `core/project/repository.py` validates workspace boundaries for both created and imported projects, actively rejecting pre-existing symlinked subdirectories (`recon/`, `exploit/`, `loot/`).
-   - `core/reporting/template_repository.py` validates template IDs and verifies safe sandbox paths with `Path.is_relative_to()`.
-2. **File Size Guards & Memory Bomb Prevention**:
-   - Maximum file size thresholds on all JSON imports, registries, templates, notes, and screenshots (`MAX_SNIPPETS_FILE_SIZE`, `MAX_REGISTRY_FILE_SIZE`, `MAX_TEMPLATE_FILE_SIZE`, `MAX_IMAGE_FILE_SIZE`).
-3. **Atomic File Persistence**:
+SpectreHUD is a single-user local desktop application, not a multi-tenant or
+network-facing service. Its primary quality goal is preserving the user's work
+through ordinary desktop failures—interrupted writes, corrupted local state,
+and failed project switches. The safeguards below document implementation
+behaviour; they are not presented as a defence against a realistic remote or
+same-user adversary. See the [desktop threat model](threat_model.md) for the
+test and scope rationale.
+
+1. **Name and workspace validation**:
+   - `core/validators.py` keeps project names, output paths, and template IDs valid for the local workspace.
+   - `core/project/repository.py` validates created and imported project locations before registering them.
+2. **Defensive local-file limits**:
+   - File-size thresholds on JSON state, templates, notes, and screenshots help avoid an accidental UI stall or unusable local state.
+3. **Atomic file persistence**:
    - `core/atomic_write.py` ensures power-loss and crash resilience by writing to unique temp files before atomically replacing target JSON/markdown files.
-4. **Single Source of Truth for Session Data**:
+4. **Single source of truth for session data**:
    - `project_state.json` inside each project folder is the sole source of truth for loot, variables, and clipboard history.
    - `LootManager` and `ClipboardWatcher` operate as session buffers in RAM, avoiding redundant and conflicting global storage files.
-5. **Code Fence & Table Injection Immunity**:
-   - Markdown exporter strictly sanitizes code-fence language specifiers and escapes table pipes to prevent format breakage or injection.
-6. **Structured & Rotating Logging (`core/logger.py`)**:
+5. **Stable report formatting**:
+   - The Markdown exporter adapts code fences and escapes table pipes so captured command output does not break a generated report.
+6. **Structured and rotating logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
-7. **Optional Pentest-Mode State Encryption**:
+7. **Optional Pentest-Mode state encryption**:
    - `ProjectRepository` encrypts only a Pentest-Mode project's `project_state.json` with authenticated Fernet encryption. `crypto_service.py` derives a key using PBKDF2-SHA256; `ProjectLockService` retains that key only for the unlocked process session.
    - `security_meta.json` contains the salt, safe KDF parameters and an encrypted verifier, never a password or usable project key. `report.md`, notes, screenshots and user-selected plaintext exports are intentionally outside this scope. See [Pentest Mode](pentest_mode.md).
 
@@ -166,3 +177,12 @@ graph TD
   - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.
   - Linux headless display setup using `xvfb-run`.
   - Automated `flake8` syntax validation, pytest execution and Linux coverage reporting.
+
+---
+
+## 6. Known Limitations & Intentional Boundaries
+
+- SpectreHUD supports one interactive application instance. Collaborative editing, cloud synchronisation, and concurrent project writers are not supported states.
+- The product is designed for normal workstation inputs selected by its user. It does not claim to defend against malware running as that user, intentionally hostile local files, or a compromised operating system.
+- Screenshot behaviour on Linux depends on the display server and compositor; Wayland can restrict direct capture.
+- Pentest Mode encrypts `project_state.json` only. Screenshots, reports, notes, and user-selected exports remain deliberately plaintext so they can be used in the surrounding workflow.
