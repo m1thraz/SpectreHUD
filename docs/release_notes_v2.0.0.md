@@ -2,40 +2,37 @@
 
 ## Highlights
 
-- **Projektorientierter Workflow:** getrennte Arbeitsbereiche, sicherer
-  Projektwechsel, Import bestehender Projekte und ZIP-Archivierung.
-- **Cheatsheet & Session-Daten:** durchsuchbare Befehle mit Variablen,
-  Session-Loot, opt-in Clipboard-Historie und Screenshot-Snipping.
-- **Report Editor V2:** Markdown-Toolbar, Suchen/Ersetzen, Editor-/Split-/Live-
-  Ansicht, Vorlagenverwaltung sowie Dark- und Light-HTML-Export.
-- **Exporte:** eigenständiges HTML, Obsidian-Notizen und portable
-  CherryTree-HTML-Pakete.
-- **Pentest-Modus:** optional verschlüsselte `project_state.json`-Ablage für
-  Projekte mit sensiblen Daten.
-- **Bedienung & Sicherheit:** einheitliche deutsche/englische Oberfläche,
-  Single-Instance-Schutz, atomare Speicherung und umfangreiche adversariale
-  Regressionstests.
+- **Project-oriented workflow:** isolated workspaces, safe project switching,
+  importing existing projects, and ZIP archiving.
+- **Cheatsheet and session data:** searchable commands with variables, session
+  loot, opt-in clipboard history, and screenshot snipping.
+- **Report Editor V2:** Markdown toolbar, find/replace, editor/split/live-preview
+  modes, template management, and Dark and Light HTML export.
+- **Exports:** standalone HTML, Obsidian notes, and portable CherryTree HTML
+  packages.
+- **Pentest Mode:** optional encrypted `project_state.json` storage for projects
+  containing sensitive data.
+- **Usability and security:** consistent German/English interface, single-instance
+  protection, atomic persistence, and extensive adversarial regression coverage.
 
-## Kompatibilität
+## Compatibility
 
-- Python 3.10 bis 3.13
-- Windows und Linux (CI-Matrix)
-- Windows-x64-EXE als zusätzliches Release-Artefakt
+- Python 3.10 through 3.13
+- Windows and Linux (CI matrix)
+- Windows x64 executable as an additional release artifact
 
-## Bekannte Einschränkungen
+## Known Limitations
 
-- Unter Wayland können Screenshots abhängig vom Compositor durch die
-  Betriebssystem-Sicherheitsregeln eingeschränkt sein. SpectreHUD meldet
-  fehlgeschlagene Bildschirmaufnahmen kontrolliert.
-- Die Clipboard-Aufzeichnung ist standardmäßig pausiert. Werden Passwörter
-  oder personenbezogene Daten kopiert, muss der Nutzer den Recorder bewusst
-  aktivieren und die lokale Speicherung verantwortungsvoll behandeln.
-- Der Pentest-Modus schützt die Projektstatusdatei. Andere bewusst abgelegte
-  Dateien im Projektordner (z. B. eigene Notizen oder Anhänge) werden dadurch
-  nicht automatisch verschlüsselt.
+- On Wayland, screenshot capture may be limited by compositor and operating-system
+  security rules. SpectreHUD reports failed screen captures in a controlled way.
+- Clipboard recording is paused by default. When passwords or personal data are
+  copied, users must enable the recorder deliberately and handle local storage
+  responsibly.
+- Pentest Mode protects the project-state file only. Other deliberately stored
+  project files, such as notes or attachments, are not encrypted automatically.
 
-## Upgrade-Hinweis
+## Upgrade Note
 
-Vor dem Upgrade laufende SpectreHUD-Instanzen schließen. Anschließend kann ein
-bestehender Projektordner über die Projektverwaltung importiert werden; vor
-umfangreichen Änderungen empfiehlt sich ein ZIP-Archiv des Projektordners.
+Close running SpectreHUD instances before upgrading. Existing project folders can
+then be imported through Project Management; creating a ZIP archive first is
+recommended before making extensive changes.

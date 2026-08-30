@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="690" viewBox="0 0 1200 690" role="img" aria-labelledby="title desc">
+  <title id="title">SpectreHUD production architecture</title>
+  <desc id="desc">Bootstrap initializes the Qt application and single-instance lock, then composes the UI, application controller, service container, domain services, event bus, storage, security, and filesystem.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#58a6ff"/></marker>
+    <style>
+      .box { fill:#161b22; stroke:#58a6ff; stroke-width:2; rx:12; }
+      .service { fill:#0d2635; stroke:#39d353; stroke-width:2; rx:12; }
+      .storage { fill:#2d1f12; stroke:#f2cc60; stroke-width:2; rx:12; }
+      .text { fill:#f0f6fc; font-family:Segoe UI,Arial,sans-serif; font-size:18px; font-weight:600; text-anchor:middle; }
+      .small { fill:#8b949e; font-family:Segoe UI,Arial,sans-serif; font-size:14px; text-anchor:middle; }
+      .arrow { stroke:#58a6ff; stroke-width:2.5; fill:none; marker-end:url(#arrow); }
+      .event { stroke:#a371f7; stroke-width:2.5; fill:none; stroke-dasharray:8 6; marker-end:url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1200" height="690" fill="#090d12" rx="18"/>
+  <text x="600" y="42" class="text" font-size="26">SpectreHUD Production Architecture</text>
+  <text x="600" y="68" class="small">Runtime composition and domain-event flow</text>
+  <rect x="435" y="95" width="330" height="72" class="box"/>
+  <text x="600" y="125" class="text">Bootstrap · main.py</text><text x="600" y="150" class="small">QApplication · QLockFile · HotkeyListener</text>
+  <rect x="75" y="235" width="260" height="88" class="box"/>
+  <text x="205" y="268" class="text">Qt UI</text><text x="205" y="293" class="small">MainWindow · Panels · Dialogs</text>
+  <rect x="470" y="235" width="260" height="88" class="box"/>
+  <text x="600" y="268" class="text">AppController</text><text x="600" y="293" class="small">Workflow orchestration</text>
+  <rect x="865" y="235" width="260" height="88" class="box"/>
+  <text x="995" y="268" class="text">ServiceContainer</text><text x="995" y="293" class="small">Production composition</text>
+  <rect x="60" y="410" width="350" height="100" class="service"/>
+  <text x="235" y="445" class="text">Domain Controllers</text><text x="235" y="471" class="small">Cheatsheet · Loot · History · Project · Report</text>
+  <rect x="485" y="410" width="270" height="100" class="service"/>
+  <text x="620" y="445" class="text">Domain Services</text><text x="620" y="471" class="small">Snippets · Loot · Projects · Clipboard · Screenshots</text>
+  <rect x="830" y="410" width="300" height="100" class="service"/>
+  <text x="980" y="445" class="text">EventBus</text><text x="980" y="471" class="small">Stable domain-event contracts</text>
+  <rect x="220" y="570" width="320" height="82" class="storage"/>
+  <text x="380" y="603" class="text">Storage &amp; Security</text><text x="380" y="628" class="small">Atomic writes · Pentest Mode</text>
+  <rect x="670" y="570" width="320" height="82" class="storage"/>
+  <text x="830" y="603" class="text">Filesystem</text><text x="830" y="628" class="small">Projects · reports · exports · registry</text>
+  <path d="M600 167 L600 225" class="arrow"/><path d="M540 167 L245 225" class="arrow"/><path d="M660 167 L955 225" class="arrow"/>
+  <path d="M335 279 L460 279" class="arrow"/><path d="M730 279 L855 279" class="arrow"/>
+  <path d="M545 323 L300 400" class="arrow"/><path d="M655 323 L690 400" class="arrow"/>
+  <path d="M410 460 L475 460" class="arrow"/><path d="M755 460 L820 460" class="event"/>
+  <path d="M550 510 L445 560" class="arrow"/><path d="M690 510 L765 560" class="arrow"/><path d="M540 611 L660 611" class="arrow"/>
+  <text x="825" y="390" class="small" fill="#a371f7">publish / subscribe</text>
+</svg>

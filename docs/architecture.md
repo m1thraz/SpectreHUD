@@ -8,6 +8,11 @@ This document provides a comprehensive technical overview of SpectreHUD's softwa
 
 SpectreHUD follows a **layered, decoupled architecture** built upon Qt 6 (PyQt6), Python 3.10+, dependency injection, reactive event dispatching, and storage abstractions.
 
+![SpectreHUD architecture diagram](assets/spectrehud_architecture.svg)
+
+The diagram reflects the production dependency flow. Solid arrows represent runtime
+composition or calls; the dashed EventBus link represents domain-event delivery.
+
 ```mermaid
 graph TD
     Bootstrap[main.py: QApplication + QLockFile] --> UI[UI Shell / Panels: MainWindow, Panels, Dialogs]
