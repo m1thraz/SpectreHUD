@@ -96,6 +96,10 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
+    try:
+        position = max(0, int(entry.get("position", 0)))
+    except (TypeError, ValueError):
+        position = 0
 
     return {
         "id": entry_id or _stable_hash_id("loot_gen", f"{title}:{content}"),
@@ -105,7 +109,8 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "title": title or "Unbenannter Eintrag",
         "content": content,
         "target_ip": target_ip,
-        "timestamp": timestamp
+        "timestamp": timestamp,
+        "position": position,
     }
 
 

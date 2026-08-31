@@ -135,6 +135,16 @@ class LootManager:
             if norm_type != entry_type:
                 entry["type"] = norm_type
                 migrated = True
+
+        for category_id in VALID_CATEGORY_IDS:
+            category_entries = sorted(
+                (entry for entry in target_entries if entry.get("category") == category_id),
+                key=lambda item: item.get("position", 0),
+            )
+            for position, entry in enumerate(category_entries):
+                if entry.get("position") != position:
+                    entry["position"] = position
+                    migrated = True
         return migrated
 
     def load_entries(self) -> None:
@@ -142,13 +152,24 @@ class LootManager:
         from core.validators import validate_loot_list
         raw_data = self.storage.load_json("loot")
         if raw_data is not None:
+            position_migration_needed = any(
+                isinstance(item, dict)
+                and (
+                    "position" not in item
+                    or isinstance(item.get("position"), bool)
+                    or not isinstance(item.get("position"), int)
+                    or item.get("position", 0) < 0
+                )
+                for item in raw_data
+            ) if isinstance(raw_data, list) else False
             self.entries = validate_loot_list(raw_data)
         else:
             self.entries = []
+            position_migration_needed = False
 
         # Automatic migration of legacy entries lacking category or with invalid category
-        if self._migrate_entries():
-            logger.info("Migrated legacy loot entries to include category/severity and persisted.")
+        if self._migrate_entries() or position_migration_needed:
+            logger.info("Migrated legacy loot entries to include category/severity/position and persisted.")
             self.save_entries()
 
     def replace_entries(self, entries: List[Dict[str, Any]]) -> None:
@@ -225,9 +246,11 @@ class LootManager:
             "title": clean_title or "Unbenannter Eintrag",
             "content": clean_content,
             "target_ip": clean_target_ip,
-            "timestamp": format_timestamp(time_format=time_format)
+            "timestamp": format_timestamp(time_format=time_format),
+            "position": 0,
         }
         new_entries = [entry, *self.entries]
+        self._migrate_entries(new_entries)
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist new loot entry to storage.")
         self.entries = new_entries
@@ -241,9 +264,16 @@ class LootManager:
         updated_entry = None
         for entry in new_entries:
             if entry.get("id") == entry_id:
+                previous_category = entry.get("category", "misc")
                 if "category" in fields:
                     cat = fields["category"]
                     entry["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
+                    if entry["category"] != previous_category:
+                        entry["position"] = sum(
+                            1
+                            for candidate in new_entries
+                            if candidate is not entry and candidate.get("category") == entry["category"]
+                        )
                 if "severity" in fields:
                     raw_sev = str(fields["severity"]).lower().strip() if fields["severity"] else "info"
                     entry["severity"] = raw_sev if raw_sev in VALID_SEVERITIES else "info"
@@ -266,11 +296,52 @@ class LootManager:
                 break
         
         if updated_entry is not None:
+            self._migrate_entries(new_entries)
             if not self.storage.save_json("loot", new_entries):
                 raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
             self.entries = new_entries
             self._publish_updated("update", updated_entry)
         return updated_entry
+
+    def reorder_entry(self, entry_id: str, category: str, target_index: int) -> Optional[Dict[str, Any]]:
+        """Moves an entry to a category/index and persists both affected column orders."""
+        if category not in VALID_CATEGORY_IDS:
+            return None
+
+        new_entries = [dict(entry) for entry in self.entries]
+        moving_entry = next((entry for entry in new_entries if entry.get("id") == entry_id), None)
+        if moving_entry is None:
+            return None
+
+        previous_category = moving_entry.get("category", "misc")
+        moving_entry["category"] = category
+
+        target_entries = sorted(
+            (
+                entry
+                for entry in new_entries
+                if entry is not moving_entry and entry.get("category") == category
+            ),
+            key=lambda item: item.get("position", 0),
+        )
+        insertion_index = max(0, min(int(target_index), len(target_entries)))
+        target_entries.insert(insertion_index, moving_entry)
+        for position, entry in enumerate(target_entries):
+            entry["position"] = position
+
+        if previous_category != category:
+            previous_entries = sorted(
+                (entry for entry in new_entries if entry.get("category") == previous_category),
+                key=lambda item: item.get("position", 0),
+            )
+            for position, entry in enumerate(previous_entries):
+                entry["position"] = position
+
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError(f"Could not persist reorder for loot entry {entry_id}.")
+        self.entries = new_entries
+        self._publish_updated("update", moving_entry)
+        return moving_entry
 
     def delete_entry(self, entry_id: str) -> bool:
         """Deletes an entry by ID."""
@@ -278,6 +349,7 @@ class LootManager:
         new_entries = [e for e in self.entries if e.get("id") != entry_id]
         if len(new_entries) == len(self.entries):
             return False
+        self._migrate_entries(new_entries)
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError(f"Could not persist deletion for loot entry {entry_id}.")
         self.entries = new_entries

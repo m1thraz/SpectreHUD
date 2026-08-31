@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy
+    QPushButton, QWidget, QApplication, QSizePolicy, QGraphicsOpacityEffect
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag
@@ -187,7 +187,15 @@ class LootCard(QFrame):
                 mime_data.setData("application/x-spectrehud-loot-entry", entry_id.encode("utf-8"))
                 drag = QDrag(self)
                 drag.setMimeData(mime_data)
-                drag.exec(Qt.DropAction.MoveAction)
+                drag.setPixmap(self.grab())
+                drag.setHotSpot(self._drag_start_position)
+                opacity_effect = QGraphicsOpacityEffect(self)
+                opacity_effect.setOpacity(0.45)
+                self.setGraphicsEffect(opacity_effect)
+                try:
+                    drag.exec(Qt.DropAction.MoveAction)
+                finally:
+                    self.setGraphicsEffect(None)
             self._drag_start_position = None
             event.accept()
             return

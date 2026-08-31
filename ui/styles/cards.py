@@ -53,6 +53,11 @@ QFrame[class="LootBoardColumn"] {
     border-radius: 8px;
 }
 
+QFrame[class="LootBoardColumn"][dragActive="true"] {
+    background-color: {CARD_HOVER_A90};
+    border: 2px solid {CYBER_CYAN};
+}
+
 QLabel[class="LootBoardColumnTitle"] {
     color: {CYBER_CYAN};
     font-size: 11px;

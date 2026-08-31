@@ -129,13 +129,17 @@ class LootController(QObject):
             return False
 
     def move_entry_to_category(
-        self, entry_id: str, category: str, parent_widget: Optional[QWidget] = None
+        self,
+        entry_id: str,
+        category: str,
+        target_index: int = 0,
+        parent_widget: Optional[QWidget] = None,
     ) -> bool:
-        """Moves one entry between Kanban columns and persists its category."""
+        """Moves one entry to a Kanban column/index and persists the new order."""
         if category not in {item["id"] for item in CATEGORIES}:
             return False
         try:
-            updated = self.loot_manager.update_entry(entry_id, category=category)
+            updated = self.loot_manager.reorder_entry(entry_id, category, target_index)
             if updated is None:
                 return False
             self.loot_updated.emit()
@@ -387,7 +391,7 @@ class LootController(QObject):
         on_delete_loot: Callable[[str], None],
         on_edit_loot: Callable[[Dict[str, Any]], None],
         on_export_loot: Callable[[str], None],
-        on_move_loot: Callable[[str, str], bool],
+        on_move_loot: Callable[[str, str, int], bool],
         parent_widget: QWidget,
         on_export_obsidian: Optional[Callable[[str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,

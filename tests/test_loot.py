@@ -236,6 +236,57 @@ class TestLootManager(unittest.TestCase):
         self.loot_mgr.clear_session()
         self.assertEqual(len(self.loot_mgr.entries), 0)
 
+    def test_reorder_within_category_persists_after_reload(self):
+        fourth = self.loot_mgr.add_entry("note", "Fourth", "4", category="recon")
+        third = self.loot_mgr.add_entry("note", "Third", "3", category="recon")
+        second = self.loot_mgr.add_entry("note", "Second", "2", category="recon")
+        first = self.loot_mgr.add_entry("note", "First", "1", category="recon")
+
+        self.loot_mgr.reorder_entry(fourth["id"], "recon", 1)
+
+        reloaded = LootManager(storage_file=self.storage_file)
+        ordered = sorted(
+            reloaded.get_entries(category="recon"),
+            key=lambda entry: entry["position"],
+        )
+        self.assertEqual(
+            [entry["id"] for entry in ordered],
+            [first["id"], fourth["id"], second["id"], third["id"]],
+        )
+        self.assertEqual([entry["position"] for entry in ordered], [0, 1, 2, 3])
+
+    def test_failed_reorder_preserves_previous_memory_order(self):
+        second = self.loot_mgr.add_entry("note", "Second", "2", category="recon")
+        first = self.loot_mgr.add_entry("note", "First", "1", category="recon")
+        original = self.loot_mgr.get_all_entries()
+
+        with patch.object(self.loot_mgr.storage, "save_json", return_value=False):
+            with self.assertRaises(PersistenceError):
+                self.loot_mgr.reorder_entry(second["id"], "recon", 0)
+
+        self.assertEqual(self.loot_mgr.get_all_entries(), original)
+        self.assertEqual(
+            [entry["id"] for entry in sorted(original, key=lambda entry: entry["position"])],
+            [first["id"], second["id"]],
+        )
+
+    def test_legacy_entries_receive_stable_positions_on_load(self):
+        legacy_entries = [
+            {"id": "first", "type": "note", "category": "recon", "title": "First", "content": "1"},
+            {"id": "second", "type": "note", "category": "recon", "title": "Second", "content": "2"},
+            {"id": "other", "type": "note", "category": "access", "title": "Other", "content": "3"},
+        ]
+        self.storage_file.write_text(json.dumps(legacy_entries), encoding="utf-8")
+
+        migrated = LootManager(storage_file=self.storage_file)
+
+        self.assertEqual(
+            [(entry["id"], entry["position"]) for entry in migrated.get_all_entries()],
+            [("first", 0), ("second", 1), ("other", 0)],
+        )
+        persisted = json.loads(self.storage_file.read_text(encoding="utf-8"))
+        self.assertTrue(all("position" in entry for entry in persisted))
+
     def test_export_loot_delegation(self):
         """Deprecated export_loot delegates to ReportBuilder."""
         self.loot_mgr.add_entry("credentials", "Web Admin", "admin:Secret!", "10.10.10.30", category="access")

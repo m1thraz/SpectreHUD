@@ -314,8 +314,10 @@ class AppController(QObject):
     def _on_export_loot_entry(self, entry_id: str) -> None:
         self.loot_ctrl.export_entry_to_file_with_feedback(entry_id, self.window)
 
-    def _on_move_loot_category(self, entry_id: str, category: str) -> bool:
-        return self.loot_ctrl.move_entry_to_category(entry_id, category, self.window)
+    def _on_move_loot_category(self, entry_id: str, category: str, target_index: int) -> bool:
+        return self.loot_ctrl.move_entry_to_category(
+            entry_id, category, target_index, self.window
+        )
 
     def _on_snippet_deleted(self, snippet_id: str) -> None:
         self.cheatsheet_ctrl.delete_snippet(snippet_id)

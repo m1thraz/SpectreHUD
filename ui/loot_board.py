@@ -19,7 +19,7 @@ class LootBoardDropArea(QFrame):
     def __init__(
         self,
         category: Dict[str, Any],
-        on_entry_dropped: Callable[[str, str], bool],
+        on_entry_dropped: Callable[[str, str, int], bool],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -58,36 +58,79 @@ class LootBoardDropArea(QFrame):
         self.entry_ids.append(str(card.entry.get("id", "")))
         self.cards_layout.addWidget(card)
 
+    def _set_drag_active(self, active: bool) -> None:
+        if self.property("dragActive") == active:
+            return
+        self.setProperty("dragActive", active)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
+
+    def _target_index_for_y(self, position_y: int, entry_id: str = "") -> int:
+        target_index = self.cards_layout.count()
+        for index in range(self.cards_layout.count()):
+            card = self.cards_layout.itemAt(index).widget()
+            if card is not None and position_y < card.geometry().center().y():
+                target_index = index
+                break
+
+        if entry_id in self.entry_ids:
+            source_index = self.entry_ids.index(entry_id)
+            if source_index < target_index:
+                target_index -= 1
+        return max(0, target_index)
+
+    def _handle_drop(self, event, position_y: int) -> None:
+        try:
+            mime_data: QMimeData = event.mimeData()
+            if not mime_data.hasFormat(LOOT_ENTRY_MIME_TYPE):
+                event.ignore()
+                return
+            try:
+                entry_id = bytes(mime_data.data(LOOT_ENTRY_MIME_TYPE)).decode("utf-8", errors="strict")
+            except UnicodeDecodeError:
+                event.ignore()
+                return
+            target_index = self._target_index_for_y(position_y, entry_id)
+            if entry_id and self.on_entry_dropped(entry_id, self.category["id"], target_index):
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        finally:
+            self._set_drag_active(False)
+
     def dragEnterEvent(self, event) -> None:
         if event.mimeData().hasFormat(LOOT_ENTRY_MIME_TYPE):
+            self._set_drag_active(True)
             event.acceptProposedAction()
         else:
+            self._set_drag_active(False)
             event.ignore()
 
     def dragMoveEvent(self, event) -> None:
         self.dragEnterEvent(event)
 
+    def dragLeaveEvent(self, event) -> None:
+        self._set_drag_active(False)
+        event.accept()
+
     def dropEvent(self, event) -> None:
-        mime_data: QMimeData = event.mimeData()
-        if not mime_data.hasFormat(LOOT_ENTRY_MIME_TYPE):
-            event.ignore()
-            return
-        entry_id = bytes(mime_data.data(LOOT_ENTRY_MIME_TYPE)).decode("utf-8", errors="strict")
-        if entry_id and self.on_entry_dropped(entry_id, self.category["id"]):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+        cards_position = self.cards_container.mapFrom(self, event.position().toPoint())
+        self._handle_drop(event, cards_position.y())
 
     def eventFilter(self, watched, event) -> bool:
         if watched is self.cards_container and event.type() in (
             QEvent.Type.DragEnter,
             QEvent.Type.DragMove,
+            QEvent.Type.DragLeave,
             QEvent.Type.Drop,
         ):
             # The visible empty area belongs to the cards container, so forward
             # drops to the column's canonical handler.
             if event.type() == QEvent.Type.Drop:
-                self.dropEvent(event)
+                self._handle_drop(event, event.position().toPoint().y())
+            elif event.type() == QEvent.Type.DragLeave:
+                self.dragLeaveEvent(event)
             else:
                 self.dragEnterEvent(event)
             return event.isAccepted()
@@ -104,7 +147,7 @@ class LootBoard(QScrollArea):
         on_delete: Callable[[str], None],
         on_edit: Callable[[Dict[str, Any]], None],
         on_export: Callable[[str], None],
-        on_move: Callable[[str, str], bool],
+        on_move: Callable[[str, str, int], bool],
         on_export_obsidian: Optional[Callable[[str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
         parent: Optional[QWidget] = None,
@@ -124,7 +167,10 @@ class LootBoard(QScrollArea):
         layout.setSpacing(10)
 
         entries_by_category = {
-            category["id"]: [entry for entry in entries if entry.get("category") == category["id"]]
+            category["id"]: sorted(
+                (entry for entry in entries if entry.get("category") == category["id"]),
+                key=lambda entry: entry.get("position", 0),
+            )
             for category in CATEGORIES
         }
         for category in CATEGORIES:

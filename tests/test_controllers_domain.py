@@ -187,9 +187,9 @@ class TestControllersDomain(unittest.TestCase):
     def test_loot_controller_moves_entry_between_categories(self):
         entry = self.loot_ctrl.add_entry("note", "Move me", "content", category="recon")
 
-        self.assertTrue(self.loot_ctrl.move_entry_to_category(entry["id"], "postex"))
+        self.assertTrue(self.loot_ctrl.move_entry_to_category(entry["id"], "postex", 0))
         self.assertEqual(self.loot_ctrl.get_entries()[0]["category"], "postex")
-        self.assertFalse(self.loot_ctrl.move_entry_to_category(entry["id"], "not-a-category"))
+        self.assertFalse(self.loot_ctrl.move_entry_to_category(entry["id"], "not-a-category", 0))
 
     def test_loot_entry_file_export_surfaces_atomic_write_failure(self):
         from core.storage import PersistenceError
