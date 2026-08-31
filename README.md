@@ -52,6 +52,15 @@ For the implementation details, see:
 - [Desktop threat model and test scope](docs/threat_model.md)
 - [v2.0.0 release notes](docs/release_notes_v2.0.0.md)
 - [Pentest Mode](docs/pentest_mode.md)
+- [Contributor development guide](docs/development.md)
+- [Changelog](CHANGELOG.md)
+
+## Contributing and security
+
+Focused contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
+opening a pull request. Report suspected vulnerabilities privately according to
+[SECURITY.md](SECURITY.md), and never place credentials or engagement data in a
+public issue.
 
 ## Installation
 

@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible SpectreHUD defect
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Do not disclose vulnerabilities or sensitive target data here; use SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: SpectreHUD version
+      placeholder: "v2.0.0 or commit SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows executable
+        - Windows from source
+        - Linux X11
+        - Linux Wayland
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove credentials, tokens, target data, and personal paths before pasting logs.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: This report contains no credentials or sensitive engagement data.
+          required: true
+        - label: This is not a private security disclosure.
+          required: true
