@@ -1,6 +1,6 @@
 # SpectreHUD Architecture & Technical Guide
 
-**Last updated:** v2.0.1
+**Last updated:** v2.0.2
 
 This document provides a technical overview of SpectreHUD's software
 architecture, component relationships, design patterns, and intentional
@@ -48,7 +48,8 @@ graph TD
   same Loot domain entries. Its drop areas support moves between phases and
   reordering within a phase, provide drag feedback, and commit positions through
   the existing Loot persistence workflow rather than maintaining separate board
-  state.
+  state. Cards use font-metric-based, five-line previews without nested scroll
+  areas; the full entry remains owned by the existing detail and copy workflows.
 
 ### 2.2 Domain & Workflow Controllers (`ui/controllers/`)
 - **`AppController` (`ui/app_controller.py`)**: The central coordinator connecting UI signals, mode switching, and domain controllers.
@@ -112,7 +113,11 @@ graph TD
   selection separately from general behaviour settings. A changed theme emits a
   restart request only after settings persistence; the application then follows
   its normal project-save and shutdown path, releases the single-instance lock,
-  and starts the replacement process.
+  and starts the replacement process. Application and code font changes rebuild
+  the running application stylesheet immediately, while report typography stays
+  scoped to report preview and export. Installed families are detected through
+  Qt; unavailable curated choices remain visible but disabled. Loot list/Kanban
+  selection is intentionally controlled and persisted from the Loot view itself.
 - QSS generation remains split into cohesive modules:
   - `palette.py`: Color constants and semantic palette definitions.
   - `typography.py`: Font families, font weights, and size hierarchies.

@@ -8,7 +8,7 @@ def test_project_metadata_uses_pep_621_compatible_license_table():
     pyproject = Path(__file__).parent.parent / "pyproject.toml"
     content = pyproject.read_text(encoding="utf-8")
 
-    assert 'version = "2.0.1"' in content
+    assert 'version = "2.0.2"' in content
     assert 'spectrehud = "spectrehud_launcher:main"' in content
     assert 'license = { text = "MIT" }' in content
     assert 'requires = ["setuptools>=61.0", "wheel"]' in content

@@ -69,7 +69,7 @@ class TestPackagingIntegration(unittest.TestCase):
 
         res_ver = subprocess.run([sys.executable, str(self.repo_root / "main.py"), "--version"], capture_output=True, text=True)
         self.assertEqual(res_ver.returncode, 0)
-        self.assertIn("SpectreHUD 2.0.1", res_ver.stdout)
+        self.assertIn("SpectreHUD 2.0.2", res_ver.stdout)
 
 
 if __name__ == "__main__":
