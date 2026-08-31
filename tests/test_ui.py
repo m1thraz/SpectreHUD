@@ -335,6 +335,26 @@ class TestUI(unittest.TestCase):
         self.assertFalse(any(isinstance(card, LootBoard) for card in window.cards))
         window.close()
 
+    def test_loot_export_tooltip_uses_active_english_locale(self):
+        window = MainWindow(
+            config_manager=ConfigManager(config_dir=self.config_dir),
+            snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=ProjectManager(base_dir=self.projects_dir),
+        )
+        window.app.switch_mode("loot")
+
+        button = window.search_panel.pills_frame.findChild(
+            QPushButton, "LootExportButton"
+        )
+        self.assertIsNotNone(button)
+        self.assertEqual(
+            button.toolTip(),
+            "Creates a new copy based on current session loot",
+        )
+        window.close()
+
     def test_theme_change_requests_restart_only_after_settings_dialog_closes(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
         window = MainWindow(

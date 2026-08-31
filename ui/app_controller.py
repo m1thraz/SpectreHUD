@@ -42,7 +42,6 @@ from ui.coordinators import (
     NavigationCoordinator,
     ClipboardCoordinator,
     ExportCoordinator,
-    EXPORT_COPY_TOOLTIP
 )
 
 logger = get_logger(__name__)
@@ -217,19 +216,27 @@ class AppController(QObject):
             self.cheatsheet_ctrl.build_filter_pills(pills_layout, self._select_category)
         elif self.active_mode == "loot":
             loot_view_mode = self.config.get("loot_view_mode", "list")
+            export_tooltip = t(
+                "report.export_copy_tip",
+                "Creates a new copy based on current session loot",
+            )
             self.loot_ctrl.build_filter_pills(
                 pills_layout, self._select_loot_type,
                 lambda: self.export_coord.export_loot(self.window),
-                self._clear_loot, EXPORT_COPY_TOOLTIP,
+                self._clear_loot, export_tooltip,
                 lambda: self.export_coord.export_loot_to_obsidian(self.window),
                 self._toggle_loot_view,
                 loot_view_mode,
             )
         elif self.active_mode == "history":
+            export_tooltip = t(
+                "report.export_copy_tip",
+                "Creates a new copy based on current session loot",
+            )
             self.history_ctrl.build_filter_pills(
                 pills_layout, self._select_history_filter,
                 lambda: self.export_coord.export_report(self.window),
-                lambda: self.clipboard_coord.clear_history(self.window), EXPORT_COPY_TOOLTIP
+                lambda: self.clipboard_coord.clear_history(self.window), export_tooltip
             )
 
     def refresh_content(self) -> None:
@@ -499,8 +506,6 @@ class AppController(QObject):
             self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
-        if "loot_view_mode" in new_settings and self.active_mode == "loot":
-            self.refresh_content()
         if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
             self._update_footer_status()
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, {

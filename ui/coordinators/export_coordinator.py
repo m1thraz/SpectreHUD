@@ -19,12 +19,6 @@ from ui.controllers.history_controller import HistoryController
 
 logger = get_logger(__name__)
 
-EXPORT_COPY_TOOLTIP = (
-    "Erstellt eine neue Kopie basierend auf dem aktuellen Loot. "
-    "Für die bearbeitbare Version siehe Report-Tab."
-)
-
-
 class ExportCoordinator(QObject):
     """Coordinates reporting and loot export actions across the application."""
 

@@ -59,23 +59,22 @@ class TestSettingsDialog(unittest.TestCase):
 
     def test_appearance_page_get_settings(self):
         page = AppearanceSettingsPage(self.config_manager)
-        page.chk_loot_board.setChecked(True)
         page.combo_ui_font.setCurrentIndex(1)
         page.combo_code_font.setCurrentIndex(3)
         page.combo_report_font.setCurrentIndex(3)
 
         settings = page.get_settings()
-        self.assertEqual(settings["loot_view_mode"], "board")
+        self.assertNotIn("loot_view_mode", settings)
         self.assertEqual(settings["ui_font"], "inter")
         self.assertEqual(settings["code_font"], "jetbrains_mono")
         self.assertEqual(settings["report_font"], "georgia")
         self.assertEqual(settings["theme"], "cyber_dark")
 
-    def test_appearance_page_defaults_to_classic_loot_view(self):
+    def test_appearance_page_has_no_redundant_loot_view_switch(self):
         page = AppearanceSettingsPage(self.config_manager)
 
-        self.assertFalse(page.chk_loot_board.isChecked())
-        self.assertEqual(page.get_settings()["loot_view_mode"], "list")
+        self.assertFalse(hasattr(page, "chk_loot_board"))
+        self.assertNotIn("loot_view_mode", page.get_settings())
 
     def test_unavailable_fonts_are_marked_and_disabled(self):
         with patch(

@@ -332,6 +332,7 @@ class LootController(QObject):
             pills_layout.addWidget(btn_view)
 
         btn_export = QPushButton("Export (.md)")
+        btn_export.setObjectName("LootExportButton")
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)
         btn_export.clicked.connect(on_export)

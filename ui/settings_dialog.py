@@ -351,26 +351,6 @@ class AppearanceSettingsPage(QWidget):
             typography_layout.addLayout(row)
         layout.addWidget(card_typography)
 
-        lbl_loot_display = QLabel(t("settings.lbl_loot_display_section", "Loot Presentation"))
-        lbl_loot_display.setProperty("class", "SettingsSectionTitle")
-        layout.addWidget(lbl_loot_display)
-
-        card_loot_display = QFrame()
-        card_loot_display.setProperty("class", "SettingsCard")
-        loot_display_layout = QVBoxLayout(card_loot_display)
-        self.chk_loot_board = QCheckBox(
-            t("settings.chk_loot_board", "Show Loot as Kanban board")
-        )
-        self.chk_loot_board.setToolTip(
-            t(
-                "settings.chk_loot_board_tip",
-                "Organize loot by pentest phase and move entries between columns.",
-            )
-        )
-        self.chk_loot_board.setChecked(self.config.get("loot_view_mode", "list") == "board")
-        loot_display_layout.addWidget(self.chk_loot_board)
-        layout.addWidget(card_loot_display)
-
         layout.addStretch()
         scroll.setWidget(content)
         _configure_transparent_scroll_surfaces(scroll)
@@ -430,7 +410,6 @@ class AppearanceSettingsPage(QWidget):
             "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
             "code_font": self.combo_code_font.currentData() or "consolas",
             "report_font": self.combo_report_font.currentData() or "segoe_ui",
-            "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
         }
 
 
