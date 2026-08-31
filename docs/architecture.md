@@ -191,3 +191,14 @@ for the two trust boundaries and their test rationale.
 - Screenshot behaviour on Linux depends on the display server and compositor; Wayland can restrict direct capture.
 - Pentest Mode encrypts `project_state.json` only. Screenshots, reports, notes, and user-selected exports remain deliberately plaintext so they can be used in the surrounding workflow.
 - `core.html_report_exporter`, `get_event_bus()` and the remaining legacy method aliases are retained only as public compatibility surfaces. Internal project-management imports use the canonical `core.project` package; the unused `core.project_manager` facade has been removed.
+
+---
+
+## 7. Optional Follow-up Work
+
+### Kanban drop-position indicator
+
+- **Status:** Optional UX polish; evaluate after manually testing the current drag highlighting, card ghost, and persistent reordering.
+- Add a narrow placeholder line to the Loot Board that moves between cards during `dragMoveEvent` and shows the exact target position before a drop.
+- Reuse the existing target-index calculation in `LootBoardDropArea`; this follow-up must not introduce another ordering implementation or change the persisted loot schema.
+- **Acceptance:** The indicator follows the pointer without layout flicker, disappears after drop, cancellation, or leaving the column, and all Loot Board tests remain green.
