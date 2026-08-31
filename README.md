@@ -13,10 +13,9 @@ other authorized security labs. It keeps the active engagement context—target
 variables, reusable commands, clipboard findings, screenshots, loot, and a
 Markdown report—in one focused project.
 
-> **Portfolio context:** Built end-to-end in six days through AI-agent
-> orchestration. The project demonstrates practical pentest-workflow
-> understanding, product scoping, technical direction, and iterative
-> verification—not a claim to be a multi-user security platform.
+> **Portfolio context:** Brought from initial concept to first public release in six days using iterative AI-assisted development, testing, and adversarial review. Development continues with a focus on maintenance, usability refinements, and real-world workflow feedback.
+
+
 
 ![SpectreHUD main view](assets/spectrehud_main.png)
 
