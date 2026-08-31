@@ -18,7 +18,7 @@ release are intentionally left to the repository owner.
 - [x] Full pytest suite passes: 370 passed, 1 skipped.
 - [x] Wheel builds and passes `scripts/verify_wheel.py` (138 files verified).
 - [x] Source and installed-wheel CLI smoke tests report `SpectreHUD 2.0.2`.
-- [ ] Manual Windows smoke test confirms startup, font changes, theme restart,
+- [x] Manual Windows smoke test confirms startup, font changes, theme restart,
   Loot list/Kanban switching, and clean shutdown.
 
 ## Repository-owner release steps
