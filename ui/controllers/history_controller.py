@@ -204,7 +204,8 @@ class HistoryController(QObject):
         on_add_to_loot: Callable[[Dict[str, Any]], None],
         on_delete_entry: Callable[[str], None],
         parent_widget: QWidget,
-        show_empty_state_fn: Callable[[str], None]
+        show_empty_state_fn: Callable[[str], None],
+        on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         history_items = self.get_history(
             target_ip=target_ip,
@@ -225,6 +226,8 @@ class HistoryController(QObject):
             card = HistoryCard(item, parent=parent_widget)
             card.transfer_to_loot.connect(on_add_to_loot)
             card.entry_deleted.connect(on_delete_entry)
+            if on_copied is not None:
+                card.copied.connect(on_copied)
             content_layout.addWidget(card)
             rendered_cards.append(card)
 

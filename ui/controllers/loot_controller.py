@@ -337,6 +337,7 @@ class LootController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None],
         on_export_obsidian: Optional[Callable[[str], None]] = None,
+        on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         loot_entries = self.get_entries(
             target_ip=None,
@@ -371,6 +372,8 @@ class LootController(QObject):
                 card.export_requested.connect(on_export_loot)
                 if on_export_obsidian is not None:
                     card.obsidian_export_requested.connect(on_export_obsidian)
+                if on_copied is not None:
+                    card.copied.connect(on_copied)
                 content_layout.addWidget(card)
                 rendered_cards.append(card)
 
@@ -387,6 +390,7 @@ class LootController(QObject):
         on_move_loot: Callable[[str, str], bool],
         parent_widget: QWidget,
         on_export_obsidian: Optional[Callable[[str], None]] = None,
+        on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         """Renders the alternate Kanban presentation using the same LootCards."""
         loot_entries = self.get_entries(
@@ -402,6 +406,7 @@ class LootController(QObject):
             on_export=on_export_loot,
             on_move=on_move_loot,
             on_export_obsidian=on_export_obsidian,
+            on_copied=on_copied,
             parent=parent_widget,
         )
         content_layout.addWidget(board)

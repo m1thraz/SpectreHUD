@@ -135,6 +135,34 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    def test_copy_minimizes_overlay_only_when_option_is_enabled(self):
+        from ui.snippet_card import SnippetCard
+
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
+        project_manager = ProjectManager(base_dir=self.projects_dir)
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=project_manager,
+        )
+        window.show()
+        self.app.processEvents()
+        card = next(card for card in window.cards if isinstance(card, SnippetCard))
+
+        card.copied.emit("first command")
+        self.app.processEvents()
+        self.assertFalse(window.isMinimized())
+
+        config_manager.set("auto_hide_on_copy", True)
+        card.copied.emit("second command")
+        self.app.processEvents()
+        self.assertTrue(window.isMinimized())
+
+        window.close()
+
     def test_report_editor_is_created_only_when_report_mode_opens(self):
         """Startup must not construct the expensive report editor in Cheatsheet mode."""
         window = MainWindow(

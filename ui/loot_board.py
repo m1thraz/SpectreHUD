@@ -106,6 +106,7 @@ class LootBoard(QScrollArea):
         on_export: Callable[[str], None],
         on_move: Callable[[str, str], bool],
         on_export_obsidian: Optional[Callable[[str], None]] = None,
+        on_copied: Optional[Callable[[str], None]] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -136,6 +137,8 @@ class LootBoard(QScrollArea):
                 card.export_requested.connect(on_export)
                 if on_export_obsidian is not None:
                     card.obsidian_export_requested.connect(on_export_obsidian)
+                if on_copied is not None:
+                    card.copied.connect(on_copied)
                 column.add_card(card)
             self.columns[category["id"]] = column
             layout.addWidget(column)

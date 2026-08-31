@@ -242,7 +242,8 @@ class AppController(QObject):
 
         if self.active_mode == "cheatsheet":
             self.cards = self.cheatsheet_ctrl.render_content(
-                content_layout, query, variables, self._on_snippet_deleted, self.window, self.content.show_empty_state
+                content_layout, query, variables, self._on_snippet_deleted, self.window,
+                self.content.show_empty_state, self._on_content_copied,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         elif self.active_mode == "loot":
@@ -251,24 +252,32 @@ class AppController(QObject):
                 self.cards = self.loot_ctrl.render_board_content(
                     content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                     self._on_export_loot_entry, self._on_move_loot_category, self.window,
-                    lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    on_export_obsidian=lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    on_copied=self._on_content_copied,
                 )
             else:
                 self.cards = self.loot_ctrl.render_content(
                     content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
                     self._on_export_loot_entry,
                     self.window, self.content.show_empty_state,
-                    lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    on_export_obsidian=lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    on_copied=self._on_content_copied,
                 )
             self.footer.set_count(_format_count(len(self.cards)))
         else:
             self.cards = self.history_ctrl.render_content(
                 content_layout, query, variables.get("target_ip"),
                 lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
-                self.clipboard_coord.delete_history_entry, self.window, self.content.show_empty_state
+                self.clipboard_coord.delete_history_entry, self.window,
+                self.content.show_empty_state, self._on_content_copied,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         self.content_refreshed.emit()
+
+    def _on_content_copied(self, _text: str) -> None:
+        """Minimize the overlay after an intentional card copy when configured."""
+        if self.config.get("auto_hide_on_copy", False):
+            self.window.showMinimized()
 
     def _select_category(self, cat_id: str) -> None:
         self.cheatsheet_ctrl.select_category(cat_id)

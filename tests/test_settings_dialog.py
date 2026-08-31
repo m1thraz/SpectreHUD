@@ -63,6 +63,12 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(settings["report_font"], "georgia")
         self.assertEqual(settings["theme"], "cyber_dark")
 
+    def test_general_page_defaults_to_classic_loot_view(self):
+        page = GeneralSettingsPage(self.config_manager)
+
+        self.assertFalse(page.chk_loot_board.isChecked())
+        self.assertEqual(page.get_settings()["loot_view_mode"], "list")
+
     def test_settings_dialog_save_and_apply(self):
         dlg = SettingsDialog(self.config_manager)
         dlg.switch_page(1)

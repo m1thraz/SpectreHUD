@@ -283,7 +283,8 @@ class CheatsheetController(QObject):
         variables: Dict[str, str],
         on_delete_snippet: Callable[[str], None],
         parent_widget: QWidget,
-        show_empty_state_fn: Callable[[str], None]
+        show_empty_state_fn: Callable[[str], None],
+        on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         # Reset expand state if search query changed
         if search_query != self._last_query:
@@ -310,6 +311,8 @@ class CheatsheetController(QObject):
             card = SnippetCard(s, variables=variables, parent=parent_widget)
             card.snippet_deleted.connect(on_delete_snippet)
             card.favorite_toggled.connect(self._on_favorite_toggled)
+            if on_copied is not None:
+                card.copied.connect(on_copied)
             content_layout.addWidget(card)
             rendered_cards.append(card)
 
