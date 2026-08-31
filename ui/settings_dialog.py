@@ -243,6 +243,157 @@ class LanguageSettingsPage(QWidget):
         }
 
 
+class AppearanceSettingsPage(QWidget):
+    """Settings page for themes, typography, and Loot presentation."""
+
+    def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.config = config_manager
+        self._init_ui()
+
+    def _init_ui(self) -> None:
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("background: transparent; border: none;")
+
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(8, 4, 12, 8)
+        layout.setSpacing(14)
+
+        lbl_theme_section = QLabel(t("settings.lbl_theme_section", "Application Theme"))
+        lbl_theme_section.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_theme_section)
+
+        card_theme = QFrame()
+        card_theme.setProperty("class", "SettingsCard")
+        theme_layout = QVBoxLayout(card_theme)
+        theme_layout.setSpacing(10)
+
+        self.theme_loader = ThemeLoader()
+        self.combo_theme = QComboBox()
+        current_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+        for theme in self.theme_loader.list_themes():
+            label = theme["name"]
+            if theme.get("author"):
+                label = f"{label} — {theme['author']}"
+            self.combo_theme.addItem(label, theme["id"])
+        theme_index = self.combo_theme.findData(current_theme)
+        self.combo_theme.setCurrentIndex(theme_index if theme_index >= 0 else 0)
+
+        theme_row = QHBoxLayout()
+        theme_label = QLabel(t("settings.lbl_theme", "Theme:"))
+        theme_label.setProperty("class", "FormLabel")
+        theme_row.addWidget(theme_label)
+        theme_row.addWidget(self.combo_theme, stretch=1)
+        self.btn_open_theme_folder = QPushButton(
+            t("settings.open_theme_folder", "Open custom themes...")
+        )
+        self.btn_open_theme_folder.setProperty("class", "BrowseBtn")
+        self.btn_open_theme_folder.clicked.connect(self._open_theme_folder)
+        theme_row.addWidget(self.btn_open_theme_folder)
+        theme_layout.addLayout(theme_row)
+
+        restart_hint = QLabel(
+            t(
+                "settings.theme_restart_hint",
+                "Selecting a different theme restarts SpectreHUD after the settings are saved.",
+            )
+        )
+        restart_hint.setProperty("class", "HintLabel")
+        restart_hint.setWordWrap(True)
+        theme_layout.addWidget(restart_hint)
+        layout.addWidget(card_theme)
+
+        lbl_typography = QLabel(t("settings.lbl_typography_section", "Typography"))
+        lbl_typography.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_typography)
+
+        card_typography = QFrame()
+        card_typography.setProperty("class", "SettingsCard")
+        typography_layout = QVBoxLayout(card_typography)
+        typography_layout.setSpacing(10)
+
+        self.combo_ui_font = self._font_combo(UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui"))
+        self.combo_code_font = self._font_combo(CODE_FONT_OPTIONS, self.config.get("code_font", "consolas"))
+        self.combo_report_font = self._font_combo(REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui"))
+        for label, combo in (
+            (t("settings.lbl_app_font", "Application font:"), self.combo_ui_font),
+            (t("settings.lbl_code_font", "Code font:"), self.combo_code_font),
+            (t("settings.lbl_report_font", "Report font (preview and HTML export):"), self.combo_report_font),
+        ):
+            row = QHBoxLayout()
+            label_widget = QLabel(label)
+            label_widget.setProperty("class", "FormLabel")
+            row.addWidget(label_widget)
+            row.addWidget(combo, stretch=1)
+            typography_layout.addLayout(row)
+        layout.addWidget(card_typography)
+
+        lbl_loot_display = QLabel(t("settings.lbl_loot_display_section", "Loot Presentation"))
+        lbl_loot_display.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_loot_display)
+
+        card_loot_display = QFrame()
+        card_loot_display.setProperty("class", "SettingsCard")
+        loot_display_layout = QVBoxLayout(card_loot_display)
+        self.chk_loot_board = QCheckBox(
+            t("settings.chk_loot_board", "Show Loot as Kanban board")
+        )
+        self.chk_loot_board.setToolTip(
+            t(
+                "settings.chk_loot_board_tip",
+                "Organize loot by pentest phase and move entries between columns.",
+            )
+        )
+        self.chk_loot_board.setChecked(self.config.get("loot_view_mode", "list") == "board")
+        loot_display_layout.addWidget(self.chk_loot_board)
+        layout.addWidget(card_loot_display)
+
+        layout.addStretch()
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
+
+    @staticmethod
+    def _font_combo(options, selected_key: str) -> QComboBox:
+        combo = QComboBox()
+        for key, label in options:
+            combo.addItem(label, key)
+        index = combo.findData(selected_key)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+        return combo
+
+    def _open_theme_folder(self) -> None:
+        try:
+            self.theme_loader.USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                t("settings.theme_folder_error_title", "Theme folder unavailable"),
+                t(
+                    "settings.theme_folder_error_message",
+                    "The custom theme folder could not be created:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.theme_loader.USER_THEMES_DIR)))
+
+    def get_settings(self) -> Dict[str, Any]:
+        return {
+            "theme": self.combo_theme.currentData() or ThemeLoader.FALLBACK_THEME_ID,
+            "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
+            "code_font": self.combo_code_font.currentData() or "consolas",
+            "report_font": self.combo_report_font.currentData() or "segoe_ui",
+            "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
+        }
+
+
 class GeneralSettingsPage(QWidget):
     """Modular settings page for overlay behavior and default parameters."""
 
@@ -267,7 +418,7 @@ class GeneralSettingsPage(QWidget):
         layout.setSpacing(14)
 
         # 1. Behavior Section
-        lbl_behavior = QLabel(t("settings.lbl_behavior_section", "Overlay Behavior & Display"))
+        lbl_behavior = QLabel(t("settings.lbl_behavior_section", "Overlay Behavior"))
         lbl_behavior.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_behavior)
 
@@ -288,75 +439,9 @@ class GeneralSettingsPage(QWidget):
         self.chk_auto_hide.setChecked(self.config.get("auto_hide_on_copy", False))
         b_layout.addWidget(self.chk_auto_hide)
 
-        self.chk_loot_board = QCheckBox(
-            t("settings.chk_loot_board", "Show Loot as Kanban board")
-        )
-        self.chk_loot_board.setToolTip(
-            t("settings.chk_loot_board_tip", "Organize loot by pentest phase and move entries between columns.")
-        )
-        self.chk_loot_board.setChecked(self.config.get("loot_view_mode", "list") == "board")
-        b_layout.addWidget(self.chk_loot_board)
-
         layout.addWidget(card_behavior)
 
-        # 2. Appearance Section
-        lbl_appearance = QLabel(t("settings.lbl_appearance_section", "Appearance"))
-        lbl_appearance.setProperty("class", "SettingsSectionTitle")
-        layout.addWidget(lbl_appearance)
-
-        card_appearance = QFrame()
-        card_appearance.setProperty("class", "SettingsCard")
-        appearance_layout = QVBoxLayout(card_appearance)
-        appearance_layout.setSpacing(10)
-
-        self.theme_loader = ThemeLoader()
-        self.combo_theme = QComboBox()
-        current_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
-        for theme in self.theme_loader.list_themes():
-            label = theme["name"]
-            if theme.get("author"):
-                label = f"{label} — {theme['author']}"
-            self.combo_theme.addItem(label, theme["id"])
-        theme_index = self.combo_theme.findData(current_theme)
-        self.combo_theme.setCurrentIndex(theme_index if theme_index >= 0 else 0)
-
-        theme_row = QHBoxLayout()
-        theme_label = QLabel(t("settings.lbl_theme", "Theme:"))
-        theme_label.setProperty("class", "FormLabel")
-        theme_row.addWidget(theme_label)
-        theme_row.addWidget(self.combo_theme, stretch=1)
-        self.btn_open_theme_folder = QPushButton(
-            t("settings.open_theme_folder", "Open custom themes...")
-        )
-        self.btn_open_theme_folder.setProperty("class", "BrowseBtn")
-        self.btn_open_theme_folder.clicked.connect(self._open_theme_folder)
-        theme_row.addWidget(self.btn_open_theme_folder)
-        appearance_layout.addLayout(theme_row)
-
-        restart_hint = QLabel(
-            t("settings.theme_restart_hint", "The selected theme becomes active after the next restart.")
-        )
-        restart_hint.setProperty("class", "HintLabel")
-        restart_hint.setWordWrap(True)
-        appearance_layout.addWidget(restart_hint)
-
-        self.combo_ui_font = self._font_combo(UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui"))
-        self.combo_code_font = self._font_combo(CODE_FONT_OPTIONS, self.config.get("code_font", "consolas"))
-        self.combo_report_font = self._font_combo(REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui"))
-        for label, combo in (
-            ("App-Schrift:", self.combo_ui_font),
-            ("Code-Schrift:", self.combo_code_font),
-            ("Report-Schrift (Vorschau & HTML-Export):", self.combo_report_font),
-        ):
-            row = QHBoxLayout()
-            label_widget = QLabel(label)
-            label_widget.setProperty("class", "FormLabel")
-            row.addWidget(label_widget)
-            row.addWidget(combo, stretch=1)
-            appearance_layout.addLayout(row)
-        layout.addWidget(card_appearance)
-
-        # 3. Defaults Section
+        # 2. Defaults Section
         lbl_defaults = QLabel(t("settings.lbl_defaults_section", "Default Parameters"))
         lbl_defaults.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_defaults)
@@ -449,15 +534,6 @@ class GeneralSettingsPage(QWidget):
         scroll.setWidget(content)
         outer_layout.addWidget(scroll)
 
-    @staticmethod
-    def _font_combo(options, selected_key: str) -> QComboBox:
-        combo = QComboBox()
-        for key, label in options:
-            combo.addItem(label, key)
-        index = combo.findData(selected_key)
-        combo.setCurrentIndex(index if index >= 0 else 0)
-        return combo
-
     def _on_browse_wordlist(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(self, t("settings.lbl_default_wordlist", "Default Wordlist Path:"), self.txt_wordlist.text().strip())
         if file_path:
@@ -473,31 +549,10 @@ class GeneralSettingsPage(QWidget):
         if folder:
             self.txt_obsidian_vault.setText(folder)
 
-    def _open_theme_folder(self) -> None:
-        try:
-            self.theme_loader.USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            QMessageBox.warning(
-                self,
-                t("settings.theme_folder_error_title", "Theme folder unavailable"),
-                t(
-                    "settings.theme_folder_error_message",
-                    "The custom theme folder could not be created:\n{error}",
-                    error=str(exc),
-                ),
-            )
-            return
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.theme_loader.USER_THEMES_DIR)))
-
     def get_settings(self) -> Dict[str, Any]:
         return {
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
-            "loot_view_mode": "board" if self.chk_loot_board.isChecked() else "list",
-            "theme": self.combo_theme.currentData() or ThemeLoader.FALLBACK_THEME_ID,
-            "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
-            "code_font": self.combo_code_font.currentData() or "consolas",
-            "report_font": self.combo_report_font.currentData() or "segoe_ui",
             "target_ip": self.txt_default_target.text().strip(),
             "attacker_ip": self.txt_default_attacker.text().strip(),
             "wordlist": self.txt_wordlist.text().strip(),
@@ -511,7 +566,7 @@ class GeneralSettingsPage(QWidget):
 class SettingsDialog(BaseHudDialog):
     """
     Modular, frameless cyber settings dialog with sidebar navigation
-    supporting Hotkeys, Language (i18n), and General Configuration.
+    supporting Hotkeys, Language, General, and Appearance configuration.
     """
 
     settings_applied = pyqtSignal(dict)
@@ -556,10 +611,15 @@ class SettingsDialog(BaseHudDialog):
         self.btn_nav_language.clicked.connect(lambda: self.switch_page(1))
         sidebar_layout.addWidget(self.btn_nav_language)
 
-        self.btn_nav_general = QPushButton(t("settings.nav_general", "General & Behavior"))
+        self.btn_nav_general = QPushButton(t("settings.nav_general", "General"))
         self.btn_nav_general.setProperty("class", "SettingsNavBtn")
         self.btn_nav_general.clicked.connect(lambda: self.switch_page(2))
         sidebar_layout.addWidget(self.btn_nav_general)
+
+        self.btn_nav_appearance = QPushButton(t("settings.nav_appearance", "Appearance"))
+        self.btn_nav_appearance.setProperty("class", "SettingsNavBtn")
+        self.btn_nav_appearance.clicked.connect(lambda: self.switch_page(3))
+        sidebar_layout.addWidget(self.btn_nav_appearance)
 
         sidebar_layout.addStretch()
         split_layout.addWidget(self.sidebar_frame)
@@ -576,10 +636,12 @@ class SettingsDialog(BaseHudDialog):
         self.page_hotkeys = HotkeySettingsPage(self.config)
         self.page_language = LanguageSettingsPage(self.config)
         self.page_general = GeneralSettingsPage(self.config)
+        self.page_appearance = AppearanceSettingsPage(self.config)
 
         self.stack.addWidget(self.page_hotkeys)
         self.stack.addWidget(self.page_language)
         self.stack.addWidget(self.page_general)
+        self.stack.addWidget(self.page_appearance)
         
         right_layout.addWidget(self.stack, stretch=1)
 
@@ -609,7 +671,12 @@ class SettingsDialog(BaseHudDialog):
 
     def switch_page(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
-        buttons = [self.btn_nav_hotkeys, self.btn_nav_language, self.btn_nav_general]
+        buttons = [
+            self.btn_nav_hotkeys,
+            self.btn_nav_language,
+            self.btn_nav_general,
+            self.btn_nav_appearance,
+        ]
         for i, btn in enumerate(buttons):
             btn.setProperty("class", "SettingsNavBtnActive" if i == index else "SettingsNavBtn")
             btn.style().unpolish(btn)
@@ -626,6 +693,7 @@ class SettingsDialog(BaseHudDialog):
         all_settings.update(self.page_hotkeys.get_settings())
         all_settings.update(self.page_language.get_settings())
         all_settings.update(self.page_general.get_settings())
+        all_settings.update(self.page_appearance.get_settings())
 
         if "workspace_dir" in all_settings and all_settings["workspace_dir"]:
             from core.project.validator import validate_workspace_directory, WorkspaceError

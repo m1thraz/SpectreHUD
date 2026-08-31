@@ -14,6 +14,8 @@ semantic versioning.
 
 ### Changed
 
+- Split themes, typography, and Loot presentation into a dedicated Appearance
+  settings tab.
 - Saving a different application theme now performs a controlled restart so the
   selection becomes active immediately.
 - Consolidated report exports and Obsidian report/loot export coordination.

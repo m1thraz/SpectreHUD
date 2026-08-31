@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from ui.settings_dialog import (
     SettingsDialog, HotkeySettingsPage, 
-    LanguageSettingsPage, GeneralSettingsPage
+    LanguageSettingsPage, GeneralSettingsPage, AppearanceSettingsPage
 )
 
 app = QApplication.instance() or QApplication([])
@@ -47,27 +47,44 @@ class TestSettingsDialog(unittest.TestCase):
         page = GeneralSettingsPage(self.config_manager)
         page.chk_always_on_top.setChecked(False)
         page.chk_auto_hide.setChecked(True)
-        page.chk_loot_board.setChecked(True)
         page.txt_default_target.setText("192.168.1.100")
-        page.combo_ui_font.setCurrentIndex(1)
-        page.combo_code_font.setCurrentIndex(3)
-        page.combo_report_font.setCurrentIndex(3)
         
         settings = page.get_settings()
         self.assertFalse(settings["always_on_top"])
         self.assertTrue(settings["auto_hide_on_copy"])
-        self.assertEqual(settings["loot_view_mode"], "board")
         self.assertEqual(settings["target_ip"], "192.168.1.100")
+        self.assertNotIn("theme", settings)
+        self.assertNotIn("loot_view_mode", settings)
+
+    def test_appearance_page_get_settings(self):
+        page = AppearanceSettingsPage(self.config_manager)
+        page.chk_loot_board.setChecked(True)
+        page.combo_ui_font.setCurrentIndex(1)
+        page.combo_code_font.setCurrentIndex(3)
+        page.combo_report_font.setCurrentIndex(3)
+
+        settings = page.get_settings()
+        self.assertEqual(settings["loot_view_mode"], "board")
         self.assertEqual(settings["ui_font"], "inter")
         self.assertEqual(settings["code_font"], "jetbrains_mono")
         self.assertEqual(settings["report_font"], "georgia")
         self.assertEqual(settings["theme"], "cyber_dark")
 
-    def test_general_page_defaults_to_classic_loot_view(self):
-        page = GeneralSettingsPage(self.config_manager)
+    def test_appearance_page_defaults_to_classic_loot_view(self):
+        page = AppearanceSettingsPage(self.config_manager)
 
         self.assertFalse(page.chk_loot_board.isChecked())
         self.assertEqual(page.get_settings()["loot_view_mode"], "list")
+
+    def test_settings_dialog_exposes_separate_appearance_tab(self):
+        dlg = SettingsDialog(self.config_manager)
+
+        self.assertEqual(dlg.stack.count(), 4)
+        dlg.btn_nav_appearance.click()
+        self.assertEqual(dlg.stack.currentWidget(), dlg.page_appearance)
+        self.assertEqual(dlg.btn_nav_appearance.property("class"), "SettingsNavBtnActive")
+        self.assertEqual(dlg.btn_nav_general.property("class"), "SettingsNavBtn")
+        dlg.close()
 
     def test_settings_dialog_save_and_apply(self):
         dlg = SettingsDialog(self.config_manager)
