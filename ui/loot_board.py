@@ -177,7 +177,12 @@ class LootBoard(QScrollArea):
             column = LootBoardDropArea(category, on_move, board_content)
             column.setFixedWidth(270)
             for entry in entries_by_category[category["id"]]:
-                card = LootCard(entry, project_dir, parent=column.cards_container)
+                card = LootCard(
+                    entry,
+                    project_dir,
+                    parent=column.cards_container,
+                    preview_line_limit=5,
+                )
                 card.loot_deleted.connect(on_delete)
                 card.edit_requested.connect(on_edit)
                 card.export_requested.connect(on_export)

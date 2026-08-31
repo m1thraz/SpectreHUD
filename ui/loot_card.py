@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QWidget, QApplication, QSizePolicy, QGraphicsOpacityEffect
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
-from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag
+from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
 from core.project import get_default_projects_dir
@@ -27,11 +27,20 @@ class LootCard(QFrame):
     obsidian_export_requested = pyqtSignal(str)
     loot_deleted = deleted
 
-    def __init__(self, entry: Dict[str, Any], project_dir: Optional[Path] = None, parent: QWidget = None):
+    def __init__(
+        self,
+        entry: Dict[str, Any],
+        project_dir: Optional[Path] = None,
+        parent: QWidget = None,
+        preview_line_limit: Optional[int] = None,
+    ):
         super().__init__(parent)
         self.setObjectName("SnippetCard")
         self.entry = entry
         self.project_dir = project_dir
+        self.preview_line_limit = max(1, int(preview_line_limit)) if preview_line_limit else None
+        self._full_content = str(self.entry.get("content", ""))
+        self._last_preview_width = -1
         self._drag_start_position = None
         self._init_ui()
 
@@ -88,11 +97,11 @@ class LootCard(QFrame):
             header_layout.addWidget(lbl_time)
 
         # 6. Edit Button
-        btn_edit = QPushButton("✎")
-        btn_edit.setProperty("class", "EditBtn")
-        btn_edit.setToolTip(t("loot.edit_tip", "Edit or recategorize this entry"))
-        btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
-        header_layout.addWidget(btn_edit)
+        self.btn_edit = QPushButton("✎")
+        self.btn_edit.setProperty("class", "EditBtn")
+        self.btn_edit.setToolTip(t("loot.edit_tip", "Edit or recategorize this entry"))
+        self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
+        header_layout.addWidget(self.btn_edit)
 
         # 7. Export Button
         self.btn_export_file = QPushButton("⇩")
@@ -143,7 +152,7 @@ class LootCard(QFrame):
         content_row = QHBoxLayout()
         content_row.setSpacing(8)
 
-        self.lbl_content = QLabel(self.entry.get("content", ""))
+        self.lbl_content = QLabel(self._full_content)
         self.lbl_content.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
@@ -151,7 +160,20 @@ class LootCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse | 
             Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
-        self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        if self.preview_line_limit is not None:
+            # A very long unbroken value must not enlarge the Kanban column.
+            # Ignoring only the horizontal hint lets the column supply the real
+            # preview width; vertical sizing still follows the font metrics.
+            self.lbl_content.setSizePolicy(
+                QSizePolicy.Policy.Ignored,
+                QSizePolicy.Policy.Preferred,
+            )
+            self.lbl_content.setMinimumWidth(0)
+        else:
+            self.lbl_content.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Preferred,
+            )
         content_row.addWidget(self.lbl_content, stretch=1)
 
         self.btn_copy = QPushButton("Copy")
@@ -161,6 +183,72 @@ class LootCard(QFrame):
         content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
 
         layout.addLayout(content_row)
+        if self.preview_line_limit is not None:
+            QTimer.singleShot(0, self._update_content_preview)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self.preview_line_limit is not None:
+            self._update_content_preview()
+
+    def _update_content_preview(self) -> None:
+        """Render at most the configured number of visual lines with an ellipsis."""
+        if self.preview_line_limit is None:
+            self.lbl_content.setText(self._full_content)
+            return
+
+        margins = self.lbl_content.contentsMargins()
+        available_width = max(
+            1,
+            self.lbl_content.width() - margins.left() - margins.right(),
+        )
+        metrics = self.lbl_content.fontMetrics()
+        preview_height = (
+            metrics.lineSpacing() * self.preview_line_limit
+            + margins.top()
+            + margins.bottom()
+        )
+        self.lbl_content.setMaximumHeight(preview_height)
+
+        if available_width == self._last_preview_width:
+            return
+        self._last_preview_width = available_width
+
+        # QTextLayout treats Unicode line separators as mandatory visual line
+        # breaks while retaining one-to-one character offsets for truncation.
+        layout_text = self._full_content.replace("\r\n", "\n").replace("\r", "\n")
+        layout_text = layout_text.replace("\n", "\u2028")
+        text_layout = QTextLayout(layout_text, self.lbl_content.font())
+        text_option = QTextOption()
+        text_option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        text_layout.setTextOption(text_option)
+        text_layout.beginLayout()
+
+        last_start = 0
+        last_end = 0
+        for _ in range(self.preview_line_limit):
+            line = text_layout.createLine()
+            if not line.isValid():
+                break
+            line.setLineWidth(available_width)
+            last_start = line.textStart()
+            last_end = last_start + line.textLength()
+        text_layout.endLayout()
+
+        if last_end >= len(layout_text):
+            preview = self._full_content
+        else:
+            prefix = layout_text[:last_start]
+            final_line = layout_text[last_start:last_end].rstrip()
+            elided_line = metrics.elidedText(
+                f"{final_line}…",
+                Qt.TextElideMode.ElideRight,
+                available_width,
+            )
+            if not elided_line.endswith("…"):
+                elided_line = f"{elided_line.rstrip()}…"
+            preview = f"{prefix}{elided_line}".replace("\u2028", "\n")
+        self.lbl_content.setText(preview)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
