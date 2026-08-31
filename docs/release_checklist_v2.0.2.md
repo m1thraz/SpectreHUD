@@ -23,11 +23,11 @@ release are intentionally left to the repository owner.
 
 ## Repository-owner release steps
 
-- [ ] Commit and push the prepared v2.0.2 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated `v2.0.2` tag from the verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable and wheel.
-- [ ] Download the published executable and verify `--version`, startup, font
+- [x] Commit and push the prepared v2.0.2 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated `v2.0.2` tag from the verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable and wheel.
+- [x] Download the published executable and verify `--version`, startup, font
   selection, theme restart, Loot view switching, and shutdown.
-- [ ] Confirm the GitHub release description links to
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.0.2.md`.
