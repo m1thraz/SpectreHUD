@@ -51,7 +51,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QProcess, QTimer
 
 from core.single_instance import ApplicationLockError, acquire_application_lock, release_application_lock
 from core.snippet_manager import SnippetManager
@@ -65,6 +65,7 @@ from ui.main_window import MainWindow
 from ui.styles import build_app_theme, get_app_icon
 
 logger = get_logger("app")
+RESTART_EXIT_CODE = 100
 
 
 def _startup_mark(started_at: float, stage: str) -> None:
@@ -127,6 +128,33 @@ def handle_tray_quit(window, _checked: bool = False) -> bool:
     return window.request_quit()
 
 
+def request_application_restart(window, app: QApplication) -> bool:
+    """Runs the normal transactional shutdown before requesting a restart."""
+    if not window.request_quit(quit_app=False):
+        return False
+    app.exit(RESTART_EXIT_CODE)
+    return True
+
+
+def _start_replacement_process() -> bool:
+    """Starts the replacement only after the current instance lock was released."""
+    if getattr(sys, "frozen", False):
+        program = sys.executable
+        arguments = list(sys.argv[1:])
+        working_directory = str(Path(sys.executable).resolve().parent)
+    else:
+        script_path = Path(__file__).resolve()
+        program = sys.executable
+        arguments = [str(script_path), *sys.argv[1:]]
+        working_directory = str(script_path.parent)
+
+    result = QProcess.startDetached(program, arguments, working_directory)
+    started = result[0] if isinstance(result, tuple) else bool(result)
+    if not started:
+        logger.error("Could not start replacement SpectreHUD process after theme change.")
+    return started
+
+
 def _create_production_container():
     """Defers container imports until the single-instance lock is held."""
     from core.container import ServiceContainer
@@ -168,6 +196,7 @@ def main():
 
     app_icon = get_app_icon()
     hotkey_listener = None
+    restart_requested = False
     try:
         if not app_icon.isNull():
             app.setWindowIcon(app_icon)
@@ -189,6 +218,9 @@ def main():
 
         # Main Window
         window = MainWindow(container=container)
+        window.app.restart_requested.connect(
+            lambda: request_application_restart(window, app)
+        )
         _startup_mark(started_at, "MainWindow constructed")
         if not app_icon.isNull():
             window.setWindowIcon(app_icon)
@@ -273,11 +305,15 @@ def main():
                 QTimer.singleShot(profile_exit_ms, app.quit)
 
         exit_code = app.exec()
+        restart_requested = exit_code == RESTART_EXIT_CODE
         logger.info("SpectreHUD shutting down cleanly.")
     finally:
         if hotkey_listener is not None:
             hotkey_listener.stop()
         release_application_lock(application_lock)
+
+    if restart_requested:
+        exit_code = 0 if _start_replacement_process() else 1
 
     sys.exit(exit_code)
 

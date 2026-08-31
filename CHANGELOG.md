@@ -14,6 +14,8 @@ semantic versioning.
 
 ### Changed
 
+- Saving a different application theme now performs a controlled restart so the
+  selection becomes active immediately.
 - Consolidated report exports and Obsidian report/loot export coordination.
 - Split major UI and project-persistence responsibilities into focused modules.
 - Curated adversarial regression coverage against the documented desktop threat

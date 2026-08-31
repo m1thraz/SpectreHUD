@@ -53,6 +53,7 @@ class AppController(QObject):
 
     mode_changed = pyqtSignal(str)
     content_refreshed = pyqtSignal()
+    restart_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -446,9 +447,21 @@ class AppController(QObject):
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
 
     def open_settings_dialog(self) -> None:
+        previous_theme = self.config.get("theme", "cyber_dark")
+        applied_settings: Dict[str, Any] = {}
         dlg = SettingsDialog(self.config, parent=self.window)
-        dlg.settings_applied.connect(self._on_settings_applied)
-        dlg.exec()
+
+        def apply_settings(settings: Dict[str, Any]) -> None:
+            applied_settings.update(settings)
+            self._on_settings_applied(settings)
+
+        dlg.settings_applied.connect(apply_settings)
+        accepted = bool(dlg.exec())
+        if (
+            accepted
+            and applied_settings.get("theme", previous_theme) != previous_theme
+        ):
+            self.restart_requested.emit()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
         if "report_font" in new_settings:

@@ -2,6 +2,7 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QPushButton
@@ -332,6 +333,57 @@ class TestUI(unittest.TestCase):
         button.click()
         self.assertEqual(config_manager.get("loot_view_mode"), "list")
         self.assertFalse(any(isinstance(card, LootBoard) for card in window.cards))
+        window.close()
+
+    def test_theme_change_requests_restart_only_after_settings_dialog_closes(self):
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=ProjectManager(base_dir=self.projects_dir),
+        )
+        callbacks = []
+        lifecycle = []
+        window.app.restart_requested.connect(lambda: lifecycle.append("restart"))
+
+        with patch("ui.app_controller.SettingsDialog") as dialog_class:
+            dialog = dialog_class.return_value
+            dialog.settings_applied.connect.side_effect = callbacks.append
+
+            def execute_dialog():
+                config_manager.set("theme", "nord")
+                callbacks[0]({"theme": "nord"})
+                lifecycle.append("dialog_closed")
+                return 1
+
+            dialog.exec.side_effect = execute_dialog
+            window.app.open_settings_dialog()
+
+        self.assertEqual(lifecycle, ["dialog_closed", "restart"])
+        window.close()
+
+    def test_unchanged_theme_does_not_request_restart(self):
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=ProjectManager(base_dir=self.projects_dir),
+        )
+        callbacks = []
+        restarts = []
+        window.app.restart_requested.connect(lambda: restarts.append(True))
+
+        with patch("ui.app_controller.SettingsDialog") as dialog_class:
+            dialog = dialog_class.return_value
+            dialog.settings_applied.connect.side_effect = callbacks.append
+            dialog.exec.side_effect = lambda: (callbacks[0]({"theme": "cyber_dark"}), 1)[1]
+            window.app.open_settings_dialog()
+
+        self.assertEqual(restarts, [])
         window.close()
 
     def test_cheatsheet_favorites_ui_interaction(self):

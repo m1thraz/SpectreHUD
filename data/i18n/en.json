@@ -210,7 +210,7 @@
 
     "settings.lbl_theme": "Theme:",
     "settings.open_theme_folder": "Open custom themes...",
-    "settings.theme_restart_hint": "The selected theme becomes active after the next restart.",
+    "settings.theme_restart_hint": "Selecting a different theme restarts SpectreHUD after the settings are saved.",
     "settings.theme_folder_error_title": "Theme folder unavailable",
     "settings.theme_folder_error_message": "The custom theme folder could not be created:\n{error}",
     "settings.shortcut_esc": "Hide HUD overlay",
