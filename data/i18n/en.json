@@ -159,6 +159,7 @@
     "settings.lbl_typography_section": "Typography",
     "settings.lbl_loot_display_section": "Loot Presentation",
     "settings.lbl_app_font": "Application font:",
+    "settings.font_not_installed": "Not installed",
     "settings.lbl_code_font": "Code font:",
     "settings.lbl_report_font": "Report font (preview and HTML export):",
     "settings.chk_loot_board": "Show Loot as Kanban board",

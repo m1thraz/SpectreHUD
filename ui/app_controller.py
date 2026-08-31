@@ -7,7 +7,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, QUrl, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
@@ -21,6 +21,7 @@ from core.logger import get_logger
 from core.event_bus import EventBus, EventType
 from core.container import ServiceContainer
 from core.storage import PersistenceError
+from core.theme_loader import ThemeLoader
 
 from ui.variable_bar import VariableBar
 from ui.panels.header_panel import HeaderPanel
@@ -28,6 +29,7 @@ from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
 from ui.panels.footer_panel import FooterPanel
 from ui.settings_dialog import SettingsDialog
+from ui.styles import build_app_theme
 from ui.controllers import (
     CheatsheetController,
     LootController,
@@ -105,6 +107,9 @@ class AppController(QObject):
             clipboard_watcher=self.clipboard_watcher
         )
         self.cards: List[QWidget] = []
+        self._applied_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+        self._applied_ui_font = self.config.get("ui_font", "segoe_ui")
+        self._applied_code_font = self.config.get("code_font", "consolas")
 
         # Domain Controllers
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, event_bus=self.event_bus, parent=self)
@@ -468,6 +473,28 @@ class AppController(QObject):
             self.restart_requested.emit()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
+        selected_theme = new_settings.get(
+            "theme", self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+        )
+        selected_ui_font = new_settings.get(
+            "ui_font", self.config.get("ui_font", "segoe_ui")
+        )
+        selected_code_font = new_settings.get(
+            "code_font", self.config.get("code_font", "consolas")
+        )
+        fonts_changed = (
+            selected_ui_font != self._applied_ui_font
+            or selected_code_font != self._applied_code_font
+        )
+        if fonts_changed:
+            # A newly selected theme is still activated by the controlled restart.
+            # Until then, update only typography against the currently active palette.
+            active_theme = (
+                self._applied_theme
+                if selected_theme != self._applied_theme
+                else selected_theme
+            )
+            self.apply_application_style(theme_id=active_theme)
         if "report_font" in new_settings:
             self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
@@ -500,6 +527,23 @@ class AppController(QObject):
             self.retranslate_ui(new_settings["language"])
         else:
             self._update_footer_status()
+
+    def apply_application_style(self, theme_id: Optional[str] = None) -> None:
+        """Rebuild the application QSS from persisted appearance preferences."""
+        app = QApplication.instance()
+        if app is None:
+            return
+
+        applied_theme = theme_id or self.config.get(
+            "theme", ThemeLoader.FALLBACK_THEME_ID
+        )
+        ui_font = self.config.get("ui_font", "segoe_ui")
+        code_font = self.config.get("code_font", "consolas")
+        palette = ThemeLoader().load_theme(applied_theme)
+        app.setStyleSheet(build_app_theme(palette, ui_font, code_font))
+        self._applied_theme = applied_theme
+        self._applied_ui_font = ui_font
+        self._applied_code_font = code_font
 
     def _on_always_on_top_toggled(self, checked: bool) -> None:
         self.config.set("always_on_top", checked)

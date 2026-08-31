@@ -23,6 +23,25 @@ UI_FONT_OPTIONS = [("segoe_ui", "Segoe UI"), ("inter", "Inter"), ("roboto", "Rob
 CODE_FONT_OPTIONS = [("consolas", "Consolas"), ("cascadia_code", "Cascadia Code"), ("fira_code", "Fira Code"), ("jetbrains_mono", "JetBrains Mono")]
 REPORT_FONT_OPTIONS = [("segoe_ui", "Segoe UI"), ("calibri", "Calibri"), ("arial", "Arial"), ("georgia", "Georgia (Serif)")]
 
+FONT_FAMILIES = {
+    "segoe_ui": "Segoe UI",
+    "inter": "Inter",
+    "roboto": "Roboto",
+    "open_sans": "Open Sans",
+    "consolas": "Consolas",
+    "cascadia_code": "Cascadia Code",
+    "fira_code": "Fira Code",
+    "jetbrains_mono": "JetBrains Mono",
+    "calibri": "Calibri",
+    "arial": "Arial",
+    "georgia": "Georgia",
+}
+
+
+def get_font_family(key: str) -> str:
+    """Return the local family whose availability represents a font option."""
+    return FONT_FAMILIES.get(key, "")
+
 
 def get_font_stack(stacks: dict[str, str], key: str, default_key: str) -> str:
     """Returns a known stack and safely falls back for invalid persisted keys."""

@@ -6,12 +6,17 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox
 )
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
 from core.config import ConfigManager
 from core.i18n import t
 from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
-from ui.styles.fonts import UI_FONT_OPTIONS, CODE_FONT_OPTIONS, REPORT_FONT_OPTIONS
+from ui.styles.fonts import (
+    UI_FONT_OPTIONS,
+    CODE_FONT_OPTIONS,
+    REPORT_FONT_OPTIONS,
+    get_font_family,
+)
 
 HOTKEY_PRESETS = [
     {"label": "Ctrl + Super + < (Standard)", "value": "<ctrl>+<cmd>+<"},
@@ -374,10 +379,33 @@ class AppearanceSettingsPage(QWidget):
     @staticmethod
     def _font_combo(options, selected_key: str) -> QComboBox:
         combo = QComboBox()
+        available_families = {
+            family.casefold() for family in QFontDatabase.families()
+        }
         for key, label in options:
-            combo.addItem(label, key)
+            is_available = get_font_family(key).casefold() in available_families
+            display_label = label
+            if not is_available:
+                display_label = f"{label} — {t('settings.font_not_installed', 'Not installed')}"
+            combo.addItem(display_label, key)
+            if not is_available:
+                model = combo.model()
+                if isinstance(model, QStandardItemModel):
+                    item = model.item(combo.count() - 1)
+                    if item is not None:
+                        item.setEnabled(False)
         index = combo.findData(selected_key)
-        combo.setCurrentIndex(index if index >= 0 else 0)
+        if index < 0:
+            model = combo.model()
+            index = next(
+                (
+                    item_index
+                    for item_index in range(combo.count())
+                    if model.flags(model.index(item_index, 0)) & Qt.ItemFlag.ItemIsEnabled
+                ),
+                0,
+            )
+        combo.setCurrentIndex(index)
         return combo
 
     def _open_theme_folder(self) -> None:

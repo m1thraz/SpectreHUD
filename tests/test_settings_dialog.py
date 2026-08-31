@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from ui.settings_dialog import (
@@ -75,6 +76,20 @@ class TestSettingsDialog(unittest.TestCase):
 
         self.assertFalse(page.chk_loot_board.isChecked())
         self.assertEqual(page.get_settings()["loot_view_mode"], "list")
+
+    def test_unavailable_fonts_are_marked_and_disabled(self):
+        with patch(
+            "ui.settings_dialog.QFontDatabase.families",
+            return_value=["Segoe UI", "Consolas", "Arial", "Georgia"],
+        ):
+            page = AppearanceSettingsPage(self.config_manager)
+
+        inter_index = page.combo_ui_font.findData("inter")
+        jetbrains_index = page.combo_code_font.findData("jetbrains_mono")
+        self.assertIn("install", page.combo_ui_font.itemText(inter_index).casefold())
+        self.assertFalse(page.combo_ui_font.model().item(inter_index).isEnabled())
+        self.assertIn("install", page.combo_code_font.itemText(jetbrains_index).casefold())
+        self.assertFalse(page.combo_code_font.model().item(jetbrains_index).isEnabled())
 
     def test_settings_dialog_exposes_separate_appearance_tab(self):
         dlg = SettingsDialog(self.config_manager)

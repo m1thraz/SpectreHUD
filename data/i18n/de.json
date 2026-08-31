@@ -159,6 +159,7 @@
     "settings.lbl_typography_section": "Schriftarten",
     "settings.lbl_loot_display_section": "Loot-Darstellung",
     "settings.lbl_app_font": "App-Schrift:",
+    "settings.font_not_installed": "Nicht installiert",
     "settings.lbl_code_font": "Code-Schrift:",
     "settings.lbl_report_font": "Report-Schrift (Vorschau und HTML-Export):",
     "settings.chk_loot_board": "Loot als Kanban-Board anzeigen",
