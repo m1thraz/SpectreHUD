@@ -20,8 +20,13 @@ REQUIRED_FILES = [
     "data/i18n/en.json",
     "data/i18n/de.json",
     "data/themes/cyber_dark.json",
+    "data/themes/daylight.json",
+    "data/themes/high_contrast.json",
+    "data/themes/matrix_terminal.json",
     "data/themes/nord.json",
+    "data/themes/red_team.json",
     "data/themes/slate.json",
+    "data/themes/solarized.json",
     "data/themes/warm_night.json",
     # Core managers
     "core/config.py",

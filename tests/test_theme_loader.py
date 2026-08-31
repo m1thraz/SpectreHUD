@@ -17,7 +17,17 @@ def test_builtin_cyber_dark_contains_every_required_token():
 
 def test_all_builtin_themes_are_discovered_and_complete():
     loader = ThemeLoader()
-    expected_ids = {"cyber_dark", "nord", "slate", "warm_night"}
+    expected_ids = {
+        "cyber_dark",
+        "daylight",
+        "high_contrast",
+        "matrix_terminal",
+        "nord",
+        "red_team",
+        "slate",
+        "solarized",
+        "warm_night",
+    }
 
     discovered_ids = {theme["id"] for theme in loader.list_themes()}
 
@@ -30,13 +40,24 @@ def test_all_builtin_themes_are_discovered_and_complete():
 
 def test_builtin_themes_have_distinct_visual_identities():
     loader = ThemeLoader()
+    theme_ids = {
+        "cyber_dark",
+        "daylight",
+        "high_contrast",
+        "matrix_terminal",
+        "nord",
+        "red_team",
+        "slate",
+        "solarized",
+        "warm_night",
+    }
 
     identities = {
         (loader.load_theme(theme_id)["BG_DARK"], loader.load_theme(theme_id)["CYBER_CYAN"])
-        for theme_id in ("cyber_dark", "nord", "slate", "warm_night")
+        for theme_id in theme_ids
     }
 
-    assert len(identities) == 4
+    assert len(identities) == len(theme_ids)
 
 
 def test_missing_theme_falls_back_to_cyber_dark():

@@ -8,7 +8,8 @@ semantic versioning.
 
 ### Added
 
-- Theme selection with Slate, Nord, and Warm Night variants.
+- Theme selection with Slate, Nord, Warm Night, High Contrast, Matrix Terminal,
+  Red Team, Solarized, and Daylight variants.
 - Persistent Kanban card ordering, drag feedback, and a direct Loot view toggle.
 
 ### Changed
