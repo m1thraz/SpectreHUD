@@ -19,18 +19,18 @@ release are intentionally left to the repository owner.
   (141 files verified).
 - [x] Wheel CLI smoke test reports `SpectreHUD 2.0.1` from a fresh virtual
   environment.
-- [ ] Manual Windows smoke test confirms theme-change restart and
+- [x] Manual Windows smoke test confirms theme-change restart and
   single-instance behaviour.
 
 Final automated verification: 351 passed, 1 skipped, 15 subtests passed.
 
 ## Repository-owner release steps
 
-- [ ] Commit and push the prepared v2.0.1 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated `v2.0.1` tag from the verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable and wheel.
-- [ ] Download the published executable and verify `--version`, startup, theme
+- [x] Commit and push the prepared v2.0.1 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated `v2.0.1` tag from the verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable and wheel.
+- [x] Download the published executable and verify `--version`, startup, theme
   selection/restart, Loot list/Kanban switching, and one persisted card reorder.
-- [ ] Confirm the GitHub release description links to
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.0.1.md`.
