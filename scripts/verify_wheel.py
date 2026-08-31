@@ -105,8 +105,8 @@ def verify_wheel(wheel_path: Path) -> bool:
             return False
 
         ep_content = zf.read(entry_point_files[0]).decode("utf-8")
-        if "spectrehud = main:main" not in ep_content:
-            print("[-] Error: 'spectrehud = main:main' entry point not found in entry_points.txt")
+        if "spectrehud = spectrehud_launcher:main" not in ep_content:
+            print("[-] Error: lightweight SpectreHUD entry point not found in entry_points.txt")
             return False
 
     print("[+] All required modules, package data, controllers, and entry points verified successfully!")

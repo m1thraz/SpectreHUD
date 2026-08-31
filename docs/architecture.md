@@ -1,6 +1,6 @@
 # SpectreHUD Architecture & Technical Guide
 
-**Last updated:** v2.0.0
+**Last updated:** v2.0.1
 
 This document provides a technical overview of SpectreHUD's software
 architecture, component relationships, design patterns, and intentional
@@ -44,6 +44,11 @@ graph TD
   - `ContentPanel`: Multi-mode view container (Cheatsheet, Loot, History, Report Editor).
   - `FooterPanel`: Status bar, shortcut hints, and active recording indicators.
 - **Dialogs (`ui/`)**: Modal forms for snippets, loot, custom variables, settings, template management and Pentest-Mode unlock. Dialog text is resolved through the active locale where available.
+- **`LootBoard` (`ui/loot_board.py`)**: Alternate Kanban presentation of the
+  same Loot domain entries. Its drop areas support moves between phases and
+  reordering within a phase, provide drag feedback, and commit positions through
+  the existing Loot persistence workflow rather than maintaining separate board
+  state.
 
 ### 2.2 Domain & Workflow Controllers (`ui/controllers/`)
 - **`AppController` (`ui/app_controller.py`)**: The central coordinator connecting UI signals, mode switching, and domain controllers.
@@ -100,14 +105,23 @@ graph TD
   - `HistoryTableModel` (`QAbstractTableModel`): 4 columns for command and clipboard history logs.
 
 ### 2.7 Modular Style System (`ui/styles/`)
-- Deconstructed QSS stylesheets into cohesive modules:
+- **`ThemeLoader` (`core/theme_loader.py`)**: Discovers bundled and user-provided
+  JSON themes, validates their required palette tokens, and falls back to Cyber
+  Dark when a selected theme cannot be loaded.
+- **Appearance settings (`ui/settings_dialog.py`)**: Own theme and typography
+  selection separately from general behaviour settings. A changed theme emits a
+  restart request only after settings persistence; the application then follows
+  its normal project-save and shutdown path, releases the single-instance lock,
+  and starts the replacement process.
+- QSS generation remains split into cohesive modules:
   - `palette.py`: Color constants and semantic palette definitions.
   - `typography.py`: Font families, font weights, and size hierarchies.
   - `buttons.py`: Standard, primary, and ghost button styling.
   - `tables.py`: Table views, header styling, and row selection states.
   - `cards.py`: Snippet card containers and code blocks.
   - `dialogs.py`: Modal dialogues, form layouts, and inputs.
-  - `theme.py`: Aggregator generating the complete `CYBER_DARK_QSS` theme.
+  - `theme.py`: Builds the complete application stylesheet from the active
+    palette plus application and code-font selections.
 
 ### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
 - **`ReportTemplate` & `TemplateSection` (`template_engine.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.

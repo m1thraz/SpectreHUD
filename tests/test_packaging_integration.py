@@ -59,7 +59,7 @@ class TestPackagingIntegration(unittest.TestCase):
                 entry_points = [n for n in names if n.endswith("entry_points.txt")]
                 self.assertTrue(len(entry_points) > 0)
                 ep_content = zf.read(entry_points[0]).decode("utf-8")
-                self.assertIn("spectrehud = main:main", ep_content)
+                self.assertIn("spectrehud = spectrehud_launcher:main", ep_content)
 
     def test_cli_help_and_version(self):
         """Tests that invoking main.py directly with CLI flags exits 0 without starting Qt GUI loop."""
@@ -69,7 +69,7 @@ class TestPackagingIntegration(unittest.TestCase):
 
         res_ver = subprocess.run([sys.executable, str(self.repo_root / "main.py"), "--version"], capture_output=True, text=True)
         self.assertEqual(res_ver.returncode, 0)
-        self.assertIn("SpectreHUD 2.0.0", res_ver.stdout)
+        self.assertIn("SpectreHUD 2.0.1", res_ver.stdout)
 
 
 if __name__ == "__main__":

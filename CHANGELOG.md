@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-08-31
+
 ### Added
 
 - Theme selection with Slate, Nord, Warm Night, High Contrast, Matrix Terminal,
@@ -27,6 +29,8 @@ semantic versioning.
 
 - The optional minimize-after-copy setting now applies to copied Cheatsheet,
   Loot, Kanban, and History content.
+- The installed `spectrehud --help` and `--version` commands now run without
+  importing Qt or bootstrapping the desktop application.
 
 ## [2.0.0] - 2026-08-30
 
@@ -39,5 +43,6 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/m1thraz/SpectreHUD/releases/tag/v2.0.0

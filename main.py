@@ -4,39 +4,8 @@ import traceback
 import time
 from pathlib import Path
 
-
-def _write_cli(lines: list[str]) -> None:
-    """Writes CLI output when a console stream exists.
-
-    A PyInstaller ``console=False`` executable has no ``sys.stdout`` on
-    Windows. CLI switches must still terminate successfully in that build,
-    even though there is nowhere to display their text.
-    """
-    stream = sys.stdout
-    if stream is None:
-        return
-    try:
-        stream.write("\n".join(lines) + "\n")
-        stream.flush()
-    except (AttributeError, OSError, ValueError):
-        return
-
-
-def _exit_for_cli_argument(argv: list[str]) -> None:
-    """Handles CLI-only invocations before any GUI or application import."""
-    if "--version" in argv or "-v" in argv:
-        _write_cli(["SpectreHUD 2.0.0"])
-        raise SystemExit(0)
-    if "--help" in argv or "-h" in argv:
-        _write_cli([
-            "SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD",
-            "Usage: spectrehud [OPTIONS]",
-            "",
-            "Options:",
-            "  -h, --help     Show this message and exit",
-            "  -v, --version  Show version and exit",
-        ])
-        raise SystemExit(0)
+from core.cli import exit_for_cli_argument as _exit_for_cli_argument
+from core.cli import write_cli as _write_cli
 
 
 # Keep executable smoke tests and package metadata commands independent from

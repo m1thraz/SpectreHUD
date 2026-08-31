@@ -50,7 +50,7 @@ For the implementation details, see:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
-- [v2.0.0 release notes](docs/release_notes_v2.0.0.md)
+- [v2.0.1 release notes](docs/release_notes_v2.0.1.md)
 - [Pentest Mode](docs/pentest_mode.md)
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
