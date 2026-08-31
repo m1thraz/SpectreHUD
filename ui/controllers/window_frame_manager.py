@@ -185,31 +185,36 @@ class WindowFrameManager(QObject):
     # Event Filter & Event Handler Adaptors
     # -------------------------------------------------------------------------
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if not self.window.isVisible():
+        try:
+            if not self.window.isVisible():
+                return super().eventFilter(watched, event)
+
+            if event.type() == QEvent.Type.MouseMove and hasattr(event, "globalPosition"):
+                global_pt = event.globalPosition().toPoint()
+                local_pt = self.window.mapFromGlobal(global_pt)
+                if self._process_mouse_move(global_pt, local_pt):
+                    return True
+
+            elif event.type() == QEvent.Type.MouseButtonPress and hasattr(event, "globalPosition"):
+                global_pt = event.globalPosition().toPoint()
+                local_pt = self.window.mapFromGlobal(global_pt)
+                if self._process_mouse_press(global_pt, local_pt, event.button()):
+                    return True
+
+            elif event.type() == QEvent.Type.MouseButtonRelease:
+                if self._process_mouse_release(event.button()):
+                    return True
+
+            elif event.type() == QEvent.Type.MouseButtonDblClick and hasattr(event, "position"):
+                local_pt = self.window.mapFromGlobal(event.globalPosition().toPoint())
+                if self._process_mouse_double_click(local_pt, event.button()):
+                    return True
+
             return super().eventFilter(watched, event)
-
-        if event.type() == QEvent.Type.MouseMove and hasattr(event, "globalPosition"):
-            global_pt = event.globalPosition().toPoint()
-            local_pt = self.window.mapFromGlobal(global_pt)
-            if self._process_mouse_move(global_pt, local_pt):
-                return True
-
-        elif event.type() == QEvent.Type.MouseButtonPress and hasattr(event, "globalPosition"):
-            global_pt = event.globalPosition().toPoint()
-            local_pt = self.window.mapFromGlobal(global_pt)
-            if self._process_mouse_press(global_pt, local_pt, event.button()):
-                return True
-
-        elif event.type() == QEvent.Type.MouseButtonRelease:
-            if self._process_mouse_release(event.button()):
-                return True
-
-        elif event.type() == QEvent.Type.MouseButtonDblClick and hasattr(event, "position"):
-            local_pt = self.window.mapFromGlobal(event.globalPosition().toPoint())
-            if self._process_mouse_double_click(local_pt, event.button()):
-                return True
-
-        return super().eventFilter(watched, event)
+        except RuntimeError:
+            # The theme-restart teardown deletes the MainWindow (and this
+            # filter's C++ object) while late events still reach the filter.
+            return False
 
     def handle_mouse_press(self, event: QMouseEvent) -> bool:
         global_pt = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()

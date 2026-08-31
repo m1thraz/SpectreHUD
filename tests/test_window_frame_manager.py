@@ -6,8 +6,10 @@ from unittest.mock import Mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QWidget
+
+from PyQt6 import sip
 
 from ui.controllers.window_frame_manager import WindowFrameManager
 
@@ -45,3 +47,15 @@ def test_double_click_toggles_only_on_empty_background():
     assert not manager._process_mouse_double_click(button_point, Qt.MouseButton.LeftButton)
     assert not manager._process_mouse_double_click(QPoint(2, 2), Qt.MouseButton.LeftButton)
     assert window.fullscreen_toggles == 1
+
+
+def test_event_filter_survives_deleted_window():
+    """The theme-restart teardown deletes the MainWindow while this filter is
+    still installed; late events must not raise RuntimeError."""
+    window = GestureWindow()
+    watched = QWidget()
+    manager = WindowFrameManager(window, Mock())
+    watched.installEventFilter(manager)
+
+    sip.delete(window)
+    assert not manager.eventFilter(watched, QEvent(QEvent.Type.MouseMove))
