@@ -64,8 +64,10 @@ QSplitter::handle:hover {
     background-color: {CYBER_CYAN};
 }
 
-/* Scroll Area Styles */
-QScrollArea#MainScrollArea {
+/* Scroll Area Styles. Keep these rules central: a widget-level stylesheet on
+   a scroll area becomes the nearest ancestor sheet for popups inside it
+   (combo lists, tooltips), which then lose the application theme colours. */
+QScrollArea#MainScrollArea, QScrollArea#SettingsScrollArea {
     background: transparent;
     border: none;
 }

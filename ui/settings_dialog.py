@@ -51,7 +51,7 @@ class HotkeySettingsPage(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("background: transparent; border: none;")
+        scroll.setObjectName("SettingsScrollArea")
 
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -259,7 +259,7 @@ class AppearanceSettingsPage(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("background: transparent; border: none;")
+        scroll.setObjectName("SettingsScrollArea")
 
         content = QWidget()
         layout = QVBoxLayout(content)
@@ -410,7 +410,7 @@ class GeneralSettingsPage(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("background: transparent; border: none;")
+        scroll.setObjectName("SettingsScrollArea")
 
         content = QWidget()
         layout = QVBoxLayout(content)

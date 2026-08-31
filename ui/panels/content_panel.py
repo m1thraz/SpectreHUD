@@ -44,7 +44,6 @@ class ContentPanel(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setObjectName("MainScrollArea")
-        self.scroll_area.setStyleSheet("background: transparent; border: none;")
 
         self.content_container = QWidget()
         self.content_layout = QVBoxLayout(self.content_container)
