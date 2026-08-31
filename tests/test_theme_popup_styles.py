@@ -11,14 +11,14 @@ import sys
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QPushButton, QToolTip
+from PyQt6.QtWidgets import QApplication, QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
 from core.config import ConfigManager
 from core.storage import InMemoryStorageBackend
 from core.theme_loader import ThemeLoader
 from ui.panels.content_panel import ContentPanel
-from ui.settings_dialog import AppearanceSettingsPage
+from ui.settings_dialog import AppearanceSettingsPage, GeneralSettingsPage, HotkeySettingsPage
 from ui.styles import build_app_theme
 
 app = QApplication.instance() or QApplication(sys.argv)
@@ -42,23 +42,32 @@ def _active_tip_label():
     )
 
 
-def test_scroll_areas_are_styled_centally_not_per_widget():
+def _assert_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
+    assert scroll.styleSheet() == ""
+    assert not scroll.autoFillBackground()
+    assert not scroll.viewport().autoFillBackground()
+    assert scroll.widget() is not None
+    assert not scroll.widget().autoFillBackground()
+
+
+def test_scroll_areas_are_styled_centrally_not_per_widget():
     qss = build_app_theme(ThemeLoader().load_theme("daylight"))
     assert "QScrollArea#MainScrollArea" in qss
     assert "QScrollArea#SettingsScrollArea" in qss
 
     panel = ContentPanel()
     assert panel.scroll_area.objectName() == "MainScrollArea"
-    assert panel.scroll_area.styleSheet() == ""
+    _assert_transparent_scroll_surfaces(panel.scroll_area)
     panel.deleteLater()
 
-    page = AppearanceSettingsPage(ConfigManager(config_dir=None, storage=InMemoryStorageBackend()))
-    scroll_areas = page.findChildren(type(panel.scroll_area))
-    assert scroll_areas, "appearance page should host its content in a scroll area"
-    for scroll in scroll_areas:
-        assert scroll.objectName() in ("MainScrollArea", "SettingsScrollArea")
-        assert scroll.styleSheet() == ""
-    page.deleteLater()
+    for page_type in (HotkeySettingsPage, AppearanceSettingsPage, GeneralSettingsPage):
+        page = page_type(ConfigManager(config_dir=None, storage=InMemoryStorageBackend()))
+        scroll_areas = page.findChildren(QScrollArea)
+        assert scroll_areas, f"{page_type.__name__} should host content in a scroll area"
+        for scroll in scroll_areas:
+            assert scroll.objectName() == "SettingsScrollArea"
+            _assert_transparent_scroll_surfaces(scroll)
+        page.deleteLater()
 
 
 def test_tooltip_inside_content_panel_keeps_theme_colors():

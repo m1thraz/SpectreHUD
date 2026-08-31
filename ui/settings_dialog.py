@@ -35,6 +35,16 @@ QUIT_PRESETS = [
 ]
 
 
+def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
+    """Keep a scroll area's viewport and hosted page transparent to window glass."""
+    scroll.setAutoFillBackground(False)
+    scroll.viewport().setAutoFillBackground(False)
+    content = scroll.widget()
+    if content is not None:
+        # QScrollArea.setWidget() enables auto-fill on the hosted widget.
+        content.setAutoFillBackground(False)
+
+
 class HotkeySettingsPage(QWidget):
     """Modular settings page for global and in-app keyboard shortcuts."""
 
@@ -164,6 +174,7 @@ class HotkeySettingsPage(QWidget):
 
         layout.addStretch()
         scroll.setWidget(content)
+        _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
 
     def _reset_defaults(self) -> None:
@@ -357,6 +368,7 @@ class AppearanceSettingsPage(QWidget):
 
         layout.addStretch()
         scroll.setWidget(content)
+        _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
 
     @staticmethod
@@ -532,6 +544,7 @@ class GeneralSettingsPage(QWidget):
         layout.addWidget(card_defaults)
         layout.addStretch()
         scroll.setWidget(content)
+        _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
 
     def _on_browse_wordlist(self) -> None:

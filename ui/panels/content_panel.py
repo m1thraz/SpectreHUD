@@ -52,6 +52,12 @@ class ContentPanel(QWidget):
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.scroll_area.setWidget(self.content_container)
+        # QScrollArea enables auto-fill on its viewport and hosted widget.
+        # Disable both paint surfaces so the frameless window glass remains
+        # visible without introducing a widget-local stylesheet.
+        self.scroll_area.setAutoFillBackground(False)
+        self.scroll_area.viewport().setAutoFillBackground(False)
+        self.content_container.setAutoFillBackground(False)
         outer_layout.addWidget(self.scroll_area, stretch=1)
 
     def get_layout(self) -> QVBoxLayout:
