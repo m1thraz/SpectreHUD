@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QPushButton
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
@@ -303,6 +303,35 @@ class TestUI(unittest.TestCase):
         self.assertEqual(len(window.cards), 1)
         self.assertIsInstance(window.cards[0], LootBoard)
         self.assertEqual(window.cards[0].columns["access"].entry_ids, [loot_manager.get_entries()[0]["id"]])
+        window.close()
+
+    def test_loot_view_button_toggles_and_persists_both_presentations(self):
+        from ui.loot_board import LootBoard
+
+        config_manager = ConfigManager(config_dir=self.config_dir)
+        window = MainWindow(
+            config_manager=config_manager,
+            snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
+            loot_manager=LootManager(storage_file=self.loot_file),
+            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            project_manager=ProjectManager(base_dir=self.projects_dir),
+        )
+        window.app.switch_mode("loot")
+
+        button = window.search_panel.pills_frame.findChild(QPushButton, "LootViewToggleButton")
+        self.assertIsNotNone(button)
+        self.assertEqual(config_manager.get("loot_view_mode"), "list")
+
+        button.click()
+        self.assertEqual(config_manager.get("loot_view_mode"), "board")
+        self.assertEqual(len(window.cards), 1)
+        self.assertIsInstance(window.cards[0], LootBoard)
+
+        button = window.search_panel.pills_frame.findChild(QPushButton, "LootViewToggleButton")
+        self.assertIsNotNone(button)
+        button.click()
+        self.assertEqual(config_manager.get("loot_view_mode"), "list")
+        self.assertFalse(any(isinstance(card, LootBoard) for card in window.cards))
         window.close()
 
     def test_cheatsheet_favorites_ui_interaction(self):

@@ -288,6 +288,8 @@ class LootController(QObject):
         on_clear: Callable[[], None],
         export_tooltip: str,
         on_export_obsidian: Optional[Callable[[], None]] = None,
+        on_toggle_view: Optional[Callable[[], None]] = None,
+        view_mode: str = "list",
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
@@ -311,6 +313,24 @@ class LootController(QObject):
         pills_layout.addStretch()
 
         # Contextual Loot Action Buttons
+        if on_toggle_view is not None:
+            showing_board = view_mode == "board"
+            btn_view = QPushButton(
+                t("loot.view_classic", "Classic")
+                if showing_board
+                else t("loot.view_kanban", "Kanban")
+            )
+            btn_view.setObjectName("LootViewToggleButton")
+            btn_view.setProperty("class", "MiniActionBtn")
+            btn_view.setToolTip(
+                t(
+                    "loot.toggle_view_tip",
+                    "Switch between classic list and Kanban board",
+                )
+            )
+            btn_view.clicked.connect(on_toggle_view)
+            pills_layout.addWidget(btn_view)
+
         btn_export = QPushButton("Export (.md)")
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)

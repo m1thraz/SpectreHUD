@@ -208,11 +208,14 @@ class AppController(QObject):
         if self.active_mode == "cheatsheet":
             self.cheatsheet_ctrl.build_filter_pills(pills_layout, self._select_category)
         elif self.active_mode == "loot":
+            loot_view_mode = self.config.get("loot_view_mode", "list")
             self.loot_ctrl.build_filter_pills(
                 pills_layout, self._select_loot_type,
                 lambda: self.export_coord.export_loot(self.window),
                 self._clear_loot, EXPORT_COPY_TOOLTIP,
                 lambda: self.export_coord.export_loot_to_obsidian(self.window),
+                self._toggle_loot_view,
+                loot_view_mode,
             )
         elif self.active_mode == "history":
             self.history_ctrl.build_filter_pills(
@@ -285,6 +288,27 @@ class AppController(QObject):
 
     def _select_loot_type(self, type_id: str) -> None:
         self.loot_ctrl.select_loot_type(type_id)
+        self.refresh_content()
+
+    def _toggle_loot_view(self) -> None:
+        """Persist and immediately apply the alternate Loot presentation."""
+        current_mode = self.config.get("loot_view_mode", "list")
+        next_mode = "list" if current_mode == "board" else "board"
+        try:
+            self.config.set("loot_view_mode", next_mode)
+        except PersistenceError as exc:
+            logger.error(f"Could not persist Loot view mode: {exc}")
+            QMessageBox.critical(
+                self.window,
+                t("loot.view_switch_failed_title", "View switch failed"),
+                t(
+                    "loot.view_switch_failed",
+                    "The Loot view could not be changed:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+        self.refresh_filter_pills()
         self.refresh_content()
 
     def _select_history_filter(self, filter_id: str) -> None:
