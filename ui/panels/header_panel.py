@@ -8,7 +8,7 @@ class HeaderPanel(QFrame):
     """
     Top HUD navigation and control bar.
     Contains Brand logo, Project/Box selector, Mode Switcher Tabs (Cheatsheet, Loot, History, Report),
-    Snip trigger, Clipboard REC indicator, Settings/Options, and Minimize button.
+    Snip trigger, Clipboard REC indicator, Settings/Options, Minimize, and Close button.
     """
 
     project_menu_requested = pyqtSignal(QPushButton)
@@ -17,6 +17,7 @@ class HeaderPanel(QFrame):
     toggle_rec_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     minimize_requested = pyqtSignal()
+    close_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -112,6 +113,13 @@ class HeaderPanel(QFrame):
         self.btn_minimize.clicked.connect(self.minimize_requested.emit)
         layout.addWidget(self.btn_minimize)
 
+        # Close button: quits via the transactional shutdown path (save first)
+        self.btn_close = QPushButton("✕")
+        self.btn_close.setProperty("class", "CloseBtn")
+        self.btn_close.setToolTip(t("header.quit_tip", "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)"))
+        self.btn_close.clicked.connect(self.close_requested.emit)
+        layout.addWidget(self.btn_close)
+
     def set_active_mode(self, mode: str) -> None:
         """Updates visual active tab styling for the selected mode."""
         self.active_mode = mode
@@ -163,4 +171,5 @@ class HeaderPanel(QFrame):
             t("header.opt_tip", "Einstellungen & Optionen öffnen (Ctrl+,)")
         )
         self.btn_minimize.setToolTip(t("header.minimize_tip", "Overlay minimieren / verstecken (Esc)"))
+        self.btn_close.setToolTip(t("header.quit_tip", "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)"))
         self.btn_project.setToolTip(t("header.project_tip", "Aktives CTF-Projekt / Box wechseln"))

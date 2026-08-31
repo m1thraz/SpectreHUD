@@ -81,6 +81,24 @@ QPushButton.MinimizeBtn:hover {
     border-color: {CYBER_CYAN};
 }
 
+/* Close HUD Button (quit with save) */
+QPushButton.CloseBtn {
+    background-color: {SURFACE_A85};
+    color: {TEXT_FORM};
+    border: 1px solid {BORDER_A80};
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 13px;
+    font-weight: bold;
+    min-width: 22px;
+}
+
+QPushButton.CloseBtn:hover {
+    background-color: {ERROR_A20};
+    color: {STATUS_ERROR};
+    border-color: {ERROR_A70};
+}
+
 /* Filter Chips / Pills */
 QPushButton.FilterPill {
     background-color: {SURFACE_A80};

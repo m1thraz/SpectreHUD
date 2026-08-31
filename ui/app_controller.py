@@ -165,6 +165,8 @@ class AppController(QObject):
         self.header.toggle_rec_requested.connect(self.clipboard_coord.toggle_pause)
         self.header.settings_requested.connect(self.open_settings_dialog)
         self.header.minimize_requested.connect(self.window.hide)
+        # request_quit(quit_app=True) must not receive QPushButton.clicked's bool
+        self.header.close_requested.connect(lambda: self.window.request_quit())
 
         # Panels & Inputs
         self.search.search_changed.connect(lambda _: self.refresh_content())
