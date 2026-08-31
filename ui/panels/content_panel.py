@@ -1,6 +1,6 @@
 from typing import Optional, List
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from core.i18n import t
 
 
@@ -68,6 +68,19 @@ class ContentPanel(QWidget):
             child = self.content_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
+
+    def refresh_content_geometry(self) -> None:
+        """Recompute layout-derived scroll geometry after replacing view content."""
+        self.content_layout.invalidate()
+        self.content_container.updateGeometry()
+        self.content_layout.activate()
+        # Re-apply the layout-derived size so QScrollArea cannot retain a
+        # previously larger hosted-widget height after wrapping/filter changes.
+        self.content_container.adjustSize()
+
+    def schedule_content_geometry_refresh(self) -> None:
+        """Recalculate once more after wrapped labels receive their final width."""
+        QTimer.singleShot(0, self.refresh_content_geometry)
 
     def show_empty_state(self, message: str) -> None:
         empty_lbl = QLabel(message)

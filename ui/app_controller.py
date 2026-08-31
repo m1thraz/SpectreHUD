@@ -278,6 +278,8 @@ class AppController(QObject):
                 self.content.show_empty_state, self._on_content_copied,
             )
             self.footer.set_count(_format_count(len(self.cards)))
+        self.content.refresh_content_geometry()
+        self.content.schedule_content_geometry_refresh()
         self.content_refreshed.emit()
 
     def _on_content_copied(self, _text: str) -> None:
