@@ -195,6 +195,12 @@ for the two trust boundaries and their test rationale.
 - **Master Test Runner (`run_tests.py`)**:
   - Delegates to the pytest collection under `tests/` and runs headlessly (`QT_QPA_PLATFORM=offscreen`).
   - Test counts are intentionally not treated as release documentation: parametrization and regression additions change them. The current CI result is the release evidence.
+  - `integration` marks cross-component Qt, subprocess and workflow boundaries;
+    `release` marks wheel and distribution checks. Normal development uses the
+    unmarked Fast Suite, while the master runner and CI remain unfiltered gates.
+- **Shared Qt test runtime (`tests/conftest.py`)**:
+  - Pytest-style widget tests request a session-scoped `qapp` fixture instead of
+    constructing competing `QApplication` instances in individual modules.
 - **GitHub Actions CI (`.github/workflows/ci.yml`)**:
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.
   - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.

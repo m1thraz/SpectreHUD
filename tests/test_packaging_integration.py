@@ -5,6 +5,11 @@ import unittest
 import zipfile
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = pytest.mark.release
+
 
 class TestPackagingIntegration(unittest.TestCase):
     """Integration tests verifying pip installable wheel packaging and entrypoints."""
@@ -60,17 +65,6 @@ class TestPackagingIntegration(unittest.TestCase):
                 self.assertTrue(len(entry_points) > 0)
                 ep_content = zf.read(entry_points[0]).decode("utf-8")
                 self.assertIn("spectrehud = spectrehud_launcher:main", ep_content)
-
-    def test_cli_help_and_version(self):
-        """Tests that invoking main.py directly with CLI flags exits 0 without starting Qt GUI loop."""
-        res_help = subprocess.run([sys.executable, str(self.repo_root / "main.py"), "--help"], capture_output=True, text=True)
-        self.assertEqual(res_help.returncode, 0)
-        self.assertIn("SpectreHUD", res_help.stdout)
-
-        res_ver = subprocess.run([sys.executable, str(self.repo_root / "main.py"), "--version"], capture_output=True, text=True)
-        self.assertEqual(res_ver.returncode, 0)
-        self.assertIn("SpectreHUD 2.0.2", res_ver.stdout)
-
 
 if __name__ == "__main__":
     unittest.main()

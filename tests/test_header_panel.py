@@ -1,20 +1,13 @@
 """Tests for the HUD header panel controls."""
 
 import os
-import sys
-
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from PyQt6.QtWidgets import QApplication
 
 from ui.panels.header_panel import HeaderPanel
 from ui.styles import build_app_theme
 from ui.styles.palette import CYBER_DARK_PALETTE
 
-app = QApplication.instance() or QApplication(sys.argv)
-
-
-def test_close_button_emits_close_requested():
+def test_close_button_emits_close_requested(qapp):
     header = HeaderPanel()
     assert header.btn_close.property("class") == "CloseBtn"
     assert header.btn_close.toolTip()
@@ -26,7 +19,7 @@ def test_close_button_emits_close_requested():
     header.deleteLater()
 
 
-def test_minimize_button_emits_minimize_requested():
+def test_minimize_button_emits_minimize_requested(qapp):
     header = HeaderPanel()
     emitted = []
     header.minimize_requested.connect(lambda: emitted.append(True))

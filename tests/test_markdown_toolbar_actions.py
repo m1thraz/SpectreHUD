@@ -1,14 +1,10 @@
 from PyQt6.QtWidgets import QPlainTextEdit
 from PyQt6.QtGui import QTextCursor
-from PyQt6.QtWidgets import QApplication
 
 from ui.markdown_toolbar_actions import build_table, insert_link, prefix_lines, set_heading, wrap_selection
 
 
-app = QApplication.instance() or QApplication([])
-
-
-def test_wrap_toggles_selection_and_selects_placeholder():
+def test_wrap_toggles_selection_and_selects_placeholder(qapp):
     edit = QPlainTextEdit("word")
     cursor = edit.textCursor(); cursor.select(QTextCursor.SelectionType.WordUnderCursor); edit.setTextCursor(cursor)
     wrap_selection(edit, "**", "**")
@@ -18,7 +14,7 @@ def test_wrap_toggles_selection_and_selects_placeholder():
     assert edit.toPlainText() == "word"
 
 
-def test_heading_lists_link_and_table():
+def test_heading_lists_link_and_table(qapp):
     edit = QPlainTextEdit("## old\na\nb")
     set_heading(edit, 1)
     assert edit.toPlainText().startswith("# old")

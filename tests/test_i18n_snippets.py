@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
+import pytest
 from core.config import ConfigManager, DEFAULT_CONFIG
 from core.i18n import get_i18n, set_locale, get_locale, DEFAULT_LOCALE
 from core.snippet_manager import SnippetManager
@@ -33,13 +34,16 @@ class TestI18nSnippets(unittest.TestCase):
     def test_cheatsheet_category_buttons_follow_active_locale(self):
         from ui.controllers.cheatsheet_controller import _category_short_name
 
-        set_locale("en")
-        self.assertEqual(_category_short_name("network_scanning"), "Network")
-        self.assertEqual(_category_short_name("custom_snippets"), "Custom")
+        try:
+            set_locale("en")
+            self.assertEqual(_category_short_name("network_scanning"), "Network")
+            self.assertEqual(_category_short_name("custom_snippets"), "Custom")
 
-        set_locale("de")
-        self.assertEqual(_category_short_name("network_scanning"), "Netzwerk")
-        self.assertEqual(_category_short_name("custom_snippets"), "Eigene")
+            set_locale("de")
+            self.assertEqual(_category_short_name("network_scanning"), "Netzwerk")
+            self.assertEqual(_category_short_name("custom_snippets"), "Eigene")
+        finally:
+            set_locale("en")
 
     def test_snippet_manager_language_switching(self):
         # 1. Initialize SnippetManager with English
@@ -81,6 +85,7 @@ class TestI18nSnippets(unittest.TestCase):
         self.assertIn(" - EN", str(mgr.default_snippets_path))
         self.assertTrue(mgr.is_favorite(custom_snip["id"]))
 
+    @pytest.mark.integration
     def test_main_window_i18n_runtime_switch(self):
         from PyQt6.QtWidgets import QApplication
         from ui.main_window import MainWindow

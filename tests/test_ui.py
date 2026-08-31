@@ -3,6 +3,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QPushButton
@@ -15,6 +16,8 @@ from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
+
+pytestmark = pytest.mark.integration
 
 class TestUI(unittest.TestCase):
     @classmethod

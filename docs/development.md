@@ -45,19 +45,47 @@ components.
 
 ## Verification sequence
 
-Run the smallest relevant tests while iterating, then the full suite:
+The suite has three intentional execution levels. Use the smallest relevant
+tests while implementing, run the Fast Suite after the change stabilizes, and
+keep the complete suite as the final gate:
 
 ```bash
+# Targeted development loop
 python -m pytest tests/test_changed_area.py
+
+# Fast Suite: unit, service, parser, model, and persistence coverage
+python -m pytest -m "not integration and not release"
+
+# Add cross-component Qt, process, and workflow coverage when relevant
+python -m pytest -m integration
+
+# Complete final gate, including release tests
 python run_tests.py
 ```
 
-For packaging changes:
+Tests marked `integration` cross a component, Qt-window, subprocess, or operating
+system boundary. Tests marked `release` build or inspect distribution artifacts.
+Markers classify execution cost; an unfiltered pytest run still executes every
+test. The default pytest output is compact, while failures retain short
+tracebacks and their exact test IDs.
+
+The full `test_ui.py`, `test_smoke.py`, `test_workflow_invariants.py`, and
+Cheatsheet geometry modules are integration suites because their assertions
+depend on a composed `MainWindow`. Mixed modules such as container, i18n,
+adversarial-regression, and single-instance coverage mark only the individual
+window or subprocess tests; their service-level tests remain in the Fast Suite.
+
+For packaging, dependency, entry-point, or release-metadata changes, also run:
 
 ```bash
-python -m build --wheel
+python -m pytest -m release
+python -m pip wheel . --no-deps --no-build-isolation -w dist/
 python scripts/verify_wheel.py dist/
 ```
+
+Do not introduce parallel execution until Qt state, environment variables,
+filesystem fixtures, application locks, and subprocess tests have demonstrated
+worker-level isolation.
 
 CI validates Python 3.10–3.13 on Windows and Linux, performs coverage on Linux,
 and builds and smoke-tests the Windows wheel and executable.

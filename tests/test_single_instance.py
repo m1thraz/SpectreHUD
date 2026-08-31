@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from core.single_instance import (
     ApplicationLockError,
     LOCK_FILENAME,
@@ -78,6 +80,7 @@ if lock is not None:
                 with self.assertRaises(ApplicationLockError):
                     acquire_application_lock(Path(temp_dir) / "unavailable")
 
+    @pytest.mark.integration
     def test_simultaneous_starts_allow_exactly_one_process_to_hold_lock(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_dir = Path(temp_dir)
@@ -92,6 +95,7 @@ if lock is not None:
 
         self.assertEqual(results, {"LOCKED", "REJECTED"})
 
+    @pytest.mark.integration
     def test_crashed_lock_owner_does_not_block_next_start(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_dir = Path(temp_dir)
@@ -106,6 +110,7 @@ if lock is not None:
             finally:
                 self._stop_process(holder)
 
+    @pytest.mark.integration
     def test_live_lock_owner_is_not_treated_as_stale(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_dir = Path(temp_dir)

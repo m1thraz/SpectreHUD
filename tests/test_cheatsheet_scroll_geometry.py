@@ -17,9 +17,11 @@ from ui.main_window import MainWindow
 from ui.snippet_card import SnippetCard
 
 
+pytestmark = pytest.mark.integration
+
+
 @pytest.fixture
-def cheatsheet_window(tmp_path):
-    app = QApplication.instance() or QApplication([])
+def cheatsheet_window(tmp_path, qapp):
     config_dir = tmp_path / "config"
     window = MainWindow(
         config_manager=ConfigManager(config_dir=config_dir),
@@ -36,13 +38,13 @@ def cheatsheet_window(tmp_path):
     window.show()
     window.app.refresh_content()
     for _ in range(3):
-        app.processEvents()
+        qapp.processEvents()
 
     yield window
 
     window.hide()
     window.close()
-    app.processEvents()
+    qapp.processEvents()
 
 
 def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:

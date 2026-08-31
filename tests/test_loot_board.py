@@ -1,20 +1,16 @@
 """Smoke tests for the Kanban loot board presentation."""
 
 import os
-import sys
 import tempfile
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QMimeData
-from PyQt6.QtWidgets import QApplication, QAbstractScrollArea
+from PyQt6.QtWidgets import QAbstractScrollArea
 
 from core.loot_manager import CATEGORIES
 from ui.loot_board import LOOT_ENTRY_MIME_TYPE, LootBoard, LootBoardDropArea
-
-
-app = QApplication.instance() or QApplication(sys.argv)
 
 
 class _FakeDragEvent:
@@ -35,7 +31,7 @@ class _FakeDragEvent:
         self.accepted = False
 
 
-def test_board_creates_one_column_per_category_and_reuses_loot_cards():
+def test_board_creates_one_column_per_category_and_reuses_loot_cards(qapp):
     moves = []
     exported = []
     entries = [
@@ -69,7 +65,7 @@ def test_board_creates_one_column_per_category_and_reuses_loot_cards():
         board.deleteLater()
 
 
-def test_board_renders_entries_by_persistent_position():
+def test_board_renders_entries_by_persistent_position(qapp):
     entries = [
         {"id": "third", "category": "recon", "position": 2, "title": "Third", "content": "3"},
         {"id": "first", "category": "recon", "position": 0, "title": "First", "content": "1"},
@@ -90,7 +86,7 @@ def test_board_renders_entries_by_persistent_position():
         board.deleteLater()
 
 
-def test_drop_area_resets_drag_highlight_after_leave_and_drop():
+def test_drop_area_resets_drag_highlight_after_leave_and_drop(qapp):
     dropped = []
     area = LootBoardDropArea(
         CATEGORIES[0],
@@ -117,7 +113,7 @@ def test_drop_area_resets_drag_highlight_after_leave_and_drop():
     area.deleteLater()
 
 
-def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars():
+def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars(qapp):
     edited = []
     contents = [
         "\n".join(f"multiline finding {index}" for index in range(30)),
@@ -147,7 +143,7 @@ def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars():
         board.resize(1400, 650)
         board.show()
         for _ in range(3):
-            app.processEvents()
+            qapp.processEvents()
 
         recon_column = board.columns["recon"]
         cards = [

@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 from typing import Dict, Any
 
+import pytest
+
 # Ensure Qt runs headlessly in test environments
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -21,6 +23,8 @@ from core.report_file_manager import ReportFileManager
 from core.storage import PersistenceError
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
+
+pytestmark = pytest.mark.integration
 
 
 class TestWorkflowInvariants(unittest.TestCase):

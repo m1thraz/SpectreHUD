@@ -7,11 +7,9 @@ the popup rendering inside the affected panels.
 """
 
 import os
-import sys
-
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QPushButton, QScrollArea, QToolTip
+from PyQt6.QtWidgets import QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
 from core.config import ConfigManager
@@ -21,23 +19,20 @@ from ui.panels.content_panel import ContentPanel
 from ui.settings_dialog import AppearanceSettingsPage, GeneralSettingsPage, HotkeySettingsPage
 from ui.styles import build_app_theme
 
-app = QApplication.instance() or QApplication(sys.argv)
-
-
-def _apply_daylight_theme() -> None:
+def _apply_daylight_theme(qapp) -> None:
     config = ConfigManager(
         config_dir=None,
         storage=InMemoryStorageBackend(initial_data={"config": {"theme": "daylight"}}),
     )
     palette = ThemeLoader().load_theme("daylight")
-    app.setStyleSheet(
+    qapp.setStyleSheet(
         build_app_theme(palette, config.get("ui_font", "segoe_ui"), config.get("code_font", "consolas"))
     )
 
 
-def _active_tip_label():
+def _active_tip_label(qapp):
     return next(
-        (w for w in app.allWidgets() if w.metaObject().className() == "QTipLabel"),
+        (w for w in qapp.allWidgets() if w.metaObject().className() == "QTipLabel"),
         None,
     )
 
@@ -50,7 +45,7 @@ def _assert_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     assert not scroll.widget().autoFillBackground()
 
 
-def test_scroll_areas_are_styled_centrally_not_per_widget():
+def test_scroll_areas_are_styled_centrally_not_per_widget(qapp):
     qss = build_app_theme(ThemeLoader().load_theme("daylight"))
     assert "QScrollArea#MainScrollArea" in qss
     assert "QScrollArea#SettingsScrollArea" in qss
@@ -70,8 +65,8 @@ def test_scroll_areas_are_styled_centrally_not_per_widget():
         page.deleteLater()
 
 
-def test_tooltip_inside_content_panel_keeps_theme_colors():
-    _apply_daylight_theme()
+def test_tooltip_inside_content_panel_keeps_theme_colors(qapp):
+    _apply_daylight_theme(qapp)
 
     panel = ContentPanel()
     button = QPushButton("Report toolbar button")
@@ -79,11 +74,11 @@ def test_tooltip_inside_content_panel_keeps_theme_colors():
     panel.content_layout.addWidget(button)
     panel.resize(600, 400)
     panel.show()
-    app.processEvents()
+    qapp.processEvents()
 
     QToolTip.showText(button.mapToGlobal(button.rect().center()), "Choose report editor layout", button)
-    app.processEvents()
-    tip = _active_tip_label()
+    qapp.processEvents()
+    tip = _active_tip_label(qapp)
     assert tip is not None, "tooltip widget was not created"
 
     corner = tip.grab().toImage().pixelColor(2, 2)
@@ -94,18 +89,18 @@ def test_tooltip_inside_content_panel_keeps_theme_colors():
     panel.deleteLater()
 
 
-def test_combo_popup_inside_settings_page_keeps_theme_colors():
-    _apply_daylight_theme()
+def test_combo_popup_inside_settings_page_keeps_theme_colors(qapp):
+    _apply_daylight_theme(qapp)
 
     page = AppearanceSettingsPage(ConfigManager(config_dir=None, storage=InMemoryStorageBackend()))
     page.resize(640, 480)
     page.show()
-    app.processEvents()
+    qapp.processEvents()
 
     combo = page.combo_theme
     assert combo.count() > 0
     combo.showPopup()
-    app.processEvents()
+    qapp.processEvents()
 
     view_palette = combo.view().palette()
     base = view_palette.color(QPalette.ColorRole.Base)

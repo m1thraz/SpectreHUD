@@ -1,20 +1,16 @@
 """Tests for frameless window gestures."""
 
 import os
-import sys
 from unittest.mock import Mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QEvent, QPoint, Qt
-from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QWidget
+from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QWidget
 
 from PyQt6 import sip
 
 from ui.controllers.window_frame_manager import WindowFrameManager
-
-
-app = QApplication.instance() or QApplication(sys.argv)
 
 
 class GestureWindow(QWidget):
@@ -34,7 +30,7 @@ class GestureWindow(QWidget):
         self.fullscreen_toggles += 1
 
 
-def test_double_click_toggles_only_on_empty_background():
+def test_double_click_toggles_only_on_empty_background(qapp):
     window = GestureWindow()
     manager = WindowFrameManager(window, Mock())
 
@@ -49,7 +45,7 @@ def test_double_click_toggles_only_on_empty_background():
     assert window.fullscreen_toggles == 1
 
 
-def test_event_filter_survives_deleted_window():
+def test_event_filter_survives_deleted_window(qapp):
     """The theme-restart teardown deletes the MainWindow while this filter is
     still installed; late events must not raise RuntimeError."""
     window = GestureWindow()

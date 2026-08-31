@@ -5,6 +5,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
+import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -17,6 +19,8 @@ from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_builder import ReportBuilder
 from ui.main_window import MainWindow
+
+pytestmark = pytest.mark.integration
 
 class TestAppSmoke(unittest.TestCase):
     @classmethod

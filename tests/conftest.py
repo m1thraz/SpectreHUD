@@ -10,6 +10,16 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
+@pytest.fixture(scope="session")
+def qapp():
+    """Provide the single QApplication shared by pytest-style Qt tests."""
+    from PyQt6.QtWidgets import QApplication
+
+    application = QApplication.instance() or QApplication([])
+    yield application
+    application.processEvents()
+
+
 @pytest.fixture(autouse=True)
 def isolate_spectrehud_user_data(tmp_path, monkeypatch):
     """Route every test's implicit app paths into fresh temporary folders.

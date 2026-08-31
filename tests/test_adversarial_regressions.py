@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QWidget
@@ -593,6 +594,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 23. Unified Shutdown: Dirty Report Blocks Quit
     # -------------------------------------------------------------------------
+    @pytest.mark.integration
     def test_quit_blocks_when_report_dirty(self):
         """
         Adversarial Lifecycle: If the report editor contains unsaved changes and
@@ -614,6 +616,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 24. Unified Shutdown: Project State Save Failure Aborts Quit
     # -------------------------------------------------------------------------
+    @pytest.mark.integration
     def test_quit_blocks_when_project_save_fails(self):
         """
         Adversarial Lifecycle: If saving project state to disk fails during shutdown,
@@ -638,6 +641,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 25. Unified Shutdown: Normal Exit Flushes State
     # -------------------------------------------------------------------------
+    @pytest.mark.integration
     def test_quit_flushes_project_state_on_clean_exit(self):
         """
         Adversarial Lifecycle: Normal request_quit must flush all UI inputs to disk.
@@ -658,6 +662,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             state = container.project_manager.load_project_state()
             self.assertEqual(state.get("target_ip"), "192.168.1.77")
 
+    @pytest.mark.integration
     def test_quit_logs_geometry_persistence_error_without_blocking_shutdown(self):
         """A normal geometry persistence failure is visible but never blocks shutdown."""
         from unittest.mock import patch
@@ -674,6 +679,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         warning.assert_called_once()
         self.assertIn("window geometry", warning.call_args.args[0])
 
+    @pytest.mark.integration
     def test_quit_logs_unexpected_geometry_error_without_blocking_shutdown(self):
         """Unexpected geometry errors include diagnostics but never block shutdown."""
         from unittest.mock import patch
@@ -692,6 +698,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 26. Close Event Discard Protection
     # -------------------------------------------------------------------------
+    @pytest.mark.integration
     def test_close_event_does_not_discard_unsaved_state(self):
         """
         Adversarial Lifecycle: closeEvent must ignore event if request_quit returns False.

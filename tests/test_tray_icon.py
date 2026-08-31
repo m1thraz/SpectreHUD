@@ -7,8 +7,6 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtGui import QColor, QIcon, QPixmap
-from PyQt6.QtWidgets import QApplication
-
 import main
 from main import (
     RESTART_EXIT_CODE,
@@ -18,10 +16,7 @@ from main import (
 )
 
 
-app = QApplication.instance() or QApplication(sys.argv)
-
-
-def test_tray_icon_keeps_logo_when_paused_and_tints_it_red_when_recording():
+def test_tray_icon_keeps_logo_when_paused_and_tints_it_red_when_recording(qapp):
     """The active state changes only the logo colour, not its shape."""
     logo = QPixmap(32, 32)
     logo.fill(QColor("#00e5ff"))

@@ -6,6 +6,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Split test execution into Fast, Integration, and Release marker groups while
+  keeping the unfiltered suite as the CI and release gate. Pytest output is now
+  compact by default, and duplicate CLI subprocess coverage was removed.
+
 ## [2.0.2] - 2026-08-31
 
 ### Added

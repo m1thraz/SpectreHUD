@@ -2,6 +2,7 @@ import unittest
 import sys
 import tempfile
 from pathlib import Path
+import pytest
 from PyQt6.QtWidgets import QApplication
 
 from core.container import ServiceContainer
@@ -85,6 +86,7 @@ class TestContainer(unittest.TestCase):
         self.assertIsNotNone(clip)
         self.assertEqual(len(container.clipboard_watcher.get_all_history()), 1)
 
+    @pytest.mark.integration
     def test_main_window_with_in_memory_container(self):
         container = ServiceContainer.create_isolated_test_container(
             initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"},
