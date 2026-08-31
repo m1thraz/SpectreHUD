@@ -53,17 +53,17 @@ class HeaderPanel(QFrame):
         self.btn_mode_cheatsheet.clicked.connect(lambda: self.mode_changed.emit("cheatsheet"))
         layout.addWidget(self.btn_mode_cheatsheet)
 
-        self.btn_mode_loot = QPushButton(t("header.mode_loot", "Loot"))
-        self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_mode_loot.setProperty("class", "ModeSwitchBtn")
-        self.btn_mode_loot.clicked.connect(lambda: self.mode_changed.emit("loot"))
-        layout.addWidget(self.btn_mode_loot)
-
         self.btn_mode_history = QPushButton(t("header.mode_history", "History"))
         self.btn_mode_history.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
         layout.addWidget(self.btn_mode_history)
+
+        self.btn_mode_loot = QPushButton(t("header.mode_loot", "Loot"))
+        self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_mode_loot.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_loot.clicked.connect(lambda: self.mode_changed.emit("loot"))
+        layout.addWidget(self.btn_mode_loot)
 
         self.btn_mode_report = QPushButton(t("header.mode_report", "Report"))
         self.btn_mode_report.setCursor(Qt.CursorShape.PointingHandCursor)
