@@ -30,6 +30,17 @@ class TestI18nSnippets(unittest.TestCase):
         self.assertEqual(DEFAULT_CONFIG["language"], "en")
         self.assertEqual(DEFAULT_LOCALE, "en")
 
+    def test_cheatsheet_category_buttons_follow_active_locale(self):
+        from ui.controllers.cheatsheet_controller import _category_short_name
+
+        set_locale("en")
+        self.assertEqual(_category_short_name("network_scanning"), "Network")
+        self.assertEqual(_category_short_name("custom_snippets"), "Custom")
+
+        set_locale("de")
+        self.assertEqual(_category_short_name("network_scanning"), "Netzwerk")
+        self.assertEqual(_category_short_name("custom_snippets"), "Eigene")
+
     def test_snippet_manager_language_switching(self):
         # 1. Initialize SnippetManager with English
         mgr = SnippetManager(

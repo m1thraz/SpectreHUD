@@ -15,23 +15,31 @@ from ui.menu_builder import build_qmenu
 logger = get_logger("cheatsheet_controller")
 
 
-CATEGORY_SHORT_NAMES: Dict[str, str] = {
-    "all": "Alle",
-    "favorites": "★ Favoriten",
-    "web_http": "Web",
-    "linux_shell": "Linux",
-    "windows_powershell": "Windows",
-    "windows_ad": "Windows",
-    "network_scanning": "Netzwerk",
-    "network_recon": "Netzwerk",
-    "sql_databases": "SQL",
-    "crypto_encoding": "Krypto",
-    "crypto_hashes": "Krypto",
-    "shells_payloads": "Shells",
-    "password_cracking": "Passwörter",
-    "post_exploitation": "Post-Ex",
-    "custom_snippets": "Eigene",
+CATEGORY_SHORT_NAMES: Dict[str, tuple[str, str]] = {
+    "all": ("cheatsheet.category_all", "All"),
+    "favorites": ("cheatsheet.category_favorites", "★ Favorites"),
+    "web_http": ("cheatsheet.category_web", "Web"),
+    "linux_shell": ("cheatsheet.category_linux", "Linux"),
+    "windows_powershell": ("cheatsheet.category_windows", "Windows"),
+    "windows_ad": ("cheatsheet.category_windows", "Windows"),
+    "network_scanning": ("cheatsheet.category_network", "Network"),
+    "network_recon": ("cheatsheet.category_network", "Network"),
+    "sql_databases": ("cheatsheet.category_sql", "SQL"),
+    "crypto_encoding": ("cheatsheet.category_crypto", "Crypto"),
+    "crypto_hashes": ("cheatsheet.category_crypto", "Crypto"),
+    "shells_payloads": ("cheatsheet.category_shells", "Shells"),
+    "password_cracking": ("cheatsheet.category_passwords", "Passwords"),
+    "post_exploitation": ("cheatsheet.category_post_ex", "Post-Ex"),
+    "custom_snippets": ("cheatsheet.category_custom", "Custom"),
 }
+
+
+def _category_short_name(category_id: str, fallback: str = "More") -> str:
+    translation = CATEGORY_SHORT_NAMES.get(category_id)
+    if translation is None:
+        return fallback
+    key, english_fallback = translation
+    return t(key, english_fallback)
 
 
 class CheatsheetController(QObject):
@@ -177,11 +185,11 @@ class CheatsheetController(QObject):
         # Update "Mehr ▾" button state
         if self.btn_more:
             if category_id in self._overflow_cat_ids:
-                short = CATEGORY_SHORT_NAMES.get(category_id, "Mehr")
+                short = _category_short_name(category_id, t("cheatsheet.more", "More"))
                 self.btn_more.setText(f"{short} ▾")
                 self.btn_more.setProperty("class", "FilterPillActive")
             else:
-                self.btn_more.setText("Mehr ▾")
+                self.btn_more.setText(t("cheatsheet.more_categories", "More ▾"))
                 self.btn_more.setProperty("class", "FilterPill")
             self.btn_more.style().unpolish(self.btn_more)
             self.btn_more.style().polish(self.btn_more)
@@ -240,7 +248,7 @@ class CheatsheetController(QObject):
         for c in ordered_primary:
             cat_id = c.get("id")
             full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
-            pill_text = CATEGORY_SHORT_NAMES.get(cat_id, full_name[:12])
+            pill_text = _category_short_name(cat_id, full_name[:12])
 
             btn = QPushButton(pill_text)
             btn.setToolTip(f"{full_name} ({c.get('count', 0)})" if full_name else pill_text)
@@ -257,7 +265,10 @@ class CheatsheetController(QObject):
             is_overflow_active = self.current_category_id in self._overflow_cat_ids
             more_label = t("cheatsheet.more_categories", "More ▾")
             if is_overflow_active:
-                short = CATEGORY_SHORT_NAMES.get(self.current_category_id, "More")
+                short = _category_short_name(
+                    self.current_category_id,
+                    t("cheatsheet.more", "More"),
+                )
                 more_label = f"{short} ▾"
 
             self.btn_more = QPushButton(more_label)
