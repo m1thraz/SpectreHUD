@@ -48,6 +48,17 @@ if lock is not None:
             process.terminate()
             process.wait(timeout=10)
 
+    def _clear_terminated_owner_lock(self, config_dir: Path) -> None:
+        """Reacquire and release a stale child-owned lock before temp cleanup."""
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            recovered_lock = acquire_application_lock(config_dir)
+            if recovered_lock is not None:
+                release_application_lock(recovered_lock)
+                return
+            time.sleep(0.05)
+        self.fail("Terminated lock owner did not release its lock in time")
+
     def _await_lock_result(self, process: subprocess.Popen) -> str:
         result = process.stdout.readline().strip()
         if not result:
@@ -92,6 +103,7 @@ if lock is not None:
             finally:
                 self._stop_process(first)
                 self._stop_process(second)
+                self._clear_terminated_owner_lock(config_dir)
 
         self.assertEqual(results, {"LOCKED", "REJECTED"})
 
@@ -128,9 +140,7 @@ if lock is not None:
                 # A terminated owner can leave QLockFile metadata behind for a
                 # moment on Windows.  Reacquire and cleanly release it before
                 # TemporaryDirectory removes the lock directory.
-                recovered_lock = acquire_application_lock(config_dir)
-                if recovered_lock is not None:
-                    release_application_lock(recovered_lock)
+                self._clear_terminated_owner_lock(config_dir)
 
     def test_existing_instance_stops_before_container_initialization(self):
         import main

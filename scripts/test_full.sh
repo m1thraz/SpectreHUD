@@ -18,4 +18,5 @@ else
     python_cmd="python"
 fi
 
-"$python_cmd" -m pytest -m "not release" --tb=short -q
+"$python_cmd" -m pytest -m "not release" \
+    -n auto --dist=loadscope --tb=short -q
