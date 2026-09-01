@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORTING_ROOT = PROJECT_ROOT / "core" / "reporting"
 REPORT_EDITOR = PROJECT_ROOT / "ui" / "report_editor_tab.py"
 APP_CONTROLLER = PROJECT_ROOT / "ui" / "app_controller.py"
+PLATFORM_ROOT = PROJECT_ROOT / "core" / "platform"
 
 
 def _ui_imports(path: Path) -> list[tuple[int, str]]:
@@ -30,6 +31,17 @@ def test_reporting_layer_does_not_import_ui():
     for path in sorted(REPORTING_ROOT.rglob("*.py")):
         for line, module in _ui_imports(path):
             violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
+
+    assert violations == [], "\n".join(violations)
+
+
+def test_platform_layer_does_not_import_ui():
+    violations = []
+    for path in sorted(PLATFORM_ROOT.rglob("*.py")):
+        for line, module in _ui_imports(path):
+            violations.append(
+                f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}"
+            )
 
     assert violations == [], "\n".join(violations)
 
