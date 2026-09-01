@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-7 implemented (Checkpoint 2 reached); Linux CI confirmation pending; Phase 8 next
+**Status:** Phases 0-8 implemented; Linux CI confirmation pending; Phase 9 next
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -289,3 +289,21 @@ No production behavior was changed during this audit.
   existing feature workflows.
 - Application starts cleanly and degrades features predictably when global system
   hooks or desktop grabs are restricted by the OS session.
+
+### Phase 8 - POSIX filesystem semantics and adversarial validation
+
+- Added dedicated adversarial filesystem test suite `tests/test_linux_filesystem_adversarial.py`
+  validating POSIX-specific behaviors across Tickets 25-28.
+- **Case Sensitivity (Ticket 25)**: Explicit casing verification for files (`report.md`,
+  `Report.md`, `REPORT.md`) and project names to guarantee that POSIX distinct filenames are
+  not conflated.
+- **Permission Failures (Ticket 26)**: Validated fail-closed handling on read-only files,
+  read-only workspace directories, and unwritable backup targets. `ReportFileManager.save()`
+  and `backup()` fail gracefully without leaving orphaned temporary files, and
+  `validate_workspace_directory()` rejects non-writable locations upfront via write probing.
+- **Symlink Handling (Ticket 27)**: Validated proper path resolution through valid symlinks and
+  predictable handling of broken/dangling symlinks without hangs or crashes.
+- **Atomic Write Durability under POSIX (Ticket 28)**: Validated `atomic_write_text`,
+  `atomic_write_bytes`, and `atomic_write_json` on POSIX (`0o600` permission enforcement via
+  `_secure_chmod`, `fsync` flushing, and transactional cleanup of temporary `.tmp_*` files
+  when writes or replacements encounter I/O or permission errors).
