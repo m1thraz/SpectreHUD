@@ -14,6 +14,7 @@ from core.loot_manager import LootManager
 from core.project import ProjectManager
 from core.snippet_manager import SnippetManager
 from ui.main_window import MainWindow
+from ui.panels.content_panel import ContentPanel
 from ui.snippet_card import SnippetCard
 
 
@@ -107,3 +108,44 @@ def test_search_reduces_scroll_range_without_stale_content_height(cheatsheet_win
     assert scroll.verticalScrollBar().maximum() == 0
     assert scroll.verticalScrollBar().value() == 0
     _assert_last_card_matches_content_bottom(cheatsheet_window)
+
+
+@pytest.mark.parametrize(
+    "command",
+    (
+        "echo long-value " * 250,
+        "A" * 2000,
+    ),
+)
+def test_long_command_keeps_card_actions_inside_viewport(qapp, command):
+    panel = ContentPanel()
+    panel.resize(740, 500)
+    card = SnippetCard(
+        {
+            "id": "long-command",
+            "title": "Long command",
+            "category": "Test",
+            "template": command,
+        },
+        variables={},
+        parent=panel.content_container,
+    )
+    panel.content_layout.addWidget(card)
+    panel.show()
+
+    for _ in range(3):
+        qapp.processEvents()
+    panel.refresh_content_geometry()
+    for _ in range(3):
+        qapp.processEvents()
+
+    viewport_width = panel.scroll_area.viewport().width()
+    assert card.lbl_command.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
+    assert panel.content_container.width() <= viewport_width
+    assert panel.scroll_area.horizontalScrollBar().maximum() == 0
+    assert card.btn_tweak.geometry().right() <= card.contentsRect().right()
+    assert card.btn_copy.geometry().right() <= card.contentsRect().right()
+
+    panel.hide()
+    panel.deleteLater()
+    qapp.processEvents()

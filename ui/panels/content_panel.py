@@ -1,7 +1,36 @@
 from typing import Optional, List
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QSize
 from core.i18n import t
+
+
+class ViewportBoundContent(QWidget):
+    """Keep horizontal child hints from widening a resizable scroll widget."""
+
+    def hasHeightForWidth(self) -> bool:
+        # The nested card layouts already contribute their wrapped size hints.
+        # Re-running the aggregate layout's heightForWidth calculation here
+        # substantially double-counts wrapped command heights in QScrollArea.
+        return False
+
+    def heightForWidth(self, _width: int) -> int:
+        return -1
+
+    def _constrain_width(self, hint: QSize) -> QSize:
+        ancestor = self.parentWidget()
+        while ancestor is not None and not isinstance(ancestor, QScrollArea):
+            ancestor = ancestor.parentWidget()
+        if ancestor is not None:
+            viewport_width = ancestor.viewport().width()
+            if viewport_width > 0:
+                hint.setWidth(min(hint.width(), viewport_width))
+        return hint
+
+    def sizeHint(self) -> QSize:
+        return self._constrain_width(super().sizeHint())
+
+    def minimumSizeHint(self) -> QSize:
+        return self._constrain_width(super().minimumSizeHint())
 
 
 class ContentPanel(QWidget):
@@ -51,7 +80,7 @@ class ContentPanel(QWidget):
             "background: transparent; border: none;"
         )
 
-        self.content_container = QWidget()
+        self.content_container = ViewportBoundContent()
         self.content_layout = QVBoxLayout(self.content_container)
         self.content_layout.setContentsMargins(12, 8, 12, 8)
         self.content_layout.setSpacing(6)

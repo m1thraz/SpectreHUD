@@ -9,6 +9,7 @@ from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
 import pyperclip
 
+
 class SnippetCard(QFrame):
     """Visual card displaying a single command snippet with natural word wrapping, inline parameter prompts and 1-click copying."""
 
@@ -92,6 +93,7 @@ class SnippetCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
         self.lbl_command.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.lbl_command.setMinimumWidth(0)
         
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
@@ -110,6 +112,7 @@ class SnippetCard(QFrame):
         self.btn_copy.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_copy.clicked.connect(self._copy_command)
         cmd_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignVCenter)
+        cmd_row.setStretch(0, 1)
 
         layout.addLayout(cmd_row)
 
