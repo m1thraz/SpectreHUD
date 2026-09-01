@@ -245,3 +245,47 @@ No production behavior was changed during this audit.
   Linux installation gate does not duplicate or remove release-test coverage.
 - No AppImage, Flatpak, or other standalone Linux artifact is introduced in
   this phase.
+
+### Phase 6 - screenshot capture capabilities
+
+- `core/platform/capabilities.py` now includes `ScreenCaptureStatus` (`AVAILABLE`,
+  `LIMITED`, `UNAVAILABLE`) and exposes `screen_capture_status` as well as
+  `is_screen_capture_available()`.
+- `core/screenshot_manager.py` accepts optional `PlatformCapabilities` (defaulting
+  to `detect_platform_capabilities()`).
+- `start_capture()` checks capability availability upfront. When capture is
+  restricted or unavailable (such as in a Wayland session), it logs a warning
+  and returns `False` immediately without hiding the parent window or scheduling
+  overlays.
+- `ui/app_controller.py::trigger_screenshot()` provides informative, localized user
+  feedback and warning logs on restricted sessions instead of causing unhandled
+  exceptions or null-pixmap failures.
+- Translations for unavailable screen capture states are available in English and
+  German.
+
+### Phase 7 - global hotkeys and session resilience
+
+- `core/hotkey_listener.py` accepts optional `PlatformCapabilities` and exposes
+  `is_available()` and `is_running()` states.
+- When global system hotkeys are unavailable (such as under Wayland), `start()`
+  degrades gracefully: it logs a warning, remains inactive, and returns `False`
+  without invoking `pynput` or interrupting application startup.
+- Runtime initialization failures in the underlying `pynput` backend (such as
+  missing or disconnected X11 display hooks) are caught, setting `_available = False`
+  and allowing the application to proceed with in-app shortcuts.
+- In-app `QShortcut` instances in `MainWindow` (Esc, Ctrl+F, Ctrl+N, Ctrl+P,
+  Ctrl+S, Ctrl+1..4, Tab, etc.) remain completely independent from `pynput` and
+  functional across all desktop environments.
+- `ui/settings_dialog.py::HotkeySettingsPage` dynamically renders a prominent,
+  localized information notice when global shortcuts are unavailable in the
+  current desktop session.
+
+### Checkpoint 2
+
+- Focused unit and integration test suites (`test_platform_capabilities.py`,
+  `test_screenshot_manager.py`, `test_hotkeys.py`, `test_settings_dialog.py`) pass
+  deterministically on both supported and simulated Wayland environments.
+- Full Fast Gate suite passes with zero errors and no regression in Windows or
+  existing feature workflows.
+- Application starts cleanly and degrades features predictably when global system
+  hooks or desktop grabs are restricted by the OS session.
