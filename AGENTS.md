@@ -12,3 +12,15 @@
   instead of immediately repeating the whole suite.
 - `python run_tests.py` and an unfiltered `python -m pytest` remain the complete
   release/final safety gate; do not redefine their meaning.
+
+### Test Output Discipline
+
+- Redirect suite output to a temporary log instead of returning the live,
+  unabridged stream.
+- For a successful run, report only its final result line and elapsed time.
+- For a failed run, return only the `FAILURES` section or the final 30-50 log
+  lines that contain the actionable traceback.
+- Diagnose a failure by rerunning the single affected test with `-v`; do not
+  immediately repeat an entire suite.
+- Keep `--tb=line` for the Fast loop and `--tb=short` for the task-completion
+  suite and CI.
