@@ -6,6 +6,22 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Additive **"Add Missing Loot"** ("Aus Loot ergänzen") feature in the Report Editor
+  that inserts newly captured loot entries into their matching report phase sections
+  without modifying or rebuilding existing manual report text.
+- Robust, canonical report marker infrastructure (`<!-- spectre:loot:{id}:{hash} -->`)
+  with 12-character SHA-256 content hashes, strict byte preservation outside insertion
+  points, code-fence isolation, and a single aggregated fallback section for unmatched
+  categories (`## Neu aus Loot ergänzt`).
+- Automatic backup protection (`report.md.bak`) and dirty-state auto-save protection
+  before appending loot, with transactional fail-closed guarantees.
+- Roundtrip reconciliation for editable rich live preview to preserve report markers
+  across mode switches.
+- Exporter marker stripping for HTML, Markdown copy, Obsidian, and CherryTree exports
+  ensuring no internal sync markers are exposed in client-facing documents.
+
 ## [2.0.3] - 2026-09-01
 
 ### Added

@@ -146,9 +146,10 @@ graph TD
 ### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
 - **`ReportTemplate` & `TemplateSection` (`template_engine.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.
 - **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
-- **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity.
+- **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity with canonical synchronization markers (`<!-- spectre:loot:{id}:{hash} -->`).
+- **`LootSyncEngine` (`loot_sync.py`)**: Provides deterministic SHA-256 (12-hex) content hashing, marker extraction/stripping, report state classification (`missing`, `current`, `stale`, `orphaned`), and additive byte-preserving insertion (`append_missing_loot_to_text()`) into matching H2 phase sections before note placeholders, with fallback handling for unmapped categories. Includes rich preview roundtrip marker reconciliation.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
-- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, view state, autosave and export workflow. Report dialogs, preview/document handling, formatting-toolbar construction and find/replace live in focused modules under `ui/report/`.
+- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, view state, autosave and export workflow. Report dialogs, preview/document handling, formatting-toolbar construction, "Add Missing Loot" action with dirty-state safety, and find/replace live in focused modules under `ui/report/`.
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
 - **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives while retaining their project-relative layout.
