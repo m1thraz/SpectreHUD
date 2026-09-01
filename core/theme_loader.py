@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Set
 
 from core.logger import get_logger
-from ui.styles.palette import CYBER_DARK_PALETTE
+from core.theme_palette import CYBER_DARK_PALETTE
 from core.platform.paths import user_themes_dir
 
 logger = get_logger(__name__)

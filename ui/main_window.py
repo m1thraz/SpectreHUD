@@ -21,6 +21,7 @@ from ui.app_controller import AppController
 from ui.controllers.window_frame_manager import WindowFrameManager
 from ui.styles import get_app_icon
 
+from ui.snipping_overlay import SnippingOverlay
 from core.container import ServiceContainer
 
 logger = get_logger("main_window")
@@ -44,7 +45,9 @@ class MainWindow(QMainWindow):
     ):
         started_at = time.perf_counter()
         super().__init__()
-        if container is not None:
+
+        # Service / Dependency Injection Setup
+        if container:
             self.container = container
             self.event_bus = container.event_bus
             self.config = container.config_manager
@@ -74,8 +77,14 @@ class MainWindow(QMainWindow):
                 else ClipboardWatcher(event_bus=self.event_bus)
             )
             self.screenshot_manager = (
-                screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+                screenshot_manager
+                if screenshot_manager is not None
+                else ScreenshotManager(overlay_factory=SnippingOverlay)
             )
+
+        if getattr(self.screenshot_manager, "_overlay_factory", None) is None:
+            self.screenshot_manager._overlay_factory = SnippingOverlay
+
         self._startup_mark(started_at, "services assigned")
 
         # Window Frame Manager for Frameless Resize & Dragging

@@ -11,6 +11,9 @@ APP_CONTROLLER = PROJECT_ROOT / "ui" / "app_controller.py"
 PLATFORM_ROOT = PROJECT_ROOT / "core" / "platform"
 
 
+CORE_ROOT = PROJECT_ROOT / "core"
+
+
 def _ui_imports(path: Path) -> list[tuple[int, str]]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations: list[tuple[int, str]] = []
@@ -24,6 +27,19 @@ def _ui_imports(path: Path) -> list[tuple[int, str]]:
             if module == "ui" or module.startswith("ui."):
                 violations.append((node.lineno, module))
     return violations
+
+
+def test_core_layer_does_not_import_ui():
+    """Architectural invariant: The entire core layer must never import from ui."""
+    violations = []
+    for path in sorted(CORE_ROOT.rglob("*.py")):
+        for line, module in _ui_imports(path):
+            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
+
+    assert violations == [], (
+        "Core layer violated architecture boundaries by importing from ui:\n"
+        + "\n".join(violations)
+    )
 
 
 def test_reporting_layer_does_not_import_ui():

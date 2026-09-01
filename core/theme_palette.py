@@ -1,0 +1,171 @@
+"""
+Core Design Tokens and Color Palette Constants for SpectreHUD Cyber Dark Theme.
+
+This module contains the domain-level theme palette dictionary and token constants,
+decoupled from Qt UI presentation classes.
+"""
+
+# Core Backgrounds & Surfaces
+BG_DARK = "#0d1117"
+BG_SURFACE = "#161b22"
+BG_SURFACE_ALT = "#121212"
+BG_CARD = "#161b22"
+BG_CARD_HOVER = "#1a212c"
+BG_PANEL_HEADER = "rgba(22, 27, 34, 0.7)"
+BG_HUD_GLASS = "rgba(13, 17, 23, 0.95)"
+BG_DIALOG_GLASS = "rgba(13, 17, 23, 0.98)"
+BG_INPUT = "rgba(22, 27, 34, 0.9)"
+BG_CODE = "rgba(9, 13, 18, 0.95)"
+
+# Primary & Cyber Accent Colors
+CYBER_CYAN = "#00e5ff"
+CYBER_BLUE = "#58a6ff"
+CYBER_BLUE_LIGHT = "#79c0ff"
+CYBER_BLUE_ACTIVE = "#388bfd"
+ACCENT_NAV_ACTIVE = "#1f293d"
+
+# Status & Severity Colors
+STATUS_SUCCESS = "#39d353"
+STATUS_SUCCESS_BG = "#238636"
+STATUS_SUCCESS_HOVER = "#2ea043"
+STATUS_ERROR = "#f85149"
+STATUS_ERROR_BG = "#da3633"
+STATUS_WARNING = "#e3b341"
+STATUS_PURPLE = "#bc8cff"
+STATUS_GREEN_LIGHT = "#56d364"
+
+# Text Colors
+TEXT_PRIMARY = "#f0f6fc"
+TEXT_SECONDARY = "#c9d1d9"
+TEXT_MUTED = "#8b949e"
+TEXT_DIMMED = "#6e7681"
+TEXT_BRAND = "#00e5ff"
+TEXT_CODE = "#39d353"
+
+# Borders & Separators
+BORDER_DEFAULT = "#30363d"
+BORDER_MUTED = "rgba(48, 54, 61, 0.6)"
+BORDER_SUBTLE = "rgba(48, 54, 61, 0.4)"
+BORDER_GLOW = "rgba(0, 229, 255, 0.35)"
+BORDER_GLOW_STRONG = "#00e5ff"
+BORDER_BLUE_GLOW = "rgba(56, 139, 253, 0.5)"
+
+# Complete render palette
+CYBER_DARK_PALETTE = {
+    "BG_DARK": BG_DARK,
+    "BG_SURFACE": BG_SURFACE,
+    "BG_SURFACE_ALT": BG_SURFACE_ALT,
+    "BG_CARD": BG_CARD,
+    "BG_CARD_HOVER": BG_CARD_HOVER,
+    "BG_PANEL_HEADER": BG_PANEL_HEADER,
+    "BG_HUD_GLASS": BG_HUD_GLASS,
+    "BG_DIALOG_GLASS": BG_DIALOG_GLASS,
+    "BG_INPUT": BG_INPUT,
+    "BG_CODE": BG_CODE,
+    "CYBER_CYAN": CYBER_CYAN,
+    "CYBER_BLUE": CYBER_BLUE,
+    "CYBER_BLUE_LIGHT": CYBER_BLUE_LIGHT,
+    "CYBER_BLUE_ACTIVE": CYBER_BLUE_ACTIVE,
+    "ACCENT_NAV_ACTIVE": ACCENT_NAV_ACTIVE,
+    "STATUS_SUCCESS": STATUS_SUCCESS,
+    "STATUS_SUCCESS_BG": STATUS_SUCCESS_BG,
+    "STATUS_SUCCESS_HOVER": STATUS_SUCCESS_HOVER,
+    "STATUS_ERROR": STATUS_ERROR,
+    "STATUS_ERROR_BG": STATUS_ERROR_BG,
+    "STATUS_WARNING": STATUS_WARNING,
+    "STATUS_PURPLE": STATUS_PURPLE,
+    "STATUS_GREEN_LIGHT": STATUS_GREEN_LIGHT,
+    "TEXT_PRIMARY": TEXT_PRIMARY,
+    "TEXT_SECONDARY": TEXT_SECONDARY,
+    "TEXT_MUTED": TEXT_MUTED,
+    "TEXT_DIMMED": TEXT_DIMMED,
+    "TEXT_BRAND": TEXT_BRAND,
+    "TEXT_CODE": TEXT_CODE,
+    "TEXT_FORM": "#e6edf3",
+    "TEXT_WHITE": "#ffffff",
+    "TEXT_REC": "#ff7b72",
+    "TEXT_FAVORITE": "#ffd700",
+    "BORDER_DEFAULT": BORDER_DEFAULT,
+    "BORDER_MUTED": BORDER_MUTED,
+    "BORDER_SUBTLE": BORDER_SUBTLE,
+    "BORDER_GLOW": BORDER_GLOW,
+    "BORDER_GLOW_STRONG": BORDER_GLOW_STRONG,
+    "BORDER_BLUE_GLOW": BORDER_BLUE_GLOW,
+    "BG_CONTROL": "#21262d",
+    "SELECTION_BLUE": "#1f6feb",
+    "CODE_SELECTION": "#1f3d29",
+    "SURFACE_A40": "rgba(22, 27, 34, 0.4)",
+    "SURFACE_A70": "rgba(22, 27, 34, 0.7)",
+    "SURFACE_A80": "rgba(22, 27, 34, 0.8)",
+    "SURFACE_A85": "rgba(22, 27, 34, 0.85)",
+    "SURFACE_A90": "rgba(22, 27, 34, 0.9)",
+    "BORDER_A40": "rgba(48, 54, 61, 0.4)",
+    "BORDER_A50": "rgba(48, 54, 61, 0.5)",
+    "BORDER_A60": "rgba(48, 54, 61, 0.6)",
+    "BORDER_A70": "rgba(48, 54, 61, 0.7)",
+    "BORDER_A80": "rgba(48, 54, 61, 0.8)",
+    "BORDER_A90": "rgba(48, 54, 61, 0.9)",
+    "BORDER_A95": "rgba(48, 54, 61, 0.95)",
+    "NAV_A60": "rgba(31, 41, 61, 0.6)",
+    "NAV_A75": "rgba(31, 41, 61, 0.75)",
+    "NAV_A80": "rgba(31, 41, 61, 0.8)",
+    "NAV_A85": "rgba(31, 41, 61, 0.85)",
+    "NAV_A95": "rgba(31, 41, 61, 0.95)",
+    "CONTROL_A70": "rgba(33, 38, 45, 0.7)",
+    "CONTROL_A80": "rgba(33, 38, 45, 0.8)",
+    "CONTROL_A85": "rgba(33, 38, 45, 0.85)",
+    "CONTROL_A90": "rgba(33, 38, 45, 0.9)",
+    "ACTIVE_BLUE_A12": "rgba(56, 139, 253, 0.12)",
+    "ACTIVE_BLUE_A20": "rgba(56, 139, 253, 0.2)",
+    "ACTIVE_BLUE_A25": "rgba(56, 139, 253, 0.25)",
+    "ACTIVE_BLUE_A30": "rgba(56, 139, 253, 0.3)",
+    "ACTIVE_BLUE_A35": "rgba(56, 139, 253, 0.35)",
+    "ACTIVE_BLUE_A40": "rgba(56, 139, 253, 0.4)",
+    "ACTIVE_BLUE_A50": "rgba(56, 139, 253, 0.5)",
+    "BLUE_A25": "rgba(88, 166, 255, 0.25)",
+    "BLUE_A35": "rgba(88, 166, 255, 0.35)",
+    "BLUE_A40": "rgba(88, 166, 255, 0.4)",
+    "BLUE_A50": "rgba(88, 166, 255, 0.5)",
+    "CYAN_A15": "rgba(0, 229, 255, 0.15)",
+    "CYAN_A20": "rgba(0, 229, 255, 0.2)",
+    "CYAN_A30": "rgba(0, 229, 255, 0.3)",
+    "CYAN_A35": "rgba(0, 229, 255, 0.35)",
+    "CYAN_A40": "rgba(0, 229, 255, 0.4)",
+    "CYAN_A50": "rgba(0, 229, 255, 0.5)",
+    "CYAN_A60": "rgba(0, 229, 255, 0.6)",
+    "MUTED_A20": "rgba(110, 118, 129, 0.2)",
+    "MUTED_A25": "rgba(110, 118, 129, 0.25)",
+    "MUTED_A40": "rgba(110, 118, 129, 0.4)",
+    "MUTED_A60": "rgba(110, 118, 129, 0.6)",
+    "ERROR_BG_A20": "rgba(218, 54, 51, 0.2)",
+    "ERROR_BG_A30": "rgba(218, 54, 51, 0.3)",
+    "ERROR_BG_A35": "rgba(218, 54, 51, 0.35)",
+    "ERROR_A20": "rgba(248, 81, 73, 0.2)",
+    "ERROR_A35": "rgba(248, 81, 73, 0.35)",
+    "ERROR_A70": "rgba(248, 81, 73, 0.7)",
+    "WARNING_A12": "rgba(210, 153, 34, 0.12)",
+    "WARNING_A20": "rgba(210, 153, 34, 0.2)",
+    "WARNING_A35": "rgba(210, 153, 34, 0.35)",
+    "WARNING_A40": "rgba(210, 153, 34, 0.4)",
+    "STAR_A15": "rgba(227, 179, 65, 0.15)",
+    "STAR_A25": "rgba(227, 179, 65, 0.25)",
+    "PURPLE_A20": "rgba(163, 113, 247, 0.2)",
+    "PURPLE_A40": "rgba(163, 113, 247, 0.4)",
+    "SUCCESS_A20": "rgba(63, 185, 80, 0.2)",
+    "SUCCESS_A40": "rgba(63, 185, 80, 0.4)",
+    "DARK_A72": "rgba(13, 17, 23, 0.72)",
+    "DARK_A80": "rgba(13, 17, 23, 0.8)",
+    "DARK_A85": "rgba(13, 17, 23, 0.85)",
+    "DARK_A95": "rgba(13, 17, 23, 0.95)",
+    "DARK_A98": "rgba(13, 17, 23, 0.98)",
+    "CODE_A90": "rgba(9, 13, 18, 0.9)",
+    "CODE_A95": "rgba(9, 13, 18, 0.95)",
+    "CODE_A98": "rgba(9, 13, 18, 0.98)",
+    "PANEL_A70": "rgba(17, 22, 29, 0.7)",
+    "PANEL_A80": "rgba(17, 22, 29, 0.8)",
+    "CARD_HOVER_A90": "rgba(26, 33, 44, 0.9)",
+    "SEARCH_FOCUS_A95": "rgba(10, 16, 29, 0.95)",
+    "INPUT_FOCUS_A90": "rgba(16, 23, 38, 0.9)",
+    "INPUT_FOCUS_A95": "rgba(16, 23, 38, 0.95)",
+    "SIDEBAR_A90": "rgba(18, 22, 29, 0.9)",
+}

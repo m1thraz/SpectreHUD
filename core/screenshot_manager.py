@@ -1,9 +1,8 @@
 from datetime import datetime
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Callable, Any
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt, QRect
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QGuiApplication, QPixmap, QPainter, QColor
-from ui.snipping_overlay import SnippingOverlay
 from core.display_geometry import (
     ScreenGeometry,
     VirtualDesktopBoundingBox,
@@ -41,12 +40,14 @@ class ScreenshotManager(QObject):
         self,
         parent: Optional[QObject] = None,
         capabilities: Optional[PlatformCapabilities] = None,
+        overlay_factory: Optional[Callable[..., Any]] = None,
     ):
         super().__init__(parent)
         self._capabilities = (
             capabilities if capabilities is not None else detect_platform_capabilities()
         )
-        self._active_overlay: Optional[SnippingOverlay] = None
+        self._overlay_factory = overlay_factory
+        self._active_overlay: Optional[Any] = None
 
     @property
     def capabilities(self) -> PlatformCapabilities:
@@ -181,7 +182,12 @@ class ScreenshotManager(QObject):
             return None, None
 
     def start_capture(
-        self, parent_window: QWidget, project_manager, loot_manager, target_ip: str = ""
+        self,
+        parent_window: QWidget,
+        project_manager,
+        loot_manager,
+        target_ip: str = "",
+        overlay_factory: Optional[Callable[..., Any]] = None,
     ) -> bool:
         """
         Main entry point:
@@ -189,7 +195,7 @@ class ScreenshotManager(QObject):
         2. Hides parent window.
         3. Delays 220ms for clean desktop view.
         4. Grabs virtual desktop across all active monitors.
-        5. Launches SnippingOverlay.
+        5. Launches injected overlay_factory.
         """
         if not self.is_capture_available():
             if self._capabilities.wayland:
@@ -200,6 +206,11 @@ class ScreenshotManager(QObject):
                 logger.warning(
                     f"Desktop screenshot capture is not supported on platform '{self._capabilities.system}'."
                 )
+            return False
+
+        factory = overlay_factory or self._overlay_factory
+        if factory is None:
+            logger.warning("No overlay factory configured for interactive screenshot capture.")
             return False
 
         was_visible = parent_window.isVisible()
@@ -214,7 +225,7 @@ class ScreenshotManager(QObject):
                         parent_window.show()
                     return
 
-                self._active_overlay = SnippingOverlay(full_pixmap, bbox=bbox)
+                self._active_overlay = factory(full_pixmap, bbox=bbox)
 
                 self._active_overlay.snip_completed.connect(
                     lambda cropped: self._on_snip_completed(
