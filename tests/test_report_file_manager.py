@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import pytest
 import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -192,6 +193,7 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(loaded.width(), 200)
         self.assertEqual(loaded.height(), 100)
 
+    @pytest.mark.integration
     def test_report_editor_export_button_dispatches_html_export(self):
         """Tests that the unified Export button can dispatch to HTML export."""
         from unittest.mock import patch

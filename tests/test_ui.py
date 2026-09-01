@@ -17,8 +17,6 @@ from core.net_detector import NetDetector
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
 
-pytestmark = pytest.mark.integration
-
 class TestUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -55,6 +53,7 @@ class TestUI(unittest.TestCase):
             self.assertIsInstance(ip, str)
             self.assertIn(".", ip)
 
+    @pytest.mark.integration
     def test_hud_modes_and_projects(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
@@ -139,6 +138,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_copy_minimizes_overlay_only_when_option_is_enabled(self):
         from ui.snippet_card import SnippetCard
 
@@ -167,6 +167,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_report_editor_is_created_only_when_report_mode_opens(self):
         """Startup must not construct the expensive report editor in Cheatsheet mode."""
         window = MainWindow(
@@ -216,6 +217,7 @@ class TestUI(unittest.TestCase):
         self.assertEqual(tab.editor.toPlainText(), "# Box Gamma Writeup\nInitial foothold via port 80.")
         self.assertFalse(tab.is_dirty())
 
+    @pytest.mark.integration
     def test_loot_grouped_by_category_with_headers(self):
         """Verifies that loot view displays section headers only for non-empty categories in CATEGORIES order."""
         from PyQt6.QtWidgets import QLabel
@@ -284,6 +286,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_loot_board_view_uses_configured_alternate_presentation(self):
         from ui.loot_board import LootBoard
 
@@ -309,6 +312,7 @@ class TestUI(unittest.TestCase):
         self.assertEqual(window.cards[0].columns["access"].entry_ids, [loot_manager.get_entries()[0]["id"]])
         window.close()
 
+    @pytest.mark.integration
     def test_loot_view_button_toggles_and_persists_both_presentations(self):
         from ui.loot_board import LootBoard
 
@@ -338,6 +342,7 @@ class TestUI(unittest.TestCase):
         self.assertFalse(any(isinstance(card, LootBoard) for card in window.cards))
         window.close()
 
+    @pytest.mark.integration
     def test_loot_export_tooltip_uses_active_english_locale(self):
         window = MainWindow(
             config_manager=ConfigManager(config_dir=self.config_dir),
@@ -358,6 +363,7 @@ class TestUI(unittest.TestCase):
         )
         window.close()
 
+    @pytest.mark.integration
     def test_theme_change_requests_restart_only_after_settings_dialog_closes(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
         window = MainWindow(
@@ -387,6 +393,7 @@ class TestUI(unittest.TestCase):
         self.assertEqual(lifecycle, ["dialog_closed", "restart"])
         window.close()
 
+    @pytest.mark.integration
     def test_unchanged_theme_does_not_request_restart(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
         window = MainWindow(
@@ -409,6 +416,7 @@ class TestUI(unittest.TestCase):
         self.assertEqual(restarts, [])
         window.close()
 
+    @pytest.mark.integration
     def test_cheatsheet_favorites_ui_interaction(self):
         from ui.snippet_card import SnippetCard
         config_manager = ConfigManager(config_dir=self.config_dir)
@@ -455,6 +463,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_inline_command_tweaker_interaction(self):
         from ui.snippet_card import SnippetCard
         from PyQt6.QtWidgets import QApplication, QDialog
@@ -495,6 +504,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_variable_bar_user_pass_and_visibility_toggle(self):
         from PyQt6.QtWidgets import QLineEdit
         config_manager = ConfigManager(config_dir=self.config_dir)
@@ -544,6 +554,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_project_archive_ui_action(self):
         from unittest.mock import patch
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
@@ -575,6 +586,7 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+    @pytest.mark.integration
     def test_search_fuzzy_and_result_capping(self):
         """Verifies that typing with typos finds matches and caps results at top 25 with expander."""
         config_manager = ConfigManager(config_dir=self.config_dir)

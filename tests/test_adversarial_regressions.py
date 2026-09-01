@@ -270,6 +270,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         project_ctrl.update_project_combo.assert_called_once()
         self.assertEqual(events, [])
 
+    @pytest.mark.integration
     def test_rapid_project_switches_keep_clipboard_data_isolated(self):
         """Repeated project switches must not leak clipboard data across sessions."""
         self.project_mgr.create_project("BoxRapidOne")
@@ -1012,6 +1013,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 39. v15-P1: list_projects() does not mutate registry
     # -------------------------------------------------------------------------
+    @pytest.mark.integration
     def test_list_projects_does_not_mutate_registry(self):
         """
         v15-P1: ProjectRepository.list_projects() must be read-only —

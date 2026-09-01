@@ -3,6 +3,7 @@
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import pytest
 from PyQt6.QtWidgets import QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
@@ -93,6 +94,7 @@ def test_tooltip_inside_content_panel_keeps_theme_colors(qapp):
     panel.deleteLater()
 
 
+@pytest.mark.integration
 def test_combo_popup_inside_settings_page_keeps_theme_colors(qapp):
     _apply_daylight_theme(qapp)
 
