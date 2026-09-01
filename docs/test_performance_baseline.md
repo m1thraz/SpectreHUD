@@ -103,3 +103,28 @@ compete. This applies to the modules above as well as:
   configuration directory.
 
 **Decision: isolation prerequisites satisfied; continue to Phase 3.**
+
+## 2026-09-01 — Phase 4 Serial/Parallel Comparison
+
+Both runs used the same Windows checkout, Python 3.10 project environment,
+`not release` marker expression, and short traceback mode. `addopts` was cleared
+on the command line only so pytest printed an explicit result summary; the
+repository configuration was not changed.
+
+Collection immediately before each run reported **386 tests**. The marker
+expression selected 385 non-release tests in both cases.
+
+| Mode | Command-specific options | Result | pytest time | Wall-clock |
+| --- | --- | --- | ---: | ---: |
+| Serial | `-n0` | 384 passed, 1 skipped, 1 deselected, 15 subtests passed | 283.66 s | 290.236 s |
+| Parallel | `-n auto --dist=loadscope` | 384 passed, 1 skipped, 15 subtests passed | 37.82 s | 39.139 s |
+
+xdist omits the deselected release test from its final summary, but the
+collection count and the 385 executed non-release outcomes are identical. No
+test failed only in the parallel run.
+
+Parallel execution reduced measured wall-clock time by **251.097 seconds**
+(approximately **86.5%**) and was approximately **7.4 times faster** for the
+non-release suite.
+
+**Decision: comparison accepted; continue to Phase 5.**
