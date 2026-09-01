@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Mapping, Set
 
 from core.logger import get_logger
 from ui.styles.palette import CYBER_DARK_PALETTE
+from core.platform.paths import user_themes_dir
 
 logger = get_logger(__name__)
 
@@ -14,7 +15,7 @@ class ThemeLoader:
     """Loads complete theme palettes and falls back safely to Cyber Dark."""
 
     BUILTIN_THEMES_DIR = Path(__file__).resolve().parent.parent / "data" / "themes"
-    USER_THEMES_DIR = Path.home() / ".config" / "spectrehud" / "themes"
+    USER_THEMES_DIR = user_themes_dir()
     FALLBACK_THEME_ID = "cyber_dark"
 
     def get_required_tokens(self) -> Set[str]:

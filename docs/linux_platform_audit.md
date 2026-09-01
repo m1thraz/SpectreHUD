@@ -1,6 +1,7 @@
 # Linux Platform Audit
 
-**Status:** Phase 0 inventory  
+**Status:** Phases 0-2 completed; Phase 3 pending
+
 **Verified:** 2026-09-01 against v2.0.3 development state
 
 This document records existing operating-system boundaries before Linux support
@@ -174,3 +175,29 @@ The first implementation checkpoint should proceed in this order:
 5. Fast Gate on Windows and Linux CI before packaging changes.
 
 No production behavior was changed during this audit.
+
+## Implementation status
+
+### Phase 1 - platform boundary
+
+- `core/platform/capabilities.py` now provides UI-free OS/session capability
+  detection for Windows, Linux/X11, Linux/Wayland, and headless sessions.
+- `tests/test_architecture_boundaries.py` prevents `core/platform/*` from
+  importing `ui.*`.
+- Capability detection is covered through injected environment and platform
+  values; it does not depend on the CI runner's real display session.
+
+### Phase 2 - paths and legacy data
+
+- `core/platform/paths.py` is the single source for config, data, cache,
+  workspace, and user-theme paths.
+- Linux honors `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and `XDG_CACHE_HOME`, with
+  the standard home-directory fallbacks when those variables are unset.
+- Windows uses roaming AppData for configuration and local AppData for mutable
+  data/cache. Existing `SPECTRE_*_DIR` overrides remain authoritative.
+- A populated legacy `~/.ctf_cheatsheet_widget` configuration remains in use
+  when the new standard config directory is empty. No files are copied,
+  deleted, or silently migrated.
+- The established user-visible `~/spectre_projects` workspace default is
+  intentionally preserved. Existing custom-theme storage is also detected so
+  the platform-path change does not make installed themes disappear.

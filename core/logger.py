@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Union
 from logging.handlers import RotatingFileHandler
+from core.platform.paths import config_dir as platform_config_dir
 
 DEFAULT_MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB per log file
 DEFAULT_LOG_BACKUP_COUNT = 3  # 3 rotated backups (spectrehud.log.1, .2, .3)
@@ -50,11 +51,10 @@ def configure_file_logging(
     )
 
     try:
-        env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
         log_dir = (
             Path(config_dir)
             if config_dir
-            else (Path(env_dir) if env_dir else Path.home() / ".ctf_cheatsheet_widget")
+            else platform_config_dir()
         )
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "spectrehud.log"

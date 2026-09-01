@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from core.logger import get_logger
@@ -7,6 +6,7 @@ from core.storage import (
     FileStorageBackend,
     PersistenceError,
 )
+from core.platform.paths import config_dir as platform_config_dir, projects_dir
 
 logger = get_logger("config")
 
@@ -31,7 +31,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "report_transparency": 0,
     "language": "en",
     "time_format": "24h",
-    "workspace_dir": str(Path.home() / "spectre_projects"),
+    "workspace_dir": str(projects_dir()),
     "obsidian_vault_path": "",
     "obsidian_export_folder": "CTF/SpectreHUD",
     "obsidian_open_after_export": False,
@@ -48,11 +48,8 @@ def clamp_transparency(value: object, default: int) -> int:
 
 
 def get_default_config_dir() -> Path:
-    """Returns the default config directory, checking SPECTRE_CONFIG_DIR env var first."""
-    env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
-    if env_dir:
-        return Path(env_dir)
-    return Path.home() / ".ctf_cheatsheet_widget"
+    """Compatibility entry point for the central platform path source."""
+    return platform_config_dir()
 
 
 class ConfigManager:

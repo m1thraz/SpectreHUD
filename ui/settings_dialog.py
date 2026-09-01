@@ -1,5 +1,4 @@
 from typing import Dict, Any, Optional
-from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -20,6 +19,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
 from core.config import ConfigManager, clamp_transparency
+from core.platform.paths import projects_dir
 from core.i18n import t
 from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
@@ -600,7 +600,7 @@ class GeneralSettingsPage(QWidget):
 
         row_ws = QHBoxLayout()
         self.txt_workspace = QLineEdit(
-            self.config.get("workspace_dir", str(Path.home() / "spectre_projects"))
+            self.config.get("workspace_dir", str(projects_dir()))
         )
         row_ws.addWidget(self.txt_workspace, stretch=1)
 

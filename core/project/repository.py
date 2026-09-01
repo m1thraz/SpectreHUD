@@ -22,6 +22,7 @@ from core.project.validator import (
 from core.project.metadata import create_initial_notes, create_initial_state
 from core.project.registry import ProjectRegistry
 from core.project.state_store import ProjectStateStore
+from core.platform.paths import config_dir as platform_config_dir, projects_dir
 
 logger = get_logger("projects")
 
@@ -29,19 +30,13 @@ PROJECT_LOOT_SUBDIRECTORIES = ("recon", "access", "privesc", "postex", "scripts"
 
 
 def get_default_projects_dir() -> Path:
-    """Returns the default projects workspace directory, checking SPECTRE_PROJECTS_DIR env var first."""
-    env_dir = os.environ.get("SPECTRE_PROJECTS_DIR")
-    if env_dir:
-        return Path(env_dir)
-    return Path.home() / "spectre_projects"
+    """Compatibility entry point for the central workspace path source."""
+    return projects_dir()
 
 
 def get_default_config_dir() -> Path:
-    """Returns default configuration directory, checking SPECTRE_CONFIG_DIR env var first."""
-    env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
-    if env_dir:
-        return Path(env_dir)
-    return Path.home() / ".ctf_cheatsheet_widget"
+    """Compatibility entry point for the central platform path source."""
+    return platform_config_dir()
 
 
 class ProjectRepository:
