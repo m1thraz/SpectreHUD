@@ -47,4 +47,4 @@ projects, report templates, and custom themes can be reused without conversion.
 
 For the complete change history, see the repository [changelog](../CHANGELOG.md).
 The test timing and isolation record is available in
-[`test_performance_baseline.md`](test_performance_baseline.md).
+[`performance_baseline.md`](testing/performance_baseline.md).

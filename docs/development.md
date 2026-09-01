@@ -19,7 +19,7 @@ then install and test the project:
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
-python run_tests.py
+python scripts/run_tests.py
 ```
 
 Alternatively, invoke the virtual environment's Python executable directly. Qt
@@ -37,7 +37,14 @@ require a manual desktop smoke test.
 - `ui/panels/` and `ui/report/`: reusable Qt composition components.
 - `data/i18n/`: English and German translation dictionaries.
 - `tests/`: unit, workflow-invariant, UI smoke, and packaging tests.
+- `scripts/`: developer, test, build, and release-validation commands.
 - `docs/`: technical reference, explicit product boundaries, and export guides.
+- `docs/testing/`: archived test classification, isolation, and timing evidence.
+
+Keep the repository root limited to standard project/governance files, package
+and application entry points, and build or direct-launch contracts such as
+`SpectreHUD.spec` and `SpectreHUD.bat`. Generated logs, screenshots, audit
+notes, and general-purpose helper scripts do not belong in the root.
 
 Use existing modules before creating a new abstraction. Keep Qt widgets out of
 `core/`, and keep persistence ownership in domain services rather than view
@@ -69,8 +76,8 @@ Tests marked `integration` cross a component, Qt-window, subprocess, or operatin
 system boundary. Tests marked `release` build or inspect distribution artifacts.
 Markers classify execution cost; an unfiltered pytest run still executes every
 test. The default pytest output is compact, while failures retain short
-tracebacks and their exact test IDs. `python run_tests.py` intentionally remains
-an alias for the complete, unfiltered final gate.
+tracebacks and their exact test IDs. `python scripts/run_tests.py`
+intentionally remains an alias for the complete, unfiltered final gate.
 
 The workflow-invariant modules, `test_smoke.py`, and Cheatsheet geometry are
 integration suites because their assertions depend on a composed `MainWindow`.
@@ -89,9 +96,11 @@ python scripts/verify_wheel.py dist/
 The Fast and non-release scripts use `pytest-xdist` with
 `--dist=loadscope`. The worker-isolation audit and measured serial/parallel
 comparison are recorded in
-[`test_performance_baseline.md`](test_performance_baseline.md). If a failure
-appears flaky or order-dependent, reproduce the individual test serially with
-`-n0` before attributing it to application code.
+[`performance_baseline.md`](testing/performance_baseline.md). The original
+integration-marker measurements are archived in
+[`integration_candidates.txt`](testing/integration_candidates.txt). If a
+failure appears flaky or order-dependent, reproduce the individual test
+serially with `-n0` before attributing it to application code.
 
 CI validates Python 3.10–3.13 on Windows and Linux, performs coverage on Linux,
 and builds and smoke-tests the Windows wheel and executable.

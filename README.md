@@ -83,7 +83,7 @@ For development:
 
 ```bash
 pip install -e ".[dev]"
-python run_tests.py
+python scripts/run_tests.py
 ```
 
 Build the distributable artifacts with:

@@ -10,7 +10,7 @@ Describe the user-visible or maintainability outcome.
 ## Verification
 
 - [ ] Focused tests pass.
-- [ ] Full `python run_tests.py` passes.
+- [ ] Full `python scripts/run_tests.py` passes.
 - [ ] Manual desktop smoke test completed, or not applicable.
 - [ ] `git diff --check` is clean.
 - [ ] English and German translations were updated together, or not applicable.

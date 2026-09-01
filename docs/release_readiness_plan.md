@@ -24,7 +24,7 @@ published `v2.0.0` tag agree.
 ## Phase 1: Test Isolation and Reliability
 
 **Status: completed.** Shared pytest fixtures isolate implicit configuration and
-project paths for every test. `run_tests.py` delegates to the same pytest
+project paths for every test. `scripts/run_tests.py` delegates to the same pytest
 collection used by CI.
 
 ### 1.1 Remove global test state
@@ -42,7 +42,7 @@ accessing user paths.
 
 ### 1.2 Align test runners
 
-- `run_tests.py`, pytest, and CI use the same test collection.
+- `scripts/run_tests.py`, pytest, and CI use the same test collection.
 - Release documentation treats the concrete CI result as the authoritative test
   count because regression additions and parametrization change it over time.
 

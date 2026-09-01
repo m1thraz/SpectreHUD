@@ -1,4 +1,4 @@
-# SpectreHUD integration-test audit
+# SpectreHUD integration-test audit (archived measurement)
 # Measured: 2026-09-01, Windows, QT_QPA_PLATFORM=offscreen
 # Command per candidate module: pytest tests/test_X.py --durations=0 -q
 # Selection: MainWindow/multi-component boundary, >0.30 s, or multi-stage filesystem workflow.

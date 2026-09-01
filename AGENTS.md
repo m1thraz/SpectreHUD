@@ -13,7 +13,7 @@
   for example `python -m pytest tests/test_<module>.py -q`.
 - After a failure, rerun only the last failures with `python -m pytest --lf -q`
   instead of immediately repeating the whole suite.
-- `python run_tests.py` and an unfiltered `python -m pytest` remain the complete
+- `python scripts/run_tests.py` and an unfiltered `python -m pytest` remain the complete
   release/final safety gate; do not redefine their meaning.
 
 ### Parallelization

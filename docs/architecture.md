@@ -200,7 +200,7 @@ for the two trust boundaries and their test rationale.
 
 ## 5. Testing & CI/CD Strategy
 
-- **Master Test Runner (`run_tests.py`)**:
+- **Master Test Runner (`scripts/run_tests.py`)**:
   - Delegates to the pytest collection under `tests/` and runs headlessly (`QT_QPA_PLATFORM=offscreen`).
   - Test counts are intentionally not treated as release documentation: parametrization and regression additions change them. The current CI result is the release evidence.
   - `scripts/test_fast.sh` and `scripts/test_full.sh` use `pytest-xdist` with
