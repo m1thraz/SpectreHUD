@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SpectreHUD
+Comment=CTF & Pentesting HUD Cheatsheet
+Exec=spectrehud
+Icon=spectrehud
+Categories=Utility;Security;Development;
+Terminal=false
+StartupWMClass=spectrehud

@@ -143,7 +143,9 @@ def main():
     logger.info("Starting SpectreHUD application...")
     app = QApplication(sys.argv)
     _startup_mark(started_at, "QApplication ready")
-    app.setApplicationName("SpectreHUD")
+    app.setApplicationName("spectrehud")
+    app.setApplicationDisplayName("SpectreHUD")
+    app.setDesktopFileName("spectrehud.desktop")
     app.setQuitOnLastWindowClosed(False)
 
     # Acquire this before creating services that access the registry, workspace,

@@ -29,6 +29,9 @@ semantic versioning.
   fully operational.
 - Comprehensive POSIX adversarial filesystem test coverage covering case sensitivity,
   permission boundaries, symlink resolutions, and atomic write durability.
+- Linux desktop integration assets including standard `resources/linux/spectrehud.desktop`,
+  hicolor icons across 48x48, 128x128, 256x256, and scalable SVG, plus aligned
+  `StartupWMClass` / `setDesktopFileName` application metadata.
 
 ## [2.0.3] - 2026-09-01
 

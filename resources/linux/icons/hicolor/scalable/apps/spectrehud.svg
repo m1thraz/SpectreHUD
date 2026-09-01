@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Cyan Glow für den Korpus -->
+    <filter id="ghostGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur1"/>
+      <feGaussianBlur stdDeviation="24" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Intensiver roter Laser-Glow für das Auge -->
+    <filter id="redEyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blurA"/>
+      <feGaussianBlur stdDeviation="18" result="blurB"/>
+      <feMerge>
+        <feMergeNode in="blurB"/>
+        <feMergeNode in="blurA"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Kein Hintergrund-Rechteck / Vollständig transparent für Windows .ico -->
+
+  <!-- Hauptsilhouette des Geistes (Maximal skaliert, füllt die Fläche) -->
+  <g filter="url(#ghostGlow)">
+    <path d="M 256 32 
+             C 340 32, 410 75, 410 160 
+             L 410 340 
+             L 380 315 
+             L 345 355 
+             L 310 320 
+             L 275 360 
+             L 256 330 
+             L 237 360 
+             L 202 320 
+             L 167 355 
+             L 132 315 
+             L 102 340 
+             L 102 160 
+             C 102 75, 172 32, 256 32 Z" 
+          fill="#04070d" stroke="#00e5ff" stroke-width="12" stroke-linejoin="round"/>
+
+    <!-- Interne High-Tech Scanlines / Vektor-Struktur im Geist -->
+    <line x1="165" y1="150" x2="347" y2="150" stroke="#00e5ff" stroke-width="4" stroke-opacity="0.4"/>
+    <line x1="185" y1="200" x2="327" y2="200" stroke="#00e5ff" stroke-width="4" stroke-opacity="0.5"/>
+  </g>
+
+  <!-- Das stechende, rote Phantom-Auge im Zentrum -->
+  <g filter="url(#redEyeGlow)">
+    <polygon points="256,190 286,215 256,240 226,215" fill="#ff1e3c"/>
+    <circle cx="256" cy="215" r="6" fill="#ffffff"/>
+  </g>
+</svg>

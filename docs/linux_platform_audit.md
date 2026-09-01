@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-8 implemented; Linux CI confirmation pending; Phase 9 next
+**Status:** Phases 0-9 implemented; Linux CI confirmation pending; Phase 10 / 11 next
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -307,3 +307,15 @@ No production behavior was changed during this audit.
   `atomic_write_bytes`, and `atomic_write_json` on POSIX (`0o600` permission enforcement via
   `_secure_chmod`, `fsync` flushing, and transactional cleanup of temporary `.tmp_*` files
   when writes or replacements encounter I/O or permission errors).
+
+### Phase 9 - Linux desktop integration
+
+- **Desktop Entry (Ticket 29)**: Created `resources/linux/spectrehud.desktop` with standard
+  `[Desktop Entry]` fields, categories (`Utility;Security;Development;`), and `StartupWMClass=spectrehud`.
+- **Hicolor Icons (Ticket 30)**: Rendered and committed multi-resolution PNG icons (48x48,
+  128x128, 256x256) and scalable SVG icon under `resources/linux/icons/hicolor/*/apps/`.
+- **Application Identity & WM_CLASS (Ticket 31)**: Explicitly configured `QApplication` metadata in
+  `main.py` (`setApplicationName("spectrehud")`, `setDesktopFileName("spectrehud.desktop")`,
+  `setApplicationDisplayName("SpectreHUD")`) to match window manager classes and Wayland application IDs.
+- Added comprehensive integration test `tests/test_linux_desktop_integration.py` validating
+  the `.desktop` file schema, all hicolor icon files, and runtime Qt metadata alignment.

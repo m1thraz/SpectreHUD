@@ -41,11 +41,12 @@ py-modules = ["main", "spectrehud_launcher", "create_desktop_shortcut"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "ui*", "data*"]
+include = ["core*", "ui*", "data*", "resources*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.png", "*.qss", "*.md", "*.svg", "*.ico"]
+"*" = ["*.json", "*.png", "*.qss", "*.md", "*.svg", "*.ico", "*.desktop"]
 data = ["*.json", "*.svg", "*.ico"]
+resources = ["*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
