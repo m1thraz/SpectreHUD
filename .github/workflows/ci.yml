@@ -58,14 +58,14 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m pytest
+          python -m pytest -m "not release"
 
       - name: Run test suite with coverage
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          xvfb-run -a coverage run -m pytest
+          xvfb-run -a coverage run -m pytest -m "not release"
           coverage report -m
 
   package:
@@ -92,6 +92,12 @@ jobs:
       - name: Compile Python sources
         run: |
           python -m compileall -q core ui data main.py scripts
+
+      - name: Run release-marked tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m pytest -m release
 
       - name: Build and inspect wheel
         run: |

@@ -45,29 +45,32 @@ components.
 
 ## Verification sequence
 
-The suite has three intentional execution levels. Use the smallest relevant
-tests while implementing, run the Fast Suite after the change stabilizes, and
-keep the complete suite as the final gate:
+The suite has three intentional execution levels. During implementation, start
+with only the directly affected test modules. After the change stabilizes, run
+the Fast Suite. For UI, `MainWindow`, process, locking, or cross-component
+changes, also run the suite including integration tests. Before completing a
+larger task, run the complete suite once:
 
 ```bash
 # Targeted development loop
-python -m pytest tests/test_changed_area.py
+pytest -q tests/test_changed_area.py
 
-# Fast Suite: unit, service, parser, model, and persistence coverage
-python -m pytest -m "not integration and not release"
+# Fast development check
+pytest -q -m "not integration and not release"
 
-# Add cross-component Qt, process, and workflow coverage when relevant
-python -m pytest -m integration
+# Fast and integration tests; excludes distribution builds
+pytest -q -m "not release"
 
 # Complete final gate, including release tests
-python run_tests.py
+pytest -q
 ```
 
 Tests marked `integration` cross a component, Qt-window, subprocess, or operating
 system boundary. Tests marked `release` build or inspect distribution artifacts.
 Markers classify execution cost; an unfiltered pytest run still executes every
 test. The default pytest output is compact, while failures retain short
-tracebacks and their exact test IDs.
+tracebacks and their exact test IDs. `python run_tests.py` intentionally remains
+an alias for the complete, unfiltered final gate.
 
 The full `test_ui.py`, `test_smoke.py`, `test_workflow_invariants.py`, and
 Cheatsheet geometry modules are integration suites because their assertions
