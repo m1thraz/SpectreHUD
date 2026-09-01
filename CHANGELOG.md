@@ -32,6 +32,17 @@ semantic versioning.
 - Linux desktop integration assets including standard `resources/linux/spectrehud.desktop`,
   hicolor icons across 48x48, 128x128, 256x256, and scalable SVG, plus aligned
   `StartupWMClass` / `setDesktopFileName` application metadata.
+- Cross-platform desktop shortcut generator (`create_desktop_shortcut.py`) creating `.lnk`
+  on Windows and `.desktop` on Linux with standard execution permissions.
+- Centralized core theme tokens (`core/theme_palette.py`) and decoupled `core/theme_loader.py`,
+  strictly removing reverse `core -> ui` imports.
+- Decoupled `ScreenshotManager` with injected `overlay_factory`, eliminating direct UI imports.
+- Lazy Qt resolution in `core/platform/opener.py`, ensuring `core.platform` can be imported
+  without eagerly loading PyQt6 modules into memory.
+- Pure Python snippet search, tag parsing, and ranking service (`core/snippet_filter.py`) with
+  isolated sub-millisecond headless unit testing.
+- Architecture guard tests (`tests/test_architecture_boundaries.py`) verifying that the entire
+  `core/` layer never imports `ui` and that `core.platform` does not eagerly load Qt.
 
 ## [2.0.3] - 2026-09-01
 

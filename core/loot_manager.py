@@ -409,54 +409,27 @@ class LootManager:
         search_query: str = "",
     ) -> List[Dict[str, Any]]:
         """Filters loot entries by target IP, type, category and search term."""
-        results = self.entries
+        from core.loot_filter import filter_loot_entries
 
-        if target_ip and target_ip != "all":
-            results = [
-                e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")
-            ]
-
-        if entry_type and entry_type != "all":
-            norm_type = TYPE_ALIASES.get(entry_type.lower(), entry_type)
-            results = [
-                e
-                for e in results
-                if TYPE_ALIASES.get(e.get("type", "").lower(), e.get("type")) == norm_type
-            ]
-
-        if category and category != "all":
-            results = [e for e in results if e.get("category") == category]
-
-        if not search_query or not search_query.strip():
-            return [dict(e) for e in results]
-
-        q = search_query.strip().lower()
-        filtered = []
-        for e in results:
-            title = e.get("title", "").lower()
-            content = e.get("content", "").lower()
-            target = e.get("target_ip", "").lower()
-            cat = e.get("category", "").lower()
-            if q in title or q in content or q in target or q in cat:
-                filtered.append(e)
-
-        return [dict(e) for e in filtered]
+        return filter_loot_entries(
+            entries=self.entries,
+            target_ip=target_ip,
+            entry_type=entry_type,
+            category=category,
+            search_query=search_query,
+        )
 
     def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
         """Returns count of entries grouped by loot type."""
-        entries = self.get_entries(target_ip=target_ip)
-        counts = {"all": len(entries)}
-        for t in LOOT_TYPES:
-            counts[t["id"]] = sum(1 for e in entries if e.get("type") == t["id"])
-        return counts
+        from core.loot_filter import count_loot_by_type
+
+        return count_loot_by_type(self.entries, LOOT_TYPES, target_ip=target_ip)
 
     def get_category_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
         """Returns count of entries grouped by category."""
-        entries = self.get_entries(target_ip=target_ip)
-        counts = {"all": len(entries)}
-        for c in CATEGORIES:
-            counts[c["id"]] = sum(1 for e in entries if e.get("category") == c["id"])
-        return counts
+        from core.loot_filter import count_loot_by_category
+
+        return count_loot_by_category(self.entries, CATEGORIES, target_ip=target_ip)
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
         """DEPRECATED: Use core.report_builder.ReportBuilder instead.

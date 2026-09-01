@@ -367,36 +367,18 @@ class SnippetManager:
         self, query: str = "", category_id: Optional[str] = None, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        Filters snippets by category and ranks them using FuzzyMatcher.
+        Filters snippets by category and ranks them using pure snippet_filter service.
         Supports fuzzy typo tolerance, tool prefix prioritization, acronyms, and tag/syntax matching.
         """
-        results = self.snippets
+        from core.snippet_filter import filter_and_rank_snippets
 
-        if category_id == "favorites":
-            results = [s for s in results if s.get("id") in self.favorite_ids]
-        elif category_id and category_id != "all":
-            results = [s for s in results if s.get("category_id") == category_id]
-
-        if query and query.strip():
-            from core.fuzzy_matcher import FuzzyMatcher
-
-            results = FuzzyMatcher.rank_snippets(results, query)
-
-            # Boost pinned favorites if they match
-            def score_with_fav(s: Dict[str, Any]) -> float:
-                base = FuzzyMatcher.score_snippet(s, query)
-                if s.get("id") in self.favorite_ids:
-                    return base + 15.0
-                return base
-
-            results.sort(key=score_with_fav, reverse=True)
-        else:
-            # Sort favorites to the top while preserving stable relative order
-            results = sorted(results, key=lambda s: 0 if s.get("id") in self.favorite_ids else 1)
-
-        if limit is not None and limit > 0:
-            return [dict(s) for s in results[:limit]]
-        return [dict(s) for s in results]
+        return filter_and_rank_snippets(
+            snippets=self.snippets,
+            category_id=category_id,
+            query=query,
+            favorite_ids=self.favorite_ids,
+            limit=limit,
+        )
 
     def get_all_snippets(self) -> List[Dict[str, Any]]:
         """Returns defensive copies of all snippets."""
