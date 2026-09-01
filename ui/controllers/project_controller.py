@@ -14,6 +14,7 @@ from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus
 from core.i18n import t
+from core.platform.opener import open_path
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
 
@@ -176,10 +177,6 @@ class ProjectController(QObject):
     def _on_archive_project(self, parent_widget: QWidget) -> None:
         """Prompts user to select output zip path and creates a compressed project archive."""
         from datetime import datetime
-        import os
-        import subprocess
-        import sys
-
         active_proj = self.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -217,15 +214,16 @@ class ProjectController(QObject):
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
             if msg.exec() == QMessageBox.StandardButton.Yes:
                 folder_to_open = zip_path.parent
-                try:
-                    if sys.platform == "win32":
-                        os.startfile(str(folder_to_open))
-                    elif sys.platform == "darwin":
-                        subprocess.Popen(["open", str(folder_to_open)])
-                    else:
-                        subprocess.Popen(["xdg-open", str(folder_to_open)])
-                except Exception:
-                    pass
+                if not open_path(folder_to_open):
+                    QMessageBox.warning(
+                        parent_widget,
+                        t("project.open_folder_error_title", "Folder unavailable"),
+                        t(
+                            "project.open_folder_error_message",
+                            "The folder could not be opened:\n{path}",
+                            path=str(folder_to_open),
+                        ),
+                    )
         else:
             err = result.get("error", "Unbekannter Fehler")
             msg = QMessageBox(parent_widget)

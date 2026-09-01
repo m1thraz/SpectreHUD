@@ -2,9 +2,6 @@
 Filesystem storage and project registry persistence layer.
 """
 
-import os
-import sys
-import subprocess
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 
@@ -23,6 +20,7 @@ from core.project.metadata import create_initial_notes, create_initial_state
 from core.project.registry import ProjectRegistry
 from core.project.state_store import ProjectStateStore
 from core.platform.paths import config_dir as platform_config_dir, projects_dir
+from core.platform.opener import open_path
 
 logger = get_logger("projects")
 
@@ -324,19 +322,10 @@ class ProjectRepository:
             except OSError as e:
                 logger.error(f"Failed to create project folder before opening {folder}: {e}")
 
-        try:
-            if sys.platform == "win32":
-                os.startfile(str(folder))
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(folder)])
-            else:
-                subprocess.Popen(["xdg-open", str(folder)])
+        if open_path(folder):
             return True
-        except (OSError, subprocess.SubprocessError) as e:
-            logger.error(
-                f"Error opening project folder {folder} in system file manager: {e}", exc_info=True
-            )
-            return False
+        logger.error("Could not open project folder %s in the system file manager", folder)
+        return False
 
     def archive_project(self, name: str, output_zip: Optional[Path] = None) -> Dict[str, Any]:
         """Archives the project workspace as a .zip file."""

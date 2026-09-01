@@ -46,6 +46,22 @@ def test_platform_layer_does_not_import_ui():
     assert violations == [], "\n".join(violations)
 
 
+def test_local_path_opening_does_not_use_platform_shell_branches():
+    """Local desktop opening belongs to core.platform.opener, not OS shell commands."""
+    forbidden = ("os.startfile", '"xdg-open"', "'xdg-open'")
+    violations = []
+    for source_root in (PROJECT_ROOT / "core", PROJECT_ROOT / "ui"):
+        for path in source_root.rglob("*.py"):
+            source = path.read_text(encoding="utf-8")
+            if any(token in source for token in forbidden):
+                violations.append(str(path.relative_to(PROJECT_ROOT)))
+
+    assert violations == [], (
+        "Local-path shell opening escaped the platform boundary: "
+        + ", ".join(violations)
+    )
+
+
 def test_report_editor_does_not_own_concrete_export_adapters():
     """The editor may coordinate UI, but concrete export work belongs elsewhere."""
     tree = ast.parse(REPORT_EDITOR.read_text(encoding="utf-8"), filename=str(REPORT_EDITOR))

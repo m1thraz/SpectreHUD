@@ -12,6 +12,7 @@ from core.platform.paths import (
     projects_dir,
     user_themes_dir,
 )
+from core.platform.opener import open_path
 
 __all__ = [
     "PlatformCapabilities",
@@ -20,6 +21,7 @@ __all__ = [
     "data_dir",
     "detect_platform_capabilities",
     "legacy_config_dir",
+    "open_path",
     "projects_dir",
     "user_themes_dir",
 ]

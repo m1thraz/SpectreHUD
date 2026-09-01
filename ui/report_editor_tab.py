@@ -18,7 +18,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -42,6 +42,7 @@ from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportEr
 from core.logger import get_logger
 from core.i18n import t
 from core.fonts import get_report_font_stack
+from core.platform.opener import open_path
 from ui.report.dialogs import MarkdownTableDialog, ReportGenerationDialog
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
@@ -791,8 +792,6 @@ class ReportEditorTab(QWidget):
             msg.exec()
 
     def _on_export_html_clicked(self) -> None:
-        from PyQt6.QtGui import QDesktopServices
-
         theme = self._select_html_export_theme()
         if theme is None:
             return
@@ -828,7 +827,16 @@ class ReportEditorTab(QWidget):
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
             if msg.exec() == QMessageBox.StandardButton.Yes:
-                QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve())))
+                if not open_path(target):
+                    QMessageBox.warning(
+                        self.window() if self else None,
+                        t("report.open_html_error_title", "Report unavailable"),
+                        t(
+                            "report.open_html_error_message",
+                            "The exported HTML report could not be opened:\n{path}",
+                            path=str(target),
+                        ),
+                    )
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)

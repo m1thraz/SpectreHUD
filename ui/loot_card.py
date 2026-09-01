@@ -1,6 +1,3 @@
-import os
-import sys
-import subprocess
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QFrame,
@@ -12,6 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
     QGraphicsOpacityEffect,
+    QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
@@ -20,6 +18,7 @@ from core.loot_manager import LOOT_TYPES, CATEGORIES
 from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
+from core.platform.opener import open_path
 import pyperclip
 
 logger = get_logger("loot_card")
@@ -352,15 +351,18 @@ class LootCard(QFrame):
         return None
 
     def _open_image(self, img_path: Path) -> None:
-        try:
-            if sys.platform == "win32":
-                os.startfile(str(img_path))
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(img_path)])
-            else:
-                subprocess.Popen(["xdg-open", str(img_path)])
-        except (OSError, FileNotFoundError, subprocess.SubprocessError) as e:
-            logger.error(f"Error opening image {img_path}: {e}", exc_info=True)
+        if open_path(img_path):
+            return
+        logger.error("Could not open loot image %s", img_path)
+        QMessageBox.warning(
+            self,
+            t("loot.open_screenshot_error_title", "Screenshot unavailable"),
+            t(
+                "loot.open_screenshot_error_message",
+                "The screenshot could not be opened:\n{path}",
+                path=str(img_path),
+            ),
+        )
 
     def _copy_content(self) -> None:
         """Copies entry content directly to clipboard."""

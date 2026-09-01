@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-2 completed; Phase 3 pending
+**Status:** Phases 0-3 completed; Phase 4 pending
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -201,3 +201,15 @@ No production behavior was changed during this audit.
 - The established user-visible `~/spectre_projects` workspace default is
   intentionally preserved. Existing custom-theme storage is also detected so
   the platform-path change does not make installed themes disappear.
+
+### Phase 3 - opening local files and directories
+
+- `core/platform/opener.py::open_path()` now routes existing local files and
+  directories through `QDesktopServices` and returns an explicit boolean.
+- Project folders, archived-project destinations, loot screenshots, exported
+  HTML reports, and the custom-theme directory use this shared operation.
+- Missing paths and desktop-service failures return `False`; UI callers provide
+  localized feedback where they own the interaction.
+- The duplicated `os.startfile` / `open` / `xdg-open` branches have been
+  removed. URI-based Obsidian opening remains separate because it is not a
+  local-path operation.

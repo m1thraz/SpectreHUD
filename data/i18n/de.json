@@ -26,6 +26,8 @@
     "project.archive_title": "Box als ZIP archivieren",
     "project.archive_success_title": "Archiv erstellt",
     "project.archive_error_title": "Archivierung fehlgeschlagen",
+    "project.open_folder_error_title": "Ordner nicht verfügbar",
+    "project.open_folder_error_message": "Der Ordner konnte nicht geöffnet werden:\n{path}",
 
     "varbar.target": "Target:",
     "varbar.attacker": "LHOST:",
@@ -204,6 +206,8 @@
     "loot.export_file_tip": "Diesen Loot-Eintrag als Textdatei ins Projekt exportieren",
     "loot.delete_tip": "Diesen Eintrag löschen",
     "loot.open_screenshot_tip": "Screenshot im Standard-Bildbetrachter öffnen",
+    "loot.open_screenshot_error_title": "Screenshot nicht verfügbar",
+    "loot.open_screenshot_error_message": "Der Screenshot konnte nicht geöffnet werden:\n{path}",
 
     "history.empty_state": "Keine Clipboard-Historie vorhanden. Aktiviere REC (Ctrl+P) und kopiere Befehle im Terminal.",
     "history.clear_title": "Historie leeren",
@@ -229,6 +233,8 @@
     "report.append_loot_success_fallback": "{count} Einträge ergänzt · {fallback_count} Kategorie(n) unter „Neu aus Loot ergänzt“",
     "report.export_html": "Export HTML...",
     "report.export_html_tip": "Exportiert den Report als eigenständige HTML-Datei mit Cyber-Dark Theme und eingebetteten Screenshots.",
+    "report.open_html_error_title": "Report nicht verfügbar",
+    "report.open_html_error_message": "Der exportierte HTML-Report konnte nicht geöffnet werden:\n{path}",
 
     "project_dialog.btn_hint": "↵ Enter: Anlegen | Esc: Abbrechen",
     "project_dialog.select_dir_title": "Basis-Verzeichnis für Projekte auswählen",
@@ -242,6 +248,7 @@
     "settings.theme_restart_hint": "Nach dem Speichern eines anderen Themes startet SpectreHUD automatisch neu.",
     "settings.theme_folder_error_title": "Theme-Ordner nicht verfügbar",
     "settings.theme_folder_error_message": "Der Ordner für eigene Themes konnte nicht erstellt werden:\n{error}",
+    "settings.theme_folder_open_error_message": "Der Ordner für eigene Themes konnte nicht geöffnet werden.",
     "settings.shortcut_esc": "HUD-Overlay verstecken",
     "settings.shortcut_ctrl_f": "Spotlight-Befehlssuche fokussieren",
     "settings.shortcut_ctrl_n": "Neuen Befehl / Snippet hinzufügen",

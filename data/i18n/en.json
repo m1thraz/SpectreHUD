@@ -26,6 +26,8 @@
     "project.archive_title": "Archive Box to ZIP",
     "project.archive_success_title": "Archive Created",
     "project.archive_error_title": "Archiving Failed",
+    "project.open_folder_error_title": "Folder unavailable",
+    "project.open_folder_error_message": "The folder could not be opened:\n{path}",
 
     "varbar.target": "Target:",
     "varbar.attacker": "LHOST:",
@@ -204,6 +206,8 @@
     "loot.export_file_tip": "Export this loot entry to a text file in the project",
     "loot.delete_tip": "Delete this entry",
     "loot.open_screenshot_tip": "Open screenshot in the default image viewer",
+    "loot.open_screenshot_error_title": "Screenshot unavailable",
+    "loot.open_screenshot_error_message": "The screenshot could not be opened:\n{path}",
 
     "history.empty_state": "No clipboard history recorded yet. Enable REC (Ctrl+P) and copy commands in your terminal.",
     "history.clear_title": "Clear History",
@@ -229,6 +233,8 @@
     "report.append_loot_success_fallback": "{count} entries appended · {fallback_count} category(ies) under 'Neu aus Loot ergänzt'",
     "report.export_html": "Export HTML...",
     "report.export_html_tip": "Export report as standalone HTML document with Cyber-Dark theme and embedded screenshots.",
+    "report.open_html_error_title": "Report unavailable",
+    "report.open_html_error_message": "The exported HTML report could not be opened:\n{path}",
 
     "project_dialog.btn_hint": "↵ Enter: Create | Esc: Cancel",
     "project_dialog.select_dir_title": "Select Base Directory for Projects",
@@ -242,6 +248,7 @@
     "settings.theme_restart_hint": "Selecting a different theme restarts SpectreHUD after the settings are saved.",
     "settings.theme_folder_error_title": "Theme folder unavailable",
     "settings.theme_folder_error_message": "The custom theme folder could not be created:\n{error}",
+    "settings.theme_folder_open_error_message": "The custom theme folder could not be opened.",
     "settings.shortcut_esc": "Hide HUD overlay",
     "settings.shortcut_ctrl_f": "Focus spotlight command search",
     "settings.shortcut_ctrl_n": "Add new command / snippet",
