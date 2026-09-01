@@ -17,6 +17,12 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
+from core.platform import (
+    PlatformCapabilities,
+    detect_platform_capabilities,
+)
+
+
 @dataclass(frozen=True)
 class HotkeyConfig:
     """Immutable configuration for global hotkey mappings."""
@@ -67,8 +73,16 @@ class HotkeyListener(QObject):
     screenshot_requested = pyqtSignal()
     quit_requested = pyqtSignal()
 
-    def __init__(self, hotkey_str: str = "<ctrl>+<cmd>+<", config: Optional[HotkeyConfig] = None):
+    def __init__(
+        self,
+        hotkey_str: str = "<ctrl>+<cmd>+<",
+        config: Optional[HotkeyConfig] = None,
+        capabilities: Optional[PlatformCapabilities] = None,
+    ):
         super().__init__()
+        self._capabilities = (
+            capabilities if capabilities is not None else detect_platform_capabilities()
+        )
         if config is not None:
             self.config = config
         else:
@@ -76,10 +90,23 @@ class HotkeyListener(QObject):
 
         self._listener = None
         self._running = False
+        self._available = self._capabilities.global_hotkeys
         self._last_trigger_time = 0.0
         self._last_screenshot_time = 0.0
         self._last_quit_time = 0.0
         self._debounce_cooldown = 0.35  # seconds
+
+    @property
+    def capabilities(self) -> PlatformCapabilities:
+        return self._capabilities
+
+    def is_available(self) -> bool:
+        """Return True if system-wide global hotkeys are supported on the active desktop session."""
+        return self._available
+
+    def is_running(self) -> bool:
+        """Return True if the background global hotkey listener thread is running."""
+        return self._running
 
     def update_config(self, new_config: HotkeyConfig) -> bool:
         """Dynamically updates the hotkey configuration and reloads listener if active."""
@@ -95,8 +122,20 @@ class HotkeyListener(QObject):
             self.start()
         return True
 
-    def start(self) -> None:
-        """Starts the pynput GlobalHotKeys listener."""
+    def start(self) -> bool:
+        """Starts the pynput GlobalHotKeys listener if supported."""
+        if not self.is_available():
+            if self._capabilities.wayland:
+                logger.warning(
+                    "Global system hotkeys are unavailable or restricted in this Wayland session."
+                )
+            else:
+                logger.warning(
+                    f"Global system hotkeys are not supported on platform '{self._capabilities.system}'."
+                )
+            self._running = False
+            return False
+
         try:
             from pynput import keyboard
 
@@ -118,8 +157,14 @@ class HotkeyListener(QObject):
             self._listener.start()
             self._running = True
             logger.info(f"Registered global hotkeys: {list(hotkey_mapping.keys())}")
-        except (ImportError, ValueError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to start global hotkey listener: {e}", exc_info=True)
+            return True
+        except (ImportError, ValueError, OSError, RuntimeError, Exception) as e:
+            logger.warning(
+                f"Failed to start global hotkey listener ({e}). Continuing with in-app shortcuts only."
+            )
+            self._running = False
+            self._available = False
+            return False
 
     def _fire_trigger(self) -> None:
         """Debounces and emits toggle signal safely."""

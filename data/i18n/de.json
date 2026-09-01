@@ -150,6 +150,7 @@
     "settings.nav_appearance": "Aussehen",
     "settings.save_apply": "Speichern & Übernehmen",
     "settings.lbl_global_hotkeys": "Globale Tastenkombinationen (Systemweit)",
+    "settings.global_hotkeys_unavailable_note": "Hinweis: Globale System-Shortcuts sind in dieser Desktop-Session (z. B. Wayland) nicht verfügbar. Lokale Tastaturkürzel innerhalb des HUDs funktionieren weiterhin normal.",
     "settings.lbl_toggle_hotkey": "SpectreHUD Ein-/Ausblenden:",
     "settings.lbl_snip_hotkey": "Screenshot Snip-Tool:",
     "settings.lbl_quit_shortcut": "SpectreHUD vollständig beenden:",

@@ -150,6 +150,7 @@
     "settings.nav_appearance": "Appearance",
     "settings.save_apply": "Save & Apply",
     "settings.lbl_global_hotkeys": "Global Shortcuts (System-wide)",
+    "settings.global_hotkeys_unavailable_note": "Note: Global system-wide shortcuts are unavailable in this desktop session (e.g. Wayland). In-app keyboard shortcuts continue to work normally.",
     "settings.lbl_toggle_hotkey": "SpectreHUD Toggle Overlay:",
     "settings.lbl_snip_hotkey": "Screenshot Snip-Tool:",
     "settings.lbl_quit_shortcut": "Quit SpectreHUD Completely:",

@@ -174,6 +174,23 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(emitted_settings[0]["workspace_dir"], str(new_workspace))
         dlg.close()
 
+    def test_hotkey_page_renders_unavailable_notice_on_wayland(self):
+        """Ticket 24: HotkeySettingsPage displays notice when global hotkeys are unavailable."""
+        from core.platform import PlatformCapabilities
+        from PyQt6.QtWidgets import QLabel
+
+        wayland_caps = PlatformCapabilities(
+            system="linux",
+            global_hotkeys=False,
+            screen_capture=False,
+            wayland=True,
+            x11=False,
+        )
+        page = HotkeySettingsPage(self.config_manager, capabilities=wayland_caps)
+        labels = [lbl.text() for lbl in page.findChildren(QLabel)]
+        self.assertTrue(any("Wayland" in text or "Globale" in text or "Global" in text for text in labels))
+
 
 if __name__ == "__main__":
     unittest.main()
+

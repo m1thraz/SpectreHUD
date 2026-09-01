@@ -19,8 +19,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFontDatabase, QStandardItemModel
 from core.config import ConfigManager, clamp_transparency
-from core.platform.paths import projects_dir
-from core.platform.opener import open_path
+from core.platform import (
+    PlatformCapabilities,
+    detect_platform_capabilities,
+    open_path,
+    projects_dir,
+)
 from core.i18n import t
 from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
@@ -66,9 +70,17 @@ def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
 class HotkeySettingsPage(QWidget):
     """Modular settings page for global and in-app keyboard shortcuts."""
 
-    def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        config_manager: ConfigManager,
+        parent: Optional[QWidget] = None,
+        capabilities: Optional[PlatformCapabilities] = None,
+    ):
         super().__init__(parent)
         self.config = config_manager
+        self.capabilities = (
+            capabilities if capabilities is not None else detect_platform_capabilities()
+        )
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -90,6 +102,27 @@ class HotkeySettingsPage(QWidget):
         lbl_global = QLabel(t("settings.lbl_global_hotkeys", "Global Shortcuts (System-wide)"))
         lbl_global.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_global)
+
+        if not self.capabilities.global_hotkeys:
+            card_notice = QFrame()
+            card_notice.setStyleSheet(
+                "background-color: rgba(234, 179, 8, 0.10); "
+                "border: 1px solid rgba(234, 179, 8, 0.30); "
+                "border-radius: 4px; padding: 6px 10px;"
+            )
+            notice_layout = QVBoxLayout(card_notice)
+            notice_layout.setContentsMargins(4, 2, 4, 2)
+            lbl_notice = QLabel(
+                t(
+                    "settings.global_hotkeys_unavailable_note",
+                    "Hinweis: Globale System-Shortcuts sind in dieser Desktop-Session (z. B. Wayland) "
+                    "nicht verfügbar. Lokale Tastaturkürzel innerhalb des HUDs funktionieren weiterhin normal.",
+                )
+            )
+            lbl_notice.setWordWrap(True)
+            lbl_notice.setStyleSheet("color: #fde047; font-size: 11px;")
+            notice_layout.addWidget(lbl_notice)
+            layout.addWidget(card_notice)
 
         card_global = QFrame()
         card_global.setProperty("class", "SettingsCard")
@@ -706,9 +739,17 @@ class SettingsDialog(BaseHudDialog):
 
     settings_applied = pyqtSignal(dict)
 
-    def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        config_manager: ConfigManager,
+        parent: Optional[QWidget] = None,
+        capabilities: Optional[PlatformCapabilities] = None,
+    ):
         super().__init__(title=t("settings.title", "SPECTRE // SETTINGS & OPTIONS"), parent=parent)
         self.config = config_manager
+        self.capabilities = (
+            capabilities if capabilities is not None else detect_platform_capabilities()
+        )
         self.setMinimumWidth(720)
         self.setMinimumHeight(480)
         self.resize(780, 560)
@@ -765,7 +806,7 @@ class SettingsDialog(BaseHudDialog):
         # Stacked Pages
         self.stack = QStackedWidget()
 
-        self.page_hotkeys = HotkeySettingsPage(self.config)
+        self.page_hotkeys = HotkeySettingsPage(self.config, capabilities=self.capabilities)
         self.page_language = LanguageSettingsPage(self.config)
         self.page_general = GeneralSettingsPage(self.config)
         self.page_appearance = AppearanceSettingsPage(self.config)

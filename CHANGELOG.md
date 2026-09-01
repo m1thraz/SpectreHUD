@@ -24,6 +24,9 @@ semantic versioning.
 - Explicit desktop capability abstraction (`ScreenCaptureStatus`) and graceful
   degradation for screen capture under Wayland and unsupported sessions without UI crashes
   or unhandled exceptions.
+- Graceful degradation and capability awareness for global system hotkeys (`HotkeyListener.is_available()`),
+  ensuring startup resilience and informative UI hints under Wayland while keeping local in-app Qt shortcuts
+  fully operational.
 
 ## [2.0.3] - 2026-09-01
 

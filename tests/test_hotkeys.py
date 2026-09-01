@@ -79,6 +79,52 @@ class TestHotkeys(unittest.TestCase):
         self.assertEqual(len(snip_called), 1)
         self.assertEqual(len(quit_called), 1)
 
+    def test_hotkey_listener_respects_wayland_capability_restriction(self):
+        """Ticket 21 & 23: On Wayland, listener is marked unavailable and start returns False gracefully."""
+        from core.platform import PlatformCapabilities
+
+        wayland_caps = PlatformCapabilities(
+            system="linux",
+            global_hotkeys=False,
+            screen_capture=False,
+            wayland=True,
+            x11=False,
+        )
+        listener = HotkeyListener(capabilities=wayland_caps)
+        self.assertFalse(listener.is_available())
+        self.assertFalse(listener.is_running())
+
+        # Calling start must return False without attempting to hook
+        started = listener.start()
+        self.assertFalse(started)
+        self.assertFalse(listener.is_running())
+
+    def test_hotkey_listener_startup_failure_degrades_gracefully(self):
+        """Ticket 23: If backend hook raises RuntimeError during start, it degrades gracefully."""
+        from core.platform import PlatformCapabilities
+
+        caps = PlatformCapabilities(
+            system="windows",
+            global_hotkeys=True,
+            screen_capture=True,
+            wayland=False,
+            x11=False,
+        )
+        listener = HotkeyListener(capabilities=caps)
+        self.assertTrue(listener.is_available())
+
+        fake_keyboard = ModuleType("pynput.keyboard")
+        fake_keyboard.GlobalHotKeys = MagicMock(side_effect=RuntimeError("Display connection lost"))
+        fake_pynput = ModuleType("pynput")
+        fake_pynput.keyboard = fake_keyboard
+        with patch.dict(sys.modules, {"pynput": fake_pynput, "pynput.keyboard": fake_keyboard}):
+            started = listener.start()
+
+        self.assertFalse(started)
+        self.assertFalse(listener.is_running())
+        self.assertFalse(listener.is_available())
+
 
 if __name__ == "__main__":
     unittest.main()
+
