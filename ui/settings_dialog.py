@@ -296,10 +296,7 @@ class AppearanceSettingsPage(QWidget):
         self.combo_theme = QComboBox()
         current_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
         for theme in self.theme_loader.list_themes():
-            label = theme["name"]
-            if theme.get("author"):
-                label = f"{label} — {theme['author']}"
-            self.combo_theme.addItem(label, theme["id"])
+            self.combo_theme.addItem(theme["name"], theme["id"])
         theme_index = self.combo_theme.findData(current_theme)
         self.combo_theme.setCurrentIndex(theme_index if theme_index >= 0 else 0)
 

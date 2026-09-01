@@ -96,6 +96,19 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertFalse(hasattr(page, "chk_loot_board"))
         self.assertNotIn("loot_view_mode", page.get_settings())
 
+    def test_appearance_theme_dropdown_shows_only_theme_names(self):
+        page = AppearanceSettingsPage(self.config_manager)
+        themes_by_id = {
+            theme["id"]: theme for theme in page.theme_loader.list_themes()
+        }
+
+        for index in range(page.combo_theme.count()):
+            theme_id = page.combo_theme.itemData(index)
+            self.assertEqual(
+                page.combo_theme.itemText(index),
+                themes_by_id[theme_id]["name"],
+            )
+
     def test_unavailable_fonts_are_marked_and_disabled(self):
         with patch(
             "ui.settings_dialog.QFontDatabase.families",
