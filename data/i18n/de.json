@@ -13,6 +13,8 @@
     "header.minimize_tip": "Overlay minimieren / verstecken (Esc)",
     "header.quit_tip": "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)",
     "header.snip_tip": "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)",
+    "header.snip_wayland_unavailable": "Bereichs-Screenshot ist unter Wayland derzeit nicht verfügbar.",
+    "header.snip_unavailable": "Bereichs-Screenshot ist auf dieser Plattform nicht verfügbar.",
     "header.rec_tip_paused": "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
     "header.rec_tip_active": "Clipboard-Logger ist AKTIV (zeichnet auf).\nKlicken oder Ctrl+P zum Pausieren.",
     "header.opt_tip": "Einstellungen & Optionen öffnen (Ctrl+,)",

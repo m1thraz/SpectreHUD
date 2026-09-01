@@ -1,9 +1,16 @@
-"""UI-free desktop capability detection for supported operating systems."""
-
 from dataclasses import dataclass
+from enum import Enum
 import os
 import platform
 from typing import Mapping, Optional
+
+
+class ScreenCaptureStatus(str, Enum):
+    """Explicit availability states for desktop screen capture."""
+
+    AVAILABLE = "available"
+    LIMITED = "limited"
+    UNAVAILABLE = "unavailable"
 
 
 @dataclass(frozen=True)
@@ -15,6 +22,17 @@ class PlatformCapabilities:
     screen_capture: bool
     wayland: bool
     x11: bool
+
+    @property
+    def screen_capture_status(self) -> ScreenCaptureStatus:
+        if self.screen_capture:
+            return ScreenCaptureStatus.AVAILABLE
+        if self.wayland:
+            return ScreenCaptureStatus.LIMITED
+        return ScreenCaptureStatus.UNAVAILABLE
+
+    def is_screen_capture_available(self) -> bool:
+        return self.screen_capture
 
 
 def detect_platform_capabilities(

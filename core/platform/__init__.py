@@ -1,7 +1,6 @@
-"""Central operating-system facts used by platform-sensitive services."""
-
 from core.platform.capabilities import (
     PlatformCapabilities,
+    ScreenCaptureStatus,
     detect_platform_capabilities,
 )
 from core.platform.paths import (
@@ -17,6 +16,7 @@ from core.platform.network import detect_linux_ipv4_address, select_preferred_ip
 
 __all__ = [
     "PlatformCapabilities",
+    "ScreenCaptureStatus",
     "cache_dir",
     "config_dir",
     "data_dir",

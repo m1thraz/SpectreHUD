@@ -13,6 +13,13 @@ from core.display_geometry import (
 from core.logger import get_logger
 
 
+from core.platform import (
+    PlatformCapabilities,
+    ScreenCaptureStatus,
+    detect_platform_capabilities,
+)
+
+
 class ScreenshotSaveError(RuntimeError):
     """Raised when writing the captured screenshot image file to disk fails."""
 
@@ -30,9 +37,28 @@ class ScreenshotManager(QObject):
 
     screenshot_saved = pyqtSignal(dict)
 
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(
+        self,
+        parent: Optional[QObject] = None,
+        capabilities: Optional[PlatformCapabilities] = None,
+    ):
         super().__init__(parent)
+        self._capabilities = (
+            capabilities if capabilities is not None else detect_platform_capabilities()
+        )
         self._active_overlay: Optional[SnippingOverlay] = None
+
+    @property
+    def capabilities(self) -> PlatformCapabilities:
+        return self._capabilities
+
+    def is_capture_available(self) -> bool:
+        """Return True if desktop screen grab is expected to work on the current OS session."""
+        return self._capabilities.screen_capture
+
+    def capture_status(self) -> ScreenCaptureStatus:
+        """Return the explicit screen capture status (AVAILABLE, LIMITED, UNAVAILABLE)."""
+        return self._capabilities.screen_capture_status
 
     def capture_virtual_desktop(
         self,
@@ -156,14 +182,26 @@ class ScreenshotManager(QObject):
 
     def start_capture(
         self, parent_window: QWidget, project_manager, loot_manager, target_ip: str = ""
-    ) -> None:
+    ) -> bool:
         """
         Main entry point:
-        1. Hides parent window.
-        2. Delays 220ms for clean desktop view.
-        3. Grabs virtual desktop across all active monitors.
-        4. Launches SnippingOverlay.
+        1. Checks desktop capability availability.
+        2. Hides parent window.
+        3. Delays 220ms for clean desktop view.
+        4. Grabs virtual desktop across all active monitors.
+        5. Launches SnippingOverlay.
         """
+        if not self.is_capture_available():
+            if self._capabilities.wayland:
+                logger.warning(
+                    "Desktop screenshot capture is unavailable or restricted in this Wayland session."
+                )
+            else:
+                logger.warning(
+                    f"Desktop screenshot capture is not supported on platform '{self._capabilities.system}'."
+                )
+            return False
+
         was_visible = parent_window.isVisible()
         parent_window.hide()
 
@@ -192,6 +230,7 @@ class ScreenshotManager(QObject):
                     parent_window.show()
 
         QTimer.singleShot(220, do_grab)
+        return True
 
     def _on_snip_completed(
         self,

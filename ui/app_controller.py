@@ -496,6 +496,24 @@ class AppController(QObject):
 
     # Screenshots & Settings
     def trigger_screenshot(self) -> None:
+        if not self.screenshot_manager.is_capture_available():
+            if self.screenshot_manager.capabilities.wayland:
+                msg = t(
+                    "header.snip_wayland_unavailable",
+                    "Bereichs-Screenshot ist unter Wayland derzeit nicht verfügbar.",
+                )
+            else:
+                msg = t(
+                    "header.snip_unavailable",
+                    "Bereichs-Screenshot ist auf dieser Plattform nicht verfügbar.",
+                )
+            logger.warning(msg)
+            if hasattr(self, "header") and hasattr(self.header, "btn_screenshot") and self.header.btn_screenshot:
+                from PyQt6.QtWidgets import QToolTip
+                btn = self.header.btn_screenshot
+                QToolTip.showText(btn.mapToGlobal(btn.rect().bottomLeft()), msg, btn)
+            return
+
         self.screenshot_manager.start_capture(
             self.window, self.project_manager, self.loot_manager, target_ip=self._target_provider()
         )

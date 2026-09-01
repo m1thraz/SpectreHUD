@@ -33,5 +33,14 @@ def test_detect_platform_capabilities(
     assert capabilities.system == system.lower()
     assert capabilities.global_hotkeys is hotkeys
     assert capabilities.screen_capture is capture
+    assert capabilities.is_screen_capture_available() is capture
     assert capabilities.wayland is wayland
     assert capabilities.x11 is x11
+
+    if capture:
+        assert capabilities.screen_capture_status == "available"
+    elif wayland:
+        assert capabilities.screen_capture_status == "limited"
+    else:
+        assert capabilities.screen_capture_status == "unavailable"
+

@@ -245,6 +245,62 @@ class TestScreenshotManager(unittest.TestCase):
         self.assertEqual(received[0]["entry"]["type"], "screenshot")
         controller.switch_mode.assert_called_once_with("loot")
 
+    def test_screenshot_manager_respects_wayland_capability_restriction(self):
+        """Ticket 18 & 19: Under Wayland, capture is marked limited and start_capture fails gracefully."""
+        from core.platform import PlatformCapabilities, ScreenCaptureStatus
+
+        wayland_caps = PlatformCapabilities(
+            system="linux",
+            global_hotkeys=False,
+            screen_capture=False,
+            wayland=True,
+            x11=False,
+        )
+        mgr = ScreenshotManager(capabilities=wayland_caps)
+        self.assertFalse(mgr.is_capture_available())
+        self.assertEqual(mgr.capture_status(), ScreenCaptureStatus.LIMITED)
+
+        parent_win = QWidget()
+        parent_win.show()
+        self.assertTrue(parent_win.isVisible())
+
+        # Calling start_capture must return False and NOT hide the parent window
+        result = mgr.start_capture(parent_win, self.project_mgr, self.loot_mgr)
+        self.assertFalse(result)
+        self.assertTrue(parent_win.isVisible())
+
+    def test_app_controller_trigger_screenshot_guards_against_unavailable_capture(self):
+        """Ticket 19: trigger_screenshot guards against unavailable screen capture gracefully."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        from core.platform import PlatformCapabilities
+        from ui.app_controller import AppController
+
+        mock_screenshot_mgr = MagicMock()
+        mock_screenshot_mgr.is_capture_available.return_value = False
+        mock_screenshot_mgr.capabilities = PlatformCapabilities(
+            system="linux",
+            global_hotkeys=False,
+            screen_capture=False,
+            wayland=True,
+            x11=False,
+        )
+
+        mock_header = SimpleNamespace(btn_screenshot=None)
+        controller = SimpleNamespace(
+            screenshot_manager=mock_screenshot_mgr,
+            header=mock_header,
+            window=QWidget(),
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            _target_provider=lambda: "",
+        )
+
+        # Triggering screenshot when capture is unavailable must return early
+        AppController.trigger_screenshot(controller)
+        mock_screenshot_mgr.start_capture.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
+

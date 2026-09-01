@@ -13,6 +13,8 @@
     "header.minimize_tip": "Minimize / hide overlay (Esc)",
     "header.quit_tip": "Quit SpectreHUD — saves the active project first (Ctrl+Q)",
     "header.snip_tip": "Capture region screenshot (Ctrl+Super+X or Ctrl+S)",
+    "header.snip_wayland_unavailable": "Screenshot capture is not available in this Wayland session.",
+    "header.snip_unavailable": "Screenshot capture is not available on this platform.",
     "header.rec_tip_paused": "Clipboard logger is PAUSED (not recording).\nClick or Ctrl+P to start recording.",
     "header.rec_tip_active": "Clipboard logger is ACTIVE (recording).\nClick or Ctrl+P to pause.",
     "header.opt_tip": "Open settings & options (Ctrl+,)",

@@ -21,6 +21,9 @@ semantic versioning.
   across mode switches.
 - Exporter marker stripping for HTML, Markdown copy, Obsidian, and CherryTree exports
   ensuring no internal sync markers are exposed in client-facing documents.
+- Explicit desktop capability abstraction (`ScreenCaptureStatus`) and graceful
+  degradation for screen capture under Wayland and unsupported sessions without UI crashes
+  or unhandled exceptions.
 
 ## [2.0.3] - 2026-09-01
 
