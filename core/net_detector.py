@@ -4,6 +4,7 @@ import platform
 import re
 from typing import Optional
 from core.logger import get_logger
+from core.platform.network import detect_linux_ipv4_address
 
 logger = get_logger("net_detector")
 
@@ -23,8 +24,12 @@ class NetDetector:
             detected = NetDetector._detect_windows_ip()
             if detected:
                 return detected
-        elif os_type in ["linux", "darwin"]:
-            detected = NetDetector._detect_unix_ip()
+        elif os_type == "linux":
+            detected = NetDetector._detect_linux_ip()
+            if detected:
+                return detected
+        elif os_type == "darwin":
+            detected = NetDetector._detect_macos_ip()
             if detected:
                 return detected
 
@@ -75,18 +80,13 @@ class NetDetector:
         return None
 
     @staticmethod
-    def _detect_unix_ip() -> Optional[str]:
-        """Checks tun0, wg0, tap0 or ip route on Linux/macOS."""
-        for iface in ["tun0", "wg0", "tap0"]:
-            try:
-                output = subprocess.check_output(
-                    ["ip", "-4", "addr", "show", iface], text=True, stderr=subprocess.DEVNULL
-                )
-                match = re.search(r"inet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
-                if match:
-                    return match.group(1)
-            except (subprocess.SubprocessError, OSError, UnicodeDecodeError) as e:
-                logger.debug(f"Unix IP detection check for {iface} failed: {e}")
+    def _detect_linux_ip() -> Optional[str]:
+        """Use Linux's machine-readable interface output when available."""
+        return detect_linux_ipv4_address()
+
+    @staticmethod
+    def _detect_macos_ip() -> Optional[str]:
+        """macOS has no supported platform command yet; use generic fallbacks."""
         return None
 
     @staticmethod

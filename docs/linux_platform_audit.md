@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-3 completed; Phase 4 pending
+**Status:** Phases 0-4 completed; local Checkpoint 1 passed; Linux CI confirmation pending
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -213,3 +213,23 @@ No production behavior was changed during this audit.
 - The duplicated `os.startfile` / `open` / `xdg-open` branches have been
   removed. URI-based Obsidian opening remains separate because it is not a
   local-path operation.
+
+### Phase 4 - Linux network discovery
+
+- Linux and macOS now follow separate branches. macOS intentionally uses the
+  generic socket fallbacks instead of invoking Linux's `ip` command.
+- Linux invokes `ip -j -4 addr` once and parses its JSON output without shell
+  pipelines or assumptions about exactly three interface names.
+- A pure selector ignores loopback/link-local addresses, prefers `tun*`,
+  `tap*`, `wg*`, and `tailscale*`, and still accepts suitable addresses from
+  ordinary interfaces when no VPN-style interface exists.
+- Missing commands, command failures, empty output, malformed JSON, and
+  loopback-only results degrade to the existing generic detection fallbacks.
+
+### Checkpoint 1
+
+- Focused platform, architecture, network, and UI integration tests pass on the
+  Windows development host.
+- The Fast Gate and complete non-release gate both finish successfully.
+- Linux behavior is covered with injected platform values and synthetic
+  `ip -j` output. Confirmation on a real Linux runner remains the next CI step.

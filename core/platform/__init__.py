@@ -13,6 +13,7 @@ from core.platform.paths import (
     user_themes_dir,
 )
 from core.platform.opener import open_path
+from core.platform.network import detect_linux_ipv4_address, select_preferred_ipv4
 
 __all__ = [
     "PlatformCapabilities",
@@ -20,8 +21,10 @@ __all__ = [
     "config_dir",
     "data_dir",
     "detect_platform_capabilities",
+    "detect_linux_ipv4_address",
     "legacy_config_dir",
     "open_path",
     "projects_dir",
+    "select_preferred_ipv4",
     "user_themes_dir",
 ]
