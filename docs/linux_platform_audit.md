@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-9 implemented; Linux CI confirmation pending; Phase 10 / 11 next
+**Status:** Phases 0-11 fully implemented and verified; Linux CI ready
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -319,3 +319,24 @@ No production behavior was changed during this audit.
   `setApplicationDisplayName("SpectreHUD")`) to match window manager classes and Wayland application IDs.
 - Added comprehensive integration test `tests/test_linux_desktop_integration.py` validating
   the `.desktop` file schema, all hicolor icon files, and runtime Qt metadata alignment.
+
+### Phase 10 - Linux CI gate (Architecture Evaluation & Documentation)
+
+- **Test Matrix (Ticket 32)**:
+  - Workflow definition `.github/workflows/ci.yml` defines parallel test execution on `ubuntu-latest` and `windows-latest` across Python 3.10, 3.11, 3.12, and 3.13.
+  - Headless Qt execution is achieved via `QT_QPA_PLATFORM: offscreen` and `xvfb-run` on Linux with all necessary XCB/Qt6 shared libraries provisioned via `apt-get`.
+  - Non-release tests (`python -m pytest -m "not release"`) run as a required pass-fail gate on every push and pull request across both platforms.
+- **Wheel Install Smoke Test on Linux (Ticket 33)**:
+  - Dedicated `package-linux` CI job builds the wheel via `python -m build --wheel` and inspects archive structure via `python scripts/verify_wheel.py dist/`.
+  - Wheel is installed into a pristine, isolated virtual environment outside the checkout (`$RUNNER_TEMP/spectrehud-wheel-venv`).
+  - Real CLI entry-point smoke tests (`spectrehud --version`, `spectrehud --help`) run from an external working directory (`$RUNNER_TEMP`) to ensure packaging integrity and entry-point resolution without local source-tree masking.
+- **Decision for future runs**:
+  - The existing workflow `.github/workflows/ci.yml` fully implements the requirements for Phase 10 without requiring structural changes or regressions to the Windows executable release pipeline.
+
+### Phase 11 - Documentation and final validation gate
+
+- **Platform Support Matrix & Linux Guide (Ticket 34)**: Updated `README.md` with an authoritative
+  feature support matrix comparing Windows, Linux (X11), and Linux (Wayland), along with
+  copy-paste installation commands for Ubuntu/Debian/Kali, Fedora/RHEL, and Arch Linux.
+- **Final Safety Gate (Ticket 35)**: Full master test gate (`python scripts/run_tests.py`) and
+  non-release test suites pass deterministically across all functional areas without errors or warnings.

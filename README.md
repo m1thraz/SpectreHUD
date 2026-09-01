@@ -62,11 +62,50 @@ opening a pull request. Report suspected vulnerabilities privately according to
 [SECURITY.md](SECURITY.md), and never place credentials or engagement data in a
 public issue.
 
+## Platform Support Matrix
+
+| Feature | Windows | Linux (X11) | Linux (Wayland) |
+|---|:---:|:---:|:---:|
+| **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts (`Esc`, `Ctrl+1..4`, etc.) |
+| **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor (Informative Tooltip) |
+| **VPN / Local IP Discovery (`ip -j`)** | ✅ Yes | ✅ Yes (`ip -j`) | ✅ Yes (`ip -j`) |
+| **XDG Base Directory Spec Compliance** | N/A | ✅ Yes (`~/.config`, `~/.local/share`) | ✅ Yes (`~/.config`, `~/.local/share`) |
+| **Desktop Integration (`.desktop`, Hicolor Icons)** | N/A | ✅ Yes | ✅ Yes |
+
 ## Installation
 
 ### Windows executable
 
 Download the current Windows build from the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases). No Python installation is required.
+
+### Linux (pip / package)
+
+Requirements: Python 3.10+ and standard Qt6/XCB desktop runtime dependencies.
+
+**Ubuntu / Debian / Kali Linux:**
+```bash
+sudo apt-get update
+sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
+pip install spectrehud
+spectrehud
+```
+
+**Fedora / RHEL:**
+```bash
+sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
+pip install spectrehud
+spectrehud
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
+pip install spectrehud
+spectrehud
+```
 
 ### From source
 
@@ -96,9 +135,10 @@ python scripts/build_exe.py
 
 ## Platform notes
 
-SpectreHUD targets Windows and Linux. On modern Wayland desktops, screen
-capture can be restricted by the compositor and may behave differently from
-Windows or X11.
+SpectreHUD provides full native support for both Windows and Linux desktops. On modern Wayland
+compositors, global background key logging and arbitrary screen grabbing are restricted by the
+display server security model; SpectreHUD gracefully degrades to in-app keyboard shortcuts and
+provides clear tooltip notifications without application interruptions.
 
 ## License
 
