@@ -23,15 +23,16 @@ test suite:
 
 ```bash
 python -m pip install -e ".[dev]"
-pytest -q -m "not integration and not release"
+./scripts/test_fast.sh
 ```
 
-During development, run affected modules first. Add `pytest -q -m "not release"`
-for UI, `MainWindow`, process, locking, or cross-component changes. Before a
-larger change is submitted, run the complete `pytest -q` gate. The equivalent
-`python run_tests.py` command intentionally runs that same complete suite. See
-the [development guide](docs/development.md) for marker ownership and packaging
-checks.
+During development, run affected modules first. Add `./scripts/test_full.sh`
+for UI, `MainWindow`, process, locking, or cross-component changes. Both scripts
+use `pytest-xdist` with `--dist=loadscope`; reproduce suspected flaky tests
+serially with `-n0`. Before a larger change is submitted, run the complete
+`pytest -q` gate. The equivalent `python run_tests.py` command intentionally
+runs that same complete suite. See the [development guide](docs/development.md)
+for marker ownership and packaging checks.
 
 Before submitting a pull request:
 

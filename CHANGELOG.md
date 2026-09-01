@@ -6,21 +6,36 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-09-01
+
+### Added
+
+- Independent live transparency controls for the HUD and Report Editor. The
+  established HUD glass appearance remains the default, while the Report
+  Editor remains opaque by default.
+- Dedicated parallel Fast and Full test commands with virtual-environment
+  guards and a documented worker-isolation baseline.
+
 ### Changed
 
 - Split the largest test modules by responsibility while preserving the exact
   386-test collection, and documented compact Fast/Full commands for coding
   agents.
-- Restored the original transparent MainScrollArea rendering path and added
-  independent, live HUD and Report Editor transparency controls under
-  Appearance. The default 5% HUD transparency matches the established glass
-  look, while the Report Editor remains opaque by default.
 - Centralized startup and runtime appearance application, including a
   theme-derived tooltip palette guard for popup labels inside locally styled
   scroll areas.
 - Split test execution into Fast, Integration, and Release marker groups while
   keeping the unfiltered suite as the CI and release gate. Pytest output is now
   compact by default, and duplicate CLI subprocess coverage was removed.
+
+### Fixed
+
+- Restored the original transparent `MainScrollArea` glass rendering after the
+  centralized scroll-area stylesheet change.
+- Hardened theme-derived tooltip colors for popup labels inside locally styled
+  scroll areas.
+
+See the [full v2.0.3 release notes](docs/release_notes_v2.0.3.md).
 
 ## [2.0.2] - 2026-08-31
 
@@ -91,7 +106,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/m1thraz/SpectreHUD/releases/tag/v2.0.0

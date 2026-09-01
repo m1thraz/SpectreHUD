@@ -55,11 +55,11 @@ larger task, run the complete suite once:
 # Targeted development loop
 pytest -q tests/test_changed_area.py
 
-# Fast development check
-pytest -q -m "not integration and not release"
+# Fast development check (parallel)
+./scripts/test_fast.sh
 
-# Fast and integration tests; excludes distribution builds
-pytest -q -m "not release"
+# Fast and integration tests; excludes distribution builds (parallel)
+./scripts/test_full.sh
 
 # Complete final gate, including release tests
 pytest -q
@@ -86,9 +86,12 @@ python -m pip wheel . --no-deps --no-build-isolation -w dist/
 python scripts/verify_wheel.py dist/
 ```
 
-Do not introduce parallel execution until Qt state, environment variables,
-filesystem fixtures, application locks, and subprocess tests have demonstrated
-worker-level isolation.
+The Fast and non-release scripts use `pytest-xdist` with
+`--dist=loadscope`. The worker-isolation audit and measured serial/parallel
+comparison are recorded in
+[`test_performance_baseline.md`](test_performance_baseline.md). If a failure
+appears flaky or order-dependent, reproduce the individual test serially with
+`-n0` before attributing it to application code.
 
 CI validates Python 3.10–3.13 on Windows and Linux, performs coverage on Linux,
 and builds and smoke-tests the Windows wheel and executable.

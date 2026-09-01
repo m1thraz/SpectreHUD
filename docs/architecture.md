@@ -1,6 +1,6 @@
 # SpectreHUD Architecture & Technical Guide
 
-**Last updated:** v2.0.2
+**Last updated:** v2.0.3
 
 This document provides a technical overview of SpectreHUD's software
 architecture, component relationships, design patterns, and intentional
@@ -203,6 +203,10 @@ for the two trust boundaries and their test rationale.
 - **Master Test Runner (`run_tests.py`)**:
   - Delegates to the pytest collection under `tests/` and runs headlessly (`QT_QPA_PLATFORM=offscreen`).
   - Test counts are intentionally not treated as release documentation: parametrization and regression additions change them. The current CI result is the release evidence.
+  - `scripts/test_fast.sh` and `scripts/test_full.sh` use `pytest-xdist` with
+    `--dist=loadscope` for local feedback while keeping tests from one module or
+    class on the same worker. Suspected order-dependent failures are reproduced
+    serially with `-n0`.
   - `integration` marks cross-component Qt, subprocess and workflow boundaries;
     `release` marks wheel and distribution checks. The normal OS/Python matrix
     runs everything except `release`; the existing Windows package-validation

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spectrehud"
-version = "2.0.2"
+version = "2.0.3"
 description = "Tactical CTF & Pentest Overlay — Cheatsheet, Loot Manager, Template-Engine, and Live Report HUD"
 readme = "README.md"
 requires-python = ">=3.10"
