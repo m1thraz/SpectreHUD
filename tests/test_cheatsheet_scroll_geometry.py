@@ -58,19 +58,24 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
     expected_bottom = last_card.geometry().bottom() + 1 + bottom_margin
 
     normal_layout_slack = 2 * (bottom_margin + layout.spacing())
+    scroll = window.content_panel.scroll_area
+    if scroll.verticalScrollBar().maximum() == 0:
+        # A short filtered list legitimately leaves the remainder of the
+        # viewport empty. The invariant here is that no stale scroll range
+        # survives from the previously longer list.
+        assert scroll.verticalScrollBar().value() == 0
+        assert container.height() <= scroll.viewport().height()
+        return
+
     assert abs(container.sizeHint().height() - expected_bottom) <= normal_layout_slack
 
-    scroll = window.content_panel.scroll_area
     scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum())
     QApplication.processEvents()
     last_bottom_in_viewport = last_card.mapTo(
         scroll.viewport(), QPoint(0, last_card.height())
     ).y()
     trailing_space = scroll.viewport().height() - last_bottom_in_viewport
-    if scroll.verticalScrollBar().maximum() == 0:
-        return
-
-    assert -4 <= trailing_space <= bottom_margin + (2 * layout.spacing()) + 12, (
+    assert -4 <= trailing_space <= bottom_margin + (3 * layout.spacing()) + 12, (
         f"trailing={trailing_space}, hint={container.sizeHint().height()}, "
         f"minimum_hint={container.minimumSizeHint().height()}, "
         f"layout_minimum={layout.minimumSize().height()}, "

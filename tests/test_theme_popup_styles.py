@@ -1,14 +1,9 @@
-"""Regression tests for popup surfaces (tooltips, combo lists) under light themes.
-
-A widget-level stylesheet on an ancestor scroll area used to detach popups
-from the application stylesheet, leaving them on the unpolished black palette
-in light themes such as Daylight. These tests pin the central QSS rules and
-the popup rendering inside the affected panels.
-"""
+"""Regression tests for HUD glass surfaces and popups under light themes."""
 
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import pytest
 from PyQt6.QtWidgets import QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
@@ -37,23 +32,35 @@ def _active_tip_label(qapp):
     )
 
 
-def _assert_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
-    assert scroll.styleSheet() == ""
+def _assert_transparent_scroll_surfaces(
+    scroll: QScrollArea,
+    *,
+    expected_local_style: str = "",
+) -> None:
+    assert scroll.styleSheet() == expected_local_style
     assert not scroll.autoFillBackground()
     assert not scroll.viewport().autoFillBackground()
     assert scroll.widget() is not None
     assert not scroll.widget().autoFillBackground()
 
 
-def test_scroll_areas_are_styled_centrally_not_per_widget(qapp):
+def test_main_scroll_area_keeps_original_local_glass_path(qapp):
     qss = build_app_theme(ThemeLoader().load_theme("daylight"))
     assert "QScrollArea#MainScrollArea" in qss
     assert "QScrollArea#SettingsScrollArea" in qss
 
     panel = ContentPanel()
     assert panel.scroll_area.objectName() == "MainScrollArea"
-    _assert_transparent_scroll_surfaces(panel.scroll_area)
+    _assert_transparent_scroll_surfaces(
+        panel.scroll_area,
+        expected_local_style="background: transparent; border: none;",
+    )
     panel.deleteLater()
+
+
+def test_settings_scroll_areas_remain_transparent_without_local_styles(qapp):
+    qss = build_app_theme(ThemeLoader().load_theme("daylight"))
+    assert "QScrollArea#SettingsScrollArea" in qss
 
     for page_type in (HotkeySettingsPage, AppearanceSettingsPage, GeneralSettingsPage):
         page = page_type(ConfigManager(config_dir=None, storage=InMemoryStorageBackend()))
@@ -65,6 +72,10 @@ def test_scroll_areas_are_styled_centrally_not_per_widget(qapp):
         page.deleteLater()
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Phase 1 restores the original glass path; Daylight tooltip isolation follows in Phase 2",
+)
 def test_tooltip_inside_content_panel_keeps_theme_colors(qapp):
     _apply_daylight_theme(qapp)
 

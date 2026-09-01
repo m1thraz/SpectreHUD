@@ -44,6 +44,12 @@ class ContentPanel(QWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setObjectName("MainScrollArea")
+        # Preserve the original render hierarchy used by the HUD glass effect.
+        # The local transparent scroll-area surface allows the themed background
+        # below the content zone to remain visible.
+        self.scroll_area.setStyleSheet(
+            "background: transparent; border: none;"
+        )
 
         self.content_container = QWidget()
         self.content_layout = QVBoxLayout(self.content_container)
@@ -53,8 +59,8 @@ class ContentPanel(QWidget):
 
         self.scroll_area.setWidget(self.content_container)
         # QScrollArea enables auto-fill on its viewport and hosted widget.
-        # Disable both paint surfaces so the frameless window glass remains
-        # visible without introducing a widget-local stylesheet.
+        # Keep these paint surfaces disabled in addition to the historical
+        # local scroll-area style so none of them obscures the glass layer.
         self.scroll_area.setAutoFillBackground(False)
         self.scroll_area.viewport().setAutoFillBackground(False)
         self.content_container.setAutoFillBackground(False)
