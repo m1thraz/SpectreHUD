@@ -13,6 +13,13 @@
 - `python run_tests.py` and an unfiltered `python -m pytest` remain the complete
   release/final safety gate; do not redefine their meaning.
 
+### Parallelization
+
+- `scripts/test_fast.sh` and `scripts/test_full.sh` run in parallel by default
+  with `pytest-xdist` and `--dist=loadscope`.
+- If a test appears flaky or order-dependent, reproduce the individual test
+  serially with `-n0` before attributing the failure to application code.
+
 ### Test Output Discipline
 
 - Redirect suite output to a temporary log instead of returning the live,
