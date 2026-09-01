@@ -1,7 +1,7 @@
 """Regression coverage for runtime appearance and independent transparency."""
 
 from types import MethodType, SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from PyQt6.QtGui import QPalette
@@ -31,6 +31,22 @@ def _controller_harness(config: ConfigManager):
         AppController.apply_application_style, controller
     )
     return controller
+
+
+def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
+    """Apply the real QSS builder to a Python mock instead of global QApplication.
+
+    Application-wide stylesheet replacement is a native Qt operation. Replacing
+    and restoring it repeatedly on the session-scoped QApplication can access
+    widgets pending deferred deletion and has crashed Qt on Windows/Python 3.12.
+    Popup/tooltip integration remains covered in ``test_theme_popup_styles.py``.
+    """
+    app = Mock()
+    with patch("ui.appearance._install_tooltip_color_guard"):
+        applied_theme = apply_application_style(app, config, theme_id=theme_id)
+
+    qss = app.setStyleSheet.call_args.args[0]
+    return app, applied_theme, qss
 
 
 def _assert_hud_background(qss: str, expected: str) -> None:
@@ -139,11 +155,16 @@ def test_theme_change_reuses_transparency_with_new_base_colors():
     _assert_report_background(qss, "rgba(245, 247, 250, 0.9)")
 
 
-def test_save_apply_updates_both_transparencies_without_restart(qapp):
+def test_save_apply_updates_both_transparencies_without_restart():
     config = ConfigManager(storage=InMemoryStorageBackend())
     controller = _controller_harness(config)
-    old_qss = qapp.styleSheet()
-    try:
+    runtime_app = Mock()
+    with (
+        patch("ui.app_controller.QApplication") as application_type,
+        patch("ui.appearance.apply_tooltip_palette"),
+        patch("ui.appearance._install_tooltip_color_guard"),
+    ):
+        application_type.instance.return_value = runtime_app
         config.update({"hud_transparency": 20, "report_transparency": 10})
 
         AppController._on_settings_applied(
@@ -151,18 +172,22 @@ def test_save_apply_updates_both_transparencies_without_restart(qapp):
             {"hud_transparency": 20, "report_transparency": 10},
         )
 
-        _assert_hud_background(qapp.styleSheet(), "rgba(13, 17, 23, 0.8)")
-        _assert_report_background(qapp.styleSheet(), "rgba(13, 17, 23, 0.9)")
+        qss = runtime_app.setStyleSheet.call_args.args[0]
+        _assert_hud_background(qss, "rgba(13, 17, 23, 0.8)")
+        _assert_report_background(qss, "rgba(13, 17, 23, 0.9)")
         controller.restart_requested.emit.assert_not_called()
-    finally:
-        qapp.setStyleSheet(old_qss)
 
 
-def test_font_and_transparency_updates_share_one_runtime_apply(qapp):
+def test_font_and_transparency_updates_share_one_runtime_apply():
     config = ConfigManager(storage=InMemoryStorageBackend())
     controller = _controller_harness(config)
-    old_qss = qapp.styleSheet()
-    try:
+    runtime_app = Mock()
+    with (
+        patch("ui.app_controller.QApplication") as application_type,
+        patch("ui.appearance.apply_tooltip_palette"),
+        patch("ui.appearance._install_tooltip_color_guard"),
+    ):
+        application_type.instance.return_value = runtime_app
         config.update(
             {
                 "ui_font": "inter",
@@ -182,39 +207,36 @@ def test_font_and_transparency_updates_share_one_runtime_apply(qapp):
             },
         )
 
-        qss = qapp.styleSheet()
+        qss = runtime_app.setStyleSheet.call_args.args[0]
+        runtime_app.setStyleSheet.assert_called_once()
         assert UI_FONT_STACKS["inter"] in qss
         assert CODE_FONT_STACKS["jetbrains_mono"] in qss
         _assert_hud_background(qss, "rgba(13, 17, 23, 0.88)")
         _assert_report_background(qss, "rgba(13, 17, 23, 0.93)")
-    finally:
-        qapp.setStyleSheet(old_qss)
 
 
-def test_daylight_apply_updates_tooltip_palette_and_keeps_global_qss(qapp):
+def test_daylight_apply_updates_tooltip_palette_and_keeps_global_qss():
     config = ConfigManager(
         storage=InMemoryStorageBackend(
             initial_data={"config": {"theme": "daylight"}}
         )
     )
-    old_qss = qapp.styleSheet()
     old_palette = QToolTip.palette()
     try:
-        apply_application_style(qapp, config)
+        _app, _theme, qss = _apply_style_without_native_qt_state(config)
 
         daylight = ThemeLoader().load_theme("daylight")
         tooltip_palette = QToolTip.palette()
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipBase).name() == daylight["BG_SURFACE"]
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipText).name() == daylight["TEXT_PRIMARY"]
-        assert "QToolTip {" in qapp.styleSheet()
-        assert f"background-color: {daylight['BG_SURFACE']};" in qapp.styleSheet()
-        assert f"color: {daylight['TEXT_PRIMARY']};" in qapp.styleSheet()
+        assert "QToolTip {" in qss
+        assert f"background-color: {daylight['BG_SURFACE']};" in qss
+        assert f"color: {daylight['TEXT_PRIMARY']};" in qss
     finally:
-        qapp.setStyleSheet(old_qss)
         QToolTip.setPalette(old_palette)
 
 
-def test_reapplying_theme_refreshes_tooltip_palette_without_resetting_values(qapp):
+def test_reapplying_theme_refreshes_tooltip_palette_without_resetting_values():
     config = ConfigManager(
         storage=InMemoryStorageBackend(
             initial_data={
@@ -226,21 +248,19 @@ def test_reapplying_theme_refreshes_tooltip_palette_without_resetting_values(qap
             }
         )
     )
-    old_qss = qapp.styleSheet()
     old_palette = QToolTip.palette()
     try:
-        apply_application_style(qapp, config)
+        _apply_style_without_native_qt_state(config)
         config.set("theme", "nord")
-        apply_application_style(qapp, config)
+        _app, _theme, qss = _apply_style_without_native_qt_state(config)
 
         nord = ThemeLoader().load_theme("nord")
         tooltip_palette = QToolTip.palette()
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipBase).name() == nord["BG_SURFACE"]
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipText).name() == nord["TEXT_PRIMARY"]
-        _assert_hud_background(qapp.styleSheet(), "rgba(46, 52, 64, 0.82)")
-        _assert_report_background(qapp.styleSheet(), "rgba(46, 52, 64, 0.94)")
+        _assert_hud_background(qss, "rgba(46, 52, 64, 0.82)")
+        _assert_report_background(qss, "rgba(46, 52, 64, 0.94)")
         assert config.get("hud_transparency") == 18
         assert config.get("report_transparency") == 6
     finally:
-        qapp.setStyleSheet(old_qss)
         QToolTip.setPalette(old_palette)
