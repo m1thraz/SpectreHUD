@@ -19,13 +19,14 @@ composition or calls; the dashed EventBus link represents domain-event delivery.
 
 ```mermaid
 graph TD
-    Bootstrap[main.py: QApplication + QLockFile] --> UI[UI Shell / Panels: MainWindow, Panels, Dialogs]
-    UI --> AppCtrl[AppController]
+    Bootstrap[main.py: QApplication + QLockFile] --> Root[MainWindow: Single Composition Root]
+    Root --> Container[ServiceContainer (core/container.py)]
+    Container --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, etc.]
+    Root --> AppCtrl[AppController: UI Action Coordinator]
+    AppCtrl --> Coordinators[Coordinators: Settings, Export, Workspace, Navigation, Clipboard]
     AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, History, Project, Report]
     DomainCtrls --> EventBus[EventBus (core/event_bus.py)]
-    DomainCtrls --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, etc.]
-    AppCtrl --> Container[ServiceContainer (core/container.py)]
-    Container --> Services
+    DomainCtrls --> Services
     Services --> Storage[StorageBackend: FileStorageBackend / InMemoryStorageBackend]
     Services --> Security[ProjectLockService + crypto_service]
     Storage --> Filesystem[(Atomic Filesystem / OS)]
@@ -36,7 +37,7 @@ graph TD
 ## 2. Architectural Layers & Components
 
 ### 2.1 UI Presentation Layer (`ui/`)
-- **`MainWindow` (`ui/main_window.py`)**: Frameless, transparent, Spotlight-style overlay shell. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
+- **`MainWindow` (`ui/main_window.py`)**: Frameless, transparent, Spotlight-style overlay shell. Serves as the **Single Composition Root** of the application. Resolves dependencies from `ServiceContainer` (or direct test arguments) and passes fully instantiated services to `AppController`. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
 - **Panels (`ui/panels/`)**:
   - `HeaderPanel`: Title, project switcher dropdown, language toggle, and action buttons.
   - `SearchPanel`: Real-time fuzzy query input with filter tags.
@@ -51,11 +52,17 @@ graph TD
   state. Cards use font-metric-based, five-line previews without nested scroll
   areas; the full entry remains owned by the existing detail and copy workflows.
 
-### 2.2 Domain & Workflow Controllers (`ui/controllers/`)
-- **`AppController` (`ui/app_controller.py`)**: The central coordinator connecting UI signals, mode switching, and domain controllers.
-- **Sub-Controllers**:
+### 2.2 Domain Controllers & Coordinators (`ui/controllers/` & `ui/coordinators/`)
+- **`AppController` (`ui/app_controller.py`)**: High-level UI orchestrator connecting panels, mode switching, and domain controllers. It receives fully resolved services from `MainWindow` and never instantiates domain services or accesses `ServiceContainer` directly.
+- **Application Coordinators (`ui/coordinators/`)**:
+  - `SettingsCoordinator`: Owns application style application, font metrics, and transparency updates.
+  - `ExportCoordinator`: Bridges UI export actions (Markdown, HTML, Obsidian, CherryTree) to pure core exporters.
+  - `WorkspaceCoordinator`: Coordinates multi-project switching and cache eviction across controllers.
+  - `NavigationCoordinator`: Handles mode switching (Cheatsheet, Loot, History, Report Editor) and header/footer states.
+  - `ClipboardCoordinator`: Handles system clipboard monitoring and variable auto-detection.
+- **Sub-Controllers (`ui/controllers/`)**:
   - `CheatsheetController`: Filtering, variable substitution, and snippet copying.
-  - `LootController`: Loot CRUD operations, tabular search, and export generation.
+  - `LootController`: Loot CRUD operations, tabular search, and board interactions.
   - `HistoryController`: Clipboard command log ingestion, filtering, and loot promotions.
   - `ProjectController`: Project creation, switching, validation, and metadata persistence.
   - `ReportController`: Lazily constructs the report tab on first use, then coordinates report loading, Markdown editing and export.

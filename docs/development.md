@@ -102,6 +102,23 @@ integration-marker measurements are archived in
 failure appears flaky or order-dependent, reproduce the individual test
 serially with `-n0` before attributing it to application code.
 
+## Code style & linting
+
+SpectreHUD uses `ruff` for fast, reproducible formatting and linting configured in `pyproject.toml` (`[tool.ruff]`):
+
+```bash
+# Check code style and rules across codebase
+ruff check core ui scripts main.py spectrehud_launcher.py create_desktop_shortcut.py tests
+
+# Format codebase (100 character line length standard)
+ruff format --line-length 100 core ui scripts main.py spectrehud_launcher.py create_desktop_shortcut.py tests
+```
+
+### Architectural linting exceptions
+- `E402` (Module level import not at top of file): Ignored because headless Qt environment variables (`QT_QPA_PLATFORM=offscreen`) and CLI dispatch must execute before PyQt6 modules are imported.
+- `E203` (Whitespace before `:`): Standard PEP 8 slice formatting compatibility.
+- `E501` (Line length): Handled by `ruff format`; long URLs, templates, and Markdown tables are preserved for readability.
+
 CI validates Python 3.10–3.13 on Windows and Linux, performs coverage on Linux,
 and builds and smoke-tests the Windows wheel and executable.
 
