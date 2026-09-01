@@ -21,7 +21,11 @@ refactored platform layers, and the distribution roadmap for Linux support.
 | **Atomic writes & POSIX semantics** | Limited POSIX permission enforcement | Restrictive `0o600` permissions (`_secure_chmod`), `fsync` durability, transactional `.tmp_*` cleanup on replace errors, and case sensitivity / external symlink handling validated |
 | **CI Pipeline** | Windows-only package smoke test | Dual-OS CI matrix (Windows & Ubuntu) with headless Qt (`QT_QPA_PLATFORM=offscreen`, `xvfb-run`) and isolated Linux wheel smoke-testing |
 
-## Detailed inventory
+## Phase-0 baseline inventory (historical)
+
+The following inventory records the state observed before the Linux platform
+work began. It is retained as the baseline for the implementation summary
+below and does not describe the current code.
 
 ### Paths and persisted data
 
@@ -341,5 +345,6 @@ A deliberate architectural evaluation of target Linux packaging formats was cond
   copy-paste installation commands for Ubuntu/Debian/Kali, Fedora/RHEL, and Arch Linux.
 - **Verification Summary**:
   - Local unit, adversarial filesystem, desktop asset, and integration test suites pass on the development baseline.
-  - Headless/Xvfb execution passes in CI matrix definitions (`.github/workflows/ci.yml`).
+  - Headless/Xvfb execution is configured in the CI matrix (`.github/workflows/ci.yml`);
+    confirmation from a live Linux CI run remains part of the pending acceptance.
   - *Pending Acceptance*: Final validation requires live confirmation against GitHub Actions Linux CI runs and manual end-to-end smoke testing under physical or virtualized X11 and Wayland desktop sessions (specifically verifying tray icon behavior, window stays-on-top hints, and compositor notification banners).

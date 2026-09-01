@@ -75,6 +75,11 @@ public issue.
 | **XDG Base Directory Spec Compliance** | N/A | ✅ Yes (`~/.config`, `~/.local/share`) | ✅ Yes (`~/.config`, `~/.local/share`) |
 | **Desktop Integration (`.desktop`, Hicolor Icons)** | N/A | ✅ Yes | ✅ Yes |
 
+Linux entries describe implemented behavior covered by automated tests. Final
+manual acceptance on real X11 and Wayland desktop sessions is still pending;
+see the [Linux platform audit](docs/linux_platform_audit.md) for the current
+verification status and known session-specific limitations.
+
 ## Installation
 
 ### Windows executable
