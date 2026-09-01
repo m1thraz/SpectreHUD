@@ -5,7 +5,7 @@ Card Containers, Frames, Code Blocks, and HUD Glass Styles for SpectreHUD.
 CARDS_QSS_TEMPLATE = """
 /* Outer HUD Frame with Glassmorphism / Acrylic Glow */
 QFrame#HudFrame {
-    background-color: {DARK_A95};
+    background-color: {HUD_BACKGROUND};
     border: 1px solid {CYAN_A35};
     border-radius: 14px;
 }

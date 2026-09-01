@@ -62,6 +62,8 @@ class TestSettingsDialog(unittest.TestCase):
         page.combo_ui_font.setCurrentIndex(1)
         page.combo_code_font.setCurrentIndex(3)
         page.combo_report_font.setCurrentIndex(3)
+        page.slider_hud_transparency.setValue(20)
+        page.spin_report_transparency.setValue(10)
 
         settings = page.get_settings()
         self.assertNotIn("loot_view_mode", settings)
@@ -69,6 +71,24 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(settings["code_font"], "jetbrains_mono")
         self.assertEqual(settings["report_font"], "georgia")
         self.assertEqual(settings["theme"], "cyber_dark")
+        self.assertEqual(settings["hud_transparency"], 20)
+        self.assertEqual(settings["report_transparency"], 10)
+
+    def test_appearance_transparency_controls_are_independent_and_bounded(self):
+        page = AppearanceSettingsPage(self.config_manager)
+
+        self.assertEqual(page.slider_hud_transparency.minimum(), 0)
+        self.assertEqual(page.slider_hud_transparency.maximum(), 30)
+        self.assertEqual(page.slider_hud_transparency.value(), 5)
+        self.assertEqual(page.slider_report_transparency.value(), 0)
+
+        page.spin_hud_transparency.setValue(17)
+        self.assertEqual(page.slider_hud_transparency.value(), 17)
+        self.assertEqual(page.slider_report_transparency.value(), 0)
+
+        page.slider_report_transparency.setValue(9)
+        self.assertEqual(page.spin_report_transparency.value(), 9)
+        self.assertEqual(page.slider_hud_transparency.value(), 17)
 
     def test_appearance_page_has_no_redundant_loot_view_switch(self):
         page = AppearanceSettingsPage(self.config_manager)
@@ -119,6 +139,8 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(self.config_manager.get("hotkey"), "<ctrl>+<cmd>+<space>")
         self.assertEqual(self.config_manager.get("quit_hotkey"), "<ctrl>+<shift>+q")
         self.assertEqual(self.config_manager.get("theme"), "cyber_dark")
+        self.assertEqual(self.config_manager.get("hud_transparency"), 5)
+        self.assertEqual(self.config_manager.get("report_transparency"), 0)
         dlg.close()
 
     def test_settings_dialog_defers_workspace_persistence_until_runtime_switch(self):

@@ -29,7 +29,7 @@ from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
 from ui.panels.footer_panel import FooterPanel
 from ui.settings_dialog import SettingsDialog
-from ui.styles import build_app_theme
+from ui.appearance import apply_application_style as apply_runtime_application_style
 from ui.controllers import (
     CheatsheetController,
     LootController,
@@ -489,11 +489,13 @@ class AppController(QObject):
         selected_code_font = new_settings.get(
             "code_font", self.config.get("code_font", "consolas")
         )
-        fonts_changed = (
+        appearance_changed = (
             selected_ui_font != self._applied_ui_font
             or selected_code_font != self._applied_code_font
+            or "hud_transparency" in new_settings
+            or "report_transparency" in new_settings
         )
-        if fonts_changed:
+        if appearance_changed:
             # A newly selected theme is still activated by the controlled restart.
             # Until then, update only typography against the currently active palette.
             active_theme = (
@@ -544,9 +546,9 @@ class AppController(QObject):
         )
         ui_font = self.config.get("ui_font", "segoe_ui")
         code_font = self.config.get("code_font", "consolas")
-        palette = ThemeLoader().load_theme(applied_theme)
-        app.setStyleSheet(build_app_theme(palette, ui_font, code_font))
-        self._applied_theme = applied_theme
+        self._applied_theme = apply_runtime_application_style(
+            app, self.config, theme_id=applied_theme
+        )
         self._applied_ui_font = ui_font
         self._applied_code_font = code_font
 

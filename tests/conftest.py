@@ -17,6 +17,11 @@ def qapp():
 
     application = QApplication.instance() or QApplication([])
     yield application
+    tooltip_guard = getattr(application, "_spectrehud_tooltip_color_guard", None)
+    if tooltip_guard is not None:
+        application.removeEventFilter(tooltip_guard)
+        tooltip_guard.deleteLater()
+        delattr(application, "_spectrehud_tooltip_color_guard")
     application.processEvents()
 
 

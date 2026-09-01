@@ -3,13 +3,13 @@
 import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-import pytest
 from PyQt6.QtWidgets import QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
 from core.config import ConfigManager
 from core.storage import InMemoryStorageBackend
 from core.theme_loader import ThemeLoader
+from ui.appearance import apply_application_style
 from ui.panels.content_panel import ContentPanel
 from ui.settings_dialog import AppearanceSettingsPage, GeneralSettingsPage, HotkeySettingsPage
 from ui.styles import build_app_theme
@@ -19,10 +19,7 @@ def _apply_daylight_theme(qapp) -> None:
         config_dir=None,
         storage=InMemoryStorageBackend(initial_data={"config": {"theme": "daylight"}}),
     )
-    palette = ThemeLoader().load_theme("daylight")
-    qapp.setStyleSheet(
-        build_app_theme(palette, config.get("ui_font", "segoe_ui"), config.get("code_font", "consolas"))
-    )
+    apply_application_style(qapp, config)
 
 
 def _active_tip_label(qapp):
@@ -72,10 +69,6 @@ def test_settings_scroll_areas_remain_transparent_without_local_styles(qapp):
         page.deleteLater()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Phase 1 restores the original glass path; Daylight tooltip isolation follows in Phase 2",
-)
 def test_tooltip_inside_content_panel_keeps_theme_colors(qapp):
     _apply_daylight_theme(qapp)
 

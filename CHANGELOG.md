@@ -8,6 +8,13 @@ semantic versioning.
 
 ### Changed
 
+- Restored the original transparent MainScrollArea rendering path and added
+  independent, live HUD and Report Editor transparency controls under
+  Appearance. The default 5% HUD transparency matches the established glass
+  look, while the Report Editor remains opaque by default.
+- Centralized startup and runtime appearance application, including a
+  theme-derived tooltip palette guard for popup labels inside locally styled
+  scroll areas.
 - Split test execution into Fast, Integration, and Release marker groups while
   keeping the unfiltered suite as the CI and release gate. Pytest output is now
   compact by default, and duplicate CLI subprocess coverage was removed.

@@ -3,11 +3,12 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QPushButton, QComboBox, QCheckBox, 
-    QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox
+    QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox,
+    QSlider, QSpinBox
 )
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
-from core.config import ConfigManager
+from core.config import ConfigManager, clamp_transparency
 from core.i18n import t
 from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
@@ -326,6 +327,38 @@ class AppearanceSettingsPage(QWidget):
         theme_layout.addWidget(restart_hint)
         layout.addWidget(card_theme)
 
+        lbl_transparency = QLabel(
+            t("settings.lbl_transparency_section", "Transparency")
+        )
+        lbl_transparency.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_transparency)
+
+        card_transparency = QFrame()
+        card_transparency.setProperty("class", "SettingsCard")
+        transparency_layout = QVBoxLayout(card_transparency)
+        transparency_layout.setSpacing(10)
+
+        self.slider_hud_transparency, self.spin_hud_transparency = (
+            self._add_transparency_control(
+                transparency_layout,
+                t("settings.lbl_hud_transparency", "HUD Transparency"),
+                clamp_transparency(self.config.get("hud_transparency", 5), 5),
+            )
+        )
+        self.slider_report_transparency, self.spin_report_transparency = (
+            self._add_transparency_control(
+                transparency_layout,
+                t(
+                    "settings.lbl_report_transparency",
+                    "Report Editor Transparency",
+                ),
+                clamp_transparency(
+                    self.config.get("report_transparency", 0), 0
+                ),
+            )
+        )
+        layout.addWidget(card_transparency)
+
         lbl_typography = QLabel(t("settings.lbl_typography_section", "Typography"))
         lbl_typography.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_typography)
@@ -355,6 +388,36 @@ class AppearanceSettingsPage(QWidget):
         scroll.setWidget(content)
         _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
+
+    @staticmethod
+    def _add_transparency_control(
+        parent_layout: QVBoxLayout,
+        label: str,
+        value: int,
+    ) -> tuple[QSlider, QSpinBox]:
+        row = QHBoxLayout()
+        label_widget = QLabel(label)
+        label_widget.setProperty("class", "FormLabel")
+        row.addWidget(label_widget)
+
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, 30)
+        slider.setValue(value)
+        slider.setProperty("class", "TransparencySlider")
+        row.addWidget(slider, stretch=1)
+
+        spin = QSpinBox()
+        spin.setRange(0, 30)
+        spin.setSuffix(" %")
+        spin.setValue(value)
+        spin.setProperty("class", "TransparencySpin")
+        spin.setMinimumWidth(68)
+        row.addWidget(spin)
+
+        slider.valueChanged.connect(spin.setValue)
+        spin.valueChanged.connect(slider.setValue)
+        parent_layout.addLayout(row)
+        return slider, spin
 
     @staticmethod
     def _font_combo(options, selected_key: str) -> QComboBox:
@@ -410,6 +473,8 @@ class AppearanceSettingsPage(QWidget):
             "ui_font": self.combo_ui_font.currentData() or "segoe_ui",
             "code_font": self.combo_code_font.currentData() or "consolas",
             "report_font": self.combo_report_font.currentData() or "segoe_ui",
+            "hud_transparency": self.slider_hud_transparency.value(),
+            "report_transparency": self.slider_report_transparency.value(),
         }
 
 

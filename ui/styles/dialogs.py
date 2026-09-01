@@ -163,6 +163,34 @@ QComboBox QAbstractItemView {
     outline: none;
 }
 
+/* Appearance transparency controls */
+QSpinBox.TransparencySpin {
+    background-color: {SURFACE_A90};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY};
+    padding: 4px 6px;
+}
+
+QSlider.TransparencySlider::groove:horizontal {
+    height: 4px;
+    background-color: {BORDER_A60};
+    border-radius: 2px;
+}
+
+QSlider.TransparencySlider::sub-page:horizontal {
+    background-color: {CYBER_CYAN};
+    border-radius: 2px;
+}
+
+QSlider.TransparencySlider::handle:horizontal {
+    width: 14px;
+    margin: -5px 0;
+    background-color: {CYBER_BLUE};
+    border: 1px solid {CYBER_CYAN};
+    border-radius: 7px;
+}
+
 /* Settings Sidebar */
 QFrame#SettingsSidebar {
     background-color: {SIDEBAR_A90};
@@ -238,7 +266,7 @@ QCheckBox::indicator:checked {
 
 /* Report Editor & Preview */
 QPlainTextEdit.ReportSourceEditor {
-    background-color: {DARK_A95};
+    background-color: {REPORT_EDITOR_BACKGROUND};
     color: {TEXT_SECONDARY};
     border: 1px solid {BORDER_DEFAULT};
     border-radius: 8px;
@@ -252,7 +280,7 @@ QPlainTextEdit.ReportSourceEditor:focus {
 }
 
 QTextEdit.ReportPreview {
-    background-color: {DARK_A98};
+    background-color: {REPORT_EDITOR_BACKGROUND};
     color: {TEXT_PRIMARY};
     border: 1px solid {BORDER_DEFAULT};
     border-radius: 8px;

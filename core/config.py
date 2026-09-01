@@ -24,6 +24,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "code_font": "consolas",
     "report_font": "segoe_ui",
     "theme": "cyber_dark",
+    "hud_transparency": 5,
+    "report_transparency": 0,
     "language": "en",
     "time_format": "24h",
     "workspace_dir": str(Path.home() / "spectre_projects"),
@@ -31,6 +33,15 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "obsidian_export_folder": "CTF/SpectreHUD",
     "obsidian_open_after_export": False,
 }
+
+
+def clamp_transparency(value: object, default: int) -> int:
+    """Normalize supported transparency preferences to an integer from 0 to 30."""
+    try:
+        transparency = int(value)
+    except (TypeError, ValueError, OverflowError):
+        transparency = default
+    return max(0, min(30, transparency))
 
 def get_default_config_dir() -> Path:
     """Returns the default config directory, checking SPECTRE_CONFIG_DIR env var first."""
@@ -78,6 +89,11 @@ class ConfigManager:
                 migrated = True
             cfg = DEFAULT_CONFIG.copy()
             cfg.update(loaded)
+            for key, default in (("hud_transparency", 5), ("report_transparency", 0)):
+                normalized = clamp_transparency(cfg.get(key), default)
+                if cfg.get(key) != normalized:
+                    migrated = True
+                cfg[key] = normalized
             self.data = cfg
             if migrated:
                 try:

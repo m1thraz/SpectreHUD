@@ -109,14 +109,21 @@ graph TD
 - **`ThemeLoader` (`core/theme_loader.py`)**: Discovers bundled and user-provided
   JSON themes, validates their required palette tokens, and falls back to Cyber
   Dark when a selected theme cannot be loaded.
-- **Appearance settings (`ui/settings_dialog.py`)**: Own theme and typography
-  selection separately from general behaviour settings. A changed theme emits a
+- **Appearance settings (`ui/settings_dialog.py`)**: Own theme, typography and
+  independent HUD/Report Editor transparency preferences separately from
+  general behaviour settings. A changed theme emits a
   restart request only after settings persistence; the application then follows
   its normal project-save and shutdown path, releases the single-instance lock,
   and starts the replacement process. Application and code font changes rebuild
   the running application stylesheet immediately, while report typography stays
   scoped to report preview and export. Installed families are detected through
-  Qt; unavailable curated choices remain visible but disabled. Loot list/Kanban
+  Qt; unavailable curated choices remain visible but disabled. HUD transparency
+  defaults to the established 5% glass rendering, while the Report Editor's two
+  writing surfaces default to fully opaque and do not affect its toolbar or
+  surrounding chrome. Both values apply immediately through the shared
+  `ui/appearance.py` runtime path. That same path derives tooltip base/text
+  colours from the active palette and guards transient Qt tooltip labels from
+  the local MainScrollArea stylesheet cascade. Loot list/Kanban
   selection is intentionally controlled and persisted from the Loot view itself.
 - QSS generation remains split into cohesive modules:
   - `palette.py`: Color constants and semantic palette definitions.
@@ -126,7 +133,8 @@ graph TD
   - `cards.py`: Snippet card containers and code blocks.
   - `dialogs.py`: Modal dialogues, form layouts, and inputs.
   - `theme.py`: Builds the complete application stylesheet from the active
-    palette plus application and code-font selections.
+    palette, application/code-font selections and the two bounded transparency
+    values.
 
 ### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
 - **`ReportTemplate` & `TemplateSection` (`template_engine.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.

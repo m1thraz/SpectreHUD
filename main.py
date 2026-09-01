@@ -31,7 +31,8 @@ from core.hotkey_listener import HotkeyListener
 from core.logger import setup_logger, get_logger
 from ui.main_window import MainWindow
 
-from ui.styles import build_app_theme, get_app_icon
+from ui.appearance import apply_application_style
+from ui.styles import get_app_icon
 
 logger = get_logger("app")
 RESTART_EXIT_CODE = 100
@@ -173,16 +174,7 @@ def main():
         # Initialize Service Container
         container = _create_production_container()
         _startup_mark(started_at, "service container ready")
-        from core.theme_loader import ThemeLoader
-
-        theme_palette = ThemeLoader().load_theme(
-            container.config_manager.get("theme", ThemeLoader.FALLBACK_THEME_ID)
-        )
-        app.setStyleSheet(build_app_theme(
-            theme_palette,
-            container.config_manager.get("ui_font", "segoe_ui"),
-            container.config_manager.get("code_font", "consolas"),
-        ))
+        apply_application_style(app, container.config_manager)
         container.clipboard_watcher.start_listening()
 
         # Main Window
