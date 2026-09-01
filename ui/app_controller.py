@@ -6,7 +6,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, QUrl, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
@@ -21,7 +21,6 @@ from core.logger import get_logger
 from core.event_bus import EventBus, EventType
 from core.container import ServiceContainer
 from core.storage import PersistenceError
-from core.theme_loader import ThemeLoader
 
 from ui.variable_bar import VariableBar
 from ui.panels.header_panel import HeaderPanel
@@ -29,7 +28,6 @@ from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
 from ui.panels.footer_panel import FooterPanel
 from ui.settings_dialog import SettingsDialog
-from ui.appearance import apply_application_style as apply_runtime_application_style
 from ui.controllers import (
     CheatsheetController,
     LootController,
@@ -42,6 +40,7 @@ from ui.coordinators import (
     NavigationCoordinator,
     ClipboardCoordinator,
     ExportCoordinator,
+    SettingsCoordinator,
 )
 
 logger = get_logger(__name__)
@@ -106,9 +105,6 @@ class AppController(QObject):
             clipboard_watcher=self.clipboard_watcher
         )
         self.cards: List[QWidget] = []
-        self._applied_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
-        self._applied_ui_font = self.config.get("ui_font", "segoe_ui")
-        self._applied_code_font = self.config.get("code_font", "consolas")
 
         # Domain Controllers
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, event_bus=self.event_bus, parent=self)
@@ -145,6 +141,23 @@ class AppController(QObject):
         self.screenshot_transaction = ScreenshotTransactionService(
             loot_manager=self.loot_manager,
             persist_project_state=self.save_current_project_state,
+        )
+        self.settings_coord = SettingsCoordinator(
+            config=self.config,
+            event_bus=self.event_bus,
+            workspace_coord=self.workspace_coord,
+            report_ctrl=self.report_ctrl,
+            footer=self.footer,
+            window=self.window,
+            loot_manager=self.loot_manager,
+            clipboard_watcher=self.clipboard_watcher,
+            # Resolve callbacks at invocation time so tests and runtime
+            # extensions can replace the controller boundary deliberately.
+            update_footer_status=lambda: self._update_footer_status(),
+            load_active_project_state=lambda: self.load_active_project_state(),
+            refresh_filter_pills=lambda: self.refresh_filter_pills(),
+            refresh_content=lambda: self.refresh_content(),
+            retranslate_ui=lambda locale: self.retranslate_ui(locale),
         )
 
         self._wire_signals()
@@ -461,77 +474,7 @@ class AppController(QObject):
             self.restart_requested.emit()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
-        selected_theme = new_settings.get(
-            "theme", self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
-        )
-        selected_ui_font = new_settings.get(
-            "ui_font", self.config.get("ui_font", "segoe_ui")
-        )
-        selected_code_font = new_settings.get(
-            "code_font", self.config.get("code_font", "consolas")
-        )
-        appearance_changed = (
-            selected_ui_font != self._applied_ui_font
-            or selected_code_font != self._applied_code_font
-            or "hud_transparency" in new_settings
-            or "report_transparency" in new_settings
-        )
-        if appearance_changed:
-            # A newly selected theme is still activated by the controlled restart.
-            # Until then, update only typography against the currently active palette.
-            active_theme = (
-                self._applied_theme
-                if selected_theme != self._applied_theme
-                else selected_theme
-            )
-            self.apply_application_style(theme_id=active_theme)
-        if "report_font" in new_settings:
-            self.report_ctrl.refresh_font_configuration()
-        if "always_on_top" in new_settings:
-            self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
-        if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
-            self._update_footer_status()
-            self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, {
-                "hotkey": new_settings.get("hotkey", self.config.get("hotkey", "<ctrl>+<cmd>+<")),
-                "snip_hotkey": new_settings.get("snip_hotkey", self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")),
-                "quit_hotkey": new_settings.get("quit_hotkey", self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")),
-            })
-        if "workspace_dir" in new_settings and new_settings["workspace_dir"]:
-            self.workspace_coord.apply_workspace_setting(
-                workspace_dir=new_settings["workspace_dir"],
-                config=self.config,
-                window=self.window,
-                load_session=self.load_active_project_state,
-                refresh_filters=self.refresh_filter_pills,
-                refresh_content=self.refresh_content,
-            )
-        if "time_format" in new_settings:
-            fmt = new_settings["time_format"]
-            if hasattr(self, "loot_manager") and hasattr(self.loot_manager, "set_time_format"):
-                self.loot_manager.set_time_format(fmt)
-            if hasattr(self, "clipboard_watcher") and hasattr(self.clipboard_watcher, "set_time_format"):
-                self.clipboard_watcher.set_time_format(fmt)
-        if "language" in new_settings:
-            self.retranslate_ui(new_settings["language"])
-        else:
-            self._update_footer_status()
-
-    def apply_application_style(self, theme_id: Optional[str] = None) -> None:
-        """Rebuild the application QSS from persisted appearance preferences."""
-        app = QApplication.instance()
-        if app is None:
-            return
-
-        applied_theme = theme_id or self.config.get(
-            "theme", ThemeLoader.FALLBACK_THEME_ID
-        )
-        ui_font = self.config.get("ui_font", "segoe_ui")
-        code_font = self.config.get("code_font", "consolas")
-        self._applied_theme = apply_runtime_application_style(
-            app, self.config, theme_id=applied_theme
-        )
-        self._applied_ui_font = ui_font
-        self._applied_code_font = code_font
+        self.settings_coord.apply(new_settings)
 
     def _on_always_on_top_toggled(self, checked: bool) -> None:
         self.config.set("always_on_top", checked)

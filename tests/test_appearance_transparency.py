@@ -1,6 +1,5 @@
 """Regression coverage for runtime appearance and independent transparency."""
 
-from types import MethodType, SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,26 +10,28 @@ from core.config import ConfigManager
 from core.storage import InMemoryStorageBackend
 from core.theme_loader import ThemeLoader
 from ui.appearance import apply_application_style
-from ui.app_controller import AppController
+from ui.coordinators.settings_coordinator import SettingsCoordinator
 from ui.styles import build_app_theme
 from core.fonts import CODE_FONT_STACKS, UI_FONT_STACKS
 from ui.styles.palette import CYBER_DARK_PALETTE
 
 
 def _controller_harness(config: ConfigManager):
-    controller = SimpleNamespace(
+    return SettingsCoordinator(
         config=config,
-        _applied_theme=config.get("theme"),
-        _applied_ui_font=config.get("ui_font"),
-        _applied_code_font=config.get("code_font"),
-        report_ctrl=SimpleNamespace(refresh_font_configuration=Mock()),
-        restart_requested=SimpleNamespace(emit=Mock()),
-        _update_footer_status=lambda: None,
+        event_bus=Mock(),
+        workspace_coord=Mock(),
+        report_ctrl=Mock(),
+        footer=Mock(),
+        window=Mock(),
+        loot_manager=Mock(),
+        clipboard_watcher=Mock(),
+        update_footer_status=Mock(),
+        load_active_project_state=Mock(),
+        refresh_filter_pills=Mock(),
+        refresh_content=Mock(),
+        retranslate_ui=Mock(),
     )
-    controller.apply_application_style = MethodType(
-        AppController.apply_application_style, controller
-    )
-    return controller
 
 
 def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
@@ -160,22 +161,20 @@ def test_save_apply_updates_both_transparencies_without_restart():
     controller = _controller_harness(config)
     runtime_app = Mock()
     with (
-        patch("ui.app_controller.QApplication") as application_type,
+        patch("ui.coordinators.settings_coordinator.QApplication") as application_type,
         patch("ui.appearance.apply_tooltip_palette"),
         patch("ui.appearance._install_tooltip_color_guard"),
     ):
         application_type.instance.return_value = runtime_app
         config.update({"hud_transparency": 20, "report_transparency": 10})
 
-        AppController._on_settings_applied(
-            controller,
+        controller.apply(
             {"hud_transparency": 20, "report_transparency": 10},
         )
 
         qss = runtime_app.setStyleSheet.call_args.args[0]
         _assert_hud_background(qss, "rgba(13, 17, 23, 0.8)")
         _assert_report_background(qss, "rgba(13, 17, 23, 0.9)")
-        controller.restart_requested.emit.assert_not_called()
 
 
 def test_font_and_transparency_updates_share_one_runtime_apply():
@@ -183,7 +182,7 @@ def test_font_and_transparency_updates_share_one_runtime_apply():
     controller = _controller_harness(config)
     runtime_app = Mock()
     with (
-        patch("ui.app_controller.QApplication") as application_type,
+        patch("ui.coordinators.settings_coordinator.QApplication") as application_type,
         patch("ui.appearance.apply_tooltip_palette"),
         patch("ui.appearance._install_tooltip_color_guard"),
     ):
@@ -197,14 +196,13 @@ def test_font_and_transparency_updates_share_one_runtime_apply():
             }
         )
 
-        AppController._on_settings_applied(
-            controller,
+        controller.apply(
             {
                 "ui_font": "inter",
                 "code_font": "jetbrains_mono",
                 "hud_transparency": 12,
                 "report_transparency": 7,
-            },
+            }
         )
 
         qss = runtime_app.setStyleSheet.call_args.args[0]

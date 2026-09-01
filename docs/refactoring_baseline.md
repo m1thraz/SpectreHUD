@@ -59,6 +59,16 @@ new services and coordinators. The count consists of:
   requires direct `AppController(...)` construction, but 26 `MainWindow`
   integration paths depend on the existing composition behavior.
 
+### Coupling after phases 5 and 6
+
+The six font/transparency tests now exercise `SettingsCoordinator` directly,
+and a single focused test verifies that `AppController._on_settings_applied`
+only delegates. Screenshot commit/rollback assertions now exercise
+`ScreenshotTransactionService`; controller coverage is limited to the success
+and failure UI/event boundary. The nine unbound responsibility-level calls
+recorded above have therefore been removed while the indirect `MainWindow`
+integration coverage remains intact.
+
 ## Phase 4 decision: preview state remains local
 
 Re-evaluated after the report export boundary and UI-builder cleanup. The view
