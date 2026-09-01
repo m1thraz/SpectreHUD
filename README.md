@@ -62,10 +62,11 @@ opening a pull request. Report suspected vulnerabilities privately according to
 [SECURITY.md](SECURITY.md), and never place credentials or engagement data in a
 public issue.
 
-## Platform Support Matrix
+## Platform Support & Verification Status
 
-| Feature | Windows | Linux (X11) | Linux (Wayland) |
+| Feature / Area | Windows | Linux (X11) | Linux (Wayland) |
 |---|:---:|:---:|:---:|
+| **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
@@ -74,11 +75,6 @@ public issue.
 | **VPN / Local IP Discovery (`ip -j`)** | ✅ Yes | ✅ Yes (`ip -j`) | ✅ Yes (`ip -j`) |
 | **XDG Base Directory Spec Compliance** | N/A | ✅ Yes (`~/.config`, `~/.local/share`) | ✅ Yes (`~/.config`, `~/.local/share`) |
 | **Desktop Integration (`.desktop`, Hicolor Icons)** | N/A | ✅ Yes | ✅ Yes |
-
-Linux entries describe implemented behavior covered by automated tests. Final
-manual acceptance on real X11 and Wayland desktop sessions is still pending;
-see the [Linux platform audit](docs/linux_platform_audit.md) for the current
-verification status and known session-specific limitations.
 
 ## Installation
 
@@ -138,12 +134,10 @@ python scripts/build_exe.py
 
 ## Platform notes
 
-SpectreHUD supports Windows and Linux (X11 and Wayland). On modern Wayland
-compositors, global background key logging and arbitrary display grabbing are restricted by the
-display server security model; SpectreHUD gracefully falls back to in-app keyboard shortcuts and
-provides clear tooltip notifications.
+Windows is the primary production-verified platform. Linux support is implemented and CI-validated; real-desktop X11/Wayland acceptance is still being expanded across physical and virtualized desktop environments.
+
+On modern Wayland compositors, global background key logging and arbitrary display grabbing are restricted by the compositor security model; SpectreHUD gracefully degrades to in-app keyboard shortcuts and provides clear UI tooltips without blocking the application.
 
 ## License
 
 Released under the [MIT License](LICENSE).
-

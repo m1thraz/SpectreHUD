@@ -62,6 +62,29 @@ def test_platform_layer_does_not_import_ui():
     assert violations == [], "\n".join(violations)
 
 
+def test_platform_package_does_not_eagerly_import_qt():
+    """Importing core.platform or core.platform.paths must not eagerly load PyQt6 into memory."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys\n"
+        "import core.platform\n"
+        "import core.platform.paths\n"
+        "import core.platform.network\n"
+        "import core.platform.capabilities\n"
+        "qt_modules = [m for m in sys.modules if m.startswith('PyQt6')]\n"
+        "assert not qt_modules, f'PyQt6 was eagerly imported by core.platform: {qt_modules}'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        cwd=str(PROJECT_ROOT),
+    )
+    assert result.returncode == 0, f"Subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+
+
 def test_local_path_opening_does_not_use_platform_shell_branches():
     """Local desktop opening belongs to core.platform.opener, not OS shell commands."""
     forbidden = ("os.startfile", '"xdg-open"', "'xdg-open'")
