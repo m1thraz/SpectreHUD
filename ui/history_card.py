@@ -1,6 +1,12 @@
 from PyQt6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QWidget,
+    QApplication,
+    QSizePolicy,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any
@@ -9,6 +15,7 @@ from core.logger import get_logger
 from core.i18n import t
 
 logger = get_logger(__name__)
+
 
 class HistoryCard(QFrame):
     """Visual card displaying a single clipboard history item with natural word wrapping and Loot-transfer."""
@@ -40,7 +47,9 @@ class HistoryCard(QFrame):
         time_display = ts.split(" ")[-1] if " " in ts else ts
         lbl_time = QLabel(time_display)
         lbl_time.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_time.setStyleSheet("background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
+        lbl_time.setStyleSheet(
+            "background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;"
+        )
         header_layout.addWidget(lbl_time)
 
         # Target IP Badge (if present)
@@ -48,13 +57,19 @@ class HistoryCard(QFrame):
         if target_ip:
             lbl_target = QLabel(target_ip)
             lbl_target.setTextFormat(Qt.TextFormat.PlainText)
-            lbl_target.setStyleSheet("background-color: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;")
+            lbl_target.setStyleSheet(
+                "background-color: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;"
+            )
             header_layout.addWidget(lbl_target)
 
         # Stats Badge
         lines_count = self.entry.get("lines_count", 1)
         char_count = self.entry.get("char_count", 0)
-        type_str = "Command" if lines_count <= 2 and char_count < 120 else f"{lines_count} lines ({char_count} chars)"
+        type_str = (
+            "Command"
+            if lines_count <= 2 and char_count < 120
+            else f"{lines_count} lines ({char_count} chars)"
+        )
         lbl_stats = QLabel(type_str)
         lbl_stats.setTextFormat(Qt.TextFormat.PlainText)
         lbl_stats.setStyleSheet("color: #8b949e; font-size: 10px;")
@@ -80,8 +95,8 @@ class HistoryCard(QFrame):
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
         self.lbl_content.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse | 
-            Qt.TextInteractionFlag.TextSelectableByKeyboard
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
         self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content_row.addWidget(self.lbl_content, stretch=1)
@@ -98,7 +113,9 @@ class HistoryCard(QFrame):
 
         self.btn_to_loot = QPushButton("+ Loot")
         self.btn_to_loot.setProperty("class", "SecondaryBtn")
-        self.btn_to_loot.setToolTip(t("history.add_to_loot_tip", "Add this text to session loot as a credential or note"))
+        self.btn_to_loot.setToolTip(
+            t("history.add_to_loot_tip", "Add this text to session loot as a credential or note")
+        )
         self.btn_to_loot.setMinimumWidth(90)
         self.btn_to_loot.clicked.connect(lambda: self.transfer_to_loot.emit(self.entry))
         action_col.addWidget(self.btn_to_loot)

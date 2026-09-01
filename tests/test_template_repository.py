@@ -30,11 +30,18 @@ class TestTemplateRepository(unittest.TestCase):
         self.assertGreaterEqual(len(builtins), 8)
 
         ids = [template.id for template in builtins]
-        self.assertTrue({
-            "ctf_walkthrough_de", "ctf_walkthrough_en", "ctf_quick_de",
-            "ctf_quick_en", "pentest_standard_de", "pentest_standard_en",
-            "pentest_executive_de", "pentest_executive_en",
-        }.issubset(ids))
+        self.assertTrue(
+            {
+                "ctf_walkthrough_de",
+                "ctf_walkthrough_en",
+                "ctf_quick_de",
+                "ctf_quick_en",
+                "pentest_standard_de",
+                "pentest_standard_en",
+                "pentest_executive_de",
+                "pentest_executive_en",
+            }.issubset(ids)
+        )
 
         for template in builtins:
             self.assertTrue(template.is_builtin)
@@ -49,24 +56,37 @@ class TestTemplateRepository(unittest.TestCase):
         bundled_templates = bundle_dir / "data" / "report_templates"
         bundled_templates.mkdir(parents=True)
         (bundled_templates / "only_bundle.json").write_text(
-            json.dumps({
-                "id": "only_bundle", "name": "Bundled", "language": "en",
-                "category": "ctf", "complexity": "simple",
-                "sections": [{"type": "header_metadata"}],
-            }),
+            json.dumps(
+                {
+                    "id": "only_bundle",
+                    "name": "Bundled",
+                    "language": "en",
+                    "category": "ctf",
+                    "complexity": "simple",
+                    "sections": [{"type": "header_metadata"}],
+                }
+            ),
             encoding="utf-8",
         )
 
-        with patch.object(sys, "frozen", True, create=True), patch.object(sys, "_MEIPASS", str(bundle_dir), create=True):
+        with (
+            patch.object(sys, "frozen", True, create=True),
+            patch.object(sys, "_MEIPASS", str(bundle_dir), create=True),
+        ):
             repo = TemplateRepository(user_templates_dir=self.user_dir)
             self.assertEqual(repo.builtin_dir, bundled_templates)
-            self.assertEqual([template.id for template in repo.get_builtin_templates()], ["only_bundle"])
+            self.assertEqual(
+                [template.id for template in repo.get_builtin_templates()], ["only_bundle"]
+            )
 
     def test_save_and_load_user_template(self):
         """A user can create and persist a custom template."""
         custom_template = ReportTemplate(
-            id="my_custom_template", name="My Custom Template", language="en",
-            category="pentest", complexity="simple",
+            id="my_custom_template",
+            name="My Custom Template",
+            language="en",
+            category="pentest",
+            complexity="simple",
             sections=[
                 TemplateSection(type="header_metadata", title="Custom Audit"),
                 TemplateSection(type="executive_summary"),
@@ -83,8 +103,11 @@ class TestTemplateRepository(unittest.TestCase):
     def test_user_template_overrides_builtin(self):
         """A user template can override and then restore a built-in template."""
         override_template = ReportTemplate(
-            id="pentest_standard_de", name="Pentest Standard-Bericht (Overridden)",
-            language="de", category="pentest", complexity="complex",
+            id="pentest_standard_de",
+            name="Pentest Standard-Bericht (Overridden)",
+            language="de",
+            category="pentest",
+            complexity="complex",
             sections=[TemplateSection(type="header_metadata", title="Overridden Header")],
         )
         self.repo.save_user_template(override_template)

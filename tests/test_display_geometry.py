@@ -1,9 +1,8 @@
 import unittest
 from core.display_geometry import (
     ScreenGeometry,
-    VirtualDesktopBoundingBox,
     compute_virtual_desktop_bounding_box,
-    compute_screen_paint_offset
+    compute_screen_paint_offset,
 )
 
 
@@ -118,5 +117,5 @@ class TestDisplayGeometry(unittest.TestCase):
         self.assertEqual(bbox.to_tuple(), (0, 0, 0, 0))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

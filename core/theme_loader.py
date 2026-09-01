@@ -25,7 +25,8 @@ class ThemeLoader:
         if not isinstance(palette, Mapping):
             return sorted(self.get_required_tokens())
         return sorted(
-            token for token in self.get_required_tokens()
+            token
+            for token in self.get_required_tokens()
             if not isinstance(palette.get(token), str) or not str(palette[token]).strip()
         )
 
@@ -61,15 +62,22 @@ class ThemeLoader:
                 continue
             theme_id = definition.get("id")
             palette = definition.get("palette")
-            if not isinstance(theme_id, str) or not theme_id.strip() or self.validate_palette(palette):
+            if (
+                not isinstance(theme_id, str)
+                or not theme_id.strip()
+                or self.validate_palette(palette)
+            ):
                 logger.warning("Ignoring invalid or incomplete theme definition: %s", path)
                 continue
-            themes.setdefault(theme_id, {
-                "id": theme_id,
-                "name": str(definition.get("name") or theme_id),
-                "author": str(definition.get("author") or "Unknown"),
-                "version": str(definition.get("version") or "1.0"),
-            })
+            themes.setdefault(
+                theme_id,
+                {
+                    "id": theme_id,
+                    "name": str(definition.get("name") or theme_id),
+                    "author": str(definition.get("author") or "Unknown"),
+                    "version": str(definition.get("version") or "1.0"),
+                },
+            )
         if self.FALLBACK_THEME_ID not in themes:
             themes[self.FALLBACK_THEME_ID] = {
                 "id": self.FALLBACK_THEME_ID,
@@ -94,7 +102,9 @@ class ThemeLoader:
             missing = self.validate_palette(palette)
             if not missing:
                 return {token: str(palette[token]) for token in self.get_required_tokens()}
-            logger.warning("Theme '%s' is missing required tokens: %s", selected_id, ", ".join(missing))
+            logger.warning(
+                "Theme '%s' is missing required tokens: %s", selected_id, ", ".join(missing)
+            )
             break
         if selected_id != self.FALLBACK_THEME_ID:
             logger.warning("Theme '%s' could not be loaded; using Cyber Dark.", selected_id)

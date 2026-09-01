@@ -1,6 +1,13 @@
 from typing import Dict, Any, List, Optional, Callable
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMenu, QMessageBox
+from PyQt6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QMenu,
+    QMessageBox,
+)
 
 from core.snippet_manager import SnippetManager
 from core.storage import PersistenceError, StorageError
@@ -52,7 +59,7 @@ class CheatsheetController(QObject):
         self,
         snippet_manager: SnippetManager,
         event_bus: Optional[EventBus] = None,
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.snippet_manager = snippet_manager
@@ -65,18 +72,21 @@ class CheatsheetController(QObject):
         self._search_expanded: bool = False
         self._last_query: str = ""
 
-    def _notify_persistence_error(self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None) -> None:
+    def _notify_persistence_error(
+        self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
+    ) -> None:
         logger.error(f"Persistence error during {operation}: {error}")
         target_widget = parent_widget
         if target_widget is None:
             from PyQt6.QtWidgets import QApplication
+
             app = QApplication.instance()
             if app:
                 target_widget = app.activeWindow()
         QMessageBox.critical(
             target_widget,
             "Speicherfehler",
-            f"Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt."
+            f"Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
         )
 
     # ------------------------------------------------------------------ #
@@ -87,9 +97,7 @@ class CheatsheetController(QObject):
         return self.snippet_manager.get_categories()
 
     def get_snippets(
-        self,
-        category_id: Optional[str] = None,
-        search_query: Optional[str] = None
+        self, category_id: Optional[str] = None, search_query: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         target_cat = category_id if category_id is not None else self.current_category_id
         return self.snippet_manager.get_snippets(category_id=target_cat, search_query=search_query)
@@ -101,7 +109,7 @@ class CheatsheetController(QObject):
         subcategory: str,
         template: str,
         description: str = "",
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> str:
         try:
             new_snip = self.snippet_manager.add_custom_snippet(
@@ -110,10 +118,12 @@ class CheatsheetController(QObject):
                 subcategory=subcategory,
                 template=template,
                 description=description,
-                tags=tags or []
+                tags=tags or [],
             )
             self.snippets_updated.emit()
-            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "add", "snippet": new_snip})
+            self.event_bus.publish(
+                EventType.SNIPPETS_UPDATED, {"action": "add", "snippet": new_snip}
+            )
             return new_snip["id"] if isinstance(new_snip, dict) else str(new_snip)
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("add_custom_snippet", e)
@@ -123,7 +133,9 @@ class CheatsheetController(QObject):
         try:
             self.snippet_manager.delete_snippet(snippet_id)
             self.snippets_updated.emit()
-            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "delete", "id": snippet_id})
+            self.event_bus.publish(
+                EventType.SNIPPETS_UPDATED, {"action": "delete", "id": snippet_id}
+            )
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_snippet", e)
 
@@ -131,23 +143,31 @@ class CheatsheetController(QObject):
         try:
             is_fav = self.snippet_manager.toggle_favorite(snippet_id)
             self.snippets_updated.emit()
-            self.event_bus.publish(EventType.SNIPPETS_UPDATED, {"action": "favorite", "id": snippet_id, "is_favorite": is_fav})
+            self.event_bus.publish(
+                EventType.SNIPPETS_UPDATED,
+                {"action": "favorite", "id": snippet_id, "is_favorite": is_fav},
+            )
             return is_fav
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("toggle_favorite", e)
             return False
 
     def get_overflow_category_actions(
-        self,
-        on_select_category: Optional[Callable[[str], None]] = None
+        self, on_select_category: Optional[Callable[[str], None]] = None
     ) -> List[MenuAction]:
         """Returns MenuAction DTOs for categories that overflow the primary horizontal bar."""
         cats = self.get_categories()
         primary_ids = {
-            "all", "favorites", "web_http", "linux_shell", 
-            "windows_powershell", "windows_ad", 
-            "network_scanning", "network_recon", 
-            "sql_databases", "custom_snippets"
+            "all",
+            "favorites",
+            "web_http",
+            "linux_shell",
+            "windows_powershell",
+            "windows_ad",
+            "network_scanning",
+            "network_recon",
+            "sql_databases",
+            "custom_snippets",
         }
         overflow_cats = [c for c in cats if c.get("id") not in primary_ids]
 
@@ -157,14 +177,20 @@ class CheatsheetController(QObject):
             cname = c.get("name", cid).strip().lstrip("\ufe0f \t")
             count = c.get("count", 0)
             text = f"{cname} ({count})" if count else cname
-            is_active = (cid == self.current_category_id)
-            actions.append(MenuAction(
-                id=f"select_cat:{cid}",
-                text=text,
-                checked=is_active,
-                callback=lambda target_cid=cid: on_select_category(target_cid) if on_select_category else self.select_category(target_cid),
-                data={"category_id": cid}
-            ))
+            is_active = cid == self.current_category_id
+            actions.append(
+                MenuAction(
+                    id=f"select_cat:{cid}",
+                    text=text,
+                    checked=is_active,
+                    callback=lambda target_cid=cid: (
+                        on_select_category(target_cid)
+                        if on_select_category
+                        else self.select_category(target_cid)
+                    ),
+                    data={"category_id": cid},
+                )
+            )
         return actions
 
     # ------------------------------------------------------------------ #
@@ -174,10 +200,10 @@ class CheatsheetController(QObject):
     def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
         self._search_expanded = False
-        
+
         # Update primary pill styles
         for cid, btn in self.filter_buttons.items():
-            is_active = (cid == category_id)
+            is_active = cid == category_id
             btn.setProperty("class", "FilterPillActive" if is_active else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
@@ -197,9 +223,7 @@ class CheatsheetController(QObject):
         self.category_changed.emit(category_id)
 
     def build_filter_pills(
-        self, 
-        pills_layout: QHBoxLayout, 
-        on_select_category: Callable[[str], None]
+        self, pills_layout: QHBoxLayout, on_select_category: Callable[[str], None]
     ) -> None:
         self.filter_buttons.clear()
         self._overflow_cat_ids.clear()
@@ -210,10 +234,16 @@ class CheatsheetController(QObject):
 
         # Group categories: Keep top categories as primary pills, place rest in "Mehr ▾"
         primary_ids = {
-            "all", "favorites", "web_http", "linux_shell", 
-            "windows_powershell", "windows_ad", 
-            "network_scanning", "network_recon", 
-            "sql_databases", "custom_snippets"
+            "all",
+            "favorites",
+            "web_http",
+            "linux_shell",
+            "windows_powershell",
+            "windows_ad",
+            "network_scanning",
+            "network_recon",
+            "sql_databases",
+            "custom_snippets",
         }
 
         all_cat = None
@@ -253,7 +283,9 @@ class CheatsheetController(QObject):
             btn = QPushButton(pill_text)
             btn.setToolTip(f"{full_name} ({c.get('count', 0)})" if full_name else pill_text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setProperty("class", "FilterPillActive" if cat_id == self.current_category_id else "FilterPill")
+            btn.setProperty(
+                "class", "FilterPillActive" if cat_id == self.current_category_id else "FilterPill"
+            )
             btn.clicked.connect(lambda checked=False, cid=cat_id: on_select_category(cid))
             self.filter_buttons[cat_id] = btn
             pills_layout.addWidget(btn)
@@ -272,7 +304,9 @@ class CheatsheetController(QObject):
                 more_label = f"{short} ▾"
 
             self.btn_more = QPushButton(more_label)
-            self.btn_more.setProperty("class", "FilterPillActive" if is_overflow_active else "FilterPill")
+            self.btn_more.setProperty(
+                "class", "FilterPillActive" if is_overflow_active else "FilterPill"
+            )
             self.btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
             self.btn_more.setToolTip(t("cheatsheet.more_categories_tip", "Show more categories"))
 
@@ -303,8 +337,7 @@ class CheatsheetController(QObject):
             self._last_query = search_query
 
         all_matching = self.snippet_manager.get_snippets(
-            category_id=self.current_category_id,
-            search_query=search_query
+            category_id=self.current_category_id, search_query=search_query
         )
 
         if not all_matching:
@@ -314,7 +347,9 @@ class CheatsheetController(QObject):
             return []
 
         # When searching, cap at top 25 unless expanded
-        is_capped = bool(search_query.strip()) and not self._search_expanded and len(all_matching) > 25
+        is_capped = (
+            bool(search_query.strip()) and not self._search_expanded and len(all_matching) > 25
+        )
         snippets = all_matching[:25] if is_capped else all_matching
 
         rendered_cards: List[QWidget] = []
@@ -331,7 +366,12 @@ class CheatsheetController(QObject):
         if is_capped:
             remaining = len(all_matching) - len(snippets)
             btn_expand = QPushButton(
-                t("cheatsheet.expand_results", "▾ Show {remaining} more results (Total {total})", remaining=remaining, total=len(all_matching))
+                t(
+                    "cheatsheet.expand_results",
+                    "▾ Show {remaining} more results (Total {total})",
+                    remaining=remaining,
+                    total=len(all_matching),
+                )
             )
             btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_expand.setStyleSheet("""
@@ -350,6 +390,7 @@ class CheatsheetController(QObject):
                     border: 1px solid #00e5ff;
                 }
             """)
+
             def _expand():
                 self._search_expanded = True
                 self.snippets_updated.emit()
@@ -376,7 +417,7 @@ class CheatsheetController(QObject):
                 subcategory=data["subcategory"],
                 template=data["template"],
                 description=data["description"],
-                tags=data.get("tags", [])
+                tags=data.get("tags", []),
             )
             return True
         return False

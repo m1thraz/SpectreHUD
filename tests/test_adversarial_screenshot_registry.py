@@ -1,28 +1,21 @@
 import os
-import json
-import time
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QWidget
-from PyQt6.QtGui import QImage, QPixmap, QColor
+from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.screenshot_transaction_service import ScreenshotTransactionService
 from core.project_session_service import ProjectSessionService
-from core.report_file_manager import ReportFileManager, ReportBackupError
-from core.snippet_manager import SnippetManager
-from ui.main_window import MainWindow
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -68,7 +61,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         """
         from PyQt6.QtGui import QImage, QPixmap
         from PyQt6.QtWidgets import QWidget
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         self.project_mgr.create_project("BoxSnipOwnership")
         self.project_mgr.activate_project("BoxSnipOwnership")
@@ -86,7 +79,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             parent_window=parent,
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            target_ip="10.10.10.10"
+            target_ip="10.10.10.10",
         )
 
         # Invariant: ScreenshotManager must NOT call save_current_project_state
@@ -118,7 +111,9 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         self.assertFalse(result.ok)
         persist_project_state.assert_called_once_with()
-        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [original_entry["id"]])
+        self.assertEqual(
+            [entry["id"] for entry in self.loot_mgr.get_all_entries()], [original_entry["id"]]
+        )
         self.assertEqual(
             [entry["id"] for entry in self.loot_mgr.storage.load_json("loot")],
             [original_entry["id"]],
@@ -171,6 +166,7 @@ class TestWorkflowRobustness(unittest.TestCase):
     def test_activate_project_does_not_create_unknown_project(self):
         """Strict activation must not create projects implicitly."""
         from core.project import ProjectNotFoundError
+
         with self.assertRaises(ProjectNotFoundError):
             self.project_mgr.activate_project("UnknownBox")
 
@@ -200,11 +196,13 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         registry_after = dict(self.project_mgr.registry)
 
-        self.assertIn("PhantomProject", projects,
-                      "list_projects must discover PhantomProject from disk")
+        self.assertIn(
+            "PhantomProject", projects, "list_projects must discover PhantomProject from disk"
+        )
         self.assertEqual(
-            registry_before, registry_after,
-            "list_projects() must not mutate self.registry (read-only invariant violated)"
+            registry_before,
+            registry_after,
+            "list_projects() must not mutate self.registry (read-only invariant violated)",
         )
 
     # -------------------------------------------------------------------------
@@ -235,6 +233,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         # Invariant 3: registry was persisted to disk
         import json
+
         registry_file = self.project_mgr.registry_file
         self.assertTrue(registry_file.exists(), "Registry file must exist after sync_registry()")
         disk_registry = json.loads(registry_file.read_text(encoding="utf-8"))

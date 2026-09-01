@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QPushButton
@@ -12,10 +13,8 @@ from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
-from core.report_file_manager import ReportFileManager
-from core.net_detector import NetDetector
 from ui.main_window import MainWindow
-from ui.report_editor_tab import ReportEditorTab
+
 
 class TestUI(unittest.TestCase):
     @classmethod
@@ -27,7 +26,7 @@ class TestUI(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.temp_path = Path(self.temp_dir.name)
-        
+
         # Set environment variables as fallback safety shield
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
         os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
@@ -64,7 +63,7 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         # Add entries into exactly 3 categories (recon, access, misc)
@@ -79,7 +78,8 @@ class TestUI(unittest.TestCase):
                 window.content_panel.content_layout.itemAt(i).widget()
                 for i in range(window.content_panel.content_layout.count())
                 if isinstance(window.content_panel.content_layout.itemAt(i).widget(), QLabel)
-                and window.content_panel.content_layout.itemAt(i).widget().property("class") == "LootSectionHeader"
+                and window.content_panel.content_layout.itemAt(i).widget().property("class")
+                == "LootSectionHeader"
             ]
 
         def get_current_cards():
@@ -139,7 +139,9 @@ class TestUI(unittest.TestCase):
 
         self.assertEqual(len(window.cards), 1)
         self.assertIsInstance(window.cards[0], LootBoard)
-        self.assertEqual(window.cards[0].columns["access"].entry_ids, [loot_manager.get_entries()[0]["id"]])
+        self.assertEqual(
+            window.cards[0].columns["access"].entry_ids, [loot_manager.get_entries()[0]["id"]]
+        )
         window.close()
 
     @pytest.mark.integration
@@ -183,9 +185,7 @@ class TestUI(unittest.TestCase):
         )
         window.app.switch_mode("loot")
 
-        button = window.search_panel.pills_frame.findChild(
-            QPushButton, "LootExportButton"
-        )
+        button = window.search_panel.pills_frame.findChild(QPushButton, "LootExportButton")
         self.assertIsNotNone(button)
         self.assertEqual(
             button.toolTip(),
@@ -245,4 +245,3 @@ class TestUI(unittest.TestCase):
 
         self.assertEqual(restarts, [])
         window.close()
-

@@ -41,7 +41,9 @@ def test_report_obsidian_export_uses_shared_coordinator_workflow(tmp_path):
     with (
         patch("ui.coordinators.export_coordinator.ObsidianExporter") as exporter_class,
         patch("ui.coordinators.export_coordinator.QMessageBox.information") as information,
-        patch("ui.coordinators.export_coordinator.QDesktopServices.openUrl", return_value=True) as open_url,
+        patch(
+            "ui.coordinators.export_coordinator.QDesktopServices.openUrl", return_value=True
+        ) as open_url,
     ):
         exporter_class.return_value.export_report.return_value = result
 

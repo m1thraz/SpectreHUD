@@ -2,8 +2,7 @@
 
 UI_FONT_STACKS = {
     "segoe_ui": (
-        "'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, "
-        "Roboto, sans-serif"
+        "'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
     ),
     "inter": "'Inter', 'Segoe UI', -apple-system, sans-serif",
     "roboto": "'Roboto', 'Segoe UI', -apple-system, sans-serif",

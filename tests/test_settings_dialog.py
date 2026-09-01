@@ -5,11 +5,15 @@ from unittest.mock import patch
 from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from ui.settings_dialog import (
-    SettingsDialog, HotkeySettingsPage, 
-    LanguageSettingsPage, GeneralSettingsPage, AppearanceSettingsPage
+    SettingsDialog,
+    HotkeySettingsPage,
+    LanguageSettingsPage,
+    GeneralSettingsPage,
+    AppearanceSettingsPage,
 )
 
 app = QApplication.instance() or QApplication([])
+
 
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
@@ -25,21 +29,21 @@ class TestSettingsDialog(unittest.TestCase):
 
     def test_hotkey_page_get_settings_and_reset(self):
         page = HotkeySettingsPage(self.config_manager)
-        page.combo_toggle.setCurrentIndex(2) # <ctrl>+<alt>+s
-        page.combo_quit.setCurrentIndex(1) # <ctrl>+<alt>+q
-        
+        page.combo_toggle.setCurrentIndex(2)  # <ctrl>+<alt>+s
+        page.combo_quit.setCurrentIndex(1)  # <ctrl>+<alt>+q
+
         settings = page.get_settings()
         self.assertEqual(settings["hotkey"], "<ctrl>+<alt>+s")
         self.assertEqual(settings["quit_hotkey"], "<ctrl>+<alt>+q")
-        
+
         page._reset_defaults()
         self.assertEqual(page.combo_toggle.currentData(), "<ctrl>+<cmd>+<")
         self.assertEqual(page.combo_quit.currentData(), "<ctrl>+<cmd>+q")
 
     def test_language_page_get_settings(self):
         page = LanguageSettingsPage(self.config_manager)
-        page.combo_lang.setCurrentIndex(1) # en
-        
+        page.combo_lang.setCurrentIndex(1)  # en
+
         settings = page.get_settings()
         self.assertEqual(settings["language"], "en")
         self.assertEqual(settings["time_format"], "24h")
@@ -49,7 +53,7 @@ class TestSettingsDialog(unittest.TestCase):
         page.chk_always_on_top.setChecked(False)
         page.chk_auto_hide.setChecked(True)
         page.txt_default_target.setText("192.168.1.100")
-        
+
         settings = page.get_settings()
         self.assertFalse(settings["always_on_top"])
         self.assertTrue(settings["auto_hide_on_copy"])
@@ -98,9 +102,7 @@ class TestSettingsDialog(unittest.TestCase):
 
     def test_appearance_theme_dropdown_shows_only_theme_names(self):
         page = AppearanceSettingsPage(self.config_manager)
-        themes_by_id = {
-            theme["id"]: theme for theme in page.theme_loader.list_themes()
-        }
+        themes_by_id = {theme["id"]: theme for theme in page.theme_loader.list_themes()}
 
         for index in range(page.combo_theme.count()):
             theme_id = page.combo_theme.itemData(index)
@@ -137,15 +139,15 @@ class TestSettingsDialog(unittest.TestCase):
         dlg = SettingsDialog(self.config_manager)
         dlg.switch_page(1)
         self.assertEqual(dlg.stack.currentIndex(), 1)
-        
-        dlg.page_hotkeys.combo_toggle.setCurrentIndex(1) # <ctrl>+<cmd>+<space>
-        dlg.page_hotkeys.combo_quit.setCurrentIndex(2) # <ctrl>+<shift>+q
-        
+
+        dlg.page_hotkeys.combo_toggle.setCurrentIndex(1)  # <ctrl>+<cmd>+<space>
+        dlg.page_hotkeys.combo_quit.setCurrentIndex(2)  # <ctrl>+<shift>+q
+
         received_signal = []
         dlg.settings_applied.connect(lambda s: received_signal.append(s))
-        
+
         dlg._on_save_settings()
-        
+
         self.assertEqual(len(received_signal), 1)
         self.assertEqual(received_signal[0]["hotkey"], "<ctrl>+<cmd>+<space>")
         self.assertEqual(received_signal[0]["quit_hotkey"], "<ctrl>+<shift>+q")
@@ -172,5 +174,6 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(emitted_settings[0]["workspace_dir"], str(new_workspace))
         dlg.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

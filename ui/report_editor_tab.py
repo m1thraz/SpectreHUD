@@ -13,14 +13,24 @@ Widget kennt nur "lade Text rein / hol Text raus", die eigentliche
 Backup-vor-Regenerierung-Logik lebt im FileManager, nicht hier - damit
 sie ohne Qt testbar bleibt.
 """
+
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QPlainTextEdit,
-    QPushButton, QLabel, QMessageBox, QFileDialog, QDialog, QMenu
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QSplitter,
+    QPlainTextEdit,
+    QPushButton,
+    QLabel,
+    QMessageBox,
+    QFileDialog,
+    QDialog,
+    QMenu,
 )
 from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence
 
@@ -55,9 +65,15 @@ class ReportEditorTab(QWidget):
     # Für main_window: signalisiert, ob ungespeicherte Änderungen vorliegen
     dirty_changed = pyqtSignal(bool)
 
-    def __init__(self, report_file_manager: ReportFileManager, loot_manager, clipboard_watcher,
-                 parent: QWidget = None, config_manager: Optional[ConfigManager] = None,
-                 export_coordinator: Optional[ExportCoordinator] = None):
+    def __init__(
+        self,
+        report_file_manager: ReportFileManager,
+        loot_manager,
+        clipboard_watcher,
+        parent: QWidget = None,
+        config_manager: Optional[ConfigManager] = None,
+        export_coordinator: Optional[ExportCoordinator] = None,
+    ):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
@@ -120,40 +136,44 @@ class ReportEditorTab(QWidget):
         self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
         self.btn_regenerate.setProperty("class", "SecondaryBtn")
         self.btn_regenerate.setToolTip(
-            t(
-                "report.regenerate_tip",
-                "Updates report structure and appends new loot entries"
-            )
+            t("report.regenerate_tip", "Updates report structure and appends new loot entries")
         )
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
         self.btn_export = QPushButton(t("report.export", "Export..."))
         self.btn_export.setProperty("class", "SecondaryBtn")
-        self.btn_export.setToolTip(t("report.export_tip", "Choose how to export the current report"))
+        self.btn_export.setToolTip(
+            t("report.export_tip", "Choose how to export the current report")
+        )
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
         # Formatting belongs with the primary editing/export actions. The
         # source-only controls are hidden while the rich preview is active.
-        self.format_toolbar_widget = build_format_toolbar(self, {
-            "heading_1": lambda: self._format_heading(1),
-            "heading_2": lambda: self._format_heading(2),
-            "heading_3": lambda: self._format_heading(3),
-            "bold": lambda: self._format_wrap("**", "**"),
-            "italic": lambda: self._format_wrap("*", "*"),
-            "code": lambda: self._format_wrap("`", "`"),
-            "code_block": self._format_code_block,
-            "list": lambda: self._format_list(False),
-            "numbered_list": lambda: self._format_list(True),
-            "link": self._format_link,
-            "table": self._format_table,
-        })
+        self.format_toolbar_widget = build_format_toolbar(
+            self,
+            {
+                "heading_1": lambda: self._format_heading(1),
+                "heading_2": lambda: self._format_heading(2),
+                "heading_3": lambda: self._format_heading(3),
+                "bold": lambda: self._format_wrap("**", "**"),
+                "italic": lambda: self._format_wrap("*", "*"),
+                "code": lambda: self._format_wrap("`", "`"),
+                "code_block": self._format_code_block,
+                "list": lambda: self._format_list(False),
+                "numbered_list": lambda: self._format_list(True),
+                "link": self._format_link,
+                "table": self._format_table,
+            },
+        )
         toolbar.addWidget(self.format_toolbar_widget)
 
         self.btn_save = QPushButton(t("report.save", "Save"))
         self.btn_save.setProperty("class", "PrimaryBtn")
-        self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
+        self.btn_save.setToolTip(
+            t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
+        )
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
         return toolbar
@@ -169,7 +189,9 @@ class ReportEditorTab(QWidget):
         ):
             action = QAction(t(key, fallback), self.view_menu)
             action.setCheckable(True)
-            action.triggered.connect(lambda _checked=False, selected=mode: self._set_view_mode(selected))
+            action.triggered.connect(
+                lambda _checked=False, selected=mode: self._set_view_mode(selected)
+            )
             self.view_menu.addAction(action)
             self._view_actions[mode] = action
         self.btn_change_view.setMenu(self.view_menu)
@@ -184,12 +206,13 @@ class ReportEditorTab(QWidget):
                 "report.editor_placeholder",
                 "No report available for this project yet.\n\n"
                 "Click 'Regenerate from Loot' above to start with an "
-                "auto-generated report, or write your markdown directly here."
+                "auto-generated report, or write your markdown directly here.",
             )
         )
         self.editor.setProperty("class", "ReportSourceEditor")
         self.editor.textChanged.connect(self._on_text_changed)
         from ui.markdown_highlighter import MarkdownHighlighter
+
         self._highlighter = MarkdownHighlighter(self.editor.document())
         self.find_replace = FindReplaceBar(self.editor, self)
         layout.addWidget(self.find_replace)
@@ -218,47 +241,67 @@ class ReportEditorTab(QWidget):
         sc_cycle = QShortcut(QKeySequence("Ctrl+Shift+V"), self, activated=self._cycle_view_mode)
         sc_cycle.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
-        sc_mode1 = QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self._set_view_mode(ViewMode.EDITOR))
+        sc_mode1 = QShortcut(
+            QKeySequence("Ctrl+1"), self, activated=lambda: self._set_view_mode(ViewMode.EDITOR)
+        )
         sc_mode1.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
-        sc_mode2 = QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self._set_view_mode(ViewMode.SPLIT))
+        sc_mode2 = QShortcut(
+            QKeySequence("Ctrl+2"), self, activated=lambda: self._set_view_mode(ViewMode.SPLIT)
+        )
         sc_mode2.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
-        sc_mode3 = QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW))
+        sc_mode3 = QShortcut(
+            QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW)
+        )
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
-        self._shortcut_find = QShortcut(QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open)
+        self._shortcut_find = QShortcut(
+            QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open
+        )
         self._shortcut_find.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self._shortcut_find_close = QShortcut(QKeySequence("Esc"), self.find_replace, activated=self.find_replace.close_bar)
+        self._shortcut_find_close = QShortcut(
+            QKeySequence("Esc"), self.find_replace, activated=self.find_replace.close_bar
+        )
         self._shortcut_find_close.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        for sequence, callback in (("Ctrl+B", lambda: self._format_wrap("**", "**")), ("Ctrl+I", lambda: self._format_wrap("*", "*")), ("Ctrl+K", lambda: self._format_wrap("`", "`"))):
+        for sequence, callback in (
+            ("Ctrl+B", lambda: self._format_wrap("**", "**")),
+            ("Ctrl+I", lambda: self._format_wrap("*", "*")),
+            ("Ctrl+K", lambda: self._format_wrap("`", "`")),
+        ):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     def _format_heading(self, level: int) -> None:
         from ui.markdown_toolbar_actions import set_heading
+
         set_heading(self.editor, level)
 
     def _format_wrap(self, prefix: str, suffix: str) -> None:
         from ui.markdown_toolbar_actions import wrap_selection
+
         wrap_selection(self.editor, prefix, suffix)
 
     def _format_code_block(self) -> None:
         from ui.markdown_toolbar_actions import insert_fenced_code
+
         insert_fenced_code(self.editor)
 
     def _format_list(self, numbered: bool) -> None:
         from ui.markdown_toolbar_actions import prefix_lines
+
         prefix_lines(self.editor, numbered)
 
     def _format_link(self) -> None:
         from ui.markdown_toolbar_actions import insert_link
+
         insert_link(self.editor)
 
     def _format_table(self) -> None:
         dialog = MarkdownTableDialog(self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             from ui.markdown_toolbar_actions import insert_table
+
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
 
     def _report_font_key(self) -> str:
@@ -271,7 +314,8 @@ class ReportEditorTab(QWidget):
         preview_font = QFont(primary_font, 10)
         preview_font.setStyleHint(QFont.StyleHint.SansSerif)
         self.preview_document.setDefaultFont(preview_font)
-        self.preview_document.setDefaultStyleSheet("""
+        self.preview_document.setDefaultStyleSheet(
+            """
             body { font-family: __REPORT_FONT_STACK__; font-size: 13px; color: #f0f6fc; line-height: 1.6; }
             h1, h2, h3, h4, h5, h6 { color: #58a6ff; font-family: __REPORT_FONT_STACK__; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
             h1 { font-size: 18px; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
@@ -286,7 +330,8 @@ class ReportEditorTab(QWidget):
             ul, ol { padding-left: 20px; margin: 6px 0; }
             li { margin: 3px 0; }
             p { margin: 6px 0; }
-        """.replace("__REPORT_FONT_STACK__", report_font))
+        """.replace("__REPORT_FONT_STACK__", report_font)
+        )
 
     def refresh_font_configuration(self) -> None:
         """Refresh preview typography after settings are saved."""
@@ -337,10 +382,14 @@ class ReportEditorTab(QWidget):
 
         msg = QMessageBox(self.window() if self else None)
         msg.setWindowTitle(t("report.unsaved_prompt_title", "Unsaved Changes"))
-        msg.setText(t("report.unsaved_prompt_message", "The report has unsaved changes.\n\nSave them now?"))
+        msg.setText(
+            t("report.unsaved_prompt_message", "The report has unsaved changes.\n\nSave them now?")
+        )
         msg.setIcon(QMessageBox.Icon.Question)
         msg.setStandardButtons(
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
         )
         msg.setDefaultButton(QMessageBox.StandardButton.Save)
 
@@ -381,7 +430,7 @@ class ReportEditorTab(QWidget):
                 "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt "
                 "(möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 # Discard: reset preview to previous markdown
@@ -445,13 +494,17 @@ class ReportEditorTab(QWidget):
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
 
-        ok = self.report_file_manager.save(self.editor.toPlainText(), project_name=self.current_project)
+        ok = self.report_file_manager.save(
+            self.editor.toPlainText(), project_name=self.current_project
+        )
         if ok:
             self._set_dirty(False)
         else:
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle(t("dialog.error", "Error"))
-            msg.setText(t("report.save_error", "The report could not be saved. Details are in the log."))
+            msg.setText(
+                t("report.save_error", "The report could not be saved. Details are in the log.")
+            )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.exec()
         return ok
@@ -463,16 +516,22 @@ class ReportEditorTab(QWidget):
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
         try:
-            ok = self.report_file_manager.save(self.editor.toPlainText(), project_name=self.current_project)
+            ok = self.report_file_manager.save(
+                self.editor.toPlainText(), project_name=self.current_project
+            )
         except Exception:
             logger.exception("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText(t("report.autosave_failed", "Autosave failed — please save manually"))
+            self.lbl_status.setText(
+                t("report.autosave_failed", "Autosave failed — please save manually")
+            )
             return
         if ok:
             self._set_dirty(False)
         else:
             logger.error("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText(t("report.autosave_failed", "Autosave failed — please save manually"))
+            self.lbl_status.setText(
+                t("report.autosave_failed", "Autosave failed — please save manually")
+            )
 
     def closeEvent(self, event) -> None:
         self._autosave_timer.stop()
@@ -494,12 +553,13 @@ class ReportEditorTab(QWidget):
         self.active_template = dialog.selected_template
 
         from core.report_file_manager import ReportBackupError, ReportSaveError
+
         try:
             new_content = self.report_file_manager.regenerate(
                 self.loot_manager,
                 self.clipboard_watcher,
                 project_name=self.current_project,
-                template=self.active_template
+                template=self.active_template,
             )
             self.editor.blockSignals(True)
             self.editor.setPlainText(new_content)
@@ -553,16 +613,18 @@ class ReportEditorTab(QWidget):
 
         layout = QVBoxLayout(dialog)
         layout.setSpacing(8)
-        layout.setContentsMargins(16, 16, 16,16)
+        layout.setContentsMargins(16, 16, 16, 16)
 
-        lbl = QLabel(t("report.export_dialog_message", "Choose an export format for the current report."))
+        lbl = QLabel(
+            t("report.export_dialog_message", "Choose an export format for the current report.")
+        )
         lbl.setWordWrap(True)
         layout.addWidget(lbl)
         layout.addSpacing(4)
 
         choices = (
             ("markdown", t("report.export_copy", "Export Copy...")),
-            ("html",     t("report.export_html", "Export HTML...")),
+            ("html", t("report.export_html", "Export HTML...")),
             ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
             ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
         )
@@ -574,7 +636,12 @@ class ReportEditorTab(QWidget):
             btn.setMinimumHeight(32)
             btn.setProperty("class", "SecondaryBtn")
             # capture export_type via default arg to avoid late-binding closure issue
-            btn.clicked.connect(lambda _checked=False, et=export_type: (selected.__setitem__(0, et), dialog.accept()))
+            btn.clicked.connect(
+                lambda _checked=False, et=export_type: (
+                    selected.__setitem__(0, et),
+                    dialog.accept(),
+                )
+            )
             layout.addWidget(btn)
 
         layout.addSpacing(4)
@@ -612,17 +679,22 @@ class ReportEditorTab(QWidget):
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
-            msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
+            msg.setText(
+                f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden."
+            )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.exec()
 
     def _on_export_html_clicked(self) -> None:
         from PyQt6.QtGui import QDesktopServices
+
         theme = self._select_html_export_theme()
         if theme is None:
             return
 
-        default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(".html")
+        default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(
+            ".html"
+        )
         file_path, _ = QFileDialog.getSaveFileName(
             self, "HTML-Report exportieren", str(default_path), "HTML (*.html)"
         )
@@ -656,7 +728,9 @@ class ReportEditorTab(QWidget):
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
-            msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
+            msg.setText(
+                f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden."
+            )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.exec()
 
@@ -680,7 +754,10 @@ class ReportEditorTab(QWidget):
             QMessageBox.warning(
                 self,
                 t("report.obsidian_export_failed_title", "Obsidian export failed"),
-                t("report.obsidian_export_unavailable", "The Obsidian export service is unavailable."),
+                t(
+                    "report.obsidian_export_unavailable",
+                    "The Obsidian export service is unavailable.",
+                ),
             )
             return None
         return self.export_coordinator
@@ -713,13 +790,23 @@ class ReportEditorTab(QWidget):
             QMessageBox.warning(
                 self,
                 t("report.cherrytree_export_failed_title", "CherryTree export failed"),
-                t("report.cherrytree_export_failed", "The CherryTree package could not be created:\n{error}", error=str(exc)),
+                t(
+                    "report.cherrytree_export_failed",
+                    "The CherryTree package could not be created:\n{error}",
+                    error=str(exc),
+                ),
             )
             return
 
-        message = t("report.cherrytree_exported", "CherryTree HTML package created:\n{path}", path=str(result.note_path.parent))
+        message = t(
+            "report.cherrytree_exported",
+            "CherryTree HTML package created:\n{path}",
+            path=str(result.note_path.parent),
+        )
         if result.warnings:
-            message += "\n\n" + t("report.cherrytree_attachment_warning", "Some images could not be copied.")
+            message += "\n\n" + t(
+                "report.cherrytree_attachment_warning", "Some images could not be copied."
+            )
         QMessageBox.information(
             self,
             t("report.cherrytree_exported_title", "CherryTree package complete"),
@@ -731,10 +818,17 @@ class ReportEditorTab(QWidget):
         msg = QMessageBox(self.window() if self else None)
         msg.setWindowTitle(t("report.html_theme_title", "Choose HTML Design"))
         msg.setText(t("report.html_theme_message", "Which design should the HTML report use?"))
-        msg.setInformativeText(t("report.html_theme_hint", "Light is especially suitable for clients and printouts."))
+        msg.setInformativeText(
+            t("report.html_theme_hint", "Light is especially suitable for clients and printouts.")
+        )
         msg.setIcon(QMessageBox.Icon.Question)
-        dark_button = msg.addButton(t("report.html_theme_dark", "Dark — SpectreHUD"), QMessageBox.ButtonRole.AcceptRole)
-        light_button = msg.addButton(t("report.html_theme_light", "Light — Client / Print"), QMessageBox.ButtonRole.ActionRole)
+        dark_button = msg.addButton(
+            t("report.html_theme_dark", "Dark — SpectreHUD"), QMessageBox.ButtonRole.AcceptRole
+        )
+        light_button = msg.addButton(
+            t("report.html_theme_light", "Light — Client / Print"),
+            QMessageBox.ButtonRole.ActionRole,
+        )
         cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
         msg.setDefaultButton(dark_button)
         # QMessageBox otherwise calculates its width from the text labels and
@@ -757,7 +851,9 @@ class ReportEditorTab(QWidget):
 
     def _update_preview(self) -> None:
         if self.current_project:
-            proj_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
+            proj_dir = self.report_file_manager.project_manager.get_project_dir(
+                self.current_project
+            )
             self.preview_document.set_project_dir(proj_dir)
         self.preview.setMarkdown(self.editor.toPlainText())
 
@@ -769,6 +865,6 @@ class ReportEditorTab(QWidget):
         mode_label = {
             ViewMode.EDITOR: "Editor",
             ViewMode.SPLIT: "Split",
-            ViewMode.PREVIEW: "Live-Ansicht"
+            ViewMode.PREVIEW: "Live-Ansicht",
         }.get(self._view_mode, "Split")
         self.lbl_status.setText(f"{self.current_project} — {marker} · [{mode_label}]")

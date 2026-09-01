@@ -28,7 +28,7 @@ class FooterPanel(QFrame):
                 "footer.status",
                 "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
                 hotkey="Ctrl+Super+<",
-                quit_hotkey="Ctrl+Super+Q"
+                quit_hotkey="Ctrl+Super+Q",
             )
         )
         self.lbl_status.setTextFormat(Qt.TextFormat.PlainText)
@@ -50,7 +50,10 @@ class FooterPanel(QFrame):
         self.chk_always_on_top.setObjectName("AlwaysOnTopCheck")
         self.chk_always_on_top.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_always_on_top.setToolTip(
-            t("footer.always_on_top_tip", "Overlay immer über allen anderen Fenstern im Vordergrund halten")
+            t(
+                "footer.always_on_top_tip",
+                "Overlay immer über allen anderen Fenstern im Vordergrund halten",
+            )
         )
         self.chk_always_on_top.toggled.connect(self.always_on_top_toggled.emit)
         layout.addWidget(self.chk_always_on_top)
@@ -58,7 +61,9 @@ class FooterPanel(QFrame):
         # 4. Resizing Grip
         self.size_grip = QSizeGrip(self)
         self.size_grip.setFixedSize(16, 16)
-        layout.addWidget(self.size_grip, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(
+            self.size_grip, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight
+        )
 
     def set_count(self, text: str) -> None:
         self.lbl_count.setText(text)
@@ -85,13 +90,24 @@ class FooterPanel(QFrame):
             .replace(">", "")
             .replace("+", " + ")
         )
-    def update_hotkey_display(self, hotkey_raw: str, quit_hotkey_raw: str = "<ctrl>+<cmd>+q") -> None:
+
+    def update_hotkey_display(
+        self, hotkey_raw: str, quit_hotkey_raw: str = "<ctrl>+<cmd>+q"
+    ) -> None:
         hotkey_display = self._format_hotkey(hotkey_raw)
         quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)
         self.lbl_status.setText(
-            t("footer.status", "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide", hotkey=hotkey_display, quit_hotkey=quit_hotkey_display)
+            t(
+                "footer.status",
+                "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+                hotkey=hotkey_display,
+                quit_hotkey=quit_hotkey_display,
+            )
         )
         self.chk_always_on_top.setText(t("footer.always_on_top", "Im Vordergrund"))
         self.chk_always_on_top.setToolTip(
-            t("footer.always_on_top_tip", "Overlay immer über allen anderen Fenstern im Vordergrund halten")
+            t(
+                "footer.always_on_top_tip",
+                "Overlay immer über allen anderen Fenstern im Vordergrund halten",
+            )
         )

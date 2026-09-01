@@ -5,13 +5,13 @@ Provides modular, structured, and extensible ReportTemplate definitions,
 section renderers, and rendering context to generate professional Markdown pentest/CTF reports.
 """
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 import re
 
-from core.loot_manager import CATEGORIES, VALID_CATEGORY_IDS
-from core.reporting.charts import render_severity_badge, render_metrics_summary
+from core.loot_manager import CATEGORIES
+from core.reporting.charts import render_severity_badge
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -77,7 +77,9 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
     target_ip = context.target_ip or (context.metadata.get("target_ip") if context.metadata else "")
     target_display = target_ip if target_ip and target_ip != "all" else "Alle Targets"
 
-    default_title = f"Pentest Report: {pname}" if lang == "de" else f"Security Assessment Report: {pname}"
+    default_title = (
+        f"Pentest Report: {pname}" if lang == "de" else f"Security Assessment Report: {pname}"
+    )
     title = section.title or default_title
 
     if lang == "de":
@@ -250,7 +252,11 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
 
     lines = [f"## {sec_title}", ""]
     if not entries:
-        no_entries = "*Keine Einträge in dieser Phase.*" if lang == "de" else "*No entries captured for this phase.*"
+        no_entries = (
+            "*Keine Einträge in dieser Phase.*"
+            if lang == "de"
+            else "*No entries captured for this phase.*"
+        )
         lines.append(no_entries)
         lines.append("")
     else:
@@ -264,7 +270,9 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
 
 
 def _render_remediation_table(section: TemplateSection, context: ReportContext, lang: str) -> str:
-    sec_title = section.title or ("Empfehlungen (Remediation-Plan)" if lang == "de" else "Remediation & Action Plan")
+    sec_title = section.title or (
+        "Empfehlungen (Remediation-Plan)" if lang == "de" else "Remediation & Action Plan"
+    )
 
     all_entries = context.loot_entries
     remed_rows = []
@@ -304,23 +312,46 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
 def _render_appendix(section: TemplateSection, context: ReportContext, lang: str) -> str:
     clip_history = context.clipboard_history
     target_ip = context.target_ip
-    filtered_clips = [c for c in clip_history if not target_ip or target_ip == "all" or c.get("target_ip") == target_ip] if clip_history else []
-    screenshot_entries = [e for e in context.loot_entries if e.get("type") == "screenshot" and (not target_ip or target_ip == "all" or e.get("target_ip") == target_ip)]
+    filtered_clips = (
+        [
+            c
+            for c in clip_history
+            if not target_ip or target_ip == "all" or c.get("target_ip") == target_ip
+        ]
+        if clip_history
+        else []
+    )
+    screenshot_entries = [
+        e
+        for e in context.loot_entries
+        if e.get("type") == "screenshot"
+        and (not target_ip or target_ip == "all" or e.get("target_ip") == target_ip)
+    ]
 
     lines = [
-        "## Anhang A: Chronologischer Befehlsverlauf (Terminal History)" if lang == "de" else "## Appendix A: Terminal Command History",
+        "## Anhang A: Chronologischer Befehlsverlauf (Terminal History)"
+        if lang == "de"
+        else "## Appendix A: Terminal Command History",
         "",
     ]
 
     if not filtered_clips:
-        no_cmds = "*Keine Clipboard-Historie aufgezeichnet.*" if lang == "de" else "*No clipboard history recorded.*"
+        no_cmds = (
+            "*Keine Clipboard-Historie aufgezeichnet.*"
+            if lang == "de"
+            else "*No clipboard history recorded.*"
+        )
         lines.append(no_cmds)
         lines.append("")
     else:
         chronological = list(reversed(filtered_clips))
         for i, item in enumerate(chronological, start=1):
             ts = item.get("timestamp", "").split(" ")[-1]
-            target_tag = f" {_wrap_inline_code('[' + str(item.get('target_ip')) + ']')}" if item.get("target_ip") else ""
+            target_tag = (
+                f" {_wrap_inline_code('[' + str(item.get('target_ip')) + ']')}"
+                if item.get("target_ip")
+                else ""
+            )
             lines.append(f"#### {i}. {_wrap_inline_code(ts)}{target_tag}")
             lines.extend(_wrap_code_fence(item.get("text", ""), lang="bash"))
             lines.append("")
@@ -331,7 +362,11 @@ def _render_appendix(section: TemplateSection, context: ReportContext, lang: str
     lines.append("")
 
     if not screenshot_entries:
-        no_screens = "*Keine Screenshots in diesem Projekt vorhanden.*" if lang == "de" else "*No screenshots captured in this project.*"
+        no_screens = (
+            "*Keine Screenshots in diesem Projekt vorhanden.*"
+            if lang == "de"
+            else "*No screenshots captured in this project.*"
+        )
         lines.append(no_screens)
         lines.append("")
     else:
@@ -371,7 +406,7 @@ class TemplateRenderer:
                     parts.append(rendered_sec.strip())
 
         body = "\n\n---\n\n".join(parts)
-        
+
         now = datetime.now()
         date_str = now.strftime("%Y-%m-%d")
         time_str = now.strftime("%H:%M:%S")
@@ -403,5 +438,5 @@ LEGACY_DEFAULT_TEMPLATE = ReportTemplate(
         TemplateSection(type="phase_section", category_id="misc"),
         TemplateSection(type="remediation_table"),
         TemplateSection(type="appendix"),
-    ]
+    ],
 )

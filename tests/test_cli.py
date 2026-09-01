@@ -18,14 +18,18 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_help(self):
         """Tests that invoking main.py --help exits with 0 and prints usage."""
-        res = subprocess.run([sys.executable, str(self.main_script), "--help"], capture_output=True, text=True)
+        res = subprocess.run(
+            [sys.executable, str(self.main_script), "--help"], capture_output=True, text=True
+        )
         self.assertEqual(res.returncode, 0)
         self.assertIn("SpectreHUD", res.stdout)
         self.assertIn("Usage:", res.stdout)
 
     def test_cli_version(self):
         """Tests that invoking main.py --version exits with 0 and prints version."""
-        res = subprocess.run([sys.executable, str(self.main_script), "--version"], capture_output=True, text=True)
+        res = subprocess.run(
+            [sys.executable, str(self.main_script), "--version"], capture_output=True, text=True
+        )
         self.assertEqual(res.returncode, 0)
         self.assertIn("SpectreHUD 2.0.3", res.stdout)
 

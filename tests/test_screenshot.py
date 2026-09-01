@@ -2,6 +2,7 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication
@@ -10,6 +11,7 @@ from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.screenshot_manager import ScreenshotManager
 from ui.loot_card import LootCard
+
 
 class TestScreenshot(unittest.TestCase):
     @classmethod
@@ -44,6 +46,7 @@ class TestScreenshot(unittest.TestCase):
         pixmap.fill(QColor("cyan"))
 
         from PyQt6.QtWidgets import QWidget
+
         dummy_win = QWidget()
 
         # Simulate completion
@@ -72,6 +75,7 @@ class TestScreenshot(unittest.TestCase):
         self.assertTrue(resolved_img.exists())
 
         dummy_win.close()
+
 
 if __name__ == "__main__":
     unittest.main()

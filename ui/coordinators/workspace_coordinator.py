@@ -4,7 +4,7 @@ Workspace Coordinator for SpectreHUD.
 Coordinates project workspaces, session state persistence, and project menu interactions.
 """
 
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
@@ -35,7 +35,7 @@ class WorkspaceCoordinator(QObject):
         project_ctrl: ProjectController,
         report_ctrl: ReportController,
         event_bus: EventBus,
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.project_manager = project_manager
@@ -54,10 +54,9 @@ class WorkspaceCoordinator(QObject):
     def _unlock_project_if_needed(self, project_name: str, window: Optional[QWidget]) -> bool:
         """Prompt only when a Pentest-Mode project lacks its in-memory session key."""
         try:
-            needs_unlock = (
-                self.project_manager.is_pentest_mode(project_name)
-                and not self.project_manager.is_project_unlocked(project_name)
-            )
+            needs_unlock = self.project_manager.is_pentest_mode(
+                project_name
+            ) and not self.project_manager.is_project_unlocked(project_name)
         except ProjectSecurityMetaError as exc:
             logger.error("Invalid Pentest-Mode metadata for '%s': %s", project_name, exc)
             if window is not None:
@@ -78,7 +77,9 @@ class WorkspaceCoordinator(QObject):
             except ProjectSecurityMetaError as exc:
                 QMessageBox.critical(window, "Pentest-Modus fehlerhaft", str(exc))
                 return False
-            QMessageBox.warning(window, "Entsperren fehlgeschlagen", "Das Passwort ist nicht korrekt.")
+            QMessageBox.warning(
+                window, "Entsperren fehlgeschlagen", "Das Passwort ist nicht korrekt."
+            )
 
     def save_current_project_session(self, variables: Dict[str, str]) -> bool:
         """Persists the variable state for the currently active project."""
@@ -89,7 +90,7 @@ class WorkspaceCoordinator(QObject):
         project_name: str,
         window: QWidget,
         variables_provider: Callable[[], Dict[str, str]],
-        on_success_callback: Optional[Callable[[str], None]] = None
+        on_success_callback: Optional[Callable[[str], None]] = None,
     ) -> bool:
         """
         Validates dirty reports, persists previous project state, and switches to a new project.
@@ -103,7 +104,9 @@ class WorkspaceCoordinator(QObject):
         current_proj = self.project_manager.get_active_project()
         variables = variables_provider() if variables_provider else {}
         if not self.save_current_project_session(variables):
-            logger.error(f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'")
+            logger.error(
+                f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'"
+            )
             project_unavailable = not self.project_manager.project_exists(current_proj)
             msg = QMessageBox(window)
             msg.setWindowTitle(t("general.save_failed", "Speichern fehlgeschlagen"))
@@ -119,7 +122,9 @@ class WorkspaceCoordinator(QObject):
                     "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
                 )
             msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+            )
             msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
             if msg.exec() != QMessageBox.StandardButton.Yes:
                 self.project_ctrl.update_project_combo()
@@ -132,7 +137,10 @@ class WorkspaceCoordinator(QObject):
             QMessageBox.critical(
                 window,
                 t("general.error", "Error"),
-                t("project.not_found_msg", f"Project '{project_name}' does not exist and cannot be activated.\n\n{activate_err}")
+                t(
+                    "project.not_found_msg",
+                    f"Project '{project_name}' does not exist and cannot be activated.\n\n{activate_err}",
+                ),
             )
             self.project_ctrl.update_project_combo()
             return False
@@ -198,7 +206,8 @@ class WorkspaceCoordinator(QObject):
             self.project_manager.base_dir = new_workspace
             available = self.project_manager.list_projects()
             workspace_projects = [
-                name for name in available
+                name
+                for name in available
                 if (new_workspace / name).is_dir() and not (new_workspace / name).is_symlink()
             ]
             if old_active not in workspace_projects:
@@ -231,7 +240,9 @@ class WorkspaceCoordinator(QObject):
                 refresh_filters()
                 refresh_content()
             except Exception as restore_err:
-                logger.exception("Failed to restore previous workspace session after switch failure.")
+                logger.exception(
+                    "Failed to restore previous workspace session after switch failure."
+                )
                 QMessageBox.critical(
                     window,
                     t("general.workspace_error", "Workspace Error"),
@@ -258,7 +269,7 @@ class WorkspaceCoordinator(QObject):
         btn_anchor: QPushButton,
         window: QWidget,
         switch_cb: Callable[[str], None],
-        new_dialog_cb: Callable[[], None]
+        new_dialog_cb: Callable[[], None],
     ) -> None:
         """Displays the popup project selection menu."""
         self.project_ctrl.show_project_menu(btn_anchor, switch_cb, new_dialog_cb, window)
@@ -269,7 +280,7 @@ class WorkspaceCoordinator(QObject):
         curr_target: str,
         curr_attacker: str,
         curr_port: str,
-        switch_cb: Callable[[str], None]
+        switch_cb: Callable[[str], None],
     ) -> None:
         """Opens the project creation dialog."""
         self.project_ctrl.open_new_project_dialog(

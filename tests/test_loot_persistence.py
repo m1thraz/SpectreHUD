@@ -3,18 +3,17 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot_manager import LootLimitError, LootManager, LootValidationError
-from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES
+from core.loot_manager import LootManager
 from core.storage import PersistenceError
 from unittest.mock import patch
 
-class TestLootManager(unittest.TestCase):
 
+class TestLootManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
-        
+
         self.storage_file = self.temp_path / "test_loot.json"
         self.loot_mgr = LootManager(storage_file=self.storage_file)
 
@@ -30,9 +29,15 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(self.loot_mgr.get_all_entries(), [])
 
     def test_search_and_filter(self):
-        self.loot_mgr.add_entry("credentials", "SSH Root", "root:toor", "10.10.10.50", category="access")
-        self.loot_mgr.add_entry("hash", "Shadow Root Hash", "$6$rounds=5000$...", "10.10.10.50", category="privesc")
-        self.loot_mgr.add_entry("flag", "User Flag", "THM{user_flag_123}", "10.10.10.99", category="access")
+        self.loot_mgr.add_entry(
+            "credentials", "SSH Root", "root:toor", "10.10.10.50", category="access"
+        )
+        self.loot_mgr.add_entry(
+            "hash", "Shadow Root Hash", "$6$rounds=5000$...", "10.10.10.50", category="privesc"
+        )
+        self.loot_mgr.add_entry(
+            "flag", "User Flag", "THM{user_flag_123}", "10.10.10.99", category="access"
+        )
 
         # Filter by type
         creds = self.loot_mgr.get_entries(entry_type="credentials")
@@ -103,7 +108,13 @@ class TestLootManager(unittest.TestCase):
     def test_legacy_entries_receive_stable_positions_on_load(self):
         legacy_entries = [
             {"id": "first", "type": "note", "category": "recon", "title": "First", "content": "1"},
-            {"id": "second", "type": "note", "category": "recon", "title": "Second", "content": "2"},
+            {
+                "id": "second",
+                "type": "note",
+                "category": "recon",
+                "title": "Second",
+                "content": "2",
+            },
             {"id": "other", "type": "note", "category": "access", "title": "Other", "content": "3"},
         ]
         self.storage_file.write_text(json.dumps(legacy_entries), encoding="utf-8")
@@ -119,15 +130,29 @@ class TestLootManager(unittest.TestCase):
 
     def test_export_loot_delegation(self):
         """Deprecated export_loot delegates to ReportBuilder."""
-        self.loot_mgr.add_entry("credentials", "Web Admin", "admin:Secret!", "10.10.10.30", category="access")
-        self.loot_mgr.add_entry("hash", "MySQL Hash", "$mysql$user*...", "10.10.10.30", category="privesc")
-        self.loot_mgr.add_entry("directory", "Hidden Endpoint", "/api/v1/admin", "10.10.10.30", category="recon")
-        self.loot_mgr.add_entry("flag", "Root Flag", "THM{test_flag}", "10.10.10.30", category="privesc")
-        self.loot_mgr.add_entry("screenshot", "Gained Root Shell", "loot/screenshot_root.png", "10.10.10.30", category="access")
+        self.loot_mgr.add_entry(
+            "credentials", "Web Admin", "admin:Secret!", "10.10.10.30", category="access"
+        )
+        self.loot_mgr.add_entry(
+            "hash", "MySQL Hash", "$mysql$user*...", "10.10.10.30", category="privesc"
+        )
+        self.loot_mgr.add_entry(
+            "directory", "Hidden Endpoint", "/api/v1/admin", "10.10.10.30", category="recon"
+        )
+        self.loot_mgr.add_entry(
+            "flag", "Root Flag", "THM{test_flag}", "10.10.10.30", category="privesc"
+        )
+        self.loot_mgr.add_entry(
+            "screenshot",
+            "Gained Root Shell",
+            "loot/screenshot_root.png",
+            "10.10.10.30",
+            category="access",
+        )
 
         export_path = self.temp_path / "loot_export.md"
         result = self.loot_mgr.export_loot(export_path, target_ip="10.10.10.30")
-        
+
         self.assertTrue(export_path.exists())
         content = export_path.read_text(encoding="utf-8")
         self.assertIn("admin:Secret!", content)
@@ -137,6 +162,6 @@ class TestLootManager(unittest.TestCase):
         self.assertIn("![Gained Root Shell](loot/screenshot_root.png)", content)
         self.assertIn("10.10.10.30", content)
 
+
 if __name__ == "__main__":
     unittest.main()
-

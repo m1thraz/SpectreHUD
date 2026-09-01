@@ -1,6 +1,7 @@
 """
 Master Theme Assembler and Icon Provider for SpectreHUD.
 """
+
 from pathlib import Path
 import re
 from typing import Mapping, Optional
@@ -41,21 +42,23 @@ def build_app_theme(
     context = dict(palette)
     hud_value = clamp_transparency(hud_transparency, 5)
     report_value = clamp_transparency(report_transparency, 0)
-    context.update({
-        "ui_font": ui_font,
-        "code_font": code_font,
-        "HUD_BACKGROUND": with_alpha(context["BG_DARK"], 100 - hud_value),
-        "REPORT_EDITOR_BACKGROUND": with_alpha(
-            context["BG_DARK"], 100 - report_value
-        ),
-    })
-    raw = "\n".join([
-        TYPOGRAPHY_QSS_TEMPLATE,
-        BUTTONS_QSS_TEMPLATE,
-        TABLES_QSS_TEMPLATE,
-        CARDS_QSS_TEMPLATE,
-        DIALOGS_QSS_TEMPLATE,
-    ])
+    context.update(
+        {
+            "ui_font": ui_font,
+            "code_font": code_font,
+            "HUD_BACKGROUND": with_alpha(context["BG_DARK"], 100 - hud_value),
+            "REPORT_EDITOR_BACKGROUND": with_alpha(context["BG_DARK"], 100 - report_value),
+        }
+    )
+    raw = "\n".join(
+        [
+            TYPOGRAPHY_QSS_TEMPLATE,
+            BUTTONS_QSS_TEMPLATE,
+            TABLES_QSS_TEMPLATE,
+            CARDS_QSS_TEMPLATE,
+            DIALOGS_QSS_TEMPLATE,
+        ]
+    )
 
     def replace_token(match: re.Match[str]) -> str:
         token = match.group(1)
@@ -76,6 +79,7 @@ def get_app_icon_path() -> Optional[Path]:
     """Resolves data/icon.ico or data/icon.svg across standard source tree, PyInstaller bundles, and package layouts."""
     # 0. Check PyInstaller frozen bundle
     import sys
+
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         bundle_data = Path(sys._MEIPASS) / "data"
         for name in ("icon.ico", "icon.svg"):
@@ -93,9 +97,10 @@ def get_app_icon_path() -> Optional[Path]:
     # 2. Check importlib.resources for wheel/egg installs
     try:
         import importlib.resources as pkg_resources
-        if hasattr(pkg_resources, 'files'):
+
+        if hasattr(pkg_resources, "files"):
             for name in ("icon.ico", "icon.svg"):
-                traversable = pkg_resources.files('data') / name
+                traversable = pkg_resources.files("data") / name
                 res_path = Path(str(traversable))
                 if res_path.exists():
                     return res_path

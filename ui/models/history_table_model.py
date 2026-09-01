@@ -19,12 +19,7 @@ class HistoryTableModel(QAbstractTableModel):
       3: Content Preview
     """
 
-    COLUMNS = [
-        "Timestamp",
-        "Target IP",
-        "Type",
-        "Content"
-    ]
+    COLUMNS = ["Timestamp", "Target IP", "Type", "Content"]
 
     def __init__(self, history: Optional[List[Dict[str, Any]]] = None, parent=None):
         super().__init__(parent)
@@ -74,7 +69,9 @@ class HistoryTableModel(QAbstractTableModel):
 
         return QVariant()
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+    def headerData(
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if 0 <= section < len(self.COLUMNS):
                 return self.COLUMNS[section]

@@ -81,7 +81,11 @@ class ReportDocument(QTextDocument):
             clean_path = clean_path[7:]
 
         path = Path(clean_path)
-        candidates = [path] if path.is_absolute() else [self.project_dir / path, self.project_dir / "loot" / path.name]
+        candidates = (
+            [path]
+            if path.is_absolute()
+            else [self.project_dir / path, self.project_dir / "loot" / path.name]
+        )
         for candidate in candidates:
             try:
                 resolved = candidate.resolve()
@@ -95,7 +99,10 @@ class ReportDocument(QTextDocument):
             if not resolved.exists() or not resolved.is_file():
                 continue
             try:
-                if resolved.stat().st_size > MAX_PREVIEW_IMAGE_FILE_SIZE or resolved.stat().st_size == 0:
+                if (
+                    resolved.stat().st_size > MAX_PREVIEW_IMAGE_FILE_SIZE
+                    or resolved.stat().st_size == 0
+                ):
                     continue
             except OSError:
                 continue

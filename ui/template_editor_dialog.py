@@ -9,9 +9,18 @@ import re
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
-    QComboBox, QListWidget, QListWidgetItem, QPushButton,
-    QLabel, QMessageBox, QWidget, QInputDialog
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QFormLayout,
+    QLineEdit,
+    QComboBox,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QLabel,
+    QMessageBox,
+    QWidget,
 )
 
 from core.reporting.template_engine import ReportTemplate, TemplateSection
@@ -24,10 +33,8 @@ SECTION_TYPE_NAMES = {
     "scope_limitations": "Scope & Limitations",
     "phase_section": "Phasen-Sektion (Loot-Kategorie)",
     "remediation_table": "Remediation & Maßnahmenplan",
-    "appendix": "Anhang (Befehlsverlauf & Screenshots)"
+    "appendix": "Anhang (Befehlsverlauf & Screenshots)",
 }
-
-
 
 
 class SectionEditDialog(QDialog):
@@ -82,7 +89,7 @@ class SectionEditDialog(QDialog):
 
     def _on_type_changed(self) -> None:
         sec_type = self.combo_type.currentData()
-        is_phase = (sec_type == "phase_section")
+        is_phase = sec_type == "phase_section"
         self.combo_category.setVisible(is_phase)
 
     def _load_section(self, section: TemplateSection) -> None:
@@ -101,11 +108,7 @@ class SectionEditDialog(QDialog):
         sec_type = self.combo_type.currentData()
         title = self.txt_title.text().strip() or None
         cat_id = self.combo_category.currentData() if sec_type == "phase_section" else None
-        return TemplateSection(
-            type=sec_type,
-            title=title,
-            category_id=cat_id
-        )
+        return TemplateSection(type=sec_type, title=title, category_id=cat_id)
 
 
 class TemplateEditorDialog(QDialog):
@@ -286,8 +289,10 @@ class TemplateEditorDialog(QDialog):
             QMessageBox.warning(self, "Ungültige Eingabe", "Bitte eine Template-ID eingeben.")
             return
 
-        if not re.match(r'^[a-zA-Z0-9_-]+$', tid):
-            QMessageBox.warning(self, "Ungültige ID", "Die ID darf nur Buchstaben, Ziffern, '_' und '-' enthalten.")
+        if not re.match(r"^[a-zA-Z0-9_-]+$", tid):
+            QMessageBox.warning(
+                self, "Ungültige ID", "Die ID darf nur Buchstaben, Ziffern, '_' und '-' enthalten."
+            )
             return
 
         if not name:
@@ -295,7 +300,9 @@ class TemplateEditorDialog(QDialog):
             return
 
         if self.list_sections.count() == 0:
-            QMessageBox.warning(self, "Keine Sektionen", "Das Template muss mindestens eine Sektion enthalten.")
+            QMessageBox.warning(
+                self, "Keine Sektionen", "Das Template muss mindestens eine Sektion enthalten."
+            )
             return
 
         sections: List[TemplateSection] = []
@@ -311,6 +318,6 @@ class TemplateEditorDialog(QDialog):
             category=self.combo_cat.currentData(),
             complexity=self.combo_comp.currentData(),
             sections=sections,
-            is_builtin=False
+            is_builtin=False,
         )
         self.accept()

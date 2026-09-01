@@ -6,15 +6,14 @@ Uses PyInstaller to compile a single-file portable Windows executable.
 
 import sys
 import subprocess
-import shutil
 from pathlib import Path
+
 
 def ensure_spec_file(spec_file: Path, project_dir: Path) -> None:
     """Generates SpectreHUD.spec automatically if it does not already exist."""
     if not spec_file.exists():
         print(f"[*] Spec file not found at {spec_file}. Generating fresh spec file...")
-        data_dir = project_dir / "data"
-        spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
+        spec_content = """# -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
 
 block_cipher = None
@@ -48,7 +47,7 @@ a = Analysis(
     datas=datas,
     hiddenimports=hidden_imports,
     hookspath=[],
-    hooksconfig={{}},
+    hooksconfig={},
     runtime_hooks=[],
     excludes=["tkinter", "unittest", "pytest"],
     win_no_prefer_redirects=False,
@@ -81,10 +80,11 @@ exe = EXE(
     entitlements_file=None,
     icon=str(data_dir / "icon.ico"),
 )
-'''
+"""
         with open(spec_file, "w", encoding="utf-8") as f:
             f.write(spec_content)
         print(f"[+] Successfully created {spec_file}")
+
 
 def build_standalone_exe() -> bool:
     project_dir = Path(__file__).resolve().parent.parent
@@ -103,6 +103,7 @@ def build_standalone_exe() -> bool:
     # Check if pyinstaller is available
     try:
         import PyInstaller
+
         print(f"[+] PyInstaller version: {PyInstaller.__version__}")
     except ImportError:
         print("[*] PyInstaller not found. Installing pyinstaller...")
@@ -120,7 +121,7 @@ def build_standalone_exe() -> bool:
         "--noconfirm",
         f"--workpath={build_dir}",
         f"--distpath={dist_dir}",
-        str(spec_file)
+        str(spec_file),
     ]
 
     print(f"[*] Running command: {' '.join(cmd)}")
@@ -131,7 +132,7 @@ def build_standalone_exe() -> bool:
         if exe_path.exists():
             size_mb = exe_path.stat().st_size / (1024 * 1024)
             print("\n" + "=" * 60)
-            print(f"[+] BUILD SUCCESSFUL!")
+            print("[+] BUILD SUCCESSFUL!")
             print(f"[+] Standalone Executable: {exe_path}")
             print(f"[+] Size: {size_mb:.2f} MB")
             print("=" * 60)
@@ -142,6 +143,7 @@ def build_standalone_exe() -> bool:
     else:
         print(f"[-] PyInstaller build failed with return code {result.returncode}")
         return False
+
 
 if __name__ == "__main__":
     success = build_standalone_exe()

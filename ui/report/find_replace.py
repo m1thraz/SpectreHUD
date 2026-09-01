@@ -33,8 +33,16 @@ class FindReplaceBar(QWidget):
         close = QPushButton("×", self)
         close.setToolTip("Suche schließen (Esc)")
         close.clicked.connect(self.close_bar)
-        for widget in (self.find_input, self.replace_input, self.count_label, previous,
-                       next_button, replace, replace_all, close):
+        for widget in (
+            self.find_input,
+            self.replace_input,
+            self.count_label,
+            previous,
+            next_button,
+            replace,
+            replace_all,
+            close,
+        ):
             layout.addWidget(widget)
         self.hide()
 

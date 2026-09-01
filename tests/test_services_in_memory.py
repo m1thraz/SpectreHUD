@@ -24,7 +24,7 @@ class TestServicesInMemory(unittest.TestCase):
             title="SSH Root",
             content="root:password123",
             target_ip="10.10.10.10",
-            category="access"
+            category="access",
         )
         self.assertTrue(bool(e1["id"]))
         self.assertEqual(len(loot_mgr.get_all_entries()), 1)
@@ -68,13 +68,11 @@ class TestServicesInMemory(unittest.TestCase):
         self.assertEqual(storage.load_json("clipboard"), [])
 
     def test_config_manager_in_memory(self):
-        storage = InMemoryStorageBackend(initial_data={
-            "config": {
-                "target_ip": "192.168.1.50",
-                "theme": "cyber_dark",
-                "language": "de"
+        storage = InMemoryStorageBackend(
+            initial_data={
+                "config": {"target_ip": "192.168.1.50", "theme": "cyber_dark", "language": "de"}
             }
-        })
+        )
         config_mgr = ConfigManager(storage=storage)
 
         self.assertEqual(config_mgr.get("target_ip"), "192.168.1.50")

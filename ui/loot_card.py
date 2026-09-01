@@ -3,8 +3,15 @@ import sys
 import subprocess
 from pathlib import Path
 from PyQt6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy, QGraphicsOpacityEffect
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QWidget,
+    QApplication,
+    QSizePolicy,
+    QGraphicsOpacityEffect,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
@@ -16,6 +23,7 @@ from core.i18n import t
 import pyperclip
 
 logger = get_logger("loot_card")
+
 
 class LootCard(QFrame):
     """Visual card displaying a single loot/note item or screenshot thumbnail with natural word wrapping."""
@@ -55,8 +63,11 @@ class LootCard(QFrame):
 
         # 1. Type Badge
         entry_type = self.entry.get("type", "note")
-        badge_info = next((t for t in LOOT_TYPES if t["id"] == entry_type), {"name": "Note", "icon": "", "badge_class": "BadgeNote"})
-        
+        badge_info = next(
+            (t for t in LOOT_TYPES if t["id"] == entry_type),
+            {"name": "Note", "icon": "", "badge_class": "BadgeNote"},
+        )
+
         lbl_badge = QLabel(badge_info["name"])
         lbl_badge.setTextFormat(Qt.TextFormat.PlainText)
         lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
@@ -64,8 +75,14 @@ class LootCard(QFrame):
 
         # 2. Category Badge
         cat_id = self.entry.get("category", "misc")
-        cat_info = next((c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""})
-        cat_short_name = cat_info["name"].split(".")[1].strip().split("&")[0].strip() if "." in cat_info["name"] else cat_info["name"]
+        cat_info = next(
+            (c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""}
+        )
+        cat_short_name = (
+            cat_info["name"].split(".")[1].strip().split("&")[0].strip()
+            if "." in cat_info["name"]
+            else cat_info["name"]
+        )
         lbl_cat = QLabel(cat_short_name)
         lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
         lbl_cat.setProperty("class", "CategoryBadge")
@@ -106,14 +123,22 @@ class LootCard(QFrame):
         # 7. Export Button
         self.btn_export_file = QPushButton("⇩")
         self.btn_export_file.setProperty("class", "SecondaryBtn")
-        self.btn_export_file.setToolTip(t("loot.export_file_tip", "Export this loot entry to a text file in the project"))
-        self.btn_export_file.clicked.connect(lambda: self.export_requested.emit(self.entry.get("id", "")))
+        self.btn_export_file.setToolTip(
+            t("loot.export_file_tip", "Export this loot entry to a text file in the project")
+        )
+        self.btn_export_file.clicked.connect(
+            lambda: self.export_requested.emit(self.entry.get("id", ""))
+        )
         header_layout.addWidget(self.btn_export_file)
 
         self.btn_export_obsidian = QPushButton("O")
         self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
-        self.btn_export_obsidian.setToolTip(t("loot.export_obsidian_tip", "Append this loot entry to the Obsidian project note"))
-        self.btn_export_obsidian.clicked.connect(lambda: self.obsidian_export_requested.emit(self.entry.get("id", "")))
+        self.btn_export_obsidian.setToolTip(
+            t("loot.export_obsidian_tip", "Append this loot entry to the Obsidian project note")
+        )
+        self.btn_export_obsidian.clicked.connect(
+            lambda: self.obsidian_export_requested.emit(self.entry.get("id", ""))
+        )
         header_layout.addWidget(self.btn_export_obsidian)
 
         # 8. Delete Button
@@ -141,7 +166,9 @@ class LootCard(QFrame):
 
             btn_open_img = QPushButton("Open")
             btn_open_img.setProperty("class", "SecondaryBtn")
-            btn_open_img.setToolTip(t("loot.open_screenshot_tip", "Open screenshot in the default image viewer"))
+            btn_open_img.setToolTip(
+                t("loot.open_screenshot_tip", "Open screenshot in the default image viewer")
+            )
             btn_open_img.clicked.connect(lambda: self._open_image(img_path))
             thumb_row.addWidget(btn_open_img, alignment=Qt.AlignmentFlag.AlignVCenter)
 
@@ -157,8 +184,8 @@ class LootCard(QFrame):
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
         self.lbl_content.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse | 
-            Qt.TextInteractionFlag.TextSelectableByKeyboard
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
         if self.preview_line_limit is not None:
             # A very long unbroken value must not enlarge the Kanban column.
@@ -204,9 +231,7 @@ class LootCard(QFrame):
         )
         metrics = self.lbl_content.fontMetrics()
         preview_height = (
-            metrics.lineSpacing() * self.preview_line_limit
-            + margins.top()
-            + margins.bottom()
+            metrics.lineSpacing() * self.preview_line_limit + margins.top() + margins.bottom()
         )
         self.lbl_content.setMaximumHeight(preview_height)
 
@@ -301,7 +326,8 @@ class LootCard(QFrame):
             content = self.entry.get("content", "")
             if "loot/" in content:
                 import re
-                m = re.search(r'\((loot/[^\)]+)\)', content)
+
+                m = re.search(r"\((loot/[^\)]+)\)", content)
                 if m:
                     rel = m.group(1)
                     filename = Path(rel).name

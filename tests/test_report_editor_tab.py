@@ -83,7 +83,9 @@ class TestReportEditorTab(unittest.TestCase):
             parent=self.tab,
         )
         self.assertGreater(dialog.combo_templates.count(), 0)
-        self.assertEqual(dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot"))
+        self.assertEqual(
+            dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot")
+        )
 
     def test_html_export_theme_buttons_have_room_for_their_labels(self):
         """The two long theme labels must not be elided in the export chooser."""
@@ -95,8 +97,12 @@ class TestReportEditorTab(unittest.TestCase):
         dialog = dialogs[0]
         self.assertGreaterEqual(dialog.minimumWidth(), 640)
         buttons = {button.text(): button for button in dialog.buttons()}
-        self.assertGreaterEqual(buttons[t("report.html_theme_dark", "Dark — SpectreHUD")].minimumWidth(), 190)
-        self.assertGreaterEqual(buttons[t("report.html_theme_light", "Light — Client / Print")].minimumWidth(), 190)
+        self.assertGreaterEqual(
+            buttons[t("report.html_theme_dark", "Dark — SpectreHUD")].minimumWidth(), 190
+        )
+        self.assertGreaterEqual(
+            buttons[t("report.html_theme_light", "Light — Client / Print")].minimumWidth(), 190
+        )
 
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""

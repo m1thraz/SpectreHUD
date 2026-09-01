@@ -2,13 +2,13 @@
 Unit tests for UI-independent domain controllers and MenuAction DTOs.
 Verifies that controllers execute pure business logic without requiring interactive Qt widgets.
 """
+
 import os
 import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from core.menu_actions import MenuAction
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
@@ -21,7 +21,6 @@ from ui.controllers.history_controller import HistoryController
 
 
 class TestControllersDomain(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
@@ -30,13 +29,19 @@ class TestControllersDomain(unittest.TestCase):
         self.event_bus = EventBus()
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.snippet_mgr = SnippetManager(user_snippets_path=self.temp_path / "user_snippets.json")
-        self.loot_mgr = LootManager(storage_file=self.temp_path / "loot.json", event_bus=self.event_bus)
-        self.clip_watcher = ClipboardWatcher(storage_file=self.temp_path / "clipboard.json", event_bus=self.event_bus)
+        self.loot_mgr = LootManager(
+            storage_file=self.temp_path / "loot.json", event_bus=self.event_bus
+        )
+        self.clip_watcher = ClipboardWatcher(
+            storage_file=self.temp_path / "clipboard.json", event_bus=self.event_bus
+        )
 
         self.project_ctrl = ProjectController(self.project_mgr, event_bus=self.event_bus)
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_mgr, event_bus=self.event_bus)
         self.loot_ctrl = LootController(self.loot_mgr, self.project_mgr, event_bus=self.event_bus)
-        self.history_ctrl = HistoryController(self.clip_watcher, self.loot_mgr, self.project_mgr, event_bus=self.event_bus)
+        self.history_ctrl = HistoryController(
+            self.clip_watcher, self.loot_mgr, self.project_mgr, event_bus=self.event_bus
+        )
 
     def tearDown(self):
         self.event_bus.clear()
@@ -73,7 +78,7 @@ class TestControllersDomain(unittest.TestCase):
             title="Domain Test Snip",
             category="linux_shell",
             subcategory="Recon",
-            template="uname -a"
+            template="uname -a",
         )
         self.assertTrue(bool(sid))
         self.assertEqual(len(events_received), 1)
@@ -113,7 +118,7 @@ class TestControllersDomain(unittest.TestCase):
             title="Root Cred",
             content="root:toor",
             target_ip="10.10.10.55",
-            category="access"
+            category="access",
         )
         eid = entry.get("id")
         self.assertTrue(bool(eid))
@@ -138,7 +143,7 @@ class TestControllersDomain(unittest.TestCase):
             title="Updated Root Cred",
             content="root:SuperSecret!",
             target_ip="10.10.10.55",
-            category="access"
+            category="access",
         )
         self.assertEqual(len(loot_events), 2)
         self.assertEqual(loot_events[1]["action"], "update")
@@ -195,7 +200,9 @@ class TestControllersDomain(unittest.TestCase):
         from core.storage import PersistenceError
 
         entry = self.loot_ctrl.add_entry("note", "Cannot write", "content", category="recon")
-        with patch("ui.controllers.loot_controller.atomic_write_text", side_effect=OSError("disk full")):
+        with patch(
+            "ui.controllers.loot_controller.atomic_write_text", side_effect=OSError("disk full")
+        ):
             with self.assertRaises(PersistenceError):
                 self.loot_ctrl.export_entry_to_file(entry["id"])
 
@@ -243,7 +250,9 @@ class TestControllersDomain(unittest.TestCase):
         history_events = []
         logging_events = []
         self.event_bus.subscribe(EventType.HISTORY_UPDATED, lambda d: history_events.append(d))
-        self.event_bus.subscribe(EventType.LOGGING_STATE_CHANGED, lambda d: logging_events.append(d))
+        self.event_bus.subscribe(
+            EventType.LOGGING_STATE_CHANGED, lambda d: logging_events.append(d)
+        )
 
         self.history_ctrl.add_entry("whoami", target_ip="10.10.10.55")
         self.history_ctrl.add_entry("id", target_ip="10.10.10.55")

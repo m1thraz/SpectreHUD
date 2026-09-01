@@ -21,15 +21,7 @@ class LootTableModel(QAbstractTableModel):
       5: Timestamp
     """
 
-    COLUMNS = [
-        "Type",
-        "Severity",
-        "Category",
-        "Title",
-        "Content",
-        "Target IP",
-        "Timestamp"
-    ]
+    COLUMNS = ["Type", "Severity", "Category", "Title", "Content", "Target IP", "Timestamp"]
 
     def __init__(self, entries: Optional[List[Dict[str, Any]]] = None, parent=None):
         super().__init__(parent)
@@ -91,7 +83,9 @@ class LootTableModel(QAbstractTableModel):
 
         return QVariant()
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+    def headerData(
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if 0 <= section < len(self.COLUMNS):
                 return self.COLUMNS[section]
@@ -148,7 +142,9 @@ class LootTableModel(QAbstractTableModel):
                 self._entries[row] = updated_entry
                 top_left = self.index(row, 0)
                 bottom_right = self.index(row, len(self.COLUMNS) - 1)
-                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.UserRole])
+                self.dataChanged.emit(
+                    top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.UserRole]
+                )
                 return True
         return False
 

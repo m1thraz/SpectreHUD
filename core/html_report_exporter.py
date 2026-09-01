@@ -15,7 +15,7 @@ from core.reporting import (
     convert_markdown_to_html,
     render_report_html,
     render_severity_badge,
-    render_metrics_summary
+    render_metrics_summary,
 )
 
 __all__ = [
@@ -29,5 +29,5 @@ __all__ = [
     "convert_markdown_to_html",
     "render_report_html",
     "render_severity_badge",
-    "render_metrics_summary"
+    "render_metrics_summary",
 ]

@@ -3,7 +3,6 @@ Metadata templates and default structure generation for project workspaces.
 """
 
 from typing import Dict, Any, Optional
-from datetime import datetime
 
 DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
 
@@ -22,20 +21,20 @@ DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
 ---
 
 ## 2. Initial Access & Exploitation
-- **Schwachstelle:** 
-- **Vorgehensweise:** 
+- **Schwachstelle:**
+- **Vorgehensweise:**
 
 ---
 
 ## 3. Privilege Escalation
-- **User Flag:** 
-- **Root / Admin Escalation:** 
-- **Root Flag:** 
+- **User Flag:**
+- **Root / Admin Escalation:**
+- **Root Flag:**
 
 ---
 
 ## 4. Notizen & Gelerntes
-- 
+-
 """
 
 
@@ -43,16 +42,17 @@ def create_initial_notes(
     project_name: str,
     target_ip: str = "TBD",
     attacker_ip: str = "TBD",
-    created_at: Optional[str] = None
+    created_at: Optional[str] = None,
 ) -> str:
     """Renders initial notes.md markdown text for a new project."""
     from core.validators import format_timestamp
+
     ts = created_at or format_timestamp()
     return DEFAULT_NOTES_TEMPLATE.format(
         project_name=project_name,
         target_ip=target_ip or "TBD",
         attacker_ip=attacker_ip or "TBD",
-        created_at=ts
+        created_at=ts,
     )
 
 
@@ -62,10 +62,11 @@ def create_initial_state(
     attacker_ip: str = "10.10.14.5",
     port: str = "4444",
     wordlist: str = "/usr/share/wordlists/dirb/common.txt",
-    created_at: Optional[str] = None
+    created_at: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generates initial dictionary structure for project_state.json."""
     from core.validators import format_timestamp
+
     ts = created_at or format_timestamp()
     return {
         "name": project_name,
@@ -76,5 +77,5 @@ def create_initial_state(
         "created_at": ts,
         "updated_at": ts,
         "loot": [],
-        "clipboard_history": []
+        "clipboard_history": [],
     }

@@ -10,11 +10,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from core.reporting.template_engine import (
-    ReportTemplate,
-    TemplateSection,
-    LEGACY_DEFAULT_TEMPLATE
-)
+from core.reporting.template_engine import ReportTemplate, TemplateSection, LEGACY_DEFAULT_TEMPLATE
 from core.validators import is_file_size_valid, MAX_TEMPLATE_FILE_SIZE
 from core.atomic_write import atomic_write_json
 from core.logger import get_logger
@@ -45,10 +41,10 @@ def template_to_dict(template: ReportTemplate) -> Dict[str, Any]:
                 "type": s.type,
                 **({"title": s.title} if s.title else {}),
                 **({"category_id": s.category_id} if s.category_id else {}),
-                **({"options": s.options} if s.options else {})
+                **({"options": s.options} if s.options else {}),
             }
             for s in template.sections
-        ]
+        ],
     }
 
 
@@ -60,7 +56,9 @@ def dict_to_template(data: Dict[str, Any], is_builtin: bool = False) -> Optional
     template_id = str(data.get("id", "")).strip()
     name = str(data.get("name", "")).strip()
     if not is_valid_template_id(template_id) or not name:
-        logger.warning(f"dict_to_template rejected template with invalid id ({template_id!r}) or name ({name!r})")
+        logger.warning(
+            f"dict_to_template rejected template with invalid id ({template_id!r}) or name ({name!r})"
+        )
         return None
 
     language = str(data.get("language", "de")).lower()
@@ -89,12 +87,14 @@ def dict_to_template(data: Dict[str, Any], is_builtin: bool = False) -> Optional
         title = s.get("title")
         cat_id = s.get("category_id")
         options = s.get("options", {}) if isinstance(s.get("options"), dict) else {}
-        sections.append(TemplateSection(
-            type=sec_type,
-            title=str(title) if title else None,
-            category_id=str(cat_id) if cat_id else None,
-            options=options
-        ))
+        sections.append(
+            TemplateSection(
+                type=sec_type,
+                title=str(title) if title else None,
+                category_id=str(cat_id) if cat_id else None,
+                options=options,
+            )
+        )
 
     if not sections:
         return None
@@ -106,14 +106,16 @@ def dict_to_template(data: Dict[str, Any], is_builtin: bool = False) -> Optional
         category=category,
         complexity=complexity,
         sections=sections,
-        is_builtin=is_builtin
+        is_builtin=is_builtin,
     )
 
 
 class TemplateRepository:
     """Repository handling loading, saving, and managing report templates."""
 
-    def __init__(self, user_templates_dir: Optional[Path] = None, builtin_dir: Optional[Path] = None):
+    def __init__(
+        self, user_templates_dir: Optional[Path] = None, builtin_dir: Optional[Path] = None
+    ):
         if builtin_dir:
             self.builtin_dir = Path(builtin_dir)
         else:
@@ -123,12 +125,15 @@ class TemplateRepository:
             if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
                 self.builtin_dir = Path(sys._MEIPASS) / "data" / "report_templates"
             else:
-                self.builtin_dir = Path(__file__).resolve().parent.parent.parent / "data" / "report_templates"
+                self.builtin_dir = (
+                    Path(__file__).resolve().parent.parent.parent / "data" / "report_templates"
+                )
 
         if user_templates_dir:
             self.user_templates_dir = Path(user_templates_dir)
         else:
             from core.config import get_default_config_dir
+
             self.user_templates_dir = get_default_config_dir() / "report_templates"
 
         self.user_templates_dir.mkdir(parents=True, exist_ok=True)

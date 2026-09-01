@@ -4,8 +4,8 @@ Central Application Orchestrator for SpectreHUD.
 Orchestrates UI panels, domain managers, and specialized coordinators.
 """
 
-from typing import Dict, Any, List, Optional
-from PyQt6.QtCore import QObject, Qt, QUrl, pyqtSignal
+from typing import Dict, Any, List
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
@@ -32,7 +32,7 @@ from ui.controllers import (
     LootController,
     HistoryController,
     ReportController,
-    ProjectController
+    ProjectController,
 )
 from ui.coordinators import (
     WorkspaceCoordinator,
@@ -89,40 +89,72 @@ class AppController(QObject):
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher
+            clipboard_watcher=self.clipboard_watcher,
         )
         self.cards: List[QWidget] = []
 
         # Domain Controllers
-        self.cheatsheet_ctrl = CheatsheetController(self.snippet_manager, event_bus=self.event_bus, parent=self)
-        self.loot_ctrl = LootController(self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
-        self.history_ctrl = HistoryController(self.clipboard_watcher, self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self)
-        self.report_ctrl = ReportController(
-            self.project_manager, self.loot_manager, self.clipboard_watcher,
-            parent_widget=self.window, config_manager=self.config
+        self.cheatsheet_ctrl = CheatsheetController(
+            self.snippet_manager, event_bus=self.event_bus, parent=self
         )
-        self.project_ctrl = ProjectController(self.project_manager, event_bus=self.event_bus, parent=self)
+        self.loot_ctrl = LootController(
+            self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self
+        )
+        self.history_ctrl = HistoryController(
+            self.clipboard_watcher,
+            self.loot_manager,
+            self.project_manager,
+            event_bus=self.event_bus,
+            parent=self,
+        )
+        self.report_ctrl = ReportController(
+            self.project_manager,
+            self.loot_manager,
+            self.clipboard_watcher,
+            parent_widget=self.window,
+            config_manager=self.config,
+        )
+        self.project_ctrl = ProjectController(
+            self.project_manager, event_bus=self.event_bus, parent=self
+        )
 
         # Specialized Coordinators
-        self._target_provider = lambda: self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, 'txt_target') else ""
+        self._target_provider = lambda: (
+            self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, "txt_target") else ""
+        )
 
         self.navigation_coord = NavigationCoordinator(
-            header=self.header, search=self.search, var_bar=self.var_bar, content=self.content,
-            report_ctrl=self.report_ctrl, event_bus=self.event_bus,
-            on_mode_switched=self._on_mode_switched, parent=self
+            header=self.header,
+            search=self.search,
+            var_bar=self.var_bar,
+            content=self.content,
+            report_ctrl=self.report_ctrl,
+            event_bus=self.event_bus,
+            on_mode_switched=self._on_mode_switched,
+            parent=self,
         )
         self.workspace_coord = WorkspaceCoordinator(
-            project_manager=self.project_manager, session_service=self.session_service,
-            project_ctrl=self.project_ctrl, report_ctrl=self.report_ctrl, event_bus=self.event_bus, parent=self
+            project_manager=self.project_manager,
+            session_service=self.session_service,
+            project_ctrl=self.project_ctrl,
+            report_ctrl=self.report_ctrl,
+            event_bus=self.event_bus,
+            parent=self,
         )
         self.clipboard_coord = ClipboardCoordinator(
-            clipboard_watcher=self.clipboard_watcher, history_ctrl=self.history_ctrl,
-            loot_ctrl=self.loot_ctrl, target_provider=self._target_provider, parent=self
+            clipboard_watcher=self.clipboard_watcher,
+            history_ctrl=self.history_ctrl,
+            loot_ctrl=self.loot_ctrl,
+            target_provider=self._target_provider,
+            parent=self,
         )
         self.export_coord = ExportCoordinator(
-            project_manager=self.project_manager, loot_manager=self.loot_manager,
-            history_ctrl=self.history_ctrl, target_provider=self._target_provider,
-            config_manager=self.config, parent=self
+            project_manager=self.project_manager,
+            loot_manager=self.loot_manager,
+            history_ctrl=self.history_ctrl,
+            target_provider=self._target_provider,
+            config_manager=self.config,
+            parent=self,
         )
         self.report_ctrl.set_export_coordinator(self.export_coord)
         self.screenshot_transaction = ScreenshotTransactionService(
@@ -191,8 +223,7 @@ class AppController(QObject):
         # Clipboard callbacks may originate outside the GUI thread.  Always
         # cross the Qt boundary before the coordinator touches UI state.
         self.clipboard_watcher.entry_added.connect(
-            self._on_clipboard_entry_added,
-            Qt.ConnectionType.QueuedConnection
+            self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection
         )
         self.clipboard_watcher.logging_state_changed.connect(self.header.update_rec_indicator)
         get_i18n().locale_changed.connect(self.retranslate_ui)
@@ -223,9 +254,11 @@ class AppController(QObject):
                 "Creates a new copy based on current session loot",
             )
             self.loot_ctrl.build_filter_pills(
-                pills_layout, self._select_loot_type,
+                pills_layout,
+                self._select_loot_type,
                 lambda: self.export_coord.export_loot(self.window),
-                self._clear_loot, export_tooltip,
+                self._clear_loot,
+                export_tooltip,
                 lambda: self.export_coord.export_loot_to_obsidian(self.window),
                 self._toggle_loot_view,
                 loot_view_mode,
@@ -236,9 +269,11 @@ class AppController(QObject):
                 "Creates a new copy based on current session loot",
             )
             self.history_ctrl.build_filter_pills(
-                pills_layout, self._select_history_filter,
+                pills_layout,
+                self._select_history_filter,
                 lambda: self.export_coord.export_report(self.window),
-                lambda: self.clipboard_coord.clear_history(self.window), export_tooltip
+                lambda: self.clipboard_coord.clear_history(self.window),
+                export_tooltip,
             )
 
     def refresh_content(self) -> None:
@@ -262,34 +297,60 @@ class AppController(QObject):
 
         if self.active_mode == "cheatsheet":
             self.cards = self.cheatsheet_ctrl.render_content(
-                content_layout, query, variables, self._on_snippet_deleted, self.window,
-                self.content.show_empty_state, self._on_content_copied,
+                content_layout,
+                query,
+                variables,
+                self._on_snippet_deleted,
+                self.window,
+                self.content.show_empty_state,
+                self._on_content_copied,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         elif self.active_mode == "loot":
-            proj_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
+            proj_dir = self.project_manager.get_project_dir(
+                self.project_manager.get_active_project()
+            )
             if self.config.get("loot_view_mode", "list") == "board":
                 self.cards = self.loot_ctrl.render_board_content(
-                    content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
-                    self._on_export_loot_entry, self._on_move_loot_category, self.window,
-                    on_export_obsidian=lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    content_layout,
+                    query,
+                    proj_dir,
+                    self._on_loot_deleted,
+                    self._on_edit_loot_requested,
+                    self._on_export_loot_entry,
+                    self._on_move_loot_category,
+                    self.window,
+                    on_export_obsidian=lambda entry_id: (
+                        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+                    ),
                     on_copied=self._on_content_copied,
                 )
             else:
                 self.cards = self.loot_ctrl.render_content(
-                    content_layout, query, proj_dir, self._on_loot_deleted, self._on_edit_loot_requested,
+                    content_layout,
+                    query,
+                    proj_dir,
+                    self._on_loot_deleted,
+                    self._on_edit_loot_requested,
                     self._on_export_loot_entry,
-                    self.window, self.content.show_empty_state,
-                    on_export_obsidian=lambda entry_id: self.export_coord.export_single_loot_to_obsidian(self.window, entry_id),
+                    self.window,
+                    self.content.show_empty_state,
+                    on_export_obsidian=lambda entry_id: (
+                        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+                    ),
                     on_copied=self._on_content_copied,
                 )
             self.footer.set_count(_format_count(len(self.cards)))
         else:
             self.cards = self.history_ctrl.render_content(
-                content_layout, query, variables.get("target_ip"),
+                content_layout,
+                query,
+                variables.get("target_ip"),
                 lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
-                self.clipboard_coord.delete_history_entry, self.window,
-                self.content.show_empty_state, self._on_content_copied,
+                self.clipboard_coord.delete_history_entry,
+                self.window,
+                self.content.show_empty_state,
+                self._on_content_copied,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         self.content.refresh_content_geometry()
@@ -347,7 +408,9 @@ class AppController(QObject):
             if self.loot_ctrl.open_add_dialog(self.window, target_ip=target_ip):
                 self._on_loot_data_updated()
         else:
-            if self.loot_ctrl.open_add_dialog(self.window, target_ip=target_ip, default_type="note", default_category="recon"):
+            if self.loot_ctrl.open_add_dialog(
+                self.window, target_ip=target_ip, default_type="note", default_category="recon"
+            ):
                 self._on_loot_data_updated()
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
@@ -358,9 +421,7 @@ class AppController(QObject):
         self.loot_ctrl.export_entry_to_file_with_feedback(entry_id, self.window)
 
     def _on_move_loot_category(self, entry_id: str, category: str, target_index: int) -> bool:
-        return self.loot_ctrl.move_entry_to_category(
-            entry_id, category, target_index, self.window
-        )
+        return self.loot_ctrl.move_entry_to_category(entry_id, category, target_index, self.window)
 
     def _on_snippet_deleted(self, snippet_id: str) -> None:
         self.cheatsheet_ctrl.delete_snippet(snippet_id)
@@ -402,9 +463,11 @@ class AppController(QObject):
         self.workspace_coord.open_new_project_dialog(
             self.window,
             self._target_provider(),
-            self.var_bar.txt_attacker.text().strip() if hasattr(self.var_bar, 'txt_attacker') else "",
-            self.var_bar.txt_port.text().strip() if hasattr(self.var_bar, 'txt_port') else "4444",
-            self.switch_to_project
+            self.var_bar.txt_attacker.text().strip()
+            if hasattr(self.var_bar, "txt_attacker")
+            else "",
+            self.var_bar.txt_port.text().strip() if hasattr(self.var_bar, "txt_port") else "4444",
+            self.switch_to_project,
         )
 
     def load_active_project_state(self) -> None:
@@ -425,9 +488,10 @@ class AppController(QObject):
             self.refresh_content()
 
         self.workspace_coord.switch_to_project(
-            project_name=project_name, window=self.window,
+            project_name=project_name,
+            window=self.window,
             variables_provider=lambda: self.var_bar.get_variables() if self.var_bar else {},
-            on_success_callback=on_switched
+            on_success_callback=on_switched,
         )
 
     # Screenshots & Settings
@@ -454,10 +518,7 @@ class AppController(QObject):
 
         dlg.settings_applied.connect(apply_settings)
         accepted = bool(dlg.exec())
-        if (
-            accepted
-            and applied_settings.get("theme", previous_theme) != previous_theme
-        ):
+        if accepted and applied_settings.get("theme", previous_theme) != previous_theme:
             self.restart_requested.emit()
 
     def _on_settings_applied(self, new_settings: Dict[str, Any]) -> None:
@@ -466,7 +527,11 @@ class AppController(QObject):
     def _on_always_on_top_toggled(self, checked: bool) -> None:
         self.config.set("always_on_top", checked)
         flags = self.window.windowFlags()
-        flags = (flags | Qt.WindowType.WindowStaysOnTopHint) if checked else (flags & ~Qt.WindowType.WindowStaysOnTopHint)
+        flags = (
+            (flags | Qt.WindowType.WindowStaysOnTopHint)
+            if checked
+            else (flags & ~Qt.WindowType.WindowStaysOnTopHint)
+        )
         was_visible = self.window.isVisible()
         self.window.setWindowFlags(flags)
         if was_visible:

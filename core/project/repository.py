@@ -13,12 +13,11 @@ from core.storage import PersistenceError
 from core.atomic_write import atomic_write_json, atomic_write_text
 from core.project_lock_service import ProjectLockService
 from core.project.validator import (
-    sanitize_project_name,
     validate_project_name,
     validate_workspace_boundary,
     ProjectExistsError,
     InvalidProjectNameError,
-    ProjectCreationError
+    ProjectCreationError,
 )
 from core.project.metadata import create_initial_notes, create_initial_state
 from core.project.registry import ProjectRegistry
@@ -49,14 +48,18 @@ class ProjectRepository:
     """Handles disk operations, directory structures, and registry persistence for CTF projects."""
 
     def __init__(
-        self, base_dir: Optional[Path] = None, config_dir: Optional[Path] = None,
+        self,
+        base_dir: Optional[Path] = None,
+        config_dir: Optional[Path] = None,
         lock_service: Optional[ProjectLockService] = None,
     ):
         self.base_dir = Path(base_dir) if base_dir else get_default_projects_dir()
         try:
             self.base_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            logger.error(f"Failed to create base projects directory {self.base_dir}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to create base projects directory {self.base_dir}: {e}", exc_info=True
+            )
 
         self.config_dir = Path(config_dir) if config_dir is not None else get_default_config_dir()
         try:
@@ -99,9 +102,11 @@ class ProjectRepository:
 
     def unlock_project(self, name: str, password: str) -> bool:
         return self.state_store.unlock(name, password)
+
     def enable_pentest_mode(self, name: str, password: str) -> None:
         """Encrypt an existing state file and retain its key for this session."""
         self.state_store.enable_pentest_mode(name, password)
+
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
         return self.project_registry.load()
@@ -124,9 +129,11 @@ class ProjectRepository:
     def list_projects(self) -> List[str]:
         """Return discovered and registered projects without persisting changes."""
         return self.project_registry.list_projects(self.base_dir)
+
     def sync_registry(self) -> List[str]:
         """Discover workspace projects and atomically persist registry changes."""
         return self.project_registry.sync(self.base_dir)
+
     def get_project_dir(self, name: Optional[str] = None) -> Path:
         """
         Returns the filesystem path for a project.
@@ -158,7 +165,9 @@ class ProjectRepository:
                 f"Workspace escape attempt / symlink traversal detected: {name!r} "
                 f"(resolved to {proj_dir})."
             )
-            raise InvalidProjectNameError(f"Workspace escape attempt detected for project '{name}'.")
+            raise InvalidProjectNameError(
+                f"Workspace escape attempt detected for project '{name}'."
+            )
 
         return proj_dir
 
@@ -169,7 +178,7 @@ class ProjectRepository:
         attacker_ip: str = "",
         port: str = "4444",
         base_dir: Optional[Path] = None,
-        allow_existing: bool = False
+        allow_existing: bool = False,
     ) -> Path:
         """
         Creates an isolated project directory structure transactionally.
@@ -191,18 +200,20 @@ class ProjectRepository:
             for sub in PROJECT_LOOT_SUBDIRECTORIES:
                 sub_p = proj_dir / sub
                 if sub_p.is_symlink():
-                    raise ProjectCreationError(f"Project directory contains symlinked subdirectory: {sub}")
+                    raise ProjectCreationError(
+                        f"Project directory contains symlinked subdirectory: {sub}"
+                    )
                 if sub_p.exists() and not sub_p.is_dir():
-                    raise OSError(f"Cannot create subfolder '{sub}' because a non-directory file exists with that name.")
+                    raise OSError(
+                        f"Cannot create subfolder '{sub}' because a non-directory file exists with that name."
+                    )
                 sub_p.mkdir(exist_ok=True)
 
             # Create notes.md if not exists
             notes_file = proj_dir / "notes.md"
             if not notes_file.exists():
                 notes_content = create_initial_notes(
-                    project_name=clean_name,
-                    target_ip=target_ip,
-                    attacker_ip=attacker_ip
+                    project_name=clean_name, target_ip=target_ip, attacker_ip=attacker_ip
                 )
                 if not atomic_write_text(notes_file, notes_content):
                     raise OSError(f"Failed to atomically create notes.md for {clean_name}")
@@ -211,22 +222,25 @@ class ProjectRepository:
             state_file = proj_dir / "project_state.json"
             if not state_file.exists():
                 initial_state = create_initial_state(
-                    project_name=clean_name,
-                    target_ip=target_ip,
-                    attacker_ip=attacker_ip,
-                    port=port
+                    project_name=clean_name, target_ip=target_ip, attacker_ip=attacker_ip, port=port
                 )
                 if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                    raise OSError(f"Failed to atomically write initial project_state.json for {clean_name}")
+                    raise OSError(
+                        f"Failed to atomically write initial project_state.json for {clean_name}"
+                    )
 
             # Register project location
             self._update_registry(additions={clean_name: str(proj_dir)})
             return proj_dir
 
         except Exception as e:
-            logger.error(f"Project creation failed for {clean_name}: {e}. Rolling back partial files.", exc_info=True)
+            logger.error(
+                f"Project creation failed for {clean_name}: {e}. Rolling back partial files.",
+                exc_info=True,
+            )
             if not dir_existed_initially and proj_dir.exists():
                 import shutil
+
                 try:
                     shutil.rmtree(proj_dir, ignore_errors=True)
                 except Exception as rb_err:
@@ -236,7 +250,9 @@ class ProjectRepository:
                 try:
                     self._update_registry(removals={clean_name})
                 except PersistenceError:
-                    logger.exception("Failed to remove rolled-back project '%s' from registry", clean_name)
+                    logger.exception(
+                        "Failed to remove rolled-back project '%s' from registry", clean_name
+                    )
 
             raise ProjectCreationError(f"Failed to create project '{clean_name}': {e}") from e
 
@@ -244,13 +260,17 @@ class ProjectRepository:
         """Imports and registers an existing directory as a project workspace."""
         target_path = Path(folder_path).resolve()
         if not target_path.exists() or not target_path.is_dir():
-            logger.warning(f"Cannot import non-existing or non-directory project folder: {folder_path}")
+            logger.warning(
+                f"Cannot import non-existing or non-directory project folder: {folder_path}"
+            )
             return None
 
         try:
             clean_name = validate_project_name(target_path.name)
         except InvalidProjectNameError as e:
-            logger.warning(f"Cannot import project with invalid directory name {target_path.name}: {e}")
+            logger.warning(
+                f"Cannot import project with invalid directory name {target_path.name}: {e}"
+            )
             return None
 
         if clean_name in self.registry and self.registry[clean_name] != str(target_path):
@@ -264,16 +284,22 @@ class ProjectRepository:
             for sub in PROJECT_LOOT_SUBDIRECTORIES:
                 sub_p = target_path / sub
                 if sub_p.is_symlink():
-                    raise ProjectCreationError(f"Imported project contains symlinked subdirectory: {sub}")
+                    raise ProjectCreationError(
+                        f"Imported project contains symlinked subdirectory: {sub}"
+                    )
                 if sub_p.exists() and not sub_p.is_dir():
-                    raise ProjectCreationError(f"Imported project contains non-directory file named '{sub}'")
+                    raise ProjectCreationError(
+                        f"Imported project contains non-directory file named '{sub}'"
+                    )
                 sub_p.mkdir(exist_ok=True)
 
             state_file = target_path / "project_state.json"
             if not state_file.exists():
                 initial_state = create_initial_state(project_name=clean_name)
                 if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                    raise OSError(f"Failed to atomically write project_state.json for imported project {clean_name}")
+                    raise OSError(
+                        f"Failed to atomically write project_state.json for imported project {clean_name}"
+                    )
 
             self._update_registry(additions={clean_name: str(target_path)})
             logger.info(f"Successfully imported project '{clean_name}' from {target_path}")
@@ -287,9 +313,13 @@ class ProjectRepository:
     def load_project_state(self, name: str) -> Dict[str, Any]:
         """Load validated plain or encrypted state through the state store."""
         return self.state_store.load(name)
-    def save_project_state(self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
+
+    def save_project_state(
+        self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> bool:
         """Persist validated plain or encrypted state through the state store."""
         return self.state_store.save(name, state=state, **kwargs)
+
     def open_project_folder(self, name: str) -> bool:
         """Opens the project folder in OS file manager."""
         folder = self.get_project_dir(name)
@@ -308,12 +338,15 @@ class ProjectRepository:
                 subprocess.Popen(["xdg-open", str(folder)])
             return True
         except (OSError, subprocess.SubprocessError) as e:
-            logger.error(f"Error opening project folder {folder} in system file manager: {e}", exc_info=True)
+            logger.error(
+                f"Error opening project folder {folder} in system file manager: {e}", exc_info=True
+            )
             return False
 
     def archive_project(self, name: str, output_zip: Optional[Path] = None) -> Dict[str, Any]:
         """Archives the project workspace as a .zip file."""
         from core.box_archiver import BoxArchiver
+
         pname = validate_project_name(name)
         proj_dir = self.get_project_dir(pname)
         return BoxArchiver.archive_project(proj_dir, output_zip)

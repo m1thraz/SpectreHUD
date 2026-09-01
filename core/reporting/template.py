@@ -16,22 +16,21 @@ def render_report_html(
     target_ip: Optional[str] = None,
     timestamp: Optional[str] = None,
     theme: str = "dark",
-    report_font: str = "segoe_ui"
+    report_font: str = "segoe_ui",
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
     now_str = timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     target_str = target_ip if target_ip and target_ip != "all" else "N/A"
     report_css = get_report_css(theme, report_font)
-    safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip("-_")
+    safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip(
+        "-_"
+    )
     download_filename = json.dumps(f"report_edited_{safe_project_name or 'report'}.html")
     # JSON alone permits literal '<', which an HTML parser could interpret as
     # a closing script tag inside the inline script below.
     download_filename = (
-        download_filename
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
+        download_filename.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     )
 
     return f"""<!DOCTYPE html>

@@ -1,27 +1,23 @@
 import os
 import json
-import time
 import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager, InvalidProjectNameError
 from core.loot_manager import LootManager
-from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
 from core.report_file_manager import ReportFileManager, ReportBackupError
-from core.snippet_manager import SnippetManager
-from ui.main_window import MainWindow
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -84,7 +80,9 @@ class TestWorkflowRobustness(unittest.TestCase):
                 self.project_mgr.get_project_dir(bad_name)
 
         # Invalid input must not create anything beside the workspace.
-        parent_entries = [p.name for p in self.projects_dir.parent.iterdir() if p.name != "projects"]
+        parent_entries = [
+            p.name for p in self.projects_dir.parent.iterdir() if p.name != "projects"
+        ]
         self.assertNotIn("pwned", parent_entries)
         self.assertNotIn("recon", parent_entries)
         self.assertNotIn("exploit", parent_entries)
@@ -128,14 +126,18 @@ class TestWorkflowRobustness(unittest.TestCase):
                 parent_window=dummy_widget,
                 project_manager=self.project_mgr,
                 loot_manager=self.loot_mgr,
-                target_ip="10.10.10.10"
+                target_ip="10.10.10.10",
             )
 
         loot_dir = self.project_mgr.get_project_dir("BoxTarget") / "loot"
         png_files = list(loot_dir.glob("screenshot_*.png"))
 
         # Collision Invariant: Exactly 3 unique PNG files must exist
-        self.assertEqual(len(png_files), 3, f"Screenshot collision occurred: found {len(png_files)} files, expected 3")
+        self.assertEqual(
+            len(png_files),
+            3,
+            f"Screenshot collision occurred: found {len(png_files)} files, expected 3",
+        )
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 3)
 
     # -------------------------------------------------------------------------
@@ -176,11 +178,11 @@ class TestWorkflowRobustness(unittest.TestCase):
         # Write poisoned schema
         poisoned_data = {
             "name": "BoxPoisoned",
-            "target_ip": 1337,           # int instead of str
-            "attacker_ip": None,         # None instead of str
-            "port": 8080,                # int instead of str
-            "loot": "banana",            # str instead of list[dict]
-            "clipboard_history": 42      # int instead of list[dict]
+            "target_ip": 1337,  # int instead of str
+            "attacker_ip": None,  # None instead of str
+            "port": 8080,  # int instead of str
+            "loot": "banana",  # str instead of list[dict]
+            "clipboard_history": 42,  # int instead of list[dict]
         }
         with open(state_file, "w", encoding="utf-8") as f:
             json.dump(poisoned_data, f)
@@ -226,6 +228,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         for child in workspace.iterdir():
             if child.is_dir():
                 import shutil
+
                 shutil.rmtree(child)
             else:
                 child.unlink()

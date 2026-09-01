@@ -1,14 +1,21 @@
-import json
 import uuid
 import warnings
-from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from core.config import get_default_config_dir
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
-from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES, MAX_TARGET_IP_LENGTH, MAX_TITLE_LENGTH
+from core.storage import (
+    StorageBackend,
+    InMemoryStorageBackend,
+    FileStorageBackend,
+    PersistenceError,
+)
+from core.validators import (
+    MAX_CONTENT_LENGTH,
+    MAX_LOOT_ENTRIES,
+    MAX_TARGET_IP_LENGTH,
+    MAX_TITLE_LENGTH,
+)
 
 logger = get_logger("loot")
 
@@ -18,7 +25,7 @@ LOOT_TYPES = [
     {"id": "screenshot", "name": "Screenshots", "icon": "", "badge_class": "BadgeScreenshot"},
     {"id": "directory", "name": "Directories", "icon": "", "badge_class": "BadgeDir"},
     {"id": "flag", "name": "Flags", "icon": "", "badge_class": "BadgeFlag"},
-    {"id": "note", "name": "Notes", "icon": "", "badge_class": "BadgeNote"}
+    {"id": "note", "name": "Notes", "icon": "", "badge_class": "BadgeNote"},
 ]
 
 CATEGORIES = [
@@ -27,7 +34,7 @@ CATEGORIES = [
     {"id": "privesc", "name": "3. Privilege Escalation", "order": 3, "icon": ""},
     {"id": "postex", "name": "4. Post-Exploitation & Lateral Movement", "order": 4, "icon": ""},
     {"id": "scripts", "name": "5. Custom Scripts & PoCs", "order": 5, "icon": ""},
-    {"id": "misc", "name": "6. Miscellaneous", "order": 6, "icon": ""}
+    {"id": "misc", "name": "6. Miscellaneous", "order": 6, "icon": ""},
 ]
 
 VALID_CATEGORY_IDS = {c["id"] for c in CATEGORIES}
@@ -39,6 +46,7 @@ class LootValidationError(ValueError):
 
 class LootLimitError(LootValidationError):
     """Raised when the active session reached its maximum number of loot entries."""
+
 
 TYPE_ALIASES = {
     "cred": "credentials",
@@ -54,8 +62,9 @@ TYPE_ALIASES = {
     "flags": "flag",
     "flag": "flag",
     "hashes": "hash",
-    "hash": "hash"
+    "hash": "hash",
 }
+
 
 class LootManager:
     """Manages session loot, credentials, hashes, flags and notes with persistence, categories and export."""
@@ -65,7 +74,7 @@ class LootManager:
         storage_file: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
         event_bus: Optional[Any] = None,
-        time_format: str = "24h"
+        time_format: str = "24h",
     ):
         if storage is not None:
             self.storage = storage
@@ -90,6 +99,7 @@ class LootManager:
         """Publishes the single canonical event for a successful loot mutation."""
         if self.event_bus:
             from core.event_bus import EventType
+
             self.event_bus.publish(
                 EventType.LOOT_UPDATED,
                 {
@@ -112,6 +122,7 @@ class LootManager:
     def _migrate_entries(self, entries: Optional[List[Dict[str, Any]]] = None) -> bool:
         """Normalizes entries in place and returns whether any entry was migrated."""
         from core.validators import VALID_SEVERITIES
+
         migrated = False
         target_entries = self.entries if entries is None else entries
         for entry in target_entries:
@@ -119,7 +130,7 @@ class LootManager:
             if not cat or cat not in VALID_CATEGORY_IDS:
                 entry["category"] = "misc"
                 migrated = True
-            
+
             # Normalize severity if missing or invalid
             sev = entry.get("severity")
             norm_sev = str(sev).lower().strip() if sev else "info"
@@ -150,18 +161,23 @@ class LootManager:
     def load_entries(self) -> None:
         """Loads and semantically validates loot entries from storage backend."""
         from core.validators import validate_loot_list
+
         raw_data = self.storage.load_json("loot")
         if raw_data is not None:
-            position_migration_needed = any(
-                isinstance(item, dict)
-                and (
-                    "position" not in item
-                    or isinstance(item.get("position"), bool)
-                    or not isinstance(item.get("position"), int)
-                    or item.get("position", 0) < 0
+            position_migration_needed = (
+                any(
+                    isinstance(item, dict)
+                    and (
+                        "position" not in item
+                        or isinstance(item.get("position"), bool)
+                        or not isinstance(item.get("position"), int)
+                        or item.get("position", 0) < 0
+                    )
+                    for item in raw_data
                 )
-                for item in raw_data
-            ) if isinstance(raw_data, list) else False
+                if isinstance(raw_data, list)
+                else False
+            )
             self.entries = validate_loot_list(raw_data)
         else:
             self.entries = []
@@ -169,7 +185,9 @@ class LootManager:
 
         # Automatic migration of legacy entries lacking category or with invalid category
         if self._migrate_entries() or position_migration_needed:
-            logger.info("Migrated legacy loot entries to include category/severity/position and persisted.")
+            logger.info(
+                "Migrated legacy loot entries to include category/severity/position and persisted."
+            )
             self.save_entries()
 
     def replace_entries(self, entries: List[Dict[str, Any]]) -> None:
@@ -178,6 +196,7 @@ class LootManager:
         Validates, migrates in RAM, and emits EventType.LOOT_UPDATED.
         """
         from core.validators import validate_loot_list
+
         self.entries = validate_loot_list(entries)
         self._migrate_entries()
         self._publish_updated("replace")
@@ -185,6 +204,7 @@ class LootManager:
     def replace_entries_and_persist(self, entries: List[Dict[str, Any]]) -> None:
         """Persist a validated replacement before committing it to in-memory state."""
         from core.validators import validate_loot_list
+
         validated_entries = validate_loot_list(entries)
         if self._migrate_entries(validated_entries):
             logger.info("Migrated replacement loot entries before persistence.")
@@ -213,14 +233,14 @@ class LootManager:
             raise PersistenceError("Could not persist loot entries to storage.")
 
     def add_entry(
-        self, 
-        entry_type: str, 
-        title: str, 
-        content: str, 
-        target_ip: str = "", 
+        self,
+        entry_type: str,
+        title: str,
+        content: str,
+        target_ip: str = "",
         category: str = "misc",
         severity: str = "info",
-        **kwargs
+        **kwargs,
     ) -> Dict[str, Any]:
         """Creates and stores a new loot entry with category and severity classification."""
         if len(self.entries) >= MAX_LOOT_ENTRIES:
@@ -228,6 +248,7 @@ class LootManager:
                 f"The active project already contains the maximum of {MAX_LOOT_ENTRIES} loot entries."
             )
         from core.validators import VALID_SEVERITIES
+
         normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
         sev_clean = str(severity).lower().strip() if severity else "info"
@@ -235,8 +256,9 @@ class LootManager:
         clean_title = self._validate_user_text(title, "Loot title", MAX_TITLE_LENGTH)
         clean_content = self._validate_user_text(content, "Loot content", MAX_CONTENT_LENGTH)
         clean_target_ip = self._validate_user_text(target_ip, "Target IP", MAX_TARGET_IP_LENGTH)
-        
+
         from core.validators import format_timestamp
+
         time_format = kwargs.get("time_format", self.time_format)
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
@@ -260,6 +282,7 @@ class LootManager:
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
         """Updates fields of an existing entry by ID and persists changes."""
         from core.validators import VALID_SEVERITIES
+
         new_entries = [dict(e) for e in self.entries]
         updated_entry = None
         for entry in new_entries:
@@ -272,18 +295,24 @@ class LootManager:
                         entry["position"] = sum(
                             1
                             for candidate in new_entries
-                            if candidate is not entry and candidate.get("category") == entry["category"]
+                            if candidate is not entry
+                            and candidate.get("category") == entry["category"]
                         )
                 if "severity" in fields:
-                    raw_sev = str(fields["severity"]).lower().strip() if fields["severity"] else "info"
+                    raw_sev = (
+                        str(fields["severity"]).lower().strip() if fields["severity"] else "info"
+                    )
                     entry["severity"] = raw_sev if raw_sev in VALID_SEVERITIES else "info"
                 if "type" in fields:
                     raw_type = fields["type"]
-                    entry["type"] = TYPE_ALIASES.get(raw_type.lower(), raw_type) if raw_type else "note"
+                    entry["type"] = (
+                        TYPE_ALIASES.get(raw_type.lower(), raw_type) if raw_type else "note"
+                    )
                 if "title" in fields:
-                    entry["title"] = self._validate_user_text(
-                        fields["title"], "Loot title", MAX_TITLE_LENGTH
-                    ) or "Unbenannter Eintrag"
+                    entry["title"] = (
+                        self._validate_user_text(fields["title"], "Loot title", MAX_TITLE_LENGTH)
+                        or "Unbenannter Eintrag"
+                    )
                 if "content" in fields:
                     entry["content"] = self._validate_user_text(
                         fields["content"], "Loot content", MAX_CONTENT_LENGTH
@@ -294,7 +323,7 @@ class LootManager:
                     )
                 updated_entry = entry
                 break
-        
+
         if updated_entry is not None:
             self._migrate_entries(new_entries)
             if not self.storage.save_json("loot", new_entries):
@@ -303,7 +332,9 @@ class LootManager:
             self._publish_updated("update", updated_entry)
         return updated_entry
 
-    def reorder_entry(self, entry_id: str, category: str, target_index: int) -> Optional[Dict[str, Any]]:
+    def reorder_entry(
+        self, entry_id: str, category: str, target_index: int
+    ) -> Optional[Dict[str, Any]]:
         """Moves an entry to a category/index and persists both affected column orders."""
         if category not in VALID_CATEGORY_IDS:
             return None
@@ -371,21 +402,27 @@ class LootManager:
         return deleted_count
 
     def get_entries(
-        self, 
-        target_ip: Optional[str] = None, 
-        entry_type: Optional[str] = None, 
+        self,
+        target_ip: Optional[str] = None,
+        entry_type: Optional[str] = None,
         category: Optional[str] = None,
-        search_query: str = ""
+        search_query: str = "",
     ) -> List[Dict[str, Any]]:
         """Filters loot entries by target IP, type, category and search term."""
         results = self.entries
 
         if target_ip and target_ip != "all":
-            results = [e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")]
+            results = [
+                e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")
+            ]
 
         if entry_type and entry_type != "all":
             norm_type = TYPE_ALIASES.get(entry_type.lower(), entry_type)
-            results = [e for e in results if TYPE_ALIASES.get(e.get("type", "").lower(), e.get("type")) == norm_type]
+            results = [
+                e
+                for e in results
+                if TYPE_ALIASES.get(e.get("type", "").lower(), e.get("type")) == norm_type
+            ]
 
         if category and category != "all":
             results = [e for e in results if e.get("category") == category]
@@ -423,9 +460,10 @@ class LootManager:
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
         """DEPRECATED: Use core.report_builder.ReportBuilder instead.
-        
+
         Delegates to ReportBuilder for unified reporting.
         """
         from core.report_builder import ReportBuilder
+
         builder = ReportBuilder(loot_manager=self)
         return builder.export(output_path, target_ip=target_ip)

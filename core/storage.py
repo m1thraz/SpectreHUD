@@ -14,7 +14,6 @@ import copy
 import threading
 
 from core.atomic_write import atomic_write_json
-from core.validators import is_file_size_valid
 from core.logger import get_logger
 
 logger = get_logger("storage")
@@ -24,11 +23,13 @@ MAX_DEFAULT_STORAGE_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 class StorageError(Exception):
     """Base exception for all storage layer errors."""
+
     pass
 
 
 class PersistenceError(StorageError, RuntimeError):
     """Raised when data persistence to the underlying storage backend fails."""
+
     pass
 
 
@@ -123,7 +124,7 @@ class FileStorageBackend(StorageBackend):
         self,
         base_dir: Optional[Union[Path, str]] = None,
         single_file_path: Optional[Union[Path, str]] = None,
-        max_file_size: int = MAX_DEFAULT_STORAGE_FILE_SIZE
+        max_file_size: int = MAX_DEFAULT_STORAGE_FILE_SIZE,
     ):
         self.max_file_size = max_file_size
         self._lock = threading.RLock()
@@ -149,7 +150,9 @@ class FileStorageBackend(StorageBackend):
             raise ValueError("Resource name cannot be empty.")
         raw = str(resource_name).strip()
         if "/" in raw or "\\" in raw or ".." in raw or Path(raw).name != raw:
-            raise ValueError(f"Invalid resource name containing path traversal components: {resource_name!r}")
+            raise ValueError(
+                f"Invalid resource name containing path traversal components: {resource_name!r}"
+            )
         sanitized_name = raw
         if not sanitized_name.endswith(".json"):
             sanitized_name += ".json"
@@ -162,6 +165,7 @@ class FileStorageBackend(StorageBackend):
                 return None
 
             from core.validators import is_file_size_valid
+
             if not is_file_size_valid(target, self.max_file_size):
                 logger.error(
                     f"Storage file {target} exceeds maximum size limit of {self.max_file_size} bytes. Rejecting oversized file."

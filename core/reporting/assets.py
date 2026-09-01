@@ -20,7 +20,9 @@ MAX_TOTAL_IMAGE_BYTES: int = 50 * 1024 * 1024  # 50 MB total session budget
 class ImageEmbeddingBudget:
     """Tracks and enforces global image count and memory limits during HTML export."""
 
-    def __init__(self, max_images: int = MAX_EMBEDDED_IMAGES, max_total_bytes: int = MAX_TOTAL_IMAGE_BYTES):
+    def __init__(
+        self, max_images: int = MAX_EMBEDDED_IMAGES, max_total_bytes: int = MAX_TOTAL_IMAGE_BYTES
+    ):
         self.max_images = max_images
         self.max_total_bytes = max_total_bytes
         self.embedded_count: int = 0
@@ -36,6 +38,7 @@ class ImageEmbeddingBudget:
     def record(self, file_size: int) -> None:
         self.embedded_count += 1
         self.embedded_bytes += file_size
+
 
 REPORT_CSS = """
 :root {
@@ -456,7 +459,9 @@ def encode_image_base64(image_path: Path) -> Optional[str]:
         if not image_path.exists() or not image_path.is_file():
             return None
         if image_path.stat().st_size > MAX_EMBED_IMAGE_FILE_SIZE:
-            logger.warning(f"Image too large to embed as base64 ({image_path.stat().st_size} bytes): {image_path}")
+            logger.warning(
+                f"Image too large to embed as base64 ({image_path.stat().st_size} bytes): {image_path}"
+            )
             return None
 
         mime_type, _ = mimetypes.guess_type(str(image_path))

@@ -7,7 +7,6 @@ from core.project import ProjectManager
 
 
 class TestBoxArchiver(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.base_dir = Path(self.temp_dir.name) / "projects"
@@ -20,10 +19,12 @@ class TestBoxArchiver(unittest.TestCase):
     def test_archive_project_lifecycle(self):
         # 1. Create a project
         proj_dir = self.project_manager.create_project("ArchiveBoxTest", target_ip="10.10.10.77")
-        
+
         # 2. Add some files to subdirectories
         (proj_dir / "notes.md").write_text("# Test Notes\nFound user flag.", encoding="utf-8")
-        (proj_dir / "recon" / "nmap.txt").write_text("22/tcp open ssh\n80/tcp open http", encoding="utf-8")
+        (proj_dir / "recon" / "nmap.txt").write_text(
+            "22/tcp open ssh\n80/tcp open http", encoding="utf-8"
+        )
         (proj_dir / "loot" / "test_screen.png").write_bytes(b"\x89PNG\r\n\x1a\ndummy")
         (proj_dir / "loot" / "temp.tmp").write_text("temporary data", encoding="utf-8")
 

@@ -65,7 +65,9 @@ def test_restart_is_cancelled_when_transactional_quit_is_rejected():
         def request_quit(quit_app=True):
             return False
 
-    app = type("App", (), {"exit": lambda self, code: (_ for _ in ()).throw(AssertionError(code))})()
+    app = type(
+        "App", (), {"exit": lambda self, code: (_ for _ in ()).throw(AssertionError(code))}
+    )()
 
     assert request_application_restart(Window(), app) is False
 

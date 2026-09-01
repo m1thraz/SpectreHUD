@@ -1,9 +1,7 @@
 import os
-import json
 import unittest
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
 
 import pytest
 
@@ -20,9 +18,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
-from core.storage import PersistenceError
 from ui.main_window import MainWindow
-from ui.report_editor_tab import ReportEditorTab
 
 pytestmark = pytest.mark.integration
 
@@ -41,10 +37,10 @@ class TestWorkflowInvariants(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.base_path = Path(self.temp_dir.name)
-        
+
         self.config_dir = self.base_path / "config"
         self.projects_dir = self.base_path / "projects"
-        
+
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.snippet_mgr = SnippetManager()
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
@@ -58,12 +54,13 @@ class TestWorkflowInvariants(unittest.TestCase):
             loot_manager=self.loot_mgr,
             clipboard_watcher=self.clip_watcher,
             project_manager=self.project_mgr,
-            screenshot_manager=self.screen_mgr
+            screenshot_manager=self.screen_mgr,
         )
 
     def tearDown(self):
-        if hasattr(self, 'window') and self.window:
+        if hasattr(self, "window") and self.window:
             from unittest.mock import patch
+
             with patch("PyQt6.QtWidgets.QMessageBox.exec", return_value=0):
                 self.window.close()
         try:
@@ -80,26 +77,36 @@ class TestWorkflowInvariants(unittest.TestCase):
         NEVER leak into Project B or Project C, and must persist across project switches.
         """
         # 1. Setup Project Alpha
-        self.project_mgr.create_project("BoxAlpha", target_ip="10.10.10.101", attacker_ip="10.10.14.1", port="4444")
+        self.project_mgr.create_project(
+            "BoxAlpha", target_ip="10.10.10.101", attacker_ip="10.10.14.1", port="4444"
+        )
         self.window.app.switch_to_project("BoxAlpha")
-        
+
         self.loot_mgr.add_entry(
             entry_type="credentials",
             category="access",
             title="Alpha Admin",
             content="admin:AlphaSecret123!",
-            target_ip="10.10.10.101"
+            target_ip="10.10.10.101",
         )
         self.clip_watcher.add_entry("nmap -sC -sV 10.10.10.101", target_ip="10.10.10.101")
         self.window.app.save_current_project_state()
 
         # 2. Setup Project Beta
-        self.project_mgr.create_project("BoxBeta", target_ip="10.10.10.202", attacker_ip="10.10.14.2", port="8080")
+        self.project_mgr.create_project(
+            "BoxBeta", target_ip="10.10.10.202", attacker_ip="10.10.14.2", port="8080"
+        )
         self.window.app.switch_to_project("BoxBeta")
-        
+
         # Verify BoxBeta starts clean and isolated
-        self.assertEqual(len(self.loot_mgr.get_all_entries()), 0, "BoxBeta must not inherit BoxAlpha loot")
-        self.assertEqual(len(self.clip_watcher.get_all_history()), 0, "BoxBeta must not inherit BoxAlpha clipboard")
+        self.assertEqual(
+            len(self.loot_mgr.get_all_entries()), 0, "BoxBeta must not inherit BoxAlpha loot"
+        )
+        self.assertEqual(
+            len(self.clip_watcher.get_all_history()),
+            0,
+            "BoxBeta must not inherit BoxAlpha clipboard",
+        )
         self.assertEqual(self.window.var_bar.txt_target.text(), "10.10.10.202")
         self.assertEqual(self.window.var_bar.txt_port.text(), "8080")
 
@@ -108,7 +115,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             category="post_exploit",
             title="Beta Root Flag",
             content="HTB{b3t4_fl4g_9999}",
-            target_ip="10.10.10.202"
+            target_ip="10.10.10.202",
         )
         self.clip_watcher.add_entry("gobuster dir -u http://10.10.10.202", target_ip="10.10.10.202")
         self.window.app.save_current_project_state()
@@ -117,11 +124,11 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.window.app.switch_to_project("BoxAlpha")
         alpha_loot = self.loot_mgr.get_all_entries()
         alpha_clip = self.clip_watcher.get_all_history()
-        
+
         self.assertEqual(len(alpha_loot), 1)
         self.assertEqual(alpha_loot[0]["title"], "Alpha Admin")
         self.assertNotIn("Beta Root Flag", [e["title"] for e in alpha_loot])
-        
+
         self.assertEqual(len(alpha_clip), 1)
         self.assertIn("10.10.10.101", alpha_clip[0]["text"])
         self.assertEqual(self.window.var_bar.txt_target.text(), "10.10.10.101")
@@ -131,7 +138,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.window.app.switch_to_project("BoxBeta")
         beta_loot = self.loot_mgr.get_all_entries()
         beta_clip = self.clip_watcher.get_all_history()
-        
+
         self.assertEqual(len(beta_loot), 1)
         self.assertEqual(beta_loot[0]["title"], "Beta Root Flag")
         self.assertNotIn("Alpha Admin", [e["title"] for e in beta_loot])
@@ -182,7 +189,9 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.project_mgr.activate_project("BoxBackupTest")
 
         # Step 1: User writes manual writeup notes
-        manual_notes = "# Custom Writeup Notes\n\n- Manual exploit chain step 1\n- Critical pivot notes"
+        manual_notes = (
+            "# Custom Writeup Notes\n\n- Manual exploit chain step 1\n- Critical pivot notes"
+        )
         rfm.save(manual_notes, "BoxBackupTest")
         self.assertTrue(rfm.exists("BoxBackupTest"))
         self.assertFalse(rfm.get_backup_path("BoxBackupTest").exists())
@@ -193,7 +202,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             category="recon",
             title="FTP Anonymous",
             content="anonymous:guest",
-            target_ip="10.10.10.50"
+            target_ip="10.10.10.50",
         )
 
         regenerated_content = rfm.regenerate(self.loot_mgr, self.clip_watcher, "BoxBackupTest")
@@ -202,10 +211,12 @@ class TestWorkflowInvariants(unittest.TestCase):
         # 1. Backup was created
         backup_path = rfm.get_backup_path("BoxBackupTest")
         self.assertTrue(backup_path.exists(), "report.md.bak must exist after regeneration")
-        
+
         # 2. Backup contains 100% of the manual notes
         backup_content = backup_path.read_text(encoding="utf-8")
-        self.assertEqual(backup_content, manual_notes, "Backup must preserve original manual content")
+        self.assertEqual(
+            backup_content, manual_notes, "Backup must preserve original manual content"
+        )
 
         # 3. New report contains fresh loot
         self.assertIn("FTP Anonymous", regenerated_content)
@@ -215,7 +226,11 @@ class TestWorkflowInvariants(unittest.TestCase):
         restore_success = rfm.restore_backup("BoxBackupTest")
         self.assertTrue(restore_success)
         restored_content = rfm.load("BoxBackupTest")
-        self.assertEqual(restored_content, manual_notes, "Restored report must match original manual notes exactly")
+        self.assertEqual(
+            restored_content,
+            manual_notes,
+            "Restored report must match original manual notes exactly",
+        )
 
     # -------------------------------------------------------------------------
     # Invariant 4: Report Dirty State Protection Guard

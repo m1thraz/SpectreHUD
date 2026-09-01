@@ -13,13 +13,14 @@ class TestEventBus(unittest.TestCase):
         self.bus.subscribe(EventType.PROJECT_CHANGED, lambda d: received.append(d))
 
         self.bus.publish(EventType.PROJECT_CHANGED, {"name": "BoxAlpha", "ip": "10.10.10.50"})
-        
+
         self.assertEqual(len(received), 1)
         self.assertEqual(received[0]["name"], "BoxAlpha")
         self.assertEqual(received[0]["ip"], "10.10.10.50")
 
     def test_unsubscribe_explicit(self):
         received = []
+
         def handler(data):
             received.append(data)
 

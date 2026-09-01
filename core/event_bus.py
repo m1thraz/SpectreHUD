@@ -16,6 +16,7 @@ logger = get_logger("event_bus")
 
 class EventType(str, Enum):
     """Standardized event topics across SpectreHUD."""
+
     PROJECT_CHANGED = "project_changed"
     PROJECT_CREATED = "project_created"
     PROJECT_ACTIVATED = "project_activated"
@@ -98,7 +99,7 @@ class EventBus:
                 logger.error(
                     f"Error in EventBus subscriber '{getattr(cb, '__qualname__', str(cb))}' "
                     f"handling event '{key}': {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
     def clear(self) -> None:

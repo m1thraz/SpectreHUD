@@ -5,13 +5,13 @@ from pathlib import Path
 from core.clipboard_watcher import ClipboardWatcher
 from core.loot_manager import LootManager
 
-class TestClipboardWatcher(unittest.TestCase):
 
+class TestClipboardWatcher(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
-        
+
         self.storage_file = self.temp_path / "test_clip.json"
         self.watcher = ClipboardWatcher(storage_file=self.storage_file)
 
@@ -55,8 +55,14 @@ class TestClipboardWatcher(unittest.TestCase):
         self.assertEqual(self.watcher.get_all_history(), [])
 
     def test_filter_and_search(self):
-        self.watcher.add_entry("gobuster dir -u http://10.10.10.50/ -w /usr/share/wordlists/dirb/common.txt", target_ip="10.10.10.50")
-        self.watcher.add_entry("LinPEAS output:\n[+] SUID Binaries found:\n/usr/bin/pkexec\n/usr/bin/sudo", target_ip="10.10.10.50")
+        self.watcher.add_entry(
+            "gobuster dir -u http://10.10.10.50/ -w /usr/share/wordlists/dirb/common.txt",
+            target_ip="10.10.10.50",
+        )
+        self.watcher.add_entry(
+            "LinPEAS output:\n[+] SUID Binaries found:\n/usr/bin/pkexec\n/usr/bin/sudo",
+            target_ip="10.10.10.50",
+        )
         self.watcher.add_entry("cat /etc/passwd", target_ip="10.10.10.99")
 
         # Search query
@@ -78,14 +84,21 @@ class TestClipboardWatcher(unittest.TestCase):
         loot_mgr = LootManager(storage_file=loot_file)
         loot_mgr.add_entry("credentials", "SSH admin", "admin:SecretPass", "10.10.10.77")
         loot_mgr.add_entry("flag", "User Flag", "THM{flag_abc_123}", "10.10.10.77")
-        loot_mgr.add_entry("screenshot", "Dashboard Exploit", "![Dashboard Exploit](loot/screenshot_dash.png)", "10.10.10.77")
+        loot_mgr.add_entry(
+            "screenshot",
+            "Dashboard Exploit",
+            "![Dashboard Exploit](loot/screenshot_dash.png)",
+            "10.10.10.77",
+        )
 
         # Add clipboard history
         self.watcher.add_entry("nmap -p 22,80 10.10.10.77", target_ip="10.10.10.77")
         self.watcher.add_entry("ssh admin@10.10.10.77", target_ip="10.10.10.77")
 
         report_path = self.temp_path / "ctf_report.md"
-        result = self.watcher.export_report_markdown(report_path, target_ip="10.10.10.77", loot_manager=loot_mgr)
+        result = self.watcher.export_report_markdown(
+            report_path, target_ip="10.10.10.77", loot_manager=loot_mgr
+        )
 
         self.assertTrue(report_path.exists())
         content = report_path.read_text(encoding="utf-8")
@@ -124,6 +137,7 @@ class TestClipboardWatcher(unittest.TestCase):
         # Clear history
         self.watcher.clear_history()
         self.assertEqual(len(self.watcher.history), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

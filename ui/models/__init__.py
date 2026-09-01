@@ -8,8 +8,4 @@ from ui.models.loot_table_model import LootTableModel
 from ui.models.snippet_list_model import SnippetListModel
 from ui.models.history_table_model import HistoryTableModel
 
-__all__ = [
-    "LootTableModel",
-    "SnippetListModel",
-    "HistoryTableModel"
-]
+__all__ = ["LootTableModel", "SnippetListModel", "HistoryTableModel"]

@@ -20,6 +20,7 @@ logger = get_logger(__name__)
 @dataclass(frozen=True)
 class HotkeyConfig:
     """Immutable configuration for global hotkey mappings."""
+
     toggle: str = "<ctrl>+<cmd>+<"
     screenshot: str = "<ctrl>+<cmd>+x"
     quit: str = "<ctrl>+<cmd>+q"
@@ -46,7 +47,9 @@ def normalize_hotkey_for_pynput(hotkey_str: str) -> str:
             normalized_parts.append(p)
             continue
         clean_p = p.strip("<>")
-        if clean_p in ("ctrl", "cmd", "alt", "shift", "space", "enter", "tab", "esc") or (clean_p.startswith("f") and clean_p[1:].isdigit()):
+        if clean_p in ("ctrl", "cmd", "alt", "shift", "space", "enter", "tab", "esc") or (
+            clean_p.startswith("f") and clean_p[1:].isdigit()
+        ):
             normalized_parts.append(f"<{clean_p}>")
         else:
             normalized_parts.append(clean_p)
@@ -59,6 +62,7 @@ class HotkeyListener(QObject):
     Dynamic global hotkey listener supporting configurable key combinations
     via pynput.keyboard.GlobalHotKeys with hot-reload capability.
     """
+
     toggle_requested = pyqtSignal()
     screenshot_requested = pyqtSignal()
     quit_requested = pyqtSignal()
@@ -83,7 +87,9 @@ class HotkeyListener(QObject):
             return True
 
         self.config = new_config
-        logger.info(f"Updated hotkey config: Toggle='{self.config.toggle}', Snip='{self.config.screenshot}', Quit='{self.config.quit}'")
+        logger.info(
+            f"Updated hotkey config: Toggle='{self.config.toggle}', Snip='{self.config.screenshot}', Quit='{self.config.quit}'"
+        )
         if self._running:
             self.stop()
             self.start()

@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 import pytest
 from core.config import ConfigManager, DEFAULT_CONFIG
-from core.i18n import get_i18n, set_locale, get_locale, DEFAULT_LOCALE
+from core.i18n import set_locale, DEFAULT_LOCALE
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
@@ -11,7 +11,6 @@ from core.project import ProjectManager
 
 
 class TestI18nSnippets(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
@@ -50,18 +49,18 @@ class TestI18nSnippets(unittest.TestCase):
         mgr = SnippetManager(
             user_snippets_path=self.user_snippets_file,
             favorites_path=self.favorites_file,
-            language="en"
+            language="en",
         )
         self.assertEqual(mgr.language, "en")
         self.assertIn(" - EN", str(mgr.default_snippets_path))
-        
+
         # Add a custom snippet and favorite
         custom_snip = mgr.add_custom_snippet(
             title="My Custom Test Snippet",
             template="echo 'test'",
             description="A custom snippet",
             category="Custom Notes & Snippets",
-            tags=["test"]
+            tags=["test"],
         )
         mgr.toggle_favorite(custom_snip["id"])
         self.assertTrue(mgr.is_favorite(custom_snip["id"]))
@@ -73,7 +72,7 @@ class TestI18nSnippets(unittest.TestCase):
         mgr.set_language("de")
         self.assertEqual(mgr.language, "de")
         self.assertNotIn(" - EN", str(mgr.default_snippets_path))
-        
+
         # Custom snippet and favorite MUST be preserved!
         self.assertTrue(mgr.is_favorite(custom_snip["id"]))
         custom_found = [s for s in mgr.snippets if s.get("id") == custom_snip["id"]]
@@ -98,7 +97,7 @@ class TestI18nSnippets(unittest.TestCase):
         snip_mgr = SnippetManager(
             user_snippets_path=self.user_snippets_file,
             favorites_path=self.favorites_file,
-            language="en"
+            language="en",
         )
         loot_mgr = LootManager(storage_file=self.loot_file)
         clip_watcher = ClipboardWatcher(storage_file=self.clip_file)
@@ -109,7 +108,7 @@ class TestI18nSnippets(unittest.TestCase):
             snippet_manager=snip_mgr,
             loot_manager=loot_mgr,
             clipboard_watcher=clip_watcher,
-            project_manager=proj_mgr
+            project_manager=proj_mgr,
         )
 
         # Initial state should be English

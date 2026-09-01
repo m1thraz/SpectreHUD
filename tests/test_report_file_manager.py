@@ -17,15 +17,17 @@ from core.validators import MAX_REPORT_FILE_SIZE
 
 class FakeClipboardWatcher:
     """Minimal PyQt6-free stub for ClipboardWatcher."""
+
     def __init__(self, history: Optional[List[Dict[str, Any]]] = None):
         self.history = history or []
 
-    def get_history(self, target_ip: Optional[str] = None, filter_type: str = "all", search_query: str = "") -> List[Dict[str, Any]]:
+    def get_history(
+        self, target_ip: Optional[str] = None, filter_type: str = "all", search_query: str = ""
+    ) -> List[Dict[str, Any]]:
         return self.history
 
 
 class TestReportFileManager(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
@@ -40,14 +42,15 @@ class TestReportFileManager(unittest.TestCase):
     def tearDown(self):
         import logging
         import gc
+
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
         os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", ""]:
-            l = logging.getLogger(name)
-            for h in list(l.handlers):
+            log_obj = logging.getLogger(name)
+            for h in list(log_obj.handlers):
                 try:
+                    log_obj.removeHandler(h)
                     h.close()
-                    l.removeHandler(h)
                 except Exception:
                     pass
         gc.collect()
@@ -95,10 +98,10 @@ class TestReportFileManager(unittest.TestCase):
     def test_backup(self):
         self.project_mgr.create_project("BoxBeta")
         self.report_mgr.save("# Version 1", "BoxBeta")
-        
+
         ok = self.report_mgr.backup("BoxBeta")
         self.assertTrue(ok)
-        
+
         bak_path = self.report_mgr.get_backup_path("BoxBeta")
         self.assertTrue(bak_path.exists())
         self.assertEqual(bak_path.read_text(encoding="utf-8"), "# Version 1")
@@ -150,7 +153,7 @@ class TestReportFileManager(unittest.TestCase):
         from core.report_file_manager import ReportSaveError
 
         self.project_mgr.create_project("SaveFailBox")
-        
+
         # Mock save to simulate disk write failure during regenerate
         with patch.object(self.report_mgr, "save", return_value=False):
             with self.assertRaises(ReportSaveError):
@@ -187,7 +190,10 @@ class TestReportFileManager(unittest.TestCase):
         doc = ReportDocument(project_dir=proj_dir)
         doc.setMarkdown("![Screenshot](loot/screenshot_20260826_120000.png)")
 
-        loaded = doc.loadResource(int(QTextDocument.ResourceType.ImageResource), QUrl("loot/screenshot_20260826_120000.png"))
+        loaded = doc.loadResource(
+            int(QTextDocument.ResourceType.ImageResource),
+            QUrl("loot/screenshot_20260826_120000.png"),
+        )
         self.assertIsNotNone(loaded)
         self.assertIsInstance(loaded, QImage)
         self.assertEqual(loaded.width(), 200)
@@ -222,10 +228,14 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(tab.btn_export.text(), "Export...")
 
         out_html = self.temp_path / "exported_test.html"
-        with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_html), "HTML (*.html)")), \
-             patch.object(tab, "_select_export_type", return_value="html"), \
-             patch.object(tab, "_select_html_export_theme", return_value="light"), \
-             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
+        with (
+            patch.object(
+                QFileDialog, "getSaveFileName", return_value=(str(out_html), "HTML (*.html)")
+            ),
+            patch.object(tab, "_select_export_type", return_value="html"),
+            patch.object(tab, "_select_html_export_theme", return_value="light"),
+            patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
+        ):
             tab.btn_export.click()
 
         self.assertTrue(out_html.exists())

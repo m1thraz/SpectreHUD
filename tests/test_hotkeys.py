@@ -6,15 +6,10 @@ import unittest
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock, patch
-from core.hotkey_listener import (
-    HotkeyConfig,
-    HotkeyListener,
-    normalize_hotkey_for_pynput
-)
+from core.hotkey_listener import HotkeyConfig, HotkeyListener, normalize_hotkey_for_pynput
 
 
 class TestHotkeys(unittest.TestCase):
-
     def test_hotkey_config_immutability(self):
         cfg = HotkeyConfig(toggle="<ctrl>+<alt>+s", screenshot="<ctrl>+<shift>+x")
         self.assertEqual(cfg.toggle, "<ctrl>+<alt>+s")
@@ -85,5 +80,5 @@ class TestHotkeys(unittest.TestCase):
         self.assertEqual(len(quit_called), 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

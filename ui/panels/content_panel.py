@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
 from PyQt6.QtCore import Qt, QTimer, QSize
 from core.i18n import t
@@ -58,7 +58,7 @@ class ContentPanel(QWidget):
             t(
                 "privacy.warning",
                 "Privacy Notice: Copied passwords or personal data are logged while REC is active "
-                "(Pause with Ctrl+P or click REC: ON)."
+                "(Pause with Ctrl+P or click REC: ON).",
             )
         )
         self.lbl_warn.setTextFormat(Qt.TextFormat.PlainText)
@@ -76,9 +76,7 @@ class ContentPanel(QWidget):
         # Preserve the original render hierarchy used by the HUD glass effect.
         # The local transparent scroll-area surface allows the themed background
         # below the content zone to remain visible.
-        self.scroll_area.setStyleSheet(
-            "background: transparent; border: none;"
-        )
+        self.scroll_area.setStyleSheet("background: transparent; border: none;")
 
         self.content_container = ViewportBoundContent()
         self.content_layout = QVBoxLayout(self.content_container)
@@ -121,7 +119,9 @@ class ContentPanel(QWidget):
         empty_lbl = QLabel(message)
         empty_lbl.setTextFormat(Qt.TextFormat.PlainText)
         empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        empty_lbl.setStyleSheet("color: #6e7681; font-size: 13px; font-style: italic; padding: 40px 20px;")
+        empty_lbl.setStyleSheet(
+            "color: #6e7681; font-size: 13px; font-style: italic; padding: 40px 20px;"
+        )
         empty_lbl.setWordWrap(True)
         self.content_layout.addWidget(empty_lbl)
 

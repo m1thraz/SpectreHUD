@@ -1,27 +1,19 @@
 import os
-import json
-import time
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
-import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QWidget
-from PyQt6.QtGui import QImage, QPixmap, QColor
+from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager, InvalidProjectNameError
 from core.loot_manager import LootManager
-from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
-from core.report_file_manager import ReportFileManager, ReportBackupError
-from core.snippet_manager import SnippetManager
-from ui.main_window import MainWindow
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -72,7 +64,9 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         # Unwritable path simulation
         target_p = self.temp_path / "valid_unwritable_probe"
-        with patch("pathlib.Path.write_text", side_effect=PermissionError("Mock Permission Denied")):
+        with patch(
+            "pathlib.Path.write_text", side_effect=PermissionError("Mock Permission Denied")
+        ):
             with self.assertRaises(WorkspaceError):
                 validate_workspace_directory(target_p)
 
@@ -135,7 +129,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             parent_window=mock_window,
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            target_ip="10.10.10.10"
+            target_ip="10.10.10.10",
         )
 
         mock_window.save_current_project_state.assert_not_called()
@@ -163,7 +157,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         session_service = ProjectSessionService(
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            clipboard_watcher=self.clip_watcher
+            clipboard_watcher=self.clip_watcher,
         )
 
         self.project_mgr.create_project("BoxLoadNoWrite")
@@ -187,7 +181,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             "text": "single line command",
             "char_count": 999999,
             "lines_count": 999999,
-            "is_multiline": True
+            "is_multiline": True,
         }
         res = validate_clipboard_entry(malicious)
         self.assertIsNotNone(res)
@@ -207,9 +201,12 @@ class TestWorkflowRobustness(unittest.TestCase):
         c1 = ServiceContainer.create_production(config_dir=self.temp_path / "c1_cfg")
         c2 = ServiceContainer.create_production(config_dir=self.temp_path / "c2_cfg")
 
-        self.assertIsNot(c1.event_bus, c2.event_bus, "Container instances must not share singleton EventBus")
+        self.assertIsNot(
+            c1.event_bus, c2.event_bus, "Container instances must not share singleton EventBus"
+        )
 
         from core.logger import close_log_handlers
+
         close_log_handlers()
 
     # -------------------------------------------------------------------------

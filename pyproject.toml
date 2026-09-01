@@ -59,3 +59,32 @@ markers = [
     "integration: cross-component, real Qt window, subprocess, or OS-boundary tests",
     "release: distribution, wheel, installer, and release-artifact tests",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = [
+    ".venv",
+    ".wheel-venv",
+    "build",
+    "dist",
+    ".git",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    # E402: Module level import not at top of file
+    # Required for headless Qt env (QT_QPA_PLATFORM) and CLI dispatch before PyQt6 imports.
+    "E402",
+    # E501: Line length is formatted by ruff format; long URLs / docstrings preserved.
+    "E501",
+    # E203: Whitespace before ':' in slices
+    "E203",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F841"]
+
+

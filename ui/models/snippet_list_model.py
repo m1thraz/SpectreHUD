@@ -101,7 +101,9 @@ class SnippetListModel(QAbstractListModel):
             if s.get("id") == target_id:
                 self._snippets[row] = updated_snippet
                 idx = self.index(row, 0)
-                self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.UserRole])
+                self.dataChanged.emit(
+                    idx, idx, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.UserRole]
+                )
                 return True
         return False
 

@@ -8,13 +8,13 @@ from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES
 from core.storage import PersistenceError
 from unittest.mock import patch
 
-class TestLootManager(unittest.TestCase):
 
+class TestLootManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
-        
+
         self.storage_file = self.temp_path / "test_loot.json"
         self.loot_mgr = LootManager(storage_file=self.storage_file)
 
@@ -31,7 +31,7 @@ class TestLootManager(unittest.TestCase):
             entry_type="credentials",
             title="Domain Admin Creds",
             content="admin:Pass123",
-            severity="critical"
+            severity="critical",
         )
         self.assertEqual(entry["severity"], "critical")
 
@@ -49,7 +49,7 @@ class TestLootManager(unittest.TestCase):
             title="FTP Admin Login",
             content="admin:P@ssword123",
             target_ip="10.10.10.25",
-            category="access"
+            category="access",
         )
         self.assertIsNotNone(entry["id"])
         self.assertEqual(entry["category"], "access")
@@ -92,7 +92,9 @@ class TestLootManager(unittest.TestCase):
 
     def test_update_entry(self):
         """update_entry successfully updates fields and recategorizes."""
-        entry = self.loot_mgr.add_entry("note", "Old Title", "Old Content", target_ip="10.10.10.1", category="recon")
+        entry = self.loot_mgr.add_entry(
+            "note", "Old Title", "Old Content", target_ip="10.10.10.1", category="recon"
+        )
         entry_id = entry["id"]
 
         # Update title, content and recategorize to privesc
@@ -101,7 +103,7 @@ class TestLootManager(unittest.TestCase):
             title="New Title",
             content="New Content",
             category="privesc",
-            type="credentials"
+            type="credentials",
         )
         self.assertIsNotNone(updated)
         self.assertEqual(updated["title"], "New Title")
@@ -133,7 +135,7 @@ class TestLootManager(unittest.TestCase):
                 "title": "Legacy Admin",
                 "content": "admin:oldpass",
                 "target_ip": "10.10.10.10",
-                "timestamp": "2026-08-20 12:00:00"
+                "timestamp": "2026-08-20 12:00:00",
                 # Note: No 'category' field
             },
             {
@@ -143,8 +145,8 @@ class TestLootManager(unittest.TestCase):
                 "title": "Legacy Flag",
                 "content": "THM{old}",
                 "target_ip": "10.10.10.10",
-                "timestamp": "2026-08-20 12:05:00"
-            }
+                "timestamp": "2026-08-20 12:05:00",
+            },
         ]
         with open(legacy_file, "w", encoding="utf-8") as f:
             json.dump(raw_legacy_data, f)
@@ -164,8 +166,19 @@ class TestLootManager(unittest.TestCase):
     def test_replace_entries_and_persist_migrates_and_immediately_saves(self):
         """The explicitly persistent replacement API migrates entries and saves them."""
         legacy_list = [
-            {"id": "l_switch_1", "type": "credentials", "title": "Project Switch Cred", "content": "pass123"},
-            {"id": "l_switch_2", "type": "dir", "category": "bad_cat", "title": "Dir", "content": "/uploads"}
+            {
+                "id": "l_switch_1",
+                "type": "credentials",
+                "title": "Project Switch Cred",
+                "content": "pass123",
+            },
+            {
+                "id": "l_switch_2",
+                "type": "dir",
+                "category": "bad_cat",
+                "title": "Dir",
+                "content": "/uploads",
+            },
         ]
         self.loot_mgr.replace_entries_and_persist(legacy_list)
         self.assertEqual(len(self.loot_mgr.entries), 2)
@@ -183,15 +196,18 @@ class TestLootManager(unittest.TestCase):
     def test_replace_entries_persist_failure_does_not_mutate_memory(self):
         """A failed replacement write preserves both the prior RAM and disk state."""
         previous = self.loot_mgr.add_entry("note", "Previous", "must survive")
-        replacement = [{"id": "loot_new", "type": "note", "title": "New", "content": "must not commit"}]
+        replacement = [
+            {"id": "loot_new", "type": "note", "title": "New", "content": "must not commit"}
+        ]
 
         with patch.object(self.loot_mgr.storage, "save_json", return_value=False):
             with self.assertRaises(PersistenceError):
                 self.loot_mgr.replace_entries_and_persist(replacement)
 
-        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [previous["id"]])
+        self.assertEqual(
+            [entry["id"] for entry in self.loot_mgr.get_all_entries()], [previous["id"]]
+        )
         self.assertEqual(
             [entry["id"] for entry in self.loot_mgr.storage.load_json("loot")],
             [previous["id"]],
         )
-

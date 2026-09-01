@@ -3,12 +3,23 @@ from typing import Dict, Any, List, Set
 
 # Known global variable aliases that are supplied by the top VariableBar
 GLOBAL_PARAM_KEYS: Set[str] = {
-    "TARGET_IP", "TARGET", "RHOST", "RHOSTS", "IP",
-    "ATTACKER_IP", "LHOST", "HOST", "MY_IP",
-    "PORT", "LPORT", "RPORT",
-    "USERNAME", "USER",
-    "PASSWORD", "PASS",
-    "URL"
+    "TARGET_IP",
+    "TARGET",
+    "RHOST",
+    "RHOSTS",
+    "IP",
+    "ATTACKER_IP",
+    "LHOST",
+    "HOST",
+    "MY_IP",
+    "PORT",
+    "LPORT",
+    "RPORT",
+    "USERNAME",
+    "USER",
+    "PASSWORD",
+    "PASS",
+    "URL",
 }
 
 # Standard defaults/presets for common CTF parameters
@@ -51,8 +62,9 @@ SMART_PRESETS: Dict[str, str] = {
     "INTERFACE": "tun0",
     "PAYLOAD": "bash",
     "EXTENSIONS": "php,txt,html,js",
-    "HASH": "hash.txt"
+    "HASH": "hash.txt",
 }
+
 
 class TemplateEngine:
     """Interpolates variables, identifies placeholders, and handles interactive inline parameter substitution."""
@@ -119,7 +131,7 @@ class TemplateEngine:
             "PASSWORD": password if password else "{{PASSWORD}}",
             "PASS": password if password else "{{PASS}}",
             "WORDLIST": wordlist,
-            "URL": f"http://{target_ip}:{port}" if port and port != "80" else f"http://{target_ip}"
+            "URL": f"http://{target_ip}:{port}" if port and port != "80" else f"http://{target_ip}",
         }
 
         # Include custom variables if provided
@@ -134,7 +146,9 @@ class TemplateEngine:
         return result
 
     @staticmethod
-    def render_with_custom(template: str, variables: Dict[str, Any], custom_params: Dict[str, str]) -> str:
+    def render_with_custom(
+        template: str, variables: Dict[str, Any], custom_params: Dict[str, str]
+    ) -> str:
         """Fully renders template resolving both globals and custom inline parameters."""
         merged_vars = dict(variables)
         merged_vars.update(custom_params)

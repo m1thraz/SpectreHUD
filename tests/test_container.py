@@ -18,6 +18,7 @@ class TestContainer(unittest.TestCase):
 
     def tearDown(self):
         from core.logger import close_log_handlers
+
         close_log_handlers()
 
     def test_service_container_create_production(self):
@@ -35,16 +36,18 @@ class TestContainer(unittest.TestCase):
             self.assertIsNotNone(container.event_bus)
 
             from core.logger import close_log_handlers
+
             close_log_handlers()
 
     def test_service_container_uses_custom_workspace_dir(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             config_dir = Path(tmp_dir) / "config"
             custom_ws = Path(tmp_dir) / "my_custom_workspace"
-            
+
             # Pre-populate config with custom workspace
             from core.storage import FileStorageBackend
             from core.config import ConfigManager
+
             st = FileStorageBackend(base_dir=config_dir)
             cfg = ConfigManager(config_dir=config_dir, storage=st)
             cfg.set("workspace_dir", str(custom_ws))
@@ -53,12 +56,12 @@ class TestContainer(unittest.TestCase):
             self.assertEqual(container.project_manager.base_dir.resolve(), custom_ws.resolve())
 
             from core.logger import close_log_handlers
+
             close_log_handlers()
 
     def test_service_container_create_isolated_test_container(self):
         container = ServiceContainer.create_isolated_test_container(
-            initial_config={"target_ip": "192.168.1.100", "theme": "cyber_dark"},
-            language="en"
+            initial_config={"target_ip": "192.168.1.100", "theme": "cyber_dark"}, language="en"
         )
 
         self.assertEqual(container.config_manager.get("target_ip"), "192.168.1.100")
@@ -70,7 +73,7 @@ class TestContainer(unittest.TestCase):
             entry_type="credentials",
             title="InMem Root",
             content="root:toor",
-            target_ip="192.168.1.100"
+            target_ip="192.168.1.100",
         )
         self.assertTrue(bool(entry["id"]))
         self.assertEqual(len(container.loot_manager.get_all_entries()), 1)
@@ -78,9 +81,10 @@ class TestContainer(unittest.TestCase):
     def test_pure_in_memory_isolation_no_disk_pollution(self):
         """Finding 5: In-memory container must use InMemoryStorageBackend without touching user default paths."""
         from core.storage import InMemoryStorageBackend
+
         container = ServiceContainer.create_isolated_test_container()
         self.assertIsInstance(container.storage, InMemoryStorageBackend)
-        
+
         # Adding entries in memory should not create user files on disk
         clip = container.clipboard_watcher.add_entry("whoami")
         self.assertIsNotNone(clip)
@@ -89,8 +93,7 @@ class TestContainer(unittest.TestCase):
     @pytest.mark.integration
     def test_main_window_with_in_memory_container(self):
         container = ServiceContainer.create_isolated_test_container(
-            initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"},
-            language="en"
+            initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"}, language="en"
         )
         window = MainWindow(container=container)
         self.assertIsNotNone(window.app)

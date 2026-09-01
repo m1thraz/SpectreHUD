@@ -26,12 +26,14 @@ def exit_for_cli_argument(argv: list[str]) -> None:
         write_cli([f"SpectreHUD {APP_VERSION}"])
         raise SystemExit(0)
     if "--help" in argv or "-h" in argv:
-        write_cli([
-            "SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD",
-            "Usage: spectrehud [OPTIONS]",
-            "",
-            "Options:",
-            "  -h, --help     Show this message and exit",
-            "  -v, --version  Show version and exit",
-        ])
+        write_cli(
+            [
+                "SpectreHUD - Sleek CTF Cheatsheet & Session Loot Overlay HUD",
+                "Usage: spectrehud [OPTIONS]",
+                "",
+                "Options:",
+                "  -h, --help     Show this message and exit",
+                "  -v, --version  Show version and exit",
+            ]
+        )
         raise SystemExit(0)

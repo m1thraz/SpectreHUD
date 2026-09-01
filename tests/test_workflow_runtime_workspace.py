@@ -3,14 +3,13 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
 
 import pytest
 
 # Ensure Qt runs headlessly in test environments
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication
 from unittest.mock import patch
 
 from core.config import ConfigManager
@@ -22,7 +21,6 @@ from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
 from core.storage import PersistenceError
 from ui.main_window import MainWindow
-from ui.report_editor_tab import ReportEditorTab
 
 pytestmark = pytest.mark.integration
 
@@ -41,10 +39,10 @@ class TestWorkflowInvariants(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.base_path = Path(self.temp_dir.name)
-        
+
         self.config_dir = self.base_path / "config"
         self.projects_dir = self.base_path / "projects"
-        
+
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.snippet_mgr = SnippetManager()
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
@@ -58,12 +56,13 @@ class TestWorkflowInvariants(unittest.TestCase):
             loot_manager=self.loot_mgr,
             clipboard_watcher=self.clip_watcher,
             project_manager=self.project_mgr,
-            screenshot_manager=self.screen_mgr
+            screenshot_manager=self.screen_mgr,
         )
 
     def tearDown(self):
-        if hasattr(self, 'window') and self.window:
+        if hasattr(self, "window") and self.window:
             from unittest.mock import patch
+
             with patch("PyQt6.QtWidgets.QMessageBox.exec", return_value=0):
                 self.window.close()
         try:
@@ -96,7 +95,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             category="recon",
             title="Nmap Port Scan Screenshot",
             content="![Nmap Port Scan Screenshot](loot/screenshot_20260825_120000.png)",
-            target_ip="10.10.10.77"
+            target_ip="10.10.10.77",
         )
         self.assertEqual(entry["type"], "screenshot")
 
@@ -105,7 +104,9 @@ class TestWorkflowInvariants(unittest.TestCase):
         report_text = rfm.regenerate(self.loot_mgr, self.clip_watcher, "BoxScreenTest")
 
         # Invariant: Image embedding must be preserved in markdown report
-        self.assertIn("![Nmap Port Scan Screenshot](loot/screenshot_20260825_120000.png)", report_text)
+        self.assertIn(
+            "![Nmap Port Scan Screenshot](loot/screenshot_20260825_120000.png)", report_text
+        )
         self.assertTrue((proj_dir / "loot" / "screenshot_20260825_120000.png").exists())
 
     # -------------------------------------------------------------------------
@@ -120,7 +121,9 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.project_mgr.create_project("BoxSingleTruth", target_ip="10.10.10.77")
         self.window.app.switch_to_project("BoxSingleTruth")
 
-        self.loot_mgr.add_entry(entry_type="note", title="Secret Note", content="confidential", category="recon")
+        self.loot_mgr.add_entry(
+            entry_type="note", title="Secret Note", content="confidential", category="recon"
+        )
         self.clip_watcher.add_entry("curl http://10.10.10.77/admin", target_ip="10.10.10.77")
         self.window.app.save_current_project_state()
 
@@ -133,7 +136,6 @@ class TestWorkflowInvariants(unittest.TestCase):
         config_dir = self.config_mgr.config_dir
         self.assertFalse((config_dir / "loot_sessions.json").exists())
         self.assertFalse((config_dir / "clipboard_history.json").exists())
-
 
     # -------------------------------------------------------------------------
     # Invariant 7 (v15-P0): Workspace switch — active project validated in new workspace
@@ -208,19 +210,27 @@ class TestWorkflowInvariants(unittest.TestCase):
             "BoxNewSession",
             {
                 "target_ip": "10.10.10.20",
-                "loot": [{"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}],
+                "loot": [
+                    {"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}
+                ],
                 "clipboard_history": [{"id": "clip_new", "text": "id", "target_ip": "10.10.10.20"}],
             },
         )
 
-        with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
+        with patch.object(
+            self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")
+        ):
             with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
 
         self.assertEqual(self.project_mgr.base_dir, old_base)
         self.assertEqual(self.project_mgr.get_active_project(), "BoxOldSession")
-        self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [old_loot["id"]])
-        self.assertEqual([entry["id"] for entry in self.clip_watcher.get_all_history()], [old_history["id"]])
+        self.assertEqual(
+            [entry["id"] for entry in self.loot_mgr.get_all_entries()], [old_loot["id"]]
+        )
+        self.assertEqual(
+            [entry["id"] for entry in self.clip_watcher.get_all_history()], [old_history["id"]]
+        )
         self.assertEqual(self.window.var_bar.txt_target.text(), "10.10.10.10")
 
     def test_workspace_config_failure_does_not_persist_new_workspace_registry(self):
@@ -232,7 +242,9 @@ class TestWorkflowInvariants(unittest.TestCase):
         new_manager = ProjectManager(base_dir=new_workspace, config_dir=new_config)
         new_manager.create_project("BoxRegistrySideEffect")
 
-        with patch.object(self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")):
+        with patch.object(
+            self.config_mgr, "set", side_effect=PersistenceError("config disk unavailable")
+        ):
             with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning"):
                 self.window.app._on_settings_applied({"workspace_dir": str(new_workspace)})
 
@@ -244,4 +256,3 @@ class TestWorkflowInvariants(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

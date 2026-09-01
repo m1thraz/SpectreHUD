@@ -3,7 +3,6 @@ from core.fuzzy_matcher import FuzzyMatcher
 
 
 class TestFuzzyMatcher(unittest.TestCase):
-
     def setUp(self):
         self.sample_snippets = [
             {
@@ -12,7 +11,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "nmap -sC -sV -oN nmap.txt {{TARGET_IP}}",
                 "description": "Scans top 1000 ports with default safe scripts and version detection",
                 "category": "Network & Recon",
-                "tags": ["recon", "nmap", "portscan", "network"]
+                "tags": ["recon", "nmap", "portscan", "network"],
             },
             {
                 "id": "2",
@@ -20,7 +19,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "sqlmap -u {{TARGET_URL}} --dump --batch",
                 "description": "Automated SQL injection tool to dump database tables",
                 "category": "Web Exploitation",
-                "tags": ["web", "sql", "sqli", "injection"]
+                "tags": ["web", "sql", "sqli", "injection"],
             },
             {
                 "id": "3",
@@ -28,7 +27,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "curl http://{{TARGET_IP}}/shell.php?cmd={{COMMAND}}",
                 "description": "Execute arbitrary bash commands via PHP web shell backdoor",
                 "category": "Web Exploitation",
-                "tags": ["web", "rce", "webshell", "exploit"]
+                "tags": ["web", "rce", "webshell", "exploit"],
             },
             {
                 "id": "4",
@@ -36,7 +35,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "ffuf -u http://{{TARGET_IP}}/page.php?file=FUZZ -w {{WORDLIST}}",
                 "description": "Fuzzing parameter for directory traversal and LFI vulnerabilities",
                 "category": "Web Exploitation",
-                "tags": ["web", "lfi", "traversal", "ffuf"]
+                "tags": ["web", "lfi", "traversal", "ffuf"],
             },
             {
                 "id": "5",
@@ -44,7 +43,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "winpeas.exe quiet cmd fast",
                 "description": "Automated Windows local privilege escalation enumeration binary",
                 "category": "Windows & Active Directory",
-                "tags": ["windows", "privesc", "winpeas", "ad"]
+                "tags": ["windows", "privesc", "winpeas", "ad"],
             },
             {
                 "id": "6",
@@ -52,7 +51,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "find / -perm -u=s -type f 2>/dev/null",
                 "description": "Find binaries with SUID bit set for Linux privilege escalation",
                 "category": "Linux & Shells",
-                "tags": ["linux", "privesc", "suid", "enum"]
+                "tags": ["linux", "privesc", "suid", "enum"],
             },
             {
                 "id": "7",
@@ -60,8 +59,8 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "template": "chisel client {{LOCAL_HOST}}:8000 R:socks",
                 "description": "Fast TCP/UDP tunnel over HTTP with SSH-like port forwarding",
                 "category": "Network & Pivoting",
-                "tags": ["pivoting", "chisel", "tunnel", "network"]
-            }
+                "tags": ["pivoting", "chisel", "tunnel", "network"],
+            },
         ]
 
     def test_exact_tool_name_prioritization(self):

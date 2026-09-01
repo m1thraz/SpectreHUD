@@ -70,7 +70,10 @@ class HeaderPanel(QFrame):
         self.btn_mode_report.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_report.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_report.setToolTip(
-            t("header.report_tip", "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)")
+            t(
+                "header.report_tip",
+                "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
+            )
         )
         self.btn_mode_report.clicked.connect(lambda: self.mode_changed.emit("report"))
         layout.addWidget(self.btn_mode_report)
@@ -109,26 +112,46 @@ class HeaderPanel(QFrame):
         # Minimize button in HUD header
         self.btn_minimize = QPushButton("🗕")
         self.btn_minimize.setProperty("class", "MinimizeBtn")
-        self.btn_minimize.setToolTip(t("header.minimize_tip", "Overlay minimieren / verstecken (Esc)"))
+        self.btn_minimize.setToolTip(
+            t("header.minimize_tip", "Overlay minimieren / verstecken (Esc)")
+        )
         self.btn_minimize.clicked.connect(self.minimize_requested.emit)
         layout.addWidget(self.btn_minimize)
 
         # Close button: quits via the transactional shutdown path (save first)
         self.btn_close = QPushButton("✕")
         self.btn_close.setProperty("class", "CloseBtn")
-        self.btn_close.setToolTip(t("header.quit_tip", "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)"))
+        self.btn_close.setToolTip(
+            t(
+                "header.quit_tip",
+                "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)",
+            )
+        )
         self.btn_close.clicked.connect(self.close_requested.emit)
         layout.addWidget(self.btn_close)
 
     def set_active_mode(self, mode: str) -> None:
         """Updates visual active tab styling for the selected mode."""
         self.active_mode = mode
-        self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive" if mode == "cheatsheet" else "ModeSwitchBtn")
-        self.btn_mode_loot.setProperty("class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn")
-        self.btn_mode_history.setProperty("class", "ModeSwitchBtnActive" if mode == "history" else "ModeSwitchBtn")
-        self.btn_mode_report.setProperty("class", "ModeSwitchBtnActive" if mode == "report" else "ModeSwitchBtn")
+        self.btn_mode_cheatsheet.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "cheatsheet" else "ModeSwitchBtn"
+        )
+        self.btn_mode_loot.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn"
+        )
+        self.btn_mode_history.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "history" else "ModeSwitchBtn"
+        )
+        self.btn_mode_report.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "report" else "ModeSwitchBtn"
+        )
 
-        for btn in [self.btn_mode_cheatsheet, self.btn_mode_loot, self.btn_mode_history, self.btn_mode_report]:
+        for btn in [
+            self.btn_mode_cheatsheet,
+            self.btn_mode_loot,
+            self.btn_mode_history,
+            self.btn_mode_report,
+        ]:
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
@@ -160,7 +183,10 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.setText(t("header.mode_history", "History"))
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
         self.btn_mode_report.setToolTip(
-            t("header.report_tip", "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)")
+            t(
+                "header.report_tip",
+                "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
+            )
         )
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(
@@ -170,6 +196,13 @@ class HeaderPanel(QFrame):
         self.btn_settings.setToolTip(
             t("header.opt_tip", "Einstellungen & Optionen öffnen (Ctrl+,)")
         )
-        self.btn_minimize.setToolTip(t("header.minimize_tip", "Overlay minimieren / verstecken (Esc)"))
-        self.btn_close.setToolTip(t("header.quit_tip", "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)"))
+        self.btn_minimize.setToolTip(
+            t("header.minimize_tip", "Overlay minimieren / verstecken (Esc)")
+        )
+        self.btn_close.setToolTip(
+            t(
+                "header.quit_tip",
+                "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)",
+            )
+        )
         self.btn_project.setToolTip(t("header.project_tip", "Aktives CTF-Projekt / Box wechseln"))

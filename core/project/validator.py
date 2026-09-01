@@ -4,38 +4,44 @@ Validation and semantic sanitization for project names and workspace paths.
 
 import re
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 from core.validators import is_windows_reserved_name
 
 
 class ProjectError(Exception):
     """Base exception for all project management errors."""
+
     pass
 
 
 class ProjectExistsError(ProjectError, ValueError):
     """Raised when attempting to create a project whose sanitized name already exists."""
+
     pass
 
 
 class InvalidProjectNameError(ProjectError, ValueError):
     """Raised when a project name is empty, contains invalid characters, or matches Windows reserved names."""
+
     pass
 
 
 class ProjectNotFoundError(ProjectError, KeyError):
     """Raised when attempting to activate a project that does not exist."""
+
     pass
 
 
 class ProjectCreationError(ProjectError, RuntimeError):
     """Raised when project workspace creation fails transactionally."""
+
     pass
 
 
 class WorkspaceError(ProjectError, RuntimeError):
     """Raised when a workspace directory cannot be created, is inaccessible, or is unwritable."""
+
     pass
 
 
@@ -76,26 +82,36 @@ def validate_project_name(name: str) -> str:
     raw = str(name).strip()
 
     # Path separators, traversal sequences, or control characters are strictly invalid
-    if "/" in raw or "\\" in raw or ".." in raw or re.search(r'[\x00-\x1f\x7f-\x9f]', raw):
-        raise InvalidProjectNameError(f"Project name '{name}' contains forbidden characters or sequences.")
+    if "/" in raw or "\\" in raw or ".." in raw or re.search(r"[\x00-\x1f\x7f-\x9f]", raw):
+        raise InvalidProjectNameError(
+            f"Project name '{name}' contains forbidden characters or sequences."
+        )
 
     if is_windows_reserved_name(raw):
         raise InvalidProjectNameError(f"Project name '{name}' is a Windows reserved device name.")
 
     clean = _normalize_safe_identifier(raw)
 
-    if not clean or clean in {".", ".."} or not re.match(r'^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$', clean):
-        raise InvalidProjectNameError(f"Project name '{name}' contains no valid identifier characters.")
+    if (
+        not clean
+        or clean in {".", ".."}
+        or not re.match(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$", clean)
+    ):
+        raise InvalidProjectNameError(
+            f"Project name '{name}' contains no valid identifier characters."
+        )
 
     if is_windows_reserved_name(clean):
-        raise InvalidProjectNameError(f"Project name '{name}' resolves to a Windows reserved device name.")
+        raise InvalidProjectNameError(
+            f"Project name '{name}' resolves to a Windows reserved device name."
+        )
 
     return clean
 
 
 def _normalize_safe_identifier(value: str) -> str:
     """Normalizes a human label into the conservative project/file identifier alphabet."""
-    clean = re.sub(r'[^a-zA-Z0-9_\-\.]+', '_', value)
+    clean = re.sub(r"[^a-zA-Z0-9_\-\.]+", "_", value)
     return clean.strip("._")
 
 

@@ -20,14 +20,19 @@ class CommandEditDialog(BaseHudDialog):
 
     def _build_editor(self, command: str) -> None:
         hint = QLabel(
-            t("command_edit.description", "Adjust the rendered command. The original snippet is not changed.")
+            t(
+                "command_edit.description",
+                "Adjust the rendered command. The original snippet is not changed.",
+            )
         )
         hint.setWordWrap(True)
         self.body_layout.addWidget(hint)
 
         self.txt_command = QPlainTextEdit(command)
         self.txt_command.setObjectName("CommandEditInput")
-        self.txt_command.setPlaceholderText(t("command_edit.placeholder", "Adjust command before copying..."))
+        self.txt_command.setPlaceholderText(
+            t("command_edit.placeholder", "Adjust command before copying...")
+        )
         self.txt_command.setMinimumHeight(210)
         self.body_layout.addWidget(self.txt_command)
 

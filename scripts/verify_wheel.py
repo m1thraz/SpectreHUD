@@ -72,10 +72,13 @@ REQUIRED_FILES = [
 def get_project_version() -> str:
     """Reads the release version without importing application code."""
     pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
-    match = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+    match = re.search(
+        r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE
+    )
     if not match:
         raise RuntimeError("Could not determine the project version from pyproject.toml")
     return match.group(1)
+
 
 def verify_wheel(wheel_path: Path) -> bool:
     print(f"[*] Inspecting Wheel: {wheel_path.name}")
@@ -109,8 +112,11 @@ def verify_wheel(wheel_path: Path) -> bool:
             print("[-] Error: lightweight SpectreHUD entry point not found in entry_points.txt")
             return False
 
-    print("[+] All required modules, package data, controllers, and entry points verified successfully!")
+    print(
+        "[+] All required modules, package data, controllers, and entry points verified successfully!"
+    )
     return True
+
 
 def main():
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dist")
@@ -129,6 +135,7 @@ def main():
 
     if not verify_wheel(wheel_path):
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

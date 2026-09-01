@@ -58,13 +58,22 @@ class SearchPanel(QFrame):
         """Updates the search input placeholder text according to current mode."""
         if mode == "cheatsheet":
             self.search_bar.txt_search.setPlaceholderText(
-                t("search.cheatsheet_placeholder", "Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...")
+                t(
+                    "search.cheatsheet_placeholder",
+                    "Befehl, Tool oder Syntax suchen (z. B. 'curl', 'nmap', 'sql')...",
+                )
             )
         elif mode == "loot":
             self.search_bar.txt_search.setPlaceholderText(
-                t("search.loot_placeholder", "Session Loot, Credentials, Hashes & Notizen durchsuchen...")
+                t(
+                    "search.loot_placeholder",
+                    "Session Loot, Credentials, Hashes & Notizen durchsuchen...",
+                )
             )
         elif mode == "history":
             self.search_bar.txt_search.setPlaceholderText(
-                t("search.history_placeholder", "Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...")
+                t(
+                    "search.history_placeholder",
+                    "Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...",
+                )
             )

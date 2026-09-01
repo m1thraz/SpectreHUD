@@ -2,6 +2,7 @@
 Menu Action Data Transfer Objects (DTO) for UI-independent controllers.
 Allows controllers to define actions, menus, and toolbars without instantiating Qt widgets.
 """
+
 from dataclasses import dataclass
 from typing import Optional, Callable, Any
 
@@ -9,6 +10,7 @@ from typing import Optional, Callable, Any
 @dataclass
 class MenuAction:
     """Represents a generic menu or toolbar action independent of any UI framework."""
+
     id: str
     text: str = ""
     icon: Optional[str] = None

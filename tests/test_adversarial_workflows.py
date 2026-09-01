@@ -1,27 +1,21 @@
 import os
-import json
-import time
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
-from core.report_file_manager import ReportFileManager, ReportBackupError
-from core.snippet_manager import SnippetManager
-from ui.main_window import MainWindow
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -174,9 +168,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         traversal_url = QUrl("../BoxReference/loot/screenshot_20260115_143022.png")
         absolute_url = QUrl.fromLocalFile(str(reference_screenshot.resolve()))
         for image_url in (traversal_url, absolute_url):
-            loaded = document.loadResource(
-                int(QTextDocument.ResourceType.ImageResource), image_url
-            )
+            loaded = document.loadResource(int(QTextDocument.ResourceType.ImageResource), image_url)
             self.assertNotIsInstance(loaded, QImage)
 
     # -------------------------------------------------------------------------
@@ -192,7 +184,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         rfm = ReportFileManager(self.project_mgr)
         self.project_mgr.create_project("BoxSaveBomb")
-        
+
         # Simulate write failure during atomic save
         with patch.object(rfm, "save", return_value=False):
             with self.assertRaises(ReportSaveError):
@@ -225,7 +217,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                     parent_window=QWidget(),
                     project_manager=self.project_mgr,
                     loot_manager=self.loot_mgr,
-                    target_ip="10.10.10.99"
+                    target_ip="10.10.10.99",
                 )
 
         self.assertEqual(len(self.loot_mgr.get_all_entries()), 0)
@@ -244,12 +236,16 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.project_mgr.create_project("BoxSaveErr")
 
         # State writes are owned by ProjectStateStore after the repository split.
-        with patch("core.project.state_store.atomic_write_json", return_value=False), \
-             patch("core.project.state_store.atomic_write_bytes", return_value=False):
+        with (
+            patch("core.project.state_store.atomic_write_json", return_value=False),
+            patch("core.project.state_store.atomic_write_bytes", return_value=False),
+        ):
             saved = self.project_mgr.save_project_state("BoxSaveErr", {"target_ip": "1.2.3.4"})
             self.assertFalse(saved)
 
-            session_saved = self.session_service.save_project_session({"target_ip": "1.2.3.4"}, "BoxSaveErr")
+            session_saved = self.session_service.save_project_session(
+                {"target_ip": "1.2.3.4"}, "BoxSaveErr"
+            )
             self.assertFalse(session_saved)
 
     # -------------------------------------------------------------------------

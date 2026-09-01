@@ -1,19 +1,25 @@
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPlainTextEdit, QPushButton, QComboBox, QWidget, QMessageBox
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QComboBox,
+    QWidget,
+    QMessageBox,
 )
-from PyQt6.QtCore import Qt
 from typing import List, Dict, Any, Optional
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
+
 
 class AddSnippetDialog(BaseHudDialog):
     """Dialog to create and save a new custom snippet with template variables."""
 
     def __init__(self, existing_categories: List[Dict[str, Any]], parent: Optional[QWidget] = None):
         super().__init__(
-            title=t("snippet_dialog.title", "SPECTRE // ADD NEW COMMAND"),
-            parent=parent
+            title=t("snippet_dialog.title", "SPECTRE // ADD NEW COMMAND"), parent=parent
         )
         self.setMinimumWidth(540)
         self.resize(560, 480)
@@ -73,7 +79,7 @@ class AddSnippetDialog(BaseHudDialog):
         lbl_tmpl = QLabel(
             t(
                 "snippet_dialog.lbl_template",
-                "Command / Template (supports {{TARGET_IP}}, {{ATTACKER_IP}}, {{PORT}}, {{WORDLIST}}):"
+                "Command / Template (supports {{TARGET_IP}}, {{ATTACKER_IP}}, {{PORT}}, {{WORDLIST}}):",
             )
         )
         lbl_tmpl.setProperty("class", "FormLabel")
@@ -104,9 +110,7 @@ class AddSnippetDialog(BaseHudDialog):
         layout.addWidget(lbl_tags)
 
         self.txt_tags = QLineEdit()
-        self.txt_tags.setPlaceholderText(
-            t("snippet_dialog.ph_tags", "e.g. nmap, udp, recon")
-        )
+        self.txt_tags.setPlaceholderText(t("snippet_dialog.ph_tags", "e.g. nmap, udp, recon"))
         layout.addWidget(self.txt_tags)
 
         # Action Buttons
@@ -135,14 +139,14 @@ class AddSnippetDialog(BaseHudDialog):
             QMessageBox.warning(
                 self,
                 t("dialog.error", "Error"),
-                t("snippet_dialog.err_title", "Please enter a title for the command.")
+                t("snippet_dialog.err_title", "Please enter a title for the command."),
             )
             return
         if not self.txt_template.toPlainText().strip():
             QMessageBox.warning(
                 self,
                 t("dialog.error", "Error"),
-                t("snippet_dialog.err_template", "Please enter the template command.")
+                t("snippet_dialog.err_template", "Please enter the template command."),
             )
             return
         self.accept()
@@ -157,5 +161,5 @@ class AddSnippetDialog(BaseHudDialog):
             "subcategory": self.txt_subcategory.text().strip() or "Allgemein",
             "template": self.txt_template.toPlainText().strip(),
             "description": self.txt_description.text().strip(),
-            "tags": tags
+            "tags": tags,
         }

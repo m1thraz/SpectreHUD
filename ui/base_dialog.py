@@ -1,10 +1,7 @@
 from typing import Optional
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QMouseEvent, QKeySequence, QShortcut
-from PyQt6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QFrame
-)
+from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from core.i18n import t
 
 
@@ -17,12 +14,13 @@ class BaseHudDialog(QDialog):
     def __init__(self, title: str = "SPECTRE // DIALOG", parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.dialog_title_text = title
-        
+
         # Frameless translucent dialog window
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         from ui.styles import get_app_icon
+
         app_icon = get_app_icon()
         if not app_icon.isNull():
             self.setWindowIcon(app_icon)
@@ -45,7 +43,7 @@ class BaseHudDialog(QDialog):
         # Main HUD frame with cyan border and dark acrylic background
         self.hud_frame = QFrame()
         self.hud_frame.setObjectName("DialogHudFrame")
-        
+
         frame_layout = QVBoxLayout(self.hud_frame)
         frame_layout.setContentsMargins(0, 0, 0, 0)
         frame_layout.setSpacing(0)
@@ -92,9 +90,14 @@ class BaseHudDialog(QDialog):
         if event.button() == Qt.MouseButton.LeftButton:
             header_rect = self.header_bar.rect()
             header_global_pos = self.header_bar.mapToGlobal(QPoint(0, 0))
-            if event.globalPosition().toPoint().y() < header_global_pos.y() + header_rect.height() + 10:
+            if (
+                event.globalPosition().toPoint().y()
+                < header_global_pos.y() + header_rect.height() + 10
+            ):
                 self._is_dragging = True
-                self._drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                self._drag_position = (
+                    event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                )
                 event.accept()
                 return
         super().mousePressEvent(event)

@@ -29,9 +29,7 @@ def test_reporting_layer_does_not_import_ui():
     violations = []
     for path in sorted(REPORTING_ROOT.rglob("*.py")):
         for line, module in _ui_imports(path):
-            violations.append(
-                f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}"
-            )
+            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
 
     assert violations == [], "\n".join(violations)
 
@@ -49,10 +47,7 @@ def test_report_editor_does_not_own_concrete_export_adapters():
     violations = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            imported_names = {
-                alias.name.rsplit(".", 1)[-1]
-                for alias in node.names
-            }
+            imported_names = {alias.name.rsplit(".", 1)[-1] for alias in node.names}
             for name in sorted(imported_names & forbidden_names):
                 violations.append(f"{REPORT_EDITOR.name}:{node.lineno} imports {name}")
 

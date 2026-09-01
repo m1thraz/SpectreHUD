@@ -9,13 +9,15 @@ from typing import Any, Union
 def _secure_chmod(path: Path, mode: int = 0o600) -> None:
     """Sets restrictive file permissions (0o600) on POSIX systems; safe fallback on Windows."""
     try:
-        if os.name == 'posix':
+        if os.name == "posix":
             os.chmod(path, mode)
     except (OSError, NotImplementedError):
         pass
 
 
-def _replace_file_with_retry(src: Path, dst: Path, max_retries: int = 5, retry_delay: float = 0.02) -> None:
+def _replace_file_with_retry(
+    src: Path, dst: Path, max_retries: int = 5, retry_delay: float = 0.02
+) -> None:
     """
     Replaces dst with src atomically.
     On Windows, rapid file replacement or antivirus locking can cause transient PermissionErrors (WinError 5).
@@ -81,7 +83,9 @@ def atomic_write_bytes(filepath: Union[str, Path], content: bytes) -> bool:
         raise e
 
 
-def atomic_write_json(filepath: Union[str, Path], data: Any, indent: int = 2, ensure_ascii: bool = False) -> bool:
+def atomic_write_json(
+    filepath: Union[str, Path], data: Any, indent: int = 2, ensure_ascii: bool = False
+) -> bool:
     """
     Atomically writes data as formatted JSON to target filepath with restrictive permissions (0o600).
     """

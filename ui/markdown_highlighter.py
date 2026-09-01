@@ -4,7 +4,13 @@ import re
 
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QSyntaxHighlighter
 
-from ui.styles.palette import CYBER_BLUE_LIGHT, CYBER_CYAN, STATUS_GREEN_LIGHT, TEXT_CODE, TEXT_MUTED
+from ui.styles.palette import (
+    CYBER_BLUE_LIGHT,
+    CYBER_CYAN,
+    STATUS_GREEN_LIGHT,
+    TEXT_CODE,
+    TEXT_MUTED,
+)
 
 
 class MarkdownHighlighter(QSyntaxHighlighter):
@@ -29,7 +35,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self.list_format = self._format(STATUS_GREEN_LIGHT)
 
     @staticmethod
-    def _format(color: str, bold: bool = False, italic: bool = False, font_family: str = "") -> QTextCharFormat:
+    def _format(
+        color: str, bold: bool = False, italic: bool = False, font_family: str = ""
+    ) -> QTextCharFormat:
         fmt = QTextCharFormat()
         fmt.setForeground(QColor(color))
         if bold:

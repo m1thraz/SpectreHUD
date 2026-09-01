@@ -2,11 +2,11 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QPushButton
+from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
@@ -16,6 +16,7 @@ from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
+
 
 class TestUI(unittest.TestCase):
     @classmethod
@@ -27,7 +28,7 @@ class TestUI(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.temp_path = Path(self.temp_dir.name)
-        
+
         # Set environment variables as fallback safety shield
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
         os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
@@ -64,11 +65,11 @@ class TestUI(unittest.TestCase):
         window = MainWindow(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
-            loot_manager=loot_manager, 
+            loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
-        
+
         # 1. Mode: Cheatsheet
         self.assertEqual(window.app.active_mode, "cheatsheet")
         self.assertGreater(len(window.cards), 0)
@@ -120,12 +121,13 @@ class TestUI(unittest.TestCase):
         # 6. Resizability and Edge Detection
         self.assertGreaterEqual(window.width(), 740)
         self.assertGreaterEqual(window.height(), 480)
-        
+
         # Test edge calculation
         from PyQt6.QtCore import QPoint
+
         edge_bottom_right = window._get_resize_edge(QPoint(window.width() - 2, window.height() - 2))
         self.assertEqual(edge_bottom_right, "bottom_right")
-        
+
         edge_center = window._get_resize_edge(QPoint(window.width() // 2, window.height() // 2))
         self.assertEqual(edge_center, "")
 
@@ -210,10 +212,14 @@ class TestUI(unittest.TestCase):
         self.assertFalse(tab.is_dirty())
         self.assertIn("Gespeichert", tab.lbl_status.text())
         self.assertTrue(report_file_manager.exists("BoxGamma"))
-        self.assertEqual(report_file_manager.load("BoxGamma"), "# Box Gamma Writeup\nInitial foothold via port 80.")
+        self.assertEqual(
+            report_file_manager.load("BoxGamma"),
+            "# Box Gamma Writeup\nInitial foothold via port 80.",
+        )
 
         # 4. Load project with existing content
         tab.load_project("BoxGamma")
-        self.assertEqual(tab.editor.toPlainText(), "# Box Gamma Writeup\nInitial foothold via port 80.")
+        self.assertEqual(
+            tab.editor.toPlainText(), "# Box Gamma Writeup\nInitial foothold via port 80."
+        )
         self.assertFalse(tab.is_dirty())
-

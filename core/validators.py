@@ -11,13 +11,13 @@ from datetime import datetime
 
 # Product size limits reject accidentally selected, corrupt, or impractically large files.
 MAX_PROJECT_STATE_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
-MAX_LOOT_FILE_SIZE: int = 10 * 1024 * 1024           # 10 MB
-MAX_CLIPBOARD_FILE_SIZE: int = 5 * 1024 * 1024       # 5 MB
-MAX_SNIPPETS_FILE_SIZE: int = 5 * 1024 * 1024        # 5 MB
-MAX_CONFIG_FILE_SIZE: int = 1 * 1024 * 1024          # 1 MB
-MAX_REGISTRY_FILE_SIZE: int = 2 * 1024 * 1024        # 2 MB
-MAX_REPORT_FILE_SIZE: int = 10 * 1024 * 1024         # 10 MB
-MAX_TEMPLATE_FILE_SIZE: int = 512 * 1024             # 512 KB
+MAX_LOOT_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
+MAX_CLIPBOARD_FILE_SIZE: int = 5 * 1024 * 1024  # 5 MB
+MAX_SNIPPETS_FILE_SIZE: int = 5 * 1024 * 1024  # 5 MB
+MAX_CONFIG_FILE_SIZE: int = 1 * 1024 * 1024  # 1 MB
+MAX_REGISTRY_FILE_SIZE: int = 2 * 1024 * 1024  # 2 MB
+MAX_REPORT_FILE_SIZE: int = 10 * 1024 * 1024  # 10 MB
+MAX_TEMPLATE_FILE_SIZE: int = 512 * 1024  # 512 KB
 
 # Persisted collection and field limits keep normal project files responsive.
 MAX_LOOT_ENTRIES: int = 1000
@@ -25,7 +25,7 @@ MAX_CLIPBOARD_ENTRIES: int = 500
 MAX_USER_SNIPPETS: int = 500
 
 MAX_TITLE_LENGTH: int = 256
-MAX_CONTENT_LENGTH: int = 128 * 1024        # 128 KB
+MAX_CONTENT_LENGTH: int = 128 * 1024  # 128 KB
 MAX_CLIPBOARD_TEXT_LENGTH: int = 64 * 1024  # 64 KB (matches live recorder)
 MAX_TARGET_IP_LENGTH: int = 128
 MAX_TIMESTAMP_LENGTH: int = 64
@@ -35,9 +35,28 @@ VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 
 # Windows reserved device names (case-insensitive, including stem checks like CON.txt)
 WINDOWS_RESERVED_DEVICE_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
-    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "COM5",
+    "COM6",
+    "COM7",
+    "COM8",
+    "COM9",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "LPT4",
+    "LPT5",
+    "LPT6",
+    "LPT7",
+    "LPT8",
+    "LPT9",
 }
 
 
@@ -68,6 +87,7 @@ def is_file_size_valid(file_path: Any, max_bytes: int) -> bool:
     """
     try:
         from pathlib import Path
+
         p = Path(file_path)
         if not p.exists():
             return False
@@ -95,7 +115,9 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     title = str(entry.get("title") or "Unbenannter Eintrag").strip()[:MAX_TITLE_LENGTH]
     content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
-    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
+    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[
+        :MAX_TIMESTAMP_LENGTH
+    ]
     try:
         position = max(0, int(entry.get("position", 0)))
     except (TypeError, ValueError):
@@ -142,8 +164,10 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
 
     entry_id = str(entry.get("id") or "")[:64]
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
-    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[:MAX_TIMESTAMP_LENGTH]
-    
+    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[
+        :MAX_TIMESTAMP_LENGTH
+    ]
+
     # Derive canonical metadata strictly from text content
     char_count = len(text)
     lines_count = text.count("\n") + 1
@@ -156,11 +180,13 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "timestamp": timestamp,
         "lines_count": lines_count,
         "char_count": char_count,
-        "is_multiline": is_multiline
+        "is_multiline": is_multiline,
     }
 
 
-def validate_clipboard_list(data: Any, max_entries: int = MAX_CLIPBOARD_ENTRIES) -> List[Dict[str, Any]]:
+def validate_clipboard_list(
+    data: Any, max_entries: int = MAX_CLIPBOARD_ENTRIES
+) -> List[Dict[str, Any]]:
     """Validates, normalizes, and caps a list of clipboard history entries."""
     if not isinstance(data, list):
         return []
@@ -192,7 +218,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "created_at": now_str,
         "updated_at": now_str,
         "loot": [],
-        "clipboard_history": []
+        "clipboard_history": [],
     }
 
     if not isinstance(data, dict):
@@ -209,7 +235,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "created_at": str(data.get("created_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "updated_at": str(data.get("updated_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "loot": validate_loot_list(data.get("loot")),
-        "clipboard_history": validate_clipboard_list(data.get("clipboard_history"))
+        "clipboard_history": validate_clipboard_list(data.get("clipboard_history")),
     }
 
 
@@ -222,17 +248,21 @@ def validate_user_snippets(data: Any, max_entries: int = MAX_USER_SNIPPETS) -> L
         if isinstance(s, dict) and s.get("title") and s.get("template"):
             title = str(s.get("title"))[:MAX_TITLE_LENGTH]
             template = str(s.get("template"))[:MAX_CONTENT_LENGTH]
-            valid.append({
-                "id": str(s.get("id") or _stable_hash_id("snip", title))[:64],
-                "title": title,
-                "template": template,
-                "category": str(s.get("category") or "Custom")[:64],
-                "category_id": str(s.get("category_id") or "custom_snippets")[:64],
-                "subcategory": str(s.get("subcategory") or "Allgemein")[:64],
-                "description": str(s.get("description") or "")[:2048],
-                "tags": [str(t)[:64] for t in s.get("tags", [])][:32] if isinstance(s.get("tags"), list) else [],
-                "is_custom": True
-            })
+            valid.append(
+                {
+                    "id": str(s.get("id") or _stable_hash_id("snip", title))[:64],
+                    "title": title,
+                    "template": template,
+                    "category": str(s.get("category") or "Custom")[:64],
+                    "category_id": str(s.get("category_id") or "custom_snippets")[:64],
+                    "subcategory": str(s.get("subcategory") or "Allgemein")[:64],
+                    "description": str(s.get("description") or "")[:2048],
+                    "tags": [str(t)[:64] for t in s.get("tags", [])][:32]
+                    if isinstance(s.get("tags"), list)
+                    else [],
+                    "is_custom": True,
+                }
+            )
             if len(valid) >= max_entries:
                 break
     return valid

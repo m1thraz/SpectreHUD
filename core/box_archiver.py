@@ -3,11 +3,12 @@ Box Archiver for SpectreHUD.
 Packs the entire project workspace (notes, state, loot, recon, exploit, reports, screenshots)
 into a portable, compressed ZIP archive with sandbox traversal protections.
 """
+
 import os
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from core.logger import get_logger
 
@@ -21,10 +22,7 @@ class BoxArchiver:
     """Creates compressed .zip archives of project workspaces."""
 
     @staticmethod
-    def archive_project(
-        project_dir: Path,
-        output_zip: Optional[Path] = None
-    ) -> Dict[str, Any]:
+    def archive_project(project_dir: Path, output_zip: Optional[Path] = None) -> Dict[str, Any]:
         """
         Compresses all files in project_dir into output_zip.
         Returns dict with keys: 'success', 'zip_path', 'file_count', 'total_bytes', 'compressed_bytes', 'error'.
@@ -37,7 +35,7 @@ class BoxArchiver:
                 "file_count": 0,
                 "total_bytes": 0,
                 "compressed_bytes": 0,
-                "error": f"Project directory does not exist: {project_dir}"
+                "error": f"Project directory does not exist: {project_dir}",
             }
 
         if output_zip is None:
@@ -58,15 +56,19 @@ class BoxArchiver:
                 "file_count": 0,
                 "total_bytes": 0,
                 "compressed_bytes": 0,
-                "error": f"Failed to create output directory: {e}"
+                "error": f"Failed to create output directory: {e}",
             }
 
         file_count = 0
         total_raw_bytes = 0
-        tmp_zip = output_zip.with_name(f".{output_zip.name}.{os.getpid()}.{datetime.now().strftime('%f')}.tmp")
+        tmp_zip = output_zip.with_name(
+            f".{output_zip.name}.{os.getpid()}.{datetime.now().strftime('%f')}.tmp"
+        )
 
         try:
-            with zipfile.ZipFile(tmp_zip, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            with zipfile.ZipFile(
+                tmp_zip, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+            ) as zf:
                 for root, dirs, files in os.walk(proj_path):
                     root_path = Path(root).resolve()
                     # Security: Disallow symlink escapes outside project_dir
@@ -95,17 +97,21 @@ class BoxArchiver:
             # Atomically replace destination with completed tmp archive
             os.replace(tmp_zip, output_zip)
             compressed_size = output_zip.stat().st_size if output_zip.exists() else 0
-            logger.info(f"Successfully archived project {proj_path.name} to {output_zip} ({file_count} files, {compressed_size} bytes)")
+            logger.info(
+                f"Successfully archived project {proj_path.name} to {output_zip} ({file_count} files, {compressed_size} bytes)"
+            )
             return {
                 "success": True,
                 "zip_path": output_zip,
                 "file_count": file_count,
                 "total_bytes": total_raw_bytes,
                 "compressed_bytes": compressed_size,
-                "error": None
+                "error": None,
             }
         except Exception as e:
-            logger.error(f"Failed to archive project {proj_path.name} to {output_zip}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to archive project {proj_path.name} to {output_zip}: {e}", exc_info=True
+            )
             if tmp_zip.exists():
                 try:
                     tmp_zip.unlink()
@@ -117,5 +123,5 @@ class BoxArchiver:
                 "file_count": file_count,
                 "total_bytes": total_raw_bytes,
                 "compressed_bytes": 0,
-                "error": str(e)
+                "error": str(e),
             }

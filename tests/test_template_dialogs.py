@@ -8,7 +8,7 @@ from unittest.mock import patch
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
-from core.reporting.template_engine import ReportTemplate, TemplateSection
+from core.reporting.template_engine import TemplateSection
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog, SectionEditDialog
 from ui.template_manager_dialog import TemplateManagerDialog
@@ -72,7 +72,7 @@ class TestTemplateDialogs(unittest.TestCase):
 
         dlg.txt_id.setText("valid_custom_id")
         dlg.txt_name.setText("Custom Pentest Workflow")
-        
+
         # Add a section
         dlg._add_section_to_list(TemplateSection(type="header_metadata"))
         dlg._add_section_to_list(TemplateSection(type="executive_summary"))
@@ -99,6 +99,7 @@ class TestTemplateDialogs(unittest.TestCase):
 
         # Select first template and duplicate
         dlg.table.selectRow(0)
+
         def mock_exec_save(dialog_self):
             dialog_self._on_save()
             return QDialog.DialogCode.Accepted

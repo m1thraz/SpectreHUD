@@ -2,13 +2,23 @@ from typing import Optional, List
 from PyQt6.QtCore import QObject, QPoint, QRect, QEvent, Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (
-    QWidget, QLabel, QAbstractButton, QLineEdit, QTextEdit, 
-    QPlainTextEdit, QComboBox, QScrollBar, QAbstractSlider, QMenu, QSizeGrip
+    QWidget,
+    QLabel,
+    QAbstractButton,
+    QLineEdit,
+    QTextEdit,
+    QPlainTextEdit,
+    QComboBox,
+    QScrollBar,
+    QAbstractSlider,
+    QMenu,
+    QSizeGrip,
 )
 from core.config import ConfigManager
 
 RESIZE_MARGIN = 20
 CORNER_MARGIN = 32
+
 
 def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidget] = None) -> bool:
     """Checks if a widget or its parents are interactive controls (buttons, inputs, sliders, grips)."""
@@ -16,15 +26,33 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
         return False
     curr = widget
     while curr is not None and curr != top_window:
-        if isinstance(curr, (QAbstractButton, QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QScrollBar, QAbstractSlider, QMenu, QSizeGrip)):
+        if isinstance(
+            curr,
+            (
+                QAbstractButton,
+                QLineEdit,
+                QTextEdit,
+                QPlainTextEdit,
+                QComboBox,
+                QScrollBar,
+                QAbstractSlider,
+                QMenu,
+                QSizeGrip,
+            ),
+        ):
             return True
-        if isinstance(curr, QLabel) and curr.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse:
+        if (
+            isinstance(curr, QLabel)
+            and curr.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
+        ):
             return True
         curr = curr.parentWidget()
     return False
 
 
-def is_empty_background_widget(widget: Optional[QWidget], top_window: Optional[QWidget] = None) -> bool:
+def is_empty_background_widget(
+    widget: Optional[QWidget], top_window: Optional[QWidget] = None
+) -> bool:
     """Returns whether a widget is a safe empty area for window gestures.
 
     Labels are deliberately excluded even when they are not selectable: a
@@ -33,6 +61,7 @@ def is_empty_background_widget(widget: Optional[QWidget], top_window: Optional[Q
     if isinstance(widget, QLabel):
         return False
     return not is_interactive_widget(widget, top_window)
+
 
 class WindowFrameManager(QObject):
     """
@@ -100,7 +129,9 @@ class WindowFrameManager(QObject):
     # -------------------------------------------------------------------------
     # Core Mouse Logic (Single Source of Truth)
     # -------------------------------------------------------------------------
-    def _process_mouse_press(self, global_pt: QPoint, local_pt: QPoint, button: Qt.MouseButton) -> bool:
+    def _process_mouse_press(
+        self, global_pt: QPoint, local_pt: QPoint, button: Qt.MouseButton
+    ) -> bool:
         if button != Qt.MouseButton.LeftButton:
             return False
 
@@ -217,7 +248,11 @@ class WindowFrameManager(QObject):
             return False
 
     def handle_mouse_press(self, event: QMouseEvent) -> bool:
-        global_pt = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
+        global_pt = (
+            event.globalPosition().toPoint()
+            if hasattr(event, "globalPosition")
+            else event.globalPos()
+        )
         local_pt = event.pos()
         handled = self._process_mouse_press(global_pt, local_pt, event.button())
         if handled:
@@ -225,7 +260,11 @@ class WindowFrameManager(QObject):
         return handled
 
     def handle_mouse_move(self, event: QMouseEvent) -> bool:
-        global_pt = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
+        global_pt = (
+            event.globalPosition().toPoint()
+            if hasattr(event, "globalPosition")
+            else event.globalPos()
+        )
         local_pt = event.pos()
         handled = self._process_mouse_move(global_pt, local_pt)
         if handled:

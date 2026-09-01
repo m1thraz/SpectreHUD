@@ -23,7 +23,7 @@ def sanitize_url(url: str, is_image: bool = False) -> str:
     lower = clean.lower()
 
     # Remove control characters and whitespace tricks
-    lower_no_spaces = re.sub(r'[\s\x00-\x1f\x7f-\x9f]', '', lower)
+    lower_no_spaces = re.sub(r"[\s\x00-\x1f\x7f-\x9f]", "", lower)
 
     # Explicitly block dangerous script URI schemes
     if lower_no_spaces.startswith(("javascript:", "vbscript:", "livescript:")):
@@ -37,7 +37,15 @@ def sanitize_url(url: str, is_image: bool = False) -> str:
         # Images: allow http, https, approved data:image/ mime types, and safe relative paths
         if lower_no_spaces.startswith(("http://", "https://")):
             return html.escape(clean, quote=True)
-        if lower_no_spaces.startswith(("data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/gif", "data:image/webp")):
+        if lower_no_spaces.startswith(
+            (
+                "data:image/png",
+                "data:image/jpeg",
+                "data:image/jpg",
+                "data:image/gif",
+                "data:image/webp",
+            )
+        ):
             return html.escape(clean, quote=True)
         if lower_no_spaces.startswith("data:"):
             return "#unsafe-data-uri-blocked"
@@ -57,7 +65,9 @@ def sanitize_url(url: str, is_image: bool = False) -> str:
         return html.escape(clean, quote=True)
 
 
-def resolve_and_embed_images(md_text: str, project_dir: Optional[Path], budget: Optional[ImageEmbeddingBudget] = None) -> str:
+def resolve_and_embed_images(
+    md_text: str, project_dir: Optional[Path], budget: Optional[ImageEmbeddingBudget] = None
+) -> str:
     """Finds all ![alt](src) in markdown and embeds local images as base64 data URIs within limits."""
     if not project_dir:
         return md_text
@@ -70,7 +80,11 @@ def resolve_and_embed_images(md_text: str, project_dir: Optional[Path], budget: 
         raw_src = match.group(2).strip()
 
         # Skip data URIs or external URLs
-        if raw_src.startswith("data:") or raw_src.startswith("http://") or raw_src.startswith("https://"):
+        if (
+            raw_src.startswith("data:")
+            or raw_src.startswith("http://")
+            or raw_src.startswith("https://")
+        ):
             return match.group(0)
 
         clean_src = raw_src
@@ -90,7 +104,11 @@ def resolve_and_embed_images(md_text: str, project_dir: Optional[Path], budget: 
         for candidate in candidate_paths:
             try:
                 cand_resolved = candidate.resolve()
-                if cand_resolved.is_relative_to(proj_resolved) and cand_resolved.exists() and cand_resolved.is_file():
+                if (
+                    cand_resolved.is_relative_to(proj_resolved)
+                    and cand_resolved.exists()
+                    and cand_resolved.is_file()
+                ):
                     file_size = cand_resolved.stat().st_size
                     if not active_budget.can_embed(file_size):
                         logger.warning(
@@ -98,7 +116,7 @@ def resolve_and_embed_images(md_text: str, project_dir: Optional[Path], budget: 
                             f"bytes={active_budget.embedded_bytes}/{active_budget.max_total_bytes} bytes). Skipping {cand_resolved.name}"
                         )
                         return f"*[Embedded image limit reached: {alt_text or cand_resolved.name}]*"
-                    
+
                     b64_uri = encode_image_base64(cand_resolved)
                     if b64_uri:
                         active_budget.record(file_size)
@@ -118,6 +136,7 @@ def format_inline(text: str) -> str:
         return ""
 
     code_tokens: List[str] = []
+
     def _code_sub(m: re.Match) -> str:
         token = f"@@SPECTRE_CODETOKEN{len(code_tokens)}@@"
         code_tokens.append(f"<code>{html.escape(m.group(1))}</code>")
@@ -126,6 +145,7 @@ def format_inline(text: str) -> str:
     res = re.sub(r"`([^`]+)`", _code_sub, text)
 
     img_tokens: List[str] = []
+
     def _img_sub(m: re.Match) -> str:
         token = f"@@SPECTRE_IMGTOKEN{len(img_tokens)}@@"
         alt = html.escape(m.group(1), quote=True)
@@ -136,6 +156,7 @@ def format_inline(text: str) -> str:
     res = re.sub(r"!\[(.*?)\]\((.*?)\)", _img_sub, res)
 
     link_tokens: List[str] = []
+
     def _link_sub(m: re.Match) -> str:
         token = f"@@SPECTRE_LINKTOKEN{len(link_tokens)}@@"
         ltext = html.escape(m.group(1))
@@ -225,7 +246,7 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
                 safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", code_block_lang)
                 safe_lang = html.escape(safe_lang, quote=True)
                 lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
-                html_lines.append(f'<pre><code{lang_class}>{escaped_code}</code></pre>')
+                html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
                 in_code_block = False
                 code_block_lines = []
                 code_block_lang = ""
@@ -320,7 +341,9 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
             alt = html.escape(img_match.group(1), quote=True)
             raw_src = img_match.group(2)
             src = sanitize_url(raw_src, is_image=True)
-            html_lines.append(f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>')
+            html_lines.append(
+                f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
+            )
             continue
 
         html_lines.append(f"<p>{format_inline(stripped)}</p>")
@@ -332,6 +355,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
     if in_code_block and code_block_lines:
         raw_code = "\n".join(code_block_lines)
         escaped_code = html.escape(raw_code)
-        html_lines.append(f'<pre><code>{escaped_code}</code></pre>')
+        html_lines.append(f"<pre><code>{escaped_code}</code></pre>")
 
     return "\n".join(html_lines)

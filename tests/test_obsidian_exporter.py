@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 
@@ -24,7 +23,11 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
         project_name="Forest",
         project_dir=project,
         markdown="# Report\n\n![Proof](loot/proof.png)",
-        project_state={"target_ip": "10.10.10.161", "attacker_ip": "10.10.14.5", "password": "never-export"},
+        project_state={
+            "target_ip": "10.10.10.161",
+            "attacker_ip": "10.10.14.5",
+            "password": "never-export",
+        },
     )
 
     assert result.note_path == vault / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
@@ -69,7 +72,9 @@ def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
 def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspace):
     vault, project = workspace
     exporter = ObsidianExporter(vault)
-    note = exporter.export_report(project_name="Forest", project_dir=project, markdown="# Manual report").note_path
+    note = exporter.export_report(
+        project_name="Forest", project_dir=project, markdown="# Manual report"
+    ).note_path
     entry = {"id": "loot-1", "type": "credentials", "title": "Admin", "content": "admin:secret"}
 
     first = exporter.append_loot(project_name="Forest", entries=[entry], note_path=note)

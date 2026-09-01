@@ -2,20 +2,18 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QPushButton
+from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
-from core.report_file_manager import ReportFileManager
-from core.net_detector import NetDetector
 from ui.main_window import MainWindow
-from ui.report_editor_tab import ReportEditorTab
+
 
 class TestUI(unittest.TestCase):
     @classmethod
@@ -27,7 +25,7 @@ class TestUI(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.temp_path = Path(self.temp_dir.name)
-        
+
         # Set environment variables as fallback safety shield
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
         os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
@@ -50,6 +48,7 @@ class TestUI(unittest.TestCase):
     @pytest.mark.integration
     def test_cheatsheet_favorites_ui_interaction(self):
         from ui.snippet_card import SnippetCard
+
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
@@ -61,34 +60,42 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         window.app.switch_mode("cheatsheet")
         self.assertGreater(len(window.cards), 2)
-        
+
         # Check that favorites filter pill exists
         self.assertIn("favorites", window.app.cheatsheet_ctrl.filter_buttons)
         fav_btn = window.app.cheatsheet_ctrl.filter_buttons["favorites"]
         self.assertIn("★", fav_btn.text())
-        
+
         # Find a non-favorite card to toggle ON
-        non_fav_card = next(c for c in window.cards if isinstance(c, SnippetCard) and not snippet_manager.is_favorite(c.snippet.get("id")))
+        non_fav_card = next(
+            c
+            for c in window.cards
+            if isinstance(c, SnippetCard) and not snippet_manager.is_favorite(c.snippet.get("id"))
+        )
         snippet_id = non_fav_card.snippet.get("id")
-        
+
         self.assertFalse(snippet_manager.is_favorite(snippet_id))
         non_fav_card.btn_fav.click()
-        
+
         # Check that it is now favorite in manager
         self.assertTrue(snippet_manager.is_favorite(snippet_id))
-        
+
         # Filter by favorites
         window.app._select_category("favorites")
         fav_ids = [c.snippet.get("id") for c in window.cards if isinstance(c, SnippetCard)]
         self.assertIn(snippet_id, fav_ids)
-        
+
         # Toggle off
-        fav_card = next(c for c in window.cards if isinstance(c, SnippetCard) and c.snippet.get("id") == snippet_id)
+        fav_card = next(
+            c
+            for c in window.cards
+            if isinstance(c, SnippetCard) and c.snippet.get("id") == snippet_id
+        )
         fav_card.btn_fav.click()
         self.assertFalse(snippet_manager.is_favorite(snippet_id))
 
@@ -99,6 +106,7 @@ class TestUI(unittest.TestCase):
         from ui.snippet_card import SnippetCard
         from PyQt6.QtWidgets import QApplication, QDialog
         from unittest.mock import patch
+
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
@@ -110,7 +118,7 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         window.app.switch_mode("cheatsheet")
@@ -122,6 +130,7 @@ class TestUI(unittest.TestCase):
 
         # Edit and confirm the new modal command editor.
         tweaked_cmd = card._rendered_command + " --proxy socks5://127.0.0.1:9050"
+
         def accept_edited_command(dialog):
             dialog.txt_command.setPlainText(tweaked_cmd)
             return QDialog.DialogCode.Accepted
@@ -138,6 +147,7 @@ class TestUI(unittest.TestCase):
     @pytest.mark.integration
     def test_variable_bar_user_pass_and_visibility_toggle(self):
         from PyQt6.QtWidgets import QLineEdit
+
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
@@ -149,7 +159,7 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         # Check fields exist on VariableBar
@@ -176,7 +186,7 @@ class TestUI(unittest.TestCase):
             "attacker_ip": "192.168.1.5",
             "port": "8000",
             "username": "pentester",
-            "password": "SuperSecretPassword123"
+            "password": "SuperSecretPassword123",
         }
         window.var_bar.set_variables(test_vars)
         retrieved = window.var_bar.get_variables()
@@ -189,6 +199,7 @@ class TestUI(unittest.TestCase):
     def test_project_archive_ui_action(self):
         from unittest.mock import patch
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
@@ -203,16 +214,21 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         out_zip = self.temp_path / "BoxToArchive.zip"
-        with patch.object(QFileDialog, "getSaveFileName", return_value=(str(out_zip), "ZIP Archives (*.zip)")), \
-             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No):
+        with (
+            patch.object(
+                QFileDialog, "getSaveFileName", return_value=(str(out_zip), "ZIP Archives (*.zip)")
+            ),
+            patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
+        ):
             window.app.project_ctrl._on_archive_project(window)
 
         self.assertTrue(out_zip.exists())
         import zipfile
+
         self.assertTrue(zipfile.is_zipfile(out_zip))
 
         window.close()
@@ -231,7 +247,7 @@ class TestUI(unittest.TestCase):
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
-            project_manager=project_manager
+            project_manager=project_manager,
         )
 
         # 1. Typo Search: 'nmp' finds nmap (and snmp)
@@ -239,7 +255,11 @@ class TestUI(unittest.TestCase):
         window.search_panel.search_bar._emit_search_changed()
 
         self.assertGreater(len(window.cards), 0)
-        found_nmap = any("nmap" in (c.snippet["title"] + c.snippet["template"]).lower() for c in window.cards if hasattr(c, "snippet"))
+        found_nmap = any(
+            "nmap" in (c.snippet["title"] + c.snippet["template"]).lower()
+            for c in window.cards
+            if hasattr(c, "snippet")
+        )
         self.assertTrue(found_nmap)
 
         # Exact Tool Search: 'nmap' puts nmap at the top
@@ -247,7 +267,9 @@ class TestUI(unittest.TestCase):
         window.search_panel.search_bar._emit_search_changed()
         self.assertGreater(len(window.cards), 0)
         first_card = window.cards[0]
-        self.assertIn("nmap", first_card.snippet["title"].lower() + first_card.snippet["template"].lower())
+        self.assertIn(
+            "nmap", first_card.snippet["title"].lower() + first_card.snippet["template"].lower()
+        )
 
         # 2. Broad search with > 25 matches triggers capping
         window.search_panel.search_bar.txt_search.setText("e")
@@ -259,8 +281,11 @@ class TestUI(unittest.TestCase):
             self.assertEqual(len(window.cards), 26)
             expander_btn = window.cards[-1]
             from PyQt6.QtWidgets import QPushButton
+
             self.assertIsInstance(expander_btn, QPushButton)
-            self.assertTrue("Weitere" in expander_btn.text() or "more" in expander_btn.text().lower())
+            self.assertTrue(
+                "Weitere" in expander_btn.text() or "more" in expander_btn.text().lower()
+            )
 
             # Click expander -> now all matching items are rendered
             expander_btn.click()
@@ -268,6 +293,6 @@ class TestUI(unittest.TestCase):
 
         window.close()
 
+
 if __name__ == "__main__":
     unittest.main()
-

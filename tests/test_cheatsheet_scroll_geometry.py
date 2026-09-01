@@ -72,9 +72,7 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
 
     scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum())
     QApplication.processEvents()
-    last_bottom_in_viewport = last_card.mapTo(
-        scroll.viewport(), QPoint(0, last_card.height())
-    ).y()
+    last_bottom_in_viewport = last_card.mapTo(scroll.viewport(), QPoint(0, last_card.height())).y()
     trailing_space = scroll.viewport().height() - last_bottom_in_viewport
     assert -4 <= trailing_space <= bottom_margin + (3 * layout.spacing()) + 12, (
         f"trailing={trailing_space}, hint={container.sizeHint().height()}, "

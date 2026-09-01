@@ -7,19 +7,15 @@ dynamic locale switching, and parameter interpolation.
 
 import json
 import sys
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-SUPPORTED_LOCALES: Dict[str, str] = {
-    "de": "Deutsch",
-    "en": "English"
-}
+SUPPORTED_LOCALES: Dict[str, str] = {"de": "Deutsch", "en": "English"}
 
 DEFAULT_LOCALE = "en"
 
@@ -84,12 +80,15 @@ class I18nManager(QObject):
     Central Internationalization (i18n) Manager for SpectreHUD.
     Provides reactive translation lookup, fallback handling, and runtime locale switching.
     """
+
     locale_changed = pyqtSignal(str)
 
     def __init__(self, default_locale: str = DEFAULT_LOCALE, locales_dir: Optional[Path] = None):
         super().__init__()
         self.locales_dir = locales_dir or get_locales_dir()
-        self._current_locale = default_locale if default_locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
+        self._current_locale = (
+            default_locale if default_locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
+        )
         self._translations: Dict[str, Dict[str, str]] = {}
         self.reload_translations()
 
@@ -116,7 +115,7 @@ class I18nManager(QObject):
         """
         loc_dict = self._translations.get(self._current_locale, {})
         text = loc_dict.get(key)
-        
+
         if text is None:
             # Fallback to German
             text = self._translations.get("de", {}).get(key)

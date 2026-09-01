@@ -9,8 +9,6 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
 from core.clipboard_watcher import ClipboardWatcher
-from core.loot_manager import LootManager
-from core.project import ProjectManager
 from core.logger import get_logger
 from ui.controllers.history_controller import HistoryController
 from ui.controllers.loot_controller import LootController
@@ -30,7 +28,7 @@ class ClipboardCoordinator(QObject):
         history_ctrl: HistoryController,
         loot_ctrl: LootController,
         target_provider: Callable[[], str],
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.clipboard_watcher = clipboard_watcher
@@ -62,7 +60,7 @@ class ClipboardCoordinator(QObject):
             default_type="credentials" if history_item.get("is_command") else "note",
             default_category="access" if history_item.get("is_command") else "recon",
             default_title=f"Kopiert aus Terminal ({history_item.get('timestamp', '')})",
-            default_content=history_item.get("text", "")
+            default_content=history_item.get("text", ""),
         )
         if success:
             self.loot_mutated.emit()

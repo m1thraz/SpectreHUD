@@ -86,9 +86,7 @@ def test_user_theme_is_discovered(tmp_path, monkeypatch):
         "palette": dict(CYBER_DARK_PALETTE),
     }
     definition["palette"]["BG_DARK"] = "#ffffff"
-    (user_dir / "portfolio_light.json").write_text(
-        json.dumps(definition), encoding="utf-8"
-    )
+    (user_dir / "portfolio_light.json").write_text(json.dumps(definition), encoding="utf-8")
     monkeypatch.setattr(ThemeLoader, "USER_THEMES_DIR", user_dir)
 
     loader = ThemeLoader()

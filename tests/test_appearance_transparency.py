@@ -51,21 +51,12 @@ def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
 
 
 def _assert_hud_background(qss: str, expected: str) -> None:
-    assert (
-        "QFrame#HudFrame {\n"
-        f"    background-color: {expected};"
-    ) in qss
+    assert (f"QFrame#HudFrame {{\n    background-color: {expected};") in qss
 
 
 def _assert_report_background(qss: str, expected: str) -> None:
-    assert (
-        "QPlainTextEdit.ReportSourceEditor {\n"
-        f"    background-color: {expected};"
-    ) in qss
-    assert (
-        "QTextEdit.ReportPreview {\n"
-        f"    background-color: {expected};"
-    ) in qss
+    assert (f"QPlainTextEdit.ReportSourceEditor {{\n    background-color: {expected};") in qss
+    assert (f"QTextEdit.ReportPreview {{\n    background-color: {expected};") in qss
 
 
 def test_missing_transparency_preferences_use_reference_defaults():
@@ -215,9 +206,7 @@ def test_font_and_transparency_updates_share_one_runtime_apply():
 
 def test_daylight_apply_updates_tooltip_palette_and_keeps_global_qss():
     config = ConfigManager(
-        storage=InMemoryStorageBackend(
-            initial_data={"config": {"theme": "daylight"}}
-        )
+        storage=InMemoryStorageBackend(initial_data={"config": {"theme": "daylight"}})
     )
     old_palette = QToolTip.palette()
     try:
@@ -225,8 +214,12 @@ def test_daylight_apply_updates_tooltip_palette_and_keeps_global_qss():
 
         daylight = ThemeLoader().load_theme("daylight")
         tooltip_palette = QToolTip.palette()
-        assert tooltip_palette.color(QPalette.ColorRole.ToolTipBase).name() == daylight["BG_SURFACE"]
-        assert tooltip_palette.color(QPalette.ColorRole.ToolTipText).name() == daylight["TEXT_PRIMARY"]
+        assert (
+            tooltip_palette.color(QPalette.ColorRole.ToolTipBase).name() == daylight["BG_SURFACE"]
+        )
+        assert (
+            tooltip_palette.color(QPalette.ColorRole.ToolTipText).name() == daylight["TEXT_PRIMARY"]
+        )
         assert "QToolTip {" in qss
         assert f"background-color: {daylight['BG_SURFACE']};" in qss
         assert f"color: {daylight['TEXT_PRIMARY']};" in qss

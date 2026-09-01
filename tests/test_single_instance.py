@@ -163,7 +163,9 @@ if lock is not None:
         app = MagicMock()
         with (
             patch.object(main, "QApplication", return_value=app),
-            patch.object(main, "acquire_application_lock", side_effect=ApplicationLockError("access denied")),
+            patch.object(
+                main, "acquire_application_lock", side_effect=ApplicationLockError("access denied")
+            ),
             patch.object(main, "_create_production_container") as create_container,
             patch.object(main.QMessageBox, "critical") as show_message,
         ):

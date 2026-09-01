@@ -139,9 +139,7 @@ def test_tooltip_inside_content_panel_keeps_theme_colors():
 def _probe_combo_popup_inside_settings_page_keeps_theme_colors(qapp):
     _apply_daylight_theme(qapp)
 
-    page = AppearanceSettingsPage(
-        ConfigManager(config_dir=None, storage=InMemoryStorageBackend())
-    )
+    page = AppearanceSettingsPage(ConfigManager(config_dir=None, storage=InMemoryStorageBackend()))
     page.resize(640, 480)
     page.show()
     qapp.processEvents()

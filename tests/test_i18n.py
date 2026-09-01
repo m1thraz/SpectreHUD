@@ -3,9 +3,11 @@ import tempfile
 import json
 from pathlib import Path
 from core.i18n import (
-    I18nManager, t, get_i18n, set_locale, 
-    get_locale, SUPPORTED_LOCALES, get_locales_dir,
-    load_locale_file, load_all_translations
+    I18nManager,
+    set_locale,
+    SUPPORTED_LOCALES,
+    get_locales_dir,
+    load_locale_file,
 )
 
 
@@ -38,8 +40,12 @@ class TestI18n(unittest.TestCase):
         missing_in_en = de_keys - en_keys
         missing_in_de = en_keys - de_keys
 
-        self.assertEqual(missing_in_en, set(), f"Keys in de.json but missing in en.json: {missing_in_en}")
-        self.assertEqual(missing_in_de, set(), f"Keys in en.json but missing in de.json: {missing_in_de}")
+        self.assertEqual(
+            missing_in_en, set(), f"Keys in de.json but missing in en.json: {missing_in_en}"
+        )
+        self.assertEqual(
+            missing_in_de, set(), f"Keys in en.json but missing in de.json: {missing_in_de}"
+        )
 
     def test_german_translations(self):
         self.assertEqual(self.i18n.t("header.mode_cheatsheet"), "Cheatsheet")
@@ -65,7 +71,9 @@ class TestI18n(unittest.TestCase):
 
     def test_missing_key_fallback(self):
         self.assertEqual(self.i18n.t("non_existing_key_xyz"), "non_existing_key_xyz")
-        self.assertEqual(self.i18n.t("non_existing_key_xyz", default="Fallback Value"), "Fallback Value")
+        self.assertEqual(
+            self.i18n.t("non_existing_key_xyz", default="Fallback Value"), "Fallback Value"
+        )
 
     def test_custom_locales_dir_and_reload(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -80,11 +88,11 @@ class TestI18n(unittest.TestCase):
 
     def test_locale_changed_signal(self):
         changed_locales = []
-        self.i18n.locale_changed.connect(lambda l: changed_locales.append(l))
-        
+        self.i18n.locale_changed.connect(lambda loc: changed_locales.append(loc))
+
         self.i18n.set_locale("en")
         self.assertEqual(changed_locales, ["en"])
-        
+
         # Setting same locale shouldn't emit signal again
         self.i18n.set_locale("en")
         self.assertEqual(len(changed_locales), 1)
@@ -112,5 +120,5 @@ class TestI18n(unittest.TestCase):
         self.assertEqual(self.i18n.t("settings.save_apply"), "Save & Apply")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

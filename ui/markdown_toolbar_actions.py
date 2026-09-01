@@ -13,12 +13,14 @@ def _select_placeholder(editor: QPlainTextEdit, start: int, length: int) -> None
     editor.setTextCursor(cursor)
 
 
-def wrap_selection(editor: QPlainTextEdit, prefix: str, suffix: str, placeholder: str = "Text") -> None:
+def wrap_selection(
+    editor: QPlainTextEdit, prefix: str, suffix: str, placeholder: str = "Text"
+) -> None:
     cursor = editor.textCursor()
     if cursor.hasSelection():
         selected = cursor.selectedText().replace("\u2029", "\n")
         if selected.startswith(prefix) and selected.endswith(suffix):
-            cursor.insertText(selected[len(prefix):-len(suffix)])
+            cursor.insertText(selected[len(prefix) : -len(suffix)])
         else:
             cursor.insertText(f"{prefix}{selected}{suffix}")
     else:

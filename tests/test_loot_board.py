@@ -35,8 +35,20 @@ def test_board_creates_one_column_per_category_and_reuses_loot_cards(qapp):
     moves = []
     exported = []
     entries = [
-        {"id": "loot_recon", "type": "note", "category": "recon", "title": "Nmap", "content": "nmap -sV"},
-        {"id": "loot_scripts", "type": "note", "category": "scripts", "title": "PoC", "content": "python poc.py"},
+        {
+            "id": "loot_recon",
+            "type": "note",
+            "category": "recon",
+            "title": "Nmap",
+            "content": "nmap -sV",
+        },
+        {
+            "id": "loot_scripts",
+            "type": "note",
+            "category": "scripts",
+            "title": "PoC",
+            "content": "python poc.py",
+        },
     ]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -46,9 +58,9 @@ def test_board_creates_one_column_per_category_and_reuses_loot_cards(qapp):
             on_delete=lambda _entry_id: None,
             on_edit=lambda _entry: None,
             on_export=exported.append,
-            on_move=lambda entry_id, category, target_index: moves.append(
-                (entry_id, category, target_index)
-            ) or True,
+            on_move=lambda entry_id, category, target_index: (
+                moves.append((entry_id, category, target_index)) or True
+            ),
         )
 
         assert list(board.columns) == [category["id"] for category in CATEGORIES]
@@ -90,9 +102,9 @@ def test_drop_area_resets_drag_highlight_after_leave_and_drop(qapp):
     dropped = []
     area = LootBoardDropArea(
         CATEGORIES[0],
-        lambda entry_id, category, target_index: dropped.append(
-            (entry_id, category, target_index)
-        ) or True,
+        lambda entry_id, category, target_index: (
+            dropped.append((entry_id, category, target_index)) or True
+        ),
     )
     mime_data = QMimeData()
     mime_data.setData(LOOT_ENTRY_MIME_TYPE, b"loot_recon")

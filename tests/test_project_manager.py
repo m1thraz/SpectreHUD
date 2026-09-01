@@ -6,8 +6,8 @@ from pathlib import Path
 from core.project import ProjectManager, InvalidProjectNameError
 from core.loot_manager import CATEGORIES
 
-class TestProjectManager(unittest.TestCase):
 
+class TestProjectManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.base_dir = Path(self.temp_dir.name)
@@ -30,7 +30,9 @@ class TestProjectManager(unittest.TestCase):
         self.assertTrue((default_dir / "project_state.json").exists())
 
     def test_create_custom_project(self):
-        proj_dir = self.pm.create_project("PickleRick", target_ip="10.10.10.80", attacker_ip="10.10.14.99")
+        proj_dir = self.pm.create_project(
+            "PickleRick", target_ip="10.10.10.80", attacker_ip="10.10.14.99"
+        )
         self.assertTrue(proj_dir.exists())
         self.assertIn("PickleRick", self.pm.list_projects())
 
@@ -55,7 +57,9 @@ class TestProjectManager(unittest.TestCase):
     def test_save_and_load_state(self):
         self.pm.create_project("Blue", target_ip="10.10.10.40")
         state = self.pm.load_project_state("Blue")
-        state["loot"].append({"type": "credentials", "title": "Admin Pass", "content": "admin:P@ss"})
+        state["loot"].append(
+            {"type": "credentials", "title": "Admin Pass", "content": "admin:P@ss"}
+        )
         state["clipboard_history"].append({"text": "nmap -p 445 10.10.10.40"})
 
         self.pm.save_project_state("Blue", state)
@@ -97,8 +101,9 @@ class TestProjectManager(unittest.TestCase):
     def test_activate_project_strict(self):
         """Finding 14: activate_project() must strictly raise ProjectNotFoundError for non-existent projects."""
         from core.project import ProjectNotFoundError
+
         self.pm.create_project("ExistingBox")
-        
+
         active = self.pm.activate_project("ExistingBox")
         self.assertEqual(active, "ExistingBox")
         self.assertEqual(self.pm.get_active_project(), "ExistingBox")
@@ -122,6 +127,7 @@ class TestProjectManager(unittest.TestCase):
     def test_windows_reserved_names_and_invalid_identifiers(self):
         """Findings 15 & 16: Windows reserved names and invalid project names must be rejected."""
         from core.project import InvalidProjectNameError
+
         invalid_names = [
             "",
             "   ",
@@ -137,7 +143,7 @@ class TestProjectManager(unittest.TestCase):
             "LPT9",
             "../secret",
             "..\\evil",
-            "../../../../etc"
+            "../../../../etc",
         ]
 
         for name in invalid_names:
@@ -148,8 +154,10 @@ class TestProjectManager(unittest.TestCase):
     def test_create_project_with_custom_base_dir(self):
         with tempfile.TemporaryDirectory() as custom_dir:
             custom_path = Path(custom_dir)
-            proj_dir = self.pm.create_project("ExternalBox", target_ip="192.168.1.50", base_dir=custom_path)
-            
+            proj_dir = self.pm.create_project(
+                "ExternalBox", target_ip="192.168.1.50", base_dir=custom_path
+            )
+
             self.assertEqual(proj_dir, (custom_path / "ExternalBox").resolve())
             self.assertTrue((proj_dir / "notes.md").exists())
             self.assertTrue((proj_dir / "project_state.json").exists())
@@ -160,18 +168,20 @@ class TestProjectManager(unittest.TestCase):
         with tempfile.TemporaryDirectory() as custom_dir:
             custom_path = Path(custom_dir)
             self.pm.create_project("PersistentBox", target_ip="10.10.10.99", base_dir=custom_path)
-            
+
             # Create a second ProjectManager instance pointing to the same config/base dir
             pm2 = ProjectManager(base_dir=self.base_dir, config_dir=self.pm.config_dir)
             self.assertIn("PersistentBox", pm2.list_projects())
-            self.assertEqual(pm2.get_project_dir("PersistentBox"), (custom_path / "PersistentBox").resolve())
+            self.assertEqual(
+                pm2.get_project_dir("PersistentBox"), (custom_path / "PersistentBox").resolve()
+            )
 
     def test_import_project_folder(self):
         with tempfile.TemporaryDirectory() as external_dir:
             ext_path = Path(external_dir) / "ImportedBox"
             ext_path.mkdir()
             (ext_path / "random_file.txt").write_text("hello", encoding="utf-8")
-            
+
             imported_name = self.pm.import_project_folder(ext_path)
             self.assertEqual(imported_name, "ImportedBox")
             self.assertEqual(self.pm.get_active_project(), "ImportedBox")

@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 from datetime import datetime
 from typing import Optional, Tuple, List
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt, QRect
@@ -10,12 +8,14 @@ from core.display_geometry import (
     ScreenGeometry,
     VirtualDesktopBoundingBox,
     compute_virtual_desktop_bounding_box,
-    compute_screen_paint_offset
+    compute_screen_paint_offset,
 )
 from core.logger import get_logger
 
+
 class ScreenshotSaveError(RuntimeError):
     """Raised when writing the captured screenshot image file to disk fails."""
+
     pass
 
 
@@ -27,13 +27,16 @@ class ScreenshotManager(QObject):
     Coordinates desktop screenshots across single and multi-monitor setups,
     interactive region selection overlay, and automatic file & loot persistence.
     """
+
     screenshot_saved = pyqtSignal(dict)
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._active_overlay: Optional[SnippingOverlay] = None
 
-    def capture_virtual_desktop(self) -> Tuple[Optional[QPixmap], Optional[VirtualDesktopBoundingBox]]:
+    def capture_virtual_desktop(
+        self,
+    ) -> Tuple[Optional[QPixmap], Optional[VirtualDesktopBoundingBox]]:
         """
         Captures screenshots of all active displays and composites them into a single QPixmap
         spanning the entire virtual desktop bounding box.
@@ -56,7 +59,9 @@ class ScreenshotManager(QObject):
                 pix = primary.grabWindow(0)
                 if not pix.isNull():
                     geom = primary.geometry()
-                    bbox = VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                    bbox = VirtualDesktopBoundingBox(
+                        geom.x(), geom.y(), geom.width(), geom.height()
+                    )
                     return pix, bbox
                 else:
                     logger.warning(f"Primary screen {primary.name()} returned null pixmap on grab.")
@@ -77,7 +82,7 @@ class ScreenshotManager(QObject):
                         y=geom.y(),
                         width=geom.width(),
                         height=geom.height(),
-                        device_pixel_ratio=dpr
+                        device_pixel_ratio=dpr,
                     )
                 )
 
@@ -96,12 +101,14 @@ class ScreenshotManager(QObject):
                 try:
                     pix = s.grabWindow(0)
                     if pix.isNull():
-                        logger.warning(f"Screen '{s.name()}' returned null pixmap on grab (e.g. Wayland restriction).")
+                        logger.warning(
+                            f"Screen '{s.name()}' returned null pixmap on grab (e.g. Wayland restriction)."
+                        )
                         continue
 
                     offset_x, offset_y = compute_screen_paint_offset(s_geom, bbox)
                     target_rect = QRect(offset_x, offset_y, s_geom.width, s_geom.height)
-                    
+
                     # Draw screen grab into logical target rect
                     painter.drawPixmap(target_rect, pix)
                     success_count += 1
@@ -111,20 +118,28 @@ class ScreenshotManager(QObject):
             painter.end()
 
             if success_count > 0:
-                logger.info(f"Successfully captured {success_count}/{len(screens)} screens across virtual desktop {bbox.width}x{bbox.height} at ({bbox.min_x}, {bbox.min_y})")
+                logger.info(
+                    f"Successfully captured {success_count}/{len(screens)} screens across virtual desktop {bbox.width}x{bbox.height} at ({bbox.min_x}, {bbox.min_y})"
+                )
                 return composite, bbox
             else:
-                logger.warning("All multi-monitor screen grabs failed. Attempting primary screen fallback.")
+                logger.warning(
+                    "All multi-monitor screen grabs failed. Attempting primary screen fallback."
+                )
                 primary = QGuiApplication.primaryScreen()
                 if primary:
                     fallback_pix = primary.grabWindow(0)
                     if not fallback_pix.isNull():
                         geom = primary.geometry()
-                        return fallback_pix, VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                        return fallback_pix, VirtualDesktopBoundingBox(
+                            geom.x(), geom.y(), geom.width(), geom.height()
+                        )
                 return None, None
 
         except Exception as e:
-            logger.error(f"Unexpected error during multi-monitor virtual desktop capture: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error during multi-monitor virtual desktop capture: {e}", exc_info=True
+            )
             # Fallback to primary screen
             primary = QGuiApplication.primaryScreen()
             if primary:
@@ -132,12 +147,16 @@ class ScreenshotManager(QObject):
                     fallback_pix = primary.grabWindow(0)
                     if not fallback_pix.isNull():
                         geom = primary.geometry()
-                        return fallback_pix, VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                        return fallback_pix, VirtualDesktopBoundingBox(
+                            geom.x(), geom.y(), geom.width(), geom.height()
+                        )
                 except Exception:
                     pass
             return None, None
 
-    def start_capture(self, parent_window: QWidget, project_manager, loot_manager, target_ip: str = "") -> None:
+    def start_capture(
+        self, parent_window: QWidget, project_manager, loot_manager, target_ip: str = ""
+    ) -> None:
         """
         Main entry point:
         1. Hides parent window.
@@ -158,7 +177,7 @@ class ScreenshotManager(QObject):
                     return
 
                 self._active_overlay = SnippingOverlay(full_pixmap, bbox=bbox)
-                
+
                 self._active_overlay.snip_completed.connect(
                     lambda cropped: self._on_snip_completed(
                         cropped, parent_window, project_manager, loot_manager, target_ip
@@ -175,12 +194,12 @@ class ScreenshotManager(QObject):
         QTimer.singleShot(220, do_grab)
 
     def _on_snip_completed(
-        self, 
-        cropped_pixmap: QPixmap, 
-        parent_window: QWidget, 
-        project_manager, 
+        self,
+        cropped_pixmap: QPixmap,
+        parent_window: QWidget,
+        project_manager,
         loot_manager,
-        target_ip: str
+        target_ip: str,
     ) -> None:
         """Saves cropped pixmap to project loot directory and creates Loot entry."""
         try:
@@ -215,7 +234,7 @@ class ScreenshotManager(QObject):
                 entry_type="screenshot",
                 title=default_title,
                 content=markdown_content,
-                target_ip=target_ip
+                target_ip=target_ip,
             )
             loot_entry["file_path"] = str(filepath)
 
@@ -231,7 +250,10 @@ class ScreenshotManager(QObject):
         """Restore the HUD after a completed or failed screenshot lifecycle."""
         try:
             parent_window.show()
-            parent_window.setWindowState(parent_window.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+            parent_window.setWindowState(
+                parent_window.windowState() & ~Qt.WindowState.WindowMinimized
+                | Qt.WindowState.WindowActive
+            )
             parent_window.raise_()
             parent_window.activateWindow()
 

@@ -49,9 +49,7 @@ class SettingsCoordinator:
         self.refresh_content = refresh_content
         self.retranslate_ui = retranslate_ui
 
-        self.applied_theme = self.config.get(
-            "theme", ThemeLoader.FALLBACK_THEME_ID
-        )
+        self.applied_theme = self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
         self.applied_ui_font = self.config.get("ui_font", "segoe_ui")
         self.applied_code_font = self.config.get("code_font", "consolas")
 
@@ -60,12 +58,8 @@ class SettingsCoordinator:
         selected_theme = new_settings.get(
             "theme", self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
         )
-        selected_ui_font = new_settings.get(
-            "ui_font", self.config.get("ui_font", "segoe_ui")
-        )
-        selected_code_font = new_settings.get(
-            "code_font", self.config.get("code_font", "consolas")
-        )
+        selected_ui_font = new_settings.get("ui_font", self.config.get("ui_font", "segoe_ui"))
+        selected_code_font = new_settings.get("code_font", self.config.get("code_font", "consolas"))
         appearance_changed = (
             selected_ui_font != self.applied_ui_font
             or selected_code_font != self.applied_code_font
@@ -75,9 +69,7 @@ class SettingsCoordinator:
         if appearance_changed:
             # A selected theme still activates only through controlled restart.
             active_theme = (
-                self.applied_theme
-                if selected_theme != self.applied_theme
-                else selected_theme
+                self.applied_theme if selected_theme != self.applied_theme else selected_theme
             )
             self.apply_application_style(theme_id=active_theme)
 
@@ -85,10 +77,7 @@ class SettingsCoordinator:
             self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
-        if any(
-            key in new_settings
-            for key in ("hotkey", "snip_hotkey", "quit_hotkey")
-        ):
+        if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
             self.update_footer_status()
             self.event_bus.publish(
                 EventType.HOTKEY_SETTINGS_CHANGED,
@@ -132,9 +121,7 @@ class SettingsCoordinator:
         if app is None:
             return
 
-        active_theme = theme_id or self.config.get(
-            "theme", ThemeLoader.FALLBACK_THEME_ID
-        )
+        active_theme = theme_id or self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
         self.applied_theme = apply_application_style(
             app,
             self.config,

@@ -29,7 +29,9 @@ class CherryTreeExporter:
     def __init__(self, output_directory: Path | str):
         raw = str(output_directory or "").strip()
         if not raw:
-            raise ExternalExportError("Choose a destination directory for the CherryTree export package.")
+            raise ExternalExportError(
+                "Choose a destination directory for the CherryTree export package."
+            )
         self.output_directory = Path(raw)
 
     @staticmethod
@@ -37,27 +39,37 @@ class CherryTreeExporter:
         try:
             return validate_project_name(project_name)
         except ValueError as exc:
-            raise ExternalExportError(f"Invalid project name for CherryTree export: {project_name!r}") from exc
+            raise ExternalExportError(
+                f"Invalid project name for CherryTree export: {project_name!r}"
+            ) from exc
 
     def _package_directory(self, project_name: str) -> Path:
         safe_name = self._project_name(project_name)
         try:
             if self.output_directory.exists() and self.output_directory.is_symlink():
-                raise ExternalExportError("Refusing to export through a symlinked CherryTree destination.")
+                raise ExternalExportError(
+                    "Refusing to export through a symlinked CherryTree destination."
+                )
             self.output_directory.mkdir(parents=True, exist_ok=True)
             root = self.output_directory.resolve()
             if not root.is_dir():
-                raise ExternalExportError("The CherryTree destination directory is unsafe or unavailable.")
+                raise ExternalExportError(
+                    "The CherryTree destination directory is unsafe or unavailable."
+                )
             package = root / safe_name
             if package.exists() and package.is_symlink():
-                raise ExternalExportError("Refusing to export through a symlinked CherryTree package directory.")
+                raise ExternalExportError(
+                    "Refusing to export through a symlinked CherryTree package directory."
+                )
             package.mkdir(exist_ok=True)
             package = package.resolve()
             if not package.is_relative_to(root) or package == root:
                 raise ExternalExportError("CherryTree export path escaped its chosen destination.")
             return package
         except OSError as exc:
-            raise ExternalExportError("Could not create the CherryTree export package directory.") from exc
+            raise ExternalExportError(
+                "Could not create the CherryTree export package directory."
+            ) from exc
 
     @staticmethod
     def _document(title: str, body_html: str, report_font: str) -> str:
@@ -69,7 +81,9 @@ body {{ padding: 28px; }} .report-wrapper {{ max-width: 1080px; margin: 0 auto; 
 img.inline-img {{ max-width: 100%; height: auto; }}
 </style></head><body><main class=\"report-wrapper report-body\">{body_html}</main></body></html>"""
 
-    def _copy_images(self, markdown: str, project_dir: Path, package_dir: Path) -> tuple[str, tuple[Path, ...], tuple[str, ...]]:
+    def _copy_images(
+        self, markdown: str, project_dir: Path, package_dir: Path
+    ) -> tuple[str, tuple[Path, ...], tuple[str, ...]]:
         image_dir = package_dir / "images"
         copied: list[Path] = []
         warnings: list[str] = []
@@ -80,13 +94,19 @@ img.inline-img {{ max-width: 100%; height: auto; }}
             alt_text, raw_path = match.group(1), match.group(2)
             source = ObsidianExporter._safe_attachment_source(raw_path, project_dir)
             if source is None:
-                if raw_path.lower().split("?", 1)[0].endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp")):
+                if (
+                    raw_path.lower()
+                    .split("?", 1)[0]
+                    .endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"))
+                ):
                     warnings.append(f"Image was not exported: {raw_path}")
                 return match.group(0)
             if source not in mapped:
                 image_dir.mkdir(exist_ok=True)
                 if image_dir.is_symlink():
-                    raise ExternalExportError("Refusing to write images through a symlinked directory.")
+                    raise ExternalExportError(
+                        "Refusing to write images through a symlinked directory."
+                    )
                 base = sanitize_filename_component(source.stem, fallback="image")
                 name = base + source.suffix.lower()
                 index = 2
@@ -118,10 +138,16 @@ img.inline-img {{ max-width: 100%; height: auto; }}
         if not source_dir.is_dir():
             raise ExternalExportError("The active project directory is unavailable.")
         package_dir = self._package_directory(project_name)
-        rewritten, copied, warnings = self._copy_images(str(report_markdown), source_dir, package_dir)
-        report_html = self._document(f"{project_name} – Report", convert_markdown_to_html(rewritten), report_font)
+        rewritten, copied, warnings = self._copy_images(
+            str(report_markdown), source_dir, package_dir
+        )
+        report_html = self._document(
+            f"{project_name} – Report", convert_markdown_to_html(rewritten), report_font
+        )
         loot_markdown = ObsidianExporter._loot_markdown(loot_entries)
-        loot_html = self._document(f"{project_name} – Loot", convert_markdown_to_html(loot_markdown), report_font)
+        loot_html = self._document(
+            f"{project_name} – Loot", convert_markdown_to_html(loot_markdown), report_font
+        )
         report_path = package_dir / "report.html"
         loot_path = package_dir / "loot.html"
         try:

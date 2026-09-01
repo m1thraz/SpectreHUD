@@ -8,8 +8,17 @@ from typing import Optional, List
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
-    QPushButton, QLabel, QMessageBox, QHeaderView, QWidget, QInputDialog
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTableWidget,
+    QTableWidgetItem,
+    QPushButton,
+    QLabel,
+    QMessageBox,
+    QHeaderView,
+    QWidget,
+    QInputDialog,
 )
 
 from core.reporting.template_engine import ReportTemplate
@@ -20,7 +29,9 @@ from ui.template_editor_dialog import TemplateEditorDialog
 class TemplateManagerDialog(QDialog):
     """Management dialog for viewing, customizing, and selecting Report Templates."""
 
-    def __init__(self, repository: Optional[TemplateRepository] = None, parent: Optional[QWidget] = None):
+    def __init__(
+        self, repository: Optional[TemplateRepository] = None, parent: Optional[QWidget] = None
+    ):
         super().__init__(parent)
         self.setObjectName("TemplateManagerDialog")
         self.setWindowTitle("Report-Templates verwalten")
@@ -43,15 +54,25 @@ class TemplateManagerDialog(QDialog):
         self.table = QTableWidget()
         self.table.setObjectName("TemplateTable")
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels([
-            "Name", "ID", "Sprache", "Kategorie", "Komplexität", "Typ"
-        ])
+        self.table.setHorizontalHeaderLabels(
+            ["Name", "ID", "Sprache", "Kategorie", "Komplexität", "Typ"]
+        )
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            5, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.table.setAlternatingRowColors(True)
@@ -126,7 +147,7 @@ class TemplateManagerDialog(QDialog):
 
     def _update_button_states(self) -> None:
         t = self._get_selected_template()
-        has_sel = (t is not None)
+        has_sel = t is not None
         self.btn_duplicate.setEnabled(has_sel)
         self.btn_edit.setEnabled(has_sel)
         self.btn_delete.setEnabled(has_sel and not t.is_builtin)
@@ -144,9 +165,7 @@ class TemplateManagerDialog(QDialog):
             return
 
         new_id, ok = QInputDialog.getText(
-            self, "Template duplizieren",
-            f"Neue ID für Kopie von '{t.name}':",
-            text=f"{t.id}_copy"
+            self, "Template duplizieren", f"Neue ID für Kopie von '{t.name}':", text=f"{t.id}_copy"
         )
         if not ok or not new_id.strip():
             return
@@ -158,7 +177,7 @@ class TemplateManagerDialog(QDialog):
             category=t.category,
             complexity=t.complexity,
             sections=list(t.sections),
-            is_builtin=False
+            is_builtin=False,
         )
         dlg = TemplateEditorDialog(template=dup, parent=self)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_template:
@@ -180,10 +199,11 @@ class TemplateManagerDialog(QDialog):
             return
 
         reply = QMessageBox.question(
-            self, "Template löschen",
+            self,
+            "Template löschen",
             f"Möchtest du das Template '{t.name}' wirklich löschen?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.repo.delete_user_template(t.id)

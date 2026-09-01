@@ -1,12 +1,12 @@
-import os
 import sys
 import subprocess
 from pathlib import Path
 
+
 def create_shortcut():
     project_dir = Path(__file__).parent.resolve()
     main_script = project_dir / "main.py"
-    
+
     # Get python executable (prefer pythonw to launch silently in background without console)
     python_dir = Path(sys.executable).parent
     pythonw_exe = python_dir / "pythonw.exe"
@@ -48,6 +48,7 @@ def create_shortcut():
     except (subprocess.SubprocessError, OSError) as e:
         print(f"[-] Fehler beim Erstellen des Shortcuts: {e}")
         return False, str(e)
+
 
 if __name__ == "__main__":
     success, path = create_shortcut()

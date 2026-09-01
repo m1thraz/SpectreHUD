@@ -29,8 +29,8 @@ class TestSemanticValidators(unittest.TestCase):
             "name": "BoxCorrupt",
             "target_ip": 10101010,  # int instead of str
             "port": None,
-            "loot": "banana",       # str instead of list[dict]
-            "clipboard_history": 42 # int instead of list[dict]
+            "loot": "banana",  # str instead of list[dict]
+            "clipboard_history": 42,  # int instead of list[dict]
         }
         state = validate_project_state(corrupted, fallback_name="BoxCorrupt")
         self.assertEqual(state["name"], "BoxCorrupt")
@@ -46,9 +46,14 @@ class TestSemanticValidators(unittest.TestCase):
         raw_loot = [
             "string_instead_of_dict",
             123,
-            {"title": "Valid Cred", "content": "admin:pass", "type": "credentials", "category": "access"},
+            {
+                "title": "Valid Cred",
+                "content": "admin:pass",
+                "type": "credentials",
+                "category": "access",
+            },
             {"type": "note"},  # missing title, content
-            None
+            None,
         ]
         validated = validate_loot_list(raw_loot)
         self.assertEqual(len(validated), 2)
@@ -63,7 +68,7 @@ class TestSemanticValidators(unittest.TestCase):
             {"text": "nmap -sV 10.10.10.10", "is_multiline": "not_a_bool"},
             {"text": ""},  # empty text should be skipped
             "not_a_dict",
-            {"text": "whoami", "lines_count": -5}
+            {"text": "whoami", "lines_count": -5},
         ]
         validated = validate_clipboard_list(raw_history)
         self.assertEqual(len(validated), 2)
@@ -77,12 +82,13 @@ class TestSemanticValidators(unittest.TestCase):
             {"title": "Valid Snippet", "template": "curl -s http://target"},
             {"title": "Missing Template"},
             {"template": "Missing Title"},
-            "invalid_string"
+            "invalid_string",
         ]
         validated = validate_user_snippets(raw_snippets)
         self.assertEqual(len(validated), 1)
         self.assertEqual(validated[0]["title"], "Valid Snippet")
         self.assertEqual(validated[0]["template"], "curl -s http://target")
+
     def test_deterministic_id_generation(self):
         """Tests that fallback ID generation is deterministic and process-independent."""
         entry1 = validate_loot_entry({"title": "Test Title", "content": "secret_data"})
@@ -101,8 +107,7 @@ class TestSemanticValidators(unittest.TestCase):
         self.assertEqual(len(loot["title"]), MAX_TITLE_LENGTH)
 
         entries = [
-            {"title": f"Item {index}", "content": "data"}
-            for index in range(MAX_LOOT_ENTRIES + 1)
+            {"title": f"Item {index}", "content": "data"} for index in range(MAX_LOOT_ENTRIES + 1)
         ]
         self.assertEqual(len(validate_loot_list(entries)), MAX_LOOT_ENTRIES)
 
@@ -122,8 +127,6 @@ class TestSemanticValidators(unittest.TestCase):
 
     def test_format_timestamp(self):
         """Tests that format_timestamp correctly formats timestamps according to 24h and 12h modes."""
-        from datetime import datetime
-        from core.validators import format_timestamp
 
     def test_validate_loot_entry_severity(self):
         """Tests severity validation, normalization, and fallback defaults."""

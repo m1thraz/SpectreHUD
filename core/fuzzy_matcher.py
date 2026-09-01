@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Tuple, Optional
 class FuzzyMatcher:
     """
     High-performance CTF & Pentester-focused fuzzy search and ranking engine.
-    
+
     Weights & Scoring Hierarchy:
     1. Exact Tool Name / Command Prefix (e.g. 'nmap', 'ffuf', 'chisel', 'curl', 'nc') -> +100
     2. Acronym & Shortcode matching (e.g. 'rce' -> 'Remote Code Execution', 'lfi' -> 'Local File Inclusion') -> +85
@@ -19,7 +19,7 @@ class FuzzyMatcher:
     @staticmethod
     def _extract_acronym(text: str) -> str:
         """Extracts leading letters from title words (e.g. 'Remote Code Execution' -> 'rce')."""
-        words = re.findall(r'[a-zA-Z0-9]+', text.lower())
+        words = re.findall(r"[a-zA-Z0-9]+", text.lower())
         if len(words) > 1:
             return "".join(w[0] for w in words)
         return ""
@@ -42,7 +42,7 @@ class FuzzyMatcher:
         if not q:
             return 1.0
 
-        query_tokens = [t for t in re.split(r'\s+', q) if t]
+        query_tokens = [t for t in re.split(r"\s+", q) if t]
         if not query_tokens:
             return 1.0
 
@@ -56,8 +56,8 @@ class FuzzyMatcher:
         tags = [str(t).lower() for t in raw_tags]
 
         # Extract primary tool / command binary name (e.g. 'nmap -sC ...' -> 'nmap')
-        template_first_word = re.split(r'[\s|;&]+', template.strip())[0] if template.strip() else ""
-        title_first_word = re.split(r'[\s|;&]+', title.strip())[0] if title.strip() else ""
+        template_first_word = re.split(r"[\s|;&]+", template.strip())[0] if template.strip() else ""
+        title_first_word = re.split(r"[\s|;&]+", title.strip())[0] if title.strip() else ""
         acronym = cls._extract_acronym(title)
 
         total_snippet_score = 0.0
@@ -87,7 +87,7 @@ class FuzzyMatcher:
                 token_score = max(token_score, 95.0)
             elif token in title:
                 # Word boundary match in title? (e.g. ' sql' in 'blind sql injection')
-                if re.search(r'\b' + re.escape(token), title):
+                if re.search(r"\b" + re.escape(token), title):
                     token_score = max(token_score, 75.0)
                 else:
                     token_score = max(token_score, 65.0)
@@ -137,10 +137,7 @@ class FuzzyMatcher:
 
     @classmethod
     def rank_snippets(
-        cls, 
-        snippets: List[Dict[str, Any]], 
-        query: str,
-        limit: Optional[int] = None
+        cls, snippets: List[Dict[str, Any]], query: str, limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         Filters and ranks snippets by relevance to the query.

@@ -1,11 +1,8 @@
 import os
 import time
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QFrame, QApplication
-)
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QFrame, QApplication
 from PyQt6.QtCore import Qt, QPoint, QEvent, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
 
@@ -15,7 +12,6 @@ from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
-from core.report_file_manager import ReportFileManager
 from core.event_bus import EventBus
 from core.logger import get_logger
 
@@ -37,14 +33,14 @@ class MainWindow(QMainWindow):
     """
 
     def __init__(
-        self, 
-        config_manager: Optional[ConfigManager] = None, 
-        snippet_manager: Optional[SnippetManager] = None, 
+        self,
+        config_manager: Optional[ConfigManager] = None,
+        snippet_manager: Optional[SnippetManager] = None,
         loot_manager: Optional[LootManager] = None,
         clipboard_watcher: Optional[ClipboardWatcher] = None,
         project_manager: Optional[ProjectManager] = None,
         screenshot_manager: Optional[ScreenshotManager] = None,
-        container: Optional[ServiceContainer] = None
+        container: Optional[ServiceContainer] = None,
     ):
         started_at = time.perf_counter()
         super().__init__()
@@ -61,11 +57,25 @@ class MainWindow(QMainWindow):
             self.container = None
             self.event_bus = EventBus()
             self.config = config_manager if config_manager is not None else ConfigManager()
-            self.snippet_manager = snippet_manager if snippet_manager is not None else SnippetManager()
-            self.project_manager = project_manager if project_manager is not None else ProjectManager(event_bus=self.event_bus)
-            self.loot_manager = loot_manager if loot_manager is not None else LootManager(event_bus=self.event_bus)
-            self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher(event_bus=self.event_bus)
-            self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+            self.snippet_manager = (
+                snippet_manager if snippet_manager is not None else SnippetManager()
+            )
+            self.project_manager = (
+                project_manager
+                if project_manager is not None
+                else ProjectManager(event_bus=self.event_bus)
+            )
+            self.loot_manager = (
+                loot_manager if loot_manager is not None else LootManager(event_bus=self.event_bus)
+            )
+            self.clipboard_watcher = (
+                clipboard_watcher
+                if clipboard_watcher is not None
+                else ClipboardWatcher(event_bus=self.event_bus)
+            )
+            self.screenshot_manager = (
+                screenshot_manager if screenshot_manager is not None else ScreenshotManager()
+            )
         self._startup_mark(started_at, "services assigned")
 
         # Window Frame Manager for Frameless Resize & Dragging
@@ -145,7 +155,7 @@ class MainWindow(QMainWindow):
         self.resize(w, h)
         self.setMinimumSize(740, 480)
         self.setMouseTracking(True)
-        
+
         is_always_on_top = self.config.get("always_on_top", True)
         flags = Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool
         if is_always_on_top:
@@ -172,7 +182,7 @@ class MainWindow(QMainWindow):
         self.hud_frame = QFrame()
         self.hud_frame.setObjectName("HudFrame")
         self.hud_frame.setMouseTracking(True)
-        
+
         hud_layout = QVBoxLayout(self.hud_frame)
         hud_layout.setContentsMargins(0, 0, 0, 0)
         hud_layout.setSpacing(0)
@@ -190,7 +200,7 @@ class MainWindow(QMainWindow):
             "target_ip": self.config.get("target_ip", "10.10.10.10"),
             "attacker_ip": self.config.get("attacker_ip", "10.10.14.5"),
             "port": self.config.get("port", "4444"),
-            "wordlist": self.config.get("wordlist", "/usr/share/wordlists/dirb/common.txt")
+            "wordlist": self.config.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
         }
         self.var_bar = VariableBar(initial_vars, parent=self)
         hud_layout.addWidget(self.var_bar)
@@ -207,27 +217,40 @@ class MainWindow(QMainWindow):
         outer_layout.addWidget(self.hud_frame)
 
         # Install event filter for universal border resizing and drag-moving
-        self.frame_manager.install_on([
-            self.hud_frame, self.header_panel, self.search_panel.pills_frame, 
-            self.footer_panel, self.var_bar, self.content_panel.content_container, 
-            self.content_panel.scroll_area, central_widget
-        ])
+        self.frame_manager.install_on(
+            [
+                self.hud_frame,
+                self.header_panel,
+                self.search_panel.pills_frame,
+                self.footer_panel,
+                self.var_bar,
+                self.content_panel.content_container,
+                self.content_panel.scroll_area,
+                central_widget,
+            ]
+        )
 
     def _setup_shortcuts(self) -> None:
         QShortcut(QKeySequence("Esc"), self, activated=self.hide)
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_panel.set_focus)
         QShortcut(QKeySequence("Ctrl+N"), self, activated=lambda: self.app._on_add_button_clicked())
         QShortcut(QKeySequence("Ctrl+Alt+S"), self, activated=lambda: self.app.trigger_screenshot())
-        QShortcut(QKeySequence("Ctrl+Shift+X"), self, activated=lambda: self.app.trigger_screenshot())
+        QShortcut(
+            QKeySequence("Ctrl+Shift+X"), self, activated=lambda: self.app.trigger_screenshot()
+        )
         QShortcut(QKeySequence("Ctrl+P"), self, activated=lambda: self.app._toggle_pause_history())
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.request_quit)
         QShortcut(QKeySequence("Ctrl+,"), self, activated=lambda: self.app.open_settings_dialog())
         QShortcut(QKeySequence("Tab"), self, activated=lambda: self.app.toggle_mode())
-        QShortcut(QKeySequence("Ctrl+1"), self, activated=lambda: self.app.switch_mode("cheatsheet"))
+        QShortcut(
+            QKeySequence("Ctrl+1"), self, activated=lambda: self.app.switch_mode("cheatsheet")
+        )
         QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.app.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.app.switch_mode("history"))
         QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.app.switch_mode("report"))
-        self.shortcut_fullscreen = QShortcut(QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen)
+        self.shortcut_fullscreen = QShortcut(
+            QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen
+        )
         self.shortcut_fullscreen.setContext(Qt.ShortcutContext.WindowShortcut)
 
     def _center_on_screen(self) -> None:
@@ -275,7 +298,9 @@ class MainWindow(QMainWindow):
             self.hide()
         else:
             self.show()
-            self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+            self.setWindowState(
+                self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive
+            )
             self.raise_()
             self.activateWindow()
             self.search_panel.set_focus()
@@ -309,19 +334,26 @@ class MainWindow(QMainWindow):
         saved = self.app.save_current_project_state()
         if not saved:
             from core.i18n import t as _t
+
             msg = QMessageBox(self)
             msg.setWindowTitle(_t("quit.save_failed_title", "Save Failed"))
             msg.setText(
                 _t(
                     "quit.save_failed_text",
                     "The current project state could not be saved to disk.\n\n"
-                    "What would you like to do?"
+                    "What would you like to do?",
                 )
             )
             msg.setIcon(QMessageBox.Icon.Warning)
-            retry_btn   = msg.addButton(_t("quit.retry",   "Retry Save"),            QMessageBox.ButtonRole.ActionRole)
-            discard_btn = msg.addButton(_t("quit.discard", "Quit Without Saving"),    QMessageBox.ButtonRole.DestructiveRole)
-            cancel_btn  = msg.addButton(_t("quit.cancel",  "Cancel"),                 QMessageBox.ButtonRole.RejectRole)
+            retry_btn = msg.addButton(
+                _t("quit.retry", "Retry Save"), QMessageBox.ButtonRole.ActionRole
+            )
+            discard_btn = msg.addButton(
+                _t("quit.discard", "Quit Without Saving"), QMessageBox.ButtonRole.DestructiveRole
+            )
+            cancel_btn = msg.addButton(
+                _t("quit.cancel", "Cancel"), QMessageBox.ButtonRole.RejectRole
+            )
             msg.setDefaultButton(cancel_btn)
             msg.exec()
             clicked = msg.clickedButton()
@@ -334,11 +366,9 @@ class MainWindow(QMainWindow):
 
         # 3. Flush window geometry
         from core.storage import PersistenceError
+
         try:
-            self.config.update({
-                "window_width": self.width(),
-                "window_height": self.height()
-            })
+            self.config.update({"window_width": self.width(), "window_height": self.height()})
         except PersistenceError as exc:
             logger.warning("Could not persist window geometry during shutdown: %s", exc)
         except Exception:
@@ -365,6 +395,7 @@ class MainWindow(QMainWindow):
             pass
         try:
             from core.logger import close_log_handlers
+
             close_log_handlers()
         except Exception:
             pass

@@ -1,25 +1,29 @@
-import json
 import uuid
 import warnings
-from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
-from core.config import get_default_config_dir
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
+from core.storage import (
+    StorageBackend,
+    InMemoryStorageBackend,
+    FileStorageBackend,
+    PersistenceError,
+)
 
 logger = get_logger("clipboard")
 
 MAX_CLIPBOARD_TEXT_SIZE = 64 * 1024  # 64 KB
+
 
 class ClipboardWatcher(QObject):
     """
     Monitors system clipboard in background, logs command copies & outputs,
     filters duplicates, and persists history.
     """
+
     entry_added = pyqtSignal(dict)
     logging_state_changed = pyqtSignal(bool)
 
@@ -29,7 +33,7 @@ class ClipboardWatcher(QObject):
         storage: Optional[StorageBackend] = None,
         event_bus: Optional[Any] = None,
         time_format: str = "24h",
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         if storage is not None:
@@ -41,14 +45,14 @@ class ClipboardWatcher(QObject):
         else:
             self.storage_file = None
             self.storage = InMemoryStorageBackend()
-        
+
         self.event_bus = event_bus
         self.time_format = time_format if time_format in ("24h", "12h") else "24h"
         self.history: List[Dict[str, Any]] = []
         self._last_copied_text: Optional[str] = None
         self._is_paused = True  # Default to PAUSED for user privacy (opt-in)
         self._current_target_provider = None
-        
+
         self.load_history()
 
     def set_time_format(self, time_format: str) -> None:
@@ -59,6 +63,7 @@ class ClipboardWatcher(QObject):
         """Publishes the single canonical event for a successful history mutation."""
         if self.event_bus:
             from core.event_bus import EventType
+
             self.event_bus.publish(
                 EventType.HISTORY_UPDATED,
                 {
@@ -106,11 +111,7 @@ class ClipboardWatcher(QObject):
             logger.error(f"Error reading clipboard content: {e}", exc_info=True)
 
     def add_entry(
-        self,
-        text: str,
-        target_ip: str = "",
-        *,
-        persist: bool = True
+        self, text: str, target_ip: str = "", *, persist: bool = True
     ) -> Optional[Dict[str, Any]]:
         """Adds a sanitized entry, optionally persisting standalone history storage.
 
@@ -139,6 +140,7 @@ class ClipboardWatcher(QObject):
         is_multiline = lines_count > 2 or char_count > 120
 
         from core.validators import format_timestamp
+
         entry = {
             "id": f"clip_{uuid.uuid4().hex[:8]}",
             "text": clean_text,
@@ -146,7 +148,7 @@ class ClipboardWatcher(QObject):
             "timestamp": format_timestamp(time_format=self.time_format),
             "lines_count": lines_count,
             "char_count": char_count,
-            "is_multiline": is_multiline
+            "is_multiline": is_multiline,
         }
 
         new_history = [entry, *self.history]
@@ -173,6 +175,7 @@ class ClipboardWatcher(QObject):
     def load_history(self) -> None:
         """Loads and semantically validates clipboard history from storage backend."""
         from core.validators import validate_clipboard_list
+
         raw_data = self.storage.load_json("clipboard")
         if raw_data is not None:
             self.history = validate_clipboard_list(raw_data)
@@ -185,6 +188,7 @@ class ClipboardWatcher(QObject):
         Validates in RAM and emits EventType.HISTORY_UPDATED.
         """
         from core.validators import validate_clipboard_list
+
         self.history = validate_clipboard_list(history)
         self._last_copied_text = self.history[0]["text"] if self.history else None
         self._publish_updated("replace")
@@ -192,6 +196,7 @@ class ClipboardWatcher(QObject):
     def replace_history_and_persist(self, history: List[Dict[str, Any]]) -> None:
         """Replaces history in memory and immediately persists the validated result."""
         from core.validators import validate_clipboard_list
+
         validated = validate_clipboard_list(history)
         if not self.storage.save_json("clipboard", validated):
             raise PersistenceError("Could not persist replacement clipboard history to storage.")
@@ -240,12 +245,19 @@ class ClipboardWatcher(QObject):
         self._publish_updated("clear")
         return count
 
-    def get_history(self, search_query: str = "", target_ip: Optional[str] = None, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_history(
+        self,
+        search_query: str = "",
+        target_ip: Optional[str] = None,
+        filter_type: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Filters history by search query, target IP, or command/output type."""
         results = self.history
 
         if target_ip and target_ip != "all":
-            results = [e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")]
+            results = [
+                e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")
+            ]
 
         if filter_type == "commands":
             results = [e for e in results if not e.get("is_multiline", False)]
@@ -283,11 +295,14 @@ class ClipboardWatcher(QObject):
     def is_paused(self) -> bool:
         return self._is_paused
 
-    def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None, loot_manager = None) -> str:
+    def export_report_markdown(
+        self, output_path: Path, target_ip: Optional[str] = None, loot_manager=None
+    ) -> str:
         """DEPRECATED: Use core.report_builder.ReportBuilder instead.
-        
+
         Delegates directly to ReportBuilder for unified reporting.
         """
         from core.report_builder import ReportBuilder
+
         builder = ReportBuilder(loot_manager=loot_manager, clipboard_watcher=self)
         return builder.export(output_path, target_ip=target_ip)

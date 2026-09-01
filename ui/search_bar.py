@@ -1,16 +1,17 @@
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLineEdit, QWidget
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+from PyQt6.QtCore import pyqtSignal, QTimer
+
 
 class SearchBar(QFrame):
     """Minimalist Spotlight-style search bar with debounced live filtering."""
-    
+
     search_changed = pyqtSignal(str)
 
     def __init__(self, parent: QWidget = None, debounce_ms: int = 60):
         super().__init__(parent)
         self.debounce_ms = debounce_ms
         self.setObjectName("SearchSection")
-        
+
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.setInterval(self.debounce_ms)
@@ -25,10 +26,12 @@ class SearchBar(QFrame):
 
         self.txt_search = QLineEdit()
         self.txt_search.setObjectName("SpotlightSearch")
-        self.txt_search.setPlaceholderText("Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql', 'suid', 'lfi')...")
+        self.txt_search.setPlaceholderText(
+            "Search commands, tools or syntax (e.g. 'curl', 'nmap', 'sql', 'suid', 'lfi')..."
+        )
         self.txt_search.setClearButtonEnabled(True)
         self.txt_search.textChanged.connect(self._on_text_changed)
-        
+
         layout.addWidget(self.txt_search)
 
     def _on_text_changed(self, text: str) -> None:

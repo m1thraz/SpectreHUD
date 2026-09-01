@@ -39,7 +39,6 @@ class FailingStorageBackend(StorageBackend):
 
 
 class TestPersistenceErrors(unittest.TestCase):
-
     def test_loot_manager_raises_and_rolls_back_on_storage_failure(self):
         backend = FailingStorageBackend()
         manager = LootManager(storage=backend)
@@ -91,11 +90,13 @@ class TestPersistenceErrors(unittest.TestCase):
 
     def test_project_manager_raises_on_registry_save_failure(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            pm = ProjectManager(base_dir=Path(tmpdir) / "projects", config_dir=Path(tmpdir) / "config")
+            pm = ProjectManager(
+                base_dir=Path(tmpdir) / "projects", config_dir=Path(tmpdir) / "config"
+            )
             blocked_file = Path(tmpdir) / "blocked_file"
             blocked_file.write_text("i am a file", encoding="utf-8")
             pm.registry_file = blocked_file / "registry.json"
-            
+
     def test_config_manager_batch_update_atomic(self):
         """Batch update must apply all settings in one atomic write or fail cleanly."""
         backend = FailingStorageBackend()
@@ -112,6 +113,7 @@ class TestPersistenceErrors(unittest.TestCase):
 
     def test_clipboard_retry_after_persistence_failure(self):
         """If persistence fails on first copy, retry of the same text must succeed when storage recovers."""
+
         class FlakyStorageBackend(StorageBackend):
             def __init__(self):
                 self.fail_once = True
@@ -169,7 +171,9 @@ class TestPersistenceErrors(unittest.TestCase):
             mock_box.assert_called_once()
 
         # Seed existing entry in memory
-        loot_mgr.entries = [{"id": "item1", "type": "credentials", "title": "Old", "content": "123"}]
+        loot_mgr.entries = [
+            {"id": "item1", "type": "credentials", "title": "Old", "content": "123"}
+        ]
 
         with patch.object(QMessageBox, "critical") as mock_box:
             success = ctrl.update_entry("item1", "New Title", "New Content")
@@ -192,7 +196,9 @@ class TestPersistenceErrors(unittest.TestCase):
         watcher = ClipboardWatcher(storage=backend)
         loot_mgr = LootManager(storage=backend)
         proj_mgr = ProjectManager()
-        ctrl = HistoryController(clipboard_watcher=watcher, loot_manager=loot_mgr, project_manager=proj_mgr)
+        ctrl = HistoryController(
+            clipboard_watcher=watcher, loot_manager=loot_mgr, project_manager=proj_mgr
+        )
 
         with patch.object(QMessageBox, "critical") as mock_box:
             # add_entry does not crash and notifies
@@ -246,5 +252,5 @@ class TestPersistenceErrors(unittest.TestCase):
             mock_box.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

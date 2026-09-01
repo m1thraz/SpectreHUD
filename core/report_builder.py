@@ -6,12 +6,12 @@ Baut Metadaten-Tabellen, Executive Summary mit Findings-Matrix, Scope-Definition
 phänomenologische Kategorien (1. Recon bis 6. Misc), Remediation-Pläne,
 sowie Anhänge für Terminal-History und Screenshot-Evidenzen.
 """
+
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.loot_manager import CATEGORIES, LOOT_TYPES
+from core.loot_manager import CATEGORIES
 from core.logger import get_logger
 
 logger = get_logger("report_builder")
@@ -60,28 +60,43 @@ class ReportBuilder:
     # Public API
     # ------------------------------------------------------------------ #
 
-    def build(self, target_ip: Optional[str] = None, project_name: Optional[str] = None, template: Optional[Any] = None) -> str:
+    def build(
+        self,
+        target_ip: Optional[str] = None,
+        project_name: Optional[str] = None,
+        template: Optional[Any] = None,
+    ) -> str:
         """Baut den kompletten Report-String unter Verwendung der Template-Engine."""
-        from core.reporting.template_engine import TemplateRenderer, LEGACY_DEFAULT_TEMPLATE, ReportContext
-        
+        from core.reporting.template_engine import (
+            TemplateRenderer,
+            LEGACY_DEFAULT_TEMPLATE,
+            ReportContext,
+        )
+
         all_loot = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
-        all_clips = self.clipboard_watcher.get_history(target_ip=target_ip) if self.clipboard_watcher else []
-        pname = project_name or (self.project_manager.get_active_project() if self.project_manager else "Default")
+        all_clips = (
+            self.clipboard_watcher.get_history(target_ip=target_ip)
+            if self.clipboard_watcher
+            else []
+        )
+        pname = project_name or (
+            self.project_manager.get_active_project() if self.project_manager else "Default"
+        )
         tip = target_ip or ""
 
         context = ReportContext(
-            loot_entries=all_loot,
-            clipboard_history=all_clips,
-            project_name=pname,
-            target_ip=tip
+            loot_entries=all_loot, clipboard_history=all_clips, project_name=pname, target_ip=tip
         )
 
         active_template = template or LEGACY_DEFAULT_TEMPLATE
         return TemplateRenderer().render(active_template, context)
 
-    def export(self, output_path: Path, target_ip: Optional[str] = None, project_name: Optional[str] = None) -> str:
+    def export(
+        self, output_path: Path, target_ip: Optional[str] = None, project_name: Optional[str] = None
+    ) -> str:
         """Baut den Report und schreibt ihn atomar nach output_path (.md erzwungen)."""
         from core.atomic_write import atomic_write_text
+
         output_path = Path(output_path)
         if output_path.suffix.lower() != ".md":
             output_path = output_path.with_suffix(".md")
@@ -101,7 +116,9 @@ class ReportBuilder:
     # Header & Metadaten
     # ------------------------------------------------------------------ #
 
-    def _render_header(self, target_ip: Optional[str], project_name: Optional[str], date_str: str) -> List[str]:
+    def _render_header(
+        self, target_ip: Optional[str], project_name: Optional[str], date_str: str
+    ) -> List[str]:
         target_display = target_ip if target_ip and target_ip != "all" else "Alle Targets"
         title = project_name if project_name else "Pentest / CTF Session"
         return [
@@ -136,7 +153,9 @@ class ReportBuilder:
                 findings_count += 1
                 title = entry.get("title", "Unbenannt")
                 cat = entry.get("category", "misc")
-                finding_rows.append(f"| {findings_count} | {title} | {sev.upper()} | {cat} | Offen |")
+                finding_rows.append(
+                    f"| {findings_count} | {title} | {sev.upper()} | {cat} | Offen |"
+                )
 
         if not finding_rows:
             finding_rows = ["| | | | | |"]
@@ -182,7 +201,9 @@ class ReportBuilder:
 
     def _render_loot_sections(self, target_ip: Optional[str]) -> List[str]:
         """Eine Sektion pro Kategorie, in fester CATEGORIES-Reihenfolge."""
-        all_entries = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        all_entries = (
+            self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        )
         lines: List[str] = []
 
         for category in sorted(CATEGORIES, key=lambda c: c["order"]):
@@ -217,6 +238,7 @@ class ReportBuilder:
         sev_badge = ""
         if severity and severity != "info":
             from core.reporting.charts import render_severity_badge
+
             sev_badge = f"{render_severity_badge(severity)} "
 
         lines = [f"### {sev_badge}{title}"]
@@ -279,7 +301,11 @@ class ReportBuilder:
         chronological = list(reversed(history_items))
         for i, item in enumerate(chronological, start=1):
             ts = item.get("timestamp", "").split(" ")[-1]
-            target_tag = f" {_wrap_inline_code('[' + str(item.get('target_ip')) + ']')}" if item.get("target_ip") else ""
+            target_tag = (
+                f" {_wrap_inline_code('[' + str(item.get('target_ip')) + ']')}"
+                if item.get("target_ip")
+                else ""
+            )
             lines.append(f"#### {i}. {_wrap_inline_code(ts)}{target_tag}")
             lines.extend(_wrap_code_fence(item.get("text", ""), lang="bash"))
             lines.append("")
@@ -293,7 +319,9 @@ class ReportBuilder:
             "## Anhang B: Screenshots",
             "",
         ]
-        all_entries = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        all_entries = (
+            self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
+        )
         screenshots = [e for e in all_entries if e.get("type") == "screenshot"]
 
         if not screenshots:

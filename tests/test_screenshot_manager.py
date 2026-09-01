@@ -49,7 +49,7 @@ class TestScreenshotManager(unittest.TestCase):
             parent_window=parent_win,
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            target_ip="10.10.10.55"
+            target_ip="10.10.10.55",
         )
 
         # Check loot directory
@@ -76,14 +76,14 @@ class TestScreenshotManager(unittest.TestCase):
             parent_window=parent_win,
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            target_ip="10.10.10.55"
+            target_ip="10.10.10.55",
         )
         self.screenshot_mgr._on_snip_completed(
             cropped_pixmap=pixmap,
             parent_window=parent_win,
             project_manager=self.project_mgr,
             loot_manager=self.loot_mgr,
-            target_ip="10.10.10.55"
+            target_ip="10.10.10.55",
         )
 
         loot_dir = self.project_mgr.get_project_dir("BoxSnip") / "loot"
@@ -118,7 +118,7 @@ class TestScreenshotManager(unittest.TestCase):
                     parent_window=parent_win,
                     project_manager=self.project_mgr,
                     loot_manager=self.loot_mgr,
-                    target_ip="10.10.10.55"
+                    target_ip="10.10.10.55",
                 )
 
         # Invariant: No loot entries created when disk save fails
@@ -192,7 +192,9 @@ class TestScreenshotManager(unittest.TestCase):
             switch_mode=MagicMock(),
             event_bus=EventBus(),
         )
-        controller.screenshot_transaction.commit.return_value = ScreenshotTransactionResult(ok=False)
+        controller.screenshot_transaction.commit.return_value = ScreenshotTransactionResult(
+            ok=False
+        )
         self.screenshot_mgr.screenshot_saved.connect(
             lambda entry: AppController._on_screenshot_saved(controller, entry)
         )

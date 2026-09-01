@@ -36,7 +36,7 @@ class ServiceContainer:
         clipboard_watcher: ClipboardWatcher,
         screenshot_manager: ScreenshotManager,
         storage: StorageBackend,
-        event_bus: EventBus
+        event_bus: EventBus,
     ):
         self.config_manager = config_manager
         self.snippet_manager = snippet_manager
@@ -49,9 +49,7 @@ class ServiceContainer:
 
     @classmethod
     def create_production(
-        cls,
-        config_dir: Optional[Path] = None,
-        language: Optional[str] = None
+        cls, config_dir: Optional[Path] = None, language: Optional[str] = None
     ) -> "ServiceContainer":
         """
         Creates a production service container backed by filesystem persistence
@@ -59,27 +57,35 @@ class ServiceContainer:
         """
         resolved_config_dir = Path(config_dir) if config_dir else get_default_config_dir()
         from core.logger import configure_file_logging
+
         configure_file_logging(config_dir=resolved_config_dir)
         storage = FileStorageBackend(base_dir=resolved_config_dir)
         event_bus = EventBus()
 
         config_manager = ConfigManager(config_dir=resolved_config_dir, storage=storage)
-        
+
         # Determine language & time format
         active_lang = language or config_manager.get("language", "en")
         time_format = config_manager.get("time_format", "24h")
         from core.i18n import set_locale
+
         set_locale(active_lang)
 
         snippet_manager = SnippetManager(language=active_lang)
         workspace_setting = config_manager.get("workspace_dir")
         base_projects_dir = Path(workspace_setting) if workspace_setting else None
-        project_manager = ProjectManager(base_dir=base_projects_dir, config_dir=resolved_config_dir, event_bus=event_bus)
-        
+        project_manager = ProjectManager(
+            base_dir=base_projects_dir, config_dir=resolved_config_dir, event_bus=event_bus
+        )
+
         # Single Source of Truth: Loot & Clipboard operate in session memory and are persisted exclusively to project_state.json
         session_storage = InMemoryStorageBackend()
-        loot_manager = LootManager(storage=session_storage, event_bus=event_bus, time_format=time_format)
-        clipboard_watcher = ClipboardWatcher(storage=session_storage, event_bus=event_bus, time_format=time_format)
+        loot_manager = LootManager(
+            storage=session_storage, event_bus=event_bus, time_format=time_format
+        )
+        clipboard_watcher = ClipboardWatcher(
+            storage=session_storage, event_bus=event_bus, time_format=time_format
+        )
         screenshot_manager = ScreenshotManager()
 
         return cls(
@@ -90,7 +96,7 @@ class ServiceContainer:
             clipboard_watcher=clipboard_watcher,
             screenshot_manager=screenshot_manager,
             storage=storage,
-            event_bus=event_bus
+            event_bus=event_bus,
         )
 
     @classmethod
@@ -101,7 +107,7 @@ class ServiceContainer:
         base_dir: Optional[Path] = None,
         config_dir: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
-        event_bus: Optional[EventBus] = None
+        event_bus: Optional[EventBus] = None,
     ) -> "ServiceContainer":
         """
         Creates a test service container with isolated temporary directories and in-memory storage.
@@ -125,12 +131,19 @@ class ServiceContainer:
         config_manager = ConfigManager(config_dir=temp_cfg_dir, storage=actual_storage)
         time_format = config_manager.get("time_format", "24h")
         from core.i18n import set_locale
+
         set_locale(language)
 
         snippet_manager = SnippetManager(language=language)
-        project_manager = ProjectManager(base_dir=temp_base_dir, config_dir=temp_cfg_dir, event_bus=actual_event_bus)
-        loot_manager = LootManager(storage=actual_storage, event_bus=actual_event_bus, time_format=time_format)
-        clipboard_watcher = ClipboardWatcher(storage=actual_storage, event_bus=actual_event_bus, time_format=time_format)
+        project_manager = ProjectManager(
+            base_dir=temp_base_dir, config_dir=temp_cfg_dir, event_bus=actual_event_bus
+        )
+        loot_manager = LootManager(
+            storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
+        )
+        clipboard_watcher = ClipboardWatcher(
+            storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
+        )
         screenshot_manager = ScreenshotManager()
 
         return cls(
@@ -141,7 +154,7 @@ class ServiceContainer:
             clipboard_watcher=clipboard_watcher,
             screenshot_manager=screenshot_manager,
             storage=actual_storage,
-            event_bus=actual_event_bus
+            event_bus=actual_event_bus,
         )
 
     # Backward-compatible alias

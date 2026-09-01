@@ -4,10 +4,10 @@ import tempfile
 from pathlib import Path
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
-from core.report_builder import ReportBuilder, SECTION_NOTES_PLACEHOLDER
+from core.report_builder import ReportBuilder
+
 
 class TestReportBuilder(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
@@ -18,7 +18,9 @@ class TestReportBuilder(unittest.TestCase):
 
         self.loot_mgr = LootManager(storage_file=self.loot_file)
         self.clip_watcher = ClipboardWatcher(storage_file=self.clip_file)
-        self.builder = ReportBuilder(loot_manager=self.loot_mgr, clipboard_watcher=self.clip_watcher)
+        self.builder = ReportBuilder(
+            loot_manager=self.loot_mgr, clipboard_watcher=self.clip_watcher
+        )
 
     def tearDown(self):
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
@@ -27,7 +29,7 @@ class TestReportBuilder(unittest.TestCase):
     def test_empty_report(self):
         """Report with no loot and no history still contains all categories and summary."""
         report = self.builder.build(project_name="EmptyBox")
-        
+
         self.assertIn("# Pentest Report: EmptyBox", report)
         self.assertIn("**Auftraggeber / Client**", report)
         self.assertIn("## Executive Summary", report)
@@ -49,12 +51,24 @@ class TestReportBuilder(unittest.TestCase):
 
     def test_categorized_loot_rendering(self):
         """Loot is correctly rendered into its respective category sections in order."""
-        self.loot_mgr.add_entry("directory", "Open Port 80", "/admin/login", "10.10.10.50", category="recon")
-        self.loot_mgr.add_entry("credentials", "SSH Key", "id_rsa_key_content", "10.10.10.50", category="access")
-        self.loot_mgr.add_entry("flag", "User Flag", "THM{user_123}", "10.10.10.50", category="access")
-        self.loot_mgr.add_entry("hash", "Shadow Hash", "$6$root$...", "10.10.10.50", category="privesc")
-        self.loot_mgr.add_entry("screenshot", "Root PoC", "loot/screenshot_root.png", "10.10.10.50", category="privesc")
-        self.loot_mgr.add_entry("note", "Pivot Note", "Found subnet 192.168.1.0/24", "10.10.10.50", category="postex")
+        self.loot_mgr.add_entry(
+            "directory", "Open Port 80", "/admin/login", "10.10.10.50", category="recon"
+        )
+        self.loot_mgr.add_entry(
+            "credentials", "SSH Key", "id_rsa_key_content", "10.10.10.50", category="access"
+        )
+        self.loot_mgr.add_entry(
+            "flag", "User Flag", "THM{user_123}", "10.10.10.50", category="access"
+        )
+        self.loot_mgr.add_entry(
+            "hash", "Shadow Hash", "$6$root$...", "10.10.10.50", category="privesc"
+        )
+        self.loot_mgr.add_entry(
+            "screenshot", "Root PoC", "loot/screenshot_root.png", "10.10.10.50", category="privesc"
+        )
+        self.loot_mgr.add_entry(
+            "note", "Pivot Note", "Found subnet 192.168.1.0/24", "10.10.10.50", category="postex"
+        )
 
         report = self.builder.build(target_ip="10.10.10.50", project_name="BoxAlpha")
 
@@ -77,8 +91,12 @@ class TestReportBuilder(unittest.TestCase):
 
     def test_target_ip_filtering(self):
         """Entries from other targets are filtered out when target_ip is specified."""
-        self.loot_mgr.add_entry("credentials", "Target 1 Creds", "alice:pass1", "10.10.10.10", category="access")
-        self.loot_mgr.add_entry("credentials", "Target 2 Creds", "bob:pass2", "10.10.10.20", category="access")
+        self.loot_mgr.add_entry(
+            "credentials", "Target 1 Creds", "alice:pass1", "10.10.10.10", category="access"
+        )
+        self.loot_mgr.add_entry(
+            "credentials", "Target 2 Creds", "bob:pass2", "10.10.10.20", category="access"
+        )
 
         report_10 = self.builder.build(target_ip="10.10.10.10")
         self.assertIn("alice:pass1", report_10)
@@ -105,13 +123,14 @@ class TestReportBuilder(unittest.TestCase):
         """Export writes file cleanly and enforces .md extension."""
         self.loot_mgr.add_entry("flag", "Flag", "CTF{flag}", category="privesc")
         out_file = self.temp_path / "test_report.txt"  # intentionally .txt
-        
+
         msg = self.builder.export(out_file, project_name="ExportTest")
         expected_md = self.temp_path / "test_report.md"
-        
+
         self.assertTrue(expected_md.exists())
         self.assertIn("CTF{flag}", expected_md.read_text(encoding="utf-8"))
         self.assertIn("Report erfolgreich generiert", msg)
+
 
 if __name__ == "__main__":
     unittest.main()

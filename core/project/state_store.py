@@ -8,10 +8,21 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from core.atomic_write import atomic_write_bytes, atomic_write_json
-from core.crypto_service import KDF_ITERATIONS, create_verifier, decrypt_bytes, derive_key, encrypt_bytes, verify_password
+from core.crypto_service import (
+    KDF_ITERATIONS,
+    create_verifier,
+    decrypt_bytes,
+    derive_key,
+    encrypt_bytes,
+    verify_password,
+)
 from core.logger import get_logger
 from core.project.validator import validate_project_name
-from core.project_lock_service import ProjectLockedError, ProjectLockService, ProjectSecurityMetaError
+from core.project_lock_service import (
+    ProjectLockedError,
+    ProjectLockService,
+    ProjectSecurityMetaError,
+)
 from core.validators import MAX_PROJECT_STATE_FILE_SIZE, is_file_size_valid, validate_project_state
 
 logger = get_logger("projects")
@@ -20,7 +31,9 @@ logger = get_logger("projects")
 class ProjectStateStore:
     """Reads and writes validated project state, including Pentest-Mode encryption."""
 
-    def __init__(self, project_dir_provider: Callable[[str], Path], lock_service: ProjectLockService):
+    def __init__(
+        self, project_dir_provider: Callable[[str], Path], lock_service: ProjectLockService
+    ):
         self.project_dir_provider = project_dir_provider
         self.lock_service = lock_service
 
@@ -36,7 +49,9 @@ class ProjectStateStore:
             with path.open("r", encoding="utf-8") as file:
                 metadata = json.load(file)
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
-            raise ProjectSecurityMetaError(f"Security metadata for '{project_dir.name}' is unreadable.") from exc
+            raise ProjectSecurityMetaError(
+                f"Security metadata for '{project_dir.name}' is unreadable."
+            ) from exc
         if not isinstance(metadata, dict) or not isinstance(metadata.get("pentest_mode"), bool):
             raise ProjectSecurityMetaError("Security metadata has an invalid pentest_mode field.")
         if metadata["pentest_mode"]:
@@ -46,20 +61,38 @@ class ProjectStateStore:
     @staticmethod
     def validate_security_meta(metadata: Dict[str, Any]) -> None:
         if not isinstance(metadata, dict) or metadata.get("pentest_mode") is not True:
-            raise ProjectSecurityMetaError("Pentest-mode metadata must explicitly enable pentest_mode.")
-        salt, iterations, verifier = metadata.get("kdf_salt"), metadata.get("kdf_iterations"), metadata.get("verifier")
-        if not isinstance(salt, str) or not isinstance(iterations, int) or not isinstance(verifier, str):
-            raise ProjectSecurityMetaError("Security metadata is missing required encryption fields.")
+            raise ProjectSecurityMetaError(
+                "Pentest-mode metadata must explicitly enable pentest_mode."
+            )
+        salt, iterations, verifier = (
+            metadata.get("kdf_salt"),
+            metadata.get("kdf_iterations"),
+            metadata.get("verifier"),
+        )
+        if (
+            not isinstance(salt, str)
+            or not isinstance(iterations, int)
+            or not isinstance(verifier, str)
+        ):
+            raise ProjectSecurityMetaError(
+                "Security metadata is missing required encryption fields."
+            )
         try:
             decoded_salt = base64.b64decode(salt.encode("ascii"), validate=True)
         except (ValueError, UnicodeEncodeError) as exc:
-            raise ProjectSecurityMetaError("Security metadata contains an invalid KDF salt.") from exc
+            raise ProjectSecurityMetaError(
+                "Security metadata contains an invalid KDF salt."
+            ) from exc
         if len(decoded_salt) < 16 or iterations < KDF_ITERATIONS or not verifier:
-            raise ProjectSecurityMetaError("Security metadata contains unsafe encryption parameters.")
+            raise ProjectSecurityMetaError(
+                "Security metadata contains unsafe encryption parameters."
+            )
 
     def save_security_meta(self, project_dir: Path, metadata: Dict[str, Any]) -> bool:
         self.validate_security_meta(metadata)
-        return atomic_write_json(self.security_meta_path(project_dir), metadata, indent=2, ensure_ascii=False)
+        return atomic_write_json(
+            self.security_meta_path(project_dir), metadata, indent=2, ensure_ascii=False
+        )
 
     @staticmethod
     def serialize(state: Dict[str, Any]) -> bytes:
@@ -67,7 +100,11 @@ class ProjectStateStore:
 
     def write(self, path: Path, state: Dict[str, Any], key: Optional[bytes]) -> bool:
         serialized = self.serialize(state)
-        return atomic_write_bytes(path, encrypt_bytes(key, serialized)) if key is not None else atomic_write_json(path, state, indent=2, ensure_ascii=False)
+        return (
+            atomic_write_bytes(path, encrypt_bytes(key, serialized))
+            if key is not None
+            else atomic_write_json(path, state, indent=2, ensure_ascii=False)
+        )
 
     def is_pentest_mode(self, name: str) -> bool:
         metadata = self.load_security_meta(self.project_dir_provider(validate_project_name(name)))
@@ -120,14 +157,18 @@ class ProjectStateStore:
         if metadata and metadata.get("pentest_mode"):
             key = self.lock_service.get_session_key(project_name)
             if key is None:
-                raise ProjectLockedError(f"Project '{project_name}' is locked. Enter its Pentest-Mode password first.")
+                raise ProjectLockedError(
+                    f"Project '{project_name}' is locked. Enter its Pentest-Mode password first."
+                )
         if state_file.exists():
             if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
                 logger.error("Project state file %s exceeds maximum size limit.", state_file)
                 return validate_project_state(None, fallback_name=project_name)
             try:
                 if key is not None:
-                    raw_data = json.loads(decrypt_bytes(key, state_file.read_bytes()).decode("utf-8"))
+                    raw_data = json.loads(
+                        decrypt_bytes(key, state_file.read_bytes()).decode("utf-8")
+                    )
                 else:
                     with state_file.open("r", encoding="utf-8") as file:
                         raw_data = json.load(file)
@@ -140,7 +181,11 @@ class ProjectStateStore:
         project_name = validate_project_name(name)
         project_dir = self.project_dir_provider(project_name)
         if not project_dir.exists() or not project_dir.is_dir():
-            logger.error("Refusing to save project '%s': project directory is unavailable at %s.", project_name, project_dir)
+            logger.error(
+                "Refusing to save project '%s': project directory is unavailable at %s.",
+                project_name,
+                project_dir,
+            )
             return False
         metadata = self.load_security_meta(project_dir)
         key = None
@@ -161,5 +206,10 @@ class ProjectStateStore:
         try:
             return self.write(project_dir / "project_state.json", valid_state, key)
         except (OSError, TypeError, ValueError) as exc:
-            logger.error("Error saving project state for %s: %s", project_name, exc, exc_info=isinstance(exc, OSError))
+            logger.error(
+                "Error saving project state for %s: %s",
+                project_name,
+                exc,
+                exc_info=isinstance(exc, OSError),
+            )
             return False

@@ -1,9 +1,12 @@
-import json
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 from core.logger import get_logger
-from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend, PersistenceError
+from core.storage import (
+    StorageBackend,
+    FileStorageBackend,
+    PersistenceError,
+)
 
 logger = get_logger("config")
 
@@ -43,6 +46,7 @@ def clamp_transparency(value: object, default: int) -> int:
         transparency = default
     return max(0, min(30, transparency))
 
+
 def get_default_config_dir() -> Path:
     """Returns the default config directory, checking SPECTRE_CONFIG_DIR env var first."""
     env_dir = os.environ.get("SPECTRE_CONFIG_DIR")
@@ -50,9 +54,10 @@ def get_default_config_dir() -> Path:
         return Path(env_dir)
     return Path.home() / ".ctf_cheatsheet_widget"
 
+
 class ConfigManager:
     """Manages application configuration, user state, and preferences with full path parameterization."""
-    
+
     def __init__(self, config_dir: Optional[Path] = None, storage: Optional[StorageBackend] = None):
         if storage is not None:
             self.storage = storage
@@ -84,7 +89,12 @@ class ConfigManager:
         if isinstance(loaded, dict):
             migrated = False
             # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
-            if loaded.get("hotkey") in ["<ctrl>+<shift>+c", "ctrl+shift+c", "<ctrl>+<shift>+C", None]:
+            if loaded.get("hotkey") in [
+                "<ctrl>+<shift>+c",
+                "ctrl+shift+c",
+                "<ctrl>+<shift>+C",
+                None,
+            ]:
                 loaded["hotkey"] = "<ctrl>+<cmd>+<"
                 migrated = True
             cfg = DEFAULT_CONFIG.copy()
@@ -101,7 +111,7 @@ class ConfigManager:
                 except PersistenceError:
                     pass
             return cfg
-        
+
         cfg = DEFAULT_CONFIG.copy()
         self.data = cfg
         try:

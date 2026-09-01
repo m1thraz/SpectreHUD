@@ -1,8 +1,8 @@
 """UI-free contracts shared by external exporters."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 
 class ExternalExportError(RuntimeError):
@@ -23,8 +23,6 @@ class ExportResult:
 class ExternalExporter(Protocol):
     """Small common boundary for one-way external export adapters."""
 
-    def export_report(self, *args, **kwargs) -> ExportResult:
-        ...
+    def export_report(self, *args, **kwargs) -> ExportResult: ...
 
-    def append_loot(self, *args, **kwargs) -> ExportResult:
-        ...
+    def append_loot(self, *args, **kwargs) -> ExportResult: ...

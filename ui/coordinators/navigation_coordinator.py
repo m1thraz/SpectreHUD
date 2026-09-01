@@ -32,7 +32,7 @@ class NavigationCoordinator(QObject):
         report_ctrl: ReportController,
         event_bus: EventBus,
         on_mode_switched: Optional[Callable[[str], None]] = None,
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.header = header

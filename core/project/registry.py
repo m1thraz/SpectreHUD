@@ -24,7 +24,10 @@ class ProjectRegistry:
     def load(self) -> Dict[str, str]:
         if self.registry_file.exists():
             if not is_file_size_valid(self.registry_file, MAX_REGISTRY_FILE_SIZE):
-                logger.warning("Project registry file %s exceeds maximum size limit. Ignoring.", self.registry_file)
+                logger.warning(
+                    "Project registry file %s exceeds maximum size limit. Ignoring.",
+                    self.registry_file,
+                )
                 return {}
             try:
                 with self.registry_file.open("r", encoding="utf-8") as file:
@@ -32,10 +35,14 @@ class ProjectRegistry:
                 if isinstance(data, dict):
                     return {str(key): str(value) for key, value in data.items()}
             except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as exc:
-                logger.warning("Could not load projects registry from %s: %s", self.registry_file, exc)
+                logger.warning(
+                    "Could not load projects registry from %s: %s", self.registry_file, exc
+                )
         return {}
 
-    def update(self, additions: Optional[Dict[str, str]] = None, removals: Optional[set[str]] = None) -> None:
+    def update(
+        self, additions: Optional[Dict[str, str]] = None, removals: Optional[set[str]] = None
+    ) -> None:
         additions = dict(additions or {})
         removals = set(removals or set())
         try:
@@ -47,8 +54,15 @@ class ProjectRegistry:
                 raise OSError("Atomic registry write returned false.")
             self.entries = updated
         except Exception as exc:
-            logger.error("Failed to update projects registry at %s: %s", self.registry_file, exc, exc_info=True)
-            raise PersistenceError(f"Failed to update projects registry at {self.registry_file}: {exc}") from exc
+            logger.error(
+                "Failed to update projects registry at %s: %s",
+                self.registry_file,
+                exc,
+                exc_info=True,
+            )
+            raise PersistenceError(
+                f"Failed to update projects registry at {self.registry_file}: {exc}"
+            ) from exc
 
     @staticmethod
     def _discover_base(base_dir: Path) -> Dict[str, Path]:
@@ -76,7 +90,9 @@ class ProjectRegistry:
             if len(paths) == 1:
                 discovered[name] = paths[0]
             else:
-                logger.error("Physical directory collision detected for project '%s': %s.", name, paths)
+                logger.error(
+                    "Physical directory collision detected for project '%s': %s.", name, paths
+                )
         return discovered
 
     def list_projects(self, base_dir: Path) -> List[str]:
@@ -98,7 +114,9 @@ class ProjectRegistry:
         base_dir = Path(base_dir)
         discovered = self._discover_base(base_dir)
         projects = set(discovered)
-        additions = {name: str(path) for name, path in discovered.items() if name not in self.entries}
+        additions = {
+            name: str(path) for name, path in discovered.items() if name not in self.entries
+        }
         removals: set[str] = set()
         for name, path_text in list(self.entries.items()):
             try:

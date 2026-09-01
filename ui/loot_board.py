@@ -87,7 +87,9 @@ class LootBoardDropArea(QFrame):
                 event.ignore()
                 return
             try:
-                entry_id = bytes(mime_data.data(LOOT_ENTRY_MIME_TYPE)).decode("utf-8", errors="strict")
+                entry_id = bytes(mime_data.data(LOOT_ENTRY_MIME_TYPE)).decode(
+                    "utf-8", errors="strict"
+                )
             except UnicodeDecodeError:
                 event.ignore()
                 return

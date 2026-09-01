@@ -27,11 +27,11 @@ class LootController(QObject):
     loot_updated = pyqtSignal()
 
     def __init__(
-        self, 
-        loot_manager: LootManager, 
-        project_manager: ProjectManager, 
+        self,
+        loot_manager: LootManager,
+        project_manager: ProjectManager,
         event_bus: Optional[EventBus] = None,
-        parent: Optional[QObject] = None
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.loot_manager = loot_manager
@@ -40,18 +40,21 @@ class LootController(QObject):
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
 
-    def _notify_persistence_error(self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None) -> None:
+    def _notify_persistence_error(
+        self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
+    ) -> None:
         logger.error(f"Persistence error during {operation}: {error}")
         target_widget = parent_widget
         if target_widget is None:
             from PyQt6.QtWidgets import QApplication
+
             app = QApplication.instance()
             if app:
                 target_widget = app.activeWindow()
         QMessageBox.critical(
             target_widget,
             "Speicherfehler",
-            f"Loot-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt."
+            f"Loot-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
         )
 
     # ------------------------------------------------------------------ #
@@ -62,13 +65,11 @@ class LootController(QObject):
         self,
         target_ip: Optional[str] = None,
         entry_type: Optional[str] = None,
-        search_query: Optional[str] = None
+        search_query: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         target_type = entry_type if entry_type is not None else self.current_loot_type
         return self.loot_manager.get_entries(
-            target_ip=target_ip,
-            entry_type=target_type,
-            search_query=search_query
+            target_ip=target_ip, entry_type=target_type, search_query=search_query
         )
 
     def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
@@ -172,9 +173,12 @@ class LootController(QObject):
             reply = QMessageBox.question(
                 parent_widget,
                 t("loot.clear_title", "Clear Loot"),
-                t("loot.clear_confirm", "Are you sure you want to delete all session loot for this project?"),
+                t(
+                    "loot.clear_confirm",
+                    "Are you sure you want to delete all session loot for this project?",
+                ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
@@ -186,7 +190,10 @@ class LootController(QObject):
 
     def export_entry_to_file(self, entry_id: str) -> Path:
         """Writes one loot entry as a human-readable, project-local text file."""
-        entry = next((item for item in self.loot_manager.get_all_entries() if item.get("id") == entry_id), None)
+        entry = next(
+            (item for item in self.loot_manager.get_all_entries() if item.get("id") == entry_id),
+            None,
+        )
         if entry is None:
             raise ValueError(f"Loot entry '{entry_id}' does not exist.")
 
@@ -194,10 +201,14 @@ class LootController(QObject):
         if category not in {item["id"] for item in CATEGORIES}:
             category = "misc"
 
-        project_dir = self.project_manager.get_project_dir(self.project_manager.get_active_project())
+        project_dir = self.project_manager.get_project_dir(
+            self.project_manager.get_active_project()
+        )
         category_dir = validate_workspace_boundary(project_dir / category, project_dir)
         if category_dir.exists() and category_dir.is_symlink():
-            raise PersistenceError(f"Refusing to export through symlinked category directory: {category}")
+            raise PersistenceError(
+                f"Refusing to export through symlinked category directory: {category}"
+            )
         category_dir.mkdir(parents=True, exist_ok=True)
         category_dir = validate_workspace_boundary(category_dir, project_dir)
         if category_dir.is_symlink() or not category_dir.is_dir():
@@ -212,16 +223,18 @@ class LootController(QObject):
             suffix += 1
         target = validate_workspace_boundary(target, project_dir)
 
-        contents = "\n".join([
-            f"Title: {entry.get('title', '')}",
-            f"Type: {entry.get('type', 'note')}",
-            f"Category: {category}",
-            f"Target: {entry.get('target_ip', '')}",
-            f"Captured: {entry.get('timestamp', '')}",
-            "",
-            str(entry.get("content", "")),
-            "",
-        ])
+        contents = "\n".join(
+            [
+                f"Title: {entry.get('title', '')}",
+                f"Type: {entry.get('type', 'note')}",
+                f"Category: {category}",
+                f"Target: {entry.get('target_ip', '')}",
+                f"Captured: {entry.get('timestamp', '')}",
+                "",
+                str(entry.get("content", "")),
+                "",
+            ]
+        )
         try:
             if not atomic_write_text(target, contents):
                 raise PersistenceError(f"Could not write loot export to {target}")
@@ -229,21 +242,28 @@ class LootController(QObject):
             raise PersistenceError(f"Could not write loot export to {target}: {exc}") from exc
         return target
 
-    def export_entry_to_file_with_feedback(self, entry_id: str, parent_widget: Optional[QWidget] = None) -> Optional[Path]:
+    def export_entry_to_file_with_feedback(
+        self, entry_id: str, parent_widget: Optional[QWidget] = None
+    ) -> Optional[Path]:
         """Exports one entry and reports the outcome to the user."""
         try:
             output_path = self.export_entry_to_file(entry_id)
         except (PersistenceError, OSError, ValueError) as exc:
             logger.error("Loot file export failed for %s: %s", entry_id, exc, exc_info=True)
-            QMessageBox.warning(parent_widget, "Export fehlgeschlagen", f"Loot-Datei konnte nicht exportiert werden:\n{exc}")
+            QMessageBox.warning(
+                parent_widget,
+                "Export fehlgeschlagen",
+                f"Loot-Datei konnte nicht exportiert werden:\n{exc}",
+            )
             return None
 
-        QMessageBox.information(parent_widget, "Loot-Datei exportiert", f"Gespeichert unter:\n{output_path}")
+        QMessageBox.information(
+            parent_widget, "Loot-Datei exportiert", f"Gespeichert unter:\n{output_path}"
+        )
         return output_path
 
     def get_type_filter_actions(
-        self,
-        on_select_type: Optional[Callable[[str], None]] = None
+        self, on_select_type: Optional[Callable[[str], None]] = None
     ) -> List[MenuAction]:
         """Returns a list of MenuAction DTOs for filtering loot by type."""
         counts = self.get_type_counts(target_ip=None)
@@ -252,20 +272,28 @@ class LootController(QObject):
                 id="type:all",
                 text=f"All ({counts.get('all', 0)})",
                 checked=(self.current_loot_type == "all"),
-                callback=lambda: on_select_type("all") if on_select_type else self.select_loot_type("all"),
-                data={"type": "all"}
+                callback=lambda: (
+                    on_select_type("all") if on_select_type else self.select_loot_type("all")
+                ),
+                data={"type": "all"},
             )
         ]
-        for t in LOOT_TYPES:
-            tid = t["id"]
+        for loot_type in LOOT_TYPES:
+            tid = loot_type["id"]
             count = counts.get(tid, 0)
-            actions.append(MenuAction(
-                id=f"type:{tid}",
-                text=f"{t['name']} ({count})",
-                checked=(self.current_loot_type == tid),
-                callback=lambda target_id=tid: on_select_type(target_id) if on_select_type else self.select_loot_type(target_id),
-                data={"type": tid}
-            ))
+            actions.append(
+                MenuAction(
+                    id=f"type:{tid}",
+                    text=f"{loot_type['name']} ({count})",
+                    checked=(self.current_loot_type == tid),
+                    callback=lambda target_id=tid: (
+                        on_select_type(target_id)
+                        if on_select_type
+                        else self.select_loot_type(target_id)
+                    ),
+                    data={"type": tid},
+                )
+            )
         return actions
 
     # ------------------------------------------------------------------ #
@@ -295,7 +323,9 @@ class LootController(QObject):
         counts = self.loot_manager.get_type_counts(target_ip=None)
         all_btn = QPushButton(f"All ({counts.get('all', 0)})")
         all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        all_btn.setProperty("class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill")
+        all_btn.setProperty(
+            "class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill"
+        )
         all_btn.clicked.connect(lambda: on_select_type("all"))
         self.filter_buttons["all"] = all_btn
         pills_layout.addWidget(all_btn)
@@ -305,7 +335,9 @@ class LootController(QObject):
             count = counts.get(tid, 0)
             btn = QPushButton(f"{loot_type['name']} ({count})")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setProperty("class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill")
+            btn.setProperty(
+                "class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill"
+            )
             btn.clicked.connect(lambda checked=False, type_id=tid: on_select_type(type_id))
             self.filter_buttons[tid] = btn
             pills_layout.addWidget(btn)
@@ -341,7 +373,12 @@ class LootController(QObject):
         if on_export_obsidian is not None:
             btn_obsidian = QPushButton("Obsidian")
             btn_obsidian.setProperty("class", "MiniActionBtn")
-            btn_obsidian.setToolTip(t("loot.export_obsidian_tip", "Append the current loot to the exported Obsidian project note"))
+            btn_obsidian.setToolTip(
+                t(
+                    "loot.export_obsidian_tip",
+                    "Append the current loot to the exported Obsidian project note",
+                )
+            )
             btn_obsidian.clicked.connect(on_export_obsidian)
             pills_layout.addWidget(btn_obsidian)
 
@@ -365,16 +402,14 @@ class LootController(QObject):
         on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
         loot_entries = self.get_entries(
-            target_ip=None,
-            entry_type=self.current_loot_type,
-            search_query=search_query
+            target_ip=None, entry_type=self.current_loot_type, search_query=search_query
         )
 
         if not loot_entries:
             show_empty_state_fn(
                 t(
                     "loot.empty_state",
-                    "No session loot captured yet. Press Ctrl+N to add notes/credentials or Snip for screenshots."
+                    "No session loot captured yet. Press Ctrl+N to add notes/credentials or Snip for screenshots.",
                 )
             )
             return []

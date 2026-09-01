@@ -10,7 +10,7 @@ from core.reporting.markdown import (
     sanitize_url,
     format_inline,
     resolve_and_embed_images,
-    convert_markdown_to_html
+    convert_markdown_to_html,
 )
 from core.reporting.template import render_report_html
 from core.reporting.charts import render_severity_badge, render_metrics_summary
@@ -19,12 +19,12 @@ from core.reporting.template_engine import (
     ReportTemplate,
     ReportContext,
     TemplateRenderer,
-    LEGACY_DEFAULT_TEMPLATE
+    LEGACY_DEFAULT_TEMPLATE,
 )
 from core.reporting.template_repository import (
     TemplateRepository,
     template_to_dict,
-    dict_to_template
+    dict_to_template,
 )
 
 __all__ = [
@@ -46,5 +46,5 @@ __all__ = [
     "LEGACY_DEFAULT_TEMPLATE",
     "TemplateRepository",
     "template_to_dict",
-    "dict_to_template"
+    "dict_to_template",
 ]

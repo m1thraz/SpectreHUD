@@ -1,10 +1,21 @@
 from typing import Dict, Any, Optional
 from pathlib import Path
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPushButton, QComboBox, QCheckBox, 
-    QStackedWidget, QFrame, QScrollArea, QFileDialog, QMessageBox,
-    QSlider, QSpinBox
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QComboBox,
+    QCheckBox,
+    QStackedWidget,
+    QFrame,
+    QScrollArea,
+    QFileDialog,
+    QMessageBox,
+    QSlider,
+    QSpinBox,
 )
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
@@ -150,7 +161,13 @@ class HotkeySettingsPage(QWidget):
             ("Ctrl + N", t("settings.shortcut_ctrl_n", "Add new command / snippet")),
             ("Ctrl + P", t("settings.shortcut_ctrl_p", "Pause / resume clipboard recorder")),
             ("Ctrl + S", t("settings.shortcut_ctrl_s", "Capture region screenshot")),
-            ("Ctrl + 1 / 2 / 3 / 4", t("settings.shortcut_modes", "Switch active mode (Cheatsheet, Loot, History, Report)")),
+            (
+                "Ctrl + 1 / 2 / 3 / 4",
+                t(
+                    "settings.shortcut_modes",
+                    "Switch active mode (Cheatsheet, Loot, History, Report)",
+                ),
+            ),
             ("Ctrl + ,", t("settings.shortcut_options", "Open settings & options")),
         ]
 
@@ -172,7 +189,9 @@ class HotkeySettingsPage(QWidget):
         # Reset button
         row_reset = QHBoxLayout()
         row_reset.addStretch()
-        self.btn_reset_defaults = QPushButton(t("settings.btn_reset_defaults", "Restore Default Hotkeys"))
+        self.btn_reset_defaults = QPushButton(
+            t("settings.btn_reset_defaults", "Restore Default Hotkeys")
+        )
         self.btn_reset_defaults.setProperty("class", "SecondaryBtn")
         self.btn_reset_defaults.clicked.connect(self._reset_defaults)
         row_reset.addWidget(self.btn_reset_defaults)
@@ -256,7 +275,7 @@ class LanguageSettingsPage(QWidget):
     def get_settings(self) -> Dict[str, Any]:
         return {
             "language": self.combo_lang.currentData() or "de",
-            "time_format": self.combo_date.currentData() or "24h"
+            "time_format": self.combo_date.currentData() or "24h",
         }
 
 
@@ -324,9 +343,7 @@ class AppearanceSettingsPage(QWidget):
         theme_layout.addWidget(restart_hint)
         layout.addWidget(card_theme)
 
-        lbl_transparency = QLabel(
-            t("settings.lbl_transparency_section", "Transparency")
-        )
+        lbl_transparency = QLabel(t("settings.lbl_transparency_section", "Transparency"))
         lbl_transparency.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_transparency)
 
@@ -335,12 +352,10 @@ class AppearanceSettingsPage(QWidget):
         transparency_layout = QVBoxLayout(card_transparency)
         transparency_layout.setSpacing(10)
 
-        self.slider_hud_transparency, self.spin_hud_transparency = (
-            self._add_transparency_control(
-                transparency_layout,
-                t("settings.lbl_hud_transparency", "HUD Transparency"),
-                clamp_transparency(self.config.get("hud_transparency", 5), 5),
-            )
+        self.slider_hud_transparency, self.spin_hud_transparency = self._add_transparency_control(
+            transparency_layout,
+            t("settings.lbl_hud_transparency", "HUD Transparency"),
+            clamp_transparency(self.config.get("hud_transparency", 5), 5),
         )
         self.slider_report_transparency, self.spin_report_transparency = (
             self._add_transparency_control(
@@ -349,9 +364,7 @@ class AppearanceSettingsPage(QWidget):
                     "settings.lbl_report_transparency",
                     "Report Editor Transparency",
                 ),
-                clamp_transparency(
-                    self.config.get("report_transparency", 0), 0
-                ),
+                clamp_transparency(self.config.get("report_transparency", 0), 0),
             )
         )
         layout.addWidget(card_transparency)
@@ -365,13 +378,22 @@ class AppearanceSettingsPage(QWidget):
         typography_layout = QVBoxLayout(card_typography)
         typography_layout.setSpacing(10)
 
-        self.combo_ui_font = self._font_combo(UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui"))
-        self.combo_code_font = self._font_combo(CODE_FONT_OPTIONS, self.config.get("code_font", "consolas"))
-        self.combo_report_font = self._font_combo(REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui"))
+        self.combo_ui_font = self._font_combo(
+            UI_FONT_OPTIONS, self.config.get("ui_font", "segoe_ui")
+        )
+        self.combo_code_font = self._font_combo(
+            CODE_FONT_OPTIONS, self.config.get("code_font", "consolas")
+        )
+        self.combo_report_font = self._font_combo(
+            REPORT_FONT_OPTIONS, self.config.get("report_font", "segoe_ui")
+        )
         for label, combo in (
             (t("settings.lbl_app_font", "Application font:"), self.combo_ui_font),
             (t("settings.lbl_code_font", "Code font:"), self.combo_code_font),
-            (t("settings.lbl_report_font", "Report font (preview and HTML export):"), self.combo_report_font),
+            (
+                t("settings.lbl_report_font", "Report font (preview and HTML export):"),
+                self.combo_report_font,
+            ),
         ):
             row = QHBoxLayout()
             label_widget = QLabel(label)
@@ -419,9 +441,7 @@ class AppearanceSettingsPage(QWidget):
     @staticmethod
     def _font_combo(options, selected_key: str) -> QComboBox:
         combo = QComboBox()
-        available_families = {
-            family.casefold() for family in QFontDatabase.families()
-        }
+        available_families = {family.casefold() for family in QFontDatabase.families()}
         for key, label in options:
             is_available = get_font_family(key).casefold() in available_families
             display_label = label
@@ -560,7 +580,9 @@ class GeneralSettingsPage(QWidget):
         d_layout.addWidget(lbl_w)
 
         row_w = QHBoxLayout()
-        self.txt_wordlist = QLineEdit(self.config.get("wordlist", "/usr/share/wordlists/dirb/common.txt"))
+        self.txt_wordlist = QLineEdit(
+            self.config.get("wordlist", "/usr/share/wordlists/dirb/common.txt")
+        )
         row_w.addWidget(self.txt_wordlist, stretch=1)
 
         btn_browse_w = QPushButton(t("dialog.browse", "Browse..."))
@@ -570,12 +592,16 @@ class GeneralSettingsPage(QWidget):
         d_layout.addLayout(row_w)
 
         # Default Workspace Directory
-        lbl_ws = QLabel(t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:"))
+        lbl_ws = QLabel(
+            t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:")
+        )
         lbl_ws.setProperty("class", "FormLabel")
         d_layout.addWidget(lbl_ws)
 
         row_ws = QHBoxLayout()
-        self.txt_workspace = QLineEdit(self.config.get("workspace_dir", str(Path.home() / "spectre_projects")))
+        self.txt_workspace = QLineEdit(
+            self.config.get("workspace_dir", str(Path.home() / "spectre_projects"))
+        )
         row_ws.addWidget(self.txt_workspace, stretch=1)
 
         btn_browse_ws = QPushButton(t("dialog.browse", "Browse..."))
@@ -591,7 +617,9 @@ class GeneralSettingsPage(QWidget):
         d_layout.addWidget(lbl_obsidian)
         row_obsidian = QHBoxLayout()
         self.txt_obsidian_vault = QLineEdit(self.config.get("obsidian_vault_path", ""))
-        self.txt_obsidian_vault.setPlaceholderText(t("settings.obsidian_vault_placeholder", "Select an existing Obsidian vault"))
+        self.txt_obsidian_vault.setPlaceholderText(
+            t("settings.obsidian_vault_placeholder", "Select an existing Obsidian vault")
+        )
         row_obsidian.addWidget(self.txt_obsidian_vault, stretch=1)
         btn_browse_obsidian = QPushButton(t("dialog.browse", "Browse..."))
         btn_browse_obsidian.setProperty("class", "BrowseBtn")
@@ -603,10 +631,14 @@ class GeneralSettingsPage(QWidget):
         lbl_obsidian_folder = QLabel(t("settings.lbl_obsidian_folder", "Obsidian export folder:"))
         lbl_obsidian_folder.setProperty("class", "FormLabel")
         row_obsidian_folder.addWidget(lbl_obsidian_folder)
-        self.txt_obsidian_folder = QLineEdit(self.config.get("obsidian_export_folder", "CTF/SpectreHUD"))
+        self.txt_obsidian_folder = QLineEdit(
+            self.config.get("obsidian_export_folder", "CTF/SpectreHUD")
+        )
         row_obsidian_folder.addWidget(self.txt_obsidian_folder, stretch=1)
         d_layout.addLayout(row_obsidian_folder)
-        self.chk_obsidian_open = QCheckBox(t("settings.chk_obsidian_open", "Open exported note in Obsidian"))
+        self.chk_obsidian_open = QCheckBox(
+            t("settings.chk_obsidian_open", "Open exported note in Obsidian")
+        )
         self.chk_obsidian_open.setChecked(self.config.get("obsidian_open_after_export", False))
         d_layout.addWidget(self.chk_obsidian_open)
 
@@ -617,17 +649,29 @@ class GeneralSettingsPage(QWidget):
         outer_layout.addWidget(scroll)
 
     def _on_browse_wordlist(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(self, t("settings.lbl_default_wordlist", "Default Wordlist Path:"), self.txt_wordlist.text().strip())
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            t("settings.lbl_default_wordlist", "Default Wordlist Path:"),
+            self.txt_wordlist.text().strip(),
+        )
         if file_path:
             self.txt_wordlist.setText(file_path)
 
     def _on_browse_workspace(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:"), self.txt_workspace.text().strip())
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            t("settings.lbl_default_workspace", "Default Workspace / Projects Directory:"),
+            self.txt_workspace.text().strip(),
+        )
         if folder:
             self.txt_workspace.setText(folder)
 
     def _on_browse_obsidian_vault(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, t("settings.lbl_obsidian_vault", "Obsidian Vault (optional):"), self.txt_obsidian_vault.text().strip())
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            t("settings.lbl_obsidian_vault", "Obsidian Vault (optional):"),
+            self.txt_obsidian_vault.text().strip(),
+        )
         if folder:
             self.txt_obsidian_vault.setText(folder)
 
@@ -654,10 +698,7 @@ class SettingsDialog(BaseHudDialog):
     settings_applied = pyqtSignal(dict)
 
     def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
-        super().__init__(
-            title=t("settings.title", "SPECTRE // SETTINGS & OPTIONS"),
-            parent=parent
-        )
+        super().__init__(title=t("settings.title", "SPECTRE // SETTINGS & OPTIONS"), parent=parent)
         self.config = config_manager
         self.setMinimumWidth(720)
         self.setMinimumHeight(480)
@@ -678,7 +719,7 @@ class SettingsDialog(BaseHudDialog):
         self.sidebar_frame = QFrame()
         self.sidebar_frame.setObjectName("SettingsSidebar")
         self.sidebar_frame.setFixedWidth(190)
-        
+
         sidebar_layout = QVBoxLayout(self.sidebar_frame)
         sidebar_layout.setContentsMargins(8, 12, 8, 12)
         sidebar_layout.setSpacing(6)
@@ -714,7 +755,7 @@ class SettingsDialog(BaseHudDialog):
 
         # Stacked Pages
         self.stack = QStackedWidget()
-        
+
         self.page_hotkeys = HotkeySettingsPage(self.config)
         self.page_language = LanguageSettingsPage(self.config)
         self.page_general = GeneralSettingsPage(self.config)
@@ -724,7 +765,7 @@ class SettingsDialog(BaseHudDialog):
         self.stack.addWidget(self.page_language)
         self.stack.addWidget(self.page_general)
         self.stack.addWidget(self.page_appearance)
-        
+
         right_layout.addWidget(self.stack, stretch=1)
 
         # Action Buttons
@@ -771,6 +812,7 @@ class SettingsDialog(BaseHudDialog):
         only after the corresponding runtime switch has completed successfully.
         """
         from core.storage import PersistenceError
+
         all_settings: Dict[str, Any] = {}
         all_settings.update(self.page_hotkeys.get_settings())
         all_settings.update(self.page_language.get_settings())
@@ -779,18 +821,20 @@ class SettingsDialog(BaseHudDialog):
 
         if "workspace_dir" in all_settings and all_settings["workspace_dir"]:
             from core.project.validator import validate_workspace_directory, WorkspaceError
+
             try:
                 validate_workspace_directory(all_settings["workspace_dir"])
             except WorkspaceError as e:
                 QMessageBox.warning(
                     self,
                     "Ungültiger Workspace-Pfad",
-                    f"Das ausgewählte Workspace-Verzeichnis ist ungültig oder nicht beschreibbar:\n{e}"
+                    f"Das ausgewählte Workspace-Verzeichnis ist ungültig oder nicht beschreibbar:\n{e}",
                 )
                 return
 
         if all_settings.get("obsidian_vault_path"):
             from core.exporters import ExternalExportError, ObsidianExporter
+
             try:
                 ObsidianExporter(
                     all_settings["obsidian_vault_path"],
@@ -800,7 +844,11 @@ class SettingsDialog(BaseHudDialog):
                 QMessageBox.warning(
                     self,
                     t("settings.obsidian_invalid_title", "Invalid Obsidian settings"),
-                    t("settings.obsidian_invalid_message", "The Obsidian vault or export folder is invalid:\n{error}", error=str(exc)),
+                    t(
+                        "settings.obsidian_invalid_message",
+                        "The Obsidian vault or export folder is invalid:\n{error}",
+                        error=str(exc),
+                    ),
                 )
                 return
 
@@ -815,12 +863,13 @@ class SettingsDialog(BaseHudDialog):
             QMessageBox.critical(
                 self,
                 "Speichern fehlgeschlagen",
-                f"Die Einstellungen konnten nicht gespeichert werden:\n{e}"
+                f"Die Einstellungen konnten nicht gespeichert werden:\n{e}",
             )
             return
 
         if "language" in all_settings:
             from core.i18n import set_locale
+
             set_locale(all_settings["language"])
 
         self.settings_applied.emit(all_settings)

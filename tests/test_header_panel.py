@@ -1,11 +1,13 @@
 """Tests for the HUD header panel controls."""
 
 import os
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from ui.panels.header_panel import HeaderPanel
 from ui.styles import build_app_theme
 from ui.styles.palette import CYBER_DARK_PALETTE
+
 
 def test_close_button_emits_close_requested(qapp):
     header = HeaderPanel()

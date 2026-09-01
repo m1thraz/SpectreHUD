@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 from core.cli import exit_for_cli_argument as _exit_for_cli_argument
-from core.cli import write_cli as _write_cli
+from core.cli import write_cli as _write_cli  # noqa: F401 (re-exported for CLI smoke tests)
 
 
 # Keep executable smoke tests and package metadata commands independent from
@@ -22,13 +22,13 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt, QProcess, QTimer
 
-from core.single_instance import ApplicationLockError, acquire_application_lock, release_application_lock
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
-from core.project import ProjectManager
+from core.single_instance import (
+    ApplicationLockError,
+    acquire_application_lock,
+    release_application_lock,
+)
 from core.hotkey_listener import HotkeyListener
-from core.logger import setup_logger, get_logger
+from core.logger import get_logger
 from ui.main_window import MainWindow
 
 from ui.appearance import apply_application_style
@@ -44,6 +44,7 @@ def _startup_mark(started_at: float, stage: str) -> None:
         elapsed_ms = (time.perf_counter() - started_at) * 1_000
         print(f"[SpectreHUD startup] {stage}: {elapsed_ms:.1f} ms", flush=True)
 
+
 def global_exception_hook(exctype, value, tb):
     """
     Global exception hook protecting the GUI process from sudden termination
@@ -51,11 +52,11 @@ def global_exception_hook(exctype, value, tb):
     """
     tb_str = "".join(traceback.format_exception(exctype, value, tb))
     logger.critical(f"Unhandled exception caught by global hook:\n{tb_str}")
-    
+
     if issubclass(exctype, (KeyboardInterrupt, SystemExit)):
         sys.__excepthook__(exctype, value, tb)
         return
-        
+
     app = QApplication.instance()
     if app and not os.environ.get("SPECTREHUD_NO_GUI_CRASH_POPUP"):
         active_win = app.activeWindow()
@@ -63,10 +64,12 @@ def global_exception_hook(exctype, value, tb):
             active_win,
             "Unerwarteter Fehler",
             f"Ein unerwarteter Fehler ist aufgetreten:\n{value}\n\n"
-            f"Die Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten."
+            f"Die Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten.",
         )
 
+
 sys.excepthook = global_exception_hook
+
 
 def create_tray_icon_pixmap(is_recording: bool, app_icon: QIcon | None = None) -> QPixmap:
     """Returns the SpectreHUD logo, tinted red while clipboard recording is active."""
@@ -131,6 +134,7 @@ def _create_production_container():
 
     return ServiceContainer.create_production()
 
+
 def main():
     # Retain correct behaviour for callers importing ``main`` and invoking it
     # directly; the module entry path has already handled this even earlier.
@@ -179,9 +183,7 @@ def main():
 
         # Main Window
         window = MainWindow(container=container)
-        window.app.restart_requested.connect(
-            lambda: request_application_restart(window, app)
-        )
+        window.app.restart_requested.connect(lambda: request_application_restart(window, app))
         _startup_mark(started_at, "MainWindow constructed")
         if not app_icon.isNull():
             window.setWindowIcon(app_icon)
@@ -196,7 +198,7 @@ def main():
         hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
         hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
         hotkey_config = HotkeyConfig(toggle=hotkey_toggle, screenshot=hotkey_snip, quit=hotkey_quit)
-        
+
         hotkey_listener = HotkeyListener(config=hotkey_config)
         hotkey_listener.toggle_requested.connect(window.toggle_visibility)
         hotkey_listener.screenshot_requested.connect(window.app.trigger_screenshot)
@@ -208,10 +210,12 @@ def main():
         app.aboutToQuit.connect(window.prepare_for_shutdown)
 
         # System Tray Icon (Default: Paused for privacy)
-        tray_icon = QSystemTrayIcon(QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app)
+        tray_icon = QSystemTrayIcon(
+            QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app
+        )
         tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
         tray_menu = QMenu()
-        
+
         act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
         act_toggle.triggered.connect(window.toggle_visibility)
         tray_menu.addAction(act_toggle)
@@ -235,22 +239,38 @@ def main():
         tray_menu.addAction(act_quit)
 
         tray_icon.setContextMenu(tray_menu)
-        tray_icon.activated.connect(lambda reason: window.toggle_visibility() if reason == QSystemTrayIcon.ActivationReason.Trigger else None)
+        tray_icon.activated.connect(
+            lambda reason: (
+                window.toggle_visibility()
+                if reason == QSystemTrayIcon.ActivationReason.Trigger
+                else None
+            )
+        )
         tray_icon.show()
         _startup_mark(started_at, "system tray ready")
 
         def update_tray_state(is_active: bool):
-            tray_icon.setIcon(QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon)))
+            tray_icon.setIcon(
+                QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon))
+            )
             status = "REC: ON" if is_active else "REC: Paused"
             tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
-            act_rec_toggle.setText(f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)")
+            act_rec_toggle.setText(
+                f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)"
+            )
 
         container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
 
         def on_hotkeys_changed(data: dict):
-            new_toggle = data.get("hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<"))
-            new_snip = data.get("snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x"))
-            new_quit = data.get("quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q"))
+            new_toggle = data.get(
+                "hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
+            )
+            new_snip = data.get(
+                "snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
+            )
+            new_quit = data.get(
+                "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
+            )
             new_cfg = HotkeyConfig(toggle=new_toggle, screenshot=new_snip, quit=new_quit)
             hotkey_listener.update_config(new_cfg)
             act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
@@ -277,6 +297,7 @@ def main():
         exit_code = 0 if _start_replacement_process() else 1
 
     sys.exit(exit_code)
+
 
 if __name__ == "__main__":
     main()

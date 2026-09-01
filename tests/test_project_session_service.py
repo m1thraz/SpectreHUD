@@ -24,7 +24,7 @@ class TestProjectSessionService(unittest.TestCase):
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher
+            clipboard_watcher=self.clipboard_watcher,
         )
 
     def tearDown(self):
@@ -40,7 +40,7 @@ class TestProjectSessionService(unittest.TestCase):
             category="access",
             title="SSH Root",
             content="root:password123",
-            target_ip="10.10.10.10"
+            target_ip="10.10.10.10",
         )
         self.clipboard_watcher.add_entry("ssh root@10.10.10.10", target_ip="10.10.10.10")
 
@@ -49,7 +49,7 @@ class TestProjectSessionService(unittest.TestCase):
             "attacker_ip": "10.10.14.5",
             "port": "2222",
             "username": "admin",
-            "password": "SecretPassword123"
+            "password": "SecretPassword123",
         }
 
         # Save session
@@ -77,8 +77,12 @@ class TestProjectSessionService(unittest.TestCase):
         self.project_manager.create_project("Box2")
 
         # Set Box1 state
-        self.loot_manager.add_entry(entry_type="flag", category="post_exploit", title="Flag1", content="HTB{flag1}")
-        self.session_service.save_project_session(variables={"target_ip": "1.1.1.1"}, project_name="Box1")
+        self.loot_manager.add_entry(
+            entry_type="flag", category="post_exploit", title="Flag1", content="HTB{flag1}"
+        )
+        self.session_service.save_project_session(
+            variables={"target_ip": "1.1.1.1"}, project_name="Box1"
+        )
 
         # Switch and load Box2
         self.session_service.load_project_session("Box2")

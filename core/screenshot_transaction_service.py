@@ -62,9 +62,7 @@ class ScreenshotTransactionService:
                 self.loot_manager.replace_entries_and_persist(entries_before_screenshot)
             except Exception as exc:
                 cleanup_errors.append(exc)
-                logger.exception(
-                    "Failed to roll back loot after screenshot session-save failure."
-                )
+                logger.exception("Failed to roll back loot after screenshot session-save failure.")
 
         file_path = loot_entry.get("file_path")
         if file_path:

@@ -24,17 +24,12 @@ class _TooltipColorGuard(QObject):
         self._text = theme_palette["TEXT_PRIMARY"]
 
     def eventFilter(self, watched, event) -> bool:
-        if (
-            event.type() == QEvent.Type.Show
-            and watched.metaObject().className() == "QTipLabel"
-        ):
+        if event.type() == QEvent.Type.Show and watched.metaObject().className() == "QTipLabel":
             watched.setPalette(QToolTip.palette())
             # Qt can copy the MainScrollArea's local transparent declarations
             # onto its transient QTipLabel. Override only the two affected
             # colours; the global QToolTip rule still owns font and geometry.
-            watched.setStyleSheet(
-                f"background-color: {self._background}; color: {self._text};"
-            )
+            watched.setStyleSheet(f"background-color: {self._background}; color: {self._text};")
         return False
 
 
@@ -75,9 +70,7 @@ def apply_application_style(
     active palette while a newly selected theme waits for its controlled
     restart.
     """
-    applied_theme = theme_id or config.get(
-        "theme", ThemeLoader.FALLBACK_THEME_ID
-    )
+    applied_theme = theme_id or config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
     theme_palette = ThemeLoader().load_theme(applied_theme)
     app.setStyleSheet(
         build_app_theme(

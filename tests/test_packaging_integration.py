@@ -33,11 +33,15 @@ class TestPackagingIntegration(unittest.TestCase):
                 names = zf.namelist()
 
                 # 1. Root scripts & Entrypoint modules
-                self.assertIn("main.py", names, "main.py must be in wheel for console_scripts entrypoint")
+                self.assertIn(
+                    "main.py", names, "main.py must be in wheel for console_scripts entrypoint"
+                )
                 self.assertIn("create_desktop_shortcut.py", names)
 
                 # 2. Bundled Package Data
-                self.assertIn("data/default_snippets.json", names, "default_snippets.json must be in wheel")
+                self.assertIn(
+                    "data/default_snippets.json", names, "default_snippets.json must be in wheel"
+                )
                 self.assertIn("data/__init__.py", names)
 
                 # 3. Core modules and canonical project package
@@ -65,6 +69,7 @@ class TestPackagingIntegration(unittest.TestCase):
                 self.assertTrue(len(entry_points) > 0)
                 ep_content = zf.read(entry_points[0]).decode("utf-8")
                 self.assertIn("spectrehud = spectrehud_launcher:main", ep_content)
+
 
 if __name__ == "__main__":
     unittest.main()

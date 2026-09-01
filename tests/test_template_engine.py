@@ -1,16 +1,14 @@
 import unittest
 from core.reporting.template_engine import (
     TemplateSection,
-    ReportTemplate,
     ReportContext,
     TemplateRenderer,
     LEGACY_DEFAULT_TEMPLATE,
     _render_header_metadata,
     _render_executive_summary,
-    _render_scope_limitations,
     _render_phase_section,
     _render_remediation_table,
-    _render_appendix
+    _render_appendix,
 )
 
 
@@ -27,7 +25,7 @@ class TestTemplateEngine(unittest.TestCase):
                 "title": "Domain Admin Credentials",
                 "content": "admin:P@ssword123",
                 "target_ip": "10.10.10.50",
-                "timestamp": "2026-08-28 10:00:00"
+                "timestamp": "2026-08-28 10:00:00",
             },
             {
                 "id": "loot_2",
@@ -37,7 +35,7 @@ class TestTemplateEngine(unittest.TestCase):
                 "title": "Open Ports",
                 "content": "22/tcp open ssh, 80/tcp open http",
                 "target_ip": "10.10.10.50",
-                "timestamp": "2026-08-28 09:30:00"
+                "timestamp": "2026-08-28 09:30:00",
             },
             {
                 "id": "loot_3",
@@ -47,19 +45,27 @@ class TestTemplateEngine(unittest.TestCase):
                 "title": "Root Proof",
                 "content": "loot/proof.png",
                 "target_ip": "10.10.10.50",
-                "timestamp": "2026-08-28 10:15:00"
-            }
+                "timestamp": "2026-08-28 10:15:00",
+            },
         ]
         self.sample_history = [
-            {"text": "nmap -sC -sV 10.10.10.50", "timestamp": "2026-08-28 09:15:00", "target_ip": "10.10.10.50"},
-            {"text": "ssh admin@10.10.10.50", "timestamp": "2026-08-28 10:01:00", "target_ip": "10.10.10.50"}
+            {
+                "text": "nmap -sC -sV 10.10.10.50",
+                "timestamp": "2026-08-28 09:15:00",
+                "target_ip": "10.10.10.50",
+            },
+            {
+                "text": "ssh admin@10.10.10.50",
+                "timestamp": "2026-08-28 10:01:00",
+                "target_ip": "10.10.10.50",
+            },
         ]
         self.context = ReportContext(
             loot_entries=self.sample_loot,
             clipboard_history=self.sample_history,
             project_name="HackTheBox_Legacy",
             target_ip="10.10.10.50",
-            metadata={"classification": "INTERNAL USE ONLY", "tester": "Alice"}
+            metadata={"classification": "INTERNAL USE ONLY", "tester": "Alice"},
         )
         self.renderer = TemplateRenderer()
 

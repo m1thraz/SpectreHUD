@@ -9,7 +9,7 @@ class TestStorage(unittest.TestCase):
 
     def test_in_memory_storage_crud(self):
         storage = InMemoryStorageBackend(initial_data={"init_key": [1, 2, 3]})
-        
+
         # Initial check
         self.assertTrue(storage.exists("init_key"))
         self.assertEqual(storage.load_json("init_key"), [1, 2, 3])
@@ -42,7 +42,9 @@ class TestStorage(unittest.TestCase):
             storage = FileStorageBackend(base_dir=base_dir)
 
             # Save
-            self.assertTrue(storage.save_json("session", {"active_box": "BoxAlpha", "ip": "10.10.10.1"}))
+            self.assertTrue(
+                storage.save_json("session", {"active_box": "BoxAlpha", "ip": "10.10.10.1"})
+            )
             self.assertTrue((base_dir / "session.json").exists())
 
             # Load

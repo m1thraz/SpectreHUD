@@ -1,6 +1,12 @@
 from PyQt6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QWidget, QApplication, QSizePolicy
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QWidget,
+    QApplication,
+    QSizePolicy,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from typing import Dict, Any, Optional
@@ -52,13 +58,15 @@ class SnippetCard(QFrame):
         self.lbl_title.setWordWrap(True)
         header_layout.addWidget(self.lbl_title, stretch=1)
 
-        cat_part = self.snippet.get('category', '').strip().lstrip("\ufe0f \t")
-        subcat_part = self.snippet.get('subcategory', '').strip()
+        cat_part = self.snippet.get("category", "").strip().lstrip("\ufe0f \t")
+        subcat_part = self.snippet.get("subcategory", "").strip()
         cat_text = f"{cat_part} › {subcat_part}" if subcat_part else cat_part
         self.lbl_category = QLabel(cat_text)
         self.lbl_category.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_category.setObjectName("SnippetCategory")
-        header_layout.addWidget(self.lbl_category, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        header_layout.addWidget(
+            self.lbl_category, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
 
         # Delete button if custom snippet
         if self.snippet.get("is_custom", False):
@@ -89,12 +97,12 @@ class SnippetCard(QFrame):
         self.lbl_command.setObjectName("CommandLabel")
         self.lbl_command.setWordWrap(True)
         self.lbl_command.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse | 
-            Qt.TextInteractionFlag.TextSelectableByKeyboard
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
         self.lbl_command.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.lbl_command.setMinimumWidth(0)
-        
+
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
         # Inline Tweak Button
@@ -131,7 +139,9 @@ class SnippetCard(QFrame):
         self._rendered_command = TemplateEngine.render(template, variables)
         self.lbl_command.setText(self._rendered_command)
 
-    def _perform_clipboard_copy(self, text_to_copy: str, target_btn: Optional[QPushButton] = None) -> None:
+    def _perform_clipboard_copy(
+        self, text_to_copy: str, target_btn: Optional[QPushButton] = None
+    ) -> None:
         """Helper to copy text to clipboard and trigger visual feedback."""
         if not text_to_copy:
             return
@@ -180,7 +190,7 @@ class SnippetCard(QFrame):
                 variables=self.variables,
                 unresolved_params=unresolved,
                 cached_params=cached_params,
-                parent=self.window()
+                parent=self.window(),
             )
 
             if dlg.exec():
@@ -189,7 +199,9 @@ class SnippetCard(QFrame):
                     for k, v in custom_values.items():
                         main_win.config.set_cached_param(k, v)
 
-                text_to_copy = TemplateEngine.render_with_custom(template, self.variables, custom_values).strip()
+                text_to_copy = TemplateEngine.render_with_custom(
+                    template, self.variables, custom_values
+                ).strip()
             else:
                 return
 
@@ -201,11 +213,11 @@ class SnippetCard(QFrame):
         current_state = bool(self.snippet.get("is_favorite", False))
         new_state = not current_state
         self.snippet["is_favorite"] = new_state
-        
+
         self.btn_fav.setText("★" if new_state else "☆")
         self.btn_fav.setProperty("class", "StarBtnActive" if new_state else "StarBtn")
         self.btn_fav.setToolTip("Favorit entfernen" if new_state else "Als Favorit anheften")
         self.btn_fav.style().unpolish(self.btn_fav)
         self.btn_fav.style().polish(self.btn_fav)
-        
+
         self.favorite_toggled.emit(self.snippet.get("id", ""), new_state)

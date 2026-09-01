@@ -1,27 +1,20 @@
 import os
-import json
-import time
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QWidget
-from PyQt6.QtGui import QImage, QPixmap, QColor
+from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError, ProjectCreationError
+from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
-from core.report_file_manager import ReportFileManager, ReportBackupError
-from core.snippet_manager import SnippetManager
-from ui.main_window import MainWindow
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -73,7 +66,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             title="Injected Credential",
             content=malicious_cred,
             target_ip="10.10.10.55",
-            category="initial_access"
+            category="initial_access",
         )
 
         # Add directory with backticks
@@ -83,7 +76,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             title="Injected Directory",
             content=malicious_dir,
             target_ip="10.10.10.55",
-            category="recon"
+            category="recon",
         )
 
         # Add clipboard item with quadruple backticks
@@ -93,7 +86,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         builder = ReportBuilder(
             loot_manager=self.loot_mgr,
             clipboard_watcher=self.clip_watcher,
-            project_manager=self.project_mgr
+            project_manager=self.project_mgr,
         )
         report_md = builder.build(target_ip="10.10.10.55", project_name="FenceTest")
 
@@ -117,29 +110,20 @@ class TestWorkflowRobustness(unittest.TestCase):
         from core.template_engine import TemplateEngine
 
         # 1. Invalid regex group backreference \1 (would crash re.sub with re.error)
-        res1 = TemplateEngine.render(
-            "curl {{TARGET_IP}}",
-            {"target_ip": r"10.10.10.1\1"}
-        )
+        res1 = TemplateEngine.render("curl {{TARGET_IP}}", {"target_ip": r"10.10.10.1\1"})
         self.assertEqual(res1, r"curl 10.10.10.1\1")
 
         # 2. Named group backreference \g<0> (would replace with {{TARGET_IP}} itself)
-        res2 = TemplateEngine.render(
-            "curl {{TARGET_IP}}",
-            {"target_ip": r"10.10.10.1\g<0>"}
-        )
+        res2 = TemplateEngine.render("curl {{TARGET_IP}}", {"target_ip": r"10.10.10.1\g<0>"})
         self.assertEqual(res2, r"curl 10.10.10.1\g<0>")
 
         # 3. Complex password with multiple backslash sequences in render_with_custom
         res3 = TemplateEngine.render_with_custom(
             "mysql -u {{USER}} -p'{{PASSWORD}}' -h {{TARGET_IP}}",
             {"target_ip": "10.10.10.99", "user": r"root\1"},
-            {"PASSWORD": r"P@ss\2\g<1>\test"}
+            {"PASSWORD": r"P@ss\2\g<1>\test"},
         )
-        self.assertEqual(
-            res3,
-            r"mysql -u root\1 -p'P@ss\2\g<1>\test' -h 10.10.10.99"
-        )
+        self.assertEqual(res3, r"mysql -u root\1 -p'P@ss\2\g<1>\test' -h 10.10.10.99")
 
     # -------------------------------------------------------------------------
     # 22. Side-Effect Free Logger Isolation
@@ -149,6 +133,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         Importing and retrieving loggers must NOT touch the filesystem or create log files.
         """
         from core.logger import get_logger
+
         test_log = get_logger("isolated_test_module")
         test_log.info("In-memory test message")
         self.assertIsNotNone(test_log)
@@ -172,7 +157,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         with patch.object(window.app.report_ctrl, "confirm_discard_if_dirty", return_value=False):
             with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
                 res = window.request_quit()
-                self.assertFalse(res, "request_quit must return False when report is dirty and user cancels")
+                self.assertFalse(
+                    res, "request_quit must return False when report is dirty and user cancels"
+                )
                 mock_quit.assert_not_called()
 
     # -------------------------------------------------------------------------
@@ -197,7 +184,10 @@ class TestWorkflowRobustness(unittest.TestCase):
                 with patch.object(QMessageBox, "clickedButton", return_value=None):
                     with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
                         res = window.request_quit()
-                        self.assertFalse(res, "request_quit must return False when state save fails and user cancels")
+                        self.assertFalse(
+                            res,
+                            "request_quit must return False when state save fails and user cancels",
+                        )
                         mock_quit.assert_not_called()
 
     # -------------------------------------------------------------------------
@@ -219,7 +209,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         with patch("PyQt6.QtWidgets.QApplication.quit"):
             res = window.request_quit()
             self.assertTrue(res)
-            
+
             # Verify persisted state
             state = container.project_manager.load_project_state()
             self.assertEqual(state.get("target_ip"), "192.168.1.77")
@@ -276,7 +266,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         evt = QCloseEvent()
         with patch.object(window, "request_quit", return_value=False):
             window.closeEvent(evt)
-            self.assertFalse(evt.isAccepted(), "CloseEvent must be ignored when request_quit returns False")
+            self.assertFalse(
+                evt.isAccepted(), "CloseEvent must be ignored when request_quit returns False"
+            )
 
     # -------------------------------------------------------------------------
     # 27. Workspace Writability Probe

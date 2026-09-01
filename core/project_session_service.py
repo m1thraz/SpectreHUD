@@ -17,7 +17,7 @@ class ProjectSessionService:
         self,
         project_manager: ProjectManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher
+        clipboard_watcher: ClipboardWatcher,
     ):
         self.project_manager = project_manager
         self.loot_manager = loot_manager
@@ -38,7 +38,9 @@ class ProjectSessionService:
             self.clipboard_watcher.replace_history([])
         return state or {}
 
-    def save_project_session(self, variables: Dict[str, str], project_name: Optional[str] = None) -> bool:
+    def save_project_session(
+        self, variables: Dict[str, str], project_name: Optional[str] = None
+    ) -> bool:
         """
         Persists the current runtime session state (target variables, session loot,
         clipboard history) into the project's project_state.json.
@@ -52,6 +54,6 @@ class ProjectSessionService:
             "username": variables.get("username", ""),
             "password": variables.get("password", ""),
             "loot": self.loot_manager.get_all_entries(),
-            "clipboard_history": self.clipboard_watcher.get_all_history()
+            "clipboard_history": self.clipboard_watcher.get_all_history(),
         }
         return self.project_manager.save_project_state(name=pname, state=state)

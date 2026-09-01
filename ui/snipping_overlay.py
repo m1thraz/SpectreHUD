@@ -1,8 +1,18 @@
 from typing import Optional
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QRect, QPoint, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPixmap, QFont, QGuiApplication, QKeyEvent, QMouseEvent
+from PyQt6.QtGui import (
+    QPainter,
+    QColor,
+    QPen,
+    QPixmap,
+    QFont,
+    QGuiApplication,
+    QKeyEvent,
+    QMouseEvent,
+)
 from core.display_geometry import VirtualDesktopBoundingBox
+
 
 class SnippingOverlay(QWidget):
     """
@@ -10,27 +20,32 @@ class SnippingOverlay(QWidget):
     cyan border glow, dimension indicator, and crosshair cursor.
     Spans the entire virtual desktop bounding box across all connected displays.
     """
+
     snip_completed = pyqtSignal(QPixmap)
     snip_cancelled = pyqtSignal()
 
     def __init__(
-        self, 
-        full_screen_pixmap: QPixmap, 
-        bbox: Optional[VirtualDesktopBoundingBox] = None, 
-        parent: Optional[QWidget] = None
+        self,
+        full_screen_pixmap: QPixmap,
+        bbox: Optional[VirtualDesktopBoundingBox] = None,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.full_pixmap = full_screen_pixmap
-        
+
         if bbox is not None:
             self.bbox = bbox
         else:
             screen = QGuiApplication.primaryScreen()
             if screen:
                 geom = screen.geometry()
-                self.bbox = VirtualDesktopBoundingBox(geom.x(), geom.y(), geom.width(), geom.height())
+                self.bbox = VirtualDesktopBoundingBox(
+                    geom.x(), geom.y(), geom.width(), geom.height()
+                )
             else:
-                self.bbox = VirtualDesktopBoundingBox(0, 0, full_screen_pixmap.width(), full_screen_pixmap.height())
+                self.bbox = VirtualDesktopBoundingBox(
+                    0, 0, full_screen_pixmap.width(), full_screen_pixmap.height()
+                )
 
         self.begin: QPoint = QPoint()
         self.end: QPoint = QPoint()
@@ -40,12 +55,12 @@ class SnippingOverlay(QWidget):
 
     def _init_window(self) -> None:
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
         )
         self.setCursor(Qt.CursorShape.CrossCursor)
-        
+
         # Position over virtual desktop bounding box across all screens
         self.setGeometry(self.bbox.min_x, self.bbox.min_y, self.bbox.width, self.bbox.height)
         self.show()
@@ -64,7 +79,7 @@ class SnippingOverlay(QWidget):
         # 3. Draw clear selection rectangle without dimming
         if not self.begin.isNull() and not self.end.isNull():
             selection_rect = QRect(self.begin, self.end).normalized()
-            
+
             # Draw un-dimmed cropped snapshot in the selection rect
             if selection_rect.width() > 0 and selection_rect.height() > 0:
                 painter.drawPixmap(selection_rect, self.full_pixmap, selection_rect)
@@ -85,7 +100,7 @@ class SnippingOverlay(QWidget):
                 badge_h = 22
                 badge_x = min(self.width() - badge_w - 10, selection_rect.right() - badge_w)
                 badge_y = min(self.height() - badge_h - 10, selection_rect.bottom() + 6)
-                
+
                 if badge_y + badge_h > self.height():
                     badge_y = selection_rect.top() - badge_h - 6
 
@@ -117,7 +132,7 @@ class SnippingOverlay(QWidget):
         if event.button() == Qt.MouseButton.LeftButton and self.is_selecting:
             self.is_selecting = False
             self.end = event.pos()
-            
+
             selection_rect = QRect(self.begin, self.end).normalized()
             selection_rect = selection_rect.intersected(self.full_pixmap.rect())
             # If region is valid (greater than 8x8 pixels)

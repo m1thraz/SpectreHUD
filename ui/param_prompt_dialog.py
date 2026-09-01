@@ -1,11 +1,16 @@
 from typing import Dict, List, Any, Optional
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPlainTextEdit, QPushButton, QWidget
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QWidget,
 )
-from PyQt6.QtCore import Qt
 from core.template_engine import TemplateEngine, SMART_PRESETS
 from ui.base_dialog import BaseHudDialog
+
 
 class ParamPromptDialog(BaseHudDialog):
     """
@@ -14,22 +19,22 @@ class ParamPromptDialog(BaseHudDialog):
     """
 
     def __init__(
-        self, 
-        template: str, 
-        variables: Dict[str, Any], 
-        unresolved_params: List[str], 
+        self,
+        template: str,
+        variables: Dict[str, Any],
+        unresolved_params: List[str],
         cached_params: Dict[str, str] = None,
-        parent: Optional[QWidget] = None
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(title="SPECTRE // PARAMETER AUSFÜLLEN", parent=parent)
         self.setMinimumWidth(540)
         self.resize(560, 380)
-        
+
         self.template = template
         self.variables = variables
         self.unresolved_params = unresolved_params
         self.cached_params = cached_params or {}
-        
+
         self.param_inputs: Dict[str, QLineEdit] = {}
         self._init_form()
         self._update_preview()
@@ -41,14 +46,14 @@ class ParamPromptDialog(BaseHudDialog):
         for param in self.unresolved_params:
             row = QVBoxLayout()
             row.setSpacing(2)
-            
+
             lbl = QLabel(f"Wert für {{{{{param}}}}}:")
             lbl.setProperty("class", "FormLabel")
             row.addWidget(lbl)
 
             # Determine default value (cached -> preset -> empty)
             default_val = self.cached_params.get(param, SMART_PRESETS.get(param, ""))
-            
+
             txt = QLineEdit(default_val)
             txt.setPlaceholderText(f"Wert für {param}...")
             txt.textChanged.connect(self._update_preview)

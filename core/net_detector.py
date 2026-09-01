@@ -2,10 +2,11 @@ import socket
 import subprocess
 import platform
 import re
-from typing import Optional, List
+from typing import Optional
 from core.logger import get_logger
 
 logger = get_logger("net_detector")
+
 
 class NetDetector:
     """Detects active network interfaces and extracts VPN/Attacker IPs (e.g. tun0, tap, 10.x.x.x)."""
@@ -40,22 +41,32 @@ class NetDetector:
         """Parses ipconfig output on Windows to find VPN / TAP / 10.x.x.x addresses."""
         try:
             output = subprocess.check_output(
-                "ipconfig", 
-                text=True, 
-                stderr=subprocess.DEVNULL, 
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+                "ipconfig",
+                text=True,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW
+                if hasattr(subprocess, "CREATE_NO_WINDOW")
+                else 0,
             )
-            
+
             # Look for 10.x.x.x addresses (typical for THM/HTB OpenVPN connections)
-            vpn_ips = re.findall(r"IPv4-Adresse[.\s]*:\s*(10\.\d{1,3}\.\d{1,3}\.\d{1,3})", output, re.IGNORECASE)
+            vpn_ips = re.findall(
+                r"IPv4-Adresse[.\s]*:\s*(10\.\d{1,3}\.\d{1,3}\.\d{1,3})", output, re.IGNORECASE
+            )
             if not vpn_ips:
-                vpn_ips = re.findall(r"IPv4 Address[.\s]*:\s*(10\.\d{1,3}\.\d{1,3}\.\d{1,3})", output, re.IGNORECASE)
+                vpn_ips = re.findall(
+                    r"IPv4 Address[.\s]*:\s*(10\.\d{1,3}\.\d{1,3}\.\d{1,3})", output, re.IGNORECASE
+                )
 
             if vpn_ips:
                 return vpn_ips[0]
 
             # Next check for other private IPs like 172.16-31.x.x or 192.168.x.x if no 10.x found
-            all_ips = re.findall(r"(?:IPv4-Adresse|IPv4 Address)[.\s]*:\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output, re.IGNORECASE)
+            all_ips = re.findall(
+                r"(?:IPv4-Adresse|IPv4 Address)[.\s]*:\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})",
+                output,
+                re.IGNORECASE,
+            )
             for ip in all_ips:
                 if not ip.startswith("127.") and not ip.startswith("169.254."):
                     return ip
@@ -68,7 +79,9 @@ class NetDetector:
         """Checks tun0, wg0, tap0 or ip route on Linux/macOS."""
         for iface in ["tun0", "wg0", "tap0"]:
             try:
-                output = subprocess.check_output(["ip", "-4", "addr", "show", iface], text=True, stderr=subprocess.DEVNULL)
+                output = subprocess.check_output(
+                    ["ip", "-4", "addr", "show", iface], text=True, stderr=subprocess.DEVNULL
+                )
                 match = re.search(r"inet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
                 if match:
                     return match.group(1)

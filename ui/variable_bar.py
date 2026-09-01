@@ -1,18 +1,16 @@
-from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QLineEdit, 
-    QPushButton, QWidget, QToolTip
-)
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt6.QtCore import pyqtSignal, QTimer
 from typing import Dict, Any
 from core.net_detector import NetDetector
 from core.i18n import t
+
 
 class VariableBar(QFrame):
     """
     Compact horizontal status bar for Target IP, LHOST, Port and Auto-Detect.
     Emits `variables_changed` whenever any input field changes.
     """
-    
+
     variables_changed = pyqtSignal(dict)
     add_snippet_clicked = pyqtSignal()
 
@@ -176,5 +174,5 @@ class VariableBar(QFrame):
             "port": self.txt_port.text().strip(),
             "username": self.txt_user.text().strip(),
             "password": self.txt_pass.text().strip(),
-            "wordlist": self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt")
+            "wordlist": self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
         }

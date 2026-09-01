@@ -10,6 +10,7 @@ from ui.command_edit_dialog import CommandEditDialog
 
 app = QApplication.instance() or QApplication([])
 
+
 class TestHudDialogs(unittest.TestCase):
     def test_base_hud_dialog_attributes(self):
         dlg = BaseHudDialog(title="SPECTRE // TEST DIALOG")
@@ -40,7 +41,7 @@ class TestHudDialogs(unittest.TestCase):
             default_content="toor",
             target_ip="10.10.10.50",
             default_type="credentials",
-            default_category="access"
+            default_category="access",
         )
         data = dlg.get_data()
         self.assertEqual(data["title"], "Root Password")
@@ -52,10 +53,12 @@ class TestHudDialogs(unittest.TestCase):
 
     def test_new_project_dialog_data(self):
         custom_base = Path("C:/custom_ctf_projects")
-        dlg = NewProjectDialog(default_name="BoxBravo", default_target="10.10.10.99", default_base_dir=custom_base)
+        dlg = NewProjectDialog(
+            default_name="BoxBravo", default_target="10.10.10.99", default_base_dir=custom_base
+        )
         dlg.txt_name.setText("BoxBravoModified")
         dlg._update_path_preview()
-        
+
         data = dlg.get_data()
         self.assertEqual(data["name"], "BoxBravoModified")
         self.assertEqual(data["target_ip"], "10.10.10.99")
@@ -80,7 +83,7 @@ class TestHudDialogs(unittest.TestCase):
         unresolved = ["ENDPOINT"]
         dlg = ParamPromptDialog(template=template, variables=vars, unresolved_params=unresolved)
         dlg.param_inputs["ENDPOINT"].setText("api/v1/users")
-        
+
         self.assertEqual(dlg.get_values()["ENDPOINT"], "api/v1/users")
         self.assertEqual(dlg.txt_preview.toPlainText(), "curl http://10.10.10.10:8080/api/v1/users")
         dlg.close()
@@ -92,5 +95,6 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(dlg.get_command(), "nmap -sV -Pn 10.10.10.10")
         dlg.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

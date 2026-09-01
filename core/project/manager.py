@@ -11,12 +11,11 @@ from core.event_bus import EventBus, EventType
 from core.project.validator import (
     validate_project_name,
     sanitize_project_name,
-    ProjectExistsError,
-    InvalidProjectNameError,
     ProjectNotFoundError,
-    ProjectCreationError
 )
-from core.project.repository import ProjectRepository, get_default_projects_dir, get_default_config_dir
+from core.project.repository import (
+    ProjectRepository,
+)
 from core.project_lock_service import ProjectLockService
 
 logger = get_logger("projects")
@@ -30,7 +29,7 @@ class ProjectManager:
         base_dir: Optional[Path] = None,
         config_dir: Optional[Path] = None,
         repository: Optional[ProjectRepository] = None,
-        event_bus: Optional[EventBus] = None
+        event_bus: Optional[EventBus] = None,
     ):
         self.lock_service = ProjectLockService()
         self.repository = repository or ProjectRepository(
@@ -87,7 +86,9 @@ class ProjectManager:
         """Ensures a Default project exists and is registered."""
         default_dir = self.base_dir / "Default"
         if not default_dir.exists():
-            self.create_project("Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5", allow_existing=True)
+            self.create_project(
+                "Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5", allow_existing=True
+            )
         else:
             self.repository._update_registry(additions={"Default": str(default_dir.resolve())})
         # Bootstrap: sync discovered projects into registry at startup
@@ -135,17 +136,20 @@ class ProjectManager:
             attacker_ip=attacker_ip,
             port=port,
             base_dir=base_dir,
-            allow_existing=allow_existing
+            allow_existing=allow_existing,
         )
         if pentest_password is not None:
             self.repository.enable_pentest_mode(clean_name, pentest_password)
         if self.event_bus:
-            self.event_bus.publish(EventType.PROJECT_CREATED, {
-                "name": clean_name,
-                "path": str(proj_dir),
-                "target_ip": target_ip,
-                "attacker_ip": attacker_ip
-            })
+            self.event_bus.publish(
+                EventType.PROJECT_CREATED,
+                {
+                    "name": clean_name,
+                    "path": str(proj_dir),
+                    "target_ip": target_ip,
+                    "attacker_ip": attacker_ip,
+                },
+            )
         return proj_dir
 
     def import_project_folder(self, folder_path: Union[Path, str]) -> Optional[str]:
@@ -174,7 +178,9 @@ class ProjectManager:
     def clear_project_key(self) -> None:
         self.lock_service.clear()
 
-    def save_project_state(self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
+    def save_project_state(
+        self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> bool:
         """Persists state data for a project."""
         pname = name or self.active_project
         return self.repository.save_project_state(pname, state=state, **kwargs)
@@ -186,7 +192,9 @@ class ProjectManager:
         """
         clean_name = validate_project_name(name)
         if clean_name not in self.list_projects():
-            raise ProjectNotFoundError(f"Project '{name}' (resolved: '{clean_name}') does not exist.")
+            raise ProjectNotFoundError(
+                f"Project '{name}' (resolved: '{clean_name}') does not exist."
+            )
 
         self.active_project = clean_name
         self.lock_service.retain_only(clean_name)
@@ -203,6 +211,7 @@ class ProjectManager:
             unknown project names rather than silently creating a new project.
         """
         import warnings
+
         warnings.warn(
             "set_active_project() is deprecated and will be removed in a future release. "
             "Use activate_project() instead.",
@@ -216,7 +225,9 @@ class ProjectManager:
         pname = name or self.active_project
         return self.repository.open_project_folder(pname)
 
-    def archive_project(self, name: Optional[str] = None, output_zip: Optional[Path] = None) -> Dict[str, Any]:
+    def archive_project(
+        self, name: Optional[str] = None, output_zip: Optional[Path] = None
+    ) -> Dict[str, Any]:
         """Archives the project workspace as a .zip file."""
         pname = name or self.active_project
         return self.repository.archive_project(pname, output_zip=output_zip)

@@ -35,7 +35,7 @@ class TestAtomicWrite(unittest.TestCase):
         data = {
             "name": "BoxAlpha",
             "loot": [{"id": "loot_1", "title": "Cred"}],
-            "clipboard_history": []
+            "clipboard_history": [],
         }
 
         self.assertTrue(atomic_write_json(target_file, data))
@@ -57,9 +57,10 @@ class TestAtomicWrite(unittest.TestCase):
         """Tests that written files have 0o600 permissions on POSIX systems."""
         import os
         import stat
+
         target_file = self.temp_path / "secret.json"
         atomic_write_json(target_file, {"key": "val"})
-        if os.name == 'posix':
+        if os.name == "posix":
             file_stat = target_file.stat().st_mode
             self.assertEqual(stat.S_IMODE(file_stat), 0o600)
 

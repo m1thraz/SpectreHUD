@@ -27,13 +27,25 @@ class MarkdownTableDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(t("report.table_title", "Insert Table"))
         layout = QVBoxLayout(self)
-        self.rows = QSpinBox(); self.rows.setRange(1, 10); self.rows.setValue(2)
-        self.columns = QSpinBox(); self.columns.setRange(1, 10); self.columns.setValue(3)
-        layout.addWidget(QLabel(t("report.table_rows", "Rows:"))); layout.addWidget(self.rows)
-        layout.addWidget(QLabel(t("report.table_columns", "Columns:"))); layout.addWidget(self.columns)
-        buttons = QHBoxLayout(); buttons.addStretch()
-        cancel = QPushButton(t("dialog.cancel", "Cancel")); cancel.clicked.connect(self.reject); buttons.addWidget(cancel)
-        insert = QPushButton(t("report.table_insert", "Insert Table")); insert.setProperty("class", "PrimaryBtn"); insert.clicked.connect(self.accept); buttons.addWidget(insert)
+        self.rows = QSpinBox()
+        self.rows.setRange(1, 10)
+        self.rows.setValue(2)
+        self.columns = QSpinBox()
+        self.columns.setRange(1, 10)
+        self.columns.setValue(3)
+        layout.addWidget(QLabel(t("report.table_rows", "Rows:")))
+        layout.addWidget(self.rows)
+        layout.addWidget(QLabel(t("report.table_columns", "Columns:")))
+        layout.addWidget(self.columns)
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        insert = QPushButton(t("report.table_insert", "Insert Table"))
+        insert.setProperty("class", "PrimaryBtn")
+        insert.clicked.connect(self.accept)
+        buttons.addWidget(insert)
         layout.addLayout(buttons)
 
 
@@ -57,26 +69,44 @@ class ReportGenerationDialog(QDialog):
 
     def _build_ui(self, has_existing_report: bool) -> None:
         layout = QVBoxLayout(self)
-        description = QLabel(t("report.generate_description", "Creates a structured report from current loot and clipboard history."))
+        description = QLabel(
+            t(
+                "report.generate_description",
+                "Creates a structured report from current loot and clipboard history.",
+            )
+        )
         description.setWordWrap(True)
         layout.addWidget(description)
         if has_existing_report:
-            warning = QLabel(t("report.generate_warning", "The existing report will be replaced. It is backed up as <b>report.md.bak</b> first."))
+            warning = QLabel(
+                t(
+                    "report.generate_warning",
+                    "The existing report will be replaced. It is backed up as <b>report.md.bak</b> first.",
+                )
+            )
             warning.setWordWrap(True)
             warning.setStyleSheet("color: #f0b429; margin-top: 6px;")
             layout.addWidget(warning)
         form = QFormLayout()
         self.combo_templates = QComboBox()
-        self.combo_templates.setToolTip(t("report.template_tip", "Select a template for the newly generated report"))
+        self.combo_templates.setToolTip(
+            t("report.template_tip", "Select a template for the newly generated report")
+        )
         form.addRow(t("report.template_label", "Report Template:"), self.combo_templates)
         layout.addLayout(form)
         self.btn_manage_templates = QPushButton(t("report.manage_templates", "🎨 Templates..."))
         self.btn_manage_templates.setProperty("class", "SecondaryBtn")
         self.btn_manage_templates.clicked.connect(self._open_template_manager)
         layout.addWidget(self.btn_manage_templates, alignment=Qt.AlignmentFlag.AlignLeft)
-        buttons = QHBoxLayout(); buttons.addStretch()
-        cancel = QPushButton(t("dialog.cancel", "Cancel")); cancel.clicked.connect(self.reject); buttons.addWidget(cancel)
-        generate = QPushButton(t("report.generate", "Generate Report")); generate.setProperty("class", "PrimaryBtn"); generate.clicked.connect(self._accept_selection); buttons.addWidget(generate)
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        generate = QPushButton(t("report.generate", "Generate Report"))
+        generate.setProperty("class", "PrimaryBtn")
+        generate.clicked.connect(self._accept_selection)
+        buttons.addWidget(generate)
         layout.addLayout(buttons)
 
     def _populate_templates(self) -> None:
@@ -85,7 +115,9 @@ class ReportGenerationDialog(QDialog):
         self.combo_templates.blockSignals(True)
         self.combo_templates.clear()
         for template in templates:
-            self.combo_templates.addItem(f"{template.name} [{template.language.upper()}]", template.id)
+            self.combo_templates.addItem(
+                f"{template.name} [{template.language.upper()}]", template.id
+            )
         index = self.combo_templates.findData(selected_id) if selected_id else -1
         self.combo_templates.setCurrentIndex(index if index >= 0 else (0 if templates else -1))
         self.combo_templates.blockSignals(False)
@@ -100,7 +132,11 @@ class ReportGenerationDialog(QDialog):
         template_id = self.combo_templates.currentData()
         template = self.template_repo.get_template(template_id) if template_id else None
         if template is None:
-            QMessageBox.warning(self, t("report.no_template_title", "No Template"), t("report.no_template_message", "Please select a report template."))
+            QMessageBox.warning(
+                self,
+                t("report.no_template_title", "No Template"),
+                t("report.no_template_message", "Please select a report template."),
+            )
             return
         self.selected_template = template
         self.accept()

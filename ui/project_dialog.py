@@ -1,7 +1,13 @@
 from pathlib import Path
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, 
-    QLineEdit, QPushButton, QWidget, QMessageBox, QFileDialog, QCheckBox
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QWidget,
+    QMessageBox,
+    QFileDialog,
+    QCheckBox,
 )
 from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
@@ -9,34 +15,36 @@ from core.project import get_default_projects_dir
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 
+
 class NewProjectDialog(BaseHudDialog):
     """Dialog to create a new isolated CTF / Pentest project workspace with custom folder selection."""
 
     def __init__(
-        self, 
-        parent: Optional[QWidget] = None, 
+        self,
+        parent: Optional[QWidget] = None,
         default_name: str = "",
         default_target: str = "",
         default_attacker: str = "10.10.14.5",
         default_port: str = "4444",
         default_base_dir: Optional[Path] = None,
         project_manager: Optional[Any] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
-            title=t("project_dialog.title", "SPECTRE // CREATE NEW PROJECT / BOX"),
-            parent=parent
+            title=t("project_dialog.title", "SPECTRE // CREATE NEW PROJECT / BOX"), parent=parent
         )
         self.setMinimumWidth(520)
         self.resize(540, 380)
-        
+
         self.project_manager = project_manager
         self.default_name = default_name or kwargs.get("name", "")
         self.default_target = default_target or kwargs.get("target_ip", "")
         self.default_attacker = default_attacker or kwargs.get("attacker_ip", "10.10.14.5")
         self.default_port = default_port or kwargs.get("port", "4444")
-        self.base_projects_dir = Path(default_base_dir) if default_base_dir else get_default_projects_dir()
-        
+        self.base_projects_dir = (
+            Path(default_base_dir) if default_base_dir else get_default_projects_dir()
+        )
+
         self._init_form()
 
     def _init_form(self) -> None:
@@ -60,9 +68,7 @@ class NewProjectDialog(BaseHudDialog):
         layout.addWidget(lbl_ip)
 
         self.txt_target = QLineEdit(self.default_target)
-        self.txt_target.setPlaceholderText(
-            t("project_dialog.ph_target", "e.g. 10.10.10.80")
-        )
+        self.txt_target.setPlaceholderText(t("project_dialog.ph_target", "e.g. 10.10.10.80"))
         layout.addWidget(self.txt_target)
 
         # 3. Base Directory / Location
@@ -104,10 +110,16 @@ class NewProjectDialog(BaseHudDialog):
 
         # 5. Target Directory Preview
         self.lbl_path_preview = QLabel(
-            t("project_dialog.preview_path", "Destination path: {path}", path=self.base_projects_dir / (self.default_name or "Projektname"))
+            t(
+                "project_dialog.preview_path",
+                "Destination path: {path}",
+                path=self.base_projects_dir / (self.default_name or "Projektname"),
+            )
         )
         self.lbl_path_preview.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
+        self.lbl_path_preview.setStyleSheet(
+            "color: #6e7681; font-size: 11px; font-family: monospace;"
+        )
         layout.addWidget(self.lbl_path_preview)
 
         # 6. Buttons
@@ -140,9 +152,9 @@ class NewProjectDialog(BaseHudDialog):
 
     def _on_browse_directory(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
-            self, 
-            t("project_dialog.select_dir_title", "Select Base Directory for Projects"), 
-            self.txt_dir.text().strip() or str(self.base_projects_dir)
+            self,
+            t("project_dialog.select_dir_title", "Select Base Directory for Projects"),
+            self.txt_dir.text().strip() or str(self.base_projects_dir),
         )
         if chosen:
             self.txt_dir.setText(chosen)
@@ -150,7 +162,11 @@ class NewProjectDialog(BaseHudDialog):
     def _update_path_preview(self) -> None:
         raw_name = self.txt_name.text().strip()
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
-        clean_name = self.project_manager._sanitize_name(raw_name) if self.project_manager else raw_name.replace(" ", "_")
+        clean_name = (
+            self.project_manager._sanitize_name(raw_name)
+            if self.project_manager
+            else raw_name.replace(" ", "_")
+        )
         target_path = base / (clean_name or "Projektname")
 
         exists = False
@@ -161,14 +177,22 @@ class NewProjectDialog(BaseHudDialog):
 
         if exists and clean_name != "Default":
             self.lbl_path_preview.setText(
-                t("project_dialog.preview_path", "Destination path: {path}", path=f"{target_path} (⚠️)")
+                t(
+                    "project_dialog.preview_path",
+                    "Destination path: {path}",
+                    path=f"{target_path} (⚠️)",
+                )
             )
-            self.lbl_path_preview.setStyleSheet("color: #ff5555; font-size: 11px; font-family: monospace;")
+            self.lbl_path_preview.setStyleSheet(
+                "color: #ff5555; font-size: 11px; font-family: monospace;"
+            )
         else:
             self.lbl_path_preview.setText(
                 t("project_dialog.preview_path", "Destination path: {path}", path=target_path)
             )
-            self.lbl_path_preview.setStyleSheet("color: #6e7681; font-size: 11px; font-family: monospace;")
+            self.lbl_path_preview.setStyleSheet(
+                "color: #6e7681; font-size: 11px; font-family: monospace;"
+            )
 
     def _on_create(self) -> None:
         name = self.txt_name.text().strip()
@@ -176,7 +200,7 @@ class NewProjectDialog(BaseHudDialog):
             QMessageBox.warning(
                 self,
                 t("dialog.error", "Error"),
-                t("project_dialog.err_name", "Please enter a name for the project / box.")
+                t("project_dialog.err_name", "Please enter a name for the project / box."),
             )
             return
 
@@ -184,23 +208,29 @@ class NewProjectDialog(BaseHudDialog):
         if self.project_manager and self.project_manager.project_exists(name, base_dir=base):
             clean = self.project_manager._sanitize_name(name)
             QMessageBox.warning(
-                self, 
-                t("project_dialog.err_exists_title", "Project Already Exists"), 
+                self,
+                t("project_dialog.err_exists_title", "Project Already Exists"),
                 t(
                     "project_dialog.err_exists_msg",
                     "A project named '{name}' already exists in the selected workspace.\n\nPlease choose a unique project name.",
-                    name=clean
-                )
+                    name=clean,
+                ),
             )
             return
 
         if self.chk_pentest_mode.isChecked():
             password = self.txt_pentest_password.text()
             if not password:
-                QMessageBox.warning(self, "Passwort fehlt", "Für den Pentest-Modus ist ein Passwort erforderlich.")
+                QMessageBox.warning(
+                    self, "Passwort fehlt", "Für den Pentest-Modus ist ein Passwort erforderlich."
+                )
                 return
             if password != self.txt_pentest_password_confirm.text():
-                QMessageBox.warning(self, "Passwörter stimmen nicht überein", "Bitte bestätige das gleiche Passwort.")
+                QMessageBox.warning(
+                    self,
+                    "Passwörter stimmen nicht überein",
+                    "Bitte bestätige das gleiche Passwort.",
+                )
                 return
 
         self.accept()
@@ -211,9 +241,13 @@ class NewProjectDialog(BaseHudDialog):
             "target_ip": self.txt_target.text().strip(),
             "attacker_ip": self.default_attacker,
             "port": self.default_port,
-            "base_dir": Path(self.txt_dir.text().strip()) if self.txt_dir.text().strip() else self.base_projects_dir,
+            "base_dir": Path(self.txt_dir.text().strip())
+            if self.txt_dir.text().strip()
+            else self.base_projects_dir,
             "pentest_mode": self.chk_pentest_mode.isChecked(),
-            "pentest_password": self.txt_pentest_password.text() if self.chk_pentest_mode.isChecked() else None,
+            "pentest_password": self.txt_pentest_password.text()
+            if self.chk_pentest_mode.isChecked()
+            else None,
         }
 
 
@@ -225,10 +259,12 @@ class ProjectUnlockDialog(BaseHudDialog):
         self.project_name = project_name
         self.setMinimumWidth(420)
         layout = self.body_layout
-        layout.addWidget(QLabel(
-            f"Das Projekt '{project_name}' verwendet den Pentest-Modus.\n"
-            "Gib das Passwort ein, um dessen project_state.json zu entsperren."
-        ))
+        layout.addWidget(
+            QLabel(
+                f"Das Projekt '{project_name}' verwendet den Pentest-Modus.\n"
+                "Gib das Passwort ein, um dessen project_state.json zu entsperren."
+            )
+        )
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
         self.txt_password.setPlaceholderText("Passwort")

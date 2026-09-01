@@ -6,7 +6,6 @@ from core.reporting.assets import ImageEmbeddingBudget
 
 
 class TestHtmlReportExporter(unittest.TestCase):
-
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.proj_dir = Path(self.temp_dir.name) / "TestBox"
@@ -46,8 +45,13 @@ curl -i http://10.10.10.10/admin
         self.assertIn("<code>nmap -sC -sV</code>", html_out)
         self.assertIn("<ul>", html_out)
         self.assertIn("<li>Port 22: OpenSSH 8.9</li>", html_out)
-        self.assertIn('<code class="language-bash">curl -i http://10.10.10.10/admin</code>', html_out)
-        self.assertIn("<blockquote>Important note about SQL injection vulnerability in search parameter.</blockquote>", html_out)
+        self.assertIn(
+            '<code class="language-bash">curl -i http://10.10.10.10/admin</code>', html_out
+        )
+        self.assertIn(
+            "<blockquote>Important note about SQL injection vulnerability in search parameter.</blockquote>",
+            html_out,
+        )
         self.assertIn("<table>", html_out)
         self.assertIn("<th>Port</th>", html_out)
         self.assertIn("<td>OpenSSH 8.9</td>", html_out)
@@ -57,7 +61,7 @@ curl -i http://10.10.10.10/admin
         # Create a dummy image inside loot directory
         img_file = self.loot_dir / "screenshot_test.png"
         # 1x1 transparent PNG bytes
-        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa75\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82'
+        png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa75\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82"
         img_file.write_bytes(png_bytes)
 
         md = "### Screenshot Evidence\n![Proof Screenshot](screenshot_test.png)"
@@ -69,7 +73,7 @@ curl -i http://10.10.10.10/admin
         """An exported report must not embed files outside its project directory."""
         # Image outside sandbox
         outside_file = Path(self.temp_dir.name) / "secret.png"
-        outside_file.write_bytes(b'\x89PNG\r\n\x1a\nfake')
+        outside_file.write_bytes(b"\x89PNG\r\n\x1a\nfake")
 
         md = "![Hacked](../secret.png)"
         html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
@@ -84,7 +88,7 @@ curl -i http://10.10.10.10/admin
             output_path=out_file,
             project_dir=self.proj_dir,
             project_name="TestBox",
-            target_ip="10.10.10.200"
+            target_ip="10.10.10.200",
         )
         self.assertTrue(success)
         self.assertTrue(out_file.exists())
@@ -97,7 +101,7 @@ curl -i http://10.10.10.10/admin
         self.assertIn('contenteditable="true"', content)
         self.assertIn("resize: both", content)
         self.assertIn("downloadEditedHtml", content)
-        self.assertIn('report_edited_TestBox.html', content)
+        self.assertIn("report_edited_TestBox.html", content)
 
     def test_light_theme_uses_client_friendly_colours(self):
         light_html = HtmlReportExporter.build_full_html(
@@ -122,31 +126,33 @@ curl -i http://10.10.10.10/admin
 
         # 2. Inline Image attribute breakout PoC
         md_img_inline = 'Inline screenshot: ![pwned](x" onfocus=alert(1) autofocus x=")'
-        html_out_inline = HtmlReportExporter.markdown_to_html(md_img_inline, project_dir=self.proj_dir)
+        html_out_inline = HtmlReportExporter.markdown_to_html(
+            md_img_inline, project_dir=self.proj_dir
+        )
         self.assertNotIn('" onfocus=', html_out_inline)
         self.assertNotIn('" autofocus', html_out_inline)
-        self.assertIn('&quot;', html_out_inline)
+        self.assertIn("&quot;", html_out_inline)
 
         # 3. JavaScript URI Scheme in Markdown Links
-        md_link_js = '[Exploit](javascript:alert(1))'
+        md_link_js = "[Exploit](javascript:alert(1))"
         html_out_link = HtmlReportExporter.markdown_to_html(md_link_js, project_dir=self.proj_dir)
         self.assertNotIn('href="javascript:', html_out_link)
         self.assertIn('href="#unsafe-scheme-blocked"', html_out_link)
 
         # 4. Obfuscated whitespace javascript URI Scheme
-        md_link_obf = '[Exploit](   javascript:alert(1)   )'
+        md_link_obf = "[Exploit](   javascript:alert(1)   )"
         html_out_obf = HtmlReportExporter.markdown_to_html(md_link_obf, project_dir=self.proj_dir)
         self.assertNotIn('href="javascript', html_out_obf)
         self.assertIn('href="#unsafe-scheme-blocked"', html_out_obf)
 
         # 5. Data:text/html URI Scheme in Images
-        md_img_data = '![XSS](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)'
+        md_img_data = "![XSS](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)"
         html_out_data = HtmlReportExporter.markdown_to_html(md_img_data, project_dir=self.proj_dir)
         self.assertNotIn('src="data:text/html', html_out_data)
         self.assertIn('src="#unsafe-data-uri-blocked"', html_out_data)
 
         # 6. Valid Safe Links and Images are preserved
-        md_safe = '[Docs](https://example.com/docs) and [Mail](mailto:test@example.com)'
+        md_safe = "[Docs](https://example.com/docs) and [Mail](mailto:test@example.com)"
         html_safe = HtmlReportExporter.markdown_to_html(md_safe, project_dir=self.proj_dir)
         self.assertIn('href="https://example.com/docs"', html_safe)
         self.assertIn('href="mailto:test@example.com"', html_safe)
@@ -156,19 +162,19 @@ curl -i http://10.10.10.10/admin
         full_html = HtmlReportExporter.build_full_html(
             "# Report",
             project_dir=self.proj_dir,
-            project_name='Evil</script><script>alert(1)</script>',
+            project_name="Evil</script><script>alert(1)</script>",
         )
 
         self.assertNotIn("Evil</script>", full_html)
-        self.assertIn('report_edited_Evilscriptscriptalert1script.html', full_html)
+        self.assertIn("report_edited_Evilscriptscriptalert1script.html", full_html)
 
     def test_protocol_relative_urls_blocked(self):
         """Protocol-relative target content is blocked in exported links and images."""
-        md_link_pr = '[Evil](//attacker.com/evil.js)'
+        md_link_pr = "[Evil](//attacker.com/evil.js)"
         html_out_link = HtmlReportExporter.markdown_to_html(md_link_pr, project_dir=self.proj_dir)
         self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
 
-        md_img_pr = '![Evil](//attacker.com/evil.png)'
+        md_img_pr = "![Evil](//attacker.com/evil.png)"
         html_out_img = HtmlReportExporter.markdown_to_html(md_img_pr, project_dir=self.proj_dir)
         self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
 
@@ -194,14 +200,16 @@ curl -i http://10.10.10.10/admin
         self.assertNotIn("<script", html_out)
 
         # 2. Tag injection attempt
-        md_tag = '```><script>alert(1)</script>\nevil\n```'
+        md_tag = "```><script>alert(1)</script>\nevil\n```"
         html_out_tag = HtmlReportExporter.markdown_to_html(md_tag, project_dir=self.proj_dir)
         self.assertNotIn("<script>alert(1)</script>", html_out_tag)
 
         # 3. Legitimate language identifier is preserved
         md_valid = '```python\nprint("secure")\n```'
         html_out_valid = HtmlReportExporter.markdown_to_html(md_valid, project_dir=self.proj_dir)
-        self.assertIn('<code class="language-python">print(&quot;secure&quot;)</code>', html_out_valid)
+        self.assertIn(
+            '<code class="language-python">print(&quot;secure&quot;)</code>', html_out_valid
+        )
 
 
 if __name__ == "__main__":

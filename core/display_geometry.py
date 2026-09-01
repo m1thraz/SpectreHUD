@@ -8,6 +8,7 @@ class ScreenGeometry:
     Representation of a single display screen in virtual desktop coordinates.
     Completely independent of Qt for pure Python unit testing.
     """
+
     x: int
     y: int
     width: int
@@ -29,6 +30,7 @@ class VirtualDesktopBoundingBox:
     Bounding box enclosing all active display screens in virtual desktop space.
     Correctly supports negative offsets (e.g. monitors placed to the left or above primary).
     """
+
     min_x: int
     min_y: int
     width: int
@@ -60,7 +62,7 @@ def _to_screen_geom(screen: ScreenInput) -> ScreenGeometry:
 
 
 def compute_virtual_desktop_bounding_box(
-    screens: Sequence[ScreenInput]
+    screens: Sequence[ScreenInput],
 ) -> VirtualDesktopBoundingBox:
     """
     Computes the overarching bounding box for a collection of screens.
@@ -82,16 +84,12 @@ def compute_virtual_desktop_bounding_box(
     total_height = max(0, max_y - min_y)
 
     return VirtualDesktopBoundingBox(
-        min_x=min_x,
-        min_y=min_y,
-        width=total_width,
-        height=total_height
+        min_x=min_x, min_y=min_y, width=total_width, height=total_height
     )
 
 
 def compute_screen_paint_offset(
-    screen: ScreenInput,
-    virtual_origin: OriginInput
+    screen: ScreenInput, virtual_origin: OriginInput
 ) -> Tuple[int, int]:
     """
     Computes the (offset_x, offset_y) top-left paint coordinate for a screen

@@ -11,7 +11,6 @@ from core.project import ProjectManager, ProjectExistsError, ProjectCreationErro
 
 
 class TestProjectTransactions(unittest.TestCase):
-
     def test_create_project_rollback_on_subfolder_conflict(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             base_dir = Path(tmpdir) / "projects"
@@ -57,8 +56,7 @@ class TestProjectTransactions(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             pm = ProjectManager(
-                base_dir=Path(tmpdir) / "projects",
-                config_dir=Path(tmpdir) / "config"
+                base_dir=Path(tmpdir) / "projects", config_dir=Path(tmpdir) / "config"
             )
             with self.assertRaises(ProjectNotFoundError):
                 pm.activate_project("MissingBox")
@@ -66,5 +64,5 @@ class TestProjectTransactions(unittest.TestCase):
             self.assertFalse((pm.base_dir / "MissingBox").exists())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
