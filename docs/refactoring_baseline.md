@@ -78,3 +78,32 @@ splitter geometry, dirty state, status label, save/autosave behavior, and the
 conversion-loss confirmation dialog. Extracting them would move these widget
 dependencies into another object without creating an independent state
 machine. No `view_mode_controller` is introduced in this refactoring cycle.
+
+## Phase 7: Single Composition Root in MainWindow
+
+`MainWindow` is the sole composition root responsible for resolving and
+instantiating application services (from `ServiceContainer` or standalone test
+arguments). `AppController` has been strictly decoupled from container
+construction: it takes fully resolved services through its constructor and
+does not evaluate a container or instantiate domain services itself. This
+boundary is guarded by `test_app_controller_receives_resolved_application_services`
+in `tests/test_architecture_boundaries.py`.
+
+## Phases 8–10: Conditional Refactoring Reviews
+
+- **Phase 8 (`SettingsDialog`):** Evaluated and confirmed. The dialog is already
+  cohesively modularized into class-level pages (`HotkeySettingsPage`,
+  `LanguageSettingsPage`, `AppearanceSettingsPage`, `GeneralSettingsPage`).
+  `_on_save_settings()` preserves transactional workspace-commit semantics.
+  No further extraction is warranted.
+- **Phase 9 (`LootController`):** Evaluated and confirmed. Presentation and
+  filter pill generation remain cohesive with the view workflows. No artificial
+  rendering framework layer was introduced.
+- **Phase 10 (Layering Reviews):**
+  - *`ThemeLoader`*: Remains in `core/` as a lightweight discovery and
+    validation engine for JSON theme palettes, referencing `CYBER_DARK_PALETTE`
+    tokens for validation.
+  - *`ScreenshotManager`*: Remains a cohesive Qt capture coordinator with
+    multi-monitor compositing, while the critical persistence/rollback/cleanup
+    transaction was cleanly isolated into `ScreenshotTransactionService` (Phase 5).
+

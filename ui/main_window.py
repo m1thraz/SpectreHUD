@@ -95,7 +95,6 @@ class MainWindow(QMainWindow):
             project_manager=self.project_manager,
             screenshot_manager=self.screenshot_manager,
             event_bus=self.event_bus,
-            container=self.container
         )
         self._startup_mark(started_at, "app controller ready")
 

@@ -19,7 +19,6 @@ from core.project_session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType
-from core.container import ServiceContainer
 from core.storage import PersistenceError
 
 from ui.variable_bar import VariableBar
@@ -63,14 +62,13 @@ class AppController(QObject):
         var_bar: VariableBar,
         content_panel: ContentPanel,
         footer_panel: FooterPanel,
-        config_manager: Optional[ConfigManager] = None,
-        snippet_manager: Optional[SnippetManager] = None,
-        loot_manager: Optional[LootManager] = None,
-        clipboard_watcher: Optional[ClipboardWatcher] = None,
-        project_manager: Optional[ProjectManager] = None,
-        screenshot_manager: Optional[ScreenshotManager] = None,
-        event_bus: Optional[EventBus] = None,
-        container: Optional[ServiceContainer] = None
+        config_manager: ConfigManager,
+        snippet_manager: SnippetManager,
+        loot_manager: LootManager,
+        clipboard_watcher: ClipboardWatcher,
+        project_manager: ProjectManager,
+        screenshot_manager: ScreenshotManager,
+        event_bus: EventBus,
     ):
         super().__init__(window)
         self.window = window
@@ -80,24 +78,13 @@ class AppController(QObject):
         self.content = content_panel
         self.footer = footer_panel
 
-        if container is not None:
-            self.container = container
-            self.config = container.config_manager
-            self.snippet_manager = container.snippet_manager
-            self.project_manager = container.project_manager
-            self.loot_manager = container.loot_manager
-            self.clipboard_watcher = container.clipboard_watcher
-            self.screenshot_manager = container.screenshot_manager
-            self.event_bus = container.event_bus
-        else:
-            self.container = None
-            self.config = config_manager if config_manager is not None else ConfigManager()
-            self.snippet_manager = snippet_manager if snippet_manager is not None else SnippetManager()
-            self.project_manager = project_manager if project_manager is not None else ProjectManager()
-            self.loot_manager = loot_manager if loot_manager is not None else LootManager()
-            self.clipboard_watcher = clipboard_watcher if clipboard_watcher is not None else ClipboardWatcher()
-            self.screenshot_manager = screenshot_manager if screenshot_manager is not None else ScreenshotManager()
-            self.event_bus = event_bus if event_bus is not None else EventBus()
+        self.config = config_manager
+        self.snippet_manager = snippet_manager
+        self.project_manager = project_manager
+        self.loot_manager = loot_manager
+        self.clipboard_watcher = clipboard_watcher
+        self.screenshot_manager = screenshot_manager
+        self.event_bus = event_bus
 
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,

@@ -7,6 +7,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORTING_ROOT = PROJECT_ROOT / "core" / "reporting"
 REPORT_EDITOR = PROJECT_ROOT / "ui" / "report_editor_tab.py"
+APP_CONTROLLER = PROJECT_ROOT / "ui" / "app_controller.py"
 
 
 def _ui_imports(path: Path) -> list[tuple[int, str]]:
@@ -56,3 +57,39 @@ def test_report_editor_does_not_own_concrete_export_adapters():
                 violations.append(f"{REPORT_EDITOR.name}:{node.lineno} imports {name}")
 
     assert violations == [], "\n".join(violations)
+
+
+def test_app_controller_receives_resolved_application_services():
+    """Service selection belongs to MainWindow, not a second composition root."""
+    tree = ast.parse(
+        APP_CONTROLLER.read_text(encoding="utf-8"),
+        filename=str(APP_CONTROLLER),
+    )
+    app_controller = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "AppController"
+    )
+    constructor = next(
+        node
+        for node in app_controller.body
+        if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+    )
+    parameter_names = {argument.arg for argument in constructor.args.args}
+    forbidden_calls = {
+        "ClipboardWatcher",
+        "ConfigManager",
+        "EventBus",
+        "LootManager",
+        "ProjectManager",
+        "ScreenshotManager",
+        "SnippetManager",
+    }
+    constructed = {
+        node.func.id
+        for node in ast.walk(constructor)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
+    assert "container" not in parameter_names
+    assert constructed.isdisjoint(forbidden_calls)

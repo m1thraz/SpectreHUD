@@ -83,3 +83,21 @@ desktop.ini
 spectrehud.log
 data/loot_session.json
 data/clipboard_history.json
+projects_registry.json
+project_state.json
+security_meta.json
+
+# Local Workspaces, Projects & Exports
+projects/
+spectre_projects/
+workspace/
+boxes/
+loot/
+tmp/
+temp/
+.test-*/
+results.txt
+*.zip
+*.tmp
+*.tmp_*
+
