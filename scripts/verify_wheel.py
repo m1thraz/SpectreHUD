@@ -44,6 +44,12 @@ REQUIRED_FILES = [
     "core/i18n.py",
     "core/display_geometry.py",
     "core/theme_loader.py",
+    # Cross-platform support boundary
+    "core/platform/__init__.py",
+    "core/platform/capabilities.py",
+    "core/platform/paths.py",
+    "core/platform/opener.py",
+    "core/platform/network.py",
     # Reporting subsystem
     "core/reporting/__init__.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The

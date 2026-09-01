@@ -21,3 +21,21 @@ def test_windows_spec_includes_runtime_data_directories():
     assert '(str(data_dir / "i18n"), "data/i18n")' in spec
     assert '(str(data_dir / "report_templates"), "data/report_templates")' in spec
     assert '(str(data_dir / "themes"), "data/themes")' in spec
+
+
+def test_ci_keeps_release_tests_and_validates_installed_linux_wheel():
+    workflow = (
+        Path(__file__).parent.parent / ".github" / "workflows" / "ci.yml"
+    ).read_text(encoding="utf-8")
+    windows_job, linux_job = workflow.split("\n  package-linux:\n", maxsplit=1)
+
+    assert "python -m pytest -m release" in windows_job
+    assert "name: Package validation (Linux, Python 3.11)" in linux_job
+    assert "runs-on: ubuntu-latest" in linux_job
+    assert "python -m build --wheel" in linux_job
+    assert "python scripts/verify_wheel.py dist/" in linux_job
+    assert 'python -m venv "$venv_dir"' in linux_job
+    assert '"$venv_dir/bin/python" -m pip install "$wheel_path"' in linux_job
+    assert 'cd "$RUNNER_TEMP"' in linux_job
+    assert '"$venv_dir/bin/spectrehud" --version' in linux_job
+    assert '"$venv_dir/bin/spectrehud" --help' in linux_job

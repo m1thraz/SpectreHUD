@@ -18,6 +18,7 @@ class TestPackagingIntegration(unittest.TestCase):
     def setUpClass(cls):
         cls.repo_root = Path(__file__).parent.parent.resolve()
 
+    @pytest.mark.timeout(180)
     def test_wheel_build_and_contents(self):
         """Builds a real wheel and checks all package components exist in the wheel archive."""
         with tempfile.TemporaryDirectory() as td:

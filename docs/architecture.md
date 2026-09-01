@@ -217,9 +217,11 @@ for the two trust boundaries and their test rationale.
     serially with `-n0`.
   - `integration` marks cross-component Qt, subprocess and workflow boundaries;
     `release` marks wheel and distribution checks. The normal OS/Python matrix
-    runs everything except `release`; the existing Windows package-validation
-    job executes the release marker once. The master runner and tag-release
-    workflow remain unfiltered final gates.
+    runs everything except `release`; the Windows package-validation job
+    executes the release marker once. Separate Windows and Linux package jobs
+    install the built wheel into fresh environments and execute its CLI entry
+    point outside the checkout. The master runner and tag-release workflow
+    remain unfiltered final gates.
 - **Shared Qt test runtime (`tests/conftest.py`)**:
   - Pytest-style widget tests request a session-scoped `qapp` fixture instead of
     constructing competing `QApplication` instances in individual modules.
@@ -228,6 +230,8 @@ for the two trust boundaries and their test rationale.
   - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.
   - Linux headless display setup using `xvfb-run`.
   - Automated `flake8` syntax validation, pytest execution and Linux coverage reporting.
+  - Fresh-wheel installation and CLI smoke tests on Windows and Linux; the
+    standalone executable remains a Windows artifact.
 
 ---
 

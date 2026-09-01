@@ -1,6 +1,6 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-4 completed; local Checkpoint 1 passed; Linux CI confirmation pending
+**Status:** Phases 0-5 implemented; Linux CI confirmation pending; Phase 6 next
 
 **Verified:** 2026-09-01 against v2.0.3 development state
 
@@ -233,3 +233,15 @@ No production behavior was changed during this audit.
 - The Fast Gate and complete non-release gate both finish successfully.
 - Linux behavior is covered with injected platform values and synthetic
   `ip -j` output. Confirmation on a real Linux runner remains the next CI step.
+
+### Phase 5 - Linux wheel validation
+
+- CI now has a dedicated Ubuntu/Python 3.11 package job in addition to the
+  existing Windows package and executable gate.
+- The Linux job builds and inspects the wheel, installs that artifact into a
+  fresh venv, changes out of the repository checkout, and executes
+  `spectrehud --version` plus `spectrehud --help` from the installed entry point.
+- Release-marked tests remain owned by the Windows package job, so adding the
+  Linux installation gate does not duplicate or remove release-test coverage.
+- No AppImage, Flatpak, or other standalone Linux artifact is introduced in
+  this phase.

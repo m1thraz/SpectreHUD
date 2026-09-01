@@ -119,8 +119,10 @@ ruff format --line-length 100 core ui scripts main.py spectrehud_launcher.py cre
 - `E203` (Whitespace before `:`): Standard PEP 8 slice formatting compatibility.
 - `E501` (Line length): Handled by `ruff format`; long URLs, templates, and Markdown tables are preserved for readability.
 
-CI validates Python 3.10–3.13 on Windows and Linux, performs coverage on Linux,
-and builds and smoke-tests the Windows wheel and executable.
+CI validates Python 3.10–3.13 on Windows and Linux and performs coverage on
+Linux. Separate package gates install and smoke-test the built wheel on both
+platforms; the Windows gate additionally builds and exercises the standalone
+executable.
 
 ## Project-specific review points
 

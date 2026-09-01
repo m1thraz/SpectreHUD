@@ -130,3 +130,41 @@ jobs:
           name: SpectreHUD-Windows-x64
           path: dist/SpectreHUD.exe
           if-no-files-found: error
+
+  package-linux:
+    name: Package validation (Linux, Python 3.11)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build and inspect wheel
+        run: |
+          python -m build --wheel
+          python scripts/verify_wheel.py dist/
+
+      - name: Install and smoke-test wheel outside checkout
+        shell: bash
+        run: |
+          wheel_path="$(python -c 'from pathlib import Path; print(next(Path("dist").glob("*.whl")).resolve())')"
+          venv_dir="$RUNNER_TEMP/spectrehud-wheel-venv"
+          python -m venv "$venv_dir"
+          "$venv_dir/bin/python" -m pip install --upgrade pip
+          "$venv_dir/bin/python" -m pip install "$wheel_path"
+          cd "$RUNNER_TEMP"
+          "$venv_dir/bin/spectrehud" --version
+          "$venv_dir/bin/spectrehud" --help
