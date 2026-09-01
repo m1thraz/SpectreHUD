@@ -4,13 +4,16 @@ Export Coordinator for SpectreHUD.
 Coordinates report and loot export operations (Markdown, HTML, ZIP archives).
 """
 
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from PyQt6.QtCore import QObject, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from core.config import ConfigManager
-from core.exporters import ExternalExportError, ObsidianExporter
+from core.atomic_write import atomic_write_text
+from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError, ObsidianExporter
+from core.reporting import HtmlReportExporter
 from core.i18n import t
 from core.project import ProjectManager
 from core.loot_manager import LootManager
@@ -18,6 +21,10 @@ from core.logger import get_logger
 from ui.controllers.history_controller import HistoryController
 
 logger = get_logger(__name__)
+
+
+class ReportExportError(RuntimeError):
+    """Raised when a concrete report export operation cannot be completed."""
 
 class ExportCoordinator(QObject):
     """Coordinates reporting and loot export actions across the application."""
@@ -47,6 +54,54 @@ class ExportCoordinator(QObject):
         target_ip = self.target_provider()
         active_proj = self.project_manager.get_active_project()
         self.history_ctrl.export_report_dialog(window, target_ip, active_proj)
+
+    def export_report_markdown(self, target: Path, markdown: str) -> None:
+        """Write an explicit Markdown copy of the current editor document."""
+        if not atomic_write_text(target, markdown):
+            raise ReportExportError(f"Could not write Markdown report: {target}")
+
+    def export_report_html(
+        self,
+        *,
+        target: Path,
+        project_name: str,
+        markdown: str,
+        theme: str,
+        report_font: str,
+    ) -> None:
+        """Render the current editor document as a standalone HTML report."""
+        project_dir = self.project_manager.get_project_dir(project_name)
+        if not HtmlReportExporter.export_to_file(
+            markdown_content=markdown,
+            output_path=target,
+            project_dir=project_dir,
+            project_name=project_name,
+            target_ip="",
+            theme=theme,
+            report_font=report_font,
+        ):
+            raise ReportExportError(f"Could not write HTML report: {target}")
+
+    def export_report_to_cherrytree(
+        self,
+        *,
+        destination: Path,
+        project_name: str,
+        markdown: str,
+        report_font: str,
+    ) -> ExportResult:
+        """Create a portable CherryTree-compatible HTML package."""
+        project_dir = self.project_manager.get_project_dir(project_name)
+        try:
+            return CherryTreeExporter(destination).export_package(
+                project_name=project_name,
+                project_dir=project_dir,
+                report_markdown=markdown,
+                loot_entries=self.loot_manager.get_all_entries(),
+                report_font=report_font,
+            )
+        except (ExternalExportError, OSError, RuntimeError) as exc:
+            raise ReportExportError(str(exc)) from exc
 
     def export_loot_to_obsidian(self, window: QWidget) -> None:
         """Append active-session loot without rewriting a user's report note."""

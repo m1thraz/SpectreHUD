@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from core.logger import get_logger
-from ui.styles.fonts import get_report_font_stack
+from core.fonts import get_report_font_stack
 
 logger = get_logger(__name__)
 

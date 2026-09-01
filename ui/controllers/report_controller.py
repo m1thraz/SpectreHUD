@@ -1,4 +1,4 @@
-from typing import Callable, Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
@@ -9,6 +9,7 @@ from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
 
 if TYPE_CHECKING:
+    from ui.coordinators.export_coordinator import ExportCoordinator
     from ui.report_editor_tab import ReportEditorTab
 
 
@@ -22,14 +23,14 @@ class ReportController(QObject):
         clipboard_watcher: ClipboardWatcher,
         parent_widget: Optional[QWidget] = None,
         config_manager: Optional[ConfigManager] = None,
-        obsidian_export_handler: Optional[Callable[[QWidget, str, str], None]] = None,
+        export_coordinator: Optional["ExportCoordinator"] = None,
     ):
         super().__init__(parent_widget)
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
         self.config_manager = config_manager
-        self.obsidian_export_handler = obsidian_export_handler
+        self.export_coordinator = export_coordinator
 
         self.report_file_manager = ReportFileManager(self.project_manager)
         self.parent_widget = parent_widget
@@ -48,19 +49,19 @@ class ReportController(QObject):
                 self.clipboard_watcher,
                 parent=self.parent_widget,
                 config_manager=self.config_manager,
-                obsidian_export_handler=self.obsidian_export_handler,
+                export_coordinator=self.export_coordinator,
             )
             self.report_editor_tab.load_project(self.project_manager.get_active_project())
         return self.report_editor_tab
 
-    def set_obsidian_export_handler(
+    def set_export_coordinator(
         self,
-        handler: Callable[[QWidget, str, str], None],
+        coordinator: "ExportCoordinator",
     ) -> None:
-        """Inject the shared application export workflow into the lazy editor."""
-        self.obsidian_export_handler = handler
+        """Inject the shared export operations into the lazy editor."""
+        self.export_coordinator = coordinator
         if self.report_editor_tab is not None:
-            self.report_editor_tab.obsidian_export_handler = handler
+            self.report_editor_tab.export_coordinator = coordinator
 
     def load_project(self, project_name: str) -> None:
         if self.report_editor_tab is not None:

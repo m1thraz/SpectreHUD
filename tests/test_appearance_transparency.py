@@ -13,7 +13,7 @@ from core.theme_loader import ThemeLoader
 from ui.appearance import apply_application_style
 from ui.app_controller import AppController
 from ui.styles import build_app_theme
-from ui.styles.fonts import CODE_FONT_STACKS, UI_FONT_STACKS
+from core.fonts import CODE_FONT_STACKS, UI_FONT_STACKS
 from ui.styles.palette import CYBER_DARK_PALETTE
 
 

@@ -11,6 +11,7 @@ from PyQt6.QtGui import QPixmap, QImage, QColor
 from core.project import ProjectManager
 from core.loot_manager import LootManager
 from core.screenshot_manager import ScreenshotManager
+from core.screenshot_transaction_service import ScreenshotTransactionResult
 from core.event_bus import EventBus, EventType
 
 
@@ -187,11 +188,11 @@ class TestScreenshotManager(unittest.TestCase):
         parent_win = MagicMock()
         parent_win.windowState.return_value = Qt.WindowState.WindowNoState
         controller = SimpleNamespace(
-            loot_manager=self.loot_mgr,
-            save_current_project_state=MagicMock(return_value=False),
+            screenshot_transaction=MagicMock(),
             switch_mode=MagicMock(),
             event_bus=EventBus(),
         )
+        controller.screenshot_transaction.commit.return_value = ScreenshotTransactionResult(ok=False)
         self.screenshot_mgr.screenshot_saved.connect(
             lambda entry: AppController._on_screenshot_saved(controller, entry)
         )
@@ -215,10 +216,19 @@ class TestScreenshotManager(unittest.TestCase):
         event_bus = EventBus()
         received = []
         event_bus.subscribe(EventType.SCREENSHOT_SAVED, received.append)
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+        from ui.app_controller import AppController
 
-        # This mirrors AppController's sole event-bus responsibility.
+        controller = SimpleNamespace(
+            screenshot_transaction=MagicMock(),
+            switch_mode=MagicMock(),
+            event_bus=event_bus,
+        )
+        controller.screenshot_transaction.commit.return_value = ScreenshotTransactionResult(ok=True)
+
         self.screenshot_mgr.screenshot_saved.connect(
-            lambda entry: event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": entry})
+            lambda entry: AppController._on_screenshot_saved(controller, entry)
         )
         self.screenshot_mgr._on_snip_completed(
             cropped_pixmap=pixmap,
@@ -231,6 +241,7 @@ class TestScreenshotManager(unittest.TestCase):
         self.assertEqual(len(received), 1)
         self.assertEqual(set(received[0]), {"entry"})
         self.assertEqual(received[0]["entry"]["type"], "screenshot")
+        controller.switch_mode.assert_called_once_with("loot")
 
 
 if __name__ == "__main__":

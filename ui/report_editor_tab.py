@@ -15,7 +15,7 @@ sie ohne Qt testbar bleibt.
 """
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -28,9 +28,10 @@ from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
+from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportError
 from core.logger import get_logger
 from core.i18n import t
-from ui.styles.fonts import get_report_font_stack
+from core.fonts import get_report_font_stack
 from ui.report.dialogs import MarkdownTableDialog, ReportGenerationDialog
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
@@ -56,13 +57,13 @@ class ReportEditorTab(QWidget):
 
     def __init__(self, report_file_manager: ReportFileManager, loot_manager, clipboard_watcher,
                  parent: QWidget = None, config_manager: Optional[ConfigManager] = None,
-                 obsidian_export_handler: Optional[Callable[[QWidget, str, str], None]] = None):
+                 export_coordinator: Optional[ExportCoordinator] = None):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
         self.config = config_manager
-        self.obsidian_export_handler = obsidian_export_handler
+        self.export_coordinator = export_coordinator
         self.template_repo = TemplateRepository()
         self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
@@ -92,7 +93,19 @@ class ReportEditorTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        # --- Toolbar ---
+        layout.addLayout(self._build_action_toolbar())
+
+        status_row = QHBoxLayout()
+        status_row.addWidget(self.lbl_status)
+        status_row.addStretch()
+        layout.addLayout(status_row)
+
+        self._build_editor_splitter(layout)
+        self._setup_shortcuts()
+        self._apply_view_mode(self._view_mode)
+
+    def _build_action_toolbar(self) -> QHBoxLayout:
+        """Build the report actions without introducing a widget factory."""
         toolbar = QHBoxLayout()
         self.lbl_status = QLabel("")
         self.lbl_status.setProperty("class", "ReportStatusLabel")
@@ -101,19 +114,7 @@ class ReportEditorTab(QWidget):
         self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
         self.btn_change_view.setProperty("class", "SecondaryBtn")
         self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
-        self.view_menu = QMenu(self.btn_change_view)
-        self._view_actions = {}
-        for mode, key, fallback in (
-            (ViewMode.EDITOR, "report.mode_editor", "📝 Editor"),
-            (ViewMode.SPLIT, "report.mode_split", "◫ Split"),
-            (ViewMode.PREVIEW, "report.mode_preview", "👁️ Live Preview"),
-        ):
-            action = QAction(t(key, fallback), self.view_menu)
-            action.setCheckable(True)
-            action.triggered.connect(lambda _checked=False, selected=mode: self._set_view_mode(selected))
-            self.view_menu.addAction(action)
-            self._view_actions[mode] = action
-        self.btn_change_view.setMenu(self.view_menu)
+        self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
 
         self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
@@ -133,9 +134,8 @@ class ReportEditorTab(QWidget):
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
-        # Formatting belongs with the primary editing/export actions.  The
-        # source-only controls are still hidden while the rich live preview is
-        # active (see _apply_view_mode).
+        # Formatting belongs with the primary editing/export actions. The
+        # source-only controls are hidden while the rich preview is active.
         self.format_toolbar_widget = build_format_toolbar(self, {
             "heading_1": lambda: self._format_heading(1),
             "heading_2": lambda: self._format_heading(2),
@@ -156,15 +156,26 @@ class ReportEditorTab(QWidget):
         self.btn_save.setToolTip(t("report.save_tip", "Save changes to active box report.md (Ctrl+S)"))
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
+        return toolbar
 
-        layout.addLayout(toolbar)
+    def _build_view_menu(self) -> None:
+        """Populate the compact view selector."""
+        self.view_menu = QMenu(self.btn_change_view)
+        self._view_actions = {}
+        for mode, key, fallback in (
+            (ViewMode.EDITOR, "report.mode_editor", "📝 Editor"),
+            (ViewMode.SPLIT, "report.mode_split", "◫ Split"),
+            (ViewMode.PREVIEW, "report.mode_preview", "👁️ Live Preview"),
+        ):
+            action = QAction(t(key, fallback), self.view_menu)
+            action.setCheckable(True)
+            action.triggered.connect(lambda _checked=False, selected=mode: self._set_view_mode(selected))
+            self.view_menu.addAction(action)
+            self._view_actions[mode] = action
+        self.btn_change_view.setMenu(self.view_menu)
 
-        status_row = QHBoxLayout()
-        status_row.addWidget(self.lbl_status)
-        status_row.addStretch()
-        layout.addLayout(status_row)
-
-        # --- Editor | Vorschau ---
+    def _build_editor_splitter(self, layout: QVBoxLayout) -> None:
+        """Build the Markdown editor, find bar, and live preview splitter."""
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self.editor = QPlainTextEdit()
@@ -197,7 +208,8 @@ class ReportEditorTab(QWidget):
         self.splitter.setStretchFactor(1, 1)
         layout.addWidget(self.splitter, stretch=1)
 
-        # Shortcuts für Speichern und View-Modi
+    def _setup_shortcuts(self) -> None:
+        """Register report editing and view-mode shortcuts."""
         sc_save = QShortcut(QKeySequence("Ctrl+S"), self, activated=self.save)
         sc_save.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         sc_save_shift = QShortcut(QKeySequence("Ctrl+Shift+S"), self, activated=self.save)
@@ -222,8 +234,6 @@ class ReportEditorTab(QWidget):
         for sequence, callback in (("Ctrl+B", lambda: self._format_wrap("**", "**")), ("Ctrl+I", lambda: self._format_wrap("*", "*")), ("Ctrl+K", lambda: self._format_wrap("`", "`"))):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-
-        self._apply_view_mode(self._view_mode)
 
     def _format_heading(self, level: int) -> None:
         from ui.markdown_toolbar_actions import set_heading
@@ -577,7 +587,6 @@ class ReportEditorTab(QWidget):
         return selected[0]
 
     def _on_export_copy_clicked(self) -> None:
-        from core.atomic_write import atomic_write_text
         default_path = self.report_file_manager.get_report_path(self.current_project)
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Report-Kopie exportieren", str(default_path), "Markdown (*.md)"
@@ -589,15 +598,18 @@ class ReportEditorTab(QWidget):
         if target.suffix.lower() != ".md":
             target = target.with_suffix(".md")
 
-        success = atomic_write_text(target, self.editor.toPlainText())
-        if success:
+        coordinator = self._require_export_coordinator()
+        if coordinator is None:
+            return
+        try:
+            coordinator.export_report_markdown(target, self.editor.toPlainText())
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Exportiert")
             msg.setText(f"Kopie gespeichert: {target.name}")
             msg.setIcon(QMessageBox.Icon.Information)
             msg.exec()
-        else:
-            logger.error(f"Export der Report-Kopie nach {target} fehlgeschlagen")
+        except ReportExportError as exc:
+            logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
             msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
@@ -605,7 +617,6 @@ class ReportEditorTab(QWidget):
             msg.exec()
 
     def _on_export_html_clicked(self) -> None:
-        from core.html_report_exporter import HtmlReportExporter
         from PyQt6.QtGui import QDesktopServices
         theme = self._select_html_export_theme()
         if theme is None:
@@ -622,17 +633,17 @@ class ReportEditorTab(QWidget):
         if target.suffix.lower() != ".html":
             target = target.with_suffix(".html")
 
-        proj_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
-        success = HtmlReportExporter.export_to_file(
-            markdown_content=self.editor.toPlainText(),
-            output_path=target,
-            project_dir=proj_dir,
-            project_name=self.current_project,
-            target_ip="",
-            theme=theme,
-            report_font=self._report_font_key()
-        )
-        if success:
+        coordinator = self._require_export_coordinator()
+        if coordinator is None:
+            return
+        try:
+            coordinator.export_report_html(
+                target=target,
+                project_name=self.current_project,
+                markdown=self.editor.toPlainText(),
+                theme=theme,
+                report_font=self._report_font_key(),
+            )
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("HTML-Report exportiert")
             msg.setText(f"HTML-Report gespeichert:\n{target.name}\n\nIm Standard-Browser öffnen?")
@@ -641,8 +652,8 @@ class ReportEditorTab(QWidget):
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
             if msg.exec() == QMessageBox.StandardButton.Yes:
                 QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve())))
-        else:
-            logger.error(f"Export des HTML-Reports nach {target} fehlgeschlagen")
+        except ReportExportError as exc:
+            logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle("Fehler")
             msg.setText(f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden.")
@@ -653,24 +664,29 @@ class ReportEditorTab(QWidget):
         """Delegate the current editor document to the shared export coordinator."""
         if not self.current_project:
             return
-        if self.obsidian_export_handler is None:
+        coordinator = self._require_export_coordinator()
+        if coordinator is None:
+            return
+        coordinator.export_report_to_obsidian(
+            self,
+            self.current_project,
+            self.editor.toPlainText(),
+        )
+
+    def _require_export_coordinator(self) -> Optional[ExportCoordinator]:
+        """Return the application export boundary or show a controlled error."""
+        if self.export_coordinator is None:
             logger.error("Obsidian report export requested without a configured handler.")
             QMessageBox.warning(
                 self,
                 t("report.obsidian_export_failed_title", "Obsidian export failed"),
                 t("report.obsidian_export_unavailable", "The Obsidian export service is unavailable."),
             )
-            return
-        self.obsidian_export_handler(
-            self,
-            self.current_project,
-            self.editor.toPlainText(),
-        )
+            return None
+        return self.export_coordinator
 
     def _on_export_cherrytree_clicked(self) -> None:
         """Creates a portable HTML package; no CherryTree database is touched."""
-        from core.exporters import CherryTreeExporter, ExternalExportError
-
         if not self.current_project:
             return
         project_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
@@ -682,15 +698,17 @@ class ReportEditorTab(QWidget):
         )
         if not destination:
             return
+        coordinator = self._require_export_coordinator()
+        if coordinator is None:
+            return
         try:
-            result = CherryTreeExporter(destination).export_package(
+            result = coordinator.export_report_to_cherrytree(
+                destination=Path(destination),
                 project_name=self.current_project,
-                project_dir=project_dir,
-                report_markdown=self.editor.toPlainText(),
-                loot_entries=self.loot_manager.get_all_entries(),
+                markdown=self.editor.toPlainText(),
                 report_font=self._report_font_key(),
             )
-        except (ExternalExportError, OSError, RuntimeError) as exc:
+        except ReportExportError as exc:
             logger.error("CherryTree package export failed: %s", exc, exc_info=True)
             QMessageBox.warning(
                 self,

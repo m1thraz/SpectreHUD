@@ -12,7 +12,7 @@ from core.config import ConfigManager, clamp_transparency
 from core.i18n import t
 from core.theme_loader import ThemeLoader
 from ui.base_dialog import BaseHudDialog
-from ui.styles.fonts import (
+from core.fonts import (
     UI_FONT_OPTIONS,
     CODE_FONT_OPTIONS,
     REPORT_FONT_OPTIONS,

@@ -60,13 +60,13 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
     def test_obsidian_export_delegates_current_editor_state(self):
-        handler = MagicMock()
-        self.tab.obsidian_export_handler = handler
+        coordinator = MagicMock()
+        self.tab.export_coordinator = coordinator
         self.tab.editor.setPlainText("# Current report\nEvidence")
 
         self.tab._on_export_obsidian_clicked()
 
-        handler.assert_called_once_with(
+        coordinator.export_report_to_obsidian.assert_called_once_with(
             self.tab,
             "TestBox",
             "# Current report\nEvidence",

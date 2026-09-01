@@ -9,7 +9,7 @@ from core.storage import InMemoryStorageBackend
 from ui.app_controller import AppController
 from ui.styles import build_app_theme
 from ui.styles.palette import CYBER_DARK_PALETTE
-from ui.styles.fonts import (
+from core.fonts import (
     CODE_FONT_OPTIONS,
     CODE_FONT_STACKS,
     REPORT_FONT_OPTIONS,

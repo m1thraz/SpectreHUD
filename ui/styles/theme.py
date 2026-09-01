@@ -11,7 +11,7 @@ from ui.styles.buttons import BUTTONS_QSS_TEMPLATE
 from ui.styles.tables import TABLES_QSS_TEMPLATE
 from ui.styles.cards import CARDS_QSS_TEMPLATE
 from ui.styles.dialogs import DIALOGS_QSS_TEMPLATE
-from ui.styles.fonts import get_code_font_stack, get_ui_font_stack
+from core.fonts import get_code_font_stack, get_ui_font_stack
 from ui.styles.palette import CYBER_DARK_PALETTE
 from core.config import clamp_transparency
 

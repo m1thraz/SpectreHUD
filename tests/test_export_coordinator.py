@@ -72,3 +72,70 @@ def test_report_obsidian_export_without_vault_stops_before_exporter(tmp_path):
     exporter_class.assert_not_called()
     project_manager.get_project_dir.assert_not_called()
     information.assert_called_once()
+
+
+def test_markdown_report_export_uses_atomic_writer(tmp_path):
+    coordinator, _ = _coordinator({}, tmp_path / "project")
+    target = tmp_path / "report.md"
+
+    with patch(
+        "ui.coordinators.export_coordinator.atomic_write_text",
+        return_value=True,
+    ) as write_text:
+        coordinator.export_report_markdown(target, "# Report")
+
+    write_text.assert_called_once_with(target, "# Report")
+
+
+def test_html_report_export_resolves_project_through_coordinator(tmp_path):
+    coordinator, project_manager = _coordinator({}, tmp_path / "project")
+    target = tmp_path / "report.html"
+
+    with patch(
+        "ui.coordinators.export_coordinator.HtmlReportExporter.export_to_file",
+        return_value=True,
+    ) as export_to_file:
+        coordinator.export_report_html(
+            target=target,
+            project_name="Forest",
+            markdown="# Report",
+            theme="light",
+            report_font="inter",
+        )
+
+    project_manager.get_project_dir.assert_called_once_with("Forest")
+    export_to_file.assert_called_once_with(
+        markdown_content="# Report",
+        output_path=target,
+        project_dir=tmp_path / "project",
+        project_name="Forest",
+        target_ip="",
+        theme="light",
+        report_font="inter",
+    )
+
+
+def test_cherrytree_report_export_uses_shared_project_and_loot_state(tmp_path):
+    coordinator, project_manager = _coordinator({}, tmp_path / "project")
+    coordinator.loot_manager.get_all_entries.return_value = [{"id": "loot-1"}]
+    result = SimpleNamespace(note_path=tmp_path / "export" / "Forest.html", warnings=())
+
+    with patch("ui.coordinators.export_coordinator.CherryTreeExporter") as exporter_class:
+        exporter_class.return_value.export_package.return_value = result
+        actual = coordinator.export_report_to_cherrytree(
+            destination=tmp_path / "export",
+            project_name="Forest",
+            markdown="# Report",
+            report_font="inter",
+        )
+
+    assert actual is result
+    project_manager.get_project_dir.assert_called_once_with("Forest")
+    exporter_class.assert_called_once_with(tmp_path / "export")
+    exporter_class.return_value.export_package.assert_called_once_with(
+        project_name="Forest",
+        project_dir=tmp_path / "project",
+        report_markdown="# Report",
+        loot_entries=[{"id": "loot-1"}],
+        report_font="inter",
+    )

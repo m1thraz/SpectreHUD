@@ -196,8 +196,9 @@ class TestReportFileManager(unittest.TestCase):
     @pytest.mark.integration
     def test_report_editor_export_button_dispatches_html_export(self):
         """Tests that the unified Export button can dispatch to HTML export."""
-        from unittest.mock import patch
+        from unittest.mock import MagicMock, patch
         from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+        from ui.coordinators.export_coordinator import ExportCoordinator
         from ui.report_editor_tab import ReportEditorTab
 
         app = QApplication.instance() or QApplication([])
@@ -205,7 +206,14 @@ class TestReportFileManager(unittest.TestCase):
         tab = ReportEditorTab(
             report_file_manager=self.report_mgr,
             loot_manager=self.loot_mgr,
-            clipboard_watcher=self.clip_watcher
+            clipboard_watcher=self.clip_watcher,
+            export_coordinator=ExportCoordinator(
+                project_manager=self.project_mgr,
+                loot_manager=self.loot_mgr,
+                history_ctrl=MagicMock(),
+                target_provider=lambda: "",
+                config_manager=MagicMock(),
+            ),
         )
         tab.load_project("BoxHtmlTest")
         tab.editor.setPlainText("# HTML Export Test\nContent goes here.")

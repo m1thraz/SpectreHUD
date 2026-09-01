@@ -4,7 +4,6 @@ Central Application Orchestrator for SpectreHUD.
 Orchestrates UI panels, domain managers, and specialized coordinators.
 """
 
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, QUrl, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox
@@ -15,6 +14,7 @@ from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
+from core.screenshot_transaction_service import ScreenshotTransactionService
 from core.project_session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
@@ -141,8 +141,10 @@ class AppController(QObject):
             history_ctrl=self.history_ctrl, target_provider=self._target_provider,
             config_manager=self.config, parent=self
         )
-        self.report_ctrl.set_obsidian_export_handler(
-            self.export_coord.export_report_to_obsidian
+        self.report_ctrl.set_export_coordinator(self.export_coord)
+        self.screenshot_transaction = ScreenshotTransactionService(
+            loot_manager=self.loot_manager,
+            persist_project_state=self.save_current_project_state,
         )
 
         self._wire_signals()
@@ -435,29 +437,8 @@ class AppController(QObject):
         )
 
     def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:
-        # AppController is the sole owner of project state persistence after screenshot.
-        # ScreenshotManager only saves the PNG and emits the signal.
-        if not self.save_current_project_state():
-            logger.error("Project state save failed after screenshot capture.")
-            screenshot_id = loot_entry.get("id")
-            if screenshot_id:
-                entries_before_screenshot = [
-                    entry for entry in self.loot_manager.get_all_entries()
-                    if entry.get("id") != screenshot_id
-                ]
-                try:
-                    self.loot_manager.replace_entries_and_persist(entries_before_screenshot)
-                except PersistenceError:
-                    # Recovery is best-effort: a failed loot rollback must not
-                    # prevent independent cleanup of the image file below.
-                    logger.exception("Failed to roll back loot after screenshot session-save failure.")
-
-            file_path = loot_entry.get("file_path")
-            if file_path:
-                try:
-                    Path(file_path).unlink(missing_ok=True)
-                except OSError as exc:
-                    logger.error("Failed to remove screenshot PNG after session rollback: %s", exc)
+        result = self.screenshot_transaction.commit(loot_entry)
+        if not result.ok:
             return
         self.switch_mode("loot")
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})

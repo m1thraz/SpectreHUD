@@ -18,6 +18,7 @@ from core.loot_manager import LootManager
 from core.storage import PersistenceError
 from core.clipboard_watcher import ClipboardWatcher
 from core.screenshot_manager import ScreenshotManager
+from core.screenshot_transaction_service import ScreenshotTransactionService
 from core.project_session_service import ProjectSessionService
 from core.report_file_manager import ReportFileManager, ReportBackupError
 from core.snippet_manager import SnippetManager
@@ -93,10 +94,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
     def test_screenshot_session_save_failure_rolls_back_loot_and_png(self):
         """A failed session commit must not leave screenshot data orphaned."""
-        from types import SimpleNamespace
         from unittest.mock import MagicMock
-        from core.event_bus import EventBus, EventType
-        from ui.app_controller import AppController
 
         self.project_mgr.create_project("BoxScreenshotRollback")
         self.project_mgr.activate_project("BoxScreenshotRollback")
@@ -110,34 +108,27 @@ class TestWorkflowRobustness(unittest.TestCase):
         )
         screenshot_entry["file_path"] = str(screenshot_path)
 
-        event_bus = EventBus()
-        published = []
-        event_bus.subscribe(EventType.SCREENSHOT_SAVED, published.append)
-        controller = SimpleNamespace(
-            loot_manager=self.loot_mgr,
-            save_current_project_state=MagicMock(return_value=False),
-            switch_mode=MagicMock(),
-            event_bus=event_bus,
+        persist_project_state = MagicMock(return_value=False)
+        service = ScreenshotTransactionService(
+            self.loot_mgr,
+            persist_project_state,
         )
 
-        AppController._on_screenshot_saved(controller, screenshot_entry)
+        result = service.commit(screenshot_entry)
 
+        self.assertFalse(result.ok)
+        persist_project_state.assert_called_once_with()
         self.assertEqual([entry["id"] for entry in self.loot_mgr.get_all_entries()], [original_entry["id"]])
         self.assertEqual(
             [entry["id"] for entry in self.loot_mgr.storage.load_json("loot")],
             [original_entry["id"]],
         )
         self.assertFalse(screenshot_path.exists())
-        controller.switch_mode.assert_not_called()
-        self.assertEqual(published, [])
 
     def test_screenshot_rollback_removes_png_when_loot_rollback_fails(self):
         """A failed loot rollback must not block independent screenshot-file cleanup."""
-        from types import SimpleNamespace
         from unittest.mock import MagicMock, patch
-        from core.event_bus import EventBus, EventType
         from core.storage import PersistenceError
-        from ui.app_controller import AppController
 
         self.project_mgr.create_project("BoxScreenshotRollbackFailure")
         loot_dir = self.project_mgr.get_project_dir("BoxScreenshotRollbackFailure") / "loot"
@@ -149,14 +140,10 @@ class TestWorkflowRobustness(unittest.TestCase):
         )
         screenshot_entry["file_path"] = str(screenshot_path)
 
-        event_bus = EventBus()
-        published = []
-        event_bus.subscribe(EventType.SCREENSHOT_SAVED, published.append)
-        controller = SimpleNamespace(
-            loot_manager=self.loot_mgr,
-            save_current_project_state=MagicMock(return_value=False),
-            switch_mode=MagicMock(),
-            event_bus=event_bus,
+        primary_failure = RuntimeError("project state unavailable")
+        service = ScreenshotTransactionService(
+            self.loot_mgr,
+            MagicMock(side_effect=primary_failure),
         )
 
         with patch.object(
@@ -164,12 +151,14 @@ class TestWorkflowRobustness(unittest.TestCase):
             "replace_entries_and_persist",
             side_effect=PersistenceError("rollback storage unavailable"),
         ) as rollback:
-            AppController._on_screenshot_saved(controller, screenshot_entry)
+            result = service.commit(screenshot_entry)
 
         rollback.assert_called_once()
+        self.assertFalse(result.ok)
+        self.assertIs(result.error, primary_failure)
+        self.assertEqual(len(result.cleanup_errors), 1)
+        self.assertIsInstance(result.cleanup_errors[0], PersistenceError)
         self.assertFalse(screenshot_path.exists())
-        controller.switch_mode.assert_not_called()
-        self.assertEqual(published, [])
 
     # -------------------------------------------------------------------------
     # 38. Strict project activation
@@ -254,4 +243,3 @@ class TestWorkflowRobustness(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
