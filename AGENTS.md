@@ -3,7 +3,10 @@
 ## Testing Workflow
 
 - During development and iteration, run `./scripts/test_fast.sh`.
-- Before completing a task or creating a commit, run `./scripts/test_full.sh`.
+- Before handing a completed task back for user acceptance, run
+  `./scripts/test_full.sh`.
+- Never create Git commits. Only the user commits changes after reviewing and
+  accepting the completed work.
 - Run release tests (`python -m pytest -m release -q`) only for packaging,
   dependency, entry-point, installer, wheel, or release-metadata changes.
 - For a change confined to one module, first run its directly affected tests,
