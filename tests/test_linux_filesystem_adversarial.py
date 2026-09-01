@@ -94,22 +94,30 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
     # -------------------------------------------------------------------------
     # Ticket 26: Permissions and Read-Only Failure Modes
     # -------------------------------------------------------------------------
-    def test_atomic_write_fails_gracefully_on_readonly_target_file(self):
-        """Ticket 26: Writing to a read-only target file fails without leaving orphaned temp files."""
+    def test_atomic_write_fails_gracefully_on_permission_denied(self):
+        """Ticket 26: Writing when permissions are denied fails without leaving orphaned temp files."""
         target = self.temp_path / "readonly.txt"
         atomic_write_text(target, "initial content")
 
-        os.chmod(target, 0o400)
-
-        try:
+        # When replace fails with PermissionError (e.g. read-only target lock or restricted destination)
+        with patch("core.atomic_write._replace_file_with_retry", side_effect=PermissionError("Permission denied")):
             with self.assertRaises(OSError):
                 atomic_write_text(target, "modified content")
-        finally:
-            os.chmod(target, 0o600)
 
         self.assertEqual(target.read_text(encoding="utf-8"), "initial content")
         tmp_files = list(self.temp_path.glob(".*.tmp_*"))
         self.assertEqual(len(tmp_files), 0)
+
+        if os.name == "posix":
+            # On POSIX, writing in a non-writable directory fails at open()
+            ro_dir = self.temp_path / "ro_posix_dir"
+            ro_dir.mkdir(parents=True, exist_ok=True)
+            os.chmod(ro_dir, 0o500)
+            try:
+                with self.assertRaises(PermissionError):
+                    atomic_write_text(ro_dir / "test.txt", "content")
+            finally:
+                os.chmod(ro_dir, 0o700)
 
     def test_report_file_manager_save_fails_on_permission_denied(self):
         """Ticket 26: ReportFileManager.save() returns False on PermissionError, and save failure triggers ReportSaveError."""
