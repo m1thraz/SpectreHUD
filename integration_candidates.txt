@@ -4,42 +4,42 @@
 # Selection: MainWindow/multi-component boundary, >0.30 s, or multi-stage filesystem workflow.
 
 # MainWindow-based UI tests (structural integration boundary)
-tests/test_ui.py::TestUI::test_hud_modes_and_projects  # 5.17s
-tests/test_ui.py::TestUI::test_copy_minimizes_overlay_only_when_option_is_enabled  # 1.65s
-tests/test_ui.py::TestUI::test_report_editor_is_created_only_when_report_mode_opens
-tests/test_ui.py::TestUI::test_loot_grouped_by_category_with_headers
-tests/test_ui.py::TestUI::test_loot_board_view_uses_configured_alternate_presentation
-tests/test_ui.py::TestUI::test_loot_view_button_toggles_and_persists_both_presentations
-tests/test_ui.py::TestUI::test_loot_export_tooltip_uses_active_english_locale
-tests/test_ui.py::TestUI::test_theme_change_requests_restart_only_after_settings_dialog_closes
-tests/test_ui.py::TestUI::test_unchanged_theme_does_not_request_restart
-tests/test_ui.py::TestUI::test_cheatsheet_favorites_ui_interaction  # 1.80s
-tests/test_ui.py::TestUI::test_inline_command_tweaker_interaction  # 1.00s
-tests/test_ui.py::TestUI::test_variable_bar_user_pass_and_visibility_toggle
-tests/test_ui.py::TestUI::test_project_archive_ui_action
-tests/test_ui.py::TestUI::test_search_fuzzy_and_result_capping  # 1.14s
+tests/test_ui_core.py::TestUI::test_hud_modes_and_projects  # 5.17s
+tests/test_ui_core.py::TestUI::test_copy_minimizes_overlay_only_when_option_is_enabled  # 1.65s
+tests/test_ui_core.py::TestUI::test_report_editor_is_created_only_when_report_mode_opens
+tests/test_ui_loot_theme.py::TestUI::test_loot_grouped_by_category_with_headers
+tests/test_ui_loot_theme.py::TestUI::test_loot_board_view_uses_configured_alternate_presentation
+tests/test_ui_loot_theme.py::TestUI::test_loot_view_button_toggles_and_persists_both_presentations
+tests/test_ui_loot_theme.py::TestUI::test_loot_export_tooltip_uses_active_english_locale
+tests/test_ui_loot_theme.py::TestUI::test_theme_change_requests_restart_only_after_settings_dialog_closes
+tests/test_ui_loot_theme.py::TestUI::test_unchanged_theme_does_not_request_restart
+tests/test_ui_interactions.py::TestUI::test_cheatsheet_favorites_ui_interaction  # 1.80s
+tests/test_ui_interactions.py::TestUI::test_inline_command_tweaker_interaction  # 1.00s
+tests/test_ui_interactions.py::TestUI::test_variable_bar_user_pass_and_visibility_toggle
+tests/test_ui_interactions.py::TestUI::test_project_archive_ui_action
+tests/test_ui_interactions.py::TestUI::test_search_fuzzy_and_result_capping  # 1.14s
 
 # MainWindow fixture plus multi-stage project/report/workspace workflows
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_multi_project_data_and_state_isolation  # 4.83s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_multi_project_report_file_isolation  # 1.93s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_report_editor_dirty_state_guard  # 1.88s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_report_regeneration_backup_and_restore_lifecycle
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_screenshot_to_loot_and_report_pipeline  # 1.01s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_single_source_of_truth_no_global_leakage  # 1.06s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_workspace_config_failure_does_not_persist_new_workspace_registry  # 1.85s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_workspace_config_failure_restores_old_session_and_ui  # 2.78s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_workspace_switch_rolls_back_on_precommit_failure  # 1.07s
-tests/test_workflow_invariants.py::TestWorkflowInvariants::test_workspace_switch_validates_active_project  # 1.13s
+tests/test_workflow_project_report.py::TestWorkflowInvariants::test_multi_project_data_and_state_isolation  # 4.83s
+tests/test_workflow_project_report.py::TestWorkflowInvariants::test_multi_project_report_file_isolation  # 1.93s
+tests/test_workflow_project_report.py::TestWorkflowInvariants::test_report_editor_dirty_state_guard  # 1.88s
+tests/test_workflow_project_report.py::TestWorkflowInvariants::test_report_regeneration_backup_and_restore_lifecycle
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_screenshot_to_loot_and_report_pipeline  # 1.01s
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_single_source_of_truth_no_global_leakage  # 1.06s
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_workspace_config_failure_does_not_persist_new_workspace_registry  # 1.85s
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_workspace_config_failure_restores_old_session_and_ui  # 2.78s
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_workspace_switch_rolls_back_on_precommit_failure  # 1.07s
+tests/test_workflow_runtime_workspace.py::TestWorkflowInvariants::test_workspace_switch_validates_active_project  # 1.13s
 
 # Focused MainWindow lifecycle and measured multi-stage filesystem cases
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_quit_blocks_when_report_dirty
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_quit_blocks_when_project_save_fails
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_quit_flushes_project_state_on_clean_exit
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_quit_logs_geometry_persistence_error_without_blocking_shutdown  # 0.41s
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_quit_logs_unexpected_geometry_error_without_blocking_shutdown  # 1.54s
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_close_event_does_not_discard_unsaved_state  # 0.86s
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_rapid_project_switches_keep_clipboard_data_isolated  # 1.29s
-tests/test_adversarial_regressions.py::TestWorkflowRobustness::test_list_projects_does_not_mutate_registry  # 0.32s
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_quit_blocks_when_report_dirty
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_quit_blocks_when_project_save_fails
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_quit_flushes_project_state_on_clean_exit
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_quit_logs_geometry_persistence_error_without_blocking_shutdown  # 0.41s
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_quit_logs_unexpected_geometry_error_without_blocking_shutdown  # 1.54s
+tests/test_adversarial_report.py::TestWorkflowRobustness::test_close_event_does_not_discard_unsaved_state  # 0.86s
+tests/test_adversarial_workflows.py::TestWorkflowRobustness::test_rapid_project_switches_keep_clipboard_data_isolated  # 1.29s
+tests/test_adversarial_screenshot_registry.py::TestWorkflowRobustness::test_list_projects_does_not_mutate_registry  # 0.32s
 
 # Other measured Qt boundaries
 tests/test_cheatsheet_scroll_geometry.py::test_full_cheatsheet_has_no_large_empty_scroll_area  # 2.07s setup
@@ -56,7 +56,7 @@ tests/test_single_instance.py::test_crashed_process_lock_is_recoverable
 tests/test_single_instance.py::test_simultaneous_process_start_allows_exactly_one_winner
 
 # Audited false positives retained in Fast Suite
-# - tests/test_ui.py::TestUI::test_net_detector (0.10s, isolated detector)
-# - tests/test_ui.py::TestUI::test_report_editor_tab_smoke (0.09s, one widget)
+# - tests/test_ui_core.py::TestUI::test_net_detector (0.10s, isolated detector)
+# - tests/test_ui_core.py::TestUI::test_report_editor_tab_smoke (0.09s, one widget)
 # - QApplication-only files whose tests stay below 0.1s and exercise one service/widget
 #   remain unmarked: dialogs, Qt models, settings, screenshot managers, template dialogs.

@@ -72,11 +72,11 @@ test. The default pytest output is compact, while failures retain short
 tracebacks and their exact test IDs. `python run_tests.py` intentionally remains
 an alias for the complete, unfiltered final gate.
 
-The full `test_ui.py`, `test_smoke.py`, `test_workflow_invariants.py`, and
-Cheatsheet geometry modules are integration suites because their assertions
-depend on a composed `MainWindow`. Mixed modules such as container, i18n,
-adversarial-regression, and single-instance coverage mark only the individual
-window or subprocess tests; their service-level tests remain in the Fast Suite.
+The workflow-invariant modules, `test_smoke.py`, and Cheatsheet geometry are
+integration suites because their assertions depend on a composed `MainWindow`.
+The focused UI, container, i18n, adversarial, report, and single-instance
+modules mark only individual window, popup, workflow, or subprocess tests;
+their isolated service/widget tests remain in the Fast Suite.
 
 For packaging, dependency, entry-point, or release-metadata changes, also run:
 

@@ -8,6 +8,9 @@ semantic versioning.
 
 ### Changed
 
+- Split the largest test modules by responsibility while preserving the exact
+  386-test collection, and documented compact Fast/Full commands for coding
+  agents.
 - Restored the original transparent MainScrollArea rendering path and added
   independent, live HUD and Report Editor transparency controls under
   Appearance. The default 5% HUD transparency matches the established glass
