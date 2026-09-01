@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+    echo "Kein aktives venv — bitte .venv aktivieren." >&2
+    exit 1
+fi
+
 script_dir="$(cd "${BASH_SOURCE[0]%/*}" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 cd "$repo_root"
