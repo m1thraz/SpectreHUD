@@ -72,6 +72,12 @@ REQUIRED_FILES = [
     "ui/controllers/window_frame_manager.py",
     "ui/base_dialog.py",
     "ui/settings_dialog.py",
+    # Linux desktop integration assets
+    "resources/linux/spectrehud.desktop",
+    "resources/linux/icons/hicolor/48x48/apps/spectrehud.png",
+    "resources/linux/icons/hicolor/128x128/apps/spectrehud.png",
+    "resources/linux/icons/hicolor/256x256/apps/spectrehud.png",
+    "resources/linux/icons/hicolor/scalable/apps/spectrehud.svg",
 ]
 
 

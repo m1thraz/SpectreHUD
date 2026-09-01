@@ -81,35 +81,27 @@ public issue.
 
 Download the current Windows build from the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases). No Python installation is required.
 
-### Linux (pip / package)
+### Linux
 
 Requirements: Python 3.10+ and standard Qt6/XCB desktop runtime dependencies.
 
-**Ubuntu / Debian / Kali Linux:**
-```bash
-sudo apt-get update
-sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
-pip install spectrehud
-spectrehud
-```
+**System dependencies:**
 
-**Fedora / RHEL:**
-```bash
-sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
-pip install spectrehud
-spectrehud
-```
+* **Ubuntu / Debian / Kali Linux:**
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
+  ```
+* **Fedora / RHEL:**
+  ```bash
+  sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
+  ```
+* **Arch Linux:**
+  ```bash
+  sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
+  ```
 
-**Arch Linux:**
-```bash
-sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
-pip install spectrehud
-spectrehud
-```
-
-### From source
-
-Requirements: Python 3.10+ on Windows or Linux.
+**Install & Run:**
 
 ```bash
 git clone https://github.com/m1thraz/SpectreHUD.git
@@ -118,9 +110,15 @@ pip install .
 spectrehud
 ```
 
-For development:
+*(Once published to PyPI, direct `pip install spectrehud` will also be available).*
+
+### From source & development
+
+Requirements: Python 3.10+ on Windows or Linux.
 
 ```bash
+git clone https://github.com/m1thraz/SpectreHUD.git
+cd SpectreHUD
 pip install -e ".[dev]"
 python scripts/run_tests.py
 ```
@@ -135,11 +133,12 @@ python scripts/build_exe.py
 
 ## Platform notes
 
-SpectreHUD provides full native support for both Windows and Linux desktops. On modern Wayland
-compositors, global background key logging and arbitrary screen grabbing are restricted by the
-display server security model; SpectreHUD gracefully degrades to in-app keyboard shortcuts and
-provides clear tooltip notifications without application interruptions.
+SpectreHUD supports Windows and Linux (X11 and Wayland). On modern Wayland
+compositors, global background key logging and arbitrary display grabbing are restricted by the
+display server security model; SpectreHUD gracefully falls back to in-app keyboard shortcuts and
+provides clear tooltip notifications.
 
 ## License
 
 Released under the [MIT License](LICENSE).
+

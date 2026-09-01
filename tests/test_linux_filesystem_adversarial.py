@@ -195,6 +195,35 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         self.assertTrue(broken_link.exists())
         self.assertEqual(broken_link.read_text(encoding="utf-8"), "repaired via atomic write")
 
+    def test_symlink_pointing_outside_workspace(self):
+        """Ticket 27: Symlink inside workspace pointing to an external directory or file."""
+        external_dir = self.temp_path / "external_area"
+        external_dir.mkdir()
+        external_target = external_dir / "secret_external.txt"
+        external_target.write_text("external payload", encoding="utf-8")
+
+        project_dir = self.temp_path / "project_ws"
+        project_dir.mkdir()
+        internal_symlink = project_dir / "link_to_external.txt"
+
+        try:
+            internal_symlink.symlink_to(external_target)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink creation not supported or permitted on this platform environment.")
+
+        self.assertTrue(internal_symlink.is_symlink())
+        # Reading through symlink returns target data
+        self.assertEqual(internal_symlink.read_text(encoding="utf-8"), "external payload")
+
+        # Resolving returns the external target outside the project root
+        resolved = internal_symlink.resolve()
+        self.assertEqual(resolved, external_target.resolve())
+        self.assertFalse(str(resolved).startswith(str(project_dir.resolve())))
+
+        # Atomic write to resolved path updates the external target correctly
+        atomic_write_text(resolved, "updated external payload")
+        self.assertEqual(external_target.read_text(encoding="utf-8"), "updated external payload")
+
     # -------------------------------------------------------------------------
     # Ticket 28: Atomic Write Under POSIX (Durability, Chmod, Error Recovery)
     # -------------------------------------------------------------------------

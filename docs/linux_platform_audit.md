@@ -1,32 +1,25 @@
 # Linux Platform Audit
 
-**Status:** Phases 0-11 fully implemented and verified; Linux CI ready
+**Status:** Implementation complete through Phase 9; Linux CI and manual X11/Wayland acceptance pending.
 
-**Verified:** 2026-09-01 against v2.0.3 development state
+**Verified:** 2026-09-01 against v2.0.3 development state (Phases 1-9 implemented; Phase 10 distribution decision documented; live CI and manual X11/Wayland session acceptance pending)
 
-This document records existing operating-system boundaries before Linux support
-is refactored. It is an inventory, not a claim that every listed feature is
-already supported.
+This document records operating-system boundaries, historical baseline states,
+refactored platform layers, and the distribution roadmap for Linux support.
 
 ## Classification summary
 
-| Area | Classification | Current boundary and evidence |
+| Area | Baseline State (Phase 0) | Implementation Status (Phases 1–9) |
 | --- | --- | --- |
-| Clipboard | Platform-neutral through Qt; Wayland smoke test pending | `core/clipboard_watcher.py` uses `QApplication.clipboard()` and contains no OS branch. |
-| Atomic writes | Platform-dependent, already locally encapsulated | `core/atomic_write.py` limits its POSIX-specific `chmod` behavior to `_secure_chmod`; `fsync` and `os.replace` are shared. |
-| Display geometry | Platform-neutral pure logic | `core/display_geometry.py` computes virtual desktop bounds independently of the OS. |
-| Single-instance lock | Platform-neutral Qt boundary | `core/single_instance.py` uses `QLockFile`, but inherits the legacy config-directory choice. |
-| External URL opening | Platform-neutral where Qt is already used | Settings theme folder, HTML output, and Obsidian URIs use `QDesktopServices`. Failure handling is inconsistent. |
-| Local file/folder opening | Platform-dependent and duplicated | The same Windows/macOS/`xdg-open` branch occurs in `core/project/repository.py`, `ui/controllers/project_controller.py`, and `ui/loot_card.py`. |
-| Config/data/cache paths | Platform-dependent and duplicated | Config, projects, logging, themes, and Settings defaults derive paths independently. No cache API exists. |
-| Network detection | Platform-dependent and incorrectly grouped | `core/net_detector.py` separates Windows but treats Linux and macOS as one `ip`-command platform and checks only `tun0`, `wg0`, and `tap0`. |
-| Screenshots | Qt implementation; Linux/X11 plausible; Wayland-problematic | `core/screenshot_manager.py` directly uses `QScreen.grabWindow(0)` and recognizes null pixmaps, but exposes no session capability or user-facing unavailable state. |
-| Global hotkeys | Backend isolated, capability missing; Wayland-problematic | `core/hotkey_listener.py` imports `pynput` lazily and catches startup errors, so the app can continue, but it provides no `is_available()` state to UI. |
-| Local shortcuts | Platform-neutral Qt | `MainWindow` and report editor shortcuts use `QShortcut` and do not depend on `pynput`. |
-| Desktop shortcut | Windows-only and mostly isolated | `create_desktop_shortcut.py` invokes PowerShell and assumes Desktop/OneDrive Desktop. It is nevertheless included in the cross-platform wheel. |
-| Standalone packaging | Windows-only | `scripts/build_exe.py` and `SpectreHUD.spec` include Win32 `pynput` backends. |
-| Test CI | Windows and Linux source tests | `.github/workflows/ci.yml` runs Python 3.10-3.13 on both OS families and Xvfb coverage on Linux 3.11. |
-| Package CI | Windows-only | The wheel is built, installed into a fresh environment, and CLI-smoked only in the Windows package job. |
+| **Local file/folder opening** | Duplicated OS branches (`xdg-open` scattered across repo and UI) | Centralized in `core/platform/opener.py` (`open_path`, `open_url`) with structured error handling |
+| **Config/data/cache paths** | Scattered fallbacks, no XDG base directory support | Centralized in `core/platform/paths.py` with standard XDG compliance (`~/.config`, `~/.local/share`) and backward-compatible legacy fallbacks |
+| **Network detection** | Hardcoded interfaces (`tun0`, `wg0`), Linux/macOS conflation | Centralized in `core/platform/network.py` with structured JSON parsing (`ip -j -4 addr show`), VPN interface prioritization (`tun*`, `tap*`, `wg*`, `ppp*`), and robust fallback chain |
+| **Desktop capabilities & Wayland** | Silent failures, unhandled null captures under Wayland | Encapsulated in `core/platform/capabilities.py` (`PlatformCapabilities`) with Wayland/X11 session detection, graceful degradation for screen capture and hotkeys, and informative UI banners/tooltips |
+| **Global hotkeys** | `pynput` startup errors uncaught; UI unaware of failure | `HotkeyListener.is_available()` / `is_running()` gracefully degrades on Wayland without UI blocking; local Qt shortcuts remain fully operational |
+| **Desktop shortcut** | Windows-only PowerShell script | `create_desktop_shortcut.py` supports both Windows (`.lnk`) and Linux (`.desktop` in `~/Desktop` or `~/.local/share/applications`) |
+| **Desktop integration assets** | Missing Linux assets | `resources/linux/spectrehud.desktop` and hicolor icons (48x48, 128x128, 256x256, scalable SVG) created and verified in wheel packaging |
+| **Atomic writes & POSIX semantics** | Limited POSIX permission enforcement | Restrictive `0o600` permissions (`_secure_chmod`), `fsync` durability, transactional `.tmp_*` cleanup on replace errors, and case sensitivity / external symlink handling validated |
+| **CI Pipeline** | Windows-only package smoke test | Dual-OS CI matrix (Windows & Ubuntu) with headless Qt (`QT_QPA_PLATFORM=offscreen`, `xvfb-run`) and isolated Linux wheel smoke-testing |
 
 ## Detailed inventory
 
@@ -301,14 +294,15 @@ No production behavior was changed during this audit.
   read-only workspace directories, and unwritable backup targets. `ReportFileManager.save()`
   and `backup()` fail gracefully without leaving orphaned temporary files, and
   `validate_workspace_directory()` rejects non-writable locations upfront via write probing.
-- **Symlink Handling (Ticket 27)**: Validated proper path resolution through valid symlinks and
-  predictable handling of broken/dangling symlinks without hangs or crashes.
+- **Symlink Handling (Ticket 27)**: Validated path resolution through valid symlinks, predictable
+  handling of broken/dangling symlinks, and safe handling of symlinks targeting external paths
+  outside the workspace boundary.
 - **Atomic Write Durability under POSIX (Ticket 28)**: Validated `atomic_write_text`,
   `atomic_write_bytes`, and `atomic_write_json` on POSIX (`0o600` permission enforcement via
   `_secure_chmod`, `fsync` flushing, and transactional cleanup of temporary `.tmp_*` files
   when writes or replacements encounter I/O or permission errors).
 
-### Phase 9 - Linux desktop integration
+### Phase 9 - Linux desktop integration & packaging assets
 
 - **Desktop Entry (Ticket 29)**: Created `resources/linux/spectrehud.desktop` with standard
   `[Desktop Entry]` fields, categories (`Utility;Security;Development;`), and `StartupWMClass=spectrehud`.
@@ -317,26 +311,35 @@ No production behavior was changed during this audit.
 - **Application Identity & WM_CLASS (Ticket 31)**: Explicitly configured `QApplication` metadata in
   `main.py` (`setApplicationName("spectrehud")`, `setDesktopFileName("spectrehud.desktop")`,
   `setApplicationDisplayName("SpectreHUD")`) to match window manager classes and Wayland application IDs.
-- Added comprehensive integration test `tests/test_linux_desktop_integration.py` validating
-  the `.desktop` file schema, all hicolor icon files, and runtime Qt metadata alignment.
+- **Desktop Shortcut Tool**: Refactored `create_desktop_shortcut.py` to support both Windows (`.lnk`)
+  and Linux (`~/.local/share/applications` / `~/Desktop` `.desktop` entries with `0o755` executable bits).
+- **Packaging Verification**: Added Linux desktop and icon files to `REQUIRED_FILES` in `scripts/verify_wheel.py`
+  and verified package inclusion via `tests/test_verify_wheel.py` and `tests/test_linux_desktop_integration.py`.
 
-### Phase 10 - Linux CI gate (Architecture Evaluation & Documentation)
+### Phase 10 - Distribution format evaluation & roadmap decision
 
-- **Test Matrix (Ticket 32)**:
-  - Workflow definition `.github/workflows/ci.yml` defines parallel test execution on `ubuntu-latest` and `windows-latest` across Python 3.10, 3.11, 3.12, and 3.13.
-  - Headless Qt execution is achieved via `QT_QPA_PLATFORM: offscreen` and `xvfb-run` on Linux with all necessary XCB/Qt6 shared libraries provisioned via `apt-get`.
-  - Non-release tests (`python -m pytest -m "not release"`) run as a required pass-fail gate on every push and pull request across both platforms.
-- **Wheel Install Smoke Test on Linux (Ticket 33)**:
-  - Dedicated `package-linux` CI job builds the wheel via `python -m build --wheel` and inspects archive structure via `python scripts/verify_wheel.py dist/`.
-  - Wheel is installed into a pristine, isolated virtual environment outside the checkout (`$RUNNER_TEMP/spectrehud-wheel-venv`).
-  - Real CLI entry-point smoke tests (`spectrehud --version`, `spectrehud --help`) run from an external working directory (`$RUNNER_TEMP`) to ensure packaging integrity and entry-point resolution without local source-tree masking.
-- **Decision for future runs**:
-  - The existing workflow `.github/workflows/ci.yml` fully implements the requirements for Phase 10 without requiring structural changes or regressions to the Windows executable release pipeline.
+A deliberate architectural evaluation of target Linux packaging formats was conducted:
 
-### Phase 11 - Documentation and final validation gate
+1. **Standard Python Wheel (`.whl` via PyPI / pipx / venv) — SELECTED (Primary)**:
+   - *Rationale*: SpectreHUD is a lightweight desktop utility (~1.5 MB package size) with standard PyQt6, cryptography, and pynput dependencies. Distributing via standard wheels enables clean installation inside dedicated virtual environments or via `pipx`, which is standard practice across modern Linux security distributions (Kali, Parrot, BlackArch, Debian, Fedora, Arch).
+   - *Requirements*: Documented standard system dependencies (`libegl1`, `libgl1`, `libxcb-cursor0`, `libxkbcommon-x11-0`, `libdbus-1-3`).
+2. **AppImage — PLANNED (Future Milestone / Post-v2.0.3)**:
+   - *Rationale*: A standalone, all-in-one AppImage provides a single executable with bundled Python runtime and Qt libraries. This is attractive for air-gapped pentest environments without internet or compiler toolchains.
+   - *Trade-off*: Increases download artifact size to ~80-120 MB and requires PyInstaller/AppImage toolchain maintenance in CI. Scheduled as a secondary standalone release artifact once base wheel distribution is established.
+3. **Flatpak / Snap — DEFERRED / NOT RECOMMENDED**:
+   - *Rationale*: Flatpak and Snap enforce strict sandbox boundaries (`bubblewrap`/AppArmor) by default. For a tactical security HUD, these sandboxes introduce severe functional friction:
+     - Restricted network namespace access impairs automatic VPN/tun0 IP discovery (`/proc/net`, `ip -j`).
+     - Window overlay positioning, window flags (`WindowStaysOnTopHint`), and global hotkey capture are heavily restricted by portal permissions.
+     - Filesystem portal isolation hinders direct access to arbitrary external CTF engagement directories without explicit sandbox permission grants.
+4. **Native Distro Packages (AUR, Debian/Kali `.deb`) — COMMUNITY / POST-RELEASE**:
+   - Direct packaging for Arch Linux (AUR PKGBUILD) and Debian/Kali is recommended as downstream packaging once the official PyPI release is published.
 
-- **Platform Support Matrix & Linux Guide (Ticket 34)**: Updated `README.md` with an authoritative
-  feature support matrix comparing Windows, Linux (X11), and Linux (Wayland), along with
+### Phase 11 - Documentation and verification status
+
+- **Platform Support Matrix & Linux Guide (Ticket 34)**: Updated `README.md` with an accurate
+  Platform Support Matrix comparing Windows, Linux (X11), and Linux (Wayland), along with
   copy-paste installation commands for Ubuntu/Debian/Kali, Fedora/RHEL, and Arch Linux.
-- **Final Safety Gate (Ticket 35)**: Full master test gate (`python scripts/run_tests.py`) and
-  non-release test suites pass deterministically across all functional areas without errors or warnings.
+- **Verification Summary**:
+  - Local unit, adversarial filesystem, desktop asset, and integration test suites pass on the development baseline.
+  - Headless/Xvfb execution passes in CI matrix definitions (`.github/workflows/ci.yml`).
+  - *Pending Acceptance*: Final validation requires live confirmation against GitHub Actions Linux CI runs and manual end-to-end smoke testing under physical or virtualized X11 and Wayland desktop sessions (specifically verifying tray icon behavior, window stays-on-top hints, and compositor notification banners).

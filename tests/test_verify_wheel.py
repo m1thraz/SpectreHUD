@@ -24,3 +24,16 @@ def test_linux_platform_modules_are_required_in_release_wheel():
     }
 
     assert expected.issubset(REQUIRED_FILES)
+
+
+def test_linux_desktop_assets_are_required_in_release_wheel():
+    expected = {
+        "resources/linux/spectrehud.desktop",
+        "resources/linux/icons/hicolor/48x48/apps/spectrehud.png",
+        "resources/linux/icons/hicolor/128x128/apps/spectrehud.png",
+        "resources/linux/icons/hicolor/256x256/apps/spectrehud.png",
+        "resources/linux/icons/hicolor/scalable/apps/spectrehud.svg",
+    }
+
+    assert expected.issubset(REQUIRED_FILES)
+
