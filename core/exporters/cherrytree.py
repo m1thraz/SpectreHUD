@@ -18,6 +18,7 @@ from core.exporters.obsidian import ObsidianExporter
 from core.project.validator import sanitize_filename_component, validate_project_name
 from core.reporting.assets import get_report_css
 from core.reporting.markdown import convert_markdown_to_html
+from core.reporting.loot_sync import strip_report_markers
 
 
 _IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+[^)]*)?\)")
@@ -138,8 +139,9 @@ img.inline-img {{ max-width: 100%; height: auto; }}
         if not source_dir.is_dir():
             raise ExternalExportError("The active project directory is unavailable.")
         package_dir = self._package_directory(project_name)
+        clean_markdown = strip_report_markers(str(report_markdown))
         rewritten, copied, warnings = self._copy_images(
-            str(report_markdown), source_dir, package_dir
+            clean_markdown, source_dir, package_dir
         )
         report_html = self._document(
             f"{project_name} – Report", convert_markdown_to_html(rewritten), report_font

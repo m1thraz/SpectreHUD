@@ -141,6 +141,17 @@ class ReportEditorTab(QWidget):
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
+        self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
+        self.btn_append_loot.setProperty("class", "SecondaryBtn")
+        self.btn_append_loot.setToolTip(
+            t(
+                "report.append_loot_tip",
+                "Appends missing loot entries to the report without overwriting manual notes",
+            )
+        )
+        self.btn_append_loot.clicked.connect(self._on_append_loot_clicked)
+        toolbar.addWidget(self.btn_append_loot)
+
         self.btn_export = QPushButton(t("report.export", "Export..."))
         self.btn_export.setProperty("class", "SecondaryBtn")
         self.btn_export.setToolTip(
@@ -412,13 +423,21 @@ class ReportEditorTab(QWidget):
 
     def _enter_preview_mode(self) -> None:
         """Enters editable live preview mode and takes a markdown baseline snapshot."""
+        if self._preview_timer.isActive():
+            self._preview_timer.stop()
+        self._update_preview()
         self._preview_markdown_snapshot = self.editor.toPlainText()
         self.preview.setReadOnly(False)
         self.preview.setFocus()
 
     def _commit_preview_to_markdown(self) -> None:
         """Commits rich-text edits from the preview document back to the markdown editor."""
-        new_markdown = self.preview_document.toMarkdown()
+        from core.reporting.loot_sync import preserve_markers_in_preview_roundtrip
+
+        raw_markdown = self.preview_document.toMarkdown()
+        new_markdown = preserve_markers_in_preview_roundtrip(
+            self._preview_markdown_snapshot or "", raw_markdown
+        )
         old_len = len(self._preview_markdown_snapshot or "")
         new_len = len(new_markdown)
 
@@ -586,6 +605,92 @@ class ReportEditorTab(QWidget):
             )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
+
+    def _on_append_loot_clicked(self) -> None:
+        """Appends unreferenced loot entries to existing report sections without rewriting user text."""
+        if not self.current_project:
+            return
+
+        if self._view_mode == ViewMode.PREVIEW:
+            self._commit_preview_to_markdown()
+
+        # Ensure dirty changes are saved before performing additive sync
+        if self._dirty:
+            if not self.save():
+                logger.error(
+                    "Could not save pending report edits before appending loot for project '%s'",
+                    self.current_project,
+                )
+                return
+
+        from core.report_file_manager import ReportBackupError, ReportSaveError
+
+        cursor = self.editor.textCursor()
+        saved_pos = cursor.position()
+
+        try:
+            result = self.report_file_manager.append_missing_loot(
+                self.loot_manager,
+                project_name=self.current_project,
+                template=self.active_template,
+            )
+        except ReportBackupError as exc:
+            logger.error("Append missing loot aborted due to backup error: %s", exc)
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle(t("dialog.error", "Error"))
+            msg.setText(
+                "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
+                "Zum Schutz deiner bestehenden Notizen wurde das Ergänzen abgebrochen."
+            )
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.exec()
+            return
+        except ReportSaveError as exc:
+            logger.error("Append missing loot: save failed: %s", exc)
+            msg = QMessageBox(self.window() if self else None)
+            msg.setWindowTitle(t("dialog.error", "Error"))
+            msg.setText(
+                "Der ergänzte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
+                "Der bisherige Report bleibt erhalten."
+            )
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.exec()
+            return
+
+        if result.added_count == 0:
+            self.lbl_status.setText(
+                t("report.append_loot_no_changes", "No missing loot entries found")
+            )
+            return
+
+        self.editor.blockSignals(True)
+        self.editor.setPlainText(result.content)
+        self.editor.blockSignals(False)
+        self._set_dirty(False)
+        self._update_preview()
+
+        # Restore cursor position within bounds
+        new_cursor = self.editor.textCursor()
+        new_cursor.setPosition(min(saved_pos, len(result.content)))
+        self.editor.setTextCursor(new_cursor)
+
+        if result.used_fallback:
+            self.lbl_status.setText(
+                t(
+                    "report.append_loot_success_fallback",
+                    "{count} entries appended · {fallback_count} category(ies) under 'Neu aus Loot ergänzt'",
+                    count=result.added_count,
+                    fallback_count=len(result.fallback_categories),
+                )
+            )
+        else:
+            self.lbl_status.setText(
+                t(
+                    "report.append_loot_success",
+                    "{count} new loot entries appended",
+                    count=result.added_count,
+                )
+            )
 
     def _ensure_active_template(self) -> None:
         """Keeps the most recently selected template available for the next dialog."""

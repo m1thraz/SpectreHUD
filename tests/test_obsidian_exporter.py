@@ -94,3 +94,16 @@ def test_obsidian_uri_is_url_encoded(workspace):
 
     assert "vault=Vault" in result.obsidian_uri
     assert "file=CTF+Notes%2FForest%2FForest.md" in result.obsidian_uri
+
+
+def test_obsidian_report_export_strips_spectre_loot_markers(workspace):
+    """Ticket 8 & 40: Obsidian report export removes internal spectre:loot: markers."""
+    vault, project = workspace
+    exporter = ObsidianExporter(vault)
+    md = "<!-- spectre:loot:loot_123:deadbeef1234 -->\n# Findings\n<!-- user note -->\nDetails."
+    result = exporter.export_report(project_name="Forest", project_dir=project, markdown=md)
+    content = result.note_path.read_text(encoding="utf-8")
+    assert "spectre:loot" not in content
+    assert "<!-- user note -->" in content
+    assert "# Findings" in content
+

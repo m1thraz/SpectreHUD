@@ -222,6 +222,11 @@
     "report.templates_tip": "Select report template for regeneration",
     "report.manage_templates": "🎨 Templates...",
     "report.manage_templates_tip": "Manage, customize or create report templates",
+    "report.append_loot": "Add Missing Loot",
+    "report.append_loot_tip": "Appends missing loot entries to the report without overwriting manual notes",
+    "report.append_loot_no_changes": "No missing loot entries found",
+    "report.append_loot_success": "{count} new loot entries appended",
+    "report.append_loot_success_fallback": "{count} entries appended · {fallback_count} category(ies) under 'Neu aus Loot ergänzt'",
     "report.export_html": "Export HTML...",
     "report.export_html_tip": "Export report as standalone HTML document with Cyber-Dark theme and embedded screenshots.",
 

@@ -58,7 +58,10 @@ class ExportCoordinator(QObject):
 
     def export_report_markdown(self, target: Path, markdown: str) -> None:
         """Write an explicit Markdown copy of the current editor document."""
-        if not atomic_write_text(target, markdown):
+        from core.reporting.loot_sync import strip_report_markers
+
+        clean_markdown = strip_report_markers(markdown)
+        if not atomic_write_text(target, clean_markdown):
             raise ReportExportError(f"Could not write Markdown report: {target}")
 
     def export_report_html(

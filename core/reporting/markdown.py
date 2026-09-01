@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from core.reporting.assets import encode_image_base64, ImageEmbeddingBudget
+from core.reporting.loot_sync import strip_report_markers
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -186,7 +187,8 @@ def format_inline(text: str) -> str:
 
 def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
     """Converts Markdown text to HTML body structure."""
-    processed_md = resolve_and_embed_images(md_text, project_dir)
+    clean_md = strip_report_markers(md_text)
+    processed_md = resolve_and_embed_images(clean_md, project_dir)
 
     lines = processed_md.splitlines()
     html_lines: List[str] = []

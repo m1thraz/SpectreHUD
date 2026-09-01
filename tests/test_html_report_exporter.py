@@ -211,6 +211,15 @@ curl -i http://10.10.10.10/admin
             '<code class="language-python">print(&quot;secure&quot;)</code>', html_out_valid
         )
 
+    def test_spectre_loot_markers_are_stripped_from_html_export(self):
+        """Ticket 6: Markers must not be visible or rendered as escaped HTML comments in output."""
+        md = "<!-- spectre:loot:loot_12345:deadbeef1234 -->\n### Finding Title\nFinding description text."
+        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        self.assertNotIn("spectre:loot", html_out)
+        self.assertNotIn("&lt;!--", html_out)
+        self.assertIn("Finding Title", html_out)
+        self.assertIn("Finding description text.", html_out)
+
 
 if __name__ == "__main__":
     unittest.main()

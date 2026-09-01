@@ -6,13 +6,25 @@ Nutzt denselben Pfad (proj_dir / "report.md"), den auch der Export
 standardmäßig verwendet.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 
+from core.reporting.loot_sync import append_missing_loot_to_text
 from core.report_builder import ReportBuilder
 from core.logger import get_logger
 
 logger = get_logger("report_file_manager")
+
+
+@dataclass(frozen=True)
+class AppendMissingLootResult:
+    """Result of append_missing_loot operation in ReportFileManager."""
+
+    content: str
+    added_count: int
+    used_fallback: bool
+    fallback_categories: Tuple[str, ...]
 
 
 class ReportBackupError(RuntimeError):
@@ -158,3 +170,57 @@ class ReportFileManager:
                 f"Speichern des regenerierten Reports für Projekt '{pname}' fehlgeschlagen."
             )
         return content
+
+    def append_missing_loot(
+        self,
+        loot_manager,
+        project_name: Optional[str] = None,
+        template: Optional[Any] = None,
+    ) -> AppendMissingLootResult:
+        """Additively inserts missing loot entries into the existing report.md.
+
+        Fail-Closed:
+        - If no loot entries are missing: returns immediately without creating backups or writing to disk.
+        - If entries are added and backup fails: raises ReportBackupError; report.md is left untouched.
+        - If saving fails: raises ReportSaveError.
+        """
+        pname = self._resolve_project_name(project_name)
+        current_content = self.load(project_name=pname)
+        loot_entries = loot_manager.get_all_entries() if loot_manager else []
+
+        result = append_missing_loot_to_text(
+            report_text=current_content,
+            loot_entries=loot_entries,
+            template=template,
+        )
+
+        if result.added_count == 0:
+            return AppendMissingLootResult(
+                content=current_content,
+                added_count=0,
+                used_fallback=False,
+                fallback_categories=(),
+            )
+
+        if self.exists(pname):
+            if not self.backup(pname):
+                logger.error(
+                    f"Automatisches Backup vor 'Aus Loot ergänzen' für {pname} fehlgeschlagen. Abbruch zum Schutz von Benutzerdaten."
+                )
+                raise ReportBackupError(
+                    f"Automatisches Backup von report.md für Projekt '{pname}' fehlgeschlagen."
+                )
+
+        if not self.save(result.text, project_name=pname):
+            logger.error(f"Speichern des ergänzten Reports für {pname} fehlgeschlagen.")
+            raise ReportSaveError(
+                f"Speichern des ergänzten Reports für Projekt '{pname}' fehlgeschlagen."
+            )
+
+        return AppendMissingLootResult(
+            content=result.text,
+            added_count=result.added_count,
+            used_fallback=result.used_fallback,
+            fallback_categories=result.fallback_categories,
+        )
+

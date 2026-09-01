@@ -222,6 +222,11 @@
     "report.templates_tip": "Wähle das Report-Template für die Regenerierung aus",
     "report.manage_templates": "🎨 Templates...",
     "report.manage_templates_tip": "Report-Templates verwalten, anpassen oder neue erstellen",
+    "report.append_loot": "Aus Loot ergänzen",
+    "report.append_loot_tip": "Ergänzt fehlende Loot-Einträge im bestehenden Report ohne manuelle Änderungen zu überschreiben",
+    "report.append_loot_no_changes": "Keine neuen Loot-Einträge gefunden",
+    "report.append_loot_success": "{count} neue Loot-Einträge ergänzt",
+    "report.append_loot_success_fallback": "{count} Einträge ergänzt · {fallback_count} Kategorie(n) unter „Neu aus Loot ergänzt“",
     "report.export_html": "Export HTML...",
     "report.export_html_tip": "Exportiert den Report als eigenständige HTML-Datei mit Cyber-Dark Theme und eingebetteten Screenshots.",
 

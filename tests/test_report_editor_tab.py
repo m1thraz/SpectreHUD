@@ -220,6 +220,62 @@ class TestReportEditorTab(unittest.TestCase):
         message_exec.assert_not_called()
         self.assertTrue(self.tab.is_dirty())
 
+    def test_btn_append_loot_exists_in_toolbar(self):
+        """Ticket 24: Verify 'Aus Loot ergänzen' button exists and is positioned in the action toolbar."""
+        self.assertTrue(hasattr(self.tab, "btn_append_loot"))
+        self.assertEqual(self.tab.btn_append_loot.text(), t("report.append_loot", "Add Missing Loot"))
+
+    def test_append_loot_saves_dirty_state_first_and_preserves_manual_edits(self):
+        """Ticket 25 & 38: Dirty editor content must be committed & saved before sync to ensure backup contains it."""
+        initial_disk_text = "# Outdated Disk Report\n\n## 1. Reconnaissance & Enumeration\n\n*Keine Einträge in dieser Phase.*\n\n_Eigene Anmerkungen zu dieser Phase:_\n"
+        self.report_file_mgr.save(initial_disk_text, "TestBox")
+
+        # User types manual edits in the editor (making it dirty)
+        manual_user_text = "# Outdated Disk Report\n\n## 1. Reconnaissance & Enumeration\n\n*Keine Einträge in dieser Phase.*\n\n_Eigene Anmerkungen zu dieser Phase:_\n\n> Important unsaved manual finding from tester!"
+        self.tab.editor.setPlainText(manual_user_text)
+        self.assertTrue(self.tab.is_dirty())
+
+        # Add new loot to loot_mgr
+        self.loot_mgr.add_entry("note", "Port 80 HTTP", "Apache 2.4.41", category="recon")
+
+        # User clicks "Aus Loot ergänzen"
+        self.tab.btn_append_loot.click()
+
+        # 1. Editor should no longer be dirty
+        self.assertFalse(self.tab.is_dirty())
+
+        # 2. Editor content should contain BOTH manual edits and new loot
+        editor_text = self.tab.editor.toPlainText()
+        self.assertIn("Important unsaved manual finding from tester!", editor_text)
+        self.assertIn("Port 80 HTTP", editor_text)
+
+        # 3. Automatic backup must contain the manual user text (NOT the stale initial_disk_text)
+        bak_path = self.report_file_mgr.get_backup_path("TestBox")
+        self.assertTrue(bak_path.exists())
+        self.assertEqual(bak_path.read_text(encoding="utf-8"), manual_user_text)
+
+    def test_preview_markdown_roundtrip_preserves_markers_regression(self):
+        """Ticket 0.1 & 39: Live preview roundtrip retains spectre:loot markers."""
+        report_with_marker = "<!-- spectre:loot:loot_abc123:deadbeef1234 -->\n### Nmap Port Scan\n\nPort 80 open\n"
+        self.tab.editor.setPlainText(report_with_marker)
+        self.tab.save()
+
+        # Enter preview mode
+        self.tab._set_view_mode(ViewMode.PREVIEW)
+
+        # Edit rich preview document slightly
+        cursor = self.tab.preview.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.insertText("\n\nExtra note from preview.")
+
+        # Switch back to SPLIT mode
+        self.tab._set_view_mode(ViewMode.SPLIT)
+
+        result_text = self.tab.editor.toPlainText()
+        self.assertIn("spectre:loot:loot_abc123:deadbeef1234", result_text)
+        self.assertIn("Extra note from preview.", result_text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

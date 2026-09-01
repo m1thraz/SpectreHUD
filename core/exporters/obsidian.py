@@ -18,6 +18,7 @@ from core.atomic_write import atomic_write_bytes, atomic_write_text
 from core.exporters.base import ExportResult, ExternalExportError
 from core.project.validator import sanitize_filename_component, validate_project_name
 from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE
+from core.reporting.loot_sync import strip_report_markers
 
 
 _IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+[^)]*)?\)")
@@ -229,8 +230,9 @@ class ObsidianExporter:
         note_path = self._copy_target(
             destination_dir / f"{self._safe_project_name(project_name)}.md", overwrite
         )
+        clean_markdown = strip_report_markers(str(markdown))
         rewritten, attachments, warnings = self._copy_attachments(
-            str(markdown), source_dir, destination_dir
+            clean_markdown, source_dir, destination_dir
         )
         content = self._frontmatter(project_name, project_state or {}) + rewritten.lstrip("\ufeff")
         try:

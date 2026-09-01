@@ -56,3 +56,19 @@ def test_cherrytree_export_keeps_missing_image_as_report_warning(package_workspa
     )
     assert result.warnings
     assert "loot/missing.png" in result.note_path.read_text(encoding="utf-8")
+
+
+def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
+    """Ticket 9 & 40: CherryTree report.html must not contain spectre:loot: markers."""
+    project, output = package_workspace
+    md = "<!-- spectre:loot:loot_99:deadbeef1234 -->\n# Report\n\nFinding text."
+    result = CherryTreeExporter(output).export_package(
+        project_name="Forest",
+        project_dir=project,
+        report_markdown=md,
+        loot_entries=[],
+    )
+    content = result.note_path.read_text(encoding="utf-8")
+    assert "spectre:loot" not in content
+    assert "Finding text." in content
+

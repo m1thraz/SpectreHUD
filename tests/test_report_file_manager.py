@@ -199,6 +199,68 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(loaded.width(), 200)
         self.assertEqual(loaded.height(), 100)
 
+    def test_append_missing_loot_creates_backup_and_preserves_existing_text(self):
+        """Ticket 19 & 31: append_missing_loot creates a backup and injects missing loot."""
+        self.project_mgr.create_project("SyncBox")
+        initial_text = "# Pentest Report\n\n## 1. Reconnaissance & Enumeration\n\n*Keine Einträge in dieser Phase.*\n\n_Eigene Anmerkungen zu dieser Phase:_\n\n> User note\n"
+        self.report_mgr.save(initial_text, "SyncBox")
+        self.loot_mgr.add_entry("note", "Port Scan", "Found port 22 open", category="recon")
+
+        result = self.report_mgr.append_missing_loot(self.loot_mgr, "SyncBox")
+        self.assertEqual(result.added_count, 1)
+        self.assertFalse(result.used_fallback)
+
+        # Backup was created containing initial_text
+        bak_path = self.report_mgr.get_backup_path("SyncBox")
+        self.assertTrue(bak_path.exists())
+        self.assertEqual(bak_path.read_text(encoding="utf-8"), initial_text)
+
+        # Loaded text contains both user note and new loot entry
+        loaded = self.report_mgr.load("SyncBox")
+        self.assertIn("> User note", loaded)
+        self.assertIn("Port Scan", loaded)
+
+    def test_append_missing_loot_noop_creates_no_backup(self):
+        """Ticket 23: When nothing is missing, no backup is created and no disk write occurs."""
+        self.project_mgr.create_project("NoopBox")
+        self.report_mgr.save("# Existing Report", "NoopBox")
+
+        # No loot in loot_mgr
+        result = self.report_mgr.append_missing_loot(self.loot_mgr, "NoopBox")
+        self.assertEqual(result.added_count, 0)
+        self.assertFalse(self.report_mgr.get_backup_path("NoopBox").exists())
+
+    def test_append_missing_loot_fails_closed_if_backup_fails(self):
+        """Ticket 21: If backup fails, append_missing_loot raises ReportBackupError and leaves file intact."""
+        from unittest.mock import patch
+        from core.report_file_manager import ReportBackupError
+
+        self.project_mgr.create_project("BackupFailBox")
+        original_text = "# Original Protected Text"
+        self.report_mgr.save(original_text, "BackupFailBox")
+        self.loot_mgr.add_entry("flag", "Root Flag", "THM{root_flag}", category="access")
+
+        with patch.object(self.report_mgr, "backup", return_value=False):
+            with self.assertRaises(ReportBackupError):
+                self.report_mgr.append_missing_loot(self.loot_mgr, "BackupFailBox")
+
+        # File was NOT modified
+        self.assertEqual(self.report_mgr.load("BackupFailBox"), original_text)
+
+    def test_append_missing_loot_fails_closed_if_save_fails(self):
+        """Ticket 22: If saving fails, append_missing_loot raises ReportSaveError."""
+        from unittest.mock import patch
+        from core.report_file_manager import ReportSaveError
+
+        self.project_mgr.create_project("SaveFailBox")
+        original_text = "# Original Text"
+        self.report_mgr.save(original_text, "SaveFailBox")
+        self.loot_mgr.add_entry("flag", "User Flag", "THM{user_flag}", category="access")
+
+        with patch.object(self.report_mgr, "save", return_value=False):
+            with self.assertRaises(ReportSaveError):
+                self.report_mgr.append_missing_loot(self.loot_mgr, "SaveFailBox")
+
     @pytest.mark.integration
     def test_report_editor_export_button_dispatches_html_export(self):
         """Tests that the unified Export button can dispatch to HTML export."""

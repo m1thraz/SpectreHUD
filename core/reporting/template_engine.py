@@ -12,6 +12,7 @@ import re
 
 from core.loot_manager import CATEGORIES
 from core.reporting.charts import render_severity_badge
+from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -207,6 +208,8 @@ def _render_scope_limitations(section: TemplateSection, context: ReportContext, 
 
 
 def _render_loot_entry_block(entry: Dict[str, Any]) -> List[str]:
+    entry_id = str(entry.get("id", "")).strip()
+    marker = format_loot_marker(entry_id, loot_content_hash(entry)) if entry_id else ""
     entry_type = entry.get("type", "note")
     severity = str(entry.get("severity", "info")).lower()
     title = entry.get("title", "Unbenannter Eintrag")
@@ -216,7 +219,10 @@ def _render_loot_entry_block(entry: Dict[str, Any]) -> List[str]:
     if severity and severity != "info":
         sev_badge = f"{render_severity_badge(severity)} "
 
-    lines = [f"### {sev_badge}{title}"]
+    lines = []
+    if marker:
+        lines.append(marker)
+    lines.append(f"### {sev_badge}{title}")
     meta = []
     if entry.get("target_ip"):
         meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
