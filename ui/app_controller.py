@@ -208,6 +208,7 @@ class AppController(QObject):
 
         # Panels & Inputs
         self.search.search_changed.connect(lambda _: self.refresh_content())
+        self.search.pills_width_changed.connect(self._on_pills_width_changed)
         self.var_bar.variables_changed.connect(self._on_variables_changed)
         self.var_bar.add_snippet_clicked.connect(self._on_add_button_clicked)
         self.footer.always_on_top_toggled.connect(self._on_always_on_top_toggled)
@@ -238,6 +239,12 @@ class AppController(QObject):
         """Toggle clipboard history logging pause state (Ctrl+P / tray action)."""
         self.clipboard_coord.toggle_pause()
 
+    def _on_pills_width_changed(self, width: int) -> None:
+        if self.active_mode == "cheatsheet":
+            self.cheatsheet_ctrl.update_pills_width(
+                width, self._select_category, self.search.get_pills_layout()
+            )
+
     def _on_mode_switched(self, mode: str) -> None:
         self.refresh_filter_pills()
         self.refresh_content()
@@ -246,7 +253,11 @@ class AppController(QObject):
         self.search.clear_pills()
         pills_layout = self.search.get_pills_layout()
         if self.active_mode == "cheatsheet":
-            self.cheatsheet_ctrl.build_filter_pills(pills_layout, self._select_category)
+            self.cheatsheet_ctrl.build_filter_pills(
+                pills_layout,
+                self._select_category,
+                available_width=self.search.get_pills_available_width(),
+            )
         elif self.active_mode == "loot":
             loot_view_mode = self.config.get("loot_view_mode", "list")
             export_tooltip = t(

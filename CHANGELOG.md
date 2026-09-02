@@ -11,6 +11,17 @@ semantic versioning.
 - **Compositor Awareness for Linux X11**: Automatically detects if an X11 compositing
   manager is running (via `_NET_WM_CM_S0` atom or `SPECTREHUD_COMPOSITOR` environment
   variable) with graceful non-composited window adaptation.
+- **Responsive Category Pills Bar**: Cheatsheet category filter buttons now dynamically
+  adapt to the available window width. Exactly as many category buttons as fit are displayed
+  horizontally, and the final button is an adaptive "More ▾" ("Mehr ▾") dropdown containing all
+  remaining categories. In wide or maximized windows, all categories fit directly without an
+  overflow button. Resizing is optimized with zero-thrashing threshold detection.
+- **Hybrid Variable Bar with Auth & Scope Popovers**: Streamlined the top variable bar down
+  from over 850px to a compact, responsive layout (~680px). Target IP, LHOST, and Port remain
+  directly editable on the bar for instant live substitution, while credentials (Username,
+  Password with visibility toggle, Domain, and NTLM Hash) and environment settings (Wordlist
+  with file browser, Target URL) are conveniently accessible via sleek `[👤 Auth ▾]` and
+  `[📁 Scope ▾]` popover flyouts with active state badges.
 
 ### Fixed
 

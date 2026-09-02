@@ -1,29 +1,50 @@
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 from PyQt6.QtCore import pyqtSignal, QTimer
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from core.net_detector import NetDetector
 from core.i18n import t
+from ui.variable_popovers import AuthPopover, ScopePopover
 
 
 class VariableBar(QFrame):
     """
-    Compact horizontal status bar for Target IP, LHOST, Port and Auto-Detect.
+    Compact horizontal status bar for Target IP, LHOST, Port and Auto-Detect,
+    combined with quick-access popovers for Auth (User/Pass/Domain/Hash) and Scope (Wordlist/URL).
     Emits `variables_changed` whenever any input field changes.
     """
 
     variables_changed = pyqtSignal(dict)
     add_snippet_clicked = pyqtSignal()
 
-    def __init__(self, initial_vars: Dict[str, Any], parent: QWidget = None):
+    def __init__(self, initial_vars: Dict[str, Any], parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("CompactVarBar")
         self.initial_vars = initial_vars
+
+        # Secondary popover frames
+        self.popover_auth = AuthPopover(self)
+        self.popover_scope = ScopePopover(self)
+
+        # Backwards compatibility handles
+        self.txt_user = self.popover_auth.txt_user
+        self.txt_pass = self.popover_auth.txt_pass
+        self.btn_toggle_pass = self.popover_auth.btn_toggle_pass
+
         self._init_ui()
+
+        # Connect popover changes
+        self.popover_auth.values_changed.connect(self._on_popover_values_changed)
+        self.popover_scope.values_changed.connect(self._on_popover_values_changed)
+
+        # Initial popover values
+        self.popover_auth.set_values(self.initial_vars)
+        self.popover_scope.set_values(self.initial_vars)
+        self._update_badge_buttons()
 
     def _init_ui(self) -> None:
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 4, 12, 4)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
 
         # 1. Target IP Input
         self.lbl_target = QLabel(t("varbar.target", "Target:"))
@@ -31,7 +52,7 @@ class VariableBar(QFrame):
         self.txt_target = QLineEdit(str(self.initial_vars.get("target_ip", "10.10.10.10")))
         self.txt_target.setProperty("class", "CompactVarInput")
         self.txt_target.setPlaceholderText("10.10.10.x")
-        self.txt_target.setFixedWidth(110)
+        self.txt_target.setFixedWidth(105)
         self.txt_target.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_target)
         layout.addWidget(self.txt_target)
@@ -42,7 +63,7 @@ class VariableBar(QFrame):
         self.txt_attacker = QLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
-        self.txt_attacker.setFixedWidth(110)
+        self.txt_attacker.setFixedWidth(105)
         self.txt_attacker.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_attacker)
         layout.addWidget(self.txt_attacker)
@@ -60,40 +81,24 @@ class VariableBar(QFrame):
         self.txt_port = QLineEdit(str(self.initial_vars.get("port", "4444")))
         self.txt_port.setProperty("class", "CompactVarInput")
         self.txt_port.setPlaceholderText("4444")
-        self.txt_port.setFixedWidth(55)
+        self.txt_port.setFixedWidth(50)
         self.txt_port.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_port)
         layout.addWidget(self.txt_port)
 
-        # 5. Username Input
-        self.lbl_user = QLabel(t("varbar.user", "User:"))
-        self.lbl_user.setProperty("class", "VarTagLabel")
-        self.txt_user = QLineEdit(str(self.initial_vars.get("username", "")))
-        self.txt_user.setProperty("class", "CompactVarInput")
-        self.txt_user.setPlaceholderText("admin")
-        self.txt_user.setFixedWidth(110)
-        self.txt_user.textChanged.connect(self._on_values_changed)
-        layout.addWidget(self.lbl_user)
-        layout.addWidget(self.txt_user)
+        # 5. Auth Popover Button (User, Pass, Domain, Hash)
+        self.btn_auth = QPushButton("👤 Auth ▾")
+        self.btn_auth.setProperty("class", "VarBadgeBtn")
+        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
+        self.btn_auth.clicked.connect(lambda: self.popover_auth.show_below(self.btn_auth))
+        layout.addWidget(self.btn_auth)
 
-        # 6. Password Input with Toggle
-        self.lbl_pass = QLabel(t("varbar.pass", "Pass:"))
-        self.lbl_pass.setProperty("class", "VarTagLabel")
-        self.txt_pass = QLineEdit(str(self.initial_vars.get("password", "")))
-        self.txt_pass.setProperty("class", "CompactVarInput")
-        self.txt_pass.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_pass.setPlaceholderText("••••")
-        self.txt_pass.setFixedWidth(110)
-        self.txt_pass.textChanged.connect(self._on_values_changed)
-        layout.addWidget(self.lbl_pass)
-        layout.addWidget(self.txt_pass)
-
-        self.btn_toggle_pass = QPushButton("👁")
-        self.btn_toggle_pass.setProperty("class", "VarPassToggleBtn")
-        self.btn_toggle_pass.setToolTip(t("varbar.pass_toggle_tip", "Passwort ein-/ausblenden"))
-        self.btn_toggle_pass.setFixedWidth(24)
-        self.btn_toggle_pass.clicked.connect(self._toggle_pass_visibility)
-        layout.addWidget(self.btn_toggle_pass)
+        # 6. Scope Popover Button (Wordlist, Target URL)
+        self.btn_scope = QPushButton("📁 Scope ▾")
+        self.btn_scope.setProperty("class", "VarBadgeBtn")
+        self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
+        self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
+        layout.addWidget(self.btn_scope)
 
         layout.addStretch()
 
@@ -104,27 +109,48 @@ class VariableBar(QFrame):
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
         layout.addWidget(self.btn_add)
 
-    def _toggle_pass_visibility(self) -> None:
-        """Toggles password field between masked (dots) and plaintext."""
-        if self.txt_pass.echoMode() == QLineEdit.EchoMode.Password:
-            self.txt_pass.setEchoMode(QLineEdit.EchoMode.Normal)
-            self.btn_toggle_pass.setText("🔒")
+    def _update_badge_buttons(self) -> None:
+        """Refreshes text and active styling on Auth and Scope buttons."""
+        auth_vals = self.popover_auth.get_values()
+        username = auth_vals.get("username", "")
+        has_auth = self.popover_auth.has_active_values()
+
+        if has_auth:
+            label = f"👤 {username[:10]} ▾" if username else "👤 Auth* ▾"
+            self.btn_auth.setText(label)
+            self.btn_auth.setProperty("class", "VarBadgeBtnActive")
         else:
-            self.txt_pass.setEchoMode(QLineEdit.EchoMode.Password)
-            self.btn_toggle_pass.setText("👁")
+            self.btn_auth.setText("👤 Auth ▾")
+            self.btn_auth.setProperty("class", "VarBadgeBtn")
+        self.btn_auth.style().unpolish(self.btn_auth)
+        self.btn_auth.style().polish(self.btn_auth)
+
+        has_scope = self.popover_scope.has_active_values()
+        if has_scope:
+            self.btn_scope.setText("📁 Scope* ▾")
+            self.btn_scope.setProperty("class", "VarBadgeBtnActive")
+        else:
+            self.btn_scope.setText("📁 Scope ▾")
+            self.btn_scope.setProperty("class", "VarBadgeBtn")
+        self.btn_scope.style().unpolish(self.btn_scope)
+        self.btn_scope.style().polish(self.btn_scope)
+
+    def _on_popover_values_changed(self) -> None:
+        self._update_badge_buttons()
+        self._on_values_changed()
 
     def retranslate(self) -> None:
         """Updates text elements when language changes."""
         self.lbl_target.setText(t("varbar.target", "Target:"))
         self.lbl_attacker.setText(t("varbar.attacker", "LHOST:"))
         self.lbl_port.setText(t("varbar.port", "Port:"))
-        self.lbl_user.setText(t("varbar.user", "User:"))
-        self.lbl_pass.setText(t("varbar.pass", "Pass:"))
-        self.btn_toggle_pass.setToolTip(t("varbar.pass_toggle_tip", "Passwort ein-/ausblenden"))
         self.btn_auto.setText(t("varbar.auto", "Auto"))
         self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
+        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
+        self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
         self.btn_add.setText(t("varbar.add_btn", "+ Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
+        self._update_badge_buttons()
 
     def auto_detect_ip(self) -> None:
         """Runs the network detector and fills the LHOST if an IP is detected."""
@@ -145,8 +171,6 @@ class VariableBar(QFrame):
         self.txt_target.blockSignals(True)
         self.txt_attacker.blockSignals(True)
         self.txt_port.blockSignals(True)
-        self.txt_user.blockSignals(True)
-        self.txt_pass.blockSignals(True)
 
         if "target_ip" in vars:
             self.txt_target.setText(str(vars["target_ip"]))
@@ -154,25 +178,28 @@ class VariableBar(QFrame):
             self.txt_attacker.setText(str(vars["attacker_ip"]))
         if "port" in vars:
             self.txt_port.setText(str(vars["port"]))
-        if "username" in vars:
-            self.txt_user.setText(str(vars["username"]))
-        if "password" in vars:
-            self.txt_pass.setText(str(vars["password"]))
+
+        self.popover_auth.set_values(vars)
+        self.popover_scope.set_values(vars)
+        self._update_badge_buttons()
 
         self.txt_target.blockSignals(False)
         self.txt_attacker.blockSignals(False)
         self.txt_port.blockSignals(False)
-        self.txt_user.blockSignals(False)
-        self.txt_pass.blockSignals(False)
 
         self._on_values_changed()
 
     def get_variables(self) -> Dict[str, str]:
+        auth_vals = self.popover_auth.get_values()
+        scope_vals = self.popover_scope.get_values()
         return {
             "target_ip": self.txt_target.text().strip(),
             "attacker_ip": self.txt_attacker.text().strip(),
             "port": self.txt_port.text().strip(),
-            "username": self.txt_user.text().strip(),
-            "password": self.txt_pass.text().strip(),
-            "wordlist": self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+            "username": auth_vals.get("username", ""),
+            "password": auth_vals.get("password", ""),
+            "domain": auth_vals.get("domain", ""),
+            "ntlm_hash": auth_vals.get("ntlm_hash", ""),
+            "wordlist": scope_vals.get("wordlist", "") or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+            "url": scope_vals.get("url", ""),
         }

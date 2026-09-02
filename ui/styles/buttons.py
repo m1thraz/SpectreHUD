@@ -143,6 +143,38 @@ QPushButton.AutoDetectBtn:hover {
     border-color: {CYBER_CYAN};
 }
 
+QPushButton.VarBadgeBtn {
+    background-color: {NAV_A60};
+    color: {TEXT_MUTED};
+    border: 1px solid {BORDER_A80};
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+QPushButton.VarBadgeBtn:hover {
+    background-color: {ACTIVE_BLUE_A20};
+    color: {TEXT_PRIMARY};
+    border-color: {BLUE_A40};
+}
+
+QPushButton.VarBadgeBtnActive {
+    background-color: {ACCENT_NAV_ACTIVE};
+    color: {CYBER_CYAN};
+    border: 1px solid {CYBER_CYAN};
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QPushButton.VarBadgeBtnActive:hover {
+    background-color: {ACTIVE_BLUE_A20};
+    color: {CYBER_CYAN};
+    border-color: {CYBER_CYAN};
+}
+
 QPushButton.MiniPrimaryBtn {
     background-color: {STATUS_SUCCESS_BG};
     color: {TEXT_WHITE};

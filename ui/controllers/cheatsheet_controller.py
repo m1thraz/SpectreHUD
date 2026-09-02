@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional, Callable
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -49,6 +50,59 @@ def _category_short_name(category_id: str, fallback: str = "More") -> str:
     return t(key, english_fallback)
 
 
+PRIORITY_CATEGORY_IDS: List[str] = [
+    "all",
+    "favorites",
+    "custom_snippets",
+    "web_http",
+    "linux_shell",
+    "windows_powershell",
+    "windows_ad",
+    "network_scanning",
+    "network_recon",
+    "sql_databases",
+    "privesc",
+    "file_transfer",
+    "shells",
+    "password_cracking",
+    "pivoting",
+    "av_evasion",
+    "wireless",
+    "cloud",
+    "mobile",
+    "iot_hardware",
+    "social_engineering",
+    "binary_exploitation",
+    "cryptography",
+    "forensics",
+    "osint",
+]
+
+
+def _order_categories(cats: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Orders categories by prioritized relevance while preserving defensive copies."""
+    cat_by_id = {c.get("id"): c for c in cats}
+    ordered = []
+    seen = set()
+    for pid in PRIORITY_CATEGORY_IDS:
+        if pid in cat_by_id:
+            ordered.append(cat_by_id[pid])
+            seen.add(pid)
+    for c in cats:
+        cid = c.get("id")
+        if cid not in seen:
+            ordered.append(c)
+            seen.add(cid)
+    return ordered
+
+
+def _estimate_pill_width(pill_text: str, font_metrics: QFontMetrics) -> int:
+    """Calculates horizontal pixel requirement for a FilterPill button."""
+    text_width = font_metrics.horizontalAdvance(pill_text)
+    # FilterPill CSS padding: 3px 10px, border: 1px -> 22px + margin/safety
+    return max(36, text_width + 24)
+
+
 class CheatsheetController(QObject):
     """UI-independent controller managing cheatsheet snippets, categories, search filtering, and MenuAction DTOs."""
 
@@ -71,6 +125,8 @@ class CheatsheetController(QObject):
         self._overflow_cat_ids: List[str] = []
         self._search_expanded: bool = False
         self._last_query: str = ""
+        self._last_visible_count: int = -1
+        self._last_available_width: int = -1
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -153,23 +209,18 @@ class CheatsheetController(QObject):
             return False
 
     def get_overflow_category_actions(
-        self, on_select_category: Optional[Callable[[str], None]] = None
+        self,
+        on_select_category: Optional[Callable[[str], None]] = None,
+        overflow_cats: Optional[List[Dict[str, Any]]] = None,
     ) -> List[MenuAction]:
         """Returns MenuAction DTOs for categories that overflow the primary horizontal bar."""
-        cats = self.get_categories()
-        primary_ids = {
-            "all",
-            "favorites",
-            "web_http",
-            "linux_shell",
-            "windows_powershell",
-            "windows_ad",
-            "network_scanning",
-            "network_recon",
-            "sql_databases",
-            "custom_snippets",
-        }
-        overflow_cats = [c for c in cats if c.get("id") not in primary_ids]
+        if overflow_cats is None:
+            cats = self.get_categories()
+            if self._overflow_cat_ids:
+                overflow_cats = [c for c in cats if c.get("id") in self._overflow_cat_ids]
+            else:
+                primary_ids = set(PRIORITY_CATEGORY_IDS[:10])
+                overflow_cats = [c for c in cats if c.get("id") not in primary_ids]
 
         actions: List[MenuAction] = []
         for c in overflow_cats:
@@ -222,60 +273,89 @@ class CheatsheetController(QObject):
 
         self.category_changed.emit(category_id)
 
+    def _calculate_visible_count(
+        self,
+        available_width: int,
+        ordered_cats: List[Dict[str, Any]],
+        font_metrics: QFontMetrics,
+        spacing: int = 6,
+    ) -> int:
+        """Determines how many category pills fit horizontally before overflowing into 'Mehr ▾'."""
+        n = len(ordered_cats)
+        if n == 0 or available_width <= 0:
+            return 0
+
+        pill_widths = []
+        for c in ordered_cats:
+            cid = c.get("id")
+            full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
+            pill_text = _category_short_name(cid, full_name[:12])
+            pill_widths.append(_estimate_pill_width(pill_text, font_metrics))
+
+        # Check if all n items fit directly without "Mehr ▾"
+        total_all = sum(pill_widths) + max(0, n - 1) * spacing
+        if total_all <= available_width:
+            return n
+
+        # Otherwise we need the "Mehr ▾" button at the end
+        more_text = t("cheatsheet.more_categories", "More ▾")
+        more_width = _estimate_pill_width(more_text, font_metrics) + 12
+
+        # Find largest k >= 1 such that first k items + more_width + k * spacing <= available_width
+        current_width = 0
+        best_k = 1
+        for k in range(1, n):
+            current_width += pill_widths[k - 1]
+            total_with_more = current_width + (k * spacing) + more_width
+            if total_with_more <= available_width:
+                best_k = k
+            else:
+                break
+        return best_k
+
     def build_filter_pills(
-        self, pills_layout: QHBoxLayout, on_select_category: Callable[[str], None]
+        self,
+        pills_layout: QHBoxLayout,
+        on_select_category: Callable[[str], None],
+        available_width: Optional[int] = None,
     ) -> None:
+        """Populates horizontal category pills dynamically based on available width."""
         self.filter_buttons.clear()
         self._overflow_cat_ids.clear()
         self.btn_more = None
         self._more_menu = None
 
+        # Clear existing widgets from layout if any
+        while pills_layout.count():
+            item = pills_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
         cats = self.snippet_manager.get_categories()
+        ordered_cats = _order_categories(cats)
 
-        # Group categories: Keep top categories as primary pills, place rest in "Mehr ▾"
-        primary_ids = {
-            "all",
-            "favorites",
-            "web_http",
-            "linux_shell",
-            "windows_powershell",
-            "windows_ad",
-            "network_scanning",
-            "network_recon",
-            "sql_databases",
-            "custom_snippets",
-        }
+        parent = pills_layout.parentWidget()
+        font = parent.font() if parent else QFont()
+        font_metrics = QFontMetrics(font)
 
-        all_cat = None
-        fav_cat = None
-        custom_cat = None
-        primary_cats = []
-        overflow_cats = []
-
-        for c in cats:
-            cid = c.get("id")
-            if cid == "all":
-                all_cat = c
-            elif cid == "favorites":
-                fav_cat = c
-            elif cid == "custom_snippets":
-                custom_cat = c
-            elif cid in primary_ids:
-                primary_cats.append(c)
+        if available_width is None or available_width < 300:
+            if parent and parent.width() >= 300:
+                margins = pills_layout.contentsMargins()
+                available_width = max(0, parent.width() - margins.left() - margins.right())
             else:
-                overflow_cats.append(c)
+                available_width = 720 - 40  # Sensible default width
 
-        ordered_primary = []
-        if all_cat:
-            ordered_primary.append(all_cat)
-        if fav_cat:
-            ordered_primary.append(fav_cat)
-        ordered_primary.extend(primary_cats)
-        if custom_cat:
-            ordered_primary.append(custom_cat)
+        visible_count = self._calculate_visible_count(
+            available_width, ordered_cats, font_metrics, spacing=pills_layout.spacing()
+        )
+        self._last_visible_count = visible_count
+        self._last_available_width = available_width
+
+        primary_cats = ordered_cats[:visible_count]
+        overflow_cats = ordered_cats[visible_count:]
 
         # Render primary pills on the bar
-        for c in ordered_primary:
+        for c in primary_cats:
             cat_id = c.get("id")
             full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
             pill_text = _category_short_name(cat_id, full_name[:12])
@@ -310,12 +390,42 @@ class CheatsheetController(QObject):
             self.btn_more.setCursor(Qt.CursorShape.PointingHandCursor)
             self.btn_more.setToolTip(t("cheatsheet.more_categories_tip", "Show more categories"))
 
-            actions = self.get_overflow_category_actions(on_select_category)
+            actions = self.get_overflow_category_actions(
+                on_select_category, overflow_cats=overflow_cats
+            )
             self._more_menu = build_qmenu(actions, parent_widget=self.btn_more)
             self.btn_more.setMenu(self._more_menu)
             pills_layout.addWidget(self.btn_more)
 
         pills_layout.addStretch()
+
+    def update_pills_width(
+        self,
+        available_width: int,
+        on_select_category: Callable[[str], None],
+        pills_layout: QHBoxLayout,
+    ) -> bool:
+        """Dynamically adjusts visible pills to match available width with zero layout thrashing."""
+        if available_width <= 0:
+            return False
+
+        cats = self.snippet_manager.get_categories()
+        ordered_cats = _order_categories(cats)
+        parent = pills_layout.parentWidget()
+        font = parent.font() if parent else QFont()
+        font_metrics = QFontMetrics(font)
+
+        target_count = self._calculate_visible_count(
+            available_width, ordered_cats, font_metrics, spacing=pills_layout.spacing()
+        )
+        if target_count != self._last_visible_count:
+            self.build_filter_pills(
+                pills_layout,
+                on_select_category,
+                available_width=available_width,
+            )
+            return True
+        return False
 
     def _on_favorite_toggled(self, snippet_id: str, is_fav: bool) -> None:
         """Handles toggling favorite on a card."""
