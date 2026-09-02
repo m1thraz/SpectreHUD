@@ -13,7 +13,6 @@ other authorized security labs. It keeps the active engagement context—target
 variables, reusable commands, clipboard findings, screenshots, loot, and a
 Markdown report—in one focused project.
 
-> **Portfolio context:** Brought from initial concept to first public release in six days using iterative AI-assisted development, testing, and adversarial review. Development continues with a focus on maintenance, usability refinements, and real-world workflow feedback.
 
 
 
