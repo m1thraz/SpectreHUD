@@ -174,3 +174,28 @@ def test_copy_button_i18n_retranslate(var_bar):
     assert var_bar.popover_auth.txt_port.btn_copy.toolTip() == "Copy to clipboard"
 
 
+def test_subnet_dns_hash_file_popovers(var_bar):
+    from core.template_engine import TemplateEngine
+
+    # Set subnet and dns in ScopePopover
+    var_bar.popover_scope.txt_subnet.setText("192.168.10.0/24")
+    var_bar.popover_scope.txt_dns.setText("192.168.10.1")
+
+    # Set hash/file in AuthPopover
+    var_bar.popover_auth.txt_hash.setText("/opt/wordlists/ntlm.hashes")
+
+    vars_dict = var_bar.get_variables()
+    assert vars_dict["subnet"] == "192.168.10.0/24"
+    assert vars_dict["dns_server"] == "192.168.10.1"
+    assert vars_dict["hash_file"] == "/opt/wordlists/ntlm.hashes"
+
+    # Test template rendering with the new tags
+    tmpl = "nmap -sn {{SUBNET}} --dns-servers {{DNS_SERVER}} -oN nmap.txt && john {{HASH_FILE}}"
+    rendered = TemplateEngine.render(tmpl, vars_dict)
+    assert (
+        rendered
+        == "nmap -sn 192.168.10.0/24 --dns-servers 192.168.10.1 -oN nmap.txt && john /opt/wordlists/ntlm.hashes"
+    )
+
+
+

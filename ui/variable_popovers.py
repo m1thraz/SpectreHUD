@@ -168,11 +168,11 @@ class AuthPopover(BaseVarPopover):
 
         row_hash = QHBoxLayout()
         row_hash.setSpacing(6)
-        self.lbl_hash = QLabel(t("varbar.ntlm_hash", "Hash:"))
+        self.lbl_hash = QLabel(t("varbar.ntlm_hash", "Hash / File:"))
         self.lbl_hash.setProperty("class", "VarPopoverLabel")
         self.txt_hash = CopyableLineEdit()
         self.txt_hash.setProperty("class", "VarPopoverInput")
-        self.txt_hash.setPlaceholderText("aad3b435b5... / LM:NTLM")
+        self.txt_hash.setPlaceholderText("aad3b435b5... / hashes.txt")
         self.txt_hash.textChanged.connect(self.values_changed.emit)
         row_hash.addWidget(self.lbl_hash)
         row_hash.addWidget(self.txt_hash)
@@ -187,12 +187,15 @@ class AuthPopover(BaseVarPopover):
             self.btn_toggle_pass.setText("👁")
 
     def get_values(self) -> Dict[str, str]:
+        hash_val = self.txt_hash.text().strip()
         return {
             "username": self.txt_user.text().strip(),
             "password": self.txt_pass.text().strip(),
             "port": self.txt_port.text().strip(),
             "domain": self.txt_domain.text().strip(),
-            "ntlm_hash": self.txt_hash.text().strip(),
+            "ntlm_hash": hash_val,
+            "hash": hash_val,
+            "hash_file": hash_val,
         }
 
     def set_values(self, vals: Dict[str, Any]) -> None:
@@ -210,8 +213,15 @@ class AuthPopover(BaseVarPopover):
             self.txt_port.setText(str(vals.get("port", "")))
         if "domain" in vals:
             self.txt_domain.setText(str(vals.get("domain", "")))
-        if "ntlm_hash" in vals:
-            self.txt_hash.setText(str(vals.get("ntlm_hash", "")))
+
+        hash_input = (
+            vals.get("ntlm_hash") if "ntlm_hash" in vals
+            else vals.get("hash_file") if "hash_file" in vals
+            else vals.get("hash") if "hash" in vals
+            else None
+        )
+        if hash_input is not None:
+            self.txt_hash.setText(str(hash_input))
 
         self.txt_user.blockSignals(False)
         self.txt_pass.blockSignals(False)
@@ -234,7 +244,7 @@ class AuthPopover(BaseVarPopover):
         self.lbl_pass.setText(t("varbar.pass", "Pass:"))
         self.lbl_port.setText(t("varbar.port", "Port:"))
         self.lbl_domain.setText(t("varbar.domain", "Domain:"))
-        self.lbl_hash.setText(t("varbar.ntlm_hash", "Hash:"))
+        self.lbl_hash.setText(t("varbar.ntlm_hash", "Hash / File:"))
         self.btn_toggle_pass.setToolTip(t("varbar.pass_toggle_tip", "Passwort ein-/ausblenden"))
         self.txt_user.retranslate()
         self.txt_port.retranslate()
@@ -292,6 +302,30 @@ class ScopePopover(BaseVarPopover):
         self.txt_url.textChanged.connect(self.values_changed.emit)
         layout.addWidget(self.txt_url)
 
+        row_subnet = QHBoxLayout()
+        row_subnet.setSpacing(6)
+        self.lbl_subnet = QLabel(t("varbar.subnet", "Subnet:"))
+        self.lbl_subnet.setProperty("class", "VarPopoverLabel")
+        self.txt_subnet = CopyableLineEdit()
+        self.txt_subnet.setProperty("class", "VarPopoverInput")
+        self.txt_subnet.setPlaceholderText("10.10.10.0/24 / 192.168.1.0/24")
+        self.txt_subnet.textChanged.connect(self.values_changed.emit)
+        row_subnet.addWidget(self.lbl_subnet)
+        row_subnet.addWidget(self.txt_subnet)
+        layout.addLayout(row_subnet)
+
+        row_dns = QHBoxLayout()
+        row_dns.setSpacing(6)
+        self.lbl_dns = QLabel(t("varbar.dns", "DNS Server:"))
+        self.lbl_dns.setProperty("class", "VarPopoverLabel")
+        self.txt_dns = CopyableLineEdit()
+        self.txt_dns.setProperty("class", "VarPopoverInput")
+        self.txt_dns.setPlaceholderText("10.10.10.10 / 8.8.8.8")
+        self.txt_dns.textChanged.connect(self.values_changed.emit)
+        row_dns.addWidget(self.lbl_dns)
+        row_dns.addWidget(self.txt_dns)
+        layout.addLayout(row_dns)
+
     def _browse_wordlist(self) -> None:
         import os
         start_dir = "/usr/share/wordlists" if os.name != "nt" else "C:\\"
@@ -308,28 +342,52 @@ class ScopePopover(BaseVarPopover):
         return {
             "wordlist": self.txt_wordlist.text().strip(),
             "url": self.txt_url.text().strip(),
+            "subnet": self.txt_subnet.text().strip(),
+            "dns_server": self.txt_dns.text().strip(),
+            "dns": self.txt_dns.text().strip(),
         }
 
     def set_values(self, vals: Dict[str, Any]) -> None:
         self.txt_wordlist.blockSignals(True)
         self.txt_url.blockSignals(True)
+        self.txt_subnet.blockSignals(True)
+        self.txt_dns.blockSignals(True)
 
         if "wordlist" in vals:
             self.txt_wordlist.setText(str(vals.get("wordlist", "")))
         if "url" in vals:
             self.txt_url.setText(str(vals.get("url", "")))
+        if "subnet" in vals:
+            self.txt_subnet.setText(str(vals.get("subnet", "")))
+        if "dns_server" in vals:
+            self.txt_dns.setText(str(vals.get("dns_server", "")))
+        elif "dns" in vals:
+            self.txt_dns.setText(str(vals.get("dns", "")))
 
         self.txt_wordlist.blockSignals(False)
         self.txt_url.blockSignals(False)
+        self.txt_subnet.blockSignals(False)
+        self.txt_dns.blockSignals(False)
 
     def has_active_values(self) -> bool:
         wl = self.txt_wordlist.text().strip()
         url = self.txt_url.text().strip()
-        return bool(url) or (bool(wl) and wl != "/usr/share/wordlists/dirb/common.txt")
+        subnet = self.txt_subnet.text().strip()
+        dns = self.txt_dns.text().strip()
+        return (
+            bool(url)
+            or bool(subnet)
+            or bool(dns)
+            or (bool(wl) and wl != "/usr/share/wordlists/dirb/common.txt")
+        )
 
     def retranslate(self) -> None:
         self.lbl_title.setText(t("varbar.scope_title", "Scope & Umgebung"))
         self.lbl_wordlist.setText(t("varbar.wordlist", "Wordlist:"))
         self.lbl_url.setText(t("varbar.url", "Target URL / Endpoint:"))
+        self.lbl_subnet.setText(t("varbar.subnet", "Subnet:"))
+        self.lbl_dns.setText(t("varbar.dns", "DNS Server:"))
         self.btn_browse.setToolTip(t("varbar.browse_tip", "Wordlist-Datei auswählen"))
         self.txt_url.retranslate()
+        self.txt_subnet.retranslate()
+        self.txt_dns.retranslate()

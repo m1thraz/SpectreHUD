@@ -194,6 +194,11 @@ class VariableBar(QFrame):
             "password": auth_vals.get("password", ""),
             "domain": auth_vals.get("domain", ""),
             "ntlm_hash": auth_vals.get("ntlm_hash", ""),
+            "hash": auth_vals.get("hash", ""),
+            "hash_file": auth_vals.get("hash_file", ""),
             "wordlist": scope_vals.get("wordlist", "") or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
             "url": scope_vals.get("url", ""),
+            "subnet": scope_vals.get("subnet", ""),
+            "dns_server": scope_vals.get("dns_server", ""),
+            "dns": scope_vals.get("dns", ""),
         }

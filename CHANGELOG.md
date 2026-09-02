@@ -20,6 +20,10 @@ semantic versioning.
   instant 1-click clipboard copying with dynamic feedback, zero layout overhead, and bilingual tooltips (EN/DE).
 - **Streamlined Variable Bar with Port in Auth Popover**: Relocated the Port field into the
   Auth Popover, further compacting the main cheatsheet header bar for narrow windows.
+- **Subnet, DNS Server & Unified Hash/File Variables**: Added dedicated persistent inputs
+  for `{{SUBNET}}` and `{{DNS_SERVER}}` inside the Scope Popover, and unified `{{NTLM_HASH}}`,
+  `{{HASH}}`, and `{{HASH_FILE}}` inside the Auth Popover with 1-click circular copy buttons,
+  smart auto-resolution, and parameter prompt fallback.
 - **Expanded Typography Options**: Added curated UI, Code, and Report font stacks in Settings:
   - **App UI**: *IBM Plex Sans* (technical/industrial look) and *Manrope* (crisp semi-geometric dark-mode font).
   - **Code/Snippets**: *IBM Plex Mono*, *Iosevka* (condensed monospace allowing ~25% more characters per line in command snippets), and *Hack* (high-contrast terminal standard).

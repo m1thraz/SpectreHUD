@@ -88,13 +88,28 @@ class TemplateEngine:
     @staticmethod
     def extract_unresolved_placeholders(template: str, variables: Dict[str, Any]) -> List[str]:
         """
-        Returns placeholder names that require user input (i.e. not handled by global target_ip/attacker_ip/port/user/pass).
+        Returns placeholder names that require user input (i.e. not handled by global target_ip/attacker_ip/port/user/pass,
+        and not already provided with a non-empty value in variables).
         """
         all_placeholders = TemplateEngine.extract_all_placeholders(template)
         unresolved = []
         for p in all_placeholders:
             if p not in GLOBAL_PARAM_KEYS:
-                unresolved.append(p)
+                p_lower = p.lower()
+                val = variables.get(p_lower) or variables.get(p)
+                if p in ("HASH", "HASH_FILE", "NTLM_HASH") and not val:
+                    val = (
+                        variables.get("ntlm_hash")
+                        or variables.get("hash_file")
+                        or variables.get("hash")
+                    )
+                elif p in ("DNS", "DNS_SERVER") and not val:
+                    val = variables.get("dns_server") or variables.get("dns")
+                elif p == "ENDPOINT" and not val:
+                    val = variables.get("url") or variables.get("endpoint")
+
+                if not val or not str(val).strip():
+                    unresolved.append(p)
         return unresolved
 
     @staticmethod
@@ -111,7 +126,22 @@ class TemplateEngine:
         port = str(variables.get("port", "")).strip() or "4444"
         username = str(variables.get("username", "")).strip()
         password = str(variables.get("password", "")).strip()
+        domain = str(variables.get("domain", "")).strip()
+        hash_val = str(
+            variables.get("ntlm_hash", "")
+            or variables.get("hash_file", "")
+            or variables.get("hash", "")
+        ).strip()
         wordlist = str(variables.get("wordlist", "")).strip() or SMART_PRESETS.get("WORDLIST", "")
+        url = str(variables.get("url", "")).strip()
+        subnet = str(variables.get("subnet", "")).strip()
+        dns_server = str(variables.get("dns_server", "") or variables.get("dns", "")).strip()
+
+        default_url = (
+            url
+            if url
+            else (f"http://{target_ip}:{port}" if port and port != "80" else f"http://{target_ip}")
+        )
 
         aliases = {
             "TARGET_IP": target_ip,
@@ -130,8 +160,16 @@ class TemplateEngine:
             "USER": username if username else "{{USER}}",
             "PASSWORD": password if password else "{{PASSWORD}}",
             "PASS": password if password else "{{PASS}}",
+            "DOMAIN": domain if domain else "{{DOMAIN}}",
+            "HASH": hash_val if hash_val else "{{HASH}}",
+            "NTLM_HASH": hash_val if hash_val else "{{NTLM_HASH}}",
+            "HASH_FILE": hash_val if hash_val else "{{HASH_FILE}}",
             "WORDLIST": wordlist,
-            "URL": f"http://{target_ip}:{port}" if port and port != "80" else f"http://{target_ip}",
+            "URL": default_url,
+            "ENDPOINT": url if url else "{{ENDPOINT}}",
+            "SUBNET": subnet if subnet else "{{SUBNET}}",
+            "DNS_SERVER": dns_server if dns_server else "{{DNS_SERVER}}",
+            "DNS": dns_server if dns_server else "{{DNS}}",
         }
 
         # Include custom variables if provided
