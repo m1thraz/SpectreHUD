@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-09-02
+
 ### Added
 
 - Additive **"Add Missing Loot"** ("Aus Loot ergänzen") feature in the Report Editor
@@ -43,9 +45,28 @@ semantic versioning.
   isolated sub-millisecond headless unit testing.
 - Architecture guard tests (`tests/test_architecture_boundaries.py`) verifying that the entire
   `core/` layer never imports `ui` and that `core.platform` does not eagerly load Qt.
-- Automated Debian package (`.deb`) build pipeline (`scripts/build_deb.py`) with native icon
-  and desktop integration, integrated into GitHub Actions (`.github/workflows/release.yml`)
-  to automatically build and attach `.deb` installers for Debian/Ubuntu/Kali Linux on release tags.
+
+### Changed
+
+- Centralized platform paths, local resource opening, Linux network discovery,
+  runtime settings application, report export coordination, and screenshot
+  transactions behind focused services and coordinators.
+- Added a dedicated Linux wheel-validation job that installs the built artifact
+  outside the checkout and verifies the installed CLI entry point.
+- Theme selectors now display the theme name without a redundant author suffix.
+- Refined the tiered Fast/Full test workflow and kept release validation in its
+  dedicated packaging path.
+
+### Fixed
+
+- Long Cheatsheet commands no longer widen cards until the Copy and Edit actions
+  are clipped outside the visible area.
+- Qt appearance tests are isolated from late Windows widget teardown events that
+  could otherwise terminate the test process with a native access violation.
+- Linux sessions without supported global hotkeys or unrestricted screenshot
+  capture now degrade predictably without preventing application startup.
+
+See the [full v2.0.4 release notes](docs/release_notes_v2.0.4.md).
 
 ## [2.0.3] - 2026-09-01
 
