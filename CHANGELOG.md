@@ -8,9 +8,22 @@ semantic versioning.
 
 ### Added
 
-- **1-Click Copy Buttons for Variable Inputs**: Added embedded, compact copy-to-clipboard
-  buttons (`📋` -> `✓`) inside Target IP, LHOST, Port, and Popover input fields for
-  instant 1-click clipboard copying during CTFs and assessments without altering layout widths.
+- **5 New Built-in HUD Themes**: Added popular dark community color schemes for enhanced
+  personalization:
+  - **Blue Team**: Cool defensive cobalt blue accents for blue teamers and SOC analysts.
+  - **Catppuccin Mocha**: Soothing pastel dark palette with warm lavender and mauve accents.
+  - **Dracula**: Classic high-contrast dark theme with vibrant purple, pink, and cyan highlights.
+  - **Gruvbox**: Warm retro groove palette with earthy amber, green, and orange tones.
+  - **Tokyo Night**: Clean modern neon cyberpunk dark palette celebrating downtown Tokyo vibes.
+- **1-Click Circular Copy Buttons for Variable Inputs**: Added sleek circular vector
+  copy-to-clipboard buttons inside Target IP, LHOST, and Popover input fields for
+  instant 1-click clipboard copying with dynamic feedback, zero layout overhead, and bilingual tooltips (EN/DE).
+- **Streamlined Variable Bar with Port in Auth Popover**: Relocated the Port field into the
+  Auth Popover, further compacting the main cheatsheet header bar for narrow windows.
+- **Expanded Typography Options**: Added curated UI, Code, and Report font stacks in Settings:
+  - **App UI**: *IBM Plex Sans* (technical/industrial look) and *Manrope* (crisp semi-geometric dark-mode font).
+  - **Code/Snippets**: *IBM Plex Mono*, *Iosevka* (condensed monospace allowing ~25% more characters per line in command snippets), and *Hack* (high-contrast terminal standard).
+  - **Reports & Exports**: *Source Serif Pro* (executive report serif), *Lato* (clean agency standard sans), and *Cambria* (native print serif).
 
 ## [2.0.5] - 2026-09-02
 

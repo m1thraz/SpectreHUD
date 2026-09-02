@@ -5,6 +5,10 @@ UI_FONT_STACKS = {
         "'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
     ),
     "inter": "'Inter', 'Segoe UI', -apple-system, sans-serif",
+    "ibm_plex_sans": (
+        "'IBM Plex Sans', 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
+    ),
+    "manrope": "'Manrope', 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
     "roboto": "'Roboto', 'Segoe UI', -apple-system, sans-serif",
     "open_sans": "'Open Sans', 'Segoe UI', -apple-system, sans-serif",
 }
@@ -13,6 +17,9 @@ CODE_FONT_STACKS = {
     "cascadia_code": "'Cascadia Code', 'Consolas', 'Fira Code', monospace",
     "fira_code": "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
     "jetbrains_mono": "'JetBrains Mono', 'Consolas', 'Fira Code', monospace",
+    "ibm_plex_mono": "'IBM Plex Mono', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
+    "iosevka": "'Iosevka', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
+    "hack": "'Hack', 'JetBrains Mono', 'DejaVu Sans Mono', 'Consolas', monospace",
 }
 REPORT_FONT_STACKS = {
     "segoe_ui": (
@@ -21,12 +28,17 @@ REPORT_FONT_STACKS = {
     ),
     "calibri": "'Calibri', 'Segoe UI', Arial, sans-serif",
     "arial": "Arial, 'Helvetica Neue', 'Segoe UI', sans-serif",
+    "lato": "'Lato', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+    "source_serif": "'Source Serif 4', 'Source Serif Pro', 'Georgia', 'Times New Roman', serif",
     "georgia": "Georgia, 'Times New Roman', serif",
+    "cambria": "'Cambria', 'Georgia', 'Times New Roman', serif",
 }
 
 UI_FONT_OPTIONS = [
     ("segoe_ui", "Segoe UI"),
     ("inter", "Inter"),
+    ("ibm_plex_sans", "IBM Plex Sans"),
+    ("manrope", "Manrope"),
     ("roboto", "Roboto"),
     ("open_sans", "Open Sans"),
 ]
@@ -35,26 +47,40 @@ CODE_FONT_OPTIONS = [
     ("cascadia_code", "Cascadia Code"),
     ("fira_code", "Fira Code"),
     ("jetbrains_mono", "JetBrains Mono"),
+    ("ibm_plex_mono", "IBM Plex Mono"),
+    ("iosevka", "Iosevka (Condensed)"),
+    ("hack", "Hack"),
 ]
 REPORT_FONT_OPTIONS = [
     ("segoe_ui", "Segoe UI"),
     ("calibri", "Calibri"),
     ("arial", "Arial"),
+    ("lato", "Lato"),
+    ("source_serif", "Source Serif Pro"),
     ("georgia", "Georgia (Serif)"),
+    ("cambria", "Cambria (Serif)"),
 ]
 
 FONT_FAMILIES = {
     "segoe_ui": "Segoe UI",
     "inter": "Inter",
+    "ibm_plex_sans": "IBM Plex Sans",
+    "manrope": "Manrope",
     "roboto": "Roboto",
     "open_sans": "Open Sans",
     "consolas": "Consolas",
     "cascadia_code": "Cascadia Code",
     "fira_code": "Fira Code",
     "jetbrains_mono": "JetBrains Mono",
+    "ibm_plex_mono": "IBM Plex Mono",
+    "iosevka": "Iosevka",
+    "hack": "Hack",
     "calibri": "Calibri",
     "arial": "Arial",
+    "lato": "Lato",
+    "source_serif": "Source Serif Pro",
     "georgia": "Georgia",
+    "cambria": "Cambria",
 }
 
 
