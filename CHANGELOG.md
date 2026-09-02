@@ -6,6 +6,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **1-Click Copy Buttons for Variable Inputs**: Added embedded, compact copy-to-clipboard
+  buttons (`📋` -> `✓`) inside Target IP, LHOST, Port, and Popover input fields for
+  instant 1-click clipboard copying during CTFs and assessments without altering layout widths.
+
 ## [2.0.5] - 2026-09-02
 
 ### Added

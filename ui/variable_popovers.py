@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint
 from PyQt6.QtGui import QGuiApplication
 from core.i18n import t
+from ui.copyable_line_edit import CopyableLineEdit
 
 
 class BaseVarPopover(QFrame):
@@ -112,7 +113,7 @@ class AuthPopover(BaseVarPopover):
         row_user.setSpacing(6)
         self.lbl_user = QLabel(t("varbar.user", "User:"))
         self.lbl_user.setProperty("class", "VarPopoverLabel")
-        self.txt_user = QLineEdit()
+        self.txt_user = CopyableLineEdit()
         self.txt_user.setProperty("class", "VarPopoverInput")
         self.txt_user.setPlaceholderText("admin / root")
         self.txt_user.textChanged.connect(self.values_changed.emit)
@@ -141,11 +142,23 @@ class AuthPopover(BaseVarPopover):
         row_pass.addWidget(self.btn_toggle_pass)
         layout.addLayout(row_pass)
 
+        row_port = QHBoxLayout()
+        row_port.setSpacing(6)
+        self.lbl_port = QLabel(t("varbar.port", "Port:"))
+        self.lbl_port.setProperty("class", "VarPopoverLabel")
+        self.txt_port = CopyableLineEdit()
+        self.txt_port.setProperty("class", "VarPopoverInput")
+        self.txt_port.setPlaceholderText("4444 / 8080")
+        self.txt_port.textChanged.connect(self.values_changed.emit)
+        row_port.addWidget(self.lbl_port)
+        row_port.addWidget(self.txt_port)
+        layout.addLayout(row_port)
+
         row_domain = QHBoxLayout()
         row_domain.setSpacing(6)
         self.lbl_domain = QLabel(t("varbar.domain", "Domain:"))
         self.lbl_domain.setProperty("class", "VarPopoverLabel")
-        self.txt_domain = QLineEdit()
+        self.txt_domain = CopyableLineEdit()
         self.txt_domain.setProperty("class", "VarPopoverInput")
         self.txt_domain.setPlaceholderText("corp.local / htb.local")
         self.txt_domain.textChanged.connect(self.values_changed.emit)
@@ -157,7 +170,7 @@ class AuthPopover(BaseVarPopover):
         row_hash.setSpacing(6)
         self.lbl_hash = QLabel(t("varbar.ntlm_hash", "Hash:"))
         self.lbl_hash.setProperty("class", "VarPopoverLabel")
-        self.txt_hash = QLineEdit()
+        self.txt_hash = CopyableLineEdit()
         self.txt_hash.setProperty("class", "VarPopoverInput")
         self.txt_hash.setPlaceholderText("aad3b435b5... / LM:NTLM")
         self.txt_hash.textChanged.connect(self.values_changed.emit)
@@ -177,6 +190,7 @@ class AuthPopover(BaseVarPopover):
         return {
             "username": self.txt_user.text().strip(),
             "password": self.txt_pass.text().strip(),
+            "port": self.txt_port.text().strip(),
             "domain": self.txt_domain.text().strip(),
             "ntlm_hash": self.txt_hash.text().strip(),
         }
@@ -184,6 +198,7 @@ class AuthPopover(BaseVarPopover):
     def set_values(self, vals: Dict[str, Any]) -> None:
         self.txt_user.blockSignals(True)
         self.txt_pass.blockSignals(True)
+        self.txt_port.blockSignals(True)
         self.txt_domain.blockSignals(True)
         self.txt_hash.blockSignals(True)
 
@@ -191,6 +206,8 @@ class AuthPopover(BaseVarPopover):
             self.txt_user.setText(str(vals.get("username", "")))
         if "password" in vals:
             self.txt_pass.setText(str(vals.get("password", "")))
+        if "port" in vals:
+            self.txt_port.setText(str(vals.get("port", "")))
         if "domain" in vals:
             self.txt_domain.setText(str(vals.get("domain", "")))
         if "ntlm_hash" in vals:
@@ -198,11 +215,31 @@ class AuthPopover(BaseVarPopover):
 
         self.txt_user.blockSignals(False)
         self.txt_pass.blockSignals(False)
+        self.txt_port.blockSignals(False)
         self.txt_domain.blockSignals(False)
         self.txt_hash.blockSignals(False)
 
     def has_active_values(self) -> bool:
-        return any(bool(v) for v in self.get_values().values())
+        vals = self.get_values()
+        return bool(
+            vals.get("username")
+            or vals.get("password")
+            or vals.get("domain")
+            or vals.get("ntlm_hash")
+        )
+
+    def retranslate(self) -> None:
+        self.lbl_title.setText(t("varbar.auth_title", "Authentifizierung"))
+        self.lbl_user.setText(t("varbar.user", "User:"))
+        self.lbl_pass.setText(t("varbar.pass", "Pass:"))
+        self.lbl_port.setText(t("varbar.port", "Port:"))
+        self.lbl_domain.setText(t("varbar.domain", "Domain:"))
+        self.lbl_hash.setText(t("varbar.ntlm_hash", "Hash:"))
+        self.btn_toggle_pass.setToolTip(t("varbar.pass_toggle_tip", "Passwort ein-/ausblenden"))
+        self.txt_user.retranslate()
+        self.txt_port.retranslate()
+        self.txt_domain.retranslate()
+        self.txt_hash.retranslate()
 
 
 class ScopePopover(BaseVarPopover):
@@ -249,7 +286,7 @@ class ScopePopover(BaseVarPopover):
         self.lbl_url.setProperty("class", "VarPopoverLabel")
         layout.addWidget(self.lbl_url)
 
-        self.txt_url = QLineEdit()
+        self.txt_url = CopyableLineEdit()
         self.txt_url.setProperty("class", "VarPopoverInput")
         self.txt_url.setPlaceholderText("http://10.10.10.10:8080/api")
         self.txt_url.textChanged.connect(self.values_changed.emit)
@@ -289,3 +326,10 @@ class ScopePopover(BaseVarPopover):
         wl = self.txt_wordlist.text().strip()
         url = self.txt_url.text().strip()
         return bool(url) or (bool(wl) and wl != "/usr/share/wordlists/dirb/common.txt")
+
+    def retranslate(self) -> None:
+        self.lbl_title.setText(t("varbar.scope_title", "Scope & Umgebung"))
+        self.lbl_wordlist.setText(t("varbar.wordlist", "Wordlist:"))
+        self.lbl_url.setText(t("varbar.url", "Target URL / Endpoint:"))
+        self.btn_browse.setToolTip(t("varbar.browse_tip", "Wordlist-Datei auswählen"))
+        self.txt_url.retranslate()

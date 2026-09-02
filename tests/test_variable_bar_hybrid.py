@@ -115,3 +115,62 @@ def test_template_engine_interpolates_popover_variables(var_bar):
     assert "corp.local" in rendered
     assert "/usr/share/wordlists/dirb/big.txt" in rendered
     assert "http://10.10.10.10:8080/admin" in rendered
+
+
+def test_copyable_line_edit_copies_to_clipboard(var_bar, qapp):
+    # Test Target IP copy button
+    var_bar.txt_target.setText("192.168.100.25")
+    assert var_bar.txt_target.btn_copy is not None
+    assert var_bar.txt_target.btn_copy.copied is False
+
+    # Trigger copy
+    var_bar.txt_target.btn_copy.click()
+    assert QApplication.clipboard().text() == "192.168.100.25"
+    assert var_bar.txt_target.btn_copy.copied is True
+
+    # Reset
+    var_bar.txt_target.btn_copy.reset_state()
+    assert var_bar.txt_target.btn_copy.copied is False
+
+    # Test LHOST and Port copy buttons
+    var_bar.txt_attacker.setText("10.8.0.2")
+    var_bar.txt_attacker.btn_copy.click()
+    assert QApplication.clipboard().text() == "10.8.0.2"
+
+    var_bar.txt_port.setText("8080")
+    var_bar.txt_port.btn_copy.click()
+    assert QApplication.clipboard().text() == "8080"
+
+
+def test_popover_copyable_fields(var_bar, qapp):
+    # Test Auth Popover user and hash copy buttons
+    var_bar.popover_auth.txt_user.setText("administrator")
+    var_bar.popover_auth.txt_user.btn_copy.click()
+    assert QApplication.clipboard().text() == "administrator"
+
+    var_bar.popover_auth.txt_hash.setText("31d6cfe0d16ae931b73c59d7e0c089c0")
+    var_bar.popover_auth.txt_hash.btn_copy.click()
+    assert QApplication.clipboard().text() == "31d6cfe0d16ae931b73c59d7e0c089c0"
+
+    # Test Scope Popover URL copy button
+    var_bar.popover_scope.txt_url.setText("https://target.local:8443/login")
+    var_bar.popover_scope.txt_url.btn_copy.click()
+    assert QApplication.clipboard().text() == "https://target.local:8443/login"
+
+
+def test_copy_button_i18n_retranslate(var_bar):
+    from core.i18n import set_locale
+
+    # Switch to German
+    set_locale("de")
+    var_bar.retranslate()
+    assert var_bar.txt_target.btn_copy.toolTip() == "In Zwischenablage kopieren"
+    assert var_bar.popover_auth.txt_port.btn_copy.toolTip() == "In Zwischenablage kopieren"
+
+    # Switch to English
+    set_locale("en")
+    var_bar.retranslate()
+    assert var_bar.txt_target.btn_copy.toolTip() == "Copy to clipboard"
+    assert var_bar.popover_auth.txt_port.btn_copy.toolTip() == "Copy to clipboard"
+
+

@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from core.net_detector import NetDetector
 from core.i18n import t
 from ui.variable_popovers import AuthPopover, ScopePopover
+from ui.copyable_line_edit import CopyableLineEdit
 
 
 class VariableBar(QFrame):
@@ -28,6 +29,7 @@ class VariableBar(QFrame):
         # Backwards compatibility handles
         self.txt_user = self.popover_auth.txt_user
         self.txt_pass = self.popover_auth.txt_pass
+        self.txt_port = self.popover_auth.txt_port
         self.btn_toggle_pass = self.popover_auth.btn_toggle_pass
 
         self._init_ui()
@@ -49,10 +51,10 @@ class VariableBar(QFrame):
         # 1. Target IP Input
         self.lbl_target = QLabel(t("varbar.target", "Target:"))
         self.lbl_target.setProperty("class", "VarTagLabel")
-        self.txt_target = QLineEdit(str(self.initial_vars.get("target_ip", "10.10.10.10")))
+        self.txt_target = CopyableLineEdit(str(self.initial_vars.get("target_ip", "10.10.10.10")))
         self.txt_target.setProperty("class", "CompactVarInput")
         self.txt_target.setPlaceholderText("10.10.10.x")
-        self.txt_target.setFixedWidth(105)
+        self.txt_target.setFixedWidth(112)
         self.txt_target.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_target)
         layout.addWidget(self.txt_target)
@@ -60,10 +62,10 @@ class VariableBar(QFrame):
         # 2. Attacker IP / LHOST Input
         self.lbl_attacker = QLabel(t("varbar.attacker", "LHOST:"))
         self.lbl_attacker.setProperty("class", "VarTagLabel")
-        self.txt_attacker = QLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
+        self.txt_attacker = CopyableLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
-        self.txt_attacker.setFixedWidth(105)
+        self.txt_attacker.setFixedWidth(112)
         self.txt_attacker.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_attacker)
         layout.addWidget(self.txt_attacker)
@@ -75,18 +77,7 @@ class VariableBar(QFrame):
         self.btn_auto.clicked.connect(self.auto_detect_ip)
         layout.addWidget(self.btn_auto)
 
-        # 4. Port / LPORT Input
-        self.lbl_port = QLabel(t("varbar.port", "Port:"))
-        self.lbl_port.setProperty("class", "VarTagLabel")
-        self.txt_port = QLineEdit(str(self.initial_vars.get("port", "4444")))
-        self.txt_port.setProperty("class", "CompactVarInput")
-        self.txt_port.setPlaceholderText("4444")
-        self.txt_port.setFixedWidth(50)
-        self.txt_port.textChanged.connect(self._on_values_changed)
-        layout.addWidget(self.lbl_port)
-        layout.addWidget(self.txt_port)
-
-        # 5. Auth Popover Button (User, Pass, Domain, Hash)
+        # 4. Auth Popover Button (User, Pass, Port, Domain, Hash)
         self.btn_auth = QPushButton("👤 Auth ▾")
         self.btn_auth.setProperty("class", "VarBadgeBtn")
         self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
@@ -143,13 +134,16 @@ class VariableBar(QFrame):
         """Updates text elements when language changes."""
         self.lbl_target.setText(t("varbar.target", "Target:"))
         self.lbl_attacker.setText(t("varbar.attacker", "LHOST:"))
-        self.lbl_port.setText(t("varbar.port", "Port:"))
+        self.txt_target.retranslate()
+        self.txt_attacker.retranslate()
         self.btn_auto.setText(t("varbar.auto", "Auto"))
         self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
-        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
+        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Port, Domain & Hash verwalten"))
         self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
         self.btn_add.setText(t("varbar.add_btn", "+ Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
+        self.popover_auth.retranslate()
+        self.popover_scope.retranslate()
         self._update_badge_buttons()
 
     def auto_detect_ip(self) -> None:
