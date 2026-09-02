@@ -152,15 +152,39 @@ QComboBox::down-arrow:hover {
     border-top-color: {CYBER_CYAN};
 }
 
-QComboBox QAbstractItemView {
+QComboBox QAbstractItemView,
+QComboBox QListView {
     background-color: {BG_SURFACE};
-    border: 1px solid {BORDER_DEFAULT};
+    border: 1px solid {CYBER_CYAN};
     border-radius: 6px;
     color: {TEXT_PRIMARY};
     selection-background-color: {ACCENT_NAV_ACTIVE};
     selection-color: {CYBER_CYAN};
     padding: 4px;
     outline: none;
+}
+
+QComboBox QAbstractItemView::item,
+QComboBox QListView::item {
+    background-color: {BG_SURFACE};
+    color: {TEXT_PRIMARY};
+    padding: 6px 10px;
+    min-height: 24px;
+    border-radius: 4px;
+}
+
+QComboBox QAbstractItemView::item:hover,
+QComboBox QListView::item:hover,
+QComboBox QAbstractItemView::item:selected,
+QComboBox QListView::item:selected {
+    background-color: {ACCENT_NAV_ACTIVE};
+    color: {CYBER_CYAN};
+}
+
+QComboBox QAbstractItemView::item:selected:active,
+QComboBox QListView::item:selected:active {
+    background-color: {ACCENT_NAV_ACTIVE};
+    color: {CYBER_CYAN};
 }
 
 /* Appearance transparency controls */

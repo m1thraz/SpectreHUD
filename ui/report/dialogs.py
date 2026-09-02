@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QListView,
     QMessageBox,
     QPushButton,
     QSpinBox,
@@ -19,6 +20,13 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
+from core.theme_palette import (
+    ACCENT_NAV_ACTIVE,
+    BG_SURFACE,
+    BORDER_DEFAULT,
+    CYBER_CYAN,
+    TEXT_PRIMARY,
+)
 from ui.template_manager_dialog import TemplateManagerDialog
 
 
@@ -68,6 +76,10 @@ class ReportGenerationDialog(QDialog):
         self._populate_templates()
 
     def _build_ui(self, has_existing_report: bool) -> None:
+        self.setObjectName("ReportGenerationDialog")
+        self.setStyleSheet(
+            f"QDialog#ReportGenerationDialog {{ background-color: {BG_SURFACE}; color: {TEXT_PRIMARY}; }}"
+        )
         layout = QVBoxLayout(self)
         description = QLabel(
             t(
@@ -76,6 +88,7 @@ class ReportGenerationDialog(QDialog):
             )
         )
         description.setWordWrap(True)
+        description.setStyleSheet(f"color: {TEXT_PRIMARY};")
         layout.addWidget(description)
         if has_existing_report:
             warning = QLabel(
@@ -89,6 +102,14 @@ class ReportGenerationDialog(QDialog):
             layout.addWidget(warning)
         form = QFormLayout()
         self.combo_templates = QComboBox()
+        self.combo_templates.setView(QListView())
+        self.combo_templates.setStyleSheet(
+            f"QComboBox {{ background-color: {BG_SURFACE}; color: {TEXT_PRIMARY}; border: 1px solid {BORDER_DEFAULT}; border-radius: 6px; padding: 6px 10px; font-size: 13px; min-height: 26px; }}"
+            f"QComboBox:focus {{ border: 1px solid {CYBER_CYAN}; }}"
+            f"QComboBox QAbstractItemView, QComboBox QListView {{ background-color: {BG_SURFACE}; color: {TEXT_PRIMARY}; border: 1px solid {CYBER_CYAN}; border-radius: 6px; selection-background-color: {ACCENT_NAV_ACTIVE}; selection-color: {CYBER_CYAN}; padding: 4px; outline: none; }}"
+            f"QComboBox QAbstractItemView::item, QComboBox QListView::item {{ background-color: {BG_SURFACE}; color: {TEXT_PRIMARY}; padding: 6px 10px; min-height: 24px; font-size: 13px; }}"
+            f"QComboBox QAbstractItemView::item:hover, QComboBox QListView::item:hover, QComboBox QAbstractItemView::item:selected, QComboBox QListView::item:selected {{ background-color: {ACCENT_NAV_ACTIVE}; color: {CYBER_CYAN}; }}"
+        )
         self.combo_templates.setToolTip(
             t("report.template_tip", "Select a template for the newly generated report")
         )

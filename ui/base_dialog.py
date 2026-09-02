@@ -15,9 +15,15 @@ class BaseHudDialog(QDialog):
         super().__init__(parent)
         self.dialog_title_text = title
 
-        # Frameless translucent dialog window
+        # Frameless dialog window
+        from core.platform import detect_platform_capabilities
+
+        self.has_compositor = detect_platform_capabilities().compositor
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        if self.has_compositor:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        else:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
         from ui.styles import get_app_icon
 
@@ -37,12 +43,19 @@ class BaseHudDialog(QDialog):
 
     def _build_base_shell(self) -> None:
         outer_layout = QVBoxLayout(self)
-        outer_layout.setContentsMargins(6, 6, 6, 6)
+        if getattr(self, "has_compositor", True):
+            outer_layout.setContentsMargins(6, 6, 6, 6)
+        else:
+            outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
 
         # Main HUD frame with cyan border and dark acrylic background
         self.hud_frame = QFrame()
         self.hud_frame.setObjectName("DialogHudFrame")
+        if not getattr(self, "has_compositor", True):
+            self.hud_frame.setStyleSheet(
+                "QFrame#DialogHudFrame { border-radius: 0px; background-color: #0d1117; }"
+            )
 
         frame_layout = QVBoxLayout(self.hud_frame)
         frame_layout.setContentsMargins(0, 0, 0, 0)

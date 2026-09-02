@@ -6,15 +6,13 @@ Builds a valid Debian binary package without requiring dpkg-deb, ar, or Linux bi
 Creates standard GNU ar archive with debian-binary, control.tar.gz, and data.tar.gz.
 """
 
-import gzip
 import io
 import os
 import re
-import sys
 import tarfile
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 
 def get_version(project_dir: Path) -> str:
@@ -36,7 +34,7 @@ def create_ar_header(filename: str, size: int, mode: int = 0o100644, mtime: int 
     mode_field = oct(mode)[2:].rjust(6, "0").ljust(8)
     size_field = str(size).ljust(10)
     magic_field = "`\n"
-    
+
     header = (
         name_field[:16]
         + mtime_field[:12]

@@ -22,6 +22,7 @@ class PlatformCapabilities:
     screen_capture: bool
     wayland: bool
     x11: bool
+    compositor: bool = True
 
     @property
     def screen_capture_status(self) -> ScreenCaptureStatus:
@@ -57,6 +58,31 @@ def detect_platform_capabilities(
         session_type == "x11" or bool(environment.get("DISPLAY"))
     )
 
+    # Detect compositor presence
+    compositor = True
+    override_comp = environment.get("SPECTREHUD_COMPOSITOR", "").strip().lower()
+    if override_comp in ("0", "false", "no", "off", "disable", "disabled"):
+        compositor = False
+    elif override_comp in ("1", "true", "yes", "on", "enable", "enabled"):
+        compositor = True
+    elif x11:
+        import shutil
+
+        xprop = shutil.which("xprop")
+        if xprop:
+            try:
+                import subprocess
+
+                res = subprocess.run(
+                    [xprop, "-root", "-len", "1", "_NET_WM_CM_S0"],
+                    capture_output=True,
+                    text=True,
+                    timeout=0.5,
+                )
+                compositor = res.returncode == 0 and "window id" in res.stdout.lower()
+            except Exception:
+                compositor = True
+
     # Windows is the fully verified desktop path. Linux capabilities are only
     # advertised for an explicit X11 session. macOS remains an unsupported,
     # conservative fallback until it receives its own implementation/smoke test.
@@ -67,4 +93,5 @@ def detect_platform_capabilities(
         screen_capture=verified_desktop,
         wayland=wayland,
         x11=x11,
+        compositor=compositor,
     )

@@ -6,6 +6,22 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Compositor Awareness for Linux X11**: Automatically detects if an X11 compositing
+  manager is running (via `_NET_WM_CM_S0` atom or `SPECTREHUD_COMPOSITOR` environment
+  variable) with graceful non-composited window adaptation.
+
+### Fixed
+
+- **Window Borders on Non-Composited X11**: Fixed black rectangular outer margin and
+  corner artifacts on systems without a compositor (e.g. Linux Mint / XFCE / MATE with
+  compositing disabled) by dynamically turning off `WA_TranslucentBackground`, removing
+  the 10px transparent margin, and applying clean square borders.
+- **Report Template Dropdown Contrast**: Fixed unreadable template selection text in
+  `ReportGenerationDialog` by adding explicit high-contrast item styles (`::item`, hover,
+  and selection) and enforcing `QListView` viewport rendering against GTK light-theme conflicts.
+
 ## [2.0.4] - 2026-09-02
 
 ### Added
@@ -23,50 +39,35 @@ semantic versioning.
   across mode switches.
 - Exporter marker stripping for HTML, Markdown copy, Obsidian, and CherryTree exports
   ensuring no internal sync markers are exposed in client-facing documents.
-- Explicit desktop capability abstraction (`ScreenCaptureStatus`) and graceful
-  degradation for screen capture under Wayland and unsupported sessions without UI crashes
-  or unhandled exceptions.
-- Graceful degradation and capability awareness for global system hotkeys (`HotkeyListener.is_available()`),
-  ensuring startup resilience and informative UI hints under Wayland while keeping local in-app Qt shortcuts
-  fully operational.
-- Comprehensive POSIX adversarial filesystem test coverage covering case sensitivity,
-  permission boundaries, symlink resolutions, and atomic write durability.
 - Linux desktop integration assets including standard `resources/linux/spectrehud.desktop`,
   hicolor icons across 48x48, 128x128, 256x256, and scalable SVG, plus aligned
   `StartupWMClass` / `setDesktopFileName` application metadata.
 - Cross-platform desktop shortcut generator (`create_desktop_shortcut.py`) creating `.lnk`
   on Windows and `.desktop` on Linux with standard execution permissions.
-- Centralized core theme tokens (`core/theme_palette.py`) and decoupled `core/theme_loader.py`,
-  strictly removing reverse `core -> ui` imports.
-- Decoupled `ScreenshotManager` with injected `overlay_factory`, eliminating direct UI imports.
-- Lazy Qt resolution in `core/platform/opener.py`, ensuring `core.platform` can be imported
-  without eagerly loading PyQt6 modules into memory.
-- Pure Python snippet search, tag parsing, and ranking service (`core/snippet_filter.py`) with
-  isolated sub-millisecond headless unit testing.
-- Architecture guard tests (`tests/test_architecture_boundaries.py`) verifying that the entire
-  `core/` layer never imports `ui` and that `core.platform` does not eagerly load Qt.
+- Automated Debian package (`.deb`) build pipeline (`scripts/build_deb.py` and `scripts/pack_deb.py`)
+  with native desktop/icon integration and automated release workflow in GitHub Actions.
+- Pure Python domain services in `core/` for snippet search (`core/snippet_filter.py`), loot
+  filtering (`core/loot_filter.py`), and navigation state (`core/navigation_state.py`).
 
 ### Changed
 
-- Centralized platform paths, local resource opening, Linux network discovery,
-  runtime settings application, report export coordination, and screenshot
-  transactions behind focused services and coordinators.
-- Added a dedicated Linux wheel-validation job that installs the built artifact
-  outside the checkout and verifies the installed CLI entry point.
-- Theme selectors now display the theme name without a redundant author suffix.
-- Refined the tiered Fast/Full test workflow and kept release validation in its
-  dedicated packaging path.
+- Centralized core theme tokens (`core/theme_palette.py`) as the single source of truth,
+  re-exported by `ui/styles/palette.py` to prevent theme token drift.
+- Decoupled `ScreenshotManager` with injected `overlay_factory` and explicit public configuration
+  API (`set_overlay_factory`), removing direct UI imports.
+- Lazy Qt resolution in `core/platform/opener.py`, ensuring `core.platform` can be imported
+  without eagerly loading PyQt6 modules into memory.
 
 ### Fixed
 
-- Long Cheatsheet commands no longer widen cards until the Copy and Edit actions
-  are clipped outside the visible area.
-- Qt appearance tests are isolated from late Windows widget teardown events that
-  could otherwise terminate the test process with a native access violation.
-- Linux sessions without supported global hotkeys or unrestricted screenshot
-  capture now degrade predictably without preventing application startup.
-
-See the [full v2.0.4 release notes](docs/release_notes_v2.0.4.md).
+- Explicit desktop capability abstraction (`ScreenCaptureStatus`) and graceful degradation
+  for screen capture under Wayland and unsupported sessions without UI crashes.
+- Capability awareness and graceful fallback for global hotkeys (`HotkeyListener.is_available()`),
+  ensuring application startup resilience under Wayland while keeping in-app Qt shortcuts operational.
+- Comprehensive POSIX adversarial filesystem hardening covering case sensitivity, permission
+  boundaries, symlink resolutions, and atomic write durability.
+- Architecture guard invariants verifying that `core/` never imports `ui` and that `core.platform`
+  does not eagerly load Qt.
 
 ## [2.0.3] - 2026-09-01
 
@@ -168,7 +169,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.4...HEAD
+[2.0.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.0...v2.0.1
