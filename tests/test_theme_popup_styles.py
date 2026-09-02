@@ -5,6 +5,10 @@ from pathlib import Path
 import subprocess
 import sys
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
@@ -49,7 +53,7 @@ def _run_isolated_qt_probe(name: str) -> None:
     """
     result = subprocess.run(
         [sys.executable, str(Path(__file__).resolve()), name],
-        cwd=Path(__file__).resolve().parents[1],
+        cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
         timeout=30,

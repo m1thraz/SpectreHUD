@@ -2,7 +2,7 @@
 
 **Status:** Implementation complete through Phase 9; Linux CI and manual X11/Wayland acceptance pending.
 
-**Verified:** 2026-09-01 against v2.0.3 development state (Phases 1-9 implemented; Phase 10 distribution decision documented; live CI and manual X11/Wayland session acceptance pending)
+**Verified:** 2026-09-02 against v2.0.4 development state (Phases 1-9 implemented; Phase 10 distribution decision documented; live CI and manual X11/Wayland session acceptance pending)
 
 This document records operating-system boundaries, historical baseline states,
 refactored platform layers, and the distribution roadmap for Linux support.
@@ -327,7 +327,7 @@ A deliberate architectural evaluation of target Linux packaging formats was cond
 1. **Standard Python Wheel (`.whl` via PyPI / pipx / venv) — SELECTED (Primary)**:
    - *Rationale*: SpectreHUD is a lightweight desktop utility (~1.5 MB package size) with standard PyQt6, cryptography, and pynput dependencies. Distributing via standard wheels enables clean installation inside dedicated virtual environments or via `pipx`, which is standard practice across modern Linux security distributions (Kali, Parrot, BlackArch, Debian, Fedora, Arch).
    - *Requirements*: Documented standard system dependencies (`libegl1`, `libgl1`, `libxcb-cursor0`, `libxkbcommon-x11-0`, `libdbus-1-3`).
-2. **AppImage — PLANNED (Future Milestone / Post-v2.0.3)**:
+2. **AppImage — PLANNED (Future Milestone / Post-v2.0.4)**:
    - *Rationale*: A standalone, all-in-one AppImage provides a single executable with bundled Python runtime and Qt libraries. This is attractive for air-gapped pentest environments without internet or compiler toolchains.
    - *Trade-off*: Increases download artifact size to ~80-120 MB and requires PyInstaller/AppImage toolchain maintenance in CI. Scheduled as a secondary standalone release artifact once base wheel distribution is established.
 3. **Flatpak / Snap — DEFERRED / NOT RECOMMENDED**:

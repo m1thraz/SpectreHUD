@@ -31,12 +31,12 @@ class TestCLI(unittest.TestCase):
             [sys.executable, str(self.main_script), "--version"], capture_output=True, text=True
         )
         self.assertEqual(res.returncode, 0)
-        self.assertIn("SpectreHUD 2.0.3", res.stdout)
+        self.assertIn("SpectreHUD 2.0.4", res.stdout)
 
     def test_cli_output_is_safe_when_windowed_exe_has_no_stdout(self):
         """PyInstaller windowed builds provide no stdout for CLI switches."""
         with patch.object(sys, "stdout", None):
-            main._write_cli(["SpectreHUD 2.0.3"])
+            main._write_cli(["SpectreHUD 2.0.4"])
 
     def test_installed_entrypoint_path_handles_version_without_gui_bootstrap(self):
         res = subprocess.run(
@@ -46,7 +46,7 @@ class TestCLI(unittest.TestCase):
             timeout=10,
         )
         self.assertEqual(res.returncode, 0)
-        self.assertEqual(res.stdout.strip(), "SpectreHUD 2.0.3")
+        self.assertEqual(res.stdout.strip(), "SpectreHUD 2.0.4")
 
 
 if __name__ == "__main__":

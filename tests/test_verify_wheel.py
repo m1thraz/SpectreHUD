@@ -11,7 +11,7 @@ def test_reporting_template_engine_is_required_instead_of_removed_models_module(
 
 def test_wheel_verifier_uses_the_current_release_version():
     """Stale wheels must not be selected from a reused dist directory."""
-    assert get_project_version() == "2.0.3"
+    assert get_project_version() == "2.0.4"
 
 
 def test_linux_platform_modules_are_required_in_release_wheel():
@@ -36,4 +36,3 @@ def test_linux_desktop_assets_are_required_in_release_wheel():
     }
 
     assert expected.issubset(REQUIRED_FILES)
-
