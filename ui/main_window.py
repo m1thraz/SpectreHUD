@@ -82,8 +82,9 @@ class MainWindow(QMainWindow):
                 else ScreenshotManager(overlay_factory=SnippingOverlay)
             )
 
-        if getattr(self.screenshot_manager, "_overlay_factory", None) is None:
-            self.screenshot_manager._overlay_factory = SnippingOverlay
+        if getattr(self.screenshot_manager, "overlay_factory", None) is None:
+            if hasattr(self.screenshot_manager, "set_overlay_factory"):
+                self.screenshot_manager.set_overlay_factory(SnippingOverlay)
 
         self._startup_mark(started_at, "services assigned")
 

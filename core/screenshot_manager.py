@@ -53,6 +53,15 @@ class ScreenshotManager(QObject):
     def capabilities(self) -> PlatformCapabilities:
         return self._capabilities
 
+    @property
+    def overlay_factory(self) -> Optional[Callable[..., Any]]:
+        """Returns the currently configured overlay factory."""
+        return self._overlay_factory
+
+    def set_overlay_factory(self, factory: Optional[Callable[..., Any]]) -> None:
+        """Explicitly configures the UI overlay factory used for interactive screen captures."""
+        self._overlay_factory = factory
+
     def is_capture_available(self) -> bool:
         """Return True if desktop screen grab is expected to work on the current OS session."""
         return self._capabilities.screen_capture
