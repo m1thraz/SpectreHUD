@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-09-02
+
 ### Added
 
 - **Compositor Awareness for Linux X11**: Automatically detects if an X11 compositing
@@ -36,6 +38,10 @@ semantic versioning.
   on individual Kanban columns and cards by enforcing `ScrollBarAlwaysOff` on column scroll
   areas, suppressing scrollbars via QSS, and bounding initial card content rendering. Mouse-wheel
   scrolling remains fully functional and smooth without horizontal card squeezing.
+- **Theme Palette Single Source of Truth**: Unified internal theme tokens under
+  `core.theme_palette` as the single canonical source of truth, eliminating maintenance drift.
+- **Overlay Factory Encapsulation**: Exposed clean public registration API for overlay
+  view factories, removing direct private state mutation.
 
 ## [2.0.4] - 2026-09-02
 
@@ -184,7 +190,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.4...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.5...HEAD
+[2.0.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.1...v2.0.2

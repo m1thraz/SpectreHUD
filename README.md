@@ -13,6 +13,7 @@ other authorized security labs. It keeps the active engagement context—target
 variables, reusable commands, clipboard findings, screenshots, loot, and a
 Markdown report—in one focused project.
 
+> **Portfolio context:** Brought from initial concept to first public release in six days using iterative AI-assisted development, testing, and adversarial review. Development continues with a focus on maintenance, usability refinements, and real-world workflow feedback.
 
 
 
@@ -49,7 +50,7 @@ For the implementation details, see:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
-- [v2.0.4 release notes](docs/release_notes_v2.0.4.md)
+- [v2.0.5 release notes](docs/release_notes_v2.0.5.md)
 - [Pentest Mode](docs/pentest_mode.md)
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
