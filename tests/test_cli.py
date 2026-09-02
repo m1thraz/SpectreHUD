@@ -27,18 +27,24 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_version(self):
         """Tests that invoking main.py --version exits with 0 and prints version."""
+        from core.cli import APP_VERSION
+
         res = subprocess.run(
             [sys.executable, str(self.main_script), "--version"], capture_output=True, text=True
         )
         self.assertEqual(res.returncode, 0)
-        self.assertIn("SpectreHUD 2.0.4", res.stdout)
+        self.assertIn(f"SpectreHUD {APP_VERSION}", res.stdout)
 
     def test_cli_output_is_safe_when_windowed_exe_has_no_stdout(self):
         """PyInstaller windowed builds provide no stdout for CLI switches."""
+        from core.cli import APP_VERSION
+
         with patch.object(sys, "stdout", None):
-            main._write_cli(["SpectreHUD 2.0.4"])
+            main._write_cli([f"SpectreHUD {APP_VERSION}"])
 
     def test_installed_entrypoint_path_handles_version_without_gui_bootstrap(self):
+        from core.cli import APP_VERSION
+
         res = subprocess.run(
             [sys.executable, str(self.launcher_script), "--version"],
             capture_output=True,
@@ -46,7 +52,7 @@ class TestCLI(unittest.TestCase):
             timeout=10,
         )
         self.assertEqual(res.returncode, 0)
-        self.assertEqual(res.stdout.strip(), "SpectreHUD 2.0.4")
+        self.assertEqual(res.stdout.strip(), f"SpectreHUD {APP_VERSION}")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,10 @@ semantic versioning.
 - **Report Template Dropdown Contrast**: Fixed unreadable template selection text in
   `ReportGenerationDialog` by adding explicit high-contrast item styles (`::item`, hover,
   and selection) and enforcing `QListView` viewport rendering against GTK light-theme conflicts.
+- **Kanban Board Scrollbars on Overflowing Items**: Eliminated unsightly vertical scrollbars
+  on individual Kanban columns and cards by enforcing `ScrollBarAlwaysOff` on column scroll
+  areas, suppressing scrollbars via QSS, and bounding initial card content rendering. Mouse-wheel
+  scrolling remains fully functional and smooth without horizontal card squeezing.
 
 ## [2.0.4] - 2026-09-02
 

@@ -65,6 +65,18 @@ QLabel[class="LootBoardColumnTitle"] {
     padding: 2px;
 }
 
+QScrollArea#LootColumnScrollArea {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea#LootColumnScrollArea QScrollBar:vertical,
+QScrollArea#LootColumnScrollArea QScrollBar:horizontal {
+    background: transparent;
+    width: 0px;
+    height: 0px;
+}
+
 /* Command Code Display Box */
 QLabel#CommandLabel {
     background-color: {CODE_A95};

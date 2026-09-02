@@ -178,7 +178,18 @@ class LootCard(QFrame):
         content_row = QHBoxLayout()
         content_row.setSpacing(8)
 
-        self.lbl_content = QLabel(self._full_content)
+        if self.preview_line_limit is not None:
+            raw_lines = self._full_content.splitlines()
+            if len(raw_lines) > self.preview_line_limit:
+                initial_text = "\n".join(raw_lines[: self.preview_line_limit]) + "…"
+            elif len(self._full_content) > 300:
+                initial_text = self._full_content[:300] + "…"
+            else:
+                initial_text = self._full_content
+        else:
+            initial_text = self._full_content
+
+        self.lbl_content = QLabel(initial_text)
         self.lbl_content.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)

@@ -6,8 +6,8 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QMimeData
-from PyQt6.QtWidgets import QAbstractScrollArea
+from PyQt6.QtCore import QMimeData, Qt
+from PyQt6.QtWidgets import QAbstractScrollArea, QScrollArea
 
 from core.loot_manager import CATEGORIES
 from ui.loot_board import LOOT_ENTRY_MIME_TYPE, LootBoard, LootBoardDropArea
@@ -173,6 +173,13 @@ def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars(qapp)
             expected_maximum += margins.top() + margins.bottom()
             assert card.lbl_content.maximumHeight() == expected_maximum
             assert card.height() < 500
+
+        # Verify column scroll area disables visible scrollbars completely
+        column_scrolls = recon_column.findChildren(QScrollArea)
+        assert len(column_scrolls) == 1
+        assert column_scrolls[0].verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        assert column_scrolls[0].horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        assert column_scrolls[0].verticalScrollBar().isVisible() is False
 
         cards[0].btn_edit.click()
         assert edited == [entries[0]]
