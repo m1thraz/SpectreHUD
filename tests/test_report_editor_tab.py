@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog
 from PyQt6.QtCore import QMimeData, QUrl
 
 from core.project import ProjectManager
@@ -315,8 +315,52 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertEqual(dialog.selected_entry["title"], "Burp Request")
         dialog.deleteLater()
 
+    def test_btn_visual_hierarchy_and_classes(self):
+        """Verifies distinct button hierarchy between safe append and destructive regenerate."""
+        self.assertIn("AppendLootBtn", self.tab.btn_append_loot.property("class"))
+        self.assertIn("RegenerateBtn", self.tab.btn_regenerate.property("class"))
+
+    def test_regenerate_confirmation_aborts_on_user_no(self):
+        """Destructive regenerate must prompt user with confirmation and abort when rejected."""
+        self.tab.editor.setPlainText("# Important Custom Report Notes\nDo not overwrite!")
+        self.tab.save()
+
+        with patch.object(
+            QMessageBox, "warning", return_value=QMessageBox.StandardButton.No
+        ) as mock_warn:
+            self.tab._on_regenerate_clicked()
+            mock_warn.assert_called_once()
+
+        self.assertEqual(
+            self.tab.editor.toPlainText(),
+            "# Important Custom Report Notes\nDo not overwrite!",
+        )
+
+    def test_regenerate_saves_dirty_edits_before_backup(self):
+        """Unsaved dirty edits must be saved before backup so .bak contains the latest manual notes."""
+        self.tab.editor.setPlainText("# Freshly Typed Draft\nUnsaved manual notes.")
+        self.assertTrue(self.tab.is_dirty())
+
+        with (
+            patch.object(
+                QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes
+            ),
+            patch("ui.report_editor_tab.ReportGenerationDialog") as MockGenDialog,
+        ):
+            mock_dlg = MagicMock()
+            mock_dlg.exec.return_value = QDialog.DialogCode.Accepted
+            mock_dlg.selected_template = self.tab.active_template
+            MockGenDialog.return_value = mock_dlg
+
+            self.tab._on_regenerate_clicked()
+
+        bak_path = self.report_file_mgr.get_backup_path("TestBox")
+        self.assertTrue(bak_path.exists())
+        self.assertIn("Unsaved manual notes.", bak_path.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

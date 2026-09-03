@@ -19,6 +19,23 @@ semantic versioning.
   without regenerating or appending all loot, and automatic import of external images
   into the project's `screenshots/` directory.
 
+### Changed
+
+- **Grouped Report Toolbar Architecture & Visual Hierarchy**: Rebuilt the report editor toolbar
+  from a single continuous button chain into four clearly separated functional zones with subtle
+  vertical dividers, matching the responsive design mockup:
+  - **Zone 1: Document Actions** (`View ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`).
+  - **Zone 2: Structure** (`H ▾` Dropdown for H1–H6 saving ~120px toolbar width, `❝` Quote, `•` Bullet List, `1.` Numbered List, `―` HR).
+  - **Zone 3: Inline Styles** (`B`, `I`, `S̶`, `</>`, `>_` Code Block).
+  - **Zone 4: Insert** (`🖼️` Image / Loot Screenshot, `🔗` Link, `▦` Table).
+  - **Isolated Save**: Right-aligned `PrimaryBtn` with `Save` action pinned to the right margin.
+- **Destructive Action Safety**:
+  - Permanently styled `Regenerate` button with red danger accent (`color: {TEXT_REC}; border: 1px solid {ERROR_A70}`)
+    to clearly signal its destructive nature against the safe blue `Add Missing Loot` button.
+  - Added an explicit overwrite confirmation dialog with "No" as default before regenerating existing reports.
+  - Automatically saves pending editor edits before regeneration so that automatic backups (`report.md.bak`)
+    reliably capture the user's latest manual work.
+
 ## [2.0.6] - 2026-09-03
 
 ### Added

@@ -50,7 +50,7 @@ from ui.report.dialogs import (
 )
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
-from ui.report.toolbar import build_format_toolbar
+from ui.report.toolbar import build_format_toolbar, create_toolbar_divider
 
 logger = get_logger("report_editor")
 
@@ -138,16 +138,8 @@ class ReportEditorTab(QWidget):
         self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
 
-        self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
-        self.btn_regenerate.setProperty("class", "SecondaryBtn")
-        self.btn_regenerate.setToolTip(
-            t("report.regenerate_tip", "Updates report structure and appends new loot entries")
-        )
-        self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
-        toolbar.addWidget(self.btn_regenerate)
-
         self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
-        self.btn_append_loot.setProperty("class", "SecondaryBtn")
+        self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
         self.btn_append_loot.setToolTip(
             t(
                 "report.append_loot_tip",
@@ -157,6 +149,14 @@ class ReportEditorTab(QWidget):
         self.btn_append_loot.clicked.connect(self._on_append_loot_clicked)
         toolbar.addWidget(self.btn_append_loot)
 
+        self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
+        self.btn_regenerate.setProperty("class", "SecondaryBtn RegenerateBtn")
+        self.btn_regenerate.setToolTip(
+            t("report.regenerate_tip", "Updates report structure and appends new loot entries")
+        )
+        self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
+        toolbar.addWidget(self.btn_regenerate)
+
         self.btn_export = QPushButton(t("report.export", "Export..."))
         self.btn_export.setProperty("class", "SecondaryBtn")
         self.btn_export.setToolTip(
@@ -164,6 +164,9 @@ class ReportEditorTab(QWidget):
         )
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
+
+        # Trenner zwischen Dokumentaktionen und Struktur/Formatierung
+        toolbar.addWidget(create_toolbar_divider(self))
 
         # Formatting belongs with the primary editing/export actions. The
         # source-only controls are hidden while the rich preview is active.
@@ -191,6 +194,9 @@ class ReportEditorTab(QWidget):
             },
         )
         toolbar.addWidget(self.format_toolbar_widget)
+
+        # Gruppe 5: Speichern (isoliert rechts)
+        toolbar.addStretch()
 
         self.btn_save = QPushButton(t("report.save", "Save"))
         self.btn_save.setProperty("class", "PrimaryBtn")
@@ -718,7 +724,37 @@ class ReportEditorTab(QWidget):
         if not self.current_project:
             return
 
-        has_existing = self.report_file_manager.exists(self.current_project) or self._dirty
+        if self._view_mode == ViewMode.PREVIEW:
+            self._commit_preview_to_markdown()
+
+        # Save pending editor edits first so the backup safely captures them
+        if self._dirty:
+            if not self.save():
+                logger.error(
+                    "Could not save pending report edits before regenerate for project '%s'",
+                    self.current_project,
+                )
+                return
+
+        has_existing = self.report_file_manager.exists(self.current_project)
+        current_content = self.editor.toPlainText().strip()
+        if has_existing and current_content:
+            reply = QMessageBox.warning(
+                self.window() if self else None,
+                t("report.regenerate_confirm_title", "Overwrite Existing Report?"),
+                t(
+                    "report.regenerate_confirm_message",
+                    "Warning: Regenerating from scratch will completely overwrite the current report structure and all manual notes!\n\n"
+                    "A backup of the current state will be saved as report.md.bak, but manual edits in this report will be replaced.\n\n"
+                    "Tip: To keep your manual notes and only append new loot, use 'Add Missing Loot' instead.\n\n"
+                    "Do you really want to regenerate and overwrite?",
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
         dialog = ReportGenerationDialog(
             template_repo=self.template_repo,
             selected_template=self.active_template,

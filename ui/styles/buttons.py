@@ -362,6 +362,50 @@ QPushButton.SecondaryBtn:hover {
     color: {TEXT_PRIMARY};
 }
 
+QPushButton.AppendLootBtn {
+    background-color: {CONTROL_A80};
+    color: {CYBER_BLUE};
+    border: 1px solid {ACTIVE_BLUE_A40};
+    border-radius: 6px;
+    padding: 5px 12px;
+}
+
+QPushButton.AppendLootBtn:hover {
+    background-color: {ACTIVE_BLUE_A40};
+    color: {TEXT_PRIMARY};
+}
+
+QPushButton.RegenerateBtn {
+    background-color: {CONTROL_A80};
+    color: {TEXT_REC};
+    border: 1px solid {ERROR_A70};
+    border-radius: 6px;
+    padding: 5px 12px;
+}
+
+QPushButton.RegenerateBtn:hover {
+    background-color: {ERROR_A35};
+    border-color: {TEXT_REC};
+    color: {TEXT_PRIMARY};
+}
+
+QPushButton.HeadingDropdownBtn {
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+QPushButton.HeadingDropdownBtn::menu-indicator {
+    image: none;
+    width: 0px;
+}
+
+QFrame.ToolbarDivider {
+    background-color: {BORDER_A80};
+    max-width: 1px;
+    width: 1px;
+    margin: 4px 6px;
+}
+
 QPushButton.FormatToolBtn {
     background-color: {CONTROL_A80};
     color: {TEXT_SECONDARY};

@@ -125,8 +125,12 @@ class ReportGenerationDialog(QDialog):
         buttons.addStretch()
         cancel = QPushButton(t("dialog.cancel", "Cancel"))
         cancel.clicked.connect(self.reject)
-        buttons.addWidget(cancel)
-        generate = QPushButton(t("report.generate", "Generate Report"))
+        btn_label = (
+            t("report.regenerate_overwrite_button", "Regenerate & Overwrite")
+            if has_existing_report
+            else t("report.generate", "Generate Report")
+        )
+        generate = QPushButton(btn_label)
         generate.setProperty("class", "PrimaryBtn")
         generate.clicked.connect(self._accept_selection)
         buttons.addWidget(generate)
