@@ -159,6 +159,7 @@ class AppController(QObject):
             history_ctrl=self.history_ctrl,
             loot_ctrl=self.loot_ctrl,
             target_provider=self._target_provider,
+            quick_note_ctrl=self.quick_note_ctrl,
             parent=self,
         )
         self.export_coord = ExportCoordinator(
@@ -234,6 +235,7 @@ class AppController(QObject):
         self.quick_note_ctrl.notes_updated.connect(self._on_notes_updated)
         self.clipboard_coord.history_mutated.connect(self._on_history_data_updated)
         self.clipboard_coord.loot_mutated.connect(self._on_loot_data_updated)
+        self.clipboard_coord.notes_mutated.connect(self._on_notes_updated)
 
         self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
         # Clipboard callbacks may originate outside the GUI thread.  Always
@@ -396,6 +398,9 @@ class AppController(QObject):
                 self.window,
                 self.content.show_empty_state,
                 self._on_content_copied,
+                on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(
+                    self.window, item
+                ),
             )
             self.footer.set_count(_format_count(len(self.cards)))
         self.content.refresh_content_geometry()

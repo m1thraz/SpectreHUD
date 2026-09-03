@@ -21,6 +21,7 @@ class ClipboardCoordinator(QObject):
 
     history_mutated = pyqtSignal()
     loot_mutated = pyqtSignal()
+    notes_mutated = pyqtSignal()
 
     def __init__(
         self,
@@ -28,6 +29,7 @@ class ClipboardCoordinator(QObject):
         history_ctrl: HistoryController,
         loot_ctrl: LootController,
         target_provider: Callable[[], str],
+        quick_note_ctrl: Optional[Any] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
@@ -35,6 +37,7 @@ class ClipboardCoordinator(QObject):
         self.history_ctrl = history_ctrl
         self.loot_ctrl = loot_ctrl
         self.target_provider = target_provider
+        self.quick_note_ctrl = quick_note_ctrl
 
         self.clipboard_watcher.set_target_provider(self.target_provider)
 
@@ -64,6 +67,40 @@ class ClipboardCoordinator(QObject):
         )
         if success:
             self.loot_mutated.emit()
+        return success
+
+    def add_history_to_note(self, window: QWidget, history_item: Dict[str, Any]) -> bool:
+        """Captures a history item directly as a Quick Note without dialog."""
+        target_ip = history_item.get("target_ip") or self.target_provider()
+        text = history_item.get("text", "")
+        if not text.strip():
+            return False
+
+        category = "access" if history_item.get("is_command") else "recon"
+        if self.quick_note_ctrl:
+            chosen = getattr(self.quick_note_ctrl, "current_category", None) or getattr(
+                self.quick_note_ctrl, "last_category", None
+            )
+            if chosen and chosen != "misc":
+                category = chosen
+
+        success = False
+        if self.quick_note_ctrl and hasattr(self.quick_note_ctrl, "add_entry"):
+            entry = self.quick_note_ctrl.add_entry(
+                text=text, category=category, target_ip=target_ip
+            )
+            success = entry is not None
+        elif (
+            hasattr(self.history_ctrl, "quick_note_manager")
+            and self.history_ctrl.quick_note_manager
+        ):
+            entry = self.history_ctrl.quick_note_manager.add_entry(
+                text=text, category=category, target_ip=target_ip
+            )
+            success = entry is not None
+
+        if success:
+            self.notes_mutated.emit()
         return success
 
     def clear_history(self, window: QWidget) -> bool:

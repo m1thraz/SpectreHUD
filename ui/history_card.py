@@ -4,12 +4,13 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QMenu,
     QWidget,
     QApplication,
     QSizePolicy,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import pyperclip
 from core.logger import get_logger
 from core.i18n import t
@@ -17,17 +18,42 @@ from core.i18n import t
 logger = get_logger(__name__)
 
 
+class SplitCaptureButton(QPushButton):
+    """
+    Split button that triggers a default quick action on main body click
+    and opens a dropdown menu when clicking the indicator arrow.
+    """
+
+    def __init__(self, text: str = "", parent: Optional[QWidget] = None):
+        super().__init__(text, parent)
+        self._menu: Optional[QMenu] = None
+
+    def setMenu(self, menu: Optional[QMenu]) -> None:
+        self._menu = menu
+        super().setMenu(menu)
+
+    def mousePressEvent(self, event) -> None:
+        arrow_width = 24
+        if event.position().x() >= (self.width() - arrow_width):
+            if self._menu:
+                self.showMenu()
+        else:
+            self.clicked.emit()
+
+
 class HistoryCard(QFrame):
-    """Visual card displaying a single clipboard history item with natural word wrapping and Loot-transfer."""
+    """Visual card displaying a single clipboard history item with natural word wrapping and Loot/Note-capture."""
 
     copied = pyqtSignal(str)
     transfer_to_loot = pyqtSignal(dict)
+    transfer_to_note = pyqtSignal(dict)
     add_to_loot_requested = transfer_to_loot
     added_to_loot = transfer_to_loot
+    add_to_note_requested = transfer_to_note
     deleted = pyqtSignal(str)
     entry_deleted = deleted
 
-    def __init__(self, entry: Dict[str, Any], parent: QWidget = None):
+    def __init__(self, entry: Dict[str, Any], parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("SnippetCard")
         self.entry = entry
@@ -111,17 +137,53 @@ class HistoryCard(QFrame):
         self.btn_copy.clicked.connect(self._copy_content)
         action_col.addWidget(self.btn_copy)
 
-        self.btn_to_loot = QPushButton("+ Loot")
-        self.btn_to_loot.setProperty("class", "SecondaryBtn")
-        self.btn_to_loot.setToolTip(
-            t("history.add_to_loot_tip", "Add this text to session loot as a credential or note")
+        self.btn_capture = SplitCaptureButton(t("history.capture", "Erfassen ▾"), self)
+        self.btn_capture.setProperty("class", "SecondaryBtn")
+        self.btn_capture.setToolTip(
+            t("history.capture_tip", "Klick: Als Note erfassen | Pfeil: Optionen (Note / Loot)")
         )
-        self.btn_to_loot.setMinimumWidth(90)
-        self.btn_to_loot.clicked.connect(lambda: self.transfer_to_loot.emit(self.entry))
-        action_col.addWidget(self.btn_to_loot)
+        self.btn_capture.setMinimumWidth(95)
+
+        capture_menu = QMenu(self.btn_capture)
+        capture_menu.setProperty("class", "SecondaryMenu")
+
+        act_note = capture_menu.addAction(t("history.capture_as_note", "Als Note erfassen"))
+        act_note.triggered.connect(self._on_capture_note)
+
+        act_loot = capture_menu.addAction(t("history.capture_as_loot", "Als Loot erfassen..."))
+        act_loot.triggered.connect(self._on_capture_loot)
+
+        self.btn_capture.setMenu(capture_menu)
+        self.btn_capture.clicked.connect(self._on_capture_note)
+        self.btn_to_loot = self.btn_capture  # backwards-compatibility alias
+
+        action_col.addWidget(self.btn_capture)
 
         content_row.addLayout(action_col)
         layout.addLayout(content_row)
+
+    def _on_capture_note(self) -> None:
+        """Captures entry directly as a Quick Note and shows visual feedback."""
+        self.transfer_to_note.emit(self.entry)
+        self._show_capture_feedback("✓ Note!")
+
+    def _on_capture_loot(self) -> None:
+        """Transfers entry to Loot via dialog and shows visual feedback."""
+        self.transfer_to_loot.emit(self.entry)
+        self._show_capture_feedback("✓ Loot...")
+
+    def _show_capture_feedback(self, text: str) -> None:
+        self.btn_capture.setText(text)
+        self.btn_capture.setProperty("class", "CopyBtnSuccess")
+        self.btn_capture.style().unpolish(self.btn_capture)
+        self.btn_capture.style().polish(self.btn_capture)
+        QTimer.singleShot(1200, self._reset_capture_btn)
+
+    def _reset_capture_btn(self) -> None:
+        self.btn_capture.setText(t("history.capture", "Erfassen ▾"))
+        self.btn_capture.setProperty("class", "SecondaryBtn")
+        self.btn_capture.style().unpolish(self.btn_capture)
+        self.btn_capture.style().polish(self.btn_capture)
 
     def _copy_content(self) -> None:
         """Copies content back to system clipboard."""

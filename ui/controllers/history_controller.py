@@ -268,6 +268,7 @@ class HistoryController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None],
         on_copied: Optional[Callable[[str], None]] = None,
+        on_add_to_note: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> List[QWidget]:
         if self.current_history_filter == "notes":
             from ui.quick_note_card import QuickNoteCard
@@ -324,6 +325,8 @@ class HistoryController(QObject):
         for item in history_items:
             card = HistoryCard(item, parent=parent_widget)
             card.transfer_to_loot.connect(on_add_to_loot)
+            if on_add_to_note is not None:
+                card.transfer_to_note.connect(on_add_to_note)
             card.entry_deleted.connect(on_delete_entry)
             if on_copied is not None:
                 card.copied.connect(on_copied)

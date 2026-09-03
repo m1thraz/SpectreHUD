@@ -60,6 +60,36 @@ class QuickNoteController(QObject):
         popup = self.get_popup()
         popup.show_at_cursor(default_category=self.last_category)
 
+    @property
+    def current_category(self) -> str:
+        return self.last_category
+
+    @current_category.setter
+    def current_category(self, cat: str) -> None:
+        self.last_category = cat if cat in VALID_CATEGORY_IDS else "misc"
+
+    def add_entry(
+        self, text: str, category: str = "misc", target_ip: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Directly adds a quick note entry."""
+        clean_cat = category if category in VALID_CATEGORY_IDS else "misc"
+        self.last_category = clean_cat
+        resolved_target = (
+            target_ip
+            if target_ip is not None
+            else (self.target_provider() if self.target_provider else "")
+        )
+        try:
+            entry = self.quick_note_manager.add_entry(
+                text=text, category=clean_cat, target_ip=resolved_target or ""
+            )
+            if entry:
+                self.note_added.emit(entry)
+            return entry
+        except Exception as e:
+            logger.error(f"Failed to add quick note entry: {e}")
+            return None
+
     def submit_note(self, text: str, category: str) -> Optional[Dict[str, Any]]:
         """Saves a newly submitted note from popup or other inputs."""
         clean_cat = category if category in VALID_CATEGORY_IDS else "misc"
