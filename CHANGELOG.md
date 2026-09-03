@@ -21,17 +21,15 @@ semantic versioning.
 
 ### Changed
 
-- **Grouped Report Toolbar Architecture & Visual Hierarchy**: Rebuilt the report editor toolbar
-  from a single continuous button chain into four clearly separated functional zones with subtle
-  vertical dividers, matching the responsive design mockup:
-  - **Zone 1: Document Actions** (`View ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`).
-  - **Zone 2: Structure** (`H ▾` Dropdown for H1–H6 saving ~120px toolbar width, `❝` Quote, `•` Bullet List, `1.` Numbered List, `―` HR).
-  - **Zone 3: Inline Styles** (`B`, `I`, `S̶`, `</>`, `>_` Code Block).
-  - **Zone 4: Insert** (`🖼️` Image / Loot Screenshot, `🔗` Link, `▦` Table).
-  - **Isolated Save**: Right-aligned `PrimaryBtn` with `Save` action pinned to the right margin.
+- **Two-Tier Report Toolbar Layout**:
+  - **Tier 1 (Document Actions & Status)**: Houses document-level controls (`View ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`) on the left, and the localized project status indicator (`<project> — ✓ Saved · [Split]`) right-aligned on the same row.
+  - **Tier 2 (Formatting Tools)**: Cleanly dedicated row for structure (`H ▾` Dropdown, `❝`, `•`, `1.`, `―`), inline styling (`B`, `I`, `S̶`, `</>`, `>_`), and inserts (`🖼️`, `🔗`, `▦`) with visible vertical dividers and rounded hit-boxes.
+  - **Toolbar Minimize / Expand Toggle**: Added a compact `▲` / `▼` toggle button on the far right of Tier 2 (directly underneath the status label) allowing users to collapse the formatting tools for an unobstructed view of their notes.
+  - **Removed Redundant Save Button**: Removed the standalone Save button from the UI in favor of existing automatic saves, dirty safeguards, and `Ctrl+S` keyboard shortcut, maximizing vertical and horizontal editing space.
+- **Full Status Label Localization (i18n)**: Fully localized report save states (`✓ Saved` / `✓ Gespeichert`, `● Unsaved changes` / `● Ungespeicherte Änderungen`) and view mode badges across languages.
 - **Destructive Action Safety**:
   - Permanently styled `Regenerate` button with red danger accent (`color: {TEXT_REC}; border: 1px solid {ERROR_A70}`)
-    to clearly signal its destructive nature against the safe blue `Add Missing Loot` button.
+    to clearly signal its destructive nature against the neutral `Add Missing Loot` button.
   - Added an explicit overwrite confirmation dialog with "No" as default before regenerating existing reports.
   - Automatically saves pending editor edits before regeneration so that automatic backups (`report.md.bak`)
     reliably capture the user's latest manual work.

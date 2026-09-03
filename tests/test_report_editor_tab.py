@@ -121,7 +121,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(self.tab.editor.isVisible())
         self.assertTrue(self.tab.preview.isVisible())
         self.assertFalse(self.tab.preview.isReadOnly())
-        self.assertIn("Live-Ansicht", self.tab.lbl_status.text())
+        self.assertIn(t("report.view_preview_short", "Live Preview"), self.tab.lbl_status.text())
 
         # 3. Cycle view mode back to EDITOR
         self.tab._cycle_view_mode()

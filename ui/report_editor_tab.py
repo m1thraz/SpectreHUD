@@ -50,7 +50,7 @@ from ui.report.dialogs import (
 )
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
-from ui.report.toolbar import build_format_toolbar, create_toolbar_divider
+from ui.report.toolbar import build_format_toolbar
 
 logger = get_logger("report_editor")
 
@@ -114,22 +114,44 @@ class ReportEditorTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
+        # Ebene 1: Dokumentaktionen (links) und Projekt-Status (rechts)
         layout.addLayout(self._build_action_toolbar())
 
-        status_row = QHBoxLayout()
-        status_row.addWidget(self.lbl_status)
-        status_row.addStretch()
-        layout.addLayout(status_row)
+        # Ebene 2: Formatierungsleiste (Struktur, Inline-Stil, Einfügen)
+        self.format_toolbar_widget = build_format_toolbar(
+            self,
+            {
+                "heading_1": lambda: self._format_heading(1),
+                "heading_2": lambda: self._format_heading(2),
+                "heading_3": lambda: self._format_heading(3),
+                "heading_4": lambda: self._format_heading(4),
+                "heading_5": lambda: self._format_heading(5),
+                "heading_6": lambda: self._format_heading(6),
+                "bold": lambda: self._format_wrap("**", "**"),
+                "italic": lambda: self._format_wrap("*", "*"),
+                "strikethrough": lambda: self._format_wrap("~~", "~~"),
+                "code": lambda: self._format_wrap("`", "`"),
+                "code_block": self._format_code_block,
+                "list": lambda: self._format_list(False),
+                "numbered_list": lambda: self._format_list(True),
+                "quote": self._format_quote,
+                "horizontal_rule": self._format_horizontal_rule,
+                "image": self._format_image,
+                "link": self._format_link,
+                "table": self._format_table,
+            },
+        )
+        layout.addWidget(self.format_toolbar_widget)
 
         self._build_editor_splitter(layout)
         self._setup_shortcuts()
         self._apply_view_mode(self._view_mode)
 
     def _build_action_toolbar(self) -> QHBoxLayout:
-        """Build the report actions without introducing a widget factory."""
+        """Build Ebene 1: Document actions on the left, status text on the right."""
         toolbar = QHBoxLayout()
-        self.lbl_status = QLabel("")
-        self.lbl_status.setProperty("class", "ReportStatusLabel")
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        toolbar.setSpacing(6)
 
         # Compact view selector; shortcuts remain available for power users.
         self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
@@ -165,46 +187,14 @@ class ReportEditorTab(QWidget):
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
-        # Trenner zwischen Dokumentaktionen und Struktur/Formatierung
-        toolbar.addWidget(create_toolbar_divider(self))
-
-        # Formatting belongs with the primary editing/export actions. The
-        # source-only controls are hidden while the rich preview is active.
-        self.format_toolbar_widget = build_format_toolbar(
-            self,
-            {
-                "heading_1": lambda: self._format_heading(1),
-                "heading_2": lambda: self._format_heading(2),
-                "heading_3": lambda: self._format_heading(3),
-                "heading_4": lambda: self._format_heading(4),
-                "heading_5": lambda: self._format_heading(5),
-                "heading_6": lambda: self._format_heading(6),
-                "bold": lambda: self._format_wrap("**", "**"),
-                "italic": lambda: self._format_wrap("*", "*"),
-                "strikethrough": lambda: self._format_wrap("~~", "~~"),
-                "code": lambda: self._format_wrap("`", "`"),
-                "code_block": self._format_code_block,
-                "list": lambda: self._format_list(False),
-                "numbered_list": lambda: self._format_list(True),
-                "quote": self._format_quote,
-                "horizontal_rule": self._format_horizontal_rule,
-                "image": self._format_image,
-                "link": self._format_link,
-                "table": self._format_table,
-            },
-        )
-        toolbar.addWidget(self.format_toolbar_widget)
-
-        # Gruppe 5: Speichern (isoliert rechts)
+        # Verschiebe Status-Text nach rechts auf Ebene 1
         toolbar.addStretch()
 
-        self.btn_save = QPushButton(t("report.save", "Save"))
-        self.btn_save.setProperty("class", "PrimaryBtn")
-        self.btn_save.setToolTip(
-            t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
-        )
-        self.btn_save.clicked.connect(self.save)
-        toolbar.addWidget(self.btn_save)
+        self.lbl_status = QLabel("")
+        self.lbl_status.setProperty("class", "ReportStatusLabel")
+        self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        toolbar.addWidget(self.lbl_status)
+
         return toolbar
 
     def _build_view_menu(self) -> None:
@@ -1167,10 +1157,14 @@ class ReportEditorTab(QWidget):
         if not self.current_project:
             self.lbl_status.setText("")
             return
-        marker = "● Ungespeicherte Änderungen" if self._dirty else "✓ Gespeichert"
+        status_text = (
+            f"● {t('report.unsaved', 'Unsaved changes')}"
+            if self._dirty
+            else f"✓ {t('report.saved', 'Saved')}"
+        )
         mode_label = {
-            ViewMode.EDITOR: "Editor",
-            ViewMode.SPLIT: "Split",
-            ViewMode.PREVIEW: "Live-Ansicht",
+            ViewMode.EDITOR: t("report.view_editor_short", "Editor"),
+            ViewMode.SPLIT: t("report.view_split_short", "Split"),
+            ViewMode.PREVIEW: t("report.view_preview_short", "Live Preview"),
         }.get(self._view_mode, "Split")
-        self.lbl_status.setText(f"{self.current_project} — {marker} · [{mode_label}]")
+        self.lbl_status.setText(f"{self.current_project} — {status_text} · [{mode_label}]")

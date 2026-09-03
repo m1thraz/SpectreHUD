@@ -166,9 +166,10 @@ QLabel#PrivacyWarningText {
     font-weight: 500;
 }
 
-QLabel.ReportStatusLabel {
+QLabel.ReportStatusLabel,
+QLabel[class*="ReportStatusLabel"] {
     color: {TEXT_MUTED};
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
 }
 """

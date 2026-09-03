@@ -75,6 +75,21 @@ class TestReportToolbar(unittest.TestCase):
         buttons[">_"].click()
         self.callbacks["code_block"].assert_called_once()
 
+    def test_toggle_button_collapses_and_expands_tools(self):
+        """Verifies clicking the toggle button collapses and expands the formatting tools."""
+        self.assertFalse(self.toolbar.tools_container.isHidden())
+        self.assertEqual(self.toolbar.btn_toggle.text(), "▲")
+
+        # Click to collapse
+        self.toolbar.btn_toggle.click()
+        self.assertTrue(self.toolbar.tools_container.isHidden())
+        self.assertEqual(self.toolbar.btn_toggle.text(), "▼")
+
+        # Click to expand
+        self.toolbar.btn_toggle.click()
+        self.assertFalse(self.toolbar.tools_container.isHidden())
+        self.assertEqual(self.toolbar.btn_toggle.text(), "▲")
+
 
 if __name__ == "__main__":
     unittest.main()

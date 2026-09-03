@@ -22,20 +22,28 @@ def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
 
 def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None]]) -> QWidget:
     """
-    Build the formatting toolbar split into 3 clear functional zones:
+    Build the formatting toolbar split into 3 clear functional zones on the left,
+    plus a collapse/minimize toggle button on the far right (under the status label):
     1. Struktur (Headings dropdown H1-H6, Quote, Lists, Horizontal Rule)
     2. Inline-Stil (Bold, Italic, Strikethrough, Inline Code, Code Block)
     3. Einfügen (Image / Loot Screenshot, Link, Table)
+    4. Minimize/Expand Toggle Button (far right)
     """
     toolbar_widget = QWidget(parent)
-    layout = QHBoxLayout(toolbar_widget)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(3)
+    main_layout = QHBoxLayout(toolbar_widget)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setSpacing(3)
 
     # -------------------------------------------------------------
-    # Zone 1: Struktur (Headings Dropdown, Quote, Lists, HR)
+    # Tools Container: Holds all formatting buttons and dividers
     # -------------------------------------------------------------
-    btn_heading = QPushButton("H ▾", toolbar_widget)
+    tools_container = QWidget(toolbar_widget)
+    tools_layout = QHBoxLayout(tools_container)
+    tools_layout.setContentsMargins(0, 0, 0, 0)
+    tools_layout.setSpacing(3)
+
+    # Zone 1: Struktur (Headings Dropdown, Quote, Lists, HR)
+    btn_heading = QPushButton("H ▾", tools_container)
     btn_heading.setProperty("class", "SecondaryBtn FormatToolBtn HeadingDropdownBtn")
     btn_heading.setToolTip(t("report.format_headings", "Headings (H1–H6)"))
 
@@ -45,7 +53,7 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
         act = heading_menu.addAction(f"H{lvl} — " + t(f"report.format_h{lvl}", f"Heading {lvl}"))
         act.triggered.connect(lambda _=False, level=lvl: callbacks[f"heading_{level}"]())
     btn_heading.setMenu(heading_menu)
-    layout.addWidget(btn_heading)
+    tools_layout.addWidget(btn_heading)
 
     structure_buttons = (
         ("❝", "report.format_quote", "Blockquote", "quote"),
@@ -54,18 +62,16 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
         ("―", "report.format_horizontal_rule", "Horizontal Rule", "horizontal_rule"),
     )
     for label, key, fallback, callback_key in structure_buttons:
-        btn = QPushButton(label, toolbar_widget)
+        btn = QPushButton(label, tools_container)
         btn.setProperty("class", "SecondaryBtn FormatToolBtn")
         btn.setToolTip(t(key, fallback))
         btn.clicked.connect(callbacks[callback_key])
-        layout.addWidget(btn)
+        tools_layout.addWidget(btn)
 
     # Visual Divider between Struktur and Inline-Stil
-    layout.addWidget(create_toolbar_divider(toolbar_widget))
+    tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # -------------------------------------------------------------
     # Zone 2: Inline-Stil (Bold, Italic, Strikethrough, Code, Code Block)
-    # -------------------------------------------------------------
     inline_buttons = (
         ("B", "report.format_bold", "Bold", "bold"),
         ("I", "report.format_italic", "Italic", "italic"),
@@ -74,28 +80,56 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
         (">_", "report.format_code_block", "Code Block", "code_block"),
     )
     for label, key, fallback, callback_key in inline_buttons:
-        btn = QPushButton(label, toolbar_widget)
+        btn = QPushButton(label, tools_container)
         btn.setProperty("class", "SecondaryBtn FormatToolBtn")
         btn.setToolTip(t(key, fallback))
         btn.clicked.connect(callbacks[callback_key])
-        layout.addWidget(btn)
+        tools_layout.addWidget(btn)
 
     # Visual Divider between Inline-Stil and Einfügen
-    layout.addWidget(create_toolbar_divider(toolbar_widget))
+    tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # -------------------------------------------------------------
     # Zone 3: Einfügen (Image, Link, Table)
-    # -------------------------------------------------------------
     insert_buttons = (
         ("🖼️", "report.format_image", "Insert Image", "image"),
         ("🔗", "report.format_link", "Link", "link"),
         ("▦", "report.format_table", "Table", "table"),
     )
     for label, key, fallback, callback_key in insert_buttons:
-        btn = QPushButton(label, toolbar_widget)
+        btn = QPushButton(label, tools_container)
         btn.setProperty("class", "SecondaryBtn FormatToolBtn")
         btn.setToolTip(t(key, fallback))
         btn.clicked.connect(callbacks[callback_key])
-        layout.addWidget(btn)
+        tools_layout.addWidget(btn)
+
+    main_layout.addWidget(tools_container)
+    main_layout.addStretch()
+
+    # -------------------------------------------------------------
+    # Minimize / Expand Toggle Button (far right, under status label)
+    # -------------------------------------------------------------
+    btn_toggle = QPushButton("▲", toolbar_widget)
+    btn_toggle.setProperty("class", "SecondaryBtn FormatToolBtn ToolbarToggleBtn")
+    btn_toggle.setToolTip(t("report.toggle_toolbar_collapse", "Collapse formatting toolbar"))
+
+    _collapsed = False
+
+    def _on_toggle_clicked() -> None:
+        nonlocal _collapsed
+        _collapsed = not _collapsed
+        tools_container.setVisible(not _collapsed)
+        btn_toggle.setText("▼" if _collapsed else "▲")
+        btn_toggle.setToolTip(
+            t("report.toggle_toolbar_expand", "Expand formatting toolbar")
+            if _collapsed
+            else t("report.toggle_toolbar_collapse", "Collapse formatting toolbar")
+        )
+
+    btn_toggle.clicked.connect(_on_toggle_clicked)
+    main_layout.addWidget(btn_toggle)
+
+    # Expose elements for programmatic access / testing
+    toolbar_widget.tools_container = tools_container
+    toolbar_widget.btn_toggle = btn_toggle
 
     return toolbar_widget

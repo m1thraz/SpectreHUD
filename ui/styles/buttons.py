@@ -461,6 +461,28 @@ QPushButton[class*="FormatToolBtn"]:hover {
     color: {TEXT_WHITE};
 }
 
+QPushButton.ToolbarToggleBtn,
+QPushButton[class~="ToolbarToggleBtn"],
+QPushButton[class*="ToolbarToggleBtn"] {
+    background-color: {SURFACE_A85};
+    color: {TEXT_MUTED};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 22px;
+    min-height: 20px;
+}
+
+QPushButton.ToolbarToggleBtn:hover,
+QPushButton[class~="ToolbarToggleBtn"]:hover,
+QPushButton[class*="ToolbarToggleBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_BLUE};
+    color: {CYBER_CYAN};
+}
+
 QPushButton.BrowseBtn {
     background-color: {CONTROL_A85};
     color: {CYBER_BLUE};
