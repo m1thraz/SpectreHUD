@@ -167,6 +167,29 @@ def format_inline(text: str) -> str:
 
     res = re.sub(r"\[(.*?)\]\((.*?)\)", _link_sub, res)
 
+    badge_tokens: List[str] = []
+
+    def _badge_sub(m: re.Match) -> str:
+        classes = m.group(1).strip()
+        inner = m.group(2)
+        class_list = classes.split()
+        if "severity-pill" in class_list and all(
+            re.match(r"^[a-zA-Z0-9_-]+$", c) for c in class_list
+        ):
+            safe_classes = " ".join(class_list)
+            safe_inner = html.escape(html.unescape(inner))
+            token = f"@@SPECTRE_BADGETOKEN{len(badge_tokens)}@@"
+            badge_tokens.append(f'<span class="{safe_classes}">{safe_inner}</span>')
+            return token
+        return m.group(0)
+
+    res = re.sub(
+        r'<span\s+class=["\']([^"\']+)["\']>([\s\S]*?)</span>',
+        _badge_sub,
+        res,
+        flags=re.IGNORECASE,
+    )
+
     res = html.escape(res)
     res = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", res)
     res = re.sub(r"__(.*?)__", r"<strong>\1</strong>", res)
@@ -181,6 +204,9 @@ def format_inline(text: str) -> str:
 
     for i, token_html in enumerate(code_tokens):
         res = res.replace(f"@@SPECTRE_CODETOKEN{i}@@", token_html)
+
+    for i, token_html in enumerate(badge_tokens):
+        res = res.replace(f"@@SPECTRE_BADGETOKEN{i}@@", token_html)
 
     return res
 

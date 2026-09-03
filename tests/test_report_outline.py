@@ -58,6 +58,15 @@ class TestReportOutline(unittest.TestCase):
         self.assertEqual(items[0].title, "Section with closing hashes")
         self.assertEqual(items[1].title, "Level 3")
 
+    def test_extract_headings_strips_html_badges(self):
+        doc = (
+            "### <span class=\"severity-pill severity-high\">🟠 HIGH</span> SQL Injection\n"
+            "#### <span class=\"severity-pill severity-critical\">🔴 CRITICAL</span> RCE Exploit\n"
+        )
+        items = extract_headings(doc)
+        self.assertEqual(items[0].title, "🟠 HIGH SQL Injection")
+        self.assertEqual(items[1].title, "🔴 CRITICAL RCE Exploit")
+
 
 if __name__ == "__main__":
     unittest.main()

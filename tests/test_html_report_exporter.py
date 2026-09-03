@@ -220,6 +220,31 @@ curl -i http://10.10.10.10/admin
         self.assertIn("Finding Title", html_out)
         self.assertIn("Finding description text.", html_out)
 
+    def test_severity_pill_spans_are_rendered_as_elements_not_escaped(self):
+        """Severity pill spans in markdown must be preserved as real HTML elements, not escaped as &lt;span..."""
+        md = (
+            "### <span class=\"severity-pill severity-high\">🟠 HIGH</span> SQL Injection in Login\n"
+            "Paragraph with <span class=\"severity-pill severity-critical\">🔴 CRITICAL</span> finding."
+        )
+        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        self.assertNotIn("&lt;span", html_out)
+        self.assertNotIn("&gt;", html_out.split("</h3>")[0])  # ensure tag is not escaped
+        self.assertIn('<span class="severity-pill severity-high">', html_out)
+        self.assertIn('<span class="severity-pill severity-critical">', html_out)
+        self.assertIn("🟠 HIGH</span> SQL Injection in Login", html_out)
+
+    def test_malicious_spans_are_safely_escaped(self):
+        """Spans with event handlers or non-severity classes are escaped to prevent XSS."""
+        md_onclick = '<span class="severity-pill severity-high" onclick="alert(1)">Exploit</span>'
+        html_out = HtmlReportExporter.markdown_to_html(md_onclick, project_dir=self.proj_dir)
+        self.assertNotIn('onclick="alert(1)"', html_out)
+        self.assertIn("&lt;span", html_out)
+
+        md_script = '<span class="severity-pill severity-high"><script>alert(1)</script></span>'
+        html_out_script = HtmlReportExporter.markdown_to_html(md_script, project_dir=self.proj_dir)
+        self.assertNotIn("<script>", html_out_script)
+        self.assertIn("&lt;script&gt;", html_out_script)
+
 
 if __name__ == "__main__":
     unittest.main()

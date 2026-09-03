@@ -40,6 +40,8 @@ def extract_headings(markdown_text: str) -> list[HeadingItem]:
             title = match.group(2).strip()
             # Remove trailing closing hashes if present, e.g. "## Title ##"
             title = re.sub(r"\s+#+$", "", title).strip()
+            # Strip inline HTML tags (e.g. <span class="severity-pill...">...</span>) for clean navigation labels
+            title = re.sub(r"<[^>]+>", "", title).strip()
             if title:
                 headings.append(HeadingItem(level=level, title=title, line_number=line_idx))
 
