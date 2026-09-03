@@ -169,12 +169,18 @@ class ReportEditorTab(QWidget):
                 "heading_1": lambda: self._format_heading(1),
                 "heading_2": lambda: self._format_heading(2),
                 "heading_3": lambda: self._format_heading(3),
+                "heading_4": lambda: self._format_heading(4),
+                "heading_5": lambda: self._format_heading(5),
+                "heading_6": lambda: self._format_heading(6),
                 "bold": lambda: self._format_wrap("**", "**"),
                 "italic": lambda: self._format_wrap("*", "*"),
+                "strikethrough": lambda: self._format_wrap("~~", "~~"),
                 "code": lambda: self._format_wrap("`", "`"),
                 "code_block": self._format_code_block,
                 "list": lambda: self._format_list(False),
                 "numbered_list": lambda: self._format_list(True),
+                "quote": self._format_quote,
+                "horizontal_rule": self._format_horizontal_rule,
                 "link": self._format_link,
                 "table": self._format_table,
             },
@@ -280,6 +286,8 @@ class ReportEditorTab(QWidget):
             ("Ctrl+B", lambda: self._format_wrap("**", "**")),
             ("Ctrl+I", lambda: self._format_wrap("*", "*")),
             ("Ctrl+K", lambda: self._format_wrap("`", "`")),
+            ("Ctrl+Shift+X", lambda: self._format_wrap("~~", "~~")),
+            ("Ctrl+Shift+Q", self._format_quote),
         ):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -293,6 +301,16 @@ class ReportEditorTab(QWidget):
         from ui.markdown_toolbar_actions import wrap_selection
 
         wrap_selection(self.editor, prefix, suffix)
+
+    def _format_quote(self) -> None:
+        from ui.markdown_toolbar_actions import insert_blockquote
+
+        insert_blockquote(self.editor)
+
+    def _format_horizontal_rule(self) -> None:
+        from ui.markdown_toolbar_actions import insert_horizontal_rule
+
+        insert_horizontal_rule(self.editor)
 
     def _format_code_block(self) -> None:
         from ui.markdown_toolbar_actions import insert_fenced_code

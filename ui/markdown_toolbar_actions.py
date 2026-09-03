@@ -31,7 +31,7 @@ def wrap_selection(
 
 
 def set_heading(editor: QPlainTextEdit, level: int) -> None:
-    level = max(1, min(3, level))
+    level = max(1, min(6, level))
     cursor = editor.textCursor()
     cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
     cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
@@ -49,7 +49,9 @@ def insert_fenced_code(editor: QPlainTextEdit) -> None:
     editor.setFocus()
 
 
-def prefix_lines(editor: QPlainTextEdit, numbered: bool = False) -> None:
+def prefix_lines(
+    editor: QPlainTextEdit, numbered: bool = False, prefix_str: str | None = None
+) -> None:
     cursor = editor.textCursor()
     start, end = cursor.selectionStart(), cursor.selectionEnd()
     document = editor.document()
@@ -59,7 +61,13 @@ def prefix_lines(editor: QPlainTextEdit, numbered: bool = False) -> None:
     block = first
     number = 1
     while block.isValid():
-        positions.append((block.position(), f"{number}. " if numbered else "- "))
+        if prefix_str is not None:
+            p = prefix_str
+        elif numbered:
+            p = f"{number}. "
+        else:
+            p = "- "
+        positions.append((block.position(), p))
         if block == last:
             break
         block = block.next()
@@ -68,6 +76,59 @@ def prefix_lines(editor: QPlainTextEdit, numbered: bool = False) -> None:
         insert = editor.textCursor()
         insert.setPosition(position)
         insert.insertText(prefix)
+    editor.setFocus()
+
+
+def insert_blockquote(editor: QPlainTextEdit) -> None:
+    """Toggles or inserts blockquote (> ) prefixes on selected lines."""
+    cursor = editor.textCursor()
+    start, end = cursor.selectionStart(), cursor.selectionEnd()
+    document = editor.document()
+    first = document.findBlock(start)
+    last = document.findBlock(max(start, end - 1))
+
+    all_quoted = True
+    block = first
+    while block.isValid():
+        if not block.text().startswith("> "):
+            all_quoted = False
+            break
+        if block == last:
+            break
+        block = block.next()
+
+    positions_and_ops = []
+    block = first
+    while block.isValid():
+        if all_quoted:
+            positions_and_ops.append((block.position(), "remove"))
+        else:
+            if not block.text().startswith("> "):
+                positions_and_ops.append((block.position(), "add"))
+        if block == last:
+            break
+        block = block.next()
+
+    for pos, op in reversed(positions_and_ops):
+        c = editor.textCursor()
+        c.setPosition(pos)
+        if op == "add":
+            c.insertText("> ")
+        elif op == "remove":
+            c.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor, 2)
+            c.removeSelectedText()
+    editor.setFocus()
+
+
+def insert_horizontal_rule(editor: QPlainTextEdit) -> None:
+    """Inserts a markdown horizontal rule (---) cleanly."""
+    cursor = editor.textCursor()
+    block_text = cursor.block().text().strip()
+    if not block_text:
+        cursor.insertText("---\n")
+    else:
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+        cursor.insertText("\n\n---\n\n")
     editor.setFocus()
 
 

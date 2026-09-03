@@ -38,3 +38,60 @@ def test_heading_lists_link_and_table(qapp):
     insert_link(edit)
     assert edit.toPlainText() == "[Linktext](url)"
     assert build_table(2, 3).count("\n") == 3
+
+
+def test_extended_headings_h4_h6(qapp):
+    edit = QPlainTextEdit("Title")
+    set_heading(edit, 4)
+    assert edit.toPlainText() == "#### Title"
+    set_heading(edit, 6)
+    assert edit.toPlainText() == "###### Title"
+    set_heading(edit, 10)
+    assert edit.toPlainText() == "###### Title"
+
+
+def test_strikethrough_wrap_and_toggle(qapp):
+    edit = QPlainTextEdit("deprecated")
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+    edit.setTextCursor(cursor)
+    wrap_selection(edit, "~~", "~~")
+    assert edit.toPlainText() == "~~deprecated~~"
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    wrap_selection(edit, "~~", "~~")
+    assert edit.toPlainText() == "deprecated"
+
+
+def test_insert_blockquote_and_toggle(qapp):
+    from ui.markdown_toolbar_actions import insert_blockquote
+
+    edit = QPlainTextEdit("line1\nline2")
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+
+    # First click: adds "> "
+    insert_blockquote(edit)
+    assert edit.toPlainText() == "> line1\n> line2"
+
+    # Second click: removes "> "
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    insert_blockquote(edit)
+    assert edit.toPlainText() == "line1\nline2"
+
+
+def test_insert_horizontal_rule(qapp):
+    from ui.markdown_toolbar_actions import insert_horizontal_rule
+
+    edit = QPlainTextEdit("")
+    insert_horizontal_rule(edit)
+    assert "---\n" in edit.toPlainText()
+
+    edit = QPlainTextEdit("Some text")
+    insert_horizontal_rule(edit)
+    assert "Some text\n\n---\n\n" == edit.toPlainText()
+

@@ -6,6 +6,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Enhanced Report Markdown Toolbar**: Added formatting buttons and keyboard shortcuts
+  for Blockquotes (`> ` / `Ctrl+Shift+Q`), Strikethrough (`~~Text~~` / `Ctrl+Shift+X`),
+  Horizontal Rules (`---`), and Headings `H4`-`H6`, with compact toolbar styling
+  and bilingual tooltips (EN/DE).
+
 ## [2.0.6] - 2026-09-03
 
 ### Added

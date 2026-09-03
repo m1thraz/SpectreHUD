@@ -362,6 +362,21 @@ QPushButton.SecondaryBtn:hover {
     color: {TEXT_PRIMARY};
 }
 
+QPushButton.FormatToolBtn {
+    background-color: {CONTROL_A80};
+    color: {TEXT_SECONDARY};
+    border: 1px solid {BORDER_A80};
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 11px;
+    min-width: 18px;
+}
+
+QPushButton.FormatToolBtn:hover {
+    background-color: {BORDER_A90};
+    color: {TEXT_PRIMARY};
+}
+
 QPushButton.BrowseBtn {
     background-color: {CONTROL_A85};
     color: {CYBER_BLUE};
