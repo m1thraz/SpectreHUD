@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spectrehud"
-version = "2.0.6"
+version = "2.0.7"
 description = "Fast, transparent desktop cheatsheet HUD and pentest companion for CTFs and assessments"
 readme = "README.md"
 requires-python = ">=3.10"
