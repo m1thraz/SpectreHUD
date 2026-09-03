@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.html_report_exporter import HtmlReportExporter
+from core.reporting import HtmlReportExporter
 from core.reporting.assets import ImageEmbeddingBudget
 
 

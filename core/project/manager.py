@@ -202,24 +202,6 @@ class ProjectManager:
             self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": clean_name})
         return clean_name
 
-    def set_active_project(self, name: str) -> str:
-        """
-        Deprecated compatibility wrapper for strict project activation.
-
-        .. deprecated::
-            Use :meth:`activate_project` instead, which raises ``ProjectNotFoundError`` on
-            unknown project names rather than silently creating a new project.
-        """
-        import warnings
-
-        warnings.warn(
-            "set_active_project() is deprecated and will be removed in a future release. "
-            "Use activate_project() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.activate_project(name)
-
     def open_project_folder(self, name: Optional[str] = None) -> bool:
         """Opens the project folder in OS file manager."""
         pname = name or self.active_project

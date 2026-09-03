@@ -105,7 +105,6 @@ graph TD
 - **Factory Methods**:
   - `ServiceContainer.create_production(...)`: Instantiates filesystem-backed storage, default config directories, and locale settings.
   - `ServiceContainer.create_isolated_test_container(...)`: Uses in-memory storage for configuration and session data, plus isolated temporary filesystem directories for filesystem-dependent services such as `ProjectManager` and `ReportFileManager`. It is designed for test isolation and does not guarantee zero disk I/O.
-  - `ServiceContainer.create_in_memory(...)`: Compatibility alias for `create_isolated_test_container(...)`. It shares the same isolated temporary-directory behaviour.
 
 ### 2.5 Storage Abstraction Layer (`core/storage.py`)
 - **`StorageBackend` Interface**:
@@ -183,7 +182,7 @@ graph TD
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
 - **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives while retaining their project-relative layout.
-- **`HtmlReportExporter` (`core/html_report_exporter.py`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts and selectable Dark or Light client/print styling. Generated HTML permits in-browser body editing and image resizing, and can save a cleaned edited copy without its editing controls.
+- **`HtmlReportExporter` (`core/reporting/`)**: Converts Markdown reports into self-contained HTML documents with embedded base64 screenshots, responsive layouts and selectable Dark or Light client/print styling. Generated HTML permits in-browser body editing and image resizing, and can save a cleaned edited copy without its editing controls.
 
 ### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
 - **`I18nManager`**: Thread-safe internationalization runtime supporting live locale switching (`de` / `en`) without application restart.
@@ -273,7 +272,7 @@ for the two trust boundaries and their test rationale.
 - The product is designed for normal workstation inputs selected by its user. It does not claim to defend against malware running as that user, intentionally hostile local files, or a compromised operating system.
 - Screenshot behaviour on Linux depends on the display server and compositor; Wayland can restrict direct capture.
 - Pentest Mode encrypts `project_state.json` only. Screenshots, reports, notes, and user-selected exports remain deliberately plaintext so they can be used in the surrounding workflow.
-- `core.html_report_exporter`, `get_event_bus()` and the remaining legacy method aliases are retained only as public compatibility surfaces. Internal project-management imports use the canonical `core.project` package; the unused `core.project_manager` facade has been removed.
+- Internal project-management imports use the canonical `core.project` package. Obsolete compatibility facades (`core.html_report_exporter`, `get_event_bus()`, and legacy mutating shims) have been removed from the codebase.
 
 ---
 

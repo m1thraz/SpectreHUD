@@ -71,9 +71,6 @@ def build_app_theme(
 
 APP_THEME = build_app_theme(CYBER_DARK_PALETTE)
 
-# Backward-compatibility alias
-CYBER_DARK_QSS = APP_THEME
-
 
 def get_app_icon_path() -> Optional[Path]:
     """Resolves data/icon.ico or data/icon.svg across standard source tree, PyInstaller bundles, and package layouts."""

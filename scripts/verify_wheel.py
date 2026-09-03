@@ -40,7 +40,6 @@ REQUIRED_FILES = [
     "core/report_builder.py",
     "core/report_file_manager.py",
     "core/box_archiver.py",
-    "core/html_report_exporter.py",
     "core/i18n.py",
     "core/display_geometry.py",
     "core/theme_loader.py",

@@ -213,16 +213,6 @@ class LootManager:
         self.entries = validated_entries
         self._publish_updated("replace")
 
-    def set_entries(self, entries: List[Dict[str, Any]]) -> None:
-        """Deprecated compatibility alias for :meth:`replace_entries_and_persist`."""
-        warnings.warn(
-            "set_entries() is deprecated; use replace_entries() for in-memory replacement "
-            "or replace_entries_and_persist() to write immediately.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.replace_entries_and_persist(entries)
-
     def get_all_entries(self) -> List[Dict[str, Any]]:
         """Returns defensive copies of all entries."""
         return [dict(e) for e in self.entries]

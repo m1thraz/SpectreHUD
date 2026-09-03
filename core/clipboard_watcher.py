@@ -204,16 +204,6 @@ class ClipboardWatcher(QObject):
         self._last_copied_text = self.history[0]["text"] if self.history else None
         self._publish_updated("replace")
 
-    def set_history(self, history: List[Dict[str, Any]]) -> None:
-        """Deprecated compatibility alias for :meth:`replace_history_and_persist`."""
-        warnings.warn(
-            "set_history() is deprecated; use replace_history() for in-memory replacement "
-            "or replace_history_and_persist() to write immediately.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.replace_history_and_persist(history)
-
     def get_all_history(self) -> List[Dict[str, Any]]:
         """Returns defensive copies of all history items."""
         return [dict(e) for e in self.history]

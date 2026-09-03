@@ -8,7 +8,6 @@ domain controllers, and UI panels without direct object dependencies.
 from typing import Dict, List, Callable, Any, Optional
 from enum import Enum
 import threading
-import warnings
 from core.logger import get_logger
 
 logger = get_logger("event_bus")
@@ -113,23 +112,3 @@ class EventBus:
             if event_type is not None:
                 return len(self._subscribers.get(str(event_type), []))
             return sum(len(cbs) for cbs in self._subscribers.values())
-
-
-# Global Singleton EventBus Instance
-_GLOBAL_EVENT_BUS: Optional[EventBus] = None
-_GLOBAL_LOCK = threading.Lock()
-
-
-def get_event_bus() -> EventBus:
-    """Deprecated compatibility access to the process-wide EventBus instance."""
-    warnings.warn(
-        "get_event_bus() is deprecated; inject an EventBus from ServiceContainer instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    global _GLOBAL_EVENT_BUS
-    if _GLOBAL_EVENT_BUS is None:
-        with _GLOBAL_LOCK:
-            if _GLOBAL_EVENT_BUS is None:
-                _GLOBAL_EVENT_BUS = EventBus()
-    return _GLOBAL_EVENT_BUS

@@ -156,6 +156,3 @@ class ServiceContainer:
             storage=actual_storage,
             event_bus=actual_event_bus,
         )
-
-    # Backward-compatible alias
-    create_in_memory = create_isolated_test_container
