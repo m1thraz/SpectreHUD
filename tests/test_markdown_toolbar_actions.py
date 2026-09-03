@@ -95,3 +95,20 @@ def test_insert_horizontal_rule(qapp):
     insert_horizontal_rule(edit)
     assert "Some text\n\n---\n\n" == edit.toPlainText()
 
+
+def test_insert_image(qapp):
+    from ui.markdown_toolbar_actions import insert_image
+
+    edit = QPlainTextEdit("")
+    insert_image(edit, "screenshots/nmap.png", alt_text="nmap")
+    assert edit.toPlainText() == "![nmap](screenshots/nmap.png)"
+    assert edit.textCursor().selectedText() == "nmap"
+
+    edit = QPlainTextEdit("Web Login Form")
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    insert_image(edit, "screenshots/login.png")
+    assert edit.toPlainText() == "![Web Login Form](screenshots/login.png)"
+
+

@@ -152,3 +152,17 @@ def build_table(rows: int, columns: int) -> str:
 def insert_table(editor: QPlainTextEdit, rows: int, columns: int) -> None:
     editor.textCursor().insertText(build_table(rows, columns))
     editor.setFocus()
+
+
+def insert_image(editor: QPlainTextEdit, image_path: str, alt_text: str = "Image") -> None:
+    """Inserts a markdown image link ![alt](path) at cursor position."""
+    cursor = editor.textCursor()
+    if cursor.hasSelection():
+        caption = cursor.selectedText().replace("\u2029", "\n")
+        cursor.insertText(f"![{caption}]({image_path})")
+    else:
+        start = cursor.position() + 2
+        cursor.insertText(f"![{alt_text}]({image_path})")
+        _select_placeholder(editor, start, len(alt_text))
+    editor.setFocus()
+

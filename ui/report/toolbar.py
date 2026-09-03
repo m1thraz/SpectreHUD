@@ -30,6 +30,7 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
         ("1.", "report.format_numbered_list", "Numbered List", "numbered_list"),
         (">", "report.format_quote", "Blockquote", "quote"),
         ("―", "report.format_horizontal_rule", "Horizontal Rule", "horizontal_rule"),
+        ("🖼️", "report.format_image", "Insert Image", "image"),
         ("🔗", "report.format_link", "Link", "link"),
         ("▦", "report.format_table", "Table", "table"),
     )

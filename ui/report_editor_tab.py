@@ -181,6 +181,7 @@ class ReportEditorTab(QWidget):
                 "numbered_list": lambda: self._format_list(True),
                 "quote": self._format_quote,
                 "horizontal_rule": self._format_horizontal_rule,
+                "image": self._format_image,
                 "link": self._format_link,
                 "table": self._format_table,
             },
@@ -288,6 +289,7 @@ class ReportEditorTab(QWidget):
             ("Ctrl+K", lambda: self._format_wrap("`", "`")),
             ("Ctrl+Shift+X", lambda: self._format_wrap("~~", "~~")),
             ("Ctrl+Shift+Q", self._format_quote),
+            ("Ctrl+Shift+I", self._format_image),
         ):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -333,6 +335,55 @@ class ReportEditorTab(QWidget):
             from ui.markdown_toolbar_actions import insert_table
 
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
+
+    def _format_image(self) -> None:
+        """Prompts the user for an image file and inserts its relative markdown link."""
+        start_dir = ""
+        project_dir = None
+        if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
+            try:
+                pname = self.report_file_manager._resolve_project_name(self.current_project)
+                project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
+                screenshots_dir = project_dir / "screenshots"
+                if screenshots_dir.is_dir():
+                    start_dir = str(screenshots_dir)
+                elif project_dir.is_dir():
+                    start_dir = str(project_dir)
+            except Exception as e:
+                logger.debug(f"Failed to resolve project dir for image dialog: {e}")
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            t("report.select_image_title", "Select Image"),
+            start_dir,
+            t(
+                "report.select_image_filter",
+                "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;All Files (*.*)",
+            ),
+        )
+        if not file_path:
+            return
+
+        rel_path = file_path
+        if self.report_file_manager:
+            try:
+                rel_path = self.report_file_manager.import_image(file_path, self.current_project)
+            except Exception as e:
+                logger.warning(f"Could not copy image to project directory: {e}")
+                if project_dir:
+                    try:
+                        rel_path = (
+                            Path(file_path).resolve().relative_to(project_dir.resolve()).as_posix()
+                        )
+                    except ValueError:
+                        rel_path = file_path.replace("\\", "/")
+                else:
+                    rel_path = file_path.replace("\\", "/")
+
+        alt_text = Path(file_path).stem
+        from ui.markdown_toolbar_actions import insert_image
+
+        insert_image(self.editor, rel_path, alt_text=alt_text)
 
     def _report_font_key(self) -> str:
         return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"

@@ -321,6 +321,7 @@
     "report.format_bold": "Bold (Ctrl+B)", "report.format_italic": "Italic (Ctrl+I)", "report.format_strikethrough": "Strikethrough (Ctrl+Shift+X)", "report.format_code": "Inline Code (Ctrl+K)",
     "report.format_code_block": "Code Block", "report.format_list": "Bullet List", "report.format_numbered_list": "Numbered List",
     "report.format_quote": "Blockquote (Ctrl+Shift+Q)", "report.format_horizontal_rule": "Horizontal Rule",
+    "report.format_image": "Insert Image (Ctrl+Shift+I)", "report.select_image_title": "Select Image", "report.select_image_filter": "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;All Files (*.*)",
     "report.format_link": "Insert Link", "report.format_table": "Insert Table", "report.table_title": "Insert Table",
     "report.table_rows": "Rows:", "report.table_columns": "Columns:", "report.table_insert": "Insert Table",
     "settings.lbl_obsidian_vault": "Obsidian Vault (optional):",

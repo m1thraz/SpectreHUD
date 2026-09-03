@@ -12,6 +12,10 @@ semantic versioning.
   for Blockquotes (`> ` / `Ctrl+Shift+Q`), Strikethrough (`~~Text~~` / `Ctrl+Shift+X`),
   Horizontal Rules (`---`), and Headings `H4`-`H6`, with compact toolbar styling
   and bilingual tooltips (EN/DE).
+- **Direct Image Insert in Report Editor**: Added `🖼️` button and `Ctrl+Shift+I` shortcut
+  to insert images directly into report Markdown (`![caption](path)`). External images
+  are automatically imported into the active project's `screenshots/` directory to preserve
+  portable relative paths across exports, HTML rendering, and archives.
 
 ## [2.0.6] - 2026-09-03
 

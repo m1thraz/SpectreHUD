@@ -308,6 +308,31 @@ class TestReportFileManager(unittest.TestCase):
 
         tab.deleteLater()
 
+    def test_import_image_inside_and_outside_project(self):
+        self.project_mgr.create_project("ImgTest")
+        proj_dir = self.project_mgr.get_project_dir("ImgTest")
+
+        # 1. Image already inside project directory
+        screenshots_dir = proj_dir / "screenshots"
+        screenshots_dir.mkdir(parents=True, exist_ok=True)
+        local_img = screenshots_dir / "local.png"
+        local_img.write_bytes(b"dummy")
+
+        rel_path = self.report_mgr.import_image(local_img, "ImgTest")
+        self.assertEqual(rel_path, "screenshots/local.png")
+
+        # 2. Image outside project directory
+        outside_dir = self.temp_path / "downloads"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        external_img = outside_dir / "external.png"
+        external_img.write_bytes(b"payload")
+
+        rel_path_imported = self.report_mgr.import_image(external_img, "ImgTest")
+        self.assertEqual(rel_path_imported, "screenshots/external.png")
+        self.assertTrue((screenshots_dir / "external.png").exists())
+        self.assertEqual((screenshots_dir / "external.png").read_bytes(), b"payload")
+
+
 
 if __name__ == "__main__":
     unittest.main()

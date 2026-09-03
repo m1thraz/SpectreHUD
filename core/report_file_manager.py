@@ -224,3 +224,31 @@ class ReportFileManager:
             fallback_categories=result.fallback_categories,
         )
 
+    def import_image(self, src_path: Path | str, project_name: Optional[str] = None) -> str:
+        """
+        Imports an image into the project's screenshots/ directory if it is not already
+        inside the project directory.
+        Returns the relative POSIX path from the project directory (e.g. 'screenshots/recon.png').
+        """
+        src = Path(src_path).resolve()
+        pname = self._resolve_project_name(project_name)
+        proj_dir = self.project_manager.get_project_dir(pname).resolve()
+
+        try:
+            rel = src.relative_to(proj_dir)
+            return rel.as_posix()
+        except ValueError:
+            # Outside project dir -> copy to screenshots/
+            screenshots_dir = proj_dir / "screenshots"
+            screenshots_dir.mkdir(parents=True, exist_ok=True)
+            dest = screenshots_dir / src.name
+            if dest.exists() and dest.resolve() != src:
+                import time
+
+                dest = screenshots_dir / f"{src.stem}_{int(time.time())}{src.suffix}"
+            import shutil
+
+            shutil.copy2(src, dest)
+            return dest.relative_to(proj_dir).as_posix()
+
+
