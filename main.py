@@ -198,12 +198,16 @@ def main():
 
         hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
         hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
+        hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
         hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
-        hotkey_config = HotkeyConfig(toggle=hotkey_toggle, screenshot=hotkey_snip, quit=hotkey_quit)
+        hotkey_config = HotkeyConfig(
+            toggle=hotkey_toggle, screenshot=hotkey_snip, quick_note=hotkey_note, quit=hotkey_quit
+        )
 
         hotkey_listener = HotkeyListener(config=hotkey_config)
         hotkey_listener.toggle_requested.connect(window.toggle_visibility)
         hotkey_listener.screenshot_requested.connect(window.app.trigger_screenshot)
+        hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
         _startup_mark(started_at, "hotkey listener started")
@@ -221,6 +225,10 @@ def main():
         act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
         act_toggle.triggered.connect(window.toggle_visibility)
         tray_menu.addAction(act_toggle)
+
+        act_note = QAction(f"Quick-Note erfassen ({hotkey_note})", tray_menu)
+        act_note.triggered.connect(window.app.trigger_quick_note)
+        tray_menu.addAction(act_note)
 
         act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
         act_snip.triggered.connect(window.app.trigger_screenshot)
@@ -270,13 +278,20 @@ def main():
             new_snip = data.get(
                 "snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
             )
+            new_note = data.get(
+                "quick_note_hotkey",
+                container.config_manager.get("quick_note_hotkey", "<ctrl>+<cmd>+n"),
+            )
             new_quit = data.get(
                 "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
             )
-            new_cfg = HotkeyConfig(toggle=new_toggle, screenshot=new_snip, quit=new_quit)
+            new_cfg = HotkeyConfig(
+                toggle=new_toggle, screenshot=new_snip, quick_note=new_note, quit=new_quit
+            )
             hotkey_listener.update_config(new_cfg)
             act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
             act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
+            act_note.setText(f"Quick-Note erfassen ({new_note})")
             act_quit.setText(f"Beenden ({new_quit})")
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)

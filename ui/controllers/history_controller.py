@@ -35,15 +35,25 @@ class HistoryController(QObject):
         loot_manager: LootManager,
         project_manager: ProjectManager,
         event_bus: Optional[EventBus] = None,
+        quick_note_manager: Optional[Any] = None,
+        quick_note_controller: Optional[Any] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.clipboard_watcher = clipboard_watcher
         self.loot_manager = loot_manager
         self.project_manager = project_manager
+        self.quick_note_manager = quick_note_manager
+        self.quick_note_controller = quick_note_controller
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_history_filter: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+
+        if self.event_bus:
+            self.event_bus.subscribe(
+                EventType.QUICK_NOTES_UPDATED,
+                lambda payload: self.history_updated.emit(),
+            )
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -88,6 +98,29 @@ class HistoryController(QObject):
             self._notify_persistence_error("add_entry", e)
 
     def clear_history(self, parent_widget: Optional[QWidget] = None) -> bool:
+        if self.current_history_filter == "notes":
+            if parent_widget:
+                reply = QMessageBox.question(
+                    parent_widget,
+                    t("quick_note.clear_title", "Clear Quick Notes"),
+                    t(
+                        "quick_note.clear_confirm",
+                        "Are you sure you want to delete all quick notes in the inbox for this project?",
+                    ),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return False
+            try:
+                if self.quick_note_manager:
+                    self.quick_note_manager.clear_entries()
+                self.history_updated.emit()
+                return True
+            except (PersistenceError, StorageError, OSError) as e:
+                self._notify_persistence_error("clear_quick_notes", e, parent_widget)
+                return False
+
         if parent_widget:
             reply = QMessageBox.question(
                 parent_widget,
@@ -111,7 +144,10 @@ class HistoryController(QObject):
 
     def delete_entry(self, item_id: str) -> None:
         try:
-            if self.clipboard_watcher.delete_entry(item_id):
+            if self.current_history_filter == "notes" and self.quick_note_manager:
+                if self.quick_note_manager.delete_entry(item_id):
+                    self.history_updated.emit()
+            elif self.clipboard_watcher.delete_entry(item_id):
                 self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_entry", e)
@@ -138,11 +174,15 @@ class HistoryController(QObject):
     ) -> List[MenuAction]:
         """Returns a list of MenuAction DTOs for filtering history."""
         history_all = self.clipboard_watcher.get_history()
+        notes_count = (
+            len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
+        )
         pills = [
             ("all", f"All ({len(history_all)})"),
             ("target_only", "Target IP Only"),
             ("commands", "Commands"),
             ("outputs", "Outputs"),
+            ("notes", f"Notes ({notes_count})"),
         ]
         actions: List[MenuAction] = []
         for pid, ptext in pills:
@@ -183,11 +223,15 @@ class HistoryController(QObject):
     ) -> None:
         self.filter_buttons.clear()
         history_all = self.clipboard_watcher.get_history()
+        notes_count = (
+            len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
+        )
         pills = [
             ("all", f"All ({len(history_all)})"),
             ("target_only", "Target IP Only"),
             ("commands", "Commands"),
             ("outputs", "Outputs"),
+            ("notes", f"Notes ({notes_count})"),
         ]
         for pid, ptext in pills:
             btn = QPushButton(ptext)
@@ -225,6 +269,46 @@ class HistoryController(QObject):
         show_empty_state_fn: Callable[[str], None],
         on_copied: Optional[Callable[[str], None]] = None,
     ) -> List[QWidget]:
+        if self.current_history_filter == "notes":
+            from ui.quick_note_card import QuickNoteCard
+
+            notes = (
+                self.quick_note_manager.get_entries(
+                    target_ip=target_ip if target_ip else None,
+                    search_query=search_query,
+                )
+                if self.quick_note_manager
+                else []
+            )
+
+            if not notes:
+                show_empty_state_fn(
+                    t(
+                        "quick_note.empty_state",
+                        "No quick notes in inbox. Use global hotkey (Ctrl+Super+N) or click 'Note' to capture thoughts.",
+                    )
+                )
+                return []
+
+            rendered_cards: List[QWidget] = []
+            for item in notes:
+                card = QuickNoteCard(item, parent=parent_widget)
+                if self.quick_note_controller:
+                    card.promote_requested.connect(
+                        lambda entry, p=parent_widget: self.quick_note_controller.promote_to_loot(
+                            entry, parent_widget=p
+                        )
+                    )
+                    card.deleted.connect(self.quick_note_controller.delete_note)
+                elif self.quick_note_manager:
+                    card.deleted.connect(self.quick_note_manager.delete_entry)
+                if on_copied is not None:
+                    card.copied.connect(on_copied)
+                content_layout.addWidget(card)
+                rendered_cards.append(card)
+
+            return rendered_cards
+
         history_items = self.get_history(target_ip=target_ip, search_query=search_query)
 
         if not history_items:

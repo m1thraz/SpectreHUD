@@ -14,6 +14,7 @@ class TestHotkeys(unittest.TestCase):
         cfg = HotkeyConfig(toggle="<ctrl>+<alt>+s", screenshot="<ctrl>+<shift>+x")
         self.assertEqual(cfg.toggle, "<ctrl>+<alt>+s")
         self.assertEqual(cfg.screenshot, "<ctrl>+<shift>+x")
+        self.assertEqual(cfg.quick_note, "<ctrl>+<cmd>+n")
         self.assertEqual(cfg.quit, "<ctrl>+<cmd>+q")
 
     def test_normalize_hotkey_strings(self):
@@ -28,11 +29,17 @@ class TestHotkeys(unittest.TestCase):
         listener = HotkeyListener(hotkey_str="<ctrl>+<alt>+t")
         self.assertEqual(listener.config.toggle, "<ctrl>+<alt>+t")
 
-        new_cfg = HotkeyConfig(toggle="<ctrl>+<shift>+h", screenshot="<f11>", quit="<ctrl>+<alt>+q")
+        new_cfg = HotkeyConfig(
+            toggle="<ctrl>+<shift>+h",
+            screenshot="<f11>",
+            quick_note="<ctrl>+<alt>+n",
+            quit="<ctrl>+<alt>+q",
+        )
         updated = listener.update_config(new_cfg)
         self.assertTrue(updated)
         self.assertEqual(listener.config.toggle, "<ctrl>+<shift>+h")
         self.assertEqual(listener.config.screenshot, "<f11>")
+        self.assertEqual(listener.config.quick_note, "<ctrl>+<alt>+n")
         self.assertEqual(listener.config.quit, "<ctrl>+<alt>+q")
 
     def test_invalid_hotkey_does_not_crash(self):
@@ -65,18 +72,22 @@ class TestHotkeys(unittest.TestCase):
         listener = HotkeyListener()
         toggle_called = []
         snip_called = []
+        quick_note_called = []
         quit_called = []
 
         listener.toggle_requested.connect(lambda: toggle_called.append(True))
         listener.screenshot_requested.connect(lambda: snip_called.append(True))
+        listener.quick_note_requested.connect(lambda: quick_note_called.append(True))
         listener.quit_requested.connect(lambda: quit_called.append(True))
 
         listener._fire_trigger()
         listener._fire_screenshot_trigger()
+        listener._fire_quick_note_trigger()
         listener._fire_quit_trigger()
 
         self.assertEqual(len(toggle_called), 1)
         self.assertEqual(len(snip_called), 1)
+        self.assertEqual(len(quick_note_called), 1)
         self.assertEqual(len(quit_called), 1)
 
     def test_hotkey_listener_respects_wayland_capability_restriction(self):

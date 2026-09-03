@@ -26,8 +26,9 @@ class FooterPanel(QFrame):
         self.lbl_status = QLabel(
             t(
                 "footer.status",
-                "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+                "{hotkey}: Toggle | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
                 hotkey="Ctrl+Super+<",
+                note_hotkey="Ctrl+Super+N",
                 quit_hotkey="Ctrl+Super+Q",
             )
         )
@@ -92,15 +93,20 @@ class FooterPanel(QFrame):
         )
 
     def update_hotkey_display(
-        self, hotkey_raw: str, quit_hotkey_raw: str = "<ctrl>+<cmd>+q"
+        self,
+        hotkey_raw: str,
+        quit_hotkey_raw: str = "<ctrl>+<cmd>+q",
+        quick_note_hotkey_raw: str = "<ctrl>+<cmd>+n",
     ) -> None:
         hotkey_display = self._format_hotkey(hotkey_raw)
         quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)
+        quick_note_display = self._format_hotkey(quick_note_hotkey_raw)
         self.lbl_status.setText(
             t(
                 "footer.status",
-                "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+                "{hotkey}: Toggle | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
                 hotkey=hotkey_display,
+                note_hotkey=quick_note_display,
                 quit_hotkey=quit_hotkey_display,
             )
         )

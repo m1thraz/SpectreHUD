@@ -200,10 +200,55 @@ def validate_clipboard_list(
     return valid_entries
 
 
+def validate_quick_note_entry(entry: Any) -> Optional[Dict[str, Any]]:
+    """Validates and normalizes a single quick note entry dictionary."""
+    if not isinstance(entry, dict):
+        return None
+
+    raw_text = str(entry.get("text") or "").strip()
+    if not raw_text:
+        return None
+
+    text = raw_text[:MAX_CLIPBOARD_TEXT_LENGTH]
+    entry_id = str(entry.get("id") or "")[:64]
+    category = str(entry.get("category") or "misc").strip().lower()
+    if category not in {"recon", "access", "privesc", "postex", "scripts", "misc"}:
+        category = "misc"
+
+    target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
+    timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[
+        :MAX_TIMESTAMP_LENGTH
+    ]
+
+    return {
+        "id": entry_id or _stable_hash_id("note_gen", text),
+        "text": text,
+        "category": category,
+        "target_ip": target_ip,
+        "timestamp": timestamp,
+    }
+
+
+def validate_quick_notes_list(
+    data: Any, max_entries: int = MAX_CLIPBOARD_ENTRIES
+) -> List[Dict[str, Any]]:
+    """Validates, normalizes, and caps a list of quick note entries."""
+    if not isinstance(data, list):
+        return []
+    valid_entries = []
+    for item in data:
+        validated = validate_quick_note_entry(item)
+        if validated is not None:
+            valid_entries.append(validated)
+            if len(valid_entries) >= max_entries:
+                break
+    return valid_entries
+
+
 def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[str, Any]:
     """
     Validates and normalizes the full project_state.json schema.
-    Ensures all expected keys and nested structures (loot list, clipboard list) exist,
+    Ensures all expected keys and nested structures (loot list, clipboard list, quick notes) exist,
     strictly bounding all string lengths and list sizes without corrupting credentials.
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -219,6 +264,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "updated_at": now_str,
         "loot": [],
         "clipboard_history": [],
+        "quick_notes": [],
     }
 
     if not isinstance(data, dict):
@@ -236,6 +282,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "updated_at": str(data.get("updated_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "loot": validate_loot_list(data.get("loot")),
         "clipboard_history": validate_clipboard_list(data.get("clipboard_history")),
+        "quick_notes": validate_quick_notes_list(data.get("quick_notes")),
     }
 
 

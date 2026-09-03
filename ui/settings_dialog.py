@@ -56,6 +56,13 @@ QUIT_PRESETS = [
     {"label": "F10 (Single Key)", "value": "<f10>"},
 ]
 
+QUICK_NOTE_PRESETS = [
+    {"label": "Ctrl + Super + N (Standard)", "value": "<ctrl>+<cmd>+n"},
+    {"label": "Ctrl + Alt + N", "value": "<ctrl>+<alt>+n"},
+    {"label": "Ctrl + Shift + N", "value": "<ctrl>+<shift>+n"},
+    {"label": "F8 (Single Key)", "value": "<f8>"},
+]
+
 
 def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     """Keep a scroll area's viewport and hosted page transparent to window glass."""
@@ -161,6 +168,22 @@ class HotkeySettingsPage(QWidget):
         row_snip.addWidget(self.combo_snip, stretch=1)
         card_layout.addLayout(row_snip)
 
+        # Quick Note Shortcut
+        row_quick_note = QHBoxLayout()
+        lbl_quick_note = QLabel(t("settings.lbl_quick_note_shortcut", "Quick Note (Haftnotiz):"))
+        lbl_quick_note.setProperty("class", "FormLabel")
+        row_quick_note.addWidget(lbl_quick_note, stretch=1)
+
+        self.combo_quick_note = QComboBox()
+        self.combo_quick_note.setMinimumWidth(220)
+        curr_quick_note = self.config.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
+        for i, preset in enumerate(QUICK_NOTE_PRESETS):
+            self.combo_quick_note.addItem(preset["label"], preset["value"])
+            if preset["value"] == curr_quick_note:
+                self.combo_quick_note.setCurrentIndex(i)
+        row_quick_note.addWidget(self.combo_quick_note, stretch=1)
+        card_layout.addLayout(row_quick_note)
+
         # Quit Shortcut
         row_quit = QHBoxLayout()
         lbl_quit = QLabel(t("settings.lbl_quit_shortcut", "Quit SpectreHUD Completely:"))
@@ -239,12 +262,14 @@ class HotkeySettingsPage(QWidget):
     def _reset_defaults(self) -> None:
         self.combo_toggle.setCurrentIndex(0)
         self.combo_snip.setCurrentIndex(0)
+        self.combo_quick_note.setCurrentIndex(0)
         self.combo_quit.setCurrentIndex(0)
 
     def get_settings(self) -> Dict[str, Any]:
         return {
             "hotkey": self.combo_toggle.currentData() or "<ctrl>+<cmd>+<",
             "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<cmd>+x",
+            "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<cmd>+n",
             "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<cmd>+q",
         }
 

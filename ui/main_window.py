@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
             self.project_manager = container.project_manager
             self.loot_manager = container.loot_manager
             self.clipboard_watcher = container.clipboard_watcher
+            self.quick_note_manager = getattr(container, "quick_note_manager", None)
             self.screenshot_manager = container.screenshot_manager
         else:
             self.container = None
@@ -76,6 +77,9 @@ class MainWindow(QMainWindow):
                 if clipboard_watcher is not None
                 else ClipboardWatcher(event_bus=self.event_bus)
             )
+            from core.quick_note_manager import QuickNoteManager
+
+            self.quick_note_manager = QuickNoteManager(event_bus=self.event_bus)
             self.screenshot_manager = (
                 screenshot_manager
                 if screenshot_manager is not None
@@ -115,6 +119,7 @@ class MainWindow(QMainWindow):
             project_manager=self.project_manager,
             screenshot_manager=self.screenshot_manager,
             event_bus=self.event_bus,
+            quick_note_manager=self.quick_note_manager,
         )
         self._startup_mark(started_at, "app controller ready")
 

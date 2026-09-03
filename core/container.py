@@ -15,6 +15,7 @@ from core.config import ConfigManager, get_default_config_dir
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
+from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.logger import get_logger
@@ -37,12 +38,18 @@ class ServiceContainer:
         screenshot_manager: ScreenshotManager,
         storage: StorageBackend,
         event_bus: EventBus,
+        quick_note_manager: Optional[QuickNoteManager] = None,
     ):
         self.config_manager = config_manager
         self.snippet_manager = snippet_manager
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
+        self.quick_note_manager = (
+            quick_note_manager
+            if quick_note_manager is not None
+            else QuickNoteManager(event_bus=event_bus)
+        )
         self.screenshot_manager = screenshot_manager
         self.storage = storage
         self.event_bus = event_bus
@@ -78,12 +85,15 @@ class ServiceContainer:
             base_dir=base_projects_dir, config_dir=resolved_config_dir, event_bus=event_bus
         )
 
-        # Single Source of Truth: Loot & Clipboard operate in session memory and are persisted exclusively to project_state.json
+        # Single Source of Truth: Loot, Clipboard & Quick Notes operate in session memory and are persisted exclusively to project_state.json
         session_storage = InMemoryStorageBackend()
         loot_manager = LootManager(
             storage=session_storage, event_bus=event_bus, time_format=time_format
         )
         clipboard_watcher = ClipboardWatcher(
+            storage=session_storage, event_bus=event_bus, time_format=time_format
+        )
+        quick_note_manager = QuickNoteManager(
             storage=session_storage, event_bus=event_bus, time_format=time_format
         )
         screenshot_manager = ScreenshotManager()
@@ -94,6 +104,7 @@ class ServiceContainer:
             project_manager=project_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
+            quick_note_manager=quick_note_manager,
             screenshot_manager=screenshot_manager,
             storage=storage,
             event_bus=event_bus,
@@ -144,6 +155,9 @@ class ServiceContainer:
         clipboard_watcher = ClipboardWatcher(
             storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
         )
+        quick_note_manager = QuickNoteManager(
+            storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
+        )
         screenshot_manager = ScreenshotManager()
 
         return cls(
@@ -152,6 +166,7 @@ class ServiceContainer:
             project_manager=project_manager,
             loot_manager=loot_manager,
             clipboard_watcher=clipboard_watcher,
+            quick_note_manager=quick_note_manager,
             screenshot_manager=screenshot_manager,
             storage=actual_storage,
             event_bus=actual_event_bus,

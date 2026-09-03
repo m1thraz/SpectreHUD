@@ -4,7 +4,7 @@ Central Application Orchestrator for SpectreHUD.
 Orchestrates UI panels, domain managers, and specialized coordinators.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
@@ -31,6 +31,7 @@ from ui.controllers import (
     CheatsheetController,
     LootController,
     HistoryController,
+    QuickNoteController,
     ReportController,
     ProjectController,
 )
@@ -69,6 +70,7 @@ class AppController(QObject):
         project_manager: ProjectManager,
         screenshot_manager: ScreenshotManager,
         event_bus: EventBus,
+        quick_note_manager: Optional[Any] = None,
     ):
         super().__init__(window)
         self.window = window
@@ -83,6 +85,7 @@ class AppController(QObject):
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_watcher = clipboard_watcher
+        self.quick_note_manager = quick_note_manager
         self.screenshot_manager = screenshot_manager
         self.event_bus = event_bus
 
@@ -90,8 +93,14 @@ class AppController(QObject):
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
             clipboard_watcher=self.clipboard_watcher,
+            quick_note_manager=self.quick_note_manager,
         )
         self.cards: List[QWidget] = []
+
+        # Specialized Coordinators & Providers
+        self._target_provider = lambda: (
+            self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, "txt_target") else ""
+        )
 
         # Domain Controllers
         self.cheatsheet_ctrl = CheatsheetController(
@@ -100,11 +109,20 @@ class AppController(QObject):
         self.loot_ctrl = LootController(
             self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self
         )
+        self.quick_note_ctrl = QuickNoteController(
+            quick_note_manager=self.quick_note_manager,
+            loot_controller=self.loot_ctrl,
+            target_provider=self._target_provider,
+            event_bus=self.event_bus,
+            parent=self,
+        )
         self.history_ctrl = HistoryController(
             self.clipboard_watcher,
             self.loot_manager,
             self.project_manager,
             event_bus=self.event_bus,
+            quick_note_manager=self.quick_note_manager,
+            quick_note_controller=self.quick_note_ctrl,
             parent=self,
         )
         self.report_ctrl = ReportController(
@@ -116,11 +134,6 @@ class AppController(QObject):
         )
         self.project_ctrl = ProjectController(
             self.project_manager, event_bus=self.event_bus, parent=self
-        )
-
-        # Specialized Coordinators
-        self._target_provider = lambda: (
-            self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, "txt_target") else ""
         )
 
         self.navigation_coord = NavigationCoordinator(
@@ -200,6 +213,7 @@ class AppController(QObject):
         self.navigation_coord.mode_changed.connect(self.mode_changed.emit)
         self.header.project_menu_requested.connect(self._show_project_menu)
         self.header.screenshot_requested.connect(self.trigger_screenshot)
+        self.header.quick_note_requested.connect(self.trigger_quick_note)
         self.header.toggle_rec_requested.connect(self.clipboard_coord.toggle_pause)
         self.header.settings_requested.connect(self.open_settings_dialog)
         self.header.minimize_requested.connect(self.window.hide)
@@ -217,6 +231,7 @@ class AppController(QObject):
         self.cheatsheet_ctrl.snippets_updated.connect(self._on_data_updated)
         self.loot_ctrl.loot_updated.connect(self._on_loot_data_updated)
         self.history_ctrl.history_updated.connect(self._on_history_data_updated)
+        self.quick_note_ctrl.notes_updated.connect(self._on_notes_updated)
         self.clipboard_coord.history_mutated.connect(self._on_history_data_updated)
         self.clipboard_coord.loot_mutated.connect(self._on_loot_data_updated)
 
@@ -226,8 +241,27 @@ class AppController(QObject):
         self.clipboard_watcher.entry_added.connect(
             self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection
         )
+        if self.quick_note_manager and hasattr(self.quick_note_manager, "entry_added"):
+            self.quick_note_manager.entry_added.connect(
+                lambda _: self._on_notes_updated(), Qt.ConnectionType.QueuedConnection
+            )
         self.clipboard_watcher.logging_state_changed.connect(self.header.update_rec_indicator)
         get_i18n().locale_changed.connect(self.retranslate_ui)
+
+    def trigger_quick_note(self) -> None:
+        """Opens the lightweight quick note capture popup."""
+        if hasattr(self, "quick_note_ctrl") and self.quick_note_ctrl:
+            self.quick_note_ctrl.show_popup()
+
+    def _on_notes_updated(self) -> None:
+        self._update_notes_badge()
+        if self.active_mode == "history":
+            self.refresh_filter_pills()
+            self.refresh_content()
+
+    def _update_notes_badge(self) -> None:
+        count = len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
+        self.header.update_history_badge(count)
 
     def switch_mode(self, mode: str) -> None:
         self.navigation_coord.switch_mode(mode)
@@ -487,6 +521,7 @@ class AppController(QObject):
         state = self.workspace_coord.load_active_project_session(self.window)
         if self.var_bar:
             self.var_bar.set_variables(state)
+        self._update_notes_badge()
 
     def save_current_project_state(self) -> bool:
         vars_dict = self.var_bar.get_variables() if self.var_bar else {}
@@ -573,6 +608,7 @@ class AppController(QObject):
         if hasattr(self, "snippet_manager") and self.snippet_manager:
             self.snippet_manager.set_language(active_lang)
         self.header.retranslate()
+        self._update_notes_badge()
         if self.var_bar:
             self.var_bar.retranslate()
         self._update_footer_status()
@@ -584,4 +620,7 @@ class AppController(QObject):
     def _update_footer_status(self) -> None:
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
         quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")
-        self.footer.update_hotkey_display(hotkey_raw, quit_hotkey_raw)
+        quick_note_hotkey_raw = self.config.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
+        self.footer.update_hotkey_display(
+            hotkey_raw, quit_hotkey_raw, quick_note_hotkey_raw=quick_note_hotkey_raw
+        )
