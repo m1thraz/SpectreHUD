@@ -30,15 +30,15 @@ class TestSettingsDialog(unittest.TestCase):
     def test_hotkey_page_get_settings_and_reset(self):
         page = HotkeySettingsPage(self.config_manager)
         page.combo_toggle.setCurrentIndex(2)  # <ctrl>+<alt>+s
-        page.combo_quit.setCurrentIndex(1)  # <ctrl>+<alt>+q
+        page.combo_quit.setCurrentIndex(0)  # <ctrl>+<alt>+q
 
         settings = page.get_settings()
         self.assertEqual(settings["hotkey"], "<ctrl>+<alt>+s")
         self.assertEqual(settings["quit_hotkey"], "<ctrl>+<alt>+q")
 
         page._reset_defaults()
-        self.assertEqual(page.combo_toggle.currentData(), "<ctrl>+<cmd>+<")
-        self.assertEqual(page.combo_quit.currentData(), "<ctrl>+<cmd>+q")
+        self.assertEqual(page.combo_toggle.currentData(), "<ctrl>+<alt>+h")
+        self.assertEqual(page.combo_quit.currentData(), "<ctrl>+<alt>+q")
 
     def test_language_page_get_settings(self):
         page = LanguageSettingsPage(self.config_manager)

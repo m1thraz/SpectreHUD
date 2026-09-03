@@ -286,7 +286,7 @@ class HistoryController(QObject):
                 show_empty_state_fn(
                     t(
                         "quick_note.empty_state",
-                        "No quick notes in inbox. Use global hotkey (Ctrl+Super+N) or click 'Note' to capture thoughts.",
+                        "No quick notes in inbox. Use global hotkey (Ctrl+Alt+N) or click 'Note' to capture thoughts.",
                     )
                 )
                 return []

@@ -196,10 +196,10 @@ def main():
         from core.hotkey_listener import HotkeyConfig
         from core.event_bus import EventType
 
-        hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
-        hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
-        hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
-        hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
+        hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<alt>+h")
+        hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
+        hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
+        hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
         hotkey_config = HotkeyConfig(
             toggle=hotkey_toggle, screenshot=hotkey_snip, quick_note=hotkey_note, quit=hotkey_quit
         )
@@ -222,7 +222,7 @@ def main():
         tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
         tray_menu = QMenu()
 
-        act_toggle = QAction("SpectreHUD anzeigen (Strg+Super+<)", tray_menu)
+        act_toggle = QAction(f"SpectreHUD anzeigen ({hotkey_toggle})", tray_menu)
         act_toggle.triggered.connect(window.toggle_visibility)
         tray_menu.addAction(act_toggle)
 
@@ -230,7 +230,7 @@ def main():
         act_note.triggered.connect(window.app.trigger_quick_note)
         tray_menu.addAction(act_note)
 
-        act_snip = QAction("Screenshot aufnehmen (Strg+Super+X)", tray_menu)
+        act_snip = QAction(f"Screenshot aufnehmen ({hotkey_snip})", tray_menu)
         act_snip.triggered.connect(window.app.trigger_screenshot)
         tray_menu.addAction(act_snip)
 
@@ -273,17 +273,17 @@ def main():
 
         def on_hotkeys_changed(data: dict):
             new_toggle = data.get(
-                "hotkey", container.config_manager.get("hotkey", "<ctrl>+<cmd>+<")
+                "hotkey", container.config_manager.get("hotkey", "<ctrl>+<alt>+h")
             )
             new_snip = data.get(
-                "snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<cmd>+x")
+                "snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
             )
             new_note = data.get(
                 "quick_note_hotkey",
-                container.config_manager.get("quick_note_hotkey", "<ctrl>+<cmd>+n"),
+                container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n"),
             )
             new_quit = data.get(
-                "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<cmd>+q")
+                "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
             )
             new_cfg = HotkeyConfig(
                 toggle=new_toggle, screenshot=new_snip, quick_note=new_note, quit=new_quit

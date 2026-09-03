@@ -27,9 +27,9 @@ class FooterPanel(QFrame):
             t(
                 "footer.status",
                 "{hotkey}: Toggle | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
-                hotkey="Ctrl+Super+<",
-                note_hotkey="Ctrl+Super+N",
-                quit_hotkey="Ctrl+Super+Q",
+                hotkey="Ctrl+Alt+H",
+                note_hotkey="Ctrl+Alt+N",
+                quit_hotkey="Ctrl+Alt+Q",
             )
         )
         self.lbl_status.setTextFormat(Qt.TextFormat.PlainText)
@@ -82,21 +82,25 @@ class FooterPanel(QFrame):
 
     @staticmethod
     def _format_hotkey(hotkey_raw: str) -> str:
-        return (
+        s = (
             hotkey_raw.replace("<ctrl>", "Strg")
             .replace("<cmd>", "Super")
             .replace("<shift>", "Shift")
             .replace("<alt>", "Alt")
-            .replace("<", "")
-            .replace(">", "")
-            .replace("+", " + ")
+            .replace("<space>", "Space")
         )
+        parts = [
+            p.strip("<>").upper() if len(p.strip("<>")) == 1 else p.strip("<>")
+            for p in s.split("+")
+            if p.strip()
+        ]
+        return " + ".join(parts)
 
     def update_hotkey_display(
         self,
         hotkey_raw: str,
-        quit_hotkey_raw: str = "<ctrl>+<cmd>+q",
-        quick_note_hotkey_raw: str = "<ctrl>+<cmd>+n",
+        quit_hotkey_raw: str = "<ctrl>+<alt>+q",
+        quick_note_hotkey_raw: str = "<ctrl>+<alt>+n",
     ) -> None:
         hotkey_display = self._format_hotkey(hotkey_raw)
         quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)

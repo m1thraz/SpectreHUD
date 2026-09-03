@@ -17,10 +17,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "username": "",
     "password": "",
     "wordlist": "/usr/share/wordlists/dirb/common.txt",
-    "hotkey": "<ctrl>+<cmd>+<",
-    "snip_hotkey": "<ctrl>+<cmd>+x",
-    "quick_note_hotkey": "<ctrl>+<cmd>+n",
-    "quit_hotkey": "<ctrl>+<cmd>+q",
+    "hotkey": "<ctrl>+<alt>+h",
+    "snip_hotkey": "<ctrl>+<alt>+x",
+    "quick_note_hotkey": "<ctrl>+<alt>+n",
+    "quit_hotkey": "<ctrl>+<alt>+q",
     "auto_hide_on_copy": False,
     "always_on_top": True,
     "loot_view_mode": "list",
@@ -86,14 +86,24 @@ class ConfigManager:
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
             migrated = False
-            # Migrate old Ctrl+Shift+C hotkey to the new Strg+Super+<
+            # Migrate legacy hotkeys to new Ctrl+Alt defaults
             if loaded.get("hotkey") in [
                 "<ctrl>+<shift>+c",
                 "ctrl+shift+c",
                 "<ctrl>+<shift>+C",
+                "<ctrl>+<cmd>+<",
                 None,
             ]:
-                loaded["hotkey"] = "<ctrl>+<cmd>+<"
+                loaded["hotkey"] = "<ctrl>+<alt>+h"
+                migrated = True
+            if loaded.get("snip_hotkey") in ["<ctrl>+<cmd>+x", None]:
+                loaded["snip_hotkey"] = "<ctrl>+<alt>+x"
+                migrated = True
+            if loaded.get("quick_note_hotkey") in ["<ctrl>+<cmd>+n", None]:
+                loaded["quick_note_hotkey"] = "<ctrl>+<alt>+n"
+                migrated = True
+            if loaded.get("quit_hotkey") in ["<ctrl>+<cmd>+q", None]:
+                loaded["quit_hotkey"] = "<ctrl>+<alt>+q"
                 migrated = True
             cfg = DEFAULT_CONFIG.copy()
             cfg.update(loaded)

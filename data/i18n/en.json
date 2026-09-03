@@ -12,7 +12,7 @@
     "header.opt": "⚙",
     "header.minimize_tip": "Minimize / hide overlay (Esc)",
     "header.quit_tip": "Quit SpectreHUD — saves the active project first (Ctrl+Q)",
-    "header.snip_tip": "Capture region screenshot (Ctrl+Super+X or Ctrl+S)",
+    "header.snip_tip": "Capture region screenshot (Ctrl+Alt+X or Ctrl+S)",
     "header.snip_wayland_unavailable": "Screenshot capture is not available in this Wayland session.",
     "header.snip_unavailable": "Screenshot capture is not available on this platform.",
     "header.rec_tip_paused": "Clipboard logger is PAUSED (not recording).\nClick or Ctrl+P to start recording.",
@@ -292,11 +292,11 @@
     "settings.shortcut_options": "Open settings & options",
 
     "tray.show": "Show SpectreHUD ({hotkey})",
-    "tray.snip": "Capture Screenshot (Ctrl+Super+X)",
+    "tray.snip": "Capture Screenshot (Ctrl+Alt+X)",
     "tray.rec_start": "Enable Clipboard Logger (Ctrl+P)",
     "tray.rec_pause": "Pause Clipboard Logger (Ctrl+P)",
     "tray.options": "Options & Hotkeys... (Ctrl+,)",
-    "tray.quit": "Quit (Ctrl+Super+Q)",
+    "tray.quit": "Quit (Ctrl+Alt+Q)",
 
     "quit.save_failed_title": "Save Failed",
     "quit.save_failed_text": "The current project state could not be saved to disk.\n\nWhat would you like to do?",

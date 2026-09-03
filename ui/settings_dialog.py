@@ -36,29 +36,31 @@ from core.fonts import (
 )
 
 HOTKEY_PRESETS = [
-    {"label": "Ctrl + Super + < (Standard)", "value": "<ctrl>+<cmd>+<"},
+    {"label": "Ctrl + Alt + H (Standard)", "value": "<ctrl>+<alt>+h"},
     {"label": "Ctrl + Super + Space", "value": "<ctrl>+<cmd>+<space>"},
     {"label": "Ctrl + Alt + S", "value": "<ctrl>+<alt>+s"},
     {"label": "Ctrl + Shift + H", "value": "<ctrl>+<shift>+h"},
+    {"label": "Ctrl + Super + <", "value": "<ctrl>+<cmd>+<"},
     {"label": "F12 (Single Key)", "value": "<f12>"},
 ]
 
 SNIP_PRESETS = [
-    {"label": "Ctrl + Super + X (Standard)", "value": "<ctrl>+<cmd>+x"},
+    {"label": "Ctrl + Alt + X (Standard)", "value": "<ctrl>+<alt>+x"},
+    {"label": "Ctrl + Super + X", "value": "<ctrl>+<cmd>+x"},
     {"label": "Ctrl + Super + S", "value": "<ctrl>+<cmd>+s"},
     {"label": "F11 (Single Key)", "value": "<f11>"},
 ]
 
 QUIT_PRESETS = [
-    {"label": "Ctrl + Super + Q (Standard)", "value": "<ctrl>+<cmd>+q"},
-    {"label": "Ctrl + Alt + Q", "value": "<ctrl>+<alt>+q"},
+    {"label": "Ctrl + Alt + Q (Standard)", "value": "<ctrl>+<alt>+q"},
+    {"label": "Ctrl + Super + Q", "value": "<ctrl>+<cmd>+q"},
     {"label": "Ctrl + Shift + Q", "value": "<ctrl>+<shift>+q"},
     {"label": "F10 (Single Key)", "value": "<f10>"},
 ]
 
 QUICK_NOTE_PRESETS = [
-    {"label": "Ctrl + Super + N (Standard)", "value": "<ctrl>+<cmd>+n"},
-    {"label": "Ctrl + Alt + N", "value": "<ctrl>+<alt>+n"},
+    {"label": "Ctrl + Alt + N (Standard)", "value": "<ctrl>+<alt>+n"},
+    {"label": "Ctrl + Super + N", "value": "<ctrl>+<cmd>+n"},
     {"label": "Ctrl + Shift + N", "value": "<ctrl>+<shift>+n"},
     {"label": "F8 (Single Key)", "value": "<f8>"},
 ]
@@ -144,7 +146,7 @@ class HotkeySettingsPage(QWidget):
 
         self.combo_toggle = QComboBox()
         self.combo_toggle.setMinimumWidth(220)
-        curr_hotkey = self.config.get("hotkey", "<ctrl>+<cmd>+<")
+        curr_hotkey = self.config.get("hotkey", "<ctrl>+<alt>+h")
         for i, preset in enumerate(HOTKEY_PRESETS):
             self.combo_toggle.addItem(preset["label"], preset["value"])
             if preset["value"] == curr_hotkey:
@@ -160,7 +162,7 @@ class HotkeySettingsPage(QWidget):
 
         self.combo_snip = QComboBox()
         self.combo_snip.setMinimumWidth(220)
-        curr_snip = self.config.get("snip_hotkey", "<ctrl>+<cmd>+x")
+        curr_snip = self.config.get("snip_hotkey", "<ctrl>+<alt>+x")
         for i, preset in enumerate(SNIP_PRESETS):
             self.combo_snip.addItem(preset["label"], preset["value"])
             if preset["value"] == curr_snip:
@@ -176,7 +178,7 @@ class HotkeySettingsPage(QWidget):
 
         self.combo_quick_note = QComboBox()
         self.combo_quick_note.setMinimumWidth(220)
-        curr_quick_note = self.config.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
+        curr_quick_note = self.config.get("quick_note_hotkey", "<ctrl>+<alt>+n")
         for i, preset in enumerate(QUICK_NOTE_PRESETS):
             self.combo_quick_note.addItem(preset["label"], preset["value"])
             if preset["value"] == curr_quick_note:
@@ -192,7 +194,7 @@ class HotkeySettingsPage(QWidget):
 
         self.combo_quit = QComboBox()
         self.combo_quit.setMinimumWidth(220)
-        curr_quit = self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")
+        curr_quit = self.config.get("quit_hotkey", "<ctrl>+<alt>+q")
         for i, preset in enumerate(QUIT_PRESETS):
             self.combo_quit.addItem(preset["label"], preset["value"])
             if preset["value"] == curr_quit:
@@ -267,10 +269,10 @@ class HotkeySettingsPage(QWidget):
 
     def get_settings(self) -> Dict[str, Any]:
         return {
-            "hotkey": self.combo_toggle.currentData() or "<ctrl>+<cmd>+<",
-            "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<cmd>+x",
-            "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<cmd>+n",
-            "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<cmd>+q",
+            "hotkey": self.combo_toggle.currentData() or "<ctrl>+<alt>+h",
+            "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<alt>+x",
+            "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<alt>+n",
+            "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<alt>+q",
         }
 
 

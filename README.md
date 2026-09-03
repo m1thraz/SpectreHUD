@@ -17,17 +17,18 @@ During a CTF or authorized engagement, the working context is usually scattered 
 ## What it does
 
 - Per-project target variables and reusable command snippets
-- Loot, optional clipboard history, and region screenshots tied to the active project
+- Instant Quick-Notes with 1-key phase tagging (`Ctrl+Alt+N`), dedicated inbox, and 1-click promotion to report loot
+- Loot, optional clipboard history with "Erfassen ▾" split-button, and region screenshots tied to the active project
 - Markdown report editor with source, split, and live-preview views
 - Structured report templates, editable standalone HTML, Markdown, Obsidian, and CherryTree exports
-- Global hotkeys, tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
+- Harmonized global hotkeys (`Ctrl+Alt+H/X/N/Q`), tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
 
 ```text
 Terminal / Browser / VM
           ↓
       SpectreHUD
           ↓
- Commands · Loot · Screenshots · Report
+ Commands · Notes · Loot · Screenshots · Report
           ↓
  Obsidian / CherryTree / Portable export
 ```
@@ -61,9 +62,10 @@ public issue.
 
 | Feature / Area | Windows | Linux (X11) | Linux (Wayland) |
 |---|:---:|:---:|:---:|
-| **Platform Verification Tier** |  **Tier 1 (Production)** |  **Tier 1 (Production)** |  **Implemented & CI-Validated** |
+| **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Quick-Notes & Phase Tagging** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts (`Esc`, `Ctrl+1..4`, etc.) |
 | **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor (Informative Tooltip) |

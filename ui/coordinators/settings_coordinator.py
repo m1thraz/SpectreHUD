@@ -77,24 +77,27 @@ class SettingsCoordinator:
             self.report_ctrl.refresh_font_configuration()
         if "always_on_top" in new_settings:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
-        if any(key in new_settings for key in ("hotkey", "snip_hotkey", "quit_hotkey")):
+        if any(
+            key in new_settings
+            for key in ("hotkey", "snip_hotkey", "quick_note_hotkey", "quit_hotkey")
+        ):
             self.update_footer_status()
-            self.event_bus.publish(
-                EventType.HOTKEY_SETTINGS_CHANGED,
-                {
-                    "hotkey": new_settings.get(
-                        "hotkey", self.config.get("hotkey", "<ctrl>+<cmd>+<")
-                    ),
-                    "snip_hotkey": new_settings.get(
-                        "snip_hotkey",
-                        self.config.get("snip_hotkey", "<ctrl>+<cmd>+x"),
-                    ),
-                    "quit_hotkey": new_settings.get(
-                        "quit_hotkey",
-                        self.config.get("quit_hotkey", "<ctrl>+<cmd>+q"),
-                    ),
-                },
-            )
+            payload = {
+                "hotkey": new_settings.get(
+                    "hotkey", self.config.get("hotkey", "<ctrl>+<alt>+h")
+                ),
+                "snip_hotkey": new_settings.get(
+                    "snip_hotkey",
+                    self.config.get("snip_hotkey", "<ctrl>+<alt>+x"),
+                ),
+                "quit_hotkey": new_settings.get(
+                    "quit_hotkey",
+                    self.config.get("quit_hotkey", "<ctrl>+<alt>+q"),
+                ),
+            }
+            if "quick_note_hotkey" in new_settings:
+                payload["quick_note_hotkey"] = new_settings["quick_note_hotkey"]
+            self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, payload)
         if new_settings.get("workspace_dir"):
             self.workspace_coord.apply_workspace_setting(
                 workspace_dir=new_settings["workspace_dir"],

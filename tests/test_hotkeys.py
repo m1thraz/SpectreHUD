@@ -14,16 +14,17 @@ class TestHotkeys(unittest.TestCase):
         cfg = HotkeyConfig(toggle="<ctrl>+<alt>+s", screenshot="<ctrl>+<shift>+x")
         self.assertEqual(cfg.toggle, "<ctrl>+<alt>+s")
         self.assertEqual(cfg.screenshot, "<ctrl>+<shift>+x")
-        self.assertEqual(cfg.quick_note, "<ctrl>+<cmd>+n")
-        self.assertEqual(cfg.quit, "<ctrl>+<cmd>+q")
+        self.assertEqual(cfg.quick_note, "<ctrl>+<alt>+n")
+        self.assertEqual(cfg.quit, "<ctrl>+<alt>+q")
 
     def test_normalize_hotkey_strings(self):
+        self.assertEqual(normalize_hotkey_for_pynput("Ctrl + Alt + H"), "<ctrl>+<alt>+h")
         self.assertEqual(normalize_hotkey_for_pynput("Strg + Super + <"), "<ctrl>+<cmd>+<")
         self.assertEqual(normalize_hotkey_for_pynput("Ctrl + Alt + S"), "<ctrl>+<alt>+s")
         self.assertEqual(normalize_hotkey_for_pynput("Ctrl + Shift + H"), "<ctrl>+<shift>+h")
         self.assertEqual(normalize_hotkey_for_pynput("F12"), "<f12>")
         self.assertEqual(normalize_hotkey_for_pynput("<f11>"), "<f11>")
-        self.assertEqual(normalize_hotkey_for_pynput(""), "<ctrl>+<cmd>+<")
+        self.assertEqual(normalize_hotkey_for_pynput(""), "<ctrl>+<alt>+h")
 
     def test_hotkey_listener_initialization_and_update(self):
         listener = HotkeyListener(hotkey_str="<ctrl>+<alt>+t")

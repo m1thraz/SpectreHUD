@@ -623,9 +623,9 @@ class AppController(QObject):
         self.event_bus.publish(EventType.LANGUAGE_CHANGED, {"locale": active_lang})
 
     def _update_footer_status(self) -> None:
-        hotkey_raw = self.config.get("hotkey", "<ctrl>+<cmd>+<")
-        quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<cmd>+q")
-        quick_note_hotkey_raw = self.config.get("quick_note_hotkey", "<ctrl>+<cmd>+n")
+        hotkey_raw = self.config.get("hotkey", "<ctrl>+<alt>+h")
+        quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<alt>+q")
+        quick_note_hotkey_raw = self.config.get("quick_note_hotkey", "<ctrl>+<alt>+n")
         self.footer.update_hotkey_display(
             hotkey_raw, quit_hotkey_raw, quick_note_hotkey_raw=quick_note_hotkey_raw
         )

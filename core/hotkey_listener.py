@@ -27,10 +27,10 @@ from core.platform import (
 class HotkeyConfig:
     """Immutable configuration for global hotkey mappings."""
 
-    toggle: str = "<ctrl>+<cmd>+<"
-    screenshot: str = "<ctrl>+<cmd>+x"
-    quick_note: str = "<ctrl>+<cmd>+n"
-    quit: str = "<ctrl>+<cmd>+q"
+    toggle: str = "<ctrl>+<alt>+h"
+    screenshot: str = "<ctrl>+<alt>+x"
+    quick_note: str = "<ctrl>+<alt>+n"
+    quit: str = "<ctrl>+<alt>+q"
 
 
 def normalize_hotkey_for_pynput(hotkey_str: str) -> str:
@@ -38,11 +38,11 @@ def normalize_hotkey_for_pynput(hotkey_str: str) -> str:
     Normalizes human-friendly hotkey strings to pynput GlobalHotKeys format.
     E.g.:
       'Strg + Super + <' -> '<ctrl>+<cmd>+<'
-      'Ctrl + Alt + S'   -> '<ctrl>+<alt>+s'
+      'Ctrl + Alt + H'   -> '<ctrl>+<alt>+h'
       'F12'              -> '<f12>'
     """
     if not hotkey_str:
-        return "<ctrl>+<cmd>+<"
+        return "<ctrl>+<alt>+h"
 
     s = hotkey_str.strip().lower()
     s = s.replace("strg", "ctrl").replace("super", "cmd").replace("win", "cmd")
@@ -77,7 +77,7 @@ class HotkeyListener(QObject):
 
     def __init__(
         self,
-        hotkey_str: str = "<ctrl>+<cmd>+<",
+        hotkey_str: str = "<ctrl>+<alt>+h",
         config: Optional[HotkeyConfig] = None,
         capabilities: Optional[PlatformCapabilities] = None,
     ):

@@ -6,6 +6,31 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Quick-Notes ("Haftnotizen") & Dedicated Inbox**:
+  - Global hotkey `Ctrl+Alt+N` and header `Note` button to quickly capture findings and fleeting thoughts in a minimal, frameless glass popup at cursor position without disrupting workflow.
+  - **1-Key Pentest Phase Tagging**: Quick single-key tagging (`1`–`6` or `Alt+1..6`) for pentest categories (`Recon`, `Access`, `PrivEsc`, `PostEx`, `Scripts`, `Misc`) with memory of the last selected phase.
+  - **Isolated Notes Inbox**: Quick notes land in a dedicated inbox view inside the History tab (`Notes (N)`) so they never prematurely clutter clean report loot.
+  - **1-Click Loot Promotion**: Each note card includes a `★ Promote` action that pre-fills `AddLootDialog` with title, category, target, and content, cleanly removing the note from the inbox once converted.
+  - **Project Session Persistence**: Fully integrated into per-project storage (`project_state.json`), ensuring notes persist reliably across sessions and project switches.
+- **"Erfassen ▾" Split-Button on History Cards**:
+  - Replaced the previous `+ Loot` button with a multi-action split-button.
+  - **Direct Capture**: 1-click on the primary button instantly saves clipboard history entries directly into the Quick Notes inbox with tactical visual confirmation (`✓ Note!`).
+  - **Dropdown Menu**: Arrow dropdown allows explicit selection between "Als Note erfassen" and opening `AddLootDialog` ("Als Loot erfassen...").
+  - Smart category resolution infers `access` for shell/command entries and `recon` otherwise, prioritizing the user's active quick-note phase.
+
+### Changed
+
+- **Harmonized Global Keyboard Shortcuts**:
+  - Overhauled default system hotkeys to eliminate collisions with operating systems, desktop window managers, and browsers:
+    - **Toggle Overlay**: `Ctrl + Alt + H` (replaces `Ctrl + Super + <`)
+    - **Screenshot Snip**: `Ctrl + Alt + X` (replaces `Ctrl + Super + X`)
+    - **Quick-Note Capture**: `Ctrl + Alt + N` (replaces `Ctrl + Super + N`)
+    - **Quit Application**: `Ctrl + Alt + Q` (replaces `Ctrl + Super + Q`)
+  - Added automatic configuration migration on startup to silently upgrade legacy config files.
+  - Updated in-app Settings dialog presets, footer hints, and system tray menu shortcuts.
+
 ## [2.0.7] - 2026-09-03
 
 ### Added
