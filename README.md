@@ -20,7 +20,7 @@ During a CTF or authorized engagement, the working context is usually scattered 
 - Loot, optional clipboard history, and region screenshots tied to the active project
 - Markdown report editor with source, split, and live-preview views
 - Structured report templates, editable standalone HTML, Markdown, Obsidian, and CherryTree exports
-- Global hotkeys, tray integration, English/German UI, and optional encrypted Pentest-Mode project state
+- Global hotkeys, tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
 
 ```text
 Terminal / Browser / VM
