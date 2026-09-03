@@ -14,6 +14,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
 from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
+from core.i18n import t
 from ui.main_window import MainWindow
 from ui.report_editor_tab import ReportEditorTab
 
@@ -204,13 +205,13 @@ class TestUI(unittest.TestCase):
         # 2. Modify editor content -> dirty flag becomes True
         tab.editor.setPlainText("# Box Gamma Writeup\nInitial foothold via port 80.")
         self.assertTrue(tab.is_dirty())
-        self.assertIn("Ungespeicherte Änderungen", tab.lbl_status.text())
+        self.assertIn(t("report.unsaved", "Unsaved changes"), tab.lbl_status.text())
 
         # 3. Save -> dirty flag becomes False and file is written
         ok = tab.save()
         self.assertTrue(ok)
         self.assertFalse(tab.is_dirty())
-        self.assertIn("Gespeichert", tab.lbl_status.text())
+        self.assertIn(t("report.saved", "Saved"), tab.lbl_status.text())
         self.assertTrue(report_file_manager.exists("BoxGamma"))
         self.assertEqual(
             report_file_manager.load("BoxGamma"),
