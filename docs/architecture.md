@@ -1,6 +1,6 @@
 # SpectreHUD Architecture & Technical Guide
 
-**Last updated:** v2.0.5
+**Last updated:** v2.0.7
 
 This document provides a technical overview of SpectreHUD's software
 architecture, component relationships, design patterns, and intentional
@@ -12,24 +12,44 @@ product boundaries.
 
 SpectreHUD follows a **layered, decoupled architecture** built upon Qt 6 (PyQt6), Python 3.10+, dependency injection, reactive event dispatching, and storage abstractions.
 
-![SpectreHUD architecture diagram](assets/spectrehud_architecture.svg)
-
-The diagram reflects the production dependency flow. Solid arrows represent runtime
-composition or calls; the dashed EventBus link represents domain-event delivery.
+The diagram below reflects the production dependency flow across layers. Solid arrows represent runtime
+composition or direct calls; the EventBus links represent reactive domain-event delivery.
 
 ```mermaid
 graph TD
-    Bootstrap[main.py: QApplication + QLockFile] --> Root[MainWindow: Single Composition Root]
-    Root --> Container[ServiceContainer (core/container.py)]
-    Container --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, etc.]
-    Root --> AppCtrl[AppController: UI Action Coordinator]
-    AppCtrl --> Coordinators[Coordinators: Settings, Export, Workspace, Navigation, Clipboard]
-    AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, History, Project, Report]
-    DomainCtrls --> EventBus[EventBus (core/event_bus.py)]
-    DomainCtrls --> Services
-    Services --> Storage[StorageBackend: FileStorageBackend / InMemoryStorageBackend]
-    Services --> Security[ProjectLockService + crypto_service]
-    Storage --> Filesystem[(Atomic Filesystem / OS)]
+    subgraph Bootstrap & Lifecycle
+        Bootstrap[main.py: CLI Parser + QLockFile + Single Instance] --> Root[MainWindow: Single Composition Root]
+    end
+
+    subgraph Dependency Injection & Domain Services
+        Root --> Container[ServiceContainer: core/container.py]
+        Container --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, ReportFileManager]
+        Services --> Storage[StorageBackend: FileStorageBackend / InMemory]
+        Services --> Security[ProjectLockService + crypto_service]
+        Storage --> Filesystem[(Atomic Filesystem / OS)]
+    end
+
+    subgraph UI Orchestration & Event Delivery
+        Root --> AppCtrl[AppController: UI Action Coordinator]
+        AppCtrl --> Coordinators[Coordinators: Settings, Export, Workspace, Navigation, Clipboard]
+        AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, History, Project, Report]
+        DomainCtrls --> EventBus[EventBus: core/event_bus.py]
+        DomainCtrls --> Services
+    end
+
+    subgraph Presentation Surfaces
+        Root --> Panels[Panels: Header, Search, VariableBar + Scope/Auth Popovers, Footer]
+        Root --> Views[Content Views: CheatsheetList, LootBoard/Table, HistoryTable]
+        Root --> ReportTab[ReportEditorTab: Two-Tier Toolbar, Split Scroll-Sync, Outline, Preview]
+    end
+
+    subgraph Reporting & Resilience Subsystem
+        Services --> ReportFM[ReportFileManager: Atomic writes, .bak on regenerate]
+        Services --> DraftMgr[DraftManager: Real-time .report.md.draft snapshots]
+        ReportTab --> Outline[Outline Parser: Headless H1-H6 extraction]
+        ReportTab --> LootSync[LootSyncEngine: Marker hashing & non-destructive append]
+        ReportTab --> DraftMgr
+    end
 ```
 
 ---
@@ -41,7 +61,7 @@ graph TD
 - **Panels (`ui/panels/`)**:
   - `HeaderPanel`: Title, project switcher dropdown, language toggle, and action buttons.
   - `SearchPanel`: Real-time fuzzy query input with filter tags.
-  - `VariableBar`: Dynamic template parameter substitutions (`{target_ip}`, `{lhost}`, `{lport}`, `{wordlist}`, etc.).
+  - `VariableBar`: Dynamic template parameter substitutions (`{target_ip}`, `{lhost}`, `{lport}`, `{wordlist}`, `{domain}`, `{subnet}`, `{dns_server}`, `{hash_file}`, etc.). Features embedded 1-click circular vector copy buttons inside all inputs, dedicated Scope and Auth popovers, and immediate HUD reflection.
   - `ContentPanel`: Multi-mode view container (Cheatsheet, Loot, History, Report Editor).
   - `FooterPanel`: Status bar, shortcut hints, and active recording indicators.
 - **Dialogs (`ui/`)**: Modal forms for snippets, loot, custom variables, settings, template management and Pentest-Mode unlock. Dialog text is resolved through the active locale where available.
@@ -114,11 +134,14 @@ graph TD
 
 ### 2.7 Modular Style System (`ui/styles/`)
 - **`ThemeLoader` (`core/theme_loader.py`)**: Discovers bundled and user-provided
-  JSON themes, validates their required palette tokens, and falls back to Cyber
-  Dark when a selected theme cannot be loaded.
-- **Appearance settings (`ui/settings_dialog.py`)**: Own theme, typography and
+  JSON themes across 14 built-in palettes (including Cyber Dark, Dracula, Catppuccin Mocha,
+  Gruvbox, Tokyo Night, Blue Team, etc.), validates their required palette tokens, and falls
+  back to Cyber Dark when a selected theme cannot be loaded.
+- **Appearance settings (`ui/settings_dialog.py`)**: Owns theme, typography, and
   independent HUD/Report Editor transparency preferences separately from
-  general behaviour settings. A changed theme emits a
+  general behaviour settings. Curated typography stacks provide resilient native fallbacks
+  across UI (IBM Plex Sans, Manrope), Code/Monospace (IBM Plex Mono, Iosevka, Hack), and
+  Reports (Source Serif 4, Lato, Cambria). A changed theme emits a
   restart request only after settings persistence; the application then follows
   its normal project-save and shutdown path, releases the single-instance lock,
   and starts the replacement process. Application and code font changes rebuild
@@ -135,7 +158,7 @@ graph TD
 - QSS generation remains split into cohesive modules:
   - `palette.py`: Color constants and semantic palette definitions.
   - `typography.py`: Font families, font weights, and size hierarchies.
-  - `buttons.py`: Standard, primary, and ghost button styling.
+  - `buttons.py`: Standard, primary, ghost, format-tool, outline, and icon-save button styling.
   - `tables.py`: Table views, header styling, and row selection states.
   - `cards.py`: Snippet card containers and code blocks.
   - `dialogs.py`: Modal dialogues, form layouts, and inputs.
@@ -143,13 +166,20 @@ graph TD
     palette, application/code-font selections and the two bounded transparency
     values.
 
-### 2.8 Structured Template Engine & Repository Subsystem (`core/reporting/`)
+### 2.8 Structured Template Engine & Reporting Subsystem (`core/reporting/`)
 - **`ReportTemplate` & `TemplateSection` (`template_engine.py`)**: Strict data models defining pentest report structures with section requirements, auto-append directives, and dynamic parameters.
 - **`TemplateRepository` (`template_repository.py`)**: Dual-tier template storage loading built-in factory templates and sandboxed custom user templates with ID regex validation (`^[a-zA-Z0-9_-]{1,64}$`).
 - **`ReportTemplateEngine` (`template_engine.py`)**: Renders structured Markdown write-ups from templates, replacing placeholders (`{{TARGET_IP}}`, `{{DATE}}`, `{{METRICS_SUMMARY}}`), formatting tabular findings with pipe escaping, and organizing loot by phase and severity with canonical synchronization markers (`<!-- spectre:loot:{id}:{hash} -->`).
 - **`LootSyncEngine` (`loot_sync.py`)**: Provides deterministic SHA-256 (12-hex) content hashing, marker extraction/stripping, report state classification (`missing`, `current`, `stale`, `orphaned`), and additive byte-preserving insertion (`append_missing_loot_to_text()`) into matching H2 phase sections before note placeholders, with fallback handling for unmapped categories. Includes rich preview roundtrip marker reconciliation.
+- **`HeadingOutlineParser` (`outline.py`)**: Headless core parser (`extract_headings`) extracting hierarchical Markdown headings (`H1`–`H6`) with 1-based line numbers while strictly ignoring `#` comments inside fenced code blocks (` ``` `).
+- **`DraftManager` (`draft_manager.py`)**: Real-time crash-resilience engine writing debounced atomic `.report.md.draft` snapshots every 5 seconds while editing. Cleans up automatically on normal save/discard and powers startup recovery prompts after unexpected terminations.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
-- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, view state, autosave and export workflow. Report dialogs, preview/document handling, formatting-toolbar construction, "Add Missing Loot" action with dirty-state safety, and find/replace live in focused modules under `ui/report/`.
+- **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, live preview, and reporting workflows:
+  - **Two-Tier Toolbar**: Tier 1 for document actions (`View ▾`, `Sections ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`), status display, and compact icon-save (`💾`); Tier 2 for formatting controls (`H ▾`, inline styles, inserts) with a collapsible minimize toggle (`▲` / `▼`).
+  - **Bi-directional Scroll-Sync**: Synchronizes scrolling between Markdown editor and live preview in Split View mode with proportional ratio mapping and recursion guards.
+  - **Hierarchical Outline Navigation**: `[ 📑 Sections ▾ ]` dropdown and `Ctrl+Shift+O` shortcut for jumping directly to any report section.
+  - **Direct Image & Loot Screenshot Insert**: `🖼️` button and `Ctrl+Shift+I` shortcut with quick-insert for recent loot screenshots and searchable `LootImagePickerDialog`.
+  - **Destructive Action Safety**: Red danger styling on `Regenerate`, explicit overwrite confirmation, and automatic pre-regeneration backup (`report.md.bak`).
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)
 - **`BoxArchiver` (`core/box_archiver.py`)**: Compresses complete project workspaces into portable `.zip` archives while retaining their project-relative layout.
@@ -180,16 +210,18 @@ for the two trust boundaries and their test rationale.
    - File-size thresholds on JSON state, templates, notes, and screenshots help avoid an accidental UI stall or unusable local state.
 3. **Atomic file persistence**:
    - `core/atomic_write.py` ensures power-loss and crash resilience by writing to unique temp files before atomically replacing target JSON/markdown files.
-4. **Single source of truth for session data**:
+4. **Real-time crash recovery snapshots**:
+   - `core/reporting/draft_manager.py` writes debounced atomic `.report.md.draft` snapshots every 5 seconds when unsaved notes are in flight. Clean saves and discards remove the draft, while startup detection flags unexpected process terminations (crash, OOM, power loss) and prompts the user to restore recent in-flight work.
+5. **Single source of truth for session data**:
    - `project_state.json` inside each project folder is the sole source of truth for loot, variables, and clipboard history.
    - `LootManager` and `ClipboardWatcher` operate as session buffers in RAM, avoiding redundant and conflicting global storage files.
-5. **Stable report formatting**:
-   - The Markdown exporter adapts code fences and escapes table pipes so captured command output does not break a generated report.
-6. **Safe customer-facing exports**:
+6. **Stable report formatting & backup safety**:
+   - The Markdown exporter adapts code fences and escapes table pipes so captured command output does not break a generated report. Pre-regeneration editor states are saved automatically before overwrites, creating clean `.bak` backups.
+7. **Safe customer-facing exports**:
    - HTML export escapes active content and unsafe URL schemes, while image and attachment resolution stays within the active project and selected export destination.
-6. **Structured and rotating logging (`core/logger.py`)**:
+8. **Structured and rotating logging (`core/logger.py`)**:
    - Hierarchical namespacing (`spectrehud.<module>`), `SPECTRE_LOG_LEVEL` environment configuration, 5 MB file threshold, and 3-backup log rotation. File logging is configured lazily at bootstrap, keeping module imports 100% side-effect free.
-7. **Optional Pentest-Mode state encryption**:
+9. **Optional Pentest-Mode state encryption**:
    - `ProjectStateStore` encrypts only a Pentest-Mode project's `project_state.json` with authenticated Fernet encryption. `crypto_service.py` derives a key using PBKDF2-SHA256; `ProjectLockService` retains that key only for the unlocked process session.
    - `security_meta.json` contains the salt, safe KDF parameters and an encrypted verifier, never a password or usable project key. `report.md`, notes, screenshots and user-selected plaintext exports are intentionally outside this scope. See [Pentest Mode](pentest_mode.md).
 
