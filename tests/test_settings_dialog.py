@@ -63,9 +63,9 @@ class TestSettingsDialog(unittest.TestCase):
 
     def test_appearance_page_get_settings(self):
         page = AppearanceSettingsPage(self.config_manager)
-        page.combo_ui_font.setCurrentIndex(1)
-        page.combo_code_font.setCurrentIndex(3)
-        page.combo_report_font.setCurrentIndex(3)
+        page.combo_ui_font.setCurrentIndex(page.combo_ui_font.findData("inter"))
+        page.combo_code_font.setCurrentIndex(page.combo_code_font.findData("jetbrains_mono"))
+        page.combo_report_font.setCurrentIndex(page.combo_report_font.findData("georgia"))
         page.slider_hud_transparency.setValue(20)
         page.spin_report_transparency.setValue(10)
 
