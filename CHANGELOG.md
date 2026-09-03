@@ -18,6 +18,15 @@ semantic versioning.
   a searchable `LootImagePickerDialog` with live preview to pick individual screenshots
   without regenerating or appending all loot, and automatic import of external images
   into the project's `screenshots/` directory.
+- **Bi-directional Scroll-Sync in Split View**: Synchronized scrolling between the Markdown editor
+  and live preview in Split View mode with smooth proportional alignment and feedback-loop guards.
+- **Hierarchical Heading Outline & Jump-to-Section Navigation**: Added `[ 📑 Sections ▾ ]` (`[ 📑 Gliederung ▾ ]`)
+  dropdown on Tier 1 and `Ctrl+Shift+O` shortcut to dynamically parse document headings (H1–H6, excluding code blocks)
+  and jump directly to any section with synchronized preview alignment.
+- **Real-Time Crash Recovery & Draft Snapshots**: Background engine saves atomic `.report.md.draft`
+  snapshots every 5 seconds while typing unsaved notes. Automatically cleans up on normal save/discard
+  and presents an instant restore prompt on startup if an unsaved draft is detected following a crash
+  or unexpected shutdown.
 
 ### Changed
 

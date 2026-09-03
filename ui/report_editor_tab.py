@@ -51,10 +51,18 @@ from ui.report.dialogs import (
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.toolbar import build_format_toolbar
+from core.reporting.outline import extract_headings
+from core.reporting.draft_manager import (
+    discard_draft,
+    get_draft,
+    has_recoverable_draft,
+    save_draft,
+)
 
 logger = get_logger("report_editor")
 
 PREVIEW_DEBOUNCE_MS = 300
+DRAFT_DEBOUNCE_MS = 5_000
 AUTOSAVE_INTERVAL_MS = 45_000
 
 
@@ -92,10 +100,17 @@ class ReportEditorTab(QWidget):
         self._view_mode = ViewMode.SPLIT
         self._preview_markdown_snapshot: Optional[str] = None
 
+        self._syncing_scroll = False
+
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
         self._preview_timer.setInterval(PREVIEW_DEBOUNCE_MS)
         self._preview_timer.timeout.connect(self._update_preview)
+
+        self._draft_timer = QTimer(self)
+        self._draft_timer.setSingleShot(True)
+        self._draft_timer.setInterval(DRAFT_DEBOUNCE_MS)
+        self._draft_timer.timeout.connect(self._save_draft_snapshot)
 
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setInterval(AUTOSAVE_INTERVAL_MS)
@@ -159,6 +174,15 @@ class ReportEditorTab(QWidget):
         self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
         self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
+
+        # Dynamic Outline / Jump to Section Dropdown
+        self.btn_outline = QPushButton(t("report.outline", "Sections ▾"))
+        self.btn_outline.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
+        self.btn_outline.setToolTip(t("report.outline_tip", "Jump to section (Ctrl+Shift+O)"))
+        self.outline_menu = QMenu(self.btn_outline)
+        self.outline_menu.aboutToShow.connect(self._populate_outline_menu)
+        self.btn_outline.setMenu(self.outline_menu)
+        toolbar.addWidget(self.btn_outline)
 
         self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
@@ -255,6 +279,10 @@ class ReportEditorTab(QWidget):
         self.preview.setProperty("class", "ReportPreview")
         self.splitter.addWidget(self.preview)
 
+        # Bi-directional scroll-sync between editor and live preview in Split mode
+        self.editor.verticalScrollBar().valueChanged.connect(self._on_editor_scroll)
+        self.preview.verticalScrollBar().valueChanged.connect(self._on_preview_scroll)
+
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 1)
         layout.addWidget(self.splitter, stretch=1)
@@ -283,6 +311,11 @@ class ReportEditorTab(QWidget):
             QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW)
         )
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_outline = QShortcut(
+            QKeySequence("Ctrl+Shift+O"), self, activated=self._show_outline_menu
+        )
+        sc_outline.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._shortcut_find = QShortcut(
             QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open
@@ -528,6 +561,47 @@ class ReportEditorTab(QWidget):
         self.preview_document.set_project_dir(proj_dir)
 
         content = self.report_file_manager.load(project_name)
+
+        # Crash Recovery: Check for uncommitted draft from unexpected termination
+        if has_recoverable_draft(proj_dir, content):
+            res = get_draft(proj_dir)
+            if res:
+                draft_text, draft_time = res
+                time_str = draft_time.strftime("%H:%M:%S")
+                msg = QMessageBox(self.window() if self else None)
+                msg.setWindowTitle(t("report.draft_recovery_title", "Recover Unsaved Draft"))
+                msg.setText(
+                    t(
+                        "report.draft_recovery_msg",
+                        "An unsaved draft for '{project}' from {time} was found.\n\nDo you want to restore it?",
+                        project=project_name,
+                        time=time_str,
+                    )
+                )
+                msg.setIcon(QMessageBox.Icon.Question)
+                btn_restore = msg.addButton(
+                    t("report.draft_restore_btn", "Restore Draft"),
+                    QMessageBox.ButtonRole.AcceptRole,
+                )
+                msg.addButton(
+                    t("report.draft_discard_btn", "Discard Draft"),
+                    QMessageBox.ButtonRole.RejectRole,
+                )
+                msg.setDefaultButton(btn_restore)
+                msg.exec()
+
+                if msg.clickedButton() is btn_restore:
+                    content = draft_text
+                    self.editor.blockSignals(True)
+                    self.editor.setPlainText(content)
+                    self.editor.blockSignals(False)
+                    self._set_dirty(True)
+                    self._update_preview()
+                    self._update_status_label()
+                    return
+                else:
+                    discard_draft(proj_dir)
+
         # setPlainText löst textChanged aus -> _dirty würde faelschlich True
         # werden, deshalb Signal kurz blocken.
         self.editor.blockSignals(True)
@@ -582,7 +656,8 @@ class ReportEditorTab(QWidget):
 
     def _on_text_changed(self) -> None:
         self._set_dirty(True)
-        self._preview_timer.start()  # debounced
+        self._preview_timer.start()  # debounced preview
+        self._draft_timer.start()  # debounced crash recovery snapshot
 
     def _enter_preview_mode(self) -> None:
         """Enters editable live preview mode and takes a markdown baseline snapshot."""
@@ -662,6 +737,7 @@ class ReportEditorTab(QWidget):
             self.preview.setVisible(True)
             total_w = self.splitter.width() or 800
             self.splitter.setSizes([total_w // 2, total_w // 2])
+            self._sync_scroll_editor_to_preview()
 
     def _cycle_view_mode(self) -> None:
         """Cycles through EDITOR -> SPLIT -> PREVIEW -> EDITOR."""
@@ -681,6 +757,12 @@ class ReportEditorTab(QWidget):
         )
         if ok:
             self._set_dirty(False)
+            proj_dir = self.report_file_manager.project_manager.get_project_dir(
+                self.current_project
+            )
+            discard_draft(proj_dir)
+            if self._draft_timer.isActive():
+                self._draft_timer.stop()
         else:
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle(t("dialog.error", "Error"))
@@ -1161,6 +1243,7 @@ class ReportEditorTab(QWidget):
             )
             self.preview_document.set_project_dir(proj_dir)
         self.preview.setMarkdown(self.editor.toPlainText())
+        self._sync_scroll_editor_to_preview()
 
     def _update_status_label(self) -> None:
         if not self.current_project:
@@ -1177,3 +1260,111 @@ class ReportEditorTab(QWidget):
             ViewMode.PREVIEW: t("report.view_preview_short", "Live Preview"),
         }.get(self._view_mode, "Split")
         self.lbl_status.setText(f"{self.current_project} — {status_text} · [{mode_label}]")
+
+    # ------------------------------------------------------------------ #
+    # Scroll-Sync (Split-View)
+    # ------------------------------------------------------------------ #
+
+    def _on_editor_scroll(self, value: int) -> None:
+        """Synchronizes preview scrollbar proportionally when editor scrolls in Split mode."""
+        if self._syncing_scroll or self._view_mode != ViewMode.SPLIT:
+            return
+        ed_bar = self.editor.verticalScrollBar()
+        pr_bar = self.preview.verticalScrollBar()
+        ed_max = ed_bar.maximum()
+        pr_max = pr_bar.maximum()
+        if ed_max <= 0 or pr_max <= 0:
+            return
+        ratio = value / ed_max
+        self._syncing_scroll = True
+        try:
+            pr_bar.setValue(int(ratio * pr_max))
+        finally:
+            self._syncing_scroll = False
+
+    def _on_preview_scroll(self, value: int) -> None:
+        """Synchronizes editor scrollbar proportionally when preview scrolls in Split mode."""
+        if self._syncing_scroll or self._view_mode != ViewMode.SPLIT:
+            return
+        ed_bar = self.editor.verticalScrollBar()
+        pr_bar = self.preview.verticalScrollBar()
+        ed_max = ed_bar.maximum()
+        pr_max = pr_bar.maximum()
+        if ed_max <= 0 or pr_max <= 0:
+            return
+        ratio = value / pr_max
+        self._syncing_scroll = True
+        try:
+            ed_bar.setValue(int(ratio * ed_max))
+        finally:
+            self._syncing_scroll = False
+
+    def _sync_scroll_editor_to_preview(self) -> None:
+        """Aligns preview scroll position to editor position (e.g. after mode switch or reload)."""
+        if self._view_mode != ViewMode.SPLIT:
+            return
+        ed_bar = self.editor.verticalScrollBar()
+        pr_bar = self.preview.verticalScrollBar()
+        ed_max = ed_bar.maximum()
+        pr_max = pr_bar.maximum()
+        if ed_max <= 0 or pr_max <= 0:
+            return
+        ratio = ed_bar.value() / ed_max
+        self._syncing_scroll = True
+        try:
+            pr_bar.setValue(int(ratio * pr_max))
+        finally:
+            self._syncing_scroll = False
+
+    # ------------------------------------------------------------------ #
+    # Outline & Sprung-Navigation
+    # ------------------------------------------------------------------ #
+
+    def _show_outline_menu(self) -> None:
+        """Opens the outline menu, populating it if needed."""
+        self._populate_outline_menu()
+        self.btn_outline.showMenu()
+
+    def _populate_outline_menu(self) -> None:
+        """Populates the outline menu with current headings extracted from the editor."""
+        self.outline_menu.clear()
+        headings = extract_headings(self.editor.toPlainText())
+        if not headings:
+            disabled_action = self.outline_menu.addAction(
+                t("report.no_headings", "No headings in document")
+            )
+            disabled_action.setEnabled(False)
+            return
+
+        for heading in headings:
+            indent = "    " * (heading.level - 1)
+            prefix = "#" * heading.level
+            action_text = f"{indent}{prefix} {heading.title}"
+            action = self.outline_menu.addAction(action_text)
+            action.triggered.connect(
+                lambda _checked=False, line=heading.line_number: self._jump_to_heading_line(line)
+            )
+
+    def _jump_to_heading_line(self, line_number: int) -> None:
+        """Positions cursor at the given 1-based line number and ensures it is visible."""
+        block = self.editor.document().findBlockByLineNumber(line_number - 1)
+        if block.isValid():
+            cursor = self.editor.textCursor()
+            cursor.setPosition(block.position())
+            self.editor.setTextCursor(cursor)
+            self.editor.ensureCursorVisible()
+            self.editor.setFocus()
+            self._sync_scroll_editor_to_preview()
+
+    # ------------------------------------------------------------------ #
+    # Crash Recovery & Draft Snapshots
+    # ------------------------------------------------------------------ #
+
+    def _save_draft_snapshot(self) -> None:
+        """Saves an in-flight draft snapshot for crash recovery if content is dirty."""
+        if not self._dirty or not self.current_project:
+            return
+        proj_dir = self.report_file_manager.project_manager.get_project_dir(
+            self.current_project
+        )
+        save_draft(proj_dir, self.editor.toPlainText())

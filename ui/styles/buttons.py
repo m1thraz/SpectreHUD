@@ -423,7 +423,10 @@ QPushButton[class*="HeadingDropdownBtn"] {
 
 QPushButton.HeadingDropdownBtn::menu-indicator,
 QPushButton[class~="HeadingDropdownBtn"]::menu-indicator,
-QPushButton[class*="HeadingDropdownBtn"]::menu-indicator {
+QPushButton[class*="HeadingDropdownBtn"]::menu-indicator,
+QPushButton.OutlineDropdownBtn::menu-indicator,
+QPushButton[class~="OutlineDropdownBtn"]::menu-indicator,
+QPushButton[class*="OutlineDropdownBtn"]::menu-indicator {
     image: none;
     width: 0px;
 }
