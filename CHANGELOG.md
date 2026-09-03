@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-09-03
+
 ### Added
 
 - **5 New Built-in HUD Themes**: Added popular dark community color schemes for enhanced
@@ -18,8 +20,6 @@ semantic versioning.
 - **1-Click Circular Copy Buttons for Variable Inputs**: Added sleek circular vector
   copy-to-clipboard buttons inside Target IP, LHOST, and Popover input fields for
   instant 1-click clipboard copying with dynamic feedback, zero layout overhead, and bilingual tooltips (EN/DE).
-- **Streamlined Variable Bar with Port in Auth Popover**: Relocated the Port field into the
-  Auth Popover, further compacting the main cheatsheet header bar for narrow windows.
 - **Subnet, DNS Server & Unified Hash/File Variables**: Added dedicated persistent inputs
   for `{{SUBNET}}` and `{{DNS_SERVER}}` inside the Scope Popover, and unified `{{NTLM_HASH}}`,
   `{{HASH}}`, and `{{HASH_FILE}}` inside the Auth Popover with 1-click circular copy buttons,
@@ -28,6 +28,14 @@ semantic versioning.
   - **App UI**: *IBM Plex Sans* (technical/industrial look) and *Manrope* (crisp semi-geometric dark-mode font).
   - **Code/Snippets**: *IBM Plex Mono*, *Iosevka* (condensed monospace allowing ~25% more characters per line in command snippets), and *Hack* (high-contrast terminal standard).
   - **Reports & Exports**: *Source Serif Pro* (executive report serif), *Lato* (clean agency standard sans), and *Cambria* (native print serif).
+
+### Changed
+
+- **Streamlined Variable Bar with Port in Auth Popover**: Relocated the Port field into the
+  Auth Popover, further compacting the main cheatsheet header bar for narrow windows.
+- **Subtle Active Badge Button Styling**: Calmed `VarBadgeBtnActive` styling so active popover
+  badge buttons (e.g., `[👤 admin ▾]`) match the non-intrusive border and background of default
+  badge buttons, removing distracting neon focus outlines.
 
 ## [2.0.5] - 2026-09-02
 

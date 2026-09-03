@@ -55,9 +55,9 @@ REPORT_FONT_OPTIONS = [
     ("segoe_ui", "Segoe UI"),
     ("calibri", "Calibri"),
     ("arial", "Arial"),
+    ("georgia", "Georgia (Serif)"),
     ("lato", "Lato"),
     ("source_serif", "Source Serif Pro"),
-    ("georgia", "Georgia (Serif)"),
     ("cambria", "Cambria (Serif)"),
 ]
 

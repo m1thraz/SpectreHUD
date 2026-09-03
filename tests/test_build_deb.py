@@ -16,9 +16,9 @@ from scripts.build_deb import (
 
 
 def test_generate_control_file():
-    content = generate_control_file("2.0.5", arch="amd64")
+    content = generate_control_file("2.0.6", arch="amd64")
     assert "Package: spectrehud" in content
-    assert "Version: 2.0.5" in content
+    assert "Version: 2.0.6" in content
     assert "Architecture: amd64" in content
     assert "Depends: libgl1" in content
     assert content.endswith("\n")
@@ -41,7 +41,7 @@ def test_prepare_deb_staging_tree(tmp_path):
     project_dir = Path(__file__).resolve().parent.parent
     staging_dir = tmp_path / "deb_staging"
 
-    prepare_deb_staging_tree(project_dir, staging_dir, "2.0.5")
+    prepare_deb_staging_tree(project_dir, staging_dir, "2.0.6")
 
     # Assert standard Debian structure
     assert (staging_dir / "DEBIAN" / "control").exists()
