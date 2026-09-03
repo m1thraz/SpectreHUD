@@ -286,6 +286,33 @@ class TestControllersDomain(unittest.TestCase):
         self.assertIsNone(history_events[3]["entry"])
         self.assertEqual(history_events[3]["history"], [])
 
+    def test_loot_controller_export_loot_uses_report_builder_directly(self):
+        """LootController.export_loot must invoke ReportBuilder directly without using deprecated LootManager.export_loot."""
+        self.loot_ctrl.add_entry("credentials", "DB User", "db:secret", target_ip="10.10.10.55", category="access")
+        out_file = self.temp_path / "controller_loot_export.md"
+
+        with patch.object(self.loot_mgr, "export_loot") as mock_deprecated:
+            self.loot_ctrl.export_loot(out_file, target_ip="10.10.10.55")
+            mock_deprecated.assert_not_called()
+
+        self.assertTrue(out_file.exists())
+        content = out_file.read_text(encoding="utf-8")
+        self.assertIn("db:secret", content)
+        self.assertIn("DB User", content)
+
+    def test_history_controller_export_report_uses_report_builder_directly(self):
+        """HistoryController.export_report_markdown must invoke ReportBuilder directly without using deprecated ClipboardWatcher.export_report_markdown."""
+        self.history_ctrl.add_entry("curl -s http://10.10.10.55/admin", target_ip="10.10.10.55")
+        out_file = self.temp_path / "controller_history_export.md"
+
+        with patch.object(self.clip_watcher, "export_report_markdown") as mock_deprecated:
+            self.history_ctrl.export_report_markdown(out_file, target_ip="10.10.10.55")
+            mock_deprecated.assert_not_called()
+
+        self.assertTrue(out_file.exists())
+        content = out_file.read_text(encoding="utf-8")
+        self.assertIn("curl -s http://10.10.10.55/admin", content)
+
 
 if __name__ == "__main__":
     unittest.main()

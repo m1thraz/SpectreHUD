@@ -186,7 +186,10 @@ class LootController(QObject):
         return True
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        return self.loot_manager.export_loot(output_path, target_ip=target_ip)
+        from core.report_builder import ReportBuilder
+
+        builder = ReportBuilder(loot_manager=self.loot_manager)
+        return builder.export(output_path, target_ip=target_ip)
 
     def export_entry_to_file(self, entry_id: str) -> Path:
         """Writes one loot entry as a human-readable, project-local text file."""

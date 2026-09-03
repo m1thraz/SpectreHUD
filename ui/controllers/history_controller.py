@@ -126,9 +126,12 @@ class HistoryController(QObject):
         return self.clipboard_watcher.is_paused
 
     def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        return self.clipboard_watcher.export_report_markdown(
-            output_path=output_path, target_ip=target_ip, loot_manager=self.loot_manager
+        from core.report_builder import ReportBuilder
+
+        builder = ReportBuilder(
+            loot_manager=self.loot_manager, clipboard_watcher=self.clipboard_watcher
         )
+        return builder.export(output_path, target_ip=target_ip)
 
     def get_filter_actions(
         self, on_select_filter: Optional[Callable[[str], None]] = None

@@ -436,6 +436,11 @@ class LootManager:
 
         Delegates to ReportBuilder for unified reporting.
         """
+        warnings.warn(
+            "LootManager.export_loot() is deprecated; use core.report_builder.ReportBuilder instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         from core.report_builder import ReportBuilder
 
         builder = ReportBuilder(loot_manager=self)

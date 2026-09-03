@@ -302,6 +302,11 @@ class ClipboardWatcher(QObject):
 
         Delegates directly to ReportBuilder for unified reporting.
         """
+        warnings.warn(
+            "ClipboardWatcher.export_report_markdown() is deprecated; use core.report_builder.ReportBuilder instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         from core.report_builder import ReportBuilder
 
         builder = ReportBuilder(loot_manager=loot_manager, clipboard_watcher=self)
