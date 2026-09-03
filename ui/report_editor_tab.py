@@ -195,6 +195,15 @@ class ReportEditorTab(QWidget):
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         toolbar.addWidget(self.lbl_status)
 
+        # Kompakter Icon-Save Button (Diskette) rechts neben dem Status-Label
+        self.btn_save = QPushButton("💾")
+        self.btn_save.setProperty("class", "SecondaryBtn FormatToolBtn SaveIconBtn")
+        self.btn_save.setToolTip(
+            t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
+        )
+        self.btn_save.clicked.connect(self.save)
+        toolbar.addWidget(self.btn_save)
+
         return toolbar
 
     def _build_view_menu(self) -> None:

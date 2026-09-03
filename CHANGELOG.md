@@ -25,7 +25,7 @@ semantic versioning.
   - **Tier 1 (Document Actions & Status)**: Houses document-level controls (`View ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`) on the left, and the localized project status indicator (`<project> — ✓ Saved · [Split]`) right-aligned on the same row.
   - **Tier 2 (Formatting Tools)**: Cleanly dedicated row for structure (`H ▾` Dropdown, `❝`, `•`, `1.`, `―`), inline styling (`B`, `I`, `S̶`, `</>`, `>_`), and inserts (`🖼️`, `🔗`, `▦`) with visible vertical dividers and rounded hit-boxes.
   - **Toolbar Minimize / Expand Toggle**: Added a compact `▲` / `▼` toggle button on the far right of Tier 2 (directly underneath the status label) allowing users to collapse the formatting tools for an unobstructed view of their notes.
-  - **Removed Redundant Save Button**: Removed the standalone Save button from the UI in favor of existing automatic saves, dirty safeguards, and `Ctrl+S` keyboard shortcut, maximizing vertical and horizontal editing space.
+  - **Compact Icon-Save on Tier 1**: Added a compact, discrete diskette icon button (`💾`) right next to the status label on Tier 1, preserving explicit manual save capability with tactical tactile feedback without cluttering the interface with a bulky button.
 - **Full Status Label Localization (i18n)**: Fully localized report save states (`✓ Saved` / `✓ Gespeichert`, `● Unsaved changes` / `● Ungespeicherte Änderungen`) and view mode badges across languages.
 - **Destructive Action Safety**:
   - Permanently styled `Regenerate` button with red danger accent (`color: {TEXT_REC}; border: 1px solid {ERROR_A70}`)

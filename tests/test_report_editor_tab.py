@@ -225,6 +225,17 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(hasattr(self.tab, "btn_append_loot"))
         self.assertEqual(self.tab.btn_append_loot.text(), t("report.append_loot", "Add Missing Loot"))
 
+    def test_btn_save_exists_as_compact_icon_in_toolbar(self):
+        """Verify compact icon-save button exists on Tier 1 next to status label."""
+        self.assertTrue(hasattr(self.tab, "btn_save"))
+        self.assertEqual(self.tab.btn_save.text(), "💾")
+        self.assertIn("SaveIconBtn", self.tab.btn_save.property("class"))
+        self.tab.report_file_manager.save = MagicMock(return_value=True)
+        self.tab._set_dirty(True)
+        self.tab.btn_save.click()
+        self.tab.report_file_manager.save.assert_called_once()
+        self.assertFalse(self.tab.is_dirty())
+
     def test_append_loot_saves_dirty_state_first_and_preserves_manual_edits(self):
         """Ticket 25 & 38: Dirty editor content must be committed & saved before sync to ensure backup contains it."""
         initial_disk_text = "# Outdated Disk Report\n\n## 1. Reconnaissance & Enumeration\n\n*Keine Einträge in dieser Phase.*\n\n_Eigene Anmerkungen zu dieser Phase:_\n"

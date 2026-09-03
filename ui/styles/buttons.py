@@ -483,6 +483,27 @@ QPushButton[class*="ToolbarToggleBtn"]:hover {
     color: {CYBER_CYAN};
 }
 
+QPushButton.SaveIconBtn,
+QPushButton[class~="SaveIconBtn"],
+QPushButton[class*="SaveIconBtn"] {
+    background-color: {SURFACE_A85};
+    color: {TEXT_PRIMARY};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 11px;
+    min-width: 22px;
+    min-height: 20px;
+}
+
+QPushButton.SaveIconBtn:hover,
+QPushButton[class~="SaveIconBtn"]:hover,
+QPushButton[class*="SaveIconBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_BLUE};
+    color: {TEXT_WHITE};
+}
+
 QPushButton.BrowseBtn {
     background-color: {CONTROL_A85};
     color: {CYBER_BLUE};
