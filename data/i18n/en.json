@@ -72,7 +72,7 @@
 
     "privacy.warning": "Privacy Notice: Copied passwords or personal data are logged while REC is active (Pause with Ctrl+P or click REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | {quit_hotkey}: Quit | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Hide",
+    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
     "footer.entries_count": "{count} entries",
     "footer.entry_count_single": "1 entry",
     "footer.always_on_top": "Always on Top",
@@ -85,6 +85,12 @@
     "card.add_loot": "+ Loot",
     "card.delete_tip": "Delete",
     "card.copy_tip": "Copy command with current variables to clipboard",
+
+    "history.capture": "Capture ▾",
+    "history.capture_tip": "Click: Save as Quick Note | Arrow: Options (Note / Loot)",
+    "history.capture_as_note": "Save as Note",
+    "history.captured_as_note": "✓ Note",
+    "history.capture_as_loot": "Save as Loot...",
 
     "report.append_loot": "Add Missing Loot",
     "report.append_loot_tip": "Safe & Non-destructive: Appends new loot and screenshots without modifying existing manual notes",
@@ -289,9 +295,13 @@
     "settings.shortcut_ctrl_p": "Pause / resume clipboard recorder",
     "settings.shortcut_ctrl_s": "Capture region screenshot",
     "settings.shortcut_modes": "Switch active mode (Cheatsheet, Loot, History, Report)",
-    "settings.shortcut_options": "Open settings & options",
+    "settings.shortcut_options": "Open settings / options",
+    "settings.lbl_quick_note_shortcut": "Quick Note (Haftnotiz):",
+    "settings.lbl_quick_ip_shortcut": "Quick IP (Target / LHOST):",
 
     "tray.show": "Show SpectreHUD ({hotkey})",
+    "tray.note": "Capture Quick-Note ({hotkey})",
+    "tray.ip": "Quick-IP (Target / LHOST) ({hotkey})",
     "tray.snip": "Capture Screenshot (Ctrl+Alt+X)",
     "tray.rec_start": "Enable Clipboard Logger (Ctrl+P)",
     "tray.rec_pause": "Pause Clipboard Logger (Ctrl+P)",

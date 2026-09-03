@@ -33,7 +33,9 @@ class TestHistoryCardSplitButton(unittest.TestCase):
         self.assertIsNotNone(self.card.btn_capture)
         # Backwards compatibility alias
         self.assertIs(self.card.btn_to_loot, self.card.btn_capture)
-        self.assertIn("Erfassen", self.card.btn_capture.text())
+        self.assertTrue(
+            "Erfassen" in self.card.btn_capture.text() or "Capture" in self.card.btn_capture.text()
+        )
         self.assertIsNotNone(self.card.btn_capture.menu())
 
     def test_main_click_emits_transfer_to_note(self):
@@ -93,8 +95,12 @@ class TestHistoryCardSplitButton(unittest.TestCase):
     def test_visual_feedback_resets(self):
         self.card._on_capture_note()
         self.assertIn("✓", self.card.btn_capture.text())
+        self.assertFalse(self.card.btn_capture.isEnabled())
         self.card._reset_capture_btn()
-        self.assertIn("Erfassen", self.card.btn_capture.text())
+        self.assertTrue(
+            "Erfassen" in self.card.btn_capture.text() or "Capture" in self.card.btn_capture.text()
+        )
+        self.assertTrue(self.card.btn_capture.isEnabled())
 
 
 class TestClipboardCoordinatorCapture(unittest.TestCase):
@@ -170,6 +176,44 @@ class TestClipboardCoordinatorCapture(unittest.TestCase):
         success = self.coordinator.add_history_to_note(window, item_empty)
         self.assertFalse(success)
         self.quick_note_ctrl.add_entry.assert_not_called()
+
+
+class TestHistoryControllerNotesRendering(unittest.TestCase):
+    def test_render_notes_inbox_ignores_active_target_ip(self):
+        from ui.controllers.history_controller import HistoryController
+        from PyQt6.QtWidgets import QVBoxLayout
+
+        mock_note_mgr = MagicMock()
+        mock_note_mgr.get_entries.return_value = [
+            {"id": "note_1", "text": "Note with target A", "category": "recon", "target_ip": "10.10.10.5", "timestamp": "12:00:00"},
+            {"id": "note_2", "text": "Note with target B", "category": "loot", "target_ip": "TARGET", "timestamp": "12:05:00"},
+        ]
+        controller = HistoryController(
+            clipboard_watcher=MagicMock(),
+            loot_manager=MagicMock(),
+            project_manager=MagicMock(),
+            quick_note_manager=mock_note_mgr,
+        )
+        controller.current_history_filter = "notes"
+
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        empty_fn = MagicMock()
+
+        cards = controller.render_content(
+            content_layout=layout,
+            parent_widget=container,
+            target_ip="192.168.1.100",  # Different IP
+            search_query="",
+            show_empty_state_fn=empty_fn,
+            on_add_to_loot=MagicMock(),
+            on_delete_entry=MagicMock(),
+        )
+
+        mock_note_mgr.get_entries.assert_called_once_with(search_query="")
+        self.assertEqual(len(cards), 2)
+        empty_fn.assert_not_called()
+        container.close()
 
 
 if __name__ == "__main__":

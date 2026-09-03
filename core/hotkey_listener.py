@@ -30,6 +30,7 @@ class HotkeyConfig:
     toggle: str = "<ctrl>+<alt>+h"
     screenshot: str = "<ctrl>+<alt>+x"
     quick_note: str = "<ctrl>+<alt>+n"
+    quick_ip: str = "<ctrl>+<alt>+i"
     quit: str = "<ctrl>+<alt>+q"
 
 
@@ -73,6 +74,7 @@ class HotkeyListener(QObject):
     toggle_requested = pyqtSignal()
     screenshot_requested = pyqtSignal()
     quick_note_requested = pyqtSignal()
+    quick_ip_requested = pyqtSignal()
     quit_requested = pyqtSignal()
 
     def __init__(
@@ -96,6 +98,7 @@ class HotkeyListener(QObject):
         self._last_trigger_time = 0.0
         self._last_screenshot_time = 0.0
         self._last_quick_note_time = 0.0
+        self._last_quick_ip_time = 0.0
         self._last_quit_time = 0.0
         self._debounce_cooldown = 0.35  # seconds
 
@@ -118,7 +121,7 @@ class HotkeyListener(QObject):
 
         self.config = new_config
         logger.info(
-            f"Updated hotkey config: Toggle='{self.config.toggle}', Snip='{self.config.screenshot}', Note='{self.config.quick_note}', Quit='{self.config.quit}'"
+            f"Updated hotkey config: Toggle='{self.config.toggle}', Snip='{self.config.screenshot}', Note='{self.config.quick_note}', IP='{self.config.quick_ip}', Quit='{self.config.quit}'"
         )
         if self._running:
             self.stop()
@@ -145,6 +148,7 @@ class HotkeyListener(QObject):
             norm_toggle = normalize_hotkey_for_pynput(self.config.toggle)
             norm_snip = normalize_hotkey_for_pynput(self.config.screenshot)
             norm_note = normalize_hotkey_for_pynput(self.config.quick_note)
+            norm_ip = normalize_hotkey_for_pynput(self.config.quick_ip)
             norm_quit = normalize_hotkey_for_pynput(self.config.quit)
 
             hotkey_mapping: Dict[str, Callable[[], None]] = {}
@@ -155,6 +159,8 @@ class HotkeyListener(QObject):
                 hotkey_mapping[norm_snip] = self._fire_screenshot_trigger
             if norm_note:
                 hotkey_mapping[norm_note] = self._fire_quick_note_trigger
+            if norm_ip:
+                hotkey_mapping[norm_ip] = self._fire_quick_ip_trigger
             if norm_quit:
                 hotkey_mapping[norm_quit] = self._fire_quit_trigger
 
@@ -192,6 +198,13 @@ class HotkeyListener(QObject):
         if now - self._last_quick_note_time >= self._debounce_cooldown:
             self._last_quick_note_time = now
             self.quick_note_requested.emit()
+
+    def _fire_quick_ip_trigger(self) -> None:
+        """Debounces and emits quick IP signal safely."""
+        now = time.time()
+        if now - self._last_quick_ip_time >= self._debounce_cooldown:
+            self._last_quick_ip_time = now
+            self.quick_ip_requested.emit()
 
     def _fire_quit_trigger(self) -> None:
         """Debounces and emits quit signal safely."""

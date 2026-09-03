@@ -79,7 +79,13 @@ class SettingsCoordinator:
             self.footer.set_always_on_top(bool(new_settings["always_on_top"]))
         if any(
             key in new_settings
-            for key in ("hotkey", "snip_hotkey", "quick_note_hotkey", "quit_hotkey")
+            for key in (
+                "hotkey",
+                "snip_hotkey",
+                "quick_note_hotkey",
+                "quick_ip_hotkey",
+                "quit_hotkey",
+            )
         ):
             self.update_footer_status()
             payload = {
@@ -97,6 +103,8 @@ class SettingsCoordinator:
             }
             if "quick_note_hotkey" in new_settings:
                 payload["quick_note_hotkey"] = new_settings["quick_note_hotkey"]
+            if "quick_ip_hotkey" in new_settings:
+                payload["quick_ip_hotkey"] = new_settings["quick_ip_hotkey"]
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, payload)
         if new_settings.get("workspace_dir"):
             self.workspace_coord.apply_workspace_setting(

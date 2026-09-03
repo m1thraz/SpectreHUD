@@ -255,11 +255,42 @@ class AppController(QObject):
         if hasattr(self, "quick_note_ctrl") and self.quick_note_ctrl:
             self.quick_note_ctrl.show_popup()
 
+    def trigger_quick_ip(self) -> None:
+        """Opens the lightweight quick IP popup."""
+        self._open_quick_ip_popup()
+
+    def _open_quick_ip_popup(self) -> None:
+        if not self.var_bar:
+            return
+        from ui.quick_ip_popup import QuickIpPopup
+
+        if not hasattr(self, "_quick_ip_popup") or self._quick_ip_popup is None:
+            self._quick_ip_popup = QuickIpPopup(parent=None)
+            self._quick_ip_popup.target_changed.connect(self._on_quick_ip_target_changed)
+            self._quick_ip_popup.attacker_changed.connect(self._on_quick_ip_attacker_changed)
+
+        vars_dict = self.var_bar.get_variables() if hasattr(self.var_bar, "get_variables") else {}
+        target_ip = str(vars_dict.get("target_ip", ""))
+        attacker_ip = str(vars_dict.get("attacker_ip", ""))
+
+        self._quick_ip_popup.show_at_cursor(target_ip, attacker_ip)
+
+    def _on_quick_ip_target_changed(self, text: str) -> None:
+        if self.var_bar and hasattr(self.var_bar, "txt_target"):
+            if self.var_bar.txt_target.text() != text:
+                self.var_bar.txt_target.setText(text)
+
+    def _on_quick_ip_attacker_changed(self, text: str) -> None:
+        if self.var_bar and hasattr(self.var_bar, "txt_attacker"):
+            if self.var_bar.txt_attacker.text() != text:
+                self.var_bar.txt_attacker.setText(text)
+
     def _on_notes_updated(self) -> None:
         self._update_notes_badge()
         if self.active_mode == "history":
             self.refresh_filter_pills()
-            self.refresh_content()
+            if getattr(self.history_ctrl, "current_history_filter", None) == "notes":
+                self.refresh_content()
 
     def _update_notes_badge(self) -> None:
         count = len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
@@ -626,6 +657,10 @@ class AppController(QObject):
         hotkey_raw = self.config.get("hotkey", "<ctrl>+<alt>+h")
         quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<alt>+q")
         quick_note_hotkey_raw = self.config.get("quick_note_hotkey", "<ctrl>+<alt>+n")
+        quick_ip_hotkey_raw = self.config.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
         self.footer.update_hotkey_display(
-            hotkey_raw, quit_hotkey_raw, quick_note_hotkey_raw=quick_note_hotkey_raw
+            hotkey_raw,
+            quit_hotkey_raw,
+            quick_note_hotkey_raw=quick_note_hotkey_raw,
+            quick_ip_hotkey_raw=quick_ip_hotkey_raw,
         )

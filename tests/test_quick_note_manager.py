@@ -93,6 +93,12 @@ class TestQuickNoteManager(unittest.TestCase):
         self.assertEqual(len(new_manager.get_all_entries()), 2)
         self.assertEqual(new_manager.get_all_entries()[0]["text"], "First Note")
 
+    def test_allow_multiple_entries_with_identical_text(self):
+        e1 = self.manager.add_entry("file:///C:/test.rar", category="recon")
+        e2 = self.manager.add_entry("file:///C:/test.rar", category="recon")
+        self.assertNotEqual(e1["id"], e2["id"])
+        self.assertEqual(len(self.manager.get_all_entries()), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

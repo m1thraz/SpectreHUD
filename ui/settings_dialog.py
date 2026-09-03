@@ -65,6 +65,13 @@ QUICK_NOTE_PRESETS = [
     {"label": "F8 (Single Key)", "value": "<f8>"},
 ]
 
+QUICK_IP_PRESETS = [
+    {"label": "Ctrl + Alt + I (Standard)", "value": "<ctrl>+<alt>+i"},
+    {"label": "Ctrl + Super + I", "value": "<ctrl>+<cmd>+i"},
+    {"label": "Ctrl + Shift + I", "value": "<ctrl>+<shift>+i"},
+    {"label": "F9 (Single Key)", "value": "<f9>"},
+]
+
 
 def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     """Keep a scroll area's viewport and hosted page transparent to window glass."""
@@ -186,6 +193,22 @@ class HotkeySettingsPage(QWidget):
         row_quick_note.addWidget(self.combo_quick_note, stretch=1)
         card_layout.addLayout(row_quick_note)
 
+        # Quick IP Shortcut
+        row_quick_ip = QHBoxLayout()
+        lbl_quick_ip = QLabel(t("settings.lbl_quick_ip_shortcut", "Quick IP (Target / LHOST):"))
+        lbl_quick_ip.setProperty("class", "FormLabel")
+        row_quick_ip.addWidget(lbl_quick_ip, stretch=1)
+
+        self.combo_quick_ip = QComboBox()
+        self.combo_quick_ip.setMinimumWidth(220)
+        curr_quick_ip = self.config.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
+        for i, preset in enumerate(QUICK_IP_PRESETS):
+            self.combo_quick_ip.addItem(preset["label"], preset["value"])
+            if preset["value"] == curr_quick_ip:
+                self.combo_quick_ip.setCurrentIndex(i)
+        row_quick_ip.addWidget(self.combo_quick_ip, stretch=1)
+        card_layout.addLayout(row_quick_ip)
+
         # Quit Shortcut
         row_quit = QHBoxLayout()
         lbl_quit = QLabel(t("settings.lbl_quit_shortcut", "Quit SpectreHUD Completely:"))
@@ -265,6 +288,7 @@ class HotkeySettingsPage(QWidget):
         self.combo_toggle.setCurrentIndex(0)
         self.combo_snip.setCurrentIndex(0)
         self.combo_quick_note.setCurrentIndex(0)
+        self.combo_quick_ip.setCurrentIndex(0)
         self.combo_quit.setCurrentIndex(0)
 
     def get_settings(self) -> Dict[str, Any]:
@@ -272,6 +296,7 @@ class HotkeySettingsPage(QWidget):
             "hotkey": self.combo_toggle.currentData() or "<ctrl>+<alt>+h",
             "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<alt>+x",
             "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<alt>+n",
+            "quick_ip_hotkey": self.combo_quick_ip.currentData() or "<ctrl>+<alt>+i",
             "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<alt>+q",
         }
 

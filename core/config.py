@@ -20,6 +20,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "hotkey": "<ctrl>+<alt>+h",
     "snip_hotkey": "<ctrl>+<alt>+x",
     "quick_note_hotkey": "<ctrl>+<alt>+n",
+    "quick_ip_hotkey": "<ctrl>+<alt>+i",
     "quit_hotkey": "<ctrl>+<alt>+q",
     "auto_hide_on_copy": False,
     "always_on_top": True,
@@ -101,6 +102,9 @@ class ConfigManager:
                 migrated = True
             if loaded.get("quick_note_hotkey") in ["<ctrl>+<cmd>+n", None]:
                 loaded["quick_note_hotkey"] = "<ctrl>+<alt>+n"
+                migrated = True
+            if loaded.get("quick_ip_hotkey") in ["<ctrl>+<cmd>+i", None]:
+                loaded["quick_ip_hotkey"] = "<ctrl>+<alt>+i"
                 migrated = True
             if loaded.get("quit_hotkey") in ["<ctrl>+<cmd>+q", None]:
                 loaded["quit_hotkey"] = "<ctrl>+<alt>+q"

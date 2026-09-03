@@ -38,6 +38,7 @@ class TestSettingsDialog(unittest.TestCase):
 
         page._reset_defaults()
         self.assertEqual(page.combo_toggle.currentData(), "<ctrl>+<alt>+h")
+        self.assertEqual(page.combo_quick_ip.currentData(), "<ctrl>+<alt>+i")
         self.assertEqual(page.combo_quit.currentData(), "<ctrl>+<alt>+q")
 
     def test_language_page_get_settings(self):

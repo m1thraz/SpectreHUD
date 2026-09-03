@@ -26,8 +26,9 @@ class FooterPanel(QFrame):
         self.lbl_status = QLabel(
             t(
                 "footer.status",
-                "{hotkey}: Toggle | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
+                "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
                 hotkey="Ctrl+Alt+H",
+                ip_hotkey="Ctrl+Alt+I",
                 note_hotkey="Ctrl+Alt+N",
                 quit_hotkey="Ctrl+Alt+Q",
             )
@@ -101,15 +102,18 @@ class FooterPanel(QFrame):
         hotkey_raw: str,
         quit_hotkey_raw: str = "<ctrl>+<alt>+q",
         quick_note_hotkey_raw: str = "<ctrl>+<alt>+n",
+        quick_ip_hotkey_raw: str = "<ctrl>+<alt>+i",
     ) -> None:
         hotkey_display = self._format_hotkey(hotkey_raw)
         quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)
         quick_note_display = self._format_hotkey(quick_note_hotkey_raw)
+        quick_ip_display = self._format_hotkey(quick_ip_hotkey_raw)
         self.lbl_status.setText(
             t(
                 "footer.status",
-                "{hotkey}: Toggle | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
+                "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
                 hotkey=hotkey_display,
+                ip_hotkey=quick_ip_display,
                 note_hotkey=quick_note_display,
                 quit_hotkey=quit_hotkey_display,
             )

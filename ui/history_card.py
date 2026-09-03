@@ -163,23 +163,26 @@ class HistoryCard(QFrame):
         layout.addLayout(content_row)
 
     def _on_capture_note(self) -> None:
-        """Captures entry directly as a Quick Note and shows visual feedback."""
+        """Captures entry directly as a Quick Note and disables further captures."""
+        self.btn_capture.setEnabled(False)
         self.transfer_to_note.emit(self.entry)
-        self._show_capture_feedback("✓ Note!")
+        self._show_capture_feedback(t("history.captured_as_note", "✓ Note"), auto_reset=False)
 
     def _on_capture_loot(self) -> None:
         """Transfers entry to Loot via dialog and shows visual feedback."""
         self.transfer_to_loot.emit(self.entry)
-        self._show_capture_feedback("✓ Loot...")
+        self._show_capture_feedback("✓ Loot...", auto_reset=True)
 
-    def _show_capture_feedback(self, text: str) -> None:
+    def _show_capture_feedback(self, text: str, auto_reset: bool = True) -> None:
         self.btn_capture.setText(text)
         self.btn_capture.setProperty("class", "CopyBtnSuccess")
         self.btn_capture.style().unpolish(self.btn_capture)
         self.btn_capture.style().polish(self.btn_capture)
-        QTimer.singleShot(1200, self._reset_capture_btn)
+        if auto_reset:
+            QTimer.singleShot(1200, self._reset_capture_btn)
 
     def _reset_capture_btn(self) -> None:
+        self.btn_capture.setEnabled(True)
         self.btn_capture.setText(t("history.capture", "Erfassen ▾"))
         self.btn_capture.setProperty("class", "SecondaryBtn")
         self.btn_capture.style().unpolish(self.btn_capture)

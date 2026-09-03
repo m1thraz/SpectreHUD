@@ -72,7 +72,7 @@
 
     "privacy.warning": "Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | {quit_hotkey}: Beenden | Ctrl+P: REC Toggle | Ctrl+S: Snip | Esc: Verstecken",
+    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Beenden | Ctrl+P: REC | Ctrl+S: Snip | Esc: Verstecken",
     "footer.entries_count": "{count} Einträge",
     "footer.entry_count_single": "1 Eintrag",
     "footer.always_on_top": "Im Vordergrund",
@@ -85,6 +85,12 @@
     "card.add_loot": "+ Loot",
     "card.delete_tip": "Löschen",
     "card.copy_tip": "Befehl mit aktuellen Variablen in die Zwischenablage kopieren",
+
+    "history.capture": "Erfassen ▾",
+    "history.capture_tip": "Klick: Als Note erfassen | Pfeil: Optionen (Note / Loot)",
+    "history.capture_as_note": "Als Note erfassen",
+    "history.captured_as_note": "✓ Note",
+    "history.capture_as_loot": "Als Loot erfassen...",
 
     "report.append_loot": "Aus Loot ergänzen",
     "report.append_loot_tip": "Sicher & Non-destruktiv: Ergänzt neuen Loot und Screenshots, ohne bestehende Notizen zu verändern",
@@ -290,13 +296,17 @@
     "settings.shortcut_ctrl_s": "Bereichs-Screenshot aufnehmen",
     "settings.shortcut_modes": "Modus wechseln (Cheatsheet, Loot, History, Report)",
     "settings.shortcut_options": "Einstellungen / Optionen öffnen",
+    "settings.lbl_quick_note_shortcut": "Quick-Note (Haftnotiz):",
+    "settings.lbl_quick_ip_shortcut": "Quick-IP (Target / LHOST):",
 
     "tray.show": "SpectreHUD anzeigen ({hotkey})",
-    "tray.snip": "Screenshot aufnehmen (Strg+Super+X)",
+    "tray.note": "Quick-Note erfassen ({hotkey})",
+    "tray.ip": "Quick-IP (Target / LHOST) ({hotkey})",
+    "tray.snip": "Screenshot aufnehmen (Ctrl+Alt+X)",
     "tray.rec_start": "Clipboard-Logger aktivieren (Ctrl+P)",
     "tray.rec_pause": "Clipboard-Logger pausieren (Ctrl+P)",
     "tray.options": "Optionen & Hotkeys... (Ctrl+,)",
-    "tray.quit": "Beenden (Strg+Super+Q)",
+    "tray.quit": "Beenden (Ctrl+Alt+Q)",
 
     "quit.save_failed_title": "Speichern fehlgeschlagen",
     "quit.save_failed_text": "Der aktuelle Projektstatus konnte nicht auf Datenträger gespeichert werden.\n\nWas möchten Sie tun?",

@@ -199,15 +199,21 @@ def main():
         hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<alt>+h")
         hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
         hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
+        hotkey_ip = container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
         hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
         hotkey_config = HotkeyConfig(
-            toggle=hotkey_toggle, screenshot=hotkey_snip, quick_note=hotkey_note, quit=hotkey_quit
+            toggle=hotkey_toggle,
+            screenshot=hotkey_snip,
+            quick_note=hotkey_note,
+            quick_ip=hotkey_ip,
+            quit=hotkey_quit,
         )
 
         hotkey_listener = HotkeyListener(config=hotkey_config)
         hotkey_listener.toggle_requested.connect(window.toggle_visibility)
         hotkey_listener.screenshot_requested.connect(window.app.trigger_screenshot)
         hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
+        hotkey_listener.quick_ip_requested.connect(window.app.trigger_quick_ip)
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
         _startup_mark(started_at, "hotkey listener started")
@@ -229,6 +235,10 @@ def main():
         act_note = QAction(f"Quick-Note erfassen ({hotkey_note})", tray_menu)
         act_note.triggered.connect(window.app.trigger_quick_note)
         tray_menu.addAction(act_note)
+
+        act_ip = QAction(f"Quick-IP (Target / LHOST) ({hotkey_ip})", tray_menu)
+        act_ip.triggered.connect(window.app.trigger_quick_ip)
+        tray_menu.addAction(act_ip)
 
         act_snip = QAction(f"Screenshot aufnehmen ({hotkey_snip})", tray_menu)
         act_snip.triggered.connect(window.app.trigger_screenshot)
@@ -282,16 +292,25 @@ def main():
                 "quick_note_hotkey",
                 container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n"),
             )
+            new_ip = data.get(
+                "quick_ip_hotkey",
+                container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i"),
+            )
             new_quit = data.get(
                 "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
             )
             new_cfg = HotkeyConfig(
-                toggle=new_toggle, screenshot=new_snip, quick_note=new_note, quit=new_quit
+                toggle=new_toggle,
+                screenshot=new_snip,
+                quick_note=new_note,
+                quick_ip=new_ip,
+                quit=new_quit,
             )
             hotkey_listener.update_config(new_cfg)
             act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
             act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
             act_note.setText(f"Quick-Note erfassen ({new_note})")
+            act_ip.setText(f"Quick-IP (Target / LHOST) ({new_ip})")
             act_quit.setText(f"Beenden ({new_quit})")
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)

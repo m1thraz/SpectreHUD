@@ -21,7 +21,7 @@ During a CTF or authorized engagement, the working context is usually scattered 
 - Loot, optional clipboard history with "Erfassen ▾" split-button, and region screenshots tied to the active project
 - Markdown report editor with source, split, and live-preview views
 - Structured report templates, editable standalone HTML, Markdown, Obsidian, and CherryTree exports
-- Harmonized global hotkeys (`Ctrl+Alt+H/X/N/Q`), tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
+- Harmonized global hotkeys (`Ctrl+Alt+H/X/N/I/Q`), tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
 
 ```text
 Terminal / Browser / VM
@@ -66,6 +66,7 @@ public issue.
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Quick-Notes & Phase Tagging** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Quick-IP Popup & Net Detection** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts (`Esc`, `Ctrl+1..4`, etc.) |
 | **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor (Informative Tooltip) |

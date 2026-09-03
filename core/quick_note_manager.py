@@ -98,6 +98,7 @@ class QuickNoteManager(QObject):
         if cat not in VALID_CATEGORY_IDS:
             cat = "misc"
 
+
         entry = {
             "id": f"note_{uuid.uuid4().hex[:8]}",
             "text": clean_text,

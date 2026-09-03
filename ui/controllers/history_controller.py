@@ -275,7 +275,6 @@ class HistoryController(QObject):
 
             notes = (
                 self.quick_note_manager.get_entries(
-                    target_ip=target_ip if target_ip else None,
                     search_query=search_query,
                 )
                 if self.quick_note_manager
