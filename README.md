@@ -8,11 +8,11 @@
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Windows and Linux](https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange)
 
-SpectreHUD is a local desktop workspace for CTFs, Hack The Box, TryHackMe, and
-other authorized security labs. It keeps the active engagement context—target
-variables, reusable commands, clipboard findings, screenshots, loot, and a
-Markdown report—in one focused project.
+**A local companion that stays open through an entire CTF or pentest engagement — from the first recon command to the finished report.**
 
+During a CTF or authorized engagement, the working context is usually scattered across a terminal, a notes app, a screenshot tool, and a handful of cheatsheet tabs — and the report gets reconstructed from memory afterward. SpectreHUD keeps that context in one place instead: target variables, reusable commands, clipboard findings, screenshots, and loot all live in the active project, and the Markdown report builds up alongside the work rather than after it.
+
+> **Portfolio context:** Brought from initial concept to first public release in six days using iterative AI-assisted development, testing, and adversarial review. Development continues with a focus on maintenance, usability refinements, and real-world workflow feedback.
 
 ![SpectreHUD main view](assets/spectrehud_main.png)
 
@@ -63,7 +63,7 @@ public issue.
 
 | Feature / Area | Windows | Linux (X11) | Linux (Wayland) |
 |---|:---:|:---:|:---:|
-| **Platform Verification Tier** |  **Tier 1 (Production)** |  **Implemented & CI-Validated** |  **Implemented & CI-Validated** |
+| **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
