@@ -4,15 +4,13 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import QWidget, QHBoxLayout
 from PyQt6.QtGui import QFontMetrics, QFont
 
 from core.snippet_manager import SnippetManager
 from ui.controllers.cheatsheet_controller import (
     CheatsheetController,
     _order_categories,
-    _estimate_pill_width,
-    PRIORITY_CATEGORY_IDS,
 )
 
 

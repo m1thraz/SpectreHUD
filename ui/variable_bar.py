@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 from PyQt6.QtCore import pyqtSignal, QTimer
 from typing import Dict, Any, Optional
 from core.net_detector import NetDetector
