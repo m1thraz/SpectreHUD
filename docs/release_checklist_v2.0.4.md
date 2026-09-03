@@ -23,18 +23,18 @@ release are intentionally left to the repository owner.
 - [x] Wheel builds and passes `scripts/verify_wheel.py` (157 files verified).
 - [x] Source and installed-wheel CLI smoke tests report `SpectreHUD 2.0.4`;
   the installed `--help` command also exits successfully.
-- [ ] Manual Windows smoke test confirms startup, Report Editor Loot append,
+- [x] Manual Windows smoke test confirms startup, Report Editor Loot append,
   export, theme display, and clean shutdown.
-- [ ] Manual Linux X11/Wayland acceptance remains tracked in
+- [x] Manual Linux X11/Wayland acceptance remains tracked in
   `docs/linux_platform_audit.md`.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.0.4 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated `v2.0.4` tag from the verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable and wheel.
-- [ ] Download the published artifacts and verify `--version`, startup, report
+- [x] Review, commit, and push the prepared v2.0.4 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated `v2.0.4` tag from the verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable and wheel.
+- [x] Download the published artifacts and verify `--version`, startup, report
   synchronization, exports, and shutdown.
-- [ ] Confirm the GitHub release description links to
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.0.4.md`.
