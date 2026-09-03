@@ -61,7 +61,7 @@ public issue.
 
 | Feature / Area | Windows | Linux (X11) | Linux (Wayland) |
 |---|:---:|:---:|:---:|
-| **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
+| **Platform Verification Tier** |  **Tier 1 (Production)** |  **Tier 1 (Production)** |  **Implemented & CI-Validated** |
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
