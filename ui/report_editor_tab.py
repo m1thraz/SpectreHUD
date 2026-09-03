@@ -43,7 +43,11 @@ from core.logger import get_logger
 from core.i18n import t
 from core.fonts import get_report_font_stack
 from core.platform.opener import open_path
-from ui.report.dialogs import MarkdownTableDialog, ReportGenerationDialog
+from ui.report.dialogs import (
+    LootImagePickerDialog,
+    MarkdownTableDialog,
+    ReportGenerationDialog,
+)
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.toolbar import build_format_toolbar
@@ -337,7 +341,91 @@ class ReportEditorTab(QWidget):
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
 
     def _format_image(self) -> None:
-        """Prompts the user for an image file and inserts its relative markdown link."""
+        """Offers screenshot insertion from Loot or local filesystem browse."""
+        screenshot_entries = (
+            self.loot_manager.get_entries(entry_type="screenshot")
+            if self.loot_manager
+            else []
+        )
+
+        if not screenshot_entries:
+            self._browse_and_insert_image()
+            return
+
+        menu = QMenu(self)
+        action_browse = menu.addAction(t("report.image_browse", "📁 Choose from Computer..."))
+        menu.addSeparator()
+
+        menu.addSection(t("report.image_from_loot", "📸 Screenshots from Loot:"))
+        entry_actions = {}
+        for entry in screenshot_entries[:6]:
+            title = entry.get("title", "Screenshot")
+            ts = entry.get("timestamp", "")
+            label = f"{title}  ({ts})" if ts else title
+            act = menu.addAction(label)
+            entry_actions[act] = entry
+
+        action_all_loot = None
+        if len(screenshot_entries) > 6:
+            menu.addSeparator()
+            action_all_loot = menu.addAction(
+                t("report.image_all_loot", "🔍 Browse all Screenshots...")
+            )
+
+        button = None
+        if hasattr(self, "format_toolbar_widget"):
+            for child in self.format_toolbar_widget.findChildren(QPushButton):
+                if child.text() == "🖼️":
+                    button = child
+                    break
+
+        pos = (
+            button.mapToGlobal(button.rect().bottomLeft())
+            if button
+            else self.mapToGlobal(self.rect().center())
+        )
+        selected_action = menu.exec(pos)
+
+        if not selected_action:
+            return
+
+        if selected_action == action_browse:
+            self._browse_and_insert_image()
+        elif selected_action == action_all_loot:
+            self._open_loot_image_picker(screenshot_entries)
+        elif selected_action in entry_actions:
+            self._insert_loot_entry_image(entry_actions[selected_action])
+
+    def _insert_loot_entry_image(self, entry: dict) -> None:
+        """Inserts a markdown image from a loot screenshot entry."""
+        title = entry.get("title", "Screenshot")
+        content = (entry.get("content") or "").strip()
+
+        if content.startswith("![") and content.endswith(")"):
+            cursor = self.editor.textCursor()
+            cursor.insertText(content)
+            self.editor.setFocus()
+        else:
+            from ui.markdown_toolbar_actions import insert_image
+
+            insert_image(self.editor, content, alt_text=title)
+
+    def _open_loot_image_picker(self, screenshot_entries: list[dict]) -> None:
+        """Opens a searchable dialog to select from all loot screenshots."""
+        project_dir = None
+        if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
+            try:
+                pname = self.report_file_manager._resolve_project_name(self.current_project)
+                project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
+            except Exception:
+                pass
+
+        dialog = LootImagePickerDialog(screenshot_entries, project_dir=project_dir, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
+            self._insert_loot_entry_image(dialog.selected_entry)
+
+    def _browse_and_insert_image(self) -> None:
+        """Prompts the user for an image file from the disk and inserts its relative markdown link."""
         start_dir = ""
         project_dir = None
         if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):

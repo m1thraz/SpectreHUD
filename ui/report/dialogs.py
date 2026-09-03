@@ -1,5 +1,4 @@
-"""Dialog widgets owned by the report editor workflow."""
-
+from pathlib import Path
 from typing import Optional
 
 from PyQt6.QtCore import Qt
@@ -9,7 +8,10 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListView,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QSpinBox,
@@ -161,3 +163,177 @@ class ReportGenerationDialog(QDialog):
             return
         self.selected_template = template
         self.accept()
+
+
+class LootImagePickerDialog(QDialog):
+    """Dialog to select and preview screenshots captured in Loot for insertion into the report."""
+
+    def __init__(
+        self,
+        screenshots: list[dict],
+        project_dir: Optional[Path] = None,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.screenshots = screenshots
+        self.project_dir = project_dir
+        self.selected_entry: Optional[dict] = None
+        self._filtered_entries: list[dict] = []
+
+        self.setWindowTitle(t("report.loot_images_title", "Select Screenshot from Loot"))
+        self.resize(680, 430)
+        self.setMinimumSize(520, 320)
+
+        main_layout = QVBoxLayout(self)
+
+        search_layout = QHBoxLayout()
+        search_label = QLabel(t("report.loot_search_label", "Search:"))
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            t("report.loot_search_placeholder", "Filter by title, target IP, timestamp...")
+        )
+        self.search_edit.textChanged.connect(self._filter_list)
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_edit)
+        main_layout.addLayout(search_layout)
+
+        content_layout = QHBoxLayout()
+
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self._on_selection_changed)
+        self.list_widget.itemDoubleClicked.connect(self._on_double_clicked)
+        content_layout.addWidget(self.list_widget, stretch=3)
+
+        preview_panel = QVBoxLayout()
+        self.info_label = QLabel()
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        preview_panel.addWidget(self.info_label)
+
+        self.preview_label = QLabel()
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setStyleSheet(
+            "border: 1px dashed #444; border-radius: 4px; background: #1a1a1a;"
+        )
+        self.preview_label.setMinimumSize(220, 160)
+        preview_panel.addWidget(self.preview_label, stretch=1)
+
+        content_layout.addLayout(preview_panel, stretch=2)
+        main_layout.addLayout(content_layout, stretch=1)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        self.btn_cancel.clicked.connect(self.reject)
+        self.btn_insert = QPushButton(t("report.loot_insert_button", "Insert"))
+        self.btn_insert.setProperty("class", "PrimaryBtn")
+        self.btn_insert.setEnabled(False)
+        self.btn_insert.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_cancel)
+        btn_layout.addWidget(self.btn_insert)
+        main_layout.addLayout(btn_layout)
+
+        self._populate_list(self.screenshots)
+
+    def _populate_list(self, entries: list[dict]) -> None:
+        self.list_widget.clear()
+        self._filtered_entries = list(entries)
+        for entry in entries:
+            title = entry.get("title", "Screenshot")
+            ts = entry.get("timestamp", "")
+            ip = entry.get("target_ip", "")
+            sub = f"[{ip}] " if ip else ""
+            item_text = f"{title}  —  {sub}{ts}" if ts else title
+            item = QListWidgetItem(item_text)
+            item.setData(Qt.ItemDataRole.UserRole, entry)
+            self.list_widget.addItem(item)
+
+        if entries:
+            self.list_widget.setCurrentRow(0)
+
+    def _filter_list(self, text: str) -> None:
+        query = text.strip().lower()
+        if not query:
+            self._populate_list(self.screenshots)
+            return
+
+        filtered = []
+        for e in self.screenshots:
+            title = str(e.get("title", "")).lower()
+            ip = str(e.get("target_ip", "")).lower()
+            ts = str(e.get("timestamp", "")).lower()
+            content = str(e.get("content", "")).lower()
+            if query in title or query in ip or query in ts or query in content:
+                filtered.append(e)
+        self._populate_list(filtered)
+
+    def _on_selection_changed(self, row: int) -> None:
+        if row < 0 or row >= len(self._filtered_entries):
+            self.selected_entry = None
+            self.btn_insert.setEnabled(False)
+            self.info_label.setText("")
+            self.preview_label.clear()
+            return
+
+        entry = self._filtered_entries[row]
+        self.selected_entry = entry
+        self.btn_insert.setEnabled(True)
+
+        title = entry.get("title", "Screenshot")
+        ts = entry.get("timestamp", "")
+        ip = entry.get("target_ip", "")
+        info_lines = [f"<b>{title}</b>"]
+        if ip:
+            info_lines.append(f"Target: {ip}")
+        if ts:
+            info_lines.append(f"Zeit: {ts}")
+        self.info_label.setText("<br>".join(info_lines))
+
+        img_path = self._resolve_entry_path(entry)
+        if img_path and img_path.is_file():
+            from PyQt6.QtGui import QPixmap
+
+            pixmap = QPixmap(str(img_path))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    220,
+                    160,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.preview_label.setPixmap(scaled)
+            else:
+                self.preview_label.setText(
+                    t("report.preview_unavailable", "No preview available")
+                )
+        else:
+            self.preview_label.setText(
+                t("report.preview_unavailable", "No preview available")
+            )
+
+    def _resolve_entry_path(self, entry: dict) -> Optional[Path]:
+        raw = entry.get("file_path") or ""
+        if raw and Path(raw).is_file():
+            return Path(raw)
+
+        content = (entry.get("content") or "").strip()
+        import re
+
+        m = re.search(r"\((.*?)\)", content)
+        path_str = m.group(1) if m else content
+
+        p = Path(path_str)
+        if p.is_file():
+            return p
+
+        if self.project_dir:
+            cand = self.project_dir / path_str
+            if cand.is_file():
+                return cand
+
+        return None
+
+    def _on_double_clicked(self, item: QListWidgetItem) -> None:
+        if self.selected_entry:
+            self.accept()
+

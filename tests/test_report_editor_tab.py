@@ -275,7 +275,48 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertIn("spectre:loot:loot_abc123:deadbeef1234", result_text)
         self.assertIn("Extra note from preview.", result_text)
 
+    def test_insert_loot_entry_image_directly_into_editor(self):
+        """Verifies individual loot screenshots can be inserted into the editor without full sync."""
+        entry = self.loot_mgr.add_entry(
+            "screenshot",
+            "Root Proof",
+            "![Root Proof](loot/proof.png)",
+            category="privesc",
+        )
+        self.tab.editor.setPlainText("Here is the proof:\n\n")
+        cursor = self.tab.editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self.tab.editor.setTextCursor(cursor)
+
+        self.tab._insert_loot_entry_image(entry)
+        self.assertIn("![Root Proof](loot/proof.png)", self.tab.editor.toPlainText())
+
+    def test_loot_image_picker_dialog(self):
+        from ui.report.dialogs import LootImagePickerDialog
+
+        entry1 = {
+            "title": "Burp Request",
+            "target_ip": "10.10.10.1",
+            "timestamp": "12:00:00",
+            "content": "loot/burp.png",
+        }
+        entry2 = {
+            "title": "Nmap Scan",
+            "target_ip": "10.10.10.2",
+            "timestamp": "12:05:00",
+            "content": "loot/nmap.png",
+        }
+        dialog = LootImagePickerDialog([entry1, entry2], parent=self.tab)
+        self.assertEqual(dialog.list_widget.count(), 2)
+
+        dialog.search_edit.setText("Burp")
+        self.assertEqual(dialog.list_widget.count(), 1)
+        self.assertIsNotNone(dialog.selected_entry)
+        self.assertEqual(dialog.selected_entry["title"], "Burp Request")
+        dialog.deleteLater()
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

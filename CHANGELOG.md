@@ -12,10 +12,12 @@ semantic versioning.
   for Blockquotes (`> ` / `Ctrl+Shift+Q`), Strikethrough (`~~Text~~` / `Ctrl+Shift+X`),
   Horizontal Rules (`---`), and Headings `H4`-`H6`, with compact toolbar styling
   and bilingual tooltips (EN/DE).
-- **Direct Image Insert in Report Editor**: Added `🖼️` button and `Ctrl+Shift+I` shortcut
-  to insert images directly into report Markdown (`![caption](path)`). External images
-  are automatically imported into the active project's `screenshots/` directory to preserve
-  portable relative paths across exports, HTML rendering, and archives.
+- **Direct Image & Loot Screenshot Insert in Report Editor**: Added `🖼️` toolbar button
+  and `Ctrl+Shift+I` shortcut to insert images directly into report Markdown.
+  Features a quick-access menu displaying recent Loot screenshots for 1-click insertion,
+  a searchable `LootImagePickerDialog` with live preview to pick individual screenshots
+  without regenerating or appending all loot, and automatic import of external images
+  into the project's `screenshots/` directory.
 
 ## [2.0.6] - 2026-09-03
 

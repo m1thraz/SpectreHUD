@@ -322,6 +322,8 @@
     "report.format_code_block": "Codeblock", "report.format_list": "Aufzählung", "report.format_numbered_list": "Nummerierte Liste",
     "report.format_quote": "Zitat / Hinweis-Callout (Strg+Umschalt+Q)", "report.format_horizontal_rule": "Horizontale Trennlinie",
     "report.format_image": "Bild einfügen (Strg+Umschalt+I)", "report.select_image_title": "Bild auswählen", "report.select_image_filter": "Bilder (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;Alle Dateien (*.*)",
+    "report.image_browse": "📁 Vom Computer auswählen...", "report.image_from_loot": "📸 Screenshots aus Loot:", "report.image_all_loot": "🔍 Alle Screenshots durchsuchen...",
+    "report.loot_images_title": "Screenshot aus Loot auswählen", "report.loot_search_label": "Suchen:", "report.loot_search_placeholder": "Nach Titel, Ziel-IP, Zeit filtern...", "report.loot_insert_button": "Einfügen", "report.preview_unavailable": "Keine Vorschau verfügbar",
     "report.format_link": "Link einfügen", "report.format_table": "Tabelle einfügen", "report.table_title": "Tabelle einfügen",
     "report.table_rows": "Zeilen:", "report.table_columns": "Spalten:", "report.table_insert": "Tabelle einfügen",
     "settings.lbl_obsidian_vault": "Obsidian-Vault (optional):",
