@@ -15,7 +15,7 @@ def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
     divider.setProperty("class", "ToolbarDivider")
     divider.setFixedWidth(1)
     divider.setStyleSheet(
-        "background-color: rgba(48, 54, 61, 0.7); max-height: 18px; margin: 4px 6px;"
+        "background-color: rgba(139, 148, 158, 0.5); max-height: 20px; min-width: 1px; max-width: 1px; margin: 3px 6px;"
     )
     return divider
 

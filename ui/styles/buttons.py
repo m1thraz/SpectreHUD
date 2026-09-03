@@ -349,76 +349,116 @@ QPushButton.PrimaryBtn:hover {
     background-color: {STATUS_SUCCESS_HOVER};
 }
 
-QPushButton.SecondaryBtn {
-    background-color: {CONTROL_A80};
-    color: {TEXT_SECONDARY};
+QPushButton.SecondaryBtn,
+QPushButton[class~="SecondaryBtn"],
+QPushButton[class*="SecondaryBtn"] {
+    background-color: {SURFACE_A85};
+    color: {TEXT_PRIMARY};
     border: 1px solid {BORDER_A80};
     border-radius: 6px;
     padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    min-height: 20px;
 }
 
-QPushButton.SecondaryBtn:hover {
-    background-color: {BORDER_A90};
+QPushButton.SecondaryBtn:hover,
+QPushButton[class~="SecondaryBtn"]:hover,
+QPushButton[class*="SecondaryBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_BLUE};
+    color: {TEXT_WHITE};
+}
+
+/* Neutral Hit-box for Add Missing Loot */
+QPushButton.AppendLootBtn,
+QPushButton[class~="AppendLootBtn"],
+QPushButton[class*="AppendLootBtn"] {
+    background-color: {SURFACE_A85};
     color: {TEXT_PRIMARY};
-}
-
-QPushButton.AppendLootBtn {
-    background-color: {CONTROL_A80};
-    color: {CYBER_BLUE};
-    border: 1px solid {ACTIVE_BLUE_A40};
+    border: 1px solid {BORDER_A80};
     border-radius: 6px;
     padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    min-height: 20px;
 }
 
-QPushButton.AppendLootBtn:hover {
-    background-color: {ACTIVE_BLUE_A40};
-    color: {TEXT_PRIMARY};
+QPushButton.AppendLootBtn:hover,
+QPushButton[class~="AppendLootBtn"]:hover,
+QPushButton[class*="AppendLootBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_BLUE};
+    color: {TEXT_WHITE};
 }
 
-QPushButton.RegenerateBtn {
-    background-color: {CONTROL_A80};
+/* Distinct Red Danger Hit-box for Destructive Regenerate */
+QPushButton.RegenerateBtn,
+QPushButton[class~="RegenerateBtn"],
+QPushButton[class*="RegenerateBtn"] {
+    background-color: {SURFACE_A85};
     color: {TEXT_REC};
     border: 1px solid {ERROR_A70};
     border-radius: 6px;
     padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    min-height: 20px;
 }
 
-QPushButton.RegenerateBtn:hover {
-    background-color: {ERROR_A35};
+QPushButton.RegenerateBtn:hover,
+QPushButton[class~="RegenerateBtn"]:hover,
+QPushButton[class*="RegenerateBtn"]:hover {
+    background-color: {ERROR_A20};
     border-color: {TEXT_REC};
-    color: {TEXT_PRIMARY};
+    color: {TEXT_WHITE};
 }
 
-QPushButton.HeadingDropdownBtn {
+QPushButton.HeadingDropdownBtn,
+QPushButton[class~="HeadingDropdownBtn"],
+QPushButton[class*="HeadingDropdownBtn"] {
     font-weight: 700;
     padding: 3px 8px;
 }
 
-QPushButton.HeadingDropdownBtn::menu-indicator {
+QPushButton.HeadingDropdownBtn::menu-indicator,
+QPushButton[class~="HeadingDropdownBtn"]::menu-indicator,
+QPushButton[class*="HeadingDropdownBtn"]::menu-indicator {
     image: none;
     width: 0px;
 }
 
-QFrame.ToolbarDivider {
+QFrame.ToolbarDivider,
+QFrame[class~="ToolbarDivider"],
+QFrame[class*="ToolbarDivider"] {
     background-color: {BORDER_A80};
+    min-width: 1px;
     max-width: 1px;
     width: 1px;
-    margin: 4px 6px;
+    margin: 3px 6px;
 }
 
-QPushButton.FormatToolBtn {
-    background-color: {CONTROL_A80};
-    color: {TEXT_SECONDARY};
-    border: 1px solid {BORDER_A80};
-    border-radius: 4px;
-    padding: 3px 6px;
-    font-size: 11px;
-    min-width: 18px;
-}
-
-QPushButton.FormatToolBtn:hover {
-    background-color: {BORDER_A90};
+/* Distinct Hit-boxes for all Format and Structure Controls */
+QPushButton.FormatToolBtn,
+QPushButton[class~="FormatToolBtn"],
+QPushButton[class*="FormatToolBtn"] {
+    background-color: {SURFACE_A85};
     color: {TEXT_PRIMARY};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    min-width: 22px;
+    min-height: 22px;
+}
+
+QPushButton.FormatToolBtn:hover,
+QPushButton[class~="FormatToolBtn"]:hover,
+QPushButton[class*="FormatToolBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_BLUE};
+    color: {TEXT_WHITE};
 }
 
 QPushButton.BrowseBtn {
