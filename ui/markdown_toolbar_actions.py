@@ -235,3 +235,26 @@ def align_text(editor: QPlainTextEdit, alignment: str = "center") -> None:
     editor.setFocus()
 
 
+def insert_page_break(editor: QPlainTextEdit) -> None:
+    """Inserts a canonical manual page break marker (<!-- spectre:pagebreak -->) at cursor position."""
+    cursor = editor.textCursor()
+    cursor.beginEditBlock()
+    try:
+        pos = cursor.position()
+        block = cursor.block()
+        block_text = block.text().strip()
+
+        if not block_text:
+            cursor.insertText("<!-- spectre:pagebreak -->\n")
+        else:
+            if pos == block.position():
+                cursor.insertText("<!-- spectre:pagebreak -->\n\n")
+            elif pos == block.position() + len(block.text()):
+                cursor.insertText("\n\n<!-- spectre:pagebreak -->\n")
+            else:
+                cursor.insertText("\n\n<!-- spectre:pagebreak -->\n\n")
+    finally:
+        cursor.endEditBlock()
+    editor.setFocus()
+
+

@@ -354,6 +354,37 @@ tr:nth-child(even) {
 .severity-high { background-color: rgba(219, 109, 40, 0.2); color: #db6d28; border: 1px solid #db6d28; }
 .severity-medium { background-color: rgba(210, 153, 34, 0.2); color: #d29922; border: 1px solid #d29922; }
 .severity-low { background-color: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid #3fb950; }
+
+/* Screen-mode styling for manual pagebreak marker */
+@media screen {
+    .spectre-page-break {
+        position: relative;
+        margin: 2.5rem 0;
+        border-top: 1px dashed rgba(88, 166, 255, 0.4);
+        text-align: center;
+        height: 0;
+    }
+    .spectre-page-break::after {
+        content: "PAGE BREAK";
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--container-bg, #0d1117);
+        padding: 2px 14px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: var(--text-muted, #8b949e);
+        border-radius: 4px;
+        border: 1px solid rgba(88, 166, 255, 0.25);
+        text-transform: uppercase;
+        user-select: none;
+    }
+    html[lang="de"] .spectre-page-break::after {
+        content: "SEITENUMBRUCH";
+    }
+}
 """
 
 REPORT_PRINT_CSS = """
@@ -402,10 +433,12 @@ REPORT_PRINT_CSS = """
         border: 1px solid #0969da !important;
     }
 
-    h1, h2, h3, h4 {
+    h1, h2, h3, h4, h5, h6 {
         color: #0969da !important;
         page-break-after: avoid;
         break-after: avoid;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     /* Print styling for codeblocks: no horizontal clipping, clean line wrapping, preserve indentation */
@@ -451,7 +484,7 @@ REPORT_PRINT_CSS = """
         break-inside: avoid;
     }
 
-    .screenshot-container {
+    figure, .screenshot-container {
         background-color: #f6f8fa !important;
         border-color: #d0d7de !important;
         page-break-inside: avoid;
@@ -465,6 +498,16 @@ REPORT_PRINT_CSS = """
         break-inside: avoid;
     }
 
+    .screenshot-caption, .screenshot-container p {
+        page-break-before: avoid;
+        break-before: avoid;
+    }
+
+    .finding-header, .finding-meta {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
     .table-container {
         overflow: visible !important;
         overflow-x: visible !important;
@@ -472,9 +515,23 @@ REPORT_PRINT_CSS = """
 
     table {
         page-break-inside: auto;
+        break-inside: auto;
     }
 
-    tr {
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
+    }
+
+    tr, tbody tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    th, td {
         page-break-inside: avoid;
         break-inside: avoid;
     }
@@ -486,6 +543,18 @@ REPORT_PRINT_CSS = """
 
     td {
         border-color: #d0d7de !important;
+    }
+
+    /* Manual page break marker: forces a new page and hides screen styling */
+    .spectre-page-break {
+        display: block !important;
+        break-before: page !important;
+        page-break-before: always !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        visibility: hidden !important;
     }
 
     .report-footer {
@@ -525,6 +594,8 @@ blockquote { background-color: #f6f8fa; }
 .report-footer { background-color: #ffffff; border-color: #d0d7de; }
 th { background-color: #f6f8fa; }
 tr:nth-child(even) { background-color: #f6f8fa; }
+.spectre-page-break { border-top-color: #d0d7de; }
+.spectre-page-break::after { background-color: #ffffff; color: #57606a; border-color: #d0d7de; }
 """
 
 

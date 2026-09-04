@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Optional, List
 
 from core.reporting.assets import encode_image_base64, ImageEmbeddingBudget
-from core.reporting.loot_sync import strip_report_markers
+from core.reporting.loot_sync import (
+    PAGEBREAK_HTML,
+    PAGEBREAK_REGEX,
+    strip_report_markers,
+)
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -289,6 +293,14 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
 
         if in_code_block:
             code_block_lines.append(line)
+            continue
+
+        # Manual Page Break: <!-- spectre:pagebreak -->
+        if PAGEBREAK_REGEX.fullmatch(stripped):
+            _flush_list()
+            _flush_table()
+            _flush_blockquote()
+            html_lines.append(PAGEBREAK_HTML)
             continue
 
         # Blockquotes >

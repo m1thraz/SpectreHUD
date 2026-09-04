@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QCheckBox,
     QLabel,
     QMessageBox,
     QWidget,
@@ -85,6 +86,11 @@ class SectionEditDialog(QDialog):
             t("template_editor.lbl_category", "Loot-Kategorie:"), self.combo_category
         )
 
+        self.chk_page_break = QCheckBox(
+            t("template_editor.chk_page_break", "Seitenumbruch vor dieser Sektion einfügen")
+        )
+        form.addRow("", self.chk_page_break)
+
         layout.addLayout(form)
         layout.addStretch()
 
@@ -117,13 +123,20 @@ class SectionEditDialog(QDialog):
             cat_idx = self.combo_category.findData(section.category_id)
             if cat_idx >= 0:
                 self.combo_category.setCurrentIndex(cat_idx)
+        self.chk_page_break.setChecked(bool(section.page_break_before))
         self._on_type_changed()
 
     def get_section(self) -> TemplateSection:
         sec_type = self.combo_type.currentData()
         title = self.txt_title.text().strip() or None
         cat_id = self.combo_category.currentData() if sec_type == "phase_section" else None
-        return TemplateSection(type=sec_type, title=title, category_id=cat_id)
+        page_break = self.chk_page_break.isChecked()
+        return TemplateSection(
+            type=sec_type,
+            title=title,
+            category_id=cat_id,
+            page_break_before=page_break,
+        )
 
 
 class TemplateEditorDialog(QDialog):
@@ -249,7 +262,12 @@ class TemplateEditorDialog(QDialog):
                 t("template_editor.item_title", "Titel: '{title}'", title=section.title)
             )
         detail_str = f" ({', '.join(details)})" if details else ""
-        return f"{type_str}{detail_str}"
+        badge = (
+            f" [{t('template_editor.page_break_badge', 'Seitenumbruch')}]"
+            if section.page_break_before
+            else ""
+        )
+        return f"{type_str}{detail_str}{badge}"
 
     def _add_section_to_list(self, section: TemplateSection) -> None:
         item = QListWidgetItem(self._format_section_item(section))

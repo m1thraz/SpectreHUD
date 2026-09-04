@@ -31,6 +31,7 @@ class TestReportToolbar(unittest.TestCase):
             "align_left": MagicMock(),
             "align_center": MagicMock(),
             "align_right": MagicMock(),
+            "page_break": MagicMock(),
         })
         self.toolbar = build_format_toolbar(None, self.callbacks)
 
@@ -173,6 +174,13 @@ class TestReportToolbar(unittest.TestCase):
             self.assertEqual(events, [True, False])
         finally:
             tb.deleteLater()
+
+    def test_page_break_button_invokes_callback(self):
+        """Verifies the page break button in Zone 5 triggers the page_break callback."""
+        btn = self.toolbar.findChild(QPushButton, "btn_insert_page_break")
+        self.assertIsNotNone(btn)
+        btn.click()
+        self.callbacks["page_break"].assert_called_once()
 
 
 if __name__ == "__main__":

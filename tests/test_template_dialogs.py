@@ -50,6 +50,29 @@ class TestTemplateDialogs(unittest.TestCase):
         self.assertEqual(configured.type, "phase_section")
         self.assertEqual(configured.title, "Special Recon")
         self.assertEqual(configured.category_id, "recon")
+        self.assertFalse(configured.page_break_before)
+
+        # Test setting page break
+        dlg.chk_page_break.setChecked(True)
+        configured_with_pb = dlg.get_section()
+        self.assertTrue(configured_with_pb.page_break_before)
+
+        # Test loading section with page break
+        dlg2 = SectionEditDialog(section=configured_with_pb)
+        self.assertTrue(dlg2.chk_page_break.isChecked())
+
+    def test_template_editor_section_badge(self):
+        """Tests that sections with page_break_before show a badge in the list."""
+        dlg = TemplateEditorDialog()
+        sec_normal = TemplateSection(type="phase_section", category_id="recon")
+        sec_pb = TemplateSection(type="phase_section", category_id="recon", page_break_before=True)
+
+        text_normal = dlg._format_section_item(sec_normal)
+        text_pb = dlg._format_section_item(sec_pb)
+
+        self.assertNotIn("[PageBreak]", text_normal)
+        self.assertNotIn("[Seitenumbruch]", text_normal)
+        self.assertTrue("[PageBreak]" in text_pb or "[Seitenumbruch]" in text_pb)
 
     def test_template_editor_inherits_theme_control_styles(self):
         """The editor uses the app theme instead of blocking user themes locally."""

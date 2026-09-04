@@ -161,12 +161,13 @@ def build_format_toolbar(
     # Visual Divider between Ausrichtung and Einfügen
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 5: Einfügen (Image, Link, Table, Report Icon)
+    # Zone 5: Einfügen (Image, Link, Table, Report Icon, Page Break)
     insert_buttons = (
         ("fa5s.image", "report.format_image", "Insert Image", "image"),
         ("fa5s.link", "report.format_link", "Link", "link"),
         ("fa5s.table", "report.format_table", "Table", "table"),
         ("fa5s.icons", "report.insert_icon", "Insert Icon", "icon"),
+        ("fa5s.file-alt", "report.format_page_break", "Insert Page Break", "page_break"),
     )
     for icon_name, key, fallback, callback_key in insert_buttons:
         btn = QPushButton(tools_container)
@@ -175,7 +176,8 @@ def build_format_toolbar(
         tooltip = t(key, fallback)
         btn.setToolTip(tooltip)
         _apply_icon_button(btn, icon_name, tooltip, icon_color, icon_active_color)
-        btn.clicked.connect(callbacks[callback_key])
+        if callback_key in callbacks and callbacks[callback_key]:
+            btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
     main_layout.addWidget(tools_container)

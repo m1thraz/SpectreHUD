@@ -42,6 +42,7 @@ def template_to_dict(template: ReportTemplate) -> Dict[str, Any]:
                 **({"title": s.title} if s.title else {}),
                 **({"category_id": s.category_id} if s.category_id else {}),
                 **({"options": s.options} if s.options else {}),
+                **({"page_break_before": True} if s.page_break_before else {}),
             }
             for s in template.sections
         ],
@@ -87,12 +88,14 @@ def dict_to_template(data: Dict[str, Any], is_builtin: bool = False) -> Optional
         title = s.get("title")
         cat_id = s.get("category_id")
         options = s.get("options", {}) if isinstance(s.get("options"), dict) else {}
+        page_break_before = bool(s.get("page_break_before", False))
         sections.append(
             TemplateSection(
                 type=sec_type,
                 title=str(title) if title else None,
                 category_id=str(cat_id) if cat_id else None,
                 options=options,
+                page_break_before=page_break_before,
             )
         )
 

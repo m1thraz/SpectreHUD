@@ -49,6 +49,7 @@ class TemplateSection:
     title: Optional[str] = None
     category_id: Optional[str] = None  # for "phase_section"
     options: Dict[str, Any] = field(default_factory=dict)
+    page_break_before: bool = False
 
 
 @dataclass(frozen=True)
@@ -415,7 +416,10 @@ class TemplateRenderer:
             if renderer:
                 rendered_sec = renderer(section, context, lang)
                 if rendered_sec.strip():
-                    parts.append(rendered_sec.strip())
+                    sec_text = rendered_sec.strip()
+                    if section.page_break_before:
+                        sec_text = f"<!-- spectre:pagebreak -->\n\n{sec_text}"
+                    parts.append(sec_text)
 
         body = "\n\n---\n\n".join(parts)
 

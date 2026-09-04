@@ -24,6 +24,10 @@ STRIP_MARKER_REGEX = re.compile(
     r"<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\r?\n?"
 )
 
+PAGEBREAK_MARKER = "<!-- spectre:pagebreak -->"
+PAGEBREAK_HTML = '<div class="spectre-page-break" contenteditable="false"></div>'
+PAGEBREAK_REGEX = re.compile(r"<!--\s*spectre:pagebreak\s*-->", re.IGNORECASE)
+
 SECTION_NOTES_PLACEHOLDER_DE = "_Eigene Anmerkungen zu dieser Phase:_"
 SECTION_NOTES_PLACEHOLDER_EN = "_Notes & observations for this phase:_"
 FALLBACK_SECTION_TITLE_DE = "Neu aus Loot ergänzt"
@@ -376,10 +380,61 @@ def append_missing_loot_to_text(
     )
 
 
+def _reconcile_pagebreaks(original_markdown: str, current_markdown: str) -> str:
+    """Reconciles pagebreak markers dropped by Qt's QTextDocument.toMarkdown()."""
+    original_pb_count = len(PAGEBREAK_REGEX.findall(original_markdown))
+    if original_pb_count == 0:
+        return current_markdown
+
+    current_pb_count = len(PAGEBREAK_REGEX.findall(current_markdown))
+    if current_pb_count >= original_pb_count:
+        return current_markdown
+
+    # Extract anchor lines following each page break in original markdown
+    pb_anchors: List[str] = []
+    for match in PAGEBREAK_REGEX.finditer(original_markdown):
+        remaining = original_markdown[match.end():].lstrip("\r\n")
+        first_line = remaining.split("\n", 1)[0].strip() if remaining else ""
+        pb_anchors.append(first_line)
+
+    result = current_markdown
+    search_start = 0
+    for anchor in pb_anchors:
+        if anchor:
+            idx = result.find(anchor, search_start)
+            if idx != -1:
+                # Check if a pagebreak marker already immediately precedes it
+                preceding = result[:idx].rstrip()
+                last_line = preceding.splitlines()[-1].strip() if preceding else ""
+                if not PAGEBREAK_REGEX.fullmatch(last_line):
+                    # Insert page break with clean spacing
+                    if idx == 0:
+                        insert_text = f"{PAGEBREAK_MARKER}\n\n"
+                    elif result[:idx].endswith("\n\n"):
+                        insert_text = f"{PAGEBREAK_MARKER}\n\n"
+                    elif result[:idx].endswith("\n"):
+                        insert_text = f"\n{PAGEBREAK_MARKER}\n\n"
+                    else:
+                        insert_text = f"\n\n{PAGEBREAK_MARKER}\n\n"
+
+                    result = result[:idx] + insert_text + result[idx:]
+                    search_start = idx + len(insert_text) + len(anchor)
+                else:
+                    search_start = idx + len(anchor)
+        else:
+            # Pagebreak was at the end of the document
+            end_preceding = result.rstrip()
+            end_last_line = end_preceding.splitlines()[-1].strip() if end_preceding else ""
+            if not PAGEBREAK_REGEX.fullmatch(end_last_line):
+                result = result.rstrip() + f"\n\n{PAGEBREAK_MARKER}\n"
+
+    return result
+
+
 def preserve_markers_in_preview_roundtrip(
     original_markdown: str, converted_markdown: str
 ) -> str:
-    """Reconciles SpectreHUD loot markers that were dropped by Qt's QTextDocument.toMarkdown().
+    """Reconciles SpectreHUD loot markers and manual pagebreaks dropped by Qt's QTextDocument.toMarkdown().
 
     Identifies markers and their anchor headings from original_markdown, and inserts them
     before matching headings in converted_markdown if the marker was omitted.
@@ -387,42 +442,39 @@ def preserve_markers_in_preview_roundtrip(
     if not original_markdown or not converted_markdown:
         return converted_markdown
 
-    original_markers = extract_report_markers(original_markdown)
-    if not original_markers:
-        return converted_markdown
-
-    # If converted markdown already has all markers, return untouched
-    converted_markers = extract_report_markers(converted_markdown)
-    if set(original_markers.keys()).issubset(set(converted_markers.keys())):
-        return converted_markdown
-
-    # Parse anchor lines following each marker in original_markdown
-    # Pattern: marker followed by a heading line like "### ... [Title]"
-    marker_anchors: List[Tuple[str, str, str]] = []  # (entry_id, content_hash, anchor_line_clean)
-    for match in MARKER_REGEX.finditer(original_markdown):
-        entry_id = match.group(1)
-        content_hash = match.group(2).lower()
-        # Find next non-empty line after the marker
-        after_pos = match.end()
-        remaining = original_markdown[after_pos:].lstrip("\r\n")
-        first_line = remaining.split("\n", 1)[0].strip() if remaining else ""
-        if first_line:
-            marker_anchors.append((entry_id, content_hash, first_line))
-
     result_markdown = converted_markdown
-    for entry_id, content_hash, anchor_line in marker_anchors:
-        marker_str = format_loot_marker(entry_id, content_hash)
-        if marker_str in result_markdown:
-            continue
 
-        # Look for anchor_line in result_markdown
-        # Anchor is typically "### [Badge] [Title]" or "### [Title]"
-        idx = result_markdown.find(anchor_line)
-        if idx != -1:
-            # Check if marker is already preceding it
-            prefix = result_markdown[:idx]
-            if marker_str not in prefix[-150:]:
-                # Insert marker right before the anchor line
-                result_markdown = result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+    # 1. Reconcile loot markers
+    original_markers = extract_report_markers(original_markdown)
+    converted_markers = extract_report_markers(result_markdown)
+    if original_markers and not set(original_markers.keys()).issubset(set(converted_markers.keys())):
+        marker_anchors: List[Tuple[str, str, str]] = []  # (entry_id, content_hash, anchor_line_clean)
+        for match in MARKER_REGEX.finditer(original_markdown):
+            entry_id = match.group(1)
+            content_hash = match.group(2).lower()
+            # Find next non-empty line after the marker
+            after_pos = match.end()
+            remaining = original_markdown[after_pos:].lstrip("\r\n")
+            first_line = remaining.split("\n", 1)[0].strip() if remaining else ""
+            if first_line:
+                marker_anchors.append((entry_id, content_hash, first_line))
+
+        for entry_id, content_hash, anchor_line in marker_anchors:
+            marker_str = format_loot_marker(entry_id, content_hash)
+            if marker_str in result_markdown:
+                continue
+
+            # Look for anchor_line in result_markdown
+            # Anchor is typically "### [Badge] [Title]" or "### [Title]"
+            idx = result_markdown.find(anchor_line)
+            if idx != -1:
+                # Check if marker is already preceding it
+                prefix = result_markdown[:idx]
+                if marker_str not in prefix[-150:]:
+                    # Insert marker right before the anchor line
+                    result_markdown = result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+
+    # 2. Reconcile manual page breaks
+    result_markdown = _reconcile_pagebreaks(original_markdown, result_markdown)
 
     return result_markdown

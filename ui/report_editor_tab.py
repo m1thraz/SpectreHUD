@@ -169,6 +169,7 @@ class ReportEditorTab(QWidget):
                 "icon": self._format_icon,
                 "link": self._format_link,
                 "table": self._format_table,
+                "page_break": self._format_page_break,
             },
             on_toggle_collapse=self._on_toolbar_collapse_toggled,
             icon_color=self._toolbar_palette["CYBER_CYAN"],
@@ -437,6 +438,11 @@ class ReportEditorTab(QWidget):
             from ui.markdown_toolbar_actions import insert_table
 
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
+
+    def _format_page_break(self) -> None:
+        from ui.markdown_toolbar_actions import insert_page_break
+
+        insert_page_break(self.editor)
 
     def _format_image(self) -> None:
         """Offers screenshot insertion from Loot or local filesystem browse."""
