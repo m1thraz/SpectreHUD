@@ -90,12 +90,14 @@ class TestUI(unittest.TestCase):
         self.assertFalse(window.var_bar.isVisible())
         self.assertFalse(window.search_panel.pills_frame.isVisible())
 
-        # Tab cycling stays within cheatsheet/loot/history (does not cycle to report)
+        # Tab cycling stays within cheatsheet/history/notes/loot (does not cycle to report)
         window.app.switch_mode("cheatsheet")
         window.app.toggle_mode()
-        self.assertEqual(window.app.active_mode, "loot")
-        window.app.toggle_mode()
         self.assertEqual(window.app.active_mode, "history")
+        window.app.toggle_mode()
+        self.assertEqual(window.app.active_mode, "notes")
+        window.app.toggle_mode()
+        self.assertEqual(window.app.active_mode, "loot")
         window.app.toggle_mode()
         self.assertEqual(window.app.active_mode, "cheatsheet")
 
