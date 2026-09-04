@@ -68,8 +68,6 @@ class HeaderPanel(QFrame):
         self.btn_mode_notes = QPushButton(t("header.mode_notes", "Notes"))
         self.btn_mode_notes.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_notes.setProperty("class", "ModeSwitchBtn")
-        self.btn_mode_notes.setIcon(icon("fa5s.thumbtack"))
-        self.btn_mode_notes.setIconSize(QSize(13, 13))
         self.btn_mode_notes.clicked.connect(lambda: self.mode_changed.emit("notes"))
         layout.addWidget(self.btn_mode_notes)
 
