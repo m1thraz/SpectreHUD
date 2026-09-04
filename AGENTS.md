@@ -17,25 +17,41 @@ To maximize development velocity and minimize token / execution costs, follow th
   ```
   *(Ensures `core/**` never imports `ui/**` and `core.platform` does not eagerly load PyQt6).*
 
-### Tier 2: Directly Affected Module Tests
-- For changes confined to a single component or module, run its directly mapped test file first:
+### Tier 2: Directly Affected Module Tests (Aggressive Scoping)
+- **STRICT RULE**: Never escalate to entire test suites if changes are confined to a single component, method, or UI element. Run only the directly mapped test file or scope strictly with `-k`:
   ```bash
   python -m pytest tests/test_<module>.py -q
+  # Scoped execution on specific tests:
+  python -m pytest tests/test_report_editor_tab.py -k "<test_name>" -q
   ```
-- After any failure, re-run only the failed tests:
+- After any failure, re-run only failed tests immediately:
   ```bash
+  # Re-run only the failed tests:
   python -m pytest --lf -q
+  # Or run failed tests first, followed by the rest:
+  python -m pytest --ff -q
   ```
 
+### Fast-Track: When to Skip Tier 3 / Tier 4
+- **Reine UI-Texte, Lokalisierung (i18n), Docstrings, CSS-Tweaks oder Typo-Fixes**:
+  Überspringe Tier 3 und Tier 4 vollständig! Führe nur gezielt aus:
+  ```bash
+  python -m pytest tests/test_architecture_boundaries.py tests/test_i18n_lint.py -q
+  ruff check .
+  ```
+- **Lokale Tier 4 Optionalität**:
+  Tier 4 (`./scripts/test_full.sh` / voller Lauf) ist lokal vor Übergabe optional, sofern Tier 0–2, Tier 1 und der Linter grün sind. Die vollständige Test-Matrix wird ohnehin auf GitHub Actions CI ausgeführt.
+
 ### Tier 3: Fast Gate Suite (Local Iteration)
-- During feature development and broad iteration, run the Fast Gate suite:
+- During major feature development and broad iteration, run the Fast Gate suite:
   ```bash
   ./scripts/test_fast.sh
   # or: python -m pytest -m "not integration and not release" -n auto --dist=loadscope -x --tb=line -q
+  # (falls pytest-xdist fehlt: python -m pytest -m "not integration and not release" -x --tb=line -q)
   ```
 
 ### Tier 4: Full Safety & Release Gate (Task Completion)
-- Before handing a completed task back for user acceptance, run:
+- For broad architectural changes or prior to major releases, run:
   ```bash
   ./scripts/test_full.sh
   # or: python scripts/run_tests.py

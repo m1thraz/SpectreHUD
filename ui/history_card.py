@@ -181,7 +181,6 @@ class HistoryCard(QFrame):
 
         self.btn_capture.setMenu(capture_menu)
         self.btn_capture.clicked.connect(self._on_capture_note)
-        self.btn_to_loot = self.btn_capture  # backwards-compatibility alias
 
         action_col.addWidget(self.btn_capture)
 

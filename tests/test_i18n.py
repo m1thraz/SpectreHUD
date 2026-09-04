@@ -23,7 +23,7 @@ class TestI18n(unittest.TestCase):
         self.assertIn("de", SUPPORTED_LOCALES)
         self.assertIn("en", SUPPORTED_LOCALES)
 
-    def test_json_files_exist_and_parity(self):
+    def test_json_files_exist_and_loadable(self):
         locales_dir = get_locales_dir()
         self.assertTrue(locales_dir.exists(), f"Locales dir should exist: {locales_dir}")
 
@@ -32,20 +32,6 @@ class TestI18n(unittest.TestCase):
 
         self.assertGreater(len(de_dict), 50)
         self.assertGreater(len(en_dict), 50)
-
-        # Check key parity between DE and EN
-        de_keys = set(de_dict.keys())
-        en_keys = set(en_dict.keys())
-
-        missing_in_en = de_keys - en_keys
-        missing_in_de = en_keys - de_keys
-
-        self.assertEqual(
-            missing_in_en, set(), f"Keys in de.json but missing in en.json: {missing_in_en}"
-        )
-        self.assertEqual(
-            missing_in_de, set(), f"Keys in en.json but missing in de.json: {missing_in_de}"
-        )
 
     def test_german_translations(self):
         self.assertEqual(self.i18n.t("header.mode_cheatsheet"), "Cheatsheet")

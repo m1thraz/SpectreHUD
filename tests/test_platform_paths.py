@@ -53,30 +53,6 @@ def test_explicit_spectre_overrides_have_highest_priority(tmp_path):
     assert user_themes_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "config-override" / "themes"
 
 
-def test_populated_legacy_config_is_read_without_moving_or_deleting(tmp_path):
-    legacy = tmp_path / ".ctf_cheatsheet_widget"
-    legacy.mkdir()
-    legacy_file = legacy / "config.json"
-    legacy_file.write_text("{}", encoding="utf-8")
-
-    resolved = config_dir(system_name="Linux", environ={}, home=tmp_path)
-
-    assert resolved == legacy
-    assert legacy_file.exists()
-    assert not (tmp_path / ".config" / "spectrehud").exists()
-
-
-def test_populated_standard_config_wins_over_legacy(tmp_path):
-    legacy = tmp_path / ".ctf_cheatsheet_widget"
-    legacy.mkdir()
-    (legacy / "config.json").write_text("{}", encoding="utf-8")
-    standard = tmp_path / ".config" / "spectrehud"
-    standard.mkdir(parents=True)
-    (standard / "config.json").write_text("{}", encoding="utf-8")
-
-    assert config_dir(system_name="Linux", environ={}, home=tmp_path) == standard
-
-
 def test_windows_user_themes_retain_old_cross_platform_location(tmp_path):
     old_themes = tmp_path / ".config" / "spectrehud" / "themes"
     old_themes.mkdir(parents=True)

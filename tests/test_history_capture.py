@@ -31,8 +31,6 @@ class TestHistoryCardSplitButton(unittest.TestCase):
 
     def test_split_button_initial_state(self):
         self.assertIsNotNone(self.card.btn_capture)
-        # Backwards compatibility alias
-        self.assertIs(self.card.btn_to_loot, self.card.btn_capture)
         self.assertTrue(
             "Erfassen" in self.card.btn_capture.text() or "Capture" in self.card.btn_capture.text()
         )

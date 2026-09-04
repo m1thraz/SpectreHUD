@@ -48,24 +48,18 @@ def _prefer_legacy(standard: Path, *legacy_candidates: Path) -> Path:
     return next((path for path in legacy_candidates if _has_entries(path)), standard)
 
 
-def legacy_config_dir(*, home: Optional[Path] = None) -> Path:
-    """Return the pre-XDG SpectreHUD config location without creating it."""
-    return (Path.home() if home is None else Path(home)) / ".ctf_cheatsheet_widget"
-
-
 def config_dir(
     *,
     system_name: Optional[str] = None,
     environ: Optional[Mapping[str, str]] = None,
     home: Optional[Path] = None,
 ) -> Path:
-    """Return config storage, retaining populated legacy data when needed."""
+    """Return platform-standard config storage."""
     system, environment, home_path = _context(system_name, environ, home)
     override = environment.get("SPECTRE_CONFIG_DIR", "").strip()
     if override:
         return Path(override)
-    standard = _standard_config_dir(system, environment, home_path)
-    return _prefer_legacy(standard, legacy_config_dir(home=home_path))
+    return _standard_config_dir(system, environment, home_path)
 
 
 def data_dir(
@@ -125,12 +119,11 @@ def user_themes_dir(
     environ: Optional[Mapping[str, str]] = None,
     home: Optional[Path] = None,
 ) -> Path:
-    """Return user theme storage with a read-compatible legacy fallback."""
+    """Return user theme storage with a read-compatible fallback."""
     system, environment, home_path = _context(system_name, environ, home)
     override = environment.get("SPECTRE_CONFIG_DIR", "").strip()
     if override:
         return Path(override) / "themes"
     standard = _standard_config_dir(system, environment, home_path) / "themes"
     old_cross_platform = home_path / ".config" / APP_SLUG / "themes"
-    old_config_relative = legacy_config_dir(home=home_path) / "themes"
-    return _prefer_legacy(standard, old_cross_platform, old_config_relative)
+    return _prefer_legacy(standard, old_cross_platform)

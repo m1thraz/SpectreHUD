@@ -7,7 +7,6 @@ from core.platform.paths import (
     cache_dir,
     config_dir,
     data_dir,
-    legacy_config_dir,
     projects_dir,
     user_themes_dir,
 )
@@ -22,7 +21,6 @@ __all__ = [
     "data_dir",
     "detect_platform_capabilities",
     "detect_linux_ipv4_address",
-    "legacy_config_dir",
     "open_path",
     "projects_dir",
     "select_preferred_ipv4",
