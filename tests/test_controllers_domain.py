@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QPushButton
 
 app = QApplication.instance()
 if app is None:
@@ -76,6 +76,172 @@ class TestControllersDomain(unittest.TestCase):
         self.assertIn("import_folder", action_ids)
         self.assertIn("archive_box", action_ids)
         self.assertIn("open_folder", action_ids)
+
+        # Pure helper methods
+        with patch.object(self.project_mgr, "open_project_folder") as mock_open:
+            self.project_ctrl.open_project_folder()
+            mock_open.assert_called_once()
+
+        with patch.object(self.project_mgr, "archive_project", return_value={"success": True}):
+            res = self.project_ctrl.archive_project("BoxOmega", Path("/fake/zip"))
+            self.assertTrue(res.get("success"))
+
+        with patch.object(self.project_mgr, "import_project_folder", return_value="BoxOmega"):
+            selected_projects = []
+            self.project_ctrl.project_selected.connect(lambda p: selected_projects.append(p))
+            imp = self.project_ctrl.import_project_folder("/fake/dir")
+            self.assertEqual(imp, "BoxOmega")
+            self.assertEqual(selected_projects, ["BoxOmega"])
+
+    def test_project_controller_archive_project_flows(self):
+        """_on_archive_project tests cancel, success with explorer open, and failure alert."""
+        parent = QWidget()
+        self.project_ctrl.create_project("ArchiveBox")
+        self.project_mgr.active_project = "ArchiveBox"
+
+        # 1. User cancels file dialog
+        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=("", "")):
+            with patch.object(self.project_ctrl, "archive_project") as mock_arch:
+                self.project_ctrl._on_archive_project(parent)
+                mock_arch.assert_not_called()
+
+        # 2. Successful archive & open explorer
+        zip_dest = self.temp_path / "ArchiveBox_test.zip"
+        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
+            with patch.object(self.project_ctrl, "archive_project", return_value={
+                "success": True,
+                "zip_path": zip_dest,
+                "file_count": 5,
+                "compressed_bytes": 1048576,
+            }):
+                with patch("ui.controllers.project_controller.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
+                    with patch("ui.controllers.project_controller.open_path", return_value=True) as mock_open:
+                        self.project_ctrl._on_archive_project(parent)
+                        mock_open.assert_called_with(zip_dest.parent)
+
+        # 3. Successful archive but open explorer fails
+        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
+            with patch.object(self.project_ctrl, "archive_project", return_value={
+                "success": True,
+                "zip_path": zip_dest,
+                "file_count": 2,
+                "compressed_bytes": 500,
+            }):
+                with patch("ui.controllers.project_controller.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
+                    with patch("ui.controllers.project_controller.open_path", return_value=False):
+                        with patch("ui.controllers.project_controller.QMessageBox.warning") as mock_warn:
+                            self.project_ctrl._on_archive_project(parent)
+                            mock_warn.assert_called_once()
+
+        # 4. Archive failure dialog
+        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
+            with patch.object(self.project_ctrl, "archive_project", return_value={"success": False, "error": "Disk full"}):
+                with patch("ui.controllers.project_controller.QMessageBox.exec"):
+                    self.project_ctrl._on_archive_project(parent)
+
+    def test_project_controller_import_project_flows(self):
+        """_on_import_project tests cancel, success, and error handling."""
+        parent = QWidget()
+
+        # 1. Cancelled
+        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=""):
+            with patch.object(self.project_ctrl, "import_project_folder") as mock_imp:
+                self.project_ctrl._on_import_project(parent, lambda p: None)
+                mock_imp.assert_not_called()
+
+        # 2. Success
+        switched = []
+        import_dir = self.temp_path / "ImportedBox"
+        import_dir.mkdir()
+        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
+            with patch.object(self.project_ctrl, "import_project_folder", return_value="ImportedBox"):
+                self.project_ctrl._on_import_project(parent, lambda p: switched.append(p))
+                self.assertEqual(switched, ["ImportedBox"])
+
+        # 3. Error
+        from core.project.validator import ProjectError
+        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
+            with patch.object(self.project_ctrl, "import_project_folder", side_effect=ProjectError("Invalid project")):
+                with patch("ui.controllers.project_controller.QMessageBox.critical") as mock_crit:
+                    self.project_ctrl._on_import_project(parent, lambda p: None)
+                    mock_crit.assert_called_once()
+
+    def test_project_controller_open_new_project_dialog_flows(self):
+        """open_new_project_dialog tests cancel, success, ProjectExistsError, and ProjectError."""
+        parent = QWidget()
+        created = []
+
+        # 1. Dialog cancelled
+        with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
+            mock_dlg = MagicMock()
+            mock_dlg.exec.return_value = 0
+            MockDlg.return_value = mock_dlg
+            res = self.project_ctrl.open_new_project_dialog(
+                parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: created.append(p)
+            )
+            self.assertFalse(res)
+            self.assertEqual(created, [])
+
+        # 2. Dialog accepted & creates project
+        with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
+            mock_dlg = MagicMock()
+            mock_dlg.exec.return_value = 1
+            mock_dlg.get_data.return_value = {
+                "name": "DialogCreatedBox",
+                "target_ip": "10.10.10.99",
+                "attacker_ip": "10.10.14.99",
+                "port": "9001",
+                "base_dir": str(self.temp_path / "projects"),
+                "pentest_password": "pass",
+            }
+            MockDlg.return_value = mock_dlg
+            res = self.project_ctrl.open_new_project_dialog(
+                parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: created.append(p)
+            )
+            self.assertTrue(res)
+            self.assertEqual(created, ["DialogCreatedBox"])
+
+        # 3. ProjectExistsError warning
+        from core.project.validator import ProjectExistsError
+        with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
+            mock_dlg = MagicMock()
+            mock_dlg.exec.return_value = 1
+            mock_dlg.get_data.return_value = {"name": "ExistingBox"}
+            MockDlg.return_value = mock_dlg
+            with patch.object(self.project_ctrl, "create_project", side_effect=ProjectExistsError("exists")):
+                with patch("ui.controllers.project_controller.QMessageBox.warning") as mock_warn:
+                    res = self.project_ctrl.open_new_project_dialog(
+                        parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
+                    )
+                    self.assertFalse(res)
+                    mock_warn.assert_called_once()
+
+        # 4. ProjectError critical
+        from core.project.validator import ProjectError
+        with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
+            mock_dlg = MagicMock()
+            mock_dlg.exec.return_value = 1
+            mock_dlg.get_data.return_value = {"name": "BadBox"}
+            MockDlg.return_value = mock_dlg
+            with patch.object(self.project_ctrl, "create_project", side_effect=ProjectError("bad name")):
+                with patch("ui.controllers.project_controller.QMessageBox.critical") as mock_crit:
+                    res = self.project_ctrl.open_new_project_dialog(
+                        parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
+                    )
+                    self.assertFalse(res)
+                    mock_crit.assert_called_once()
+
+    def test_project_controller_show_project_menu(self):
+        """show_project_menu builds menu and calls exec at calculated position."""
+        btn = QPushButton()
+        btn.setGeometry(10, 10, 120, 30)
+        with patch("ui.controllers.project_controller.build_qmenu") as mock_build:
+            mock_menu = MagicMock()
+            mock_build.return_value = mock_menu
+            self.project_ctrl.show_project_menu(
+                btn, on_switch_project=lambda p: None, on_open_new_project=lambda: None, parent_widget=QWidget()
+            )
+            mock_menu.exec.assert_called_once()
 
     def test_cheatsheet_controller_domain(self):
         """CheatsheetController manages snippets, favorites, and categories purely in-memory and publishes events."""
