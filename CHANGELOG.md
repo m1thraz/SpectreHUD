@@ -8,12 +8,23 @@ semantic versioning.
 
 ### Added
 
-- **Quick-Notes ("Haftnotizen") & Dedicated Inbox**:
+- **Quick-Notes ("Haftnotizen") & Dedicated Top-Level Tab**:
   - Global hotkey `Ctrl+Alt+N` and header `Note` button to quickly capture findings and fleeting thoughts in a minimal, frameless glass popup at cursor position without disrupting workflow.
   - **1-Key Pentest Phase Tagging**: Quick single-key tagging (`1`–`6` or `Alt+1..6`) for pentest categories (`Recon`, `Access`, `PrivEsc`, `PostEx`, `Scripts`, `Misc`) with memory of the last selected phase.
-  - **Isolated Notes Inbox**: Quick notes land in a dedicated inbox view inside the History tab (`Notes (N)`) so they never prematurely clutter clean report loot.
+  - **First-Class Header Tab**: Promoted Quick Notes from a nested filter inside History to a dedicated top-level tab in the HUD header bar (`Notes` / `Notes (N)`) featuring real-time unread badge counts.
   - **1-Click Loot Promotion**: Each note card includes a `★ Promote` action that pre-fills `AddLootDialog` with title, category, target, and content, cleanly removing the note from the inbox once converted.
-  - **Project Session Persistence**: Fully integrated into per-project storage (`project_state.json`), ensuring notes persist reliably across sessions and project switches.
+  - **Project Session Persistence**: Fully integrated into per-project storage (`project_state.json`), ensuring notes persist reliably across sessions and project switches without requiring migrations.
+- **Quick Notes Pentest Workflow (Capture → Triage → Follow-up / Loot / Report)**:
+  - **Triage Status Lifecycle**: Added structured note states (`inbox`, `followup`, `resolved`) with interactive color-coded status pills (`📥 Inbox ▾`, `⏳ Follow-up ▾`, `✓ Resolved ▾`) and subtle text dimming for completed entries.
+  - **Priority Pinning & 3-Tier Sorting**: Notes can be pinned to the top (`fa5s.thumbtack`). Displayed notes use a stable 3-tier priority ordering: (1) Pinned notes, (2) Active/open notes (`inbox`, `followup`), (3) Resolved notes, maintaining newest-first order within each tier.
+  - **Inline Card Editing**: Click "Edit" to edit note text directly in-place with `Ctrl+Enter` to save and `Esc` to cancel.
+  - **"Send to ▾" (Loot & Report Promotion)**: Upgraded promote action into a dual-destination menu:
+    - `★ Send to Loot`: Opens `AddLootDialog` pre-filled with note details and deletes the note from the inbox upon acceptance.
+    - `📝 Send to Report`: Directly appends the note as a structured Markdown block (`### Note (<PHASE>) - [<IP>] (<TIMESTAMP>)`) to the active project report and automatically marks it as `resolved`.
+  - **Status & Phase Filtering**: Filter bar provides triage pills (`All`, `Inbox`, `Follow-up`, `Resolved`, `📌 Pinned`) and a dedicated phase dropdown (`Phase: All ▾`).
+  - **Multi-Field Spotlight Search**: Search matches note content, pentest phase, target IP, and triage status simultaneously.
+  - **Bulk Triage Bar**: Multi-select checkboxes on cards summon a Cyberpunk HUD bulk action bar to mark statuses, delete notes in bulk with safety confirmation, or deselect all.
+  - **Native Markdown-Light Rendering**: Notes display Markdown formatting (bold, code, lists, headings) cleanly in cards without extra dependencies.
 - **Quick-IP Popup (Target + LHOST)**:
   - Global hotkey `Ctrl+Alt+I` opens a minimal, frameless glass popup at cursor position to inspect, copy, or edit Target IP and LHOST without needing to focus the HUD.
   - Features embedded 1-click circular copy buttons (`CopyableLineEdit`) and an "Auto" button that runs `NetDetector.detect_attacker_ip()` with instant live visual feedback.
@@ -36,6 +47,10 @@ semantic versioning.
     - **Quit Application**: `Ctrl + Alt + Q` (replaces `Ctrl + Super + Q`)
   - Added automatic configuration migration on startup to silently upgrade legacy config files.
   - Updated in-app Settings dialog presets, footer hints, and system tray menu shortcuts.
+- **Header Bar Vector Icon System & Visual Compactness**:
+  - Replaced platform-inconsistent Unicode emoji (`⚙`, `🚩`) on Header bar buttons with crisp vector FontAwesome icons (`fa5s.cog`, `fa5s.sticky-note`).
+  - Eliminated redundant padding between `QFrame#HeaderBar` stylesheet rules and `HeaderPanel` layout margins, reducing unnecessary vertical whitespace.
+  - Compacted mode switch button padding from `4px 10px` to `3px 10px` for a unified, streamlined Cyberpunk HUD aesthetic.
 
 ## [2.0.7] - 2026-09-03
 
