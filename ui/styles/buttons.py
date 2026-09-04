@@ -249,6 +249,55 @@ QPushButton.CopyBtnSuccess {
     font-size: 12px;
 }
 
+/* Compact square hit-boxes shared by universal card actions. */
+QPushButton.CardIconBtn {
+    background-color: {CONTROL_A85};
+    color: {TEXT_SECONDARY};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    padding: 3px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+QPushButton.CardIconBtn:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    color: {TEXT_WHITE};
+    border-color: {CYBER_BLUE};
+}
+
+QPushButton.CardIconBtnSuccess {
+    background-color: {STATUS_SUCCESS_BG};
+    color: {TEXT_WHITE};
+    border: 1px solid {STATUS_SUCCESS};
+    border-radius: 6px;
+    padding: 3px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+QPushButton.CardDangerIconBtn {
+    background-color: transparent;
+    color: {STATUS_ERROR};
+    border: 1px solid {ERROR_BG_A30};
+    border-radius: 6px;
+    padding: 3px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+QPushButton.CardDangerIconBtn:hover {
+    background-color: {STATUS_ERROR_BG};
+    color: {TEXT_WHITE};
+    border-color: {STATUS_ERROR};
+}
+
 /* Danger Buttons */
 QPushButton.DangerBtn {
     background-color: transparent;

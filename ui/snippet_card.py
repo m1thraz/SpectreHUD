@@ -8,13 +8,18 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
 from typing import Dict, Any, Optional
 from core.template_engine import TemplateEngine
 from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
 from core.i18n import t
+from ui.styles.icons import icon
+from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING, TEXT_DIMMED
 import pyperclip
+
+
+CARD_ICON_SIZE = QSize(13, 13)
 
 
 class SnippetCard(QFrame):
@@ -46,7 +51,11 @@ class SnippetCard(QFrame):
 
         # Star / Favorite Button
         is_fav = bool(self.snippet.get("is_favorite", False))
-        self.btn_fav = QPushButton("★" if is_fav else "☆")
+        self.btn_fav = QPushButton()
+        self.btn_fav.setIcon(
+            icon("fa5s.star", color=STATUS_WARNING if is_fav else TEXT_DIMMED)
+        )
+        self.btn_fav.setIconSize(CARD_ICON_SIZE)
         self.btn_fav.setProperty("class", "StarBtnActive" if is_fav else "StarBtn")
         self.btn_fav.setToolTip(
             t("snippet.fav_remove", "Favorit entfernen")
@@ -75,9 +84,13 @@ class SnippetCard(QFrame):
 
         # Delete button if custom snippet
         if self.snippet.get("is_custom", False):
-            self.btn_delete = QPushButton("✕")
-            self.btn_delete.setProperty("class", "DangerBtn")
-            self.btn_delete.setToolTip("Diesen eigenen Befehl löschen")
+            self.btn_delete = QPushButton()
+            self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+            self.btn_delete.setIconSize(CARD_ICON_SIZE)
+            self.btn_delete.setProperty("class", "CardDangerIconBtn")
+            self.btn_delete.setToolTip(
+                t("snippet.delete_tip", "Delete this custom command")
+            )
             self.btn_delete.clicked.connect(lambda: self.deleted.emit(self.snippet.get("id", "")))
             header_layout.addWidget(self.btn_delete)
 
@@ -111,19 +124,22 @@ class SnippetCard(QFrame):
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
         # Inline Tweak Button
-        self.btn_tweak = QPushButton("✏️")
-        self.btn_tweak.setProperty("class", "TweakBtn")
+        self.btn_tweak = QPushButton()
+        self.btn_tweak.setIcon(icon("fa5s.pen"))
+        self.btn_tweak.setIconSize(CARD_ICON_SIZE)
+        self.btn_tweak.setProperty("class", "CardIconBtn")
         self.btn_tweak.setToolTip(
             t("snippet.tweak_tip", "Befehl anpassen vor dem Kopieren")
         )
-        self.btn_tweak.setFixedWidth(34)
         self.btn_tweak.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tweak.clicked.connect(self._open_command_editor)
         cmd_row.addWidget(self.btn_tweak, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        self.btn_copy = QPushButton(t("snippet.copy", "Copy"))
-        self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setFixedWidth(85)
+        self.btn_copy = QPushButton()
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setIconSize(CARD_ICON_SIZE)
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("snippet.copy", "Copy"))
         self.btn_copy.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_copy.clicked.connect(self._copy_command)
         cmd_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -161,8 +177,10 @@ class SnippetCard(QFrame):
             pass
 
         btn = target_btn or self.btn_copy
-        btn.setText(t("snippet.copied", "✓ Copied!"))
-        btn.setProperty("class", "CopyBtnSuccess")
+        btn.setText("")
+        btn.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
+        btn.setProperty("class", "CardIconBtnSuccess")
+        btn.setToolTip(t("snippet.copied", "Copied!"))
         btn.style().unpolish(btn)
         btn.style().polish(btn)
 
@@ -171,8 +189,14 @@ class SnippetCard(QFrame):
 
     def _reset_copy_btn(self, btn: Optional[QPushButton] = None) -> None:
         target = btn or self.btn_copy
-        target.setText(t("snippet.copy", "Copy"))
-        target.setProperty("class", "CopyBtn")
+        target.setText("")
+        target.setProperty("class", "CardIconBtn")
+        if target is self.btn_tweak:
+            target.setIcon(icon("fa5s.pen"))
+            target.setToolTip(t("snippet.tweak_tip", "Adjust command before copying"))
+        else:
+            target.setIcon(icon("fa5s.copy"))
+            target.setToolTip(t("snippet.copy", "Copy"))
         target.style().unpolish(target)
         target.style().polish(target)
 
@@ -221,7 +245,10 @@ class SnippetCard(QFrame):
         new_state = not current_state
         self.snippet["is_favorite"] = new_state
 
-        self.btn_fav.setText("★" if new_state else "☆")
+        self.btn_fav.setIcon(
+            icon("fa5s.star", color=STATUS_WARNING if new_state else TEXT_DIMMED)
+        )
+        self.btn_fav.setProperty("class", "StarBtnActive" if new_state else "StarBtn")
         self.btn_fav.setToolTip(
             t("snippet.fav_remove", "Favorit entfernen")
             if new_state

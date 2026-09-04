@@ -52,7 +52,8 @@ class TestHistoryCardSplitButton(unittest.TestCase):
         self.assertEqual(notes_emitted[0]["text"], "nmap -sC -sV 10.10.10.50")
         self.assertEqual(len(loot_emitted), 0)
         # Verify visual feedback
-        self.assertIn("✓", self.card.btn_capture.text())
+        self.assertNotIn("✓", self.card.btn_capture.text())
+        self.assertFalse(self.card.btn_capture.icon().isNull())
 
     def test_mouse_press_left_part_triggers_note(self):
         notes_emitted = []
@@ -94,7 +95,8 @@ class TestHistoryCardSplitButton(unittest.TestCase):
 
     def test_visual_feedback_resets(self):
         self.card._on_capture_note()
-        self.assertIn("✓", self.card.btn_capture.text())
+        self.assertNotIn("✓", self.card.btn_capture.text())
+        self.assertFalse(self.card.btn_capture.icon().isNull())
         self.assertFalse(self.card.btn_capture.isEnabled())
         self.card._reset_capture_btn()
         self.assertTrue(

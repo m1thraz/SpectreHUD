@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional, Callable
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QWidget,
@@ -19,13 +19,15 @@ from core.i18n import t
 from ui.snippet_card import SnippetCard
 from ui.add_snippet_dialog import AddSnippetDialog
 from ui.menu_builder import build_qmenu
+from ui.styles.icons import icon
+from ui.styles.palette import STATUS_WARNING
 
 logger = get_logger("cheatsheet_controller")
 
 
 CATEGORY_SHORT_NAMES: Dict[str, tuple[str, str]] = {
     "all": ("cheatsheet.category_all", "All"),
-    "favorites": ("cheatsheet.category_favorites", "★ Favorites"),
+    "favorites": ("cheatsheet.category_favorites", "Favorites"),
     "web_http": ("cheatsheet.category_web", "Web"),
     "linux_shell": ("cheatsheet.category_linux", "Linux"),
     "windows_powershell": ("cheatsheet.category_windows", "Windows"),
@@ -365,6 +367,9 @@ class CheatsheetController(QObject):
             pill_text = _category_short_name(cat_id, full_name[:12])
 
             btn = QPushButton(pill_text)
+            if cat_id == "favorites":
+                btn.setIcon(icon("fa5s.star", color=STATUS_WARNING))
+                btn.setIconSize(QSize(11, 11))
             btn.setToolTip(f"{full_name} ({c.get('count', 0)})" if full_name else pill_text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty(

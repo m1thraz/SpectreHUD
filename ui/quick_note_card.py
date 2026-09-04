@@ -25,9 +25,17 @@ import pyperclip
 from core.logger import get_logger
 from core.i18n import t
 from ui.styles.icons import icon
-from ui.styles.palette import CYBER_CYAN
+from ui.styles.palette import CYBER_CYAN, STATUS_ERROR, STATUS_SUCCESS
 
 logger = get_logger("quick_note_card")
+
+CARD_ICON_SIZE = QSize(13, 13)
+
+STATUS_ICONS = {
+    "inbox": "fa5s.inbox",
+    "followup": "fa5s.clock",
+    "resolved": "fa5s.check-circle",
+}
 
 
 class NoteEditor(QPlainTextEdit):
@@ -155,11 +163,13 @@ class QuickNoteCard(QFrame):
         header_layout.addStretch()
 
         # 7. Delete Button
-        btn_delete = QPushButton("✕")
-        btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setToolTip(t("quick_note.delete_tip", "Delete this quick note"))
-        btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
-        header_layout.addWidget(btn_delete)
+        self.btn_delete = QPushButton()
+        self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+        self.btn_delete.setIconSize(CARD_ICON_SIZE)
+        self.btn_delete.setProperty("class", "CardDangerIconBtn")
+        self.btn_delete.setToolTip(t("quick_note.delete_tip", "Delete this quick note"))
+        self.btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
+        header_layout.addWidget(self.btn_delete)
 
         layout.addLayout(header_layout)
 
@@ -227,22 +237,26 @@ class QuickNoteCard(QFrame):
         self.action_col = QVBoxLayout()
         self.action_col.setSpacing(4)
 
-        self.btn_copy = QPushButton("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setMinimumWidth(85)
+        self.btn_copy = QPushButton()
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setIconSize(CARD_ICON_SIZE)
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("quick_note.copy_tip", "Copy quick note"))
         self.btn_copy.clicked.connect(self._copy_content)
         self.action_col.addWidget(self.btn_copy)
 
-        self.btn_edit = QPushButton(t("quick_note.edit", "Edit"))
-        self.btn_edit.setProperty("class", "SecondaryBtn")
+        self.btn_edit = QPushButton()
+        self.btn_edit.setProperty("class", "CardIconBtn")
         self.btn_edit.setIcon(icon("fa5s.pen", color="#79c0ff"))
-        self.btn_edit.setIconSize(QSize(10, 10))
-        self.btn_edit.setMinimumWidth(85)
+        self.btn_edit.setIconSize(CARD_ICON_SIZE)
+        self.btn_edit.setToolTip(t("quick_note.edit", "Edit"))
         self.btn_edit.clicked.connect(self._start_edit)
         self.action_col.addWidget(self.btn_edit)
 
         # Send to Dropdown Menu (Loot or Report)
-        self.btn_send = QPushButton("Send to ▾")
+        self.btn_send = QPushButton(t("quick_note.send_to", "Send to ▾"))
+        self.btn_send.setIcon(icon("fa5s.share", color="#e3b341"))
+        self.btn_send.setIconSize(CARD_ICON_SIZE)
         self.btn_send.setProperty("class", "SecondaryBtn")
         self.btn_send.setStyleSheet(
             "QPushButton { border-color: rgba(210, 153, 34, 0.6); color: #e3b341; } "
@@ -262,11 +276,11 @@ class QuickNoteCard(QFrame):
     def _build_status_menu(self) -> None:
         status_menu = QMenu(self.btn_status)
         for s_code, s_label in [
-            ("inbox", t("quick_note.status_inbox", "📥 Inbox")),
-            ("followup", t("quick_note.status_followup", "⏳ Follow-up")),
-            ("resolved", t("quick_note.status_resolved", "✓ Resolved")),
+            ("inbox", t("quick_note.status_inbox", "Inbox")),
+            ("followup", t("quick_note.status_followup", "Follow-up")),
+            ("resolved", t("quick_note.status_resolved", "Resolved")),
         ]:
-            action = QAction(s_label, status_menu)
+            action = QAction(icon(STATUS_ICONS[s_code]), s_label, status_menu)
             action.triggered.connect(lambda checked=False, st=s_code: self._change_status(st))
             status_menu.addAction(action)
         self.btn_status.setMenu(status_menu)
@@ -278,16 +292,18 @@ class QuickNoteCard(QFrame):
 
     def _update_status_style(self) -> None:
         st = str(self.entry.get("status", "inbox")).lower()
+        self.btn_status.setIcon(icon(STATUS_ICONS.get(st, STATUS_ICONS["inbox"])))
+        self.btn_status.setIconSize(QSize(11, 11))
         if st == "followup":
-            self.btn_status.setText(t("quick_note.status_followup_short", "⏳ Follow-up ▾"))
+            self.btn_status.setText(t("quick_note.status_followup_short", "Follow-up ▾"))
             self.btn_status.setStyleSheet(
                 "background-color: rgba(210, 153, 34, 0.2); color: #e3b341; "
                 "border: 1px solid rgba(210, 153, 34, 0.5); border-radius: 4px; "
                 "padding: 2px 6px; font-size: 10px; font-weight: bold;"
             )
-            self.lbl_content.setStyleSheet("color: #f0f6fc;")
+            self.lbl_content.setStyleSheet("")
         elif st == "resolved":
-            self.btn_status.setText(t("quick_note.status_resolved_short", "✓ Resolved ▾"))
+            self.btn_status.setText(t("quick_note.status_resolved_short", "Resolved ▾"))
             self.btn_status.setStyleSheet(
                 "background-color: rgba(57, 211, 83, 0.15); color: #56d364; "
                 "border: 1px solid rgba(57, 211, 83, 0.4); border-radius: 4px; "
@@ -296,13 +312,13 @@ class QuickNoteCard(QFrame):
             # Subtle dimming of text for resolved notes
             self.lbl_content.setStyleSheet("color: #8b949e;")
         else:
-            self.btn_status.setText(t("quick_note.status_inbox_short", "📥 Inbox ▾"))
+            self.btn_status.setText(t("quick_note.status_inbox_short", "Inbox ▾"))
             self.btn_status.setStyleSheet(
                 "background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; "
                 "border: 1px solid rgba(56, 139, 253, 0.4); border-radius: 4px; "
                 "padding: 2px 6px; font-size: 10px; font-weight: bold;"
             )
-            self.lbl_content.setStyleSheet("color: #f0f6fc;")
+            self.lbl_content.setStyleSheet("")
 
     def _toggle_pin(self) -> None:
         current_pin = bool(self.entry.get("pinned", False))
@@ -338,11 +354,15 @@ class QuickNoteCard(QFrame):
     def _build_send_menu(self) -> None:
         send_menu = QMenu(self.btn_send)
 
-        act_loot = QAction(t("quick_note.send_loot", "★ Send to Loot"), send_menu)
+        act_loot = QAction(icon("fa5s.archive"), t("quick_note.send_loot", "Send to Loot"), send_menu)
         act_loot.triggered.connect(lambda: self.promote_requested.emit(self.entry))
         send_menu.addAction(act_loot)
 
-        act_report = QAction(t("quick_note.send_report", "📝 Send to Report"), send_menu)
+        act_report = QAction(
+            icon("fa5s.file-alt"),
+            t("quick_note.send_report", "Send to Report"),
+            send_menu,
+        )
         act_report.triggered.connect(lambda: self.send_to_report_requested.emit(self.entry))
         send_menu.addAction(act_report)
 
@@ -391,8 +411,9 @@ class QuickNoteCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Copied!")
-            self.btn_copy.setProperty("class", "CopyBtnSuccess")
+            self.btn_copy.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
+            self.btn_copy.setProperty("class", "CardIconBtnSuccess")
+            self.btn_copy.setToolTip(t("snippet.copied", "Copied!"))
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
 
@@ -400,8 +421,10 @@ class QuickNoteCard(QFrame):
             self.copied.emit(text)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
+        self.btn_copy.setText("")
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("quick_note.copy_tip", "Copy quick note"))
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)
 

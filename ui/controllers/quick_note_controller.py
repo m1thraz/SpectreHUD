@@ -6,7 +6,7 @@ reporting export, inline editing, status triage, pinning, and bulk actions.
 """
 
 from typing import Optional, Callable, Dict, Any, List, Set
-from PyQt6.QtCore import QObject, pyqtSignal, Qt
+from PyQt6.QtCore import QObject, pyqtSignal, Qt, QSize
 from PyQt6.QtWidgets import (
     QWidget,
     QPushButton,
@@ -27,6 +27,7 @@ from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
 from ui.styles.palette import CYBER_CYAN, TEXT_MUTED
+from ui.styles.icons import icon
 
 logger = get_logger("quick_note_controller")
 
@@ -474,19 +475,29 @@ class QuickNoteController(QObject):
         lbl_mark.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 11px;")
         layout.addWidget(lbl_mark)
 
-        btn_inbox = QPushButton(t("quick_note.status_inbox_short", "📥 Inbox"))
+        btn_inbox = QPushButton(t("quick_note.status_inbox_short", "Inbox ▾").removesuffix(" ▾"))
+        btn_inbox.setIcon(icon("fa5s.inbox"))
+        btn_inbox.setIconSize(QSize(12, 12))
         btn_inbox.setProperty("class", "SecondaryBtn")
         btn_inbox.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_inbox.clicked.connect(lambda: self.bulk_set_status("inbox"))
         layout.addWidget(btn_inbox)
 
-        btn_followup = QPushButton(t("quick_note.status_followup_short", "⏳ Follow-up"))
+        btn_followup = QPushButton(
+            t("quick_note.status_followup_short", "Follow-up ▾").removesuffix(" ▾")
+        )
+        btn_followup.setIcon(icon("fa5s.clock"))
+        btn_followup.setIconSize(QSize(12, 12))
         btn_followup.setProperty("class", "SecondaryBtn")
         btn_followup.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_followup.clicked.connect(lambda: self.bulk_set_status("followup"))
         layout.addWidget(btn_followup)
 
-        btn_resolved = QPushButton(t("quick_note.status_resolved_short", "✓ Resolved"))
+        btn_resolved = QPushButton(
+            t("quick_note.status_resolved_short", "Resolved ▾").removesuffix(" ▾")
+        )
+        btn_resolved.setIcon(icon("fa5s.check-circle"))
+        btn_resolved.setIconSize(QSize(12, 12))
         btn_resolved.setProperty("class", "SecondaryBtn")
         btn_resolved.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_resolved.clicked.connect(lambda: self.bulk_set_status("resolved"))
@@ -495,12 +506,16 @@ class QuickNoteController(QObject):
         layout.addStretch()
 
         btn_delete = QPushButton(t("quick_note.bulk_delete", "Delete Selected"))
+        btn_delete.setIcon(icon("fa5s.trash"))
+        btn_delete.setIconSize(QSize(12, 12))
         btn_delete.setProperty("class", "DangerBtn")
         btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_delete.clicked.connect(lambda: self.bulk_delete_notes(parent_widget))
         layout.addWidget(btn_delete)
 
-        btn_deselect = QPushButton(t("quick_note.bulk_deselect", "✕ Deselect"))
+        btn_deselect = QPushButton(t("quick_note.bulk_deselect", "Deselect"))
+        btn_deselect.setIcon(icon("fa5s.times"))
+        btn_deselect.setIconSize(QSize(12, 12))
         btn_deselect.setProperty("class", "SecondaryBtn")
         btn_deselect.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_deselect.clicked.connect(self.clear_selection)

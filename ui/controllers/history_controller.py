@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -19,6 +19,7 @@ from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.history_card import HistoryCard
+from ui.styles.icons import icon
 
 logger = get_logger("history_controller")
 
@@ -207,12 +208,16 @@ class HistoryController(QObject):
 
         # Contextual History Action Buttons
         btn_export = QPushButton("Report (.md)")
+        btn_export.setIcon(icon("fa5s.file-export"))
+        btn_export.setIconSize(QSize(12, 12))
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
 
         btn_clear = QPushButton("Clear")
+        btn_clear.setIcon(icon("fa5s.trash"))
+        btn_clear.setIconSize(QSize(12, 12))
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip(t("history.clear_tip", "Clear this project's clipboard history"))
         btn_clear.clicked.connect(on_clear)

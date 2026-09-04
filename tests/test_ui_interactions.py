@@ -69,7 +69,8 @@ class TestUI(unittest.TestCase):
         # Check that favorites filter pill exists
         self.assertIn("favorites", window.app.cheatsheet_ctrl.filter_buttons)
         fav_btn = window.app.cheatsheet_ctrl.filter_buttons["favorites"]
-        self.assertIn("★", fav_btn.text())
+        self.assertNotIn("★", fav_btn.text())
+        self.assertFalse(fav_btn.icon().isNull())
 
         # Find a non-favorite card to toggle ON
         non_fav_card = next(

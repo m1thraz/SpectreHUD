@@ -18,6 +18,8 @@ semantic versioning.
 - Modernized the Report Editor toolbars with consistent QtAwesome icons for structural,
   insert, view, export, save, and collapse actions while retaining clear text labels and
   typographic Markdown controls where they are more readable.
+- Replaced remaining emoji and Unicode action glyphs across the Variable Bar, Cheatsheet,
+  Loot, Quick Notes, and History core views with consistent QtAwesome icons and state feedback.
 
 ## [2.0.8] - 2026-09-04
 

@@ -11,10 +11,14 @@ from PyQt6.QtWidgets import (
     QWidget,
     QFileDialog,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QSize
 from PyQt6.QtGui import QGuiApplication
 from core.i18n import t
 from ui.copyable_line_edit import CopyableLineEdit
+from ui.styles.icons import icon
+
+
+POPOVER_ICON_SIZE = QSize(12, 12)
 
 
 class BaseVarPopover(QFrame):
@@ -131,7 +135,9 @@ class AuthPopover(BaseVarPopover):
         self.txt_pass.setPlaceholderText("••••••••")
         self.txt_pass.textChanged.connect(self.values_changed.emit)
 
-        self.btn_toggle_pass = QPushButton("👁")
+        self.btn_toggle_pass = QPushButton()
+        self.btn_toggle_pass.setIcon(icon("fa5s.eye"))
+        self.btn_toggle_pass.setIconSize(POPOVER_ICON_SIZE)
         self.btn_toggle_pass.setProperty("class", "VarPopoverBtn")
         self.btn_toggle_pass.setFixedWidth(28)
         self.btn_toggle_pass.setToolTip(t("varbar.pass_toggle_tip", "Passwort ein-/ausblenden"))
@@ -181,10 +187,10 @@ class AuthPopover(BaseVarPopover):
     def _toggle_pass_visibility(self) -> None:
         if self.txt_pass.echoMode() == QLineEdit.EchoMode.Password:
             self.txt_pass.setEchoMode(QLineEdit.EchoMode.Normal)
-            self.btn_toggle_pass.setText("🔒")
+            self.btn_toggle_pass.setIcon(icon("fa5s.eye-slash"))
         else:
             self.txt_pass.setEchoMode(QLineEdit.EchoMode.Password)
-            self.btn_toggle_pass.setText("👁")
+            self.btn_toggle_pass.setIcon(icon("fa5s.eye"))
 
     def get_values(self) -> Dict[str, str]:
         hash_val = self.txt_hash.text().strip()
@@ -282,7 +288,9 @@ class ScopePopover(BaseVarPopover):
         self.txt_wordlist.setPlaceholderText("/usr/share/wordlists/dirb/common.txt")
         self.txt_wordlist.textChanged.connect(self.values_changed.emit)
 
-        self.btn_browse = QPushButton(t("varbar.browse", "..."))
+        self.btn_browse = QPushButton()
+        self.btn_browse.setIcon(icon("fa5s.folder-open"))
+        self.btn_browse.setIconSize(POPOVER_ICON_SIZE)
         self.btn_browse.setProperty("class", "VarPopoverBtn")
         self.btn_browse.setFixedWidth(28)
         self.btn_browse.setToolTip(t("varbar.browse_tip", "Wordlist-Datei auswählen"))

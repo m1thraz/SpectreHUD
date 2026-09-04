@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect,
     QMessageBox,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
@@ -19,9 +19,13 @@ from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
 from core.platform.opener import open_path
+from ui.styles.icons import icon
+from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
 import pyperclip
 
 logger = get_logger("loot_card")
+
+CARD_ICON_SIZE = QSize(13, 13)
 
 
 class LootCard(QFrame):
@@ -113,15 +117,19 @@ class LootCard(QFrame):
             header_layout.addWidget(lbl_time)
 
         # 6. Edit Button
-        self.btn_edit = QPushButton("✎")
-        self.btn_edit.setProperty("class", "EditBtn")
+        self.btn_edit = QPushButton()
+        self.btn_edit.setIcon(icon("fa5s.pen"))
+        self.btn_edit.setIconSize(CARD_ICON_SIZE)
+        self.btn_edit.setProperty("class", "CardIconBtn")
         self.btn_edit.setToolTip(t("loot.edit_tip", "Edit or recategorize this entry"))
         self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
         header_layout.addWidget(self.btn_edit)
 
         # 7. Export Button
-        self.btn_export_file = QPushButton("⇩")
-        self.btn_export_file.setProperty("class", "SecondaryBtn")
+        self.btn_export_file = QPushButton()
+        self.btn_export_file.setIcon(icon("fa5s.download"))
+        self.btn_export_file.setIconSize(CARD_ICON_SIZE)
+        self.btn_export_file.setProperty("class", "CardIconBtn")
         self.btn_export_file.setToolTip(
             t("loot.export_file_tip", "Export this loot entry to a text file in the project")
         )
@@ -130,8 +138,10 @@ class LootCard(QFrame):
         )
         header_layout.addWidget(self.btn_export_file)
 
-        self.btn_export_obsidian = QPushButton("O")
-        self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
+        self.btn_export_obsidian = QPushButton()
+        self.btn_export_obsidian.setIcon(icon("fa5s.book-open"))
+        self.btn_export_obsidian.setIconSize(CARD_ICON_SIZE)
+        self.btn_export_obsidian.setProperty("class", "CardIconBtn")
         self.btn_export_obsidian.setToolTip(
             t("loot.export_obsidian_tip", "Append this loot entry to the Obsidian project note")
         )
@@ -141,11 +151,13 @@ class LootCard(QFrame):
         header_layout.addWidget(self.btn_export_obsidian)
 
         # 8. Delete Button
-        btn_delete = QPushButton("✕")
-        btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setToolTip(t("loot.delete_tip", "Delete this entry"))
-        btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
-        header_layout.addWidget(btn_delete)
+        self.btn_delete = QPushButton()
+        self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+        self.btn_delete.setIconSize(CARD_ICON_SIZE)
+        self.btn_delete.setProperty("class", "CardDangerIconBtn")
+        self.btn_delete.setToolTip(t("loot.delete_tip", "Delete this entry"))
+        self.btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
+        header_layout.addWidget(self.btn_delete)
 
         layout.addLayout(header_layout)
 
@@ -213,9 +225,11 @@ class LootCard(QFrame):
             )
         content_row.addWidget(self.lbl_content, stretch=1)
 
-        self.btn_copy = QPushButton("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setMinimumWidth(90)
+        self.btn_copy = QPushButton()
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setIconSize(CARD_ICON_SIZE)
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("loot.copy_tip", "Copy this entry"))
         self.btn_copy.clicked.connect(self._copy_content)
         content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
 
@@ -386,8 +400,9 @@ class LootCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Copied!")
-            self.btn_copy.setProperty("class", "CopyBtnSuccess")
+            self.btn_copy.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
+            self.btn_copy.setProperty("class", "CardIconBtnSuccess")
+            self.btn_copy.setToolTip(t("snippet.copied", "Copied!"))
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
 
@@ -395,7 +410,9 @@ class LootCard(QFrame):
             self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
+        self.btn_copy.setText("")
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("loot.copy_tip", "Copy this entry"))
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)

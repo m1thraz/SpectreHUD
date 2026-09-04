@@ -49,14 +49,14 @@ class TestI18n(unittest.TestCase):
 
     def test_german_translations(self):
         self.assertEqual(self.i18n.t("header.mode_cheatsheet"), "Cheatsheet")
-        self.assertEqual(self.i18n.t("varbar.add_btn"), "+ Neu")
+        self.assertEqual(self.i18n.t("varbar.add_btn"), "Neu")
         self.assertEqual(self.i18n.t("dialog.cancel"), "Abbrechen")
         self.assertEqual(self.i18n.t("dialog.save"), "Speichern")
 
     def test_locale_switch_to_english(self):
         self.i18n.set_locale("en")
         self.assertEqual(self.i18n.current_locale, "en")
-        self.assertEqual(self.i18n.t("varbar.add_btn"), "+ New")
+        self.assertEqual(self.i18n.t("varbar.add_btn"), "New")
         self.assertEqual(self.i18n.t("dialog.cancel"), "Cancel")
         self.assertEqual(self.i18n.t("dialog.save"), "Save")
 

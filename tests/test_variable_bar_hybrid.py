@@ -92,7 +92,10 @@ def test_variable_bar_badge_button_styling(qapp):
 
     # Initially empty auth and default scope
     assert empty_bar.btn_auth.property("class") == "VarBadgeBtn"
-    assert empty_bar.btn_auth.text() == "👤 Auth ▾"
+    assert empty_bar.btn_auth.text() == "Auth ▾"
+    assert not empty_bar.btn_auth.icon().isNull()
+    assert empty_bar.btn_scope.text() == "Scope ▾"
+    assert not empty_bar.btn_scope.icon().isNull()
 
     # Setting username updates badge text and class
     empty_bar.popover_auth.txt_user.setText("pentester")
@@ -103,6 +106,20 @@ def test_variable_bar_badge_button_styling(qapp):
     empty_bar.popover_auth.txt_user.setText("")
     empty_bar.popover_auth.txt_pass.setText("")
     assert empty_bar.btn_auth.property("class") == "VarBadgeBtn"
+
+
+def test_password_visibility_uses_qtawesome_state_icons(qapp):
+    bar = VariableBar({})
+    toggle = bar.btn_toggle_pass
+
+    assert toggle.text() == ""
+    assert not toggle.icon().isNull()
+    hidden_icon_key = toggle.icon().cacheKey()
+
+    toggle.click()
+    assert toggle.text() == ""
+    assert not toggle.icon().isNull()
+    assert toggle.icon().cacheKey() != hidden_icon_key
 
 
 def test_template_engine_interpolates_popover_variables(var_bar):
@@ -196,6 +213,5 @@ def test_subnet_dns_hash_file_popovers(var_bar):
         rendered
         == "nmap -sn 192.168.10.0/24 --dns-servers 192.168.10.1 -oN nmap.txt && john /opt/wordlists/ntlm.hashes"
     )
-
 
 

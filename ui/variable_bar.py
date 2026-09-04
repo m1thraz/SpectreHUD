@@ -1,10 +1,15 @@
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
-from PyQt6.QtCore import pyqtSignal, QTimer
+from PyQt6.QtCore import pyqtSignal, QTimer, QSize
 from typing import Dict, Any, Optional
 from core.net_detector import NetDetector
 from core.i18n import t
 from ui.variable_popovers import AuthPopover, ScopePopover
 from ui.copyable_line_edit import CopyableLineEdit
+from ui.styles.icons import icon
+from ui.styles.palette import STATUS_SUCCESS
+
+
+VARIABLE_BAR_ICON_SIZE = QSize(12, 12)
 
 
 class VariableBar(QFrame):
@@ -72,20 +77,26 @@ class VariableBar(QFrame):
 
         # 3. Auto-Detect Button
         self.btn_auto = QPushButton(t("varbar.auto", "Auto"))
+        self.btn_auto.setIcon(icon("fa5s.crosshairs"))
+        self.btn_auto.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_auto.setProperty("class", "AutoDetectBtn")
         self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
         self.btn_auto.clicked.connect(self.auto_detect_ip)
         layout.addWidget(self.btn_auto)
 
         # 4. Auth Popover Button (User, Pass, Port, Domain, Hash)
-        self.btn_auth = QPushButton("👤 Auth ▾")
+        self.btn_auth = QPushButton("Auth ▾")
+        self.btn_auth.setIcon(icon("fa5s.user"))
+        self.btn_auth.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_auth.setProperty("class", "VarBadgeBtn")
         self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
         self.btn_auth.clicked.connect(lambda: self.popover_auth.show_below(self.btn_auth))
         layout.addWidget(self.btn_auth)
 
         # 6. Scope Popover Button (Wordlist, Target URL)
-        self.btn_scope = QPushButton("📁 Scope ▾")
+        self.btn_scope = QPushButton("Scope ▾")
+        self.btn_scope.setIcon(icon("fa5s.folder"))
+        self.btn_scope.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_scope.setProperty("class", "VarBadgeBtn")
         self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
         self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
@@ -94,7 +105,9 @@ class VariableBar(QFrame):
         layout.addStretch()
 
         # 7. Add Snippet Button
-        self.btn_add = QPushButton(t("varbar.add_btn", "+ Neu"))
+        self.btn_add = QPushButton(t("varbar.add_btn", "Neu"))
+        self.btn_add.setIcon(icon("fa5s.plus"))
+        self.btn_add.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_add.setProperty("class", "MiniPrimaryBtn")
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
@@ -107,21 +120,21 @@ class VariableBar(QFrame):
         has_auth = self.popover_auth.has_active_values()
 
         if has_auth:
-            label = f"👤 {username[:10]} ▾" if username else "👤 Auth* ▾"
+            label = f"{username[:10]} ▾" if username else "Auth* ▾"
             self.btn_auth.setText(label)
             self.btn_auth.setProperty("class", "VarBadgeBtnActive")
         else:
-            self.btn_auth.setText("👤 Auth ▾")
+            self.btn_auth.setText("Auth ▾")
             self.btn_auth.setProperty("class", "VarBadgeBtn")
         self.btn_auth.style().unpolish(self.btn_auth)
         self.btn_auth.style().polish(self.btn_auth)
 
         has_scope = self.popover_scope.has_active_values()
         if has_scope:
-            self.btn_scope.setText("📁 Scope* ▾")
+            self.btn_scope.setText("Scope* ▾")
             self.btn_scope.setProperty("class", "VarBadgeBtnActive")
         else:
-            self.btn_scope.setText("📁 Scope ▾")
+            self.btn_scope.setText("Scope ▾")
             self.btn_scope.setProperty("class", "VarBadgeBtn")
         self.btn_scope.style().unpolish(self.btn_scope)
         self.btn_scope.style().polish(self.btn_scope)
@@ -140,7 +153,7 @@ class VariableBar(QFrame):
         self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
         self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Port, Domain & Hash verwalten"))
         self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
-        self.btn_add.setText(t("varbar.add_btn", "+ Neu"))
+        self.btn_add.setText(t("varbar.add_btn", "Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
         self.popover_auth.retranslate()
         self.popover_scope.retranslate()
@@ -151,11 +164,16 @@ class VariableBar(QFrame):
         detected = NetDetector.detect_attacker_ip()
         if detected:
             self.txt_attacker.setText(detected)
-            self.btn_auto.setText("✓ " + detected)
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
+            self.btn_auto.setText(detected)
+            self.btn_auto.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
+            QTimer.singleShot(2000, self._reset_auto_button)
         else:
             self.btn_auto.setText(t("varbar.no_ip", "Keine IP"))
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
+            QTimer.singleShot(2000, self._reset_auto_button)
+
+    def _reset_auto_button(self) -> None:
+        self.btn_auto.setText(t("varbar.auto", "Auto"))
+        self.btn_auto.setIcon(icon("fa5s.crosshairs"))
 
     def _on_values_changed(self) -> None:
         self.variables_changed.emit(self.get_variables())

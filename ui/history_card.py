@@ -9,13 +9,17 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
 from typing import Dict, Any, Optional
 import pyperclip
 from core.logger import get_logger
 from core.i18n import t
+from ui.styles.icons import icon
+from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
 
 logger = get_logger(__name__)
+
+CARD_ICON_SIZE = QSize(13, 13)
 
 
 class SplitCaptureButton(QPushButton):
@@ -104,11 +108,13 @@ class HistoryCard(QFrame):
         header_layout.addStretch()
 
         # Delete Button
-        btn_delete = QPushButton("✕")
-        btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setToolTip(t("history.delete_tip", "Delete this history entry"))
-        btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
-        header_layout.addWidget(btn_delete)
+        self.btn_delete = QPushButton()
+        self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+        self.btn_delete.setIconSize(CARD_ICON_SIZE)
+        self.btn_delete.setProperty("class", "CardDangerIconBtn")
+        self.btn_delete.setToolTip(t("history.delete_tip", "Delete this history entry"))
+        self.btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
+        header_layout.addWidget(self.btn_delete)
 
         layout.addLayout(header_layout)
 
@@ -131,13 +137,17 @@ class HistoryCard(QFrame):
         action_col = QVBoxLayout()
         action_col.setSpacing(4)
 
-        self.btn_copy = QPushButton("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setMinimumWidth(90)
+        self.btn_copy = QPushButton()
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setIconSize(CARD_ICON_SIZE)
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("history.copy_tip", "Copy history entry"))
         self.btn_copy.clicked.connect(self._copy_content)
         action_col.addWidget(self.btn_copy)
 
         self.btn_capture = SplitCaptureButton(t("history.capture", "Erfassen ▾"), self)
+        self.btn_capture.setIcon(icon("fa5s.inbox"))
+        self.btn_capture.setIconSize(CARD_ICON_SIZE)
         self.btn_capture.setProperty("class", "SecondaryBtn")
         self.btn_capture.setToolTip(
             t("history.capture_tip", "Klick: Als Note erfassen | Pfeil: Optionen (Note / Loot)")
@@ -147,10 +157,14 @@ class HistoryCard(QFrame):
         capture_menu = QMenu(self.btn_capture)
         capture_menu.setProperty("class", "SecondaryMenu")
 
-        act_note = capture_menu.addAction(t("history.capture_as_note", "Als Note erfassen"))
+        act_note = capture_menu.addAction(
+            icon("fa5s.sticky-note"), t("history.capture_as_note", "Als Note erfassen")
+        )
         act_note.triggered.connect(self._on_capture_note)
 
-        act_loot = capture_menu.addAction(t("history.capture_as_loot", "Als Loot erfassen..."))
+        act_loot = capture_menu.addAction(
+            icon("fa5s.archive"), t("history.capture_as_loot", "Als Loot erfassen...")
+        )
         act_loot.triggered.connect(self._on_capture_loot)
 
         self.btn_capture.setMenu(capture_menu)
@@ -166,15 +180,16 @@ class HistoryCard(QFrame):
         """Captures entry directly as a Quick Note and disables further captures."""
         self.btn_capture.setEnabled(False)
         self.transfer_to_note.emit(self.entry)
-        self._show_capture_feedback(t("history.captured_as_note", "✓ Note"), auto_reset=False)
+        self._show_capture_feedback(t("history.captured_as_note", "Note"), auto_reset=False)
 
     def _on_capture_loot(self) -> None:
         """Transfers entry to Loot via dialog and shows visual feedback."""
         self.transfer_to_loot.emit(self.entry)
-        self._show_capture_feedback("✓ Loot...", auto_reset=True)
+        self._show_capture_feedback("Loot...", auto_reset=True)
 
     def _show_capture_feedback(self, text: str, auto_reset: bool = True) -> None:
         self.btn_capture.setText(text)
+        self.btn_capture.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
         self.btn_capture.setProperty("class", "CopyBtnSuccess")
         self.btn_capture.style().unpolish(self.btn_capture)
         self.btn_capture.style().polish(self.btn_capture)
@@ -184,6 +199,7 @@ class HistoryCard(QFrame):
     def _reset_capture_btn(self) -> None:
         self.btn_capture.setEnabled(True)
         self.btn_capture.setText(t("history.capture", "Erfassen ▾"))
+        self.btn_capture.setIcon(icon("fa5s.inbox"))
         self.btn_capture.setProperty("class", "SecondaryBtn")
         self.btn_capture.style().unpolish(self.btn_capture)
         self.btn_capture.style().polish(self.btn_capture)
@@ -199,8 +215,9 @@ class HistoryCard(QFrame):
             except (pyperclip.PyperclipException, OSError) as exc:
                 logger.debug(f"pyperclip copy fallback failed: {exc}")
 
-            self.btn_copy.setText("✓ Copied!")
-            self.btn_copy.setProperty("class", "CopyBtnSuccess")
+            self.btn_copy.setIcon(icon("fa5s.check", color=STATUS_SUCCESS))
+            self.btn_copy.setProperty("class", "CardIconBtnSuccess")
+            self.btn_copy.setToolTip(t("snippet.copied", "Copied!"))
             self.btn_copy.style().unpolish(self.btn_copy)
             self.btn_copy.style().polish(self.btn_copy)
 
@@ -208,7 +225,9 @@ class HistoryCard(QFrame):
             self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self) -> None:
-        self.btn_copy.setText("Copy")
-        self.btn_copy.setProperty("class", "CopyBtn")
+        self.btn_copy.setText("")
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("history.copy_tip", "Copy history entry"))
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)
