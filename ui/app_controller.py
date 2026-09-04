@@ -258,6 +258,16 @@ class AppController(QObject):
         """Opens the lightweight quick IP popup."""
         self._open_quick_ip_popup()
 
+    def trigger_quick_loot(self) -> None:
+        """Opens the Add-Loot dialog non-modally as a floating remote control."""
+        target_ip = self._target_provider()
+        self.loot_ctrl.open_add_dialog(
+            parent_widget=None,
+            target_ip=target_ip,
+            modal=False,
+            on_accepted=lambda _data: self._on_loot_data_updated(),
+        )
+
     def _open_quick_ip_popup(self) -> None:
         if not self.var_bar:
             return
@@ -676,9 +686,11 @@ class AppController(QObject):
         quit_hotkey_raw = self.config.get("quit_hotkey", "<ctrl>+<alt>+q")
         quick_note_hotkey_raw = self.config.get("quick_note_hotkey", "<ctrl>+<alt>+n")
         quick_ip_hotkey_raw = self.config.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
+        quick_loot_hotkey_raw = self.config.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
         self.footer.update_hotkey_display(
             hotkey_raw,
             quit_hotkey_raw,
             quick_note_hotkey_raw=quick_note_hotkey_raw,
             quick_ip_hotkey_raw=quick_ip_hotkey_raw,
+            quick_loot_hotkey_raw=quick_loot_hotkey_raw,
         )

@@ -79,7 +79,7 @@
 
     "privacy.warning": "Datenschutz-Hinweis: Kopierte Passwörter oder persönliche Daten werden protokolliert, solange REC aktiv ist (Pausieren mit Ctrl+P oder Klick auf REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Beenden | Ctrl+P: REC | Ctrl+S: Snip | Esc: Verstecken",
+    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {loot_hotkey}: Loot | {quit_hotkey}: Beenden | Ctrl+P: REC | Ctrl+S: Snip | Esc: Verstecken",
     "footer.entries_count": "{count} Einträge",
     "footer.entry_count_single": "1 Eintrag",
     "footer.always_on_top": "Im Vordergrund",
@@ -305,10 +305,12 @@
     "settings.shortcut_options": "Einstellungen / Optionen öffnen",
     "settings.lbl_quick_note_shortcut": "Quick-Note (Haftnotiz):",
     "settings.lbl_quick_ip_shortcut": "Quick-IP (Target / LHOST):",
+    "settings.lbl_quick_loot_shortcut": "Quick-Loot (Direkt erfassen):",
 
     "tray.show": "SpectreHUD anzeigen ({hotkey})",
     "tray.note": "Quick-Note erfassen ({hotkey})",
     "tray.ip": "Quick-IP (Target / LHOST) ({hotkey})",
+    "tray.loot": "Loot erfassen ({hotkey})",
     "tray.snip": "Screenshot aufnehmen (Ctrl+Alt+X)",
     "tray.rec_start": "Clipboard-Logger aktivieren (Ctrl+P)",
     "tray.rec_pause": "Clipboard-Logger pausieren (Ctrl+P)",

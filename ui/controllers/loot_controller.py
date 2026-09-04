@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal, QPoint
+from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 
 from core.loot_manager import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
@@ -39,6 +41,7 @@ class LootController(QObject):
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
+        self._active_add_dialog: Optional[AddLootDialog] = None
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -477,7 +480,7 @@ class LootController(QObject):
 
     def open_add_dialog(
         self,
-        parent_widget: QWidget,
+        parent_widget: Optional[QWidget] = None,
         target_ip: str = "",
         default_target: str = "",
         default_type: str = "note",
@@ -485,8 +488,99 @@ class LootController(QObject):
         default_title: str = "",
         default_content: str = "",
         default_severity: str = "info",
+        modal: bool = True,
+        on_accepted: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> bool:
-        """Open the loot dialog with optional values prefilled by its caller."""
+        """Open the loot dialog with optional values prefilled by its caller.
+
+        If modal=True (default), runs synchronously as a blocking modal dialog.
+        If modal=False, opens non-modally as a floating remote control window.
+        """
+        if not modal:
+            if self._active_add_dialog is not None and self._active_add_dialog.isVisible():
+                self._active_add_dialog.raise_()
+                self._active_add_dialog.activateWindow()
+                if hasattr(self._active_add_dialog, "txt_title"):
+                    self._active_add_dialog.txt_title.setFocus()
+                return True
+
+            dlg = AddLootDialog(
+                parent=None,
+                target_ip=target_ip or default_target,
+                default_type=default_type,
+                default_category=default_category,
+                default_title=default_title,
+                default_content=default_content,
+                default_severity=default_severity,
+            )
+            dlg.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.Tool
+            )
+
+            cursor_pos = QCursor.pos()
+            screen = QGuiApplication.screenAt(cursor_pos) or QGuiApplication.primaryScreen()
+            dlg_width = dlg.width()
+            dlg_height = dlg.height()
+            target_x = cursor_pos.x() - (dlg_width // 2)
+            target_y = cursor_pos.y() - (dlg_height // 2)
+            if screen:
+                geom = screen.availableGeometry()
+                target_x = max(geom.left() + 10, min(target_x, geom.right() - dlg_width - 10))
+                target_y = max(geom.top() + 10, min(target_y, geom.bottom() - dlg_height - 10))
+            dlg.move(QPoint(target_x, target_y))
+
+            def _handle_accepted() -> None:
+                data = dlg.get_data()
+                self.add_entry(
+                    entry_type=data["type"],
+                    title=data["title"],
+                    content=data["content"],
+                    target_ip=data["target_ip"],
+                    category=data.get("category", "misc"),
+                    severity=data.get("severity", "info"),
+                )
+                if on_accepted:
+                    on_accepted(data)
+
+            def _handle_finished() -> None:
+                if self._active_add_dialog is dlg:
+                    self._active_add_dialog = None
+
+            dlg.accepted.connect(_handle_accepted)
+            dlg.finished.connect(_handle_finished)
+            self._active_add_dialog = dlg
+
+            dlg.show()
+            if os.name == "nt":
+                try:
+                    import ctypes
+
+                    user32 = ctypes.windll.user32
+                    kernel32 = ctypes.windll.kernel32
+                    hwnd = int(dlg.winId())
+                    fg = user32.GetForegroundWindow()
+                    if fg != hwnd:
+                        fore_thread = user32.GetWindowThreadProcessId(fg, None)
+                        app_thread = kernel32.GetCurrentThreadId()
+                        if fore_thread != app_thread and fore_thread != 0:
+                            user32.AttachThreadInput(fore_thread, app_thread, True)
+                            user32.BringWindowToTop(hwnd)
+                            user32.SetForegroundWindow(hwnd)
+                            user32.AttachThreadInput(fore_thread, app_thread, False)
+                        else:
+                            user32.BringWindowToTop(hwnd)
+                            user32.SetForegroundWindow(hwnd)
+                except Exception:
+                    pass
+
+            dlg.raise_()
+            dlg.activateWindow()
+            if hasattr(dlg, "txt_title"):
+                dlg.txt_title.setFocus()
+            return True
+
         dlg = AddLootDialog(
             parent=parent_widget,
             target_ip=target_ip or default_target,
@@ -506,6 +600,8 @@ class LootController(QObject):
                 category=data.get("category", "misc"),
                 severity=data.get("severity", "info"),
             )
+            if on_accepted:
+                on_accepted(data)
             return True
         return False
 

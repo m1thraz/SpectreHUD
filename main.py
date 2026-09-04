@@ -200,12 +200,14 @@ def main():
         hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
         hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
         hotkey_ip = container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
+        hotkey_loot = container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
         hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
         hotkey_config = HotkeyConfig(
             toggle=hotkey_toggle,
             screenshot=hotkey_snip,
             quick_note=hotkey_note,
             quick_ip=hotkey_ip,
+            quick_loot=hotkey_loot,
             quit=hotkey_quit,
         )
 
@@ -214,6 +216,7 @@ def main():
         hotkey_listener.screenshot_requested.connect(window.app.trigger_screenshot)
         hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
         hotkey_listener.quick_ip_requested.connect(window.app.trigger_quick_ip)
+        hotkey_listener.quick_loot_requested.connect(window.app.trigger_quick_loot)
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
         _startup_mark(started_at, "hotkey listener started")
@@ -239,6 +242,10 @@ def main():
         act_ip = QAction(f"Quick-IP (Target / LHOST) ({hotkey_ip})", tray_menu)
         act_ip.triggered.connect(window.app.trigger_quick_ip)
         tray_menu.addAction(act_ip)
+
+        act_loot = QAction(f"Loot erfassen ({hotkey_loot})", tray_menu)
+        act_loot.triggered.connect(window.app.trigger_quick_loot)
+        tray_menu.addAction(act_loot)
 
         act_snip = QAction(f"Screenshot aufnehmen ({hotkey_snip})", tray_menu)
         act_snip.triggered.connect(window.app.trigger_screenshot)
@@ -296,6 +303,10 @@ def main():
                 "quick_ip_hotkey",
                 container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i"),
             )
+            new_loot = data.get(
+                "quick_loot_hotkey",
+                container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l"),
+            )
             new_quit = data.get(
                 "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
             )
@@ -304,6 +315,7 @@ def main():
                 screenshot=new_snip,
                 quick_note=new_note,
                 quick_ip=new_ip,
+                quick_loot=new_loot,
                 quit=new_quit,
             )
             hotkey_listener.update_config(new_cfg)
@@ -311,6 +323,7 @@ def main():
             act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
             act_note.setText(f"Quick-Note erfassen ({new_note})")
             act_ip.setText(f"Quick-IP (Target / LHOST) ({new_ip})")
+            act_loot.setText(f"Loot erfassen ({new_loot})")
             act_quit.setText(f"Beenden ({new_quit})")
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)

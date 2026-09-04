@@ -95,6 +95,39 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(dlg.get_command(), "nmap -sV -Pn 10.10.10.10")
         dlg.close()
 
+    def test_loot_controller_open_add_dialog_non_modal(self):
+        from unittest.mock import MagicMock
+        from ui.controllers.loot_controller import LootController
+
+        loot_mgr = MagicMock()
+        project_mgr = MagicMock()
+        ctrl = LootController(loot_mgr, project_mgr)
+
+        accepted_data = []
+        result = ctrl.open_add_dialog(
+            modal=False,
+            target_ip="10.10.10.42",
+            default_title="Flag 1",
+            default_content="flag{123}",
+            on_accepted=lambda d: accepted_data.append(d),
+        )
+        self.assertTrue(result)
+        self.assertIsNotNone(ctrl._active_add_dialog)
+        dlg = ctrl._active_add_dialog
+        self.assertEqual(dlg.current_target_ip, "10.10.10.42")
+        self.assertEqual(dlg.initial_title, "Flag 1")
+
+        # Second call returns existing instance (single-instance protection)
+        result2 = ctrl.open_add_dialog(modal=False)
+        self.assertTrue(result2)
+        self.assertIs(ctrl._active_add_dialog, dlg)
+
+        # Simulating accept
+        dlg.accept()
+        self.assertIsNone(ctrl._active_add_dialog)
+        loot_mgr.add_entry.assert_called_once()
+        self.assertEqual(len(accepted_data), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

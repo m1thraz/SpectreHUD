@@ -16,6 +16,7 @@ class TestHotkeys(unittest.TestCase):
         self.assertEqual(cfg.screenshot, "<ctrl>+<shift>+x")
         self.assertEqual(cfg.quick_note, "<ctrl>+<alt>+n")
         self.assertEqual(cfg.quick_ip, "<ctrl>+<alt>+i")
+        self.assertEqual(cfg.quick_loot, "<ctrl>+<alt>+l")
         self.assertEqual(cfg.quit, "<ctrl>+<alt>+q")
 
     def test_normalize_hotkey_strings(self):
@@ -76,24 +77,28 @@ class TestHotkeys(unittest.TestCase):
         snip_called = []
         quick_note_called = []
         quick_ip_called = []
+        quick_loot_called = []
         quit_called = []
 
         listener.toggle_requested.connect(lambda: toggle_called.append(True))
         listener.screenshot_requested.connect(lambda: snip_called.append(True))
         listener.quick_note_requested.connect(lambda: quick_note_called.append(True))
         listener.quick_ip_requested.connect(lambda: quick_ip_called.append(True))
+        listener.quick_loot_requested.connect(lambda: quick_loot_called.append(True))
         listener.quit_requested.connect(lambda: quit_called.append(True))
 
         listener._fire_trigger()
         listener._fire_screenshot_trigger()
         listener._fire_quick_note_trigger()
         listener._fire_quick_ip_trigger()
+        listener._fire_quick_loot_trigger()
         listener._fire_quit_trigger()
 
         self.assertEqual(len(toggle_called), 1)
         self.assertEqual(len(snip_called), 1)
         self.assertEqual(len(quick_note_called), 1)
         self.assertEqual(len(quick_ip_called), 1)
+        self.assertEqual(len(quick_loot_called), 1)
         self.assertEqual(len(quit_called), 1)
 
     def test_hotkey_listener_respects_wayland_capability_restriction(self):

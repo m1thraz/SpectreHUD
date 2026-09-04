@@ -84,6 +84,7 @@ class SettingsCoordinator:
                 "snip_hotkey",
                 "quick_note_hotkey",
                 "quick_ip_hotkey",
+                "quick_loot_hotkey",
                 "quit_hotkey",
             )
         ):
@@ -105,6 +106,8 @@ class SettingsCoordinator:
                 payload["quick_note_hotkey"] = new_settings["quick_note_hotkey"]
             if "quick_ip_hotkey" in new_settings:
                 payload["quick_ip_hotkey"] = new_settings["quick_ip_hotkey"]
+            if "quick_loot_hotkey" in new_settings:
+                payload["quick_loot_hotkey"] = new_settings["quick_loot_hotkey"]
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, payload)
         if new_settings.get("workspace_dir"):
             self.workspace_coord.apply_workspace_setting(

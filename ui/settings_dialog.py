@@ -72,6 +72,13 @@ QUICK_IP_PRESETS = [
     {"label": "F9 (Single Key)", "value": "<f9>"},
 ]
 
+QUICK_LOOT_PRESETS = [
+    {"label": "Ctrl + Alt + L (Standard)", "value": "<ctrl>+<alt>+l"},
+    {"label": "Ctrl + Super + L", "value": "<ctrl>+<cmd>+l"},
+    {"label": "Ctrl + Shift + L", "value": "<ctrl>+<shift>+l"},
+    {"label": "F10 (Single Key)", "value": "<f10>"},
+]
+
 
 def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     """Keep a scroll area's viewport and hosted page transparent to window glass."""
@@ -209,6 +216,22 @@ class HotkeySettingsPage(QWidget):
         row_quick_ip.addWidget(self.combo_quick_ip, stretch=1)
         card_layout.addLayout(row_quick_ip)
 
+        # Quick Loot Shortcut
+        row_quick_loot = QHBoxLayout()
+        lbl_quick_loot = QLabel(t("settings.lbl_quick_loot_shortcut", "Quick Loot (Add Loot Dialog):"))
+        lbl_quick_loot.setProperty("class", "FormLabel")
+        row_quick_loot.addWidget(lbl_quick_loot, stretch=1)
+
+        self.combo_quick_loot = QComboBox()
+        self.combo_quick_loot.setMinimumWidth(220)
+        curr_quick_loot = self.config.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
+        for i, preset in enumerate(QUICK_LOOT_PRESETS):
+            self.combo_quick_loot.addItem(preset["label"], preset["value"])
+            if preset["value"] == curr_quick_loot:
+                self.combo_quick_loot.setCurrentIndex(i)
+        row_quick_loot.addWidget(self.combo_quick_loot, stretch=1)
+        card_layout.addLayout(row_quick_loot)
+
         # Quit Shortcut
         row_quit = QHBoxLayout()
         lbl_quit = QLabel(t("settings.lbl_quit_shortcut", "Quit SpectreHUD Completely:"))
@@ -289,6 +312,7 @@ class HotkeySettingsPage(QWidget):
         self.combo_snip.setCurrentIndex(0)
         self.combo_quick_note.setCurrentIndex(0)
         self.combo_quick_ip.setCurrentIndex(0)
+        self.combo_quick_loot.setCurrentIndex(0)
         self.combo_quit.setCurrentIndex(0)
 
     def get_settings(self) -> Dict[str, Any]:
@@ -297,6 +321,7 @@ class HotkeySettingsPage(QWidget):
             "snip_hotkey": self.combo_snip.currentData() or "<ctrl>+<alt>+x",
             "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<alt>+n",
             "quick_ip_hotkey": self.combo_quick_ip.currentData() or "<ctrl>+<alt>+i",
+            "quick_loot_hotkey": self.combo_quick_loot.currentData() or "<ctrl>+<alt>+l",
             "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<alt>+q",
         }
 

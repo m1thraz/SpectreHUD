@@ -79,7 +79,7 @@
 
     "privacy.warning": "Privacy Notice: Copied passwords or personal data are logged while REC is active (Pause with Ctrl+P or click REC: ON).",
 
-    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
+    "footer.status": "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {loot_hotkey}: Loot | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
     "footer.entries_count": "{count} entries",
     "footer.entry_count_single": "1 entry",
     "footer.always_on_top": "Always on Top",
@@ -305,10 +305,12 @@
     "settings.shortcut_options": "Open settings / options",
     "settings.lbl_quick_note_shortcut": "Quick Note (Haftnotiz):",
     "settings.lbl_quick_ip_shortcut": "Quick IP (Target / LHOST):",
+    "settings.lbl_quick_loot_shortcut": "Quick Loot (Add Loot Dialog):",
 
     "tray.show": "Show SpectreHUD ({hotkey})",
     "tray.note": "Capture Quick-Note ({hotkey})",
     "tray.ip": "Quick-IP (Target / LHOST) ({hotkey})",
+    "tray.loot": "Capture Loot ({hotkey})",
     "tray.snip": "Capture Screenshot (Ctrl+Alt+X)",
     "tray.rec_start": "Enable Clipboard Logger (Ctrl+P)",
     "tray.rec_pause": "Pause Clipboard Logger (Ctrl+P)",
