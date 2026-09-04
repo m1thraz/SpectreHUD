@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 
 from core.platform.capabilities import detect_platform_capabilities
 from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 
 app = QApplication.instance() or QApplication(sys.argv)
 
@@ -42,7 +43,7 @@ class TestCompositorMode(unittest.TestCase):
     def test_main_window_adaptive_margins_and_translucency(self):
         # 1. Non-composited mode
         with patch.object(MainWindow, "_detect_compositor", return_value=False):
-            win_no_comp = MainWindow()
+            win_no_comp = create_main_window()
             self.assertFalse(win_no_comp.has_compositor)
             self.assertFalse(win_no_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
             central = win_no_comp.centralWidget()
@@ -52,7 +53,7 @@ class TestCompositorMode(unittest.TestCase):
 
         # 2. Composited mode
         with patch.object(MainWindow, "_detect_compositor", return_value=True):
-            win_comp = MainWindow()
+            win_comp = create_main_window()
             self.assertTrue(win_comp.has_compositor)
             self.assertTrue(win_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
             central = win_comp.centralWidget()

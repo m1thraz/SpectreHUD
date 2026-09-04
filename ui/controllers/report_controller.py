@@ -7,6 +7,7 @@ from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
+from core.reporting.note_formatter import append_report_note
 
 if TYPE_CHECKING:
     from ui.coordinators.export_coordinator import ExportCoordinator
@@ -97,33 +98,22 @@ class ReportController(QObject):
 
     def append_note(self, note: dict) -> bool:
         """Appends a quick note to the active project's report.md."""
-        text = str(note.get("text") or "").strip()
-        if not text:
-            return False
-
-        cat = str(note.get("category") or "misc").upper()
-        ts = str(note.get("timestamp") or "")
-        target_ip = str(note.get("target_ip") or "").strip()
-
-        header = f"### Note ({cat})"
-        if target_ip:
-            header += f" - [{target_ip}]"
-        if ts:
-            header += f" ({ts})"
-
-        block = f"\n\n{header}\n\n{text}\n"
-
         if self.report_editor_tab is not None:
             current = self.report_editor_tab.editor.toPlainText()
-            if not current.strip():
-                current = f"# CTF Report - {self.project_manager.get_active_project()}\n"
-            self.report_editor_tab.editor.setPlainText(current.rstrip() + block)
+        else:
+            current = self.report_file_manager.load() or ""
+
+        new_content = append_report_note(
+            current,
+            self.project_manager.get_active_project(),
+            note,
+        )
+        if new_content is None:
+            return False
+
+        if self.report_editor_tab is not None:
+            self.report_editor_tab.editor.setPlainText(new_content)
             self.report_editor_tab.save()
             return True
 
-        current = self.report_file_manager.load() or ""
-        if not current.strip():
-            current = f"# CTF Report - {self.project_manager.get_active_project()}\n"
-        new_content = current.rstrip() + block
         return self.report_file_manager.save(new_content)
-

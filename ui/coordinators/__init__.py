@@ -9,6 +9,7 @@ from ui.coordinators.navigation_coordinator import NavigationCoordinator
 from ui.coordinators.clipboard_coordinator import ClipboardCoordinator
 from ui.coordinators.export_coordinator import ExportCoordinator
 from ui.coordinators.settings_coordinator import SettingsCoordinator
+from ui.coordinators.shutdown_coordinator import ShutdownCoordinator
 
 __all__ = [
     "WorkspaceCoordinator",
@@ -16,4 +17,5 @@ __all__ = [
     "ClipboardCoordinator",
     "ExportCoordinator",
     "SettingsCoordinator",
+    "ShutdownCoordinator",
 ]

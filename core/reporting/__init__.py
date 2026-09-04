@@ -7,10 +7,9 @@ Provides modular HTML report generation, CSS styling, markdown conversion, and c
 from core.reporting.exporter import HtmlReportExporter
 from core.reporting.assets import (
     MAX_EMBED_IMAGE_FILE_SIZE,
-    REPORT_CSS,
-    REPORT_PRINT_CSS,
     encode_image_base64,
 )
+from core.reporting.styles import REPORT_CSS, REPORT_PRINT_CSS
 from core.reporting.markdown import (
     sanitize_url,
     format_inline,

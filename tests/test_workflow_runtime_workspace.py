@@ -20,7 +20,7 @@ from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_file_manager import ReportFileManager
 from core.storage import PersistenceError
-from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 
 pytestmark = pytest.mark.integration
 
@@ -50,7 +50,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.clip_watcher = ClipboardWatcher(storage_file=self.config_dir / "clipboard.json")
         self.screen_mgr = ScreenshotManager()
 
-        self.window = MainWindow(
+        self.window = create_main_window(
             config_manager=self.config_mgr,
             snippet_manager=self.snippet_mgr,
             loot_manager=self.loot_mgr,

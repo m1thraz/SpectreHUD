@@ -216,6 +216,31 @@ class TestQuickNoteController(unittest.TestCase):
         self.assertEqual(len(remaining), 1)
         self.assertEqual(remaining[0]["id"], e2["id"])
 
+    def test_clear_selection_updates_rendered_cards_without_storing_widgets(self):
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout
+
+        entry = self.controller.submit_note("Select me", category="recon")
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        cards = self.controller.render_content(
+            content_layout=layout,
+            search_query="",
+            on_copied=None,
+            parent_widget=container,
+            show_empty_state_fn=MagicMock(),
+        )
+        card = cards[0]
+
+        card.chk_select.setChecked(True)
+        self.assertEqual(self.controller.selected_note_ids, {entry["id"]})
+
+        self.controller.clear_selection()
+
+        self.assertFalse(card.chk_select.isChecked())
+        self.assertEqual(self.controller.selected_note_ids, set())
+        self.assertFalse(hasattr(self.controller, "_rendered_cards"))
+        container.close()
+
     def test_render_content_with_status_filter(self):
         from PyQt6.QtWidgets import QWidget, QVBoxLayout
 

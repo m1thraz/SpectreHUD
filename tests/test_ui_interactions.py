@@ -12,7 +12,7 @@ from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
-from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 
 
 class TestUI(unittest.TestCase):
@@ -55,7 +55,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -114,7 +114,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -155,7 +155,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -210,7 +210,7 @@ class TestUI(unittest.TestCase):
         project_manager.create_project("BoxToArchive", target_ip="10.10.10.99")
         project_manager.activate_project("BoxToArchive")
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -243,7 +243,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,

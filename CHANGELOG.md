@@ -6,6 +6,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Reduced UI orchestration coupling with registered mode renderers, container-only
+  `MainWindow` construction, isolated shutdown and selection workflows, and smaller
+  reporting/loot helpers without changing user-facing behavior.
+
 ## [2.0.9] - 2026-09-04
 
 ### Added

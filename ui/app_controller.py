@@ -27,6 +27,7 @@ from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
 from ui.panels.footer_panel import FooterPanel
 from ui.settings_dialog import SettingsDialog
+from ui.content_renderer import CallbackContentRenderer, ContentRenderer, RenderResult
 from ui.controllers import (
     CheatsheetController,
     LootController,
@@ -192,6 +193,18 @@ class AppController(QObject):
             retranslate_ui=lambda locale: self.retranslate_ui(locale),
         )
 
+        self._renderers: Dict[str, ContentRenderer] = {
+            "cheatsheet": CallbackContentRenderer(
+                self._build_cheatsheet_pills, self._render_cheatsheet
+            ),
+            "loot": CallbackContentRenderer(self._build_loot_pills, self._render_loot),
+            "history": CallbackContentRenderer(
+                self._build_history_pills, self._render_history
+            ),
+            "notes": CallbackContentRenderer(self._build_notes_pills, self._render_notes),
+            "report": CallbackContentRenderer(lambda: None, self._render_report),
+        }
+
         self._wire_signals()
 
         # Synchronize initial language
@@ -328,142 +341,158 @@ class AppController(QObject):
 
     def refresh_filter_pills(self) -> None:
         self.search.clear_pills()
+        self._renderer_for_mode().build_pills()
+
+    def _renderer_for_mode(self) -> ContentRenderer:
+        """Return the registered renderer, preserving History as legacy fallback."""
+        return self._renderers.get(self.active_mode, self._renderers["history"])
+
+    def _build_cheatsheet_pills(self) -> None:
         pills_layout = self.search.get_pills_layout()
-        if self.active_mode == "cheatsheet":
-            self.cheatsheet_ctrl.build_filter_pills(
-                pills_layout,
-                self._select_category,
-                available_width=self.search.get_pills_available_width(),
-            )
-        elif self.active_mode == "loot":
-            loot_view_mode = self.config.get("loot_view_mode", "list")
-            export_tooltip = t(
-                "report.export_copy_tip",
-                "Creates a new copy based on current session loot",
-            )
-            self.loot_ctrl.build_filter_pills(
-                pills_layout,
-                self._select_loot_type,
-                lambda: self.export_coord.export_loot(self.window),
-                self._clear_loot,
-                export_tooltip,
-                lambda: self.export_coord.export_loot_to_obsidian(self.window),
-                self._toggle_loot_view,
-                loot_view_mode,
-            )
-        elif self.active_mode == "history":
-            export_tooltip = t(
-                "report.export_copy_tip",
-                "Creates a new copy based on current session loot",
-            )
-            self.history_ctrl.build_filter_pills(
-                pills_layout,
-                self._select_history_filter,
-                lambda: self.export_coord.export_report(self.window),
-                lambda: self.clipboard_coord.clear_history(self.window),
-                export_tooltip,
-            )
-        elif self.active_mode == "notes":
-            self.quick_note_ctrl.build_filter_pills(
-                pills_layout,
-                self._select_notes_filter,
-                self._clear_notes,
-            )
+        self.cheatsheet_ctrl.build_filter_pills(
+            pills_layout,
+            self._select_category,
+            available_width=self.search.get_pills_available_width(),
+        )
+
+    def _build_loot_pills(self) -> None:
+        export_tooltip = t(
+            "report.export_copy_tip",
+            "Creates a new copy based on current session loot",
+        )
+        self.loot_ctrl.build_filter_pills(
+            self.search.get_pills_layout(),
+            self._select_loot_type,
+            lambda: self.export_coord.export_loot(self.window),
+            self._clear_loot,
+            export_tooltip,
+            lambda: self.export_coord.export_loot_to_obsidian(self.window),
+            self._toggle_loot_view,
+            self.config.get("loot_view_mode", "list"),
+        )
+
+    def _build_history_pills(self) -> None:
+        export_tooltip = t(
+            "report.export_copy_tip",
+            "Creates a new copy based on current session loot",
+        )
+        self.history_ctrl.build_filter_pills(
+            self.search.get_pills_layout(),
+            self._select_history_filter,
+            lambda: self.export_coord.export_report(self.window),
+            lambda: self.clipboard_coord.clear_history(self.window),
+            export_tooltip,
+        )
+
+    def _build_notes_pills(self) -> None:
+        self.quick_note_ctrl.build_filter_pills(
+            self.search.get_pills_layout(),
+            self._select_notes_filter,
+            self._clear_notes,
+        )
 
     def refresh_content(self) -> None:
-        content_layout = self.content.get_layout()
-        if self.active_mode == "report":
-            self.cards = self.report_ctrl.render_content(content_layout)
-            self.footer.set_count("Report Editor")
-            self.content_refreshed.emit()
-            return
+        result = self._renderer_for_mode().render()
+        self.cards = result.cards
+        self.footer.set_count(result.footer_text)
+        if result.refresh_geometry:
+            self.content.refresh_content_geometry()
+            self.content.schedule_content_geometry_refresh()
+        self.content_refreshed.emit()
 
+    @staticmethod
+    def _format_entry_count(count: int) -> str:
+        if count == 1:
+            return t("footer.entry_count_single", "1 entry")
+        return t("footer.entries_count", "{count} entries", count=count)
+
+    def _prepare_card_content(self):
+        content_layout = self.content.get_layout()
         self.report_ctrl.detach_tab_if_needed(content_layout)
         self.content.clear_cards()
         self.cards.clear()
+        return content_layout
+
+    def _render_report(self) -> RenderResult:
+        cards = self.report_ctrl.render_content(self.content.get_layout())
+        return RenderResult(cards, "Report Editor", refresh_geometry=False)
+
+    def _render_cheatsheet(self) -> RenderResult:
+        cards = self.cheatsheet_ctrl.render_content(
+            self._prepare_card_content(),
+            self.search.get_query(),
+            self.var_bar.get_variables() if self.var_bar else {},
+            self._on_snippet_deleted,
+            self.window,
+            self.content.show_empty_state,
+            self._on_content_copied,
+        )
+        return RenderResult(cards, self._format_entry_count(len(cards)))
+
+    def _render_loot(self) -> RenderResult:
+        content_layout = self._prepare_card_content()
         query = self.search.get_query()
-        variables = self.var_bar.get_variables() if self.var_bar else {}
-
-        def _format_count(n: int) -> str:
-            if n == 1:
-                return t("footer.entry_count_single", "1 entry")
-            return t("footer.entries_count", "{count} entries", count=n)
-
-        if self.active_mode == "cheatsheet":
-            self.cards = self.cheatsheet_ctrl.render_content(
+        project_dir = self.project_manager.get_project_dir(
+            self.project_manager.get_active_project()
+        )
+        def export_obsidian(entry_id: str) -> None:
+            self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+        if self.config.get("loot_view_mode", "list") == "board":
+            cards = self.loot_ctrl.render_board_content(
                 content_layout,
                 query,
-                variables,
-                self._on_snippet_deleted,
+                project_dir,
+                self._on_loot_deleted,
+                self._on_edit_loot_requested,
+                self._on_export_loot_entry,
+                self._on_move_loot_category,
                 self.window,
-                self.content.show_empty_state,
-                self._on_content_copied,
+                on_export_obsidian=export_obsidian,
+                on_copied=self._on_content_copied,
             )
-            self.footer.set_count(_format_count(len(self.cards)))
-        elif self.active_mode == "loot":
-            proj_dir = self.project_manager.get_project_dir(
-                self.project_manager.get_active_project()
-            )
-            if self.config.get("loot_view_mode", "list") == "board":
-                self.cards = self.loot_ctrl.render_board_content(
-                    content_layout,
-                    query,
-                    proj_dir,
-                    self._on_loot_deleted,
-                    self._on_edit_loot_requested,
-                    self._on_export_loot_entry,
-                    self._on_move_loot_category,
-                    self.window,
-                    on_export_obsidian=lambda entry_id: (
-                        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
-                    ),
-                    on_copied=self._on_content_copied,
-                )
-            else:
-                self.cards = self.loot_ctrl.render_content(
-                    content_layout,
-                    query,
-                    proj_dir,
-                    self._on_loot_deleted,
-                    self._on_edit_loot_requested,
-                    self._on_export_loot_entry,
-                    self.window,
-                    self.content.show_empty_state,
-                    on_export_obsidian=lambda entry_id: (
-                        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
-                    ),
-                    on_copied=self._on_content_copied,
-                )
-            self.footer.set_count(_format_count(len(self.cards)))
-        elif self.active_mode == "notes":
-            self.cards = self.quick_note_ctrl.render_content(
-                content_layout,
-                query,
-                self._on_content_copied,
-                self.window,
-                self.content.show_empty_state,
-                on_edit_note=self._on_edit_note_requested,
-            )
-            self.footer.set_count(_format_count(len(self.cards)))
         else:
-            self.cards = self.history_ctrl.render_content(
+            cards = self.loot_ctrl.render_content(
                 content_layout,
                 query,
-                variables.get("target_ip"),
-                lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
-                self.clipboard_coord.delete_history_entry,
+                project_dir,
+                self._on_loot_deleted,
+                self._on_edit_loot_requested,
+                self._on_export_loot_entry,
                 self.window,
                 self.content.show_empty_state,
-                self._on_content_copied,
-                on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(
-                    self.window, item
-                ),
-                on_edit_history=self._on_edit_history_requested,
+                on_export_obsidian=export_obsidian,
+                on_copied=self._on_content_copied,
             )
-            self.footer.set_count(_format_count(len(self.cards)))
-        self.content.refresh_content_geometry()
-        self.content.schedule_content_geometry_refresh()
-        self.content_refreshed.emit()
+        return RenderResult(cards, self._format_entry_count(len(cards)))
+
+    def _render_notes(self) -> RenderResult:
+        cards = self.quick_note_ctrl.render_content(
+            self._prepare_card_content(),
+            self.search.get_query(),
+            self._on_content_copied,
+            self.window,
+            self.content.show_empty_state,
+            on_edit_note=self._on_edit_note_requested,
+        )
+        return RenderResult(cards, self._format_entry_count(len(cards)))
+
+    def _render_history(self) -> RenderResult:
+        variables = self.var_bar.get_variables() if self.var_bar else {}
+        cards = self.history_ctrl.render_content(
+            self._prepare_card_content(),
+            self.search.get_query(),
+            variables.get("target_ip"),
+            lambda item: self.clipboard_coord.add_history_to_loot(self.window, item),
+            self.clipboard_coord.delete_history_entry,
+            self.window,
+            self.content.show_empty_state,
+            self._on_content_copied,
+            on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(
+                self.window, item
+            ),
+            on_edit_history=self._on_edit_history_requested,
+        )
+        return RenderResult(cards, self._format_entry_count(len(cards)))
 
     def _on_content_copied(self, _text: str) -> None:
         """Minimize the overlay after an intentional card copy when configured."""

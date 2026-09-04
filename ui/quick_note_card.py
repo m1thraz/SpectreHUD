@@ -456,3 +456,7 @@ class QuickNoteCard(QFrame):
         self.chk_select.blockSignals(True)
         self.chk_select.setChecked(selected)
         self.chk_select.blockSignals(False)
+
+    def clear_selection(self) -> None:
+        """Clear the selection checkbox when the shared selection model resets."""
+        self.set_selected(False)

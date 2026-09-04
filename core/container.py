@@ -55,6 +55,39 @@ class ServiceContainer:
         self.event_bus = event_bus
 
     @classmethod
+    def from_services(
+        cls,
+        *,
+        config_manager: ConfigManager,
+        snippet_manager: SnippetManager,
+        project_manager: ProjectManager,
+        loot_manager: LootManager,
+        clipboard_watcher: ClipboardWatcher,
+        screenshot_manager: Optional[ScreenshotManager] = None,
+        quick_note_manager: Optional[QuickNoteManager] = None,
+        storage: Optional[StorageBackend] = None,
+        event_bus: Optional[EventBus] = None,
+    ) -> "ServiceContainer":
+        """Compose a container from explicitly supplied service instances.
+
+        This is primarily useful for tests and alternative composition roots
+        that need precise service doubles without teaching UI widgets how to
+        construct application dependencies.
+        """
+        actual_event_bus = event_bus or EventBus()
+        return cls(
+            config_manager=config_manager,
+            snippet_manager=snippet_manager,
+            project_manager=project_manager,
+            loot_manager=loot_manager,
+            clipboard_watcher=clipboard_watcher,
+            screenshot_manager=screenshot_manager or ScreenshotManager(),
+            quick_note_manager=quick_note_manager,
+            storage=storage or InMemoryStorageBackend(),
+            event_bus=actual_event_bus,
+        )
+
+    @classmethod
     def create_production(
         cls, config_dir: Optional[Path] = None, language: Optional[str] = None
     ) -> "ServiceContainer":

@@ -15,7 +15,7 @@ from core.project import ProjectManager
 from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
 from core.i18n import t
-from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 from ui.report_editor_tab import ReportEditorTab
 
 
@@ -63,7 +63,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -150,7 +150,7 @@ class TestUI(unittest.TestCase):
         config_manager = ConfigManager(config_dir=self.config_dir)
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=LootManager(storage_file=self.loot_file),
@@ -175,7 +175,7 @@ class TestUI(unittest.TestCase):
     @pytest.mark.integration
     def test_report_editor_is_created_only_when_report_mode_opens(self):
         """Startup must not construct the expensive report editor in Cheatsheet mode."""
-        window = MainWindow(
+        window = create_main_window(
             config_manager=ConfigManager(config_dir=self.config_dir),
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),

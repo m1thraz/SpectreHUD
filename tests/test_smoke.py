@@ -18,7 +18,7 @@ from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_builder import ReportBuilder
-from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 
 pytestmark = pytest.mark.integration
 
@@ -51,7 +51,7 @@ class TestAppSmoke(unittest.TestCase):
 
     def test_full_app_lifecycle_smoke(self):
         print("Smoke: 1. Instantiate MainWindow", flush=True)
-        window = MainWindow(
+        window = create_main_window(
             config_manager=self.config_mgr,
             snippet_manager=self.snippet_mgr,
             loot_manager=self.loot_mgr,

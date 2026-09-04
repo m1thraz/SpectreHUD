@@ -16,6 +16,7 @@ from core.validators import (
     MAX_TARGET_IP_LENGTH,
     MAX_TITLE_LENGTH,
 )
+from core.loot_migrator import LootMigrator
 
 logger = get_logger("loot")
 
@@ -119,44 +120,16 @@ class LootManager:
             )
         return text
 
-    def _migrate_entries(self, entries: Optional[List[Dict[str, Any]]] = None) -> bool:
-        """Normalizes entries in place and returns whether any entry was migrated."""
-        from core.validators import VALID_SEVERITIES
-
-        migrated = False
-        target_entries = self.entries if entries is None else entries
-        for entry in target_entries:
-            cat = entry.get("category")
-            if not cat or cat not in VALID_CATEGORY_IDS:
-                entry["category"] = "misc"
-                migrated = True
-
-            # Normalize severity if missing or invalid
-            sev = entry.get("severity")
-            norm_sev = str(sev).lower().strip() if sev else "info"
-            if norm_sev not in VALID_SEVERITIES:
-                norm_sev = "info"
-            if norm_sev != sev:
-                entry["severity"] = norm_sev
-                migrated = True
-
-            # Also normalize type if needed
-            entry_type = entry.get("type")
-            norm_type = TYPE_ALIASES.get(str(entry_type).lower(), entry_type)
-            if norm_type != entry_type:
-                entry["type"] = norm_type
-                migrated = True
-
-        for category_id in VALID_CATEGORY_IDS:
-            category_entries = sorted(
-                (entry for entry in target_entries if entry.get("category") == category_id),
-                key=lambda item: item.get("position", 0),
-            )
-            for position, entry in enumerate(category_entries):
-                if entry.get("position") != position:
-                    entry["position"] = position
-                    migrated = True
-        return migrated
+    @staticmethod
+    def _migrate_entries(
+        entries: List[Dict[str, Any]],
+    ) -> tuple[List[Dict[str, Any]], bool]:
+        """Delegate loot schema normalization to the isolated migrator."""
+        return LootMigrator.migrate(
+            entries,
+            valid_category_ids=VALID_CATEGORY_IDS,
+            type_aliases=TYPE_ALIASES,
+        )
 
     def load_entries(self) -> None:
         """Loads and semantically validates loot entries from storage backend."""
@@ -184,7 +157,8 @@ class LootManager:
             position_migration_needed = False
 
         # Automatic migration of legacy entries lacking category or with invalid category
-        if self._migrate_entries() or position_migration_needed:
+        self.entries, migrated = self._migrate_entries(self.entries)
+        if migrated or position_migration_needed:
             logger.info(
                 "Migrated legacy loot entries to include category/severity/position and persisted."
             )
@@ -198,7 +172,7 @@ class LootManager:
         from core.validators import validate_loot_list
 
         self.entries = validate_loot_list(entries)
-        self._migrate_entries()
+        self.entries, _ = self._migrate_entries(self.entries)
         self._publish_updated("replace")
 
     def replace_entries_and_persist(self, entries: List[Dict[str, Any]]) -> None:
@@ -206,7 +180,8 @@ class LootManager:
         from core.validators import validate_loot_list
 
         validated_entries = validate_loot_list(entries)
-        if self._migrate_entries(validated_entries):
+        validated_entries, migrated = self._migrate_entries(validated_entries)
+        if migrated:
             logger.info("Migrated replacement loot entries before persistence.")
         if not self.storage.save_json("loot", validated_entries):
             raise PersistenceError("Could not persist replacement loot entries to storage.")
@@ -262,7 +237,8 @@ class LootManager:
             "position": 0,
         }
         new_entries = [entry, *self.entries]
-        self._migrate_entries(new_entries)
+        new_entries, _ = self._migrate_entries(new_entries)
+        entry = next(candidate for candidate in new_entries if candidate.get("id") == entry["id"])
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError("Could not persist new loot entry to storage.")
         self.entries = new_entries
@@ -315,7 +291,10 @@ class LootManager:
                 break
 
         if updated_entry is not None:
-            self._migrate_entries(new_entries)
+            new_entries, _ = self._migrate_entries(new_entries)
+            updated_entry = next(
+                entry for entry in new_entries if entry.get("id") == entry_id
+            )
             if not self.storage.save_json("loot", new_entries):
                 raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
             self.entries = new_entries
@@ -370,7 +349,7 @@ class LootManager:
         new_entries = [e for e in self.entries if e.get("id") != entry_id]
         if len(new_entries) == len(self.entries):
             return False
-        self._migrate_entries(new_entries)
+        new_entries, _ = self._migrate_entries(new_entries)
         if not self.storage.save_json("loot", new_entries):
             raise PersistenceError(f"Could not persist deletion for loot entry {entry_id}.")
         self.entries = new_entries

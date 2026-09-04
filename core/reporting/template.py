@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from core.reporting.assets import get_report_css
+from core.reporting.styles import get_report_css
 
 
 def render_report_html(

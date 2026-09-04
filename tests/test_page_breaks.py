@@ -6,7 +6,7 @@ preview roundtrip reconciliation, template integration, and editor actions.
 import unittest
 from PyQt6.QtWidgets import QApplication, QPlainTextEdit
 
-from core.reporting.assets import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGHT_CSS
+from core.reporting.styles import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGHT_CSS
 from core.reporting.loot_sync import (
     PAGEBREAK_MARKER,
     PAGEBREAK_HTML,

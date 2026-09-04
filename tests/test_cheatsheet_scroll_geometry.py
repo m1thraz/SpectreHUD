@@ -13,6 +13,7 @@ from core.config import ConfigManager
 from core.loot_manager import LootManager
 from core.project import ProjectManager
 from core.snippet_manager import SnippetManager
+from tests.window_factory import create_main_window
 from ui.main_window import MainWindow
 from ui.panels.content_panel import ContentPanel
 from ui.snippet_card import SnippetCard
@@ -24,7 +25,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 def cheatsheet_window(tmp_path, qapp):
     config_dir = tmp_path / "config"
-    window = MainWindow(
+    window = create_main_window(
         config_manager=ConfigManager(config_dir=config_dir),
         snippet_manager=SnippetManager(
             user_snippets_path=config_dir / "user_snippets.json",

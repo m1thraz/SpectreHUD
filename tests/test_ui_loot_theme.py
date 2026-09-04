@@ -13,7 +13,7 @@ from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
 from core.clipboard_watcher import ClipboardWatcher
 from core.project import ProjectManager
-from ui.main_window import MainWindow
+from tests.window_factory import create_main_window
 
 
 class TestUI(unittest.TestCase):
@@ -58,7 +58,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -127,7 +127,7 @@ class TestUI(unittest.TestCase):
         loot_manager = LootManager(storage_file=self.loot_file)
         clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=loot_manager,
@@ -149,7 +149,7 @@ class TestUI(unittest.TestCase):
         from ui.loot_board import LootBoard
 
         config_manager = ConfigManager(config_dir=self.config_dir)
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),
@@ -176,7 +176,7 @@ class TestUI(unittest.TestCase):
 
     @pytest.mark.integration
     def test_loot_export_tooltip_uses_active_english_locale(self):
-        window = MainWindow(
+        window = create_main_window(
             config_manager=ConfigManager(config_dir=self.config_dir),
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),
@@ -196,7 +196,7 @@ class TestUI(unittest.TestCase):
     @pytest.mark.integration
     def test_theme_change_requests_restart_only_after_settings_dialog_closes(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),
@@ -226,7 +226,7 @@ class TestUI(unittest.TestCase):
     @pytest.mark.integration
     def test_unchanged_theme_does_not_request_restart(self):
         config_manager = ConfigManager(config_dir=self.config_dir)
-        window = MainWindow(
+        window = create_main_window(
             config_manager=config_manager,
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),

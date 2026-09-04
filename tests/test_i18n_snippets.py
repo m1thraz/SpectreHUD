@@ -87,7 +87,7 @@ class TestI18nSnippets(unittest.TestCase):
     @pytest.mark.integration
     def test_main_window_i18n_runtime_switch(self):
         from PyQt6.QtWidgets import QApplication
-        from ui.main_window import MainWindow
+        from tests.window_factory import create_main_window
 
         app = QApplication.instance() or QApplication([])
 
@@ -103,7 +103,7 @@ class TestI18nSnippets(unittest.TestCase):
         clip_watcher = ClipboardWatcher(storage_file=self.clip_file)
         proj_mgr = ProjectManager(base_dir=self.projects_dir)
 
-        window = MainWindow(
+        window = create_main_window(
             config_manager=cfg_mgr,
             snippet_manager=snip_mgr,
             loot_manager=loot_mgr,

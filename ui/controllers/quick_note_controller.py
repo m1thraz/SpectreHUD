@@ -6,14 +6,13 @@ reporting export, inline editing, status triage, pinning, and bulk actions.
 """
 
 from typing import Optional, Callable, Dict, Any, List, Set
-from PyQt6.QtCore import QObject, pyqtSignal, Qt, QSize
+from PyQt6.QtCore import QObject, pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QWidget,
     QPushButton,
     QHBoxLayout,
     QVBoxLayout,
     QMessageBox,
-    QLabel,
     QFrame,
     QMenu,
 )
@@ -26,8 +25,8 @@ from core.logger import get_logger
 from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
-from ui.styles.palette import CYBER_CYAN, TEXT_MUTED
-from ui.styles.icons import icon
+from ui.quick_note_bulk_bar import QuickNoteBulkBar
+from ui.note_selection_model import NoteSelectionModel
 
 logger = get_logger("quick_note_controller")
 
@@ -40,6 +39,8 @@ class QuickNoteController(QObject):
 
     note_added = pyqtSignal(dict)
     notes_updated = pyqtSignal()
+    selection_count_changed = pyqtSignal(int)
+    selection_cleared = pyqtSignal()
 
     def __init__(
         self,
@@ -59,16 +60,18 @@ class QuickNoteController(QObject):
         self.last_category: str = "misc"
         self.current_category_filter: str = "all"
         self.current_status_filter: str = "all"
-        self.selected_note_ids: Set[str] = set()
+        self.selection_model = NoteSelectionModel()
         self.filter_buttons: Dict[str, QPushButton] = {}
         self.btn_phase: Optional[QPushButton] = None
-        self.bulk_bar: Optional[QFrame] = None
-        self.bulk_bar_lbl: Optional[QLabel] = None
-        self._rendered_cards: List[QuickNoteCard] = []
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
             self.event_bus.subscribe(EventType.QUICK_NOTES_UPDATED, self._on_notes_updated)
+
+    @property
+    def selected_note_ids(self) -> Set[str]:
+        """Compatibility snapshot of the selection model's current IDs."""
+        return self.selection_model.snapshot()
 
     def _on_notes_updated(self, payload: Optional[Dict[str, Any]] = None) -> None:
         self.notes_updated.emit()
@@ -203,7 +206,7 @@ class QuickNoteController(QObject):
     def delete_note(self, entry_id: str) -> bool:
         """Deletes a quick note."""
         try:
-            self.selected_note_ids.discard(entry_id)
+            self.selection_model.discard(entry_id)
             return self.quick_note_manager.delete_entry(entry_id)
         except Exception as e:
             logger.error(f"Failed to delete quick note {entry_id}: {e}")
@@ -268,37 +271,23 @@ class QuickNoteController(QObject):
 
     def on_card_selection_changed(self, entry_id: str, is_selected: bool) -> None:
         """Tracks selection state for bulk triage operations."""
-        if is_selected:
-            self.selected_note_ids.add(entry_id)
-        else:
-            self.selected_note_ids.discard(entry_id)
+        self.selection_model.set_selected(entry_id, is_selected)
         self._update_bulk_bar()
 
     def _update_bulk_bar(self) -> None:
-        if not self.bulk_bar:
-            return
-        count = len(self.selected_note_ids)
-        if count > 0:
-            if self.bulk_bar_lbl:
-                self.bulk_bar_lbl.setText(
-                    t("quick_note.bulk_selected_count", f"{count} selected").replace("{count}", str(count))
-                )
-            self.bulk_bar.setVisible(True)
-        else:
-            self.bulk_bar.setVisible(False)
+        self.selection_count_changed.emit(len(self.selection_model))
 
     def clear_selection(self) -> None:
         """Clears all selected notes."""
-        self.selected_note_ids.clear()
-        for card in self._rendered_cards:
-            card.set_selected(False)
+        if self.selection_model.clear():
+            self.selection_cleared.emit()
         self._update_bulk_bar()
 
     def bulk_set_status(self, status: str) -> None:
         """Applies a triage status to all currently selected notes."""
-        if not self.selected_note_ids:
+        if not self.selection_model:
             return
-        for entry_id in list(self.selected_note_ids):
+        for entry_id in self.selection_model.snapshot():
             try:
                 self.quick_note_manager.update_entry(entry_id, status=status)
             except Exception as e:
@@ -308,11 +297,11 @@ class QuickNoteController(QObject):
 
     def bulk_delete_notes(self, parent_widget: Optional[QWidget] = None) -> bool:
         """Deletes all currently selected notes after user confirmation."""
-        if not self.selected_note_ids:
+        if not self.selection_model:
             return False
 
         if parent_widget:
-            count = len(self.selected_note_ids)
+            count = len(self.selection_model)
             confirm_msg = t(
                 "quick_note.bulk_delete_confirm",
                 f"Are you sure you want to delete {count} selected quick note(s)?",
@@ -327,7 +316,7 @@ class QuickNoteController(QObject):
             if reply != QMessageBox.StandardButton.Yes:
                 return False
 
-        for entry_id in list(self.selected_note_ids):
+        for entry_id in self.selection_model.snapshot():
             try:
                 self.quick_note_manager.delete_entry(entry_id)
             except Exception as e:
@@ -480,72 +469,15 @@ class QuickNoteController(QObject):
 
     def _create_bulk_bar(self, parent_widget: Optional[QWidget]) -> QFrame:
         """Creates the horizontal bulk triage action bar."""
-        frame = QFrame()
-        frame.setObjectName("QuickNoteBulkBar")
-        frame.setStyleSheet(
-            "QFrame#QuickNoteBulkBar { background-color: rgba(0, 229, 255, 0.08); "
-            "border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 6px; } "
-            "QPushButton { font-size: 11px; padding: 2px 8px; border-radius: 4px; }"
+        bulk_bar = QuickNoteBulkBar(parent_widget)
+        bulk_bar.status_requested.connect(self.bulk_set_status)
+        bulk_bar.delete_requested.connect(
+            lambda: self.bulk_delete_notes(parent_widget)
         )
-        layout = QHBoxLayout(frame)
-        layout.setContentsMargins(10, 5, 10, 5)
-        layout.setSpacing(6)
-
-        self.bulk_bar_lbl = QLabel(t("quick_note.bulk_selected_count", "0 selected"))
-        self.bulk_bar_lbl.setStyleSheet(f"color: {CYBER_CYAN}; font-weight: bold; font-size: 11px;")
-        layout.addWidget(self.bulk_bar_lbl)
-
-        lbl_mark = QLabel(t("quick_note.bulk_mark_as", "Mark:"))
-        lbl_mark.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 11px;")
-        layout.addWidget(lbl_mark)
-
-        btn_inbox = QPushButton(t("quick_note.status_inbox_short", "Inbox ▾").removesuffix(" ▾"))
-        btn_inbox.setIcon(icon("fa5s.inbox"))
-        btn_inbox.setIconSize(QSize(12, 12))
-        btn_inbox.setProperty("class", "SecondaryBtn")
-        btn_inbox.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_inbox.clicked.connect(lambda: self.bulk_set_status("inbox"))
-        layout.addWidget(btn_inbox)
-
-        btn_followup = QPushButton(
-            t("quick_note.status_followup_short", "Follow-up ▾").removesuffix(" ▾")
-        )
-        btn_followup.setIcon(icon("fa5s.clock"))
-        btn_followup.setIconSize(QSize(12, 12))
-        btn_followup.setProperty("class", "SecondaryBtn")
-        btn_followup.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_followup.clicked.connect(lambda: self.bulk_set_status("followup"))
-        layout.addWidget(btn_followup)
-
-        btn_resolved = QPushButton(
-            t("quick_note.status_resolved_short", "Resolved ▾").removesuffix(" ▾")
-        )
-        btn_resolved.setIcon(icon("fa5s.check-circle"))
-        btn_resolved.setIconSize(QSize(12, 12))
-        btn_resolved.setProperty("class", "SecondaryBtn")
-        btn_resolved.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_resolved.clicked.connect(lambda: self.bulk_set_status("resolved"))
-        layout.addWidget(btn_resolved)
-
-        layout.addStretch()
-
-        btn_delete = QPushButton(t("quick_note.bulk_delete", "Delete Selected"))
-        btn_delete.setIcon(icon("fa5s.trash"))
-        btn_delete.setIconSize(QSize(12, 12))
-        btn_delete.setProperty("class", "DangerBtn")
-        btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_delete.clicked.connect(lambda: self.bulk_delete_notes(parent_widget))
-        layout.addWidget(btn_delete)
-
-        btn_deselect = QPushButton(t("quick_note.bulk_deselect", "Deselect"))
-        btn_deselect.setIcon(icon("fa5s.times"))
-        btn_deselect.setIconSize(QSize(12, 12))
-        btn_deselect.setProperty("class", "SecondaryBtn")
-        btn_deselect.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_deselect.clicked.connect(self.clear_selection)
-        layout.addWidget(btn_deselect)
-
-        return frame
+        bulk_bar.deselect_requested.connect(self.clear_selection)
+        self.selection_count_changed.connect(bulk_bar.set_selected_count)
+        bulk_bar.set_selected_count(len(self.selection_model))
+        return bulk_bar
 
     def render_content(
         self,
@@ -557,8 +489,6 @@ class QuickNoteController(QObject):
         on_edit_note: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> List[QWidget]:
         """Renders notes inbox cards into the content layout."""
-        self._rendered_cards = []
-
         cat_filter = (
             None if self.current_category_filter in ("all", "") else self.current_category_filter
         )
@@ -579,12 +509,12 @@ class QuickNoteController(QObject):
 
         # Retain selection of only still existing items
         existing_ids = {n.get("id") for n in self.quick_note_manager.get_all_entries()}
-        self.selected_note_ids = {nid for nid in self.selected_note_ids if nid in existing_ids}
+        self.selection_model.retain(existing_ids)
 
         # Create and attach bulk bar
-        self.bulk_bar = self._create_bulk_bar(parent_widget)
+        bulk_bar = self._create_bulk_bar(parent_widget)
         self._update_bulk_bar()
-        content_layout.addWidget(self.bulk_bar)
+        content_layout.addWidget(bulk_bar)
 
         if not notes:
             show_empty_state_fn(
@@ -616,7 +546,9 @@ class QuickNoteController(QObject):
             card.pin_toggled.connect(self.toggle_note_pinned)
             card.selection_changed.connect(self.on_card_selection_changed)
 
-            if item.get("id") in self.selected_note_ids:
+            self.selection_cleared.connect(card.clear_selection)
+
+            if item.get("id") in self.selection_model:
                 card.set_selected(True)
 
             if on_copied is not None:
@@ -624,6 +556,4 @@ class QuickNoteController(QObject):
 
             content_layout.addWidget(card)
             rendered_cards.append(card)
-            self._rendered_cards.append(card)
-
         return rendered_cards
