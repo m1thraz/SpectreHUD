@@ -1,6 +1,6 @@
 # SpectreHUD Architecture & Technical Guide
 
-**Last updated:** v2.0.7
+**Last updated:** v2.0.8
 
 This document provides a technical overview of SpectreHUD's software
 architecture, component relationships, design patterns, and intentional

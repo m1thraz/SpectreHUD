@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.8] - 2026-09-04
+
 ### Added
 
 - **Quick-Notes ("Haftnotizen") & Dedicated Top-Level Tab**:
@@ -306,7 +308,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.7...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.8...HEAD
+[2.0.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.7...v2.0.8
 [2.0.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.6...v2.0.7
 [2.0.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.4...v2.0.5
