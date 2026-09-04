@@ -16,7 +16,7 @@ QFrame#HeaderBar {
     border-top-left-radius: 14px;
     border-top-right-radius: 14px;
     border-bottom: 1px solid {BORDER_A50};
-    padding: 8px 12px;
+    padding: 0px;
 }
 
 /* Filter Chips / Pills Bar Frame */

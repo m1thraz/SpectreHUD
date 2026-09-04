@@ -91,3 +91,10 @@ class SearchPanel(QFrame):
                     "Clipboard-Historie, kopierte Befehle & Ausgaben durchsuchen...",
                 )
             )
+        elif mode == "notes":
+            self.search_bar.txt_search.setPlaceholderText(
+                t(
+                    "search.notes_placeholder",
+                    "Quick-Notes & Notizen-Inbox durchsuchen...",
+                )
+            )

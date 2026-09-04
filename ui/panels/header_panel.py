@@ -42,7 +42,7 @@ class HeaderPanel(QFrame):
         # Project / Box Selection Dropdown Trigger
         self.btn_project = QPushButton("Box: Default ▾")
         self.btn_project.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_project.setProperty("class", "ProjectDropdownBtn")
+        self.btn_project.setProperty("class", "ProjectSelectBtn")
         self.btn_project.setToolTip(
             t("header.project_tip", "Aktive CTF-Box auswählen oder neues Projekt anlegen")
         )
@@ -63,6 +63,12 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
         layout.addWidget(self.btn_mode_history)
+
+        self.btn_mode_notes = QPushButton(t("header.mode_notes", "📌 Notes"))
+        self.btn_mode_notes.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_mode_notes.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_notes.clicked.connect(lambda: self.mode_changed.emit("notes"))
+        layout.addWidget(self.btn_mode_notes)
 
         self.btn_mode_loot = QPushButton(t("header.mode_loot", "Loot"))
         self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -85,10 +91,10 @@ class HeaderPanel(QFrame):
         layout.addStretch()
 
         # Quick Note Button
-        self.btn_quick_note = QPushButton(t("header.note", "Note"))
+        self.btn_quick_note = QPushButton(t("header.note", "📌 Note"))
         self.btn_quick_note.setProperty("class", "ScreenshotBtn")
         self.btn_quick_note.setToolTip(
-            t("header.note_tip", "Quick-Note Haftnotiz erfassen (Strg+Super+N)")
+            t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)")
         )
         self.btn_quick_note.clicked.connect(self.quick_note_requested.emit)
         layout.addWidget(self.btn_quick_note)
@@ -149,11 +155,14 @@ class HeaderPanel(QFrame):
         self.btn_mode_cheatsheet.setProperty(
             "class", "ModeSwitchBtnActive" if mode == "cheatsheet" else "ModeSwitchBtn"
         )
-        self.btn_mode_loot.setProperty(
-            "class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn"
-        )
         self.btn_mode_history.setProperty(
             "class", "ModeSwitchBtnActive" if mode == "history" else "ModeSwitchBtn"
+        )
+        self.btn_mode_notes.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "notes" else "ModeSwitchBtn"
+        )
+        self.btn_mode_loot.setProperty(
+            "class", "ModeSwitchBtnActive" if mode == "loot" else "ModeSwitchBtn"
         )
         self.btn_mode_report.setProperty(
             "class", "ModeSwitchBtnActive" if mode == "report" else "ModeSwitchBtn"
@@ -161,8 +170,9 @@ class HeaderPanel(QFrame):
 
         for btn in [
             self.btn_mode_cheatsheet,
-            self.btn_mode_loot,
             self.btn_mode_history,
+            self.btn_mode_notes,
+            self.btn_mode_loot,
             self.btn_mode_report,
         ]:
             btn.style().unpolish(btn)
@@ -189,8 +199,16 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator.style().unpolish(self.btn_rec_indicator)
         self.btn_rec_indicator.style().polish(self.btn_rec_indicator)
 
+    def update_notes_badge(self, count: int = 0) -> None:
+        """Updates Notes tab label with pending notes count if > 0."""
+        base_text = t("header.mode_notes", "📌 Notes")
+        if count > 0:
+            self.btn_mode_notes.setText(f"{base_text} [{count}]")
+        else:
+            self.btn_mode_notes.setText(base_text)
+
     def update_history_badge(self, notes_count: int = 0) -> None:
-        """Updates History tab label with pending notes count if > 0."""
+        """Kept for backward compatibility."""
         base_text = t("header.mode_history", "History")
         if notes_count > 0:
             self.btn_mode_history.setText(f"{base_text} [{notes_count}]")
@@ -200,8 +218,9 @@ class HeaderPanel(QFrame):
     def retranslate(self) -> None:
         """Dynamically re-translates all texts on language changes."""
         self.btn_mode_cheatsheet.setText(t("header.mode_cheatsheet", "Cheatsheet"))
-        self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_history.setText(t("header.mode_history", "History"))
+        self.btn_mode_notes.setText(t("header.mode_notes", "📌 Notes"))
+        self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
         self.btn_mode_report.setToolTip(
             t(
@@ -209,8 +228,8 @@ class HeaderPanel(QFrame):
                 "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
             )
         )
-        self.btn_quick_note.setText(t("header.note", "Note"))
-        self.btn_quick_note.setToolTip(t("header.note_tip", "Quick-Note erfassen (Strg+Super+N)"))
+        self.btn_quick_note.setText(t("header.note", "📌 Note"))
+        self.btn_quick_note.setToolTip(t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)"))
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(
             t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")

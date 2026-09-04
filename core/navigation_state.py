@@ -8,8 +8,8 @@ completely independent of Qt UI widgets.
 from typing import List, Optional, Set
 
 
-VALID_MODES: Set[str] = {"cheatsheet", "loot", "history", "report"}
-TAB_CYCLE_MODES: List[str] = ["cheatsheet", "loot", "history"]
+VALID_MODES: Set[str] = {"cheatsheet", "history", "notes", "loot", "report"}
+TAB_CYCLE_MODES: List[str] = ["cheatsheet", "history", "notes", "loot"]
 
 
 class NavigationStateMachine:

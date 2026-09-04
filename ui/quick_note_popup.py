@@ -93,7 +93,7 @@ class QuickNotePopup(QWidget):
 
         # Header Row: Title & Hint
         header_layout = QHBoxLayout()
-        lbl_title = QLabel("⚡ QUICK NOTE")
+        lbl_title = QLabel("📌 QUICK NOTE")
         lbl_title.setStyleSheet(
             "color: #00e5ff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
         )

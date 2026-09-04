@@ -121,8 +121,6 @@ class AppController(QObject):
             self.loot_manager,
             self.project_manager,
             event_bus=self.event_bus,
-            quick_note_manager=self.quick_note_manager,
-            quick_note_controller=self.quick_note_ctrl,
             parent=self,
         )
         self.report_ctrl = ReportController(
@@ -287,14 +285,13 @@ class AppController(QObject):
 
     def _on_notes_updated(self) -> None:
         self._update_notes_badge()
-        if self.active_mode == "history":
+        if self.active_mode == "notes":
             self.refresh_filter_pills()
-            if getattr(self.history_ctrl, "current_history_filter", None) == "notes":
-                self.refresh_content()
+            self.refresh_content()
 
     def _update_notes_badge(self) -> None:
         count = len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
-        self.header.update_history_badge(count)
+        self.header.update_notes_badge(count)
 
     def switch_mode(self, mode: str) -> None:
         self.navigation_coord.switch_mode(mode)
@@ -352,6 +349,12 @@ class AppController(QObject):
                 lambda: self.export_coord.export_report(self.window),
                 lambda: self.clipboard_coord.clear_history(self.window),
                 export_tooltip,
+            )
+        elif self.active_mode == "notes":
+            self.quick_note_ctrl.build_filter_pills(
+                pills_layout,
+                self._select_notes_filter,
+                self._clear_notes,
             )
 
     def refresh_content(self) -> None:
@@ -419,6 +422,15 @@ class AppController(QObject):
                     on_copied=self._on_content_copied,
                 )
             self.footer.set_count(_format_count(len(self.cards)))
+        elif self.active_mode == "notes":
+            self.cards = self.quick_note_ctrl.render_content(
+                content_layout,
+                query,
+                self._on_content_copied,
+                self.window,
+                self.content.show_empty_state,
+            )
+            self.footer.set_count(_format_count(len(self.cards)))
         else:
             self.cards = self.history_ctrl.render_content(
                 content_layout,
@@ -472,6 +484,14 @@ class AppController(QObject):
         self.refresh_filter_pills()
         self.refresh_content()
 
+    def _select_notes_filter(self, filter_id: str) -> None:
+        self.quick_note_ctrl.select_filter(filter_id)
+        self.refresh_content()
+
+    def _clear_notes(self) -> None:
+        if self.quick_note_ctrl.clear_all_notes(self.window):
+            self._on_notes_updated()
+
     def _select_history_filter(self, filter_id: str) -> None:
         self.history_ctrl.select_history_filter(filter_id)
         self.refresh_content()
@@ -488,11 +508,8 @@ class AppController(QObject):
         elif self.active_mode == "loot":
             if self.loot_ctrl.open_add_dialog(self.window, target_ip=target_ip):
                 self._on_loot_data_updated()
-        else:
-            if self.loot_ctrl.open_add_dialog(
-                self.window, target_ip=target_ip, default_type="note", default_category="recon"
-            ):
-                self._on_loot_data_updated()
+        elif self.active_mode in ("notes", "history"):
+            self.quick_note_ctrl.show_popup()
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         if self.loot_ctrl.open_edit_dialog(self.window, entry):

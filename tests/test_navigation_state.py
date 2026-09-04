@@ -17,13 +17,16 @@ def test_initial_state():
 def test_valid_mode_transitions():
     """Transitions to valid modes succeed and record history."""
     sm = NavigationStateMachine()
+    assert sm.switch_mode("notes") is True
+    assert sm.active_mode == "notes"
+
     assert sm.switch_mode("loot") is True
     assert sm.active_mode == "loot"
 
     assert sm.switch_mode("report") is True
     assert sm.active_mode == "report"
 
-    assert sm.history == ["cheatsheet", "loot", "report"]
+    assert sm.history == ["cheatsheet", "notes", "loot", "report"]
 
 
 def test_invalid_mode_rejected():
@@ -46,16 +49,20 @@ def test_report_dirty_guard():
 
 
 def test_tab_cycling():
-    """Tab shortcut cycles in order cheatsheet -> loot -> history -> cheatsheet."""
+    """Tab shortcut cycles in order cheatsheet -> history -> notes -> loot -> cheatsheet."""
     sm = NavigationStateMachine(initial_mode="cheatsheet")
-
-    assert sm.get_next_tab_mode() == "loot"
-    assert sm.cycle_tab_mode() == "loot"
-    assert sm.active_mode == "loot"
 
     assert sm.get_next_tab_mode() == "history"
     assert sm.cycle_tab_mode() == "history"
     assert sm.active_mode == "history"
+
+    assert sm.get_next_tab_mode() == "notes"
+    assert sm.cycle_tab_mode() == "notes"
+    assert sm.active_mode == "notes"
+
+    assert sm.get_next_tab_mode() == "loot"
+    assert sm.cycle_tab_mode() == "loot"
+    assert sm.active_mode == "loot"
 
     assert sm.get_next_tab_mode() == "cheatsheet"
     assert sm.cycle_tab_mode() == "cheatsheet"

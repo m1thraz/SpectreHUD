@@ -69,6 +69,79 @@ class TestQuickNoteController(unittest.TestCase):
         # Note still in inbox
         self.assertEqual(len(self.manager.get_all_entries()), 1)
 
+    def test_build_filter_pills_and_select_filter(self):
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout
+
+        self.controller.submit_note("Recon note", category="recon")
+        self.controller.submit_note("Access note", category="access")
+
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        selected_filters = []
+        cleared = []
+
+        self.controller.build_filter_pills(
+            layout,
+            on_select_filter=selected_filters.append,
+            on_clear=lambda: cleared.append(True),
+        )
+
+        self.assertIn("all", self.controller.filter_buttons)
+        self.assertIn("recon", self.controller.filter_buttons)
+        self.assertIn("access", self.controller.filter_buttons)
+
+        # Test selecting a filter
+        self.controller.select_filter("recon")
+        self.assertEqual(self.controller.current_category_filter, "recon")
+        self.assertEqual(
+            self.controller.filter_buttons["recon"].property("class"),
+            "FilterPillActive",
+        )
+        container.close()
+
+    def test_clear_all_notes(self):
+        self.controller.submit_note("Note 1", category="misc")
+        self.controller.submit_note("Note 2", category="recon")
+        self.assertEqual(len(self.manager.get_all_entries()), 2)
+
+        # Calling without parent_widget skips modal dialog and clears
+        success = self.controller.clear_all_notes(parent_widget=None)
+        self.assertTrue(success)
+        self.assertEqual(len(self.manager.get_all_entries()), 0)
+
+    def test_render_content(self):
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout
+
+        self.controller.submit_note("Note for testing render", category="recon")
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        empty_fn = MagicMock()
+
+        cards = self.controller.render_content(
+            content_layout=layout,
+            search_query="",
+            on_copied=MagicMock(),
+            parent_widget=container,
+            show_empty_state_fn=empty_fn,
+        )
+
+        self.assertEqual(len(cards), 1)
+        empty_fn.assert_not_called()
+
+        # Test empty state when filtered with no matches
+        empty_layout = QVBoxLayout(container)
+        self.controller.select_filter("privesc")
+        empty_cards = self.controller.render_content(
+            content_layout=empty_layout,
+            search_query="",
+            on_copied=MagicMock(),
+            parent_widget=container,
+            show_empty_state_fn=empty_fn,
+        )
+        self.assertEqual(len(empty_cards), 0)
+        empty_fn.assert_called_once()
+        container.close()
+
 
 class TestQuickNotePopup(unittest.TestCase):
     def setUp(self):
@@ -101,6 +174,69 @@ class TestQuickNotePopup(unittest.TestCase):
         self.popup.cancelled.connect(lambda: cancelled.append(True))
         self.popup.reject()
         self.assertEqual(len(cancelled), 1)
+
+
+class TestAppControllerAddButtonAndNotesIntegration(unittest.TestCase):
+    def setUp(self):
+        from ui.app_controller import AppController
+
+        self.controller = MagicMock(spec=AppController)
+        self.controller.active_mode = "notes"
+        self.controller._target_provider = MagicMock(return_value="10.10.10.50")
+        self.controller.window = MagicMock()
+        self.controller.cheatsheet_ctrl = MagicMock()
+        self.controller.loot_ctrl = MagicMock()
+        self.controller.quick_note_ctrl = MagicMock()
+        self.controller.quick_note_manager = MagicMock()
+        self.controller.header = MagicMock()
+        self.controller.refresh_filter_pills = MagicMock()
+        self.controller.refresh_content = MagicMock()
+
+        # Bind methods under test
+        self.controller._on_add_button_clicked = AppController._on_add_button_clicked.__get__(
+            self.controller
+        )
+        self.controller._on_notes_updated = AppController._on_notes_updated.__get__(
+            self.controller
+        )
+        self.controller._update_notes_badge = AppController._update_notes_badge.__get__(
+            self.controller
+        )
+
+    def test_add_button_in_notes_mode_opens_quick_note_popup(self):
+        self.controller.active_mode = "notes"
+        self.controller._on_add_button_clicked()
+
+        self.controller.quick_note_ctrl.show_popup.assert_called_once()
+        self.controller.loot_ctrl.open_add_dialog.assert_not_called()
+        self.controller.cheatsheet_ctrl.open_add_dialog.assert_not_called()
+
+    def test_add_button_in_history_mode_opens_quick_note_popup(self):
+        self.controller.active_mode = "history"
+        self.controller._on_add_button_clicked()
+
+        self.controller.quick_note_ctrl.show_popup.assert_called_once()
+        self.controller.loot_ctrl.open_add_dialog.assert_not_called()
+
+    def test_add_button_in_report_mode_does_nothing(self):
+        self.controller.active_mode = "report"
+        self.controller._on_add_button_clicked()
+
+        self.controller.quick_note_ctrl.show_popup.assert_not_called()
+        self.controller.loot_ctrl.open_add_dialog.assert_not_called()
+
+    def test_on_notes_updated_updates_notes_badge(self):
+        self.controller.active_mode = "notes"
+        self.controller.quick_note_manager.get_all_entries.return_value = [
+            {"id": "n1"},
+            {"id": "n2"},
+        ]
+
+        self.controller._on_notes_updated()
+
+        self.controller.header.update_notes_badge.assert_called_once_with(2)
+        self.controller.refresh_filter_pills.assert_called_once()
+        self.controller.refresh_content.assert_called_once()
 
 
 if __name__ == "__main__":

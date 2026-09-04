@@ -280,9 +280,10 @@ class MainWindow(QMainWindow):
         QShortcut(
             QKeySequence("Ctrl+1"), self, activated=lambda: self.app.switch_mode("cheatsheet")
         )
-        QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.app.switch_mode("loot"))
-        QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.app.switch_mode("history"))
-        QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.app.switch_mode("report"))
+        QShortcut(QKeySequence("Ctrl+2"), self, activated=lambda: self.app.switch_mode("history"))
+        QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.app.switch_mode("notes"))
+        QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.app.switch_mode("loot"))
+        QShortcut(QKeySequence("Ctrl+5"), self, activated=lambda: self.app.switch_mode("report"))
         self.shortcut_fullscreen = QShortcut(
             QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen
         )

@@ -5,15 +5,17 @@ Coordinates the QuickNotePopup, quick note persistence, promotion to loot,
 and UI inbox synchronization.
 """
 
-from typing import Optional, Callable, Dict, Any
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QWidget
+from typing import Optional, Callable, Dict, Any, List
+from PyQt6.QtCore import QObject, pyqtSignal, Qt
+from PyQt6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QMessageBox
 
 from core.quick_note_manager import QuickNoteManager
 from core.loot_manager import VALID_CATEGORY_IDS
 from core.event_bus import EventBus, EventType
 from core.logger import get_logger
+from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
+from ui.quick_note_card import QuickNoteCard
 
 logger = get_logger("quick_note_controller")
 
@@ -40,6 +42,8 @@ class QuickNoteController(QObject):
         self.target_provider = target_provider
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.last_category: str = "misc"
+        self.current_category_filter: str = "all"
+        self.filter_buttons: Dict[str, QPushButton] = {}
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
@@ -154,3 +158,111 @@ class QuickNoteController(QObject):
             self.delete_note(entry_id)
             return True
         return False
+
+    def select_filter(self, filter_id: str) -> None:
+        """Selects active category filter and updates pill styles."""
+        self.current_category_filter = filter_id
+        for fid, btn in self.filter_buttons.items():
+            btn.setProperty("class", "FilterPillActive" if fid == filter_id else "FilterPill")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+    def build_filter_pills(
+        self,
+        pills_layout: QHBoxLayout,
+        on_select_filter: Callable[[str], None],
+        on_clear: Callable[[], None],
+    ) -> None:
+        """Builds category filter pills and Clear action button for Notes mode."""
+        self.filter_buttons.clear()
+        all_notes = self.quick_note_manager.get_all_entries()
+
+        pills = [("all", f"All ({len(all_notes)})")]
+        for cat in ["recon", "access", "privesc", "postex", "scripts", "misc"]:
+            count = sum(1 for n in all_notes if n.get("category") == cat)
+            pills.append((cat, f"{cat.capitalize()} ({count})"))
+
+        for pid, ptext in pills:
+            btn = QPushButton(ptext)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setProperty(
+                "class",
+                "FilterPillActive" if self.current_category_filter == pid else "FilterPill",
+            )
+            btn.clicked.connect(lambda checked=False, fid=pid: on_select_filter(fid))
+            self.filter_buttons[pid] = btn
+            pills_layout.addWidget(btn)
+
+        pills_layout.addStretch()
+
+        btn_clear = QPushButton("Clear")
+        btn_clear.setProperty("class", "MiniDangerBtn")
+        btn_clear.setToolTip(
+            t("quick_note.clear_tip", "Clear all quick notes in the inbox for this project")
+        )
+        btn_clear.clicked.connect(on_clear)
+        pills_layout.addWidget(btn_clear)
+
+    def clear_all_notes(self, parent_widget: Optional[QWidget] = None) -> bool:
+        """Deletes all quick notes in the current project after user confirmation."""
+        if parent_widget:
+            reply = QMessageBox.question(
+                parent_widget,
+                t("quick_note.clear_title", "Clear Quick Notes"),
+                t(
+                    "quick_note.clear_confirm",
+                    "Are you sure you want to delete all quick notes in the inbox for this project?",
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+
+        try:
+            self.quick_note_manager.clear_entries()
+            self.notes_updated.emit()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to clear quick notes: {e}")
+            return False
+
+    def render_content(
+        self,
+        content_layout: QVBoxLayout,
+        search_query: str,
+        on_copied: Optional[Callable[[str], None]],
+        parent_widget: QWidget,
+        show_empty_state_fn: Callable[[str], None],
+    ) -> List[QWidget]:
+        """Renders notes inbox cards into the content layout."""
+        cat_filter = (
+            None if self.current_category_filter == "all" else self.current_category_filter
+        )
+        notes = self.quick_note_manager.get_entries(
+            category=cat_filter,
+            search_query=search_query,
+        )
+
+        if not notes:
+            show_empty_state_fn(
+                t(
+                    "quick_note.empty_state",
+                    "No quick notes in inbox. Use global hotkey (Ctrl+Alt+N) or click '📌 Note' to capture thoughts.",
+                )
+            )
+            return []
+
+        rendered_cards: List[QWidget] = []
+        for item in notes:
+            card = QuickNoteCard(item, parent=parent_widget)
+            card.promote_requested.connect(
+                lambda entry, p=parent_widget: self.promote_to_loot(entry, parent_widget=p)
+            )
+            card.deleted.connect(self.delete_note)
+            if on_copied is not None:
+                card.copied.connect(on_copied)
+            content_layout.addWidget(card)
+            rendered_cards.append(card)
+
+        return rendered_cards

@@ -48,7 +48,7 @@ class QuickNoteCard(QFrame):
         header_layout.setSpacing(6)
 
         # Quick Note Type Badge
-        lbl_type = QLabel("NOTE")
+        lbl_type = QLabel("📌 NOTE")
         lbl_type.setTextFormat(Qt.TextFormat.PlainText)
         lbl_type.setStyleSheet(
             "background-color: rgba(210, 153, 34, 0.18); color: #e3b341; "

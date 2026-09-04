@@ -9,7 +9,7 @@ QPushButton.ModeSwitchBtn {
     color: {TEXT_FORM};
     border: 1px solid {BORDER_A80};
     border-radius: 6px;
-    padding: 4px 10px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: 600;
 }
@@ -25,23 +25,25 @@ QPushButton.ModeSwitchBtnActive {
     color: {CYBER_CYAN};
     border: 1px solid {CYBER_CYAN};
     border-radius: 6px;
-    padding: 4px 10px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: bold;
 }
 
 /* Project Selector Button */
-QPushButton.ProjectSelectBtn {
+QPushButton.ProjectSelectBtn,
+QPushButton.ProjectDropdownBtn {
     background-color: {NAV_A75};
     color: {CYBER_BLUE_LIGHT};
     border: 1px solid {ACTIVE_BLUE_A50};
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     font-size: 11px;
     font-weight: 600;
 }
 
-QPushButton.ProjectSelectBtn:hover {
+QPushButton.ProjectSelectBtn:hover,
+QPushButton.ProjectDropdownBtn:hover {
     background-color: {ACTIVE_BLUE_A25};
     color: {CYBER_CYAN};
     border-color: {CYBER_CYAN};
@@ -53,7 +55,7 @@ QPushButton.ScreenshotBtn {
     color: {CYBER_CYAN};
     border: 1px solid {CYAN_A50};
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     font-size: 11px;
     font-weight: 600;
 }
