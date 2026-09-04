@@ -18,8 +18,8 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
-from PyQt6.QtGui import QKeyEvent, QAction
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize, QEvent
+from PyQt6.QtGui import QKeyEvent, QAction, QMouseEvent
 import pyperclip
 
 from core.logger import get_logger
@@ -66,6 +66,7 @@ class QuickNoteCard(QFrame):
     """
 
     copied = pyqtSignal(str)
+    edit_requested = pyqtSignal(dict)
     promote_requested = pyqtSignal(dict)
     send_to_report_requested = pyqtSignal(dict)
     deleted = pyqtSignal(str)
@@ -188,6 +189,7 @@ class QuickNoteCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
+        self.lbl_content.installEventFilter(self)
         self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.content_row.addWidget(self.lbl_content, stretch=1)
 
@@ -250,7 +252,7 @@ class QuickNoteCard(QFrame):
         self.btn_edit.setIcon(icon("fa5s.pen", color="#79c0ff"))
         self.btn_edit.setIconSize(CARD_ICON_SIZE)
         self.btn_edit.setToolTip(t("quick_note.edit", "Edit"))
-        self.btn_edit.clicked.connect(self._start_edit)
+        self.btn_edit.clicked.connect(self._trigger_edit)
         self.action_col.addWidget(self.btn_edit)
 
         # Send to Dropdown Menu (Loot or Report)
@@ -389,6 +391,27 @@ class QuickNoteCard(QFrame):
         self.edit_container.setVisible(False)
         self.lbl_content.setVisible(True)
         self.edited.emit(self.entry.get("id", ""), new_text)
+
+    def _trigger_edit(self) -> None:
+        """Emits edit_requested if connected, otherwise falls back to inline editor."""
+        if self.receivers(self.edit_requested) > 0:
+            self.edit_requested.emit(self.entry)
+        else:
+            self._start_edit()
+
+    def eventFilter(self, watched, event) -> bool:
+        if event.type() == QEvent.Type.MouseButtonDblClick:
+            if hasattr(event, "button") and event.button() == Qt.MouseButton.LeftButton:
+                self._trigger_edit()
+                return True
+        return super().eventFilter(watched, event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._trigger_edit()
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def _cancel_edit(self) -> None:
         self.is_editing = False

@@ -8,6 +8,18 @@ semantic versioning.
 
 ### Added
 
+- **Double-Click to Edit for Loot, Notes, and History**:
+  - **Loot**: Double-clicking any loot card (including its title and text) opens `AddLootDialog` in edit mode directly.
+  - **Quick Notes**: Double-clicking any note card (or clicking the edit button) opens the new `EditNoteDialog` to adjust text, pentest phase category, triage status, and target IP.
+  - **Clipboard History**: Double-clicking any history card (or clicking the new `✎` edit button) opens the new `EditHistoryDialog` to adjust recorded commands/snippets and target IPs directly.
+- **Dedicated History & Note Edit Dialogs**:
+  - `EditHistoryDialog`: Clean modal HUD dialog with target IP and content editor, supporting `Ctrl+Enter` save and `Esc` cancel.
+  - `EditNoteDialog`: Modal HUD dialog with phase category dropdown, triage status selector, target IP, and multi-line text editor.
+  - Added `ClipboardWatcher.update_entry()` with automatic recalculation of lines count, char count, and multiline categorization.
+- **Quick-Loot Popup & Global Hotkey**:
+  - Global hotkey `Ctrl+Alt+L` and header trigger to capture findings and credentials via a lightweight non-modal dialog at the cursor position without disrupting the active window.
+- **Report Text Alignment Controls**:
+  - Added Left (`align-left`), Center (`align-center`), and Right (`align-right`) formatting buttons to the Report Editor toolbar for effortless block and text alignment.
 - **Export-Robust QtAwesome Icons for Reports**:
   - Added a searchable, categorized picker with 28 report- and pentest-focused icons.
   - Icons are stored as reusable, theme-independent PNG assets and inserted as normal
@@ -15,11 +27,26 @@ semantic versioning.
 
 ### Changed
 
+- **Full Report Toolbar Collapsing (Single-Button Hide)**:
+  - Updated the Report Editor toolbar collapse action to collapse both Tier 1 (document actions/status) and Tier 2 (formatting tools) together into a minimal restore bar, maximizing writing space.
+- **Header Navigation Bar Streamlining**:
+  - Removed the thumbtack icon from the `Notes` tab button in `HeaderPanel` for a unified, typography-driven HUD navigation bar.
 - Modernized the Report Editor toolbars with consistent QtAwesome icons for structural,
   insert, view, export, save, and collapse actions while retaining clear text labels and
   typographic Markdown controls where they are more readable.
 - Replaced remaining emoji and Unicode action glyphs across the Variable Bar, Cheatsheet,
   Loot, Quick Notes, and History core views with consistent QtAwesome icons and state feedback.
+
+### Fixed
+
+- **Click-Outside-to-Close for Quick Popups (Quick Note, Quick IP, Quick Loot)**:
+  - Fixed focus-stealing timer loop issue where forced foreground capture prevented windows from closing on background click.
+  - Quick popups now gain initial keyboard focus once upon opening (`ActiveWindowFocusReason`) and close cleanly on focus loss.
+- **PDF & Print Code Block Scroll Cutoff**:
+  - Fixed issue where long, horizontally or vertically scrollable code blocks were cut off in PDF exports. Added print stylesheets (`@media print`) so code blocks wrap naturally without scrollbars and avoid awkward mid-block page breaks.
+- **Comprehensive UI Internationalization (i18n)**:
+  - Localized previously hardcoded strings in `ui/project_dialog.py` (including Pentest-Mode password unlock dialog), `ui/template_manager_dialog.py`, find/replace bar, and dialog alerts.
+  - Enforced 100% key parity (582+ keys) across `de.json` and `en.json`.
 
 ## [2.0.8] - 2026-09-04
 

@@ -170,7 +170,7 @@ def prepare_deb_staging_tree(project_dir: Path, staging_dir: Path, version: str)
         scalable_dir.mkdir(parents=True, exist_ok=True)
         svg_icon = icon_src_dir / "scalable" / "spectrehud.svg"
         if svg_icon.exists():
-            shutil.copy2(svg_icon, target_icon_dir / "spectrehud.svg")
+            shutil.copy2(svg_icon, scalable_dir / "spectrehud.svg")
 
 
 def build_pyinstaller_bundle(project_dir: Path, output_bundle_dir: Path) -> bool:

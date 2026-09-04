@@ -138,6 +138,23 @@ class TestClipboardWatcher(unittest.TestCase):
         self.watcher.clear_history()
         self.assertEqual(len(self.watcher.history), 0)
 
+    def test_update_entry(self):
+        entry = self.watcher.add_entry("initial command", target_ip="10.10.10.1")
+        self.assertIsNotNone(entry)
+        entry_id = entry["id"]
+
+        updated = self.watcher.update_entry(entry_id, "modified command", target_ip="10.10.10.2")
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated["text"], "modified command")
+        self.assertEqual(updated["target_ip"], "10.10.10.2")
+        self.assertEqual(self.watcher.history[0]["text"], "modified command")
+        self.assertEqual(self.watcher.history[0]["target_ip"], "10.10.10.2")
+
+        # Non-existent entry returns None
+        self.assertIsNone(self.watcher.update_entry("clip_nonexistent", "new text"))
+        # Empty text returns None
+        self.assertIsNone(self.watcher.update_entry(entry_id, "   "))
+
 
 if __name__ == "__main__":
     unittest.main()

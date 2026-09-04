@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect,
     QMessageBox,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
 from typing import Dict, Any, Optional
 from core.loot_manager import LOOT_TYPES, CATEGORIES
@@ -93,11 +93,12 @@ class LootCard(QFrame):
         header_layout.addWidget(lbl_cat)
 
         # 3. Title
-        lbl_title = QLabel(self.entry.get("title", "Unbenannt"))
-        lbl_title.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_title.setObjectName("SnippetTitle")
-        lbl_title.setWordWrap(True)
-        header_layout.addWidget(lbl_title, stretch=1)
+        self.lbl_title = QLabel(self.entry.get("title", "Unbenannt"))
+        self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_title.setObjectName("SnippetTitle")
+        self.lbl_title.setWordWrap(True)
+        self.lbl_title.installEventFilter(self)
+        header_layout.addWidget(self.lbl_title, stretch=1)
 
         # 4. Target IP (if set)
         target_ip = self.entry.get("target_ip", "")
@@ -209,6 +210,7 @@ class LootCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
+        self.lbl_content.installEventFilter(self)
         if self.preview_line_limit is not None:
             # A very long unbroken value must not enlarge the Kanban column.
             # Ignoring only the horizontal hint lets the column supply the real
@@ -298,6 +300,13 @@ class LootCard(QFrame):
                 elided_line = f"{elided_line.rstrip()}…"
             preview = f"{prefix}{elided_line}".replace("\u2028", "\n")
         self.lbl_content.setText(preview)
+
+    def eventFilter(self, watched, event) -> bool:
+        if event.type() == QEvent.Type.MouseButtonDblClick:
+            if hasattr(event, "button") and event.button() == Qt.MouseButton.LeftButton:
+                self.edit_requested.emit(self.entry)
+                return True
+        return super().eventFilter(watched, event)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:

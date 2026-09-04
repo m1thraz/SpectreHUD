@@ -225,6 +225,44 @@ class ClipboardWatcher(QObject):
         self._publish_updated("delete", deleted_entry)
         return True
 
+    def update_entry(
+        self, entry_id: str, text: str, target_ip: Optional[str] = None, *, persist: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """Updates text and optionally target_ip of an existing history item."""
+        clean_text = str(text or "").strip()
+        if not clean_text:
+            return None
+
+        idx = -1
+        for i, entry in enumerate(self.history):
+            if entry.get("id") == entry_id:
+                idx = i
+                break
+        if idx == -1:
+            return None
+
+        current = dict(self.history[idx])
+        lines_count = clean_text.count("\n") + 1
+        char_count = len(clean_text)
+        is_multiline = lines_count > 2 or char_count > 120
+
+        current["text"] = clean_text
+        current["lines_count"] = lines_count
+        current["char_count"] = char_count
+        current["is_multiline"] = is_multiline
+        if target_ip is not None:
+            current["target_ip"] = str(target_ip).strip()
+
+        new_history = list(self.history)
+        new_history[idx] = current
+
+        if persist and not self.storage.save_json("clipboard", new_history):
+            raise PersistenceError(f"Could not persist update of clipboard entry {entry_id}.")
+
+        self.history = new_history
+        self._publish_updated("update", current)
+        return dict(current)
+
     def clear_history(self) -> int:
         """Clears all clipboard history."""
         count = len(self.history)

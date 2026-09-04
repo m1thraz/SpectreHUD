@@ -613,5 +613,16 @@
     "loot.export_failed_title": "Export Failed",
     "loot.export_failed_msg": "Failed to export loot file:\n{error}",
     "loot.export_success_title": "Loot File Exported",
-    "loot.export_success_msg": "Saved at:\n{path}"
+    "loot.export_success_msg": "Saved at:\n{path}",
+    "history.edit_title": "SPECTRE // EDIT CLIPBOARD ENTRY",
+    "history.edit_tip": "Edit this history entry",
+    "history.lbl_target": "Target IP (optional):",
+    "history.lbl_content": "Content:",
+    "history.edit_hint": "Ctrl+Enter: Save | Esc: Cancel",
+    "note_dialog.title_edit": "SPECTRE // EDIT NOTE",
+    "note_dialog.lbl_phase": "Pentest Phase:",
+    "note_dialog.lbl_status": "Status:",
+    "note_dialog.lbl_target": "Target IP (optional):",
+    "note_dialog.lbl_text": "Note Text:",
+    "note_dialog.edit_hint": "Ctrl+Enter: Save | Esc: Cancel"
 }

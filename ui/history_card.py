@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize, QEvent
+from PyQt6.QtGui import QMouseEvent
 from typing import Dict, Any, Optional
 import pyperclip
 from core.logger import get_logger
@@ -49,6 +50,7 @@ class HistoryCard(QFrame):
     """Visual card displaying a single clipboard history item with natural word wrapping and Loot/Note-capture."""
 
     copied = pyqtSignal(str)
+    edit_requested = pyqtSignal(dict)
     transfer_to_loot = pyqtSignal(dict)
     transfer_to_note = pyqtSignal(dict)
     add_to_loot_requested = transfer_to_loot
@@ -68,7 +70,7 @@ class HistoryCard(QFrame):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
 
-        # Header Row: Time, Target IP, Stats, Delete
+        # Header Row: Time, Target IP, Stats, Edit, Delete
         header_layout = QHBoxLayout()
         header_layout.setSpacing(8)
 
@@ -107,6 +109,15 @@ class HistoryCard(QFrame):
 
         header_layout.addStretch()
 
+        # Edit Button
+        self.btn_edit = QPushButton()
+        self.btn_edit.setIcon(icon("fa5s.pen"))
+        self.btn_edit.setIconSize(CARD_ICON_SIZE)
+        self.btn_edit.setProperty("class", "CardIconBtn")
+        self.btn_edit.setToolTip(t("history.edit_tip", "Edit this history entry"))
+        self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
+        header_layout.addWidget(self.btn_edit)
+
         # Delete Button
         self.btn_delete = QPushButton()
         self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
@@ -130,6 +141,7 @@ class HistoryCard(QFrame):
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
+        self.lbl_content.installEventFilter(self)
         self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content_row.addWidget(self.lbl_content, stretch=1)
 
@@ -231,3 +243,17 @@ class HistoryCard(QFrame):
         self.btn_copy.setToolTip(t("history.copy_tip", "Copy history entry"))
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)
+
+    def eventFilter(self, watched, event) -> bool:
+        if event.type() == QEvent.Type.MouseButtonDblClick:
+            if hasattr(event, "button") and event.button() == Qt.MouseButton.LeftButton:
+                self.edit_requested.emit(self.entry)
+                return True
+        return super().eventFilter(watched, event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.edit_requested.emit(self.entry)
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)

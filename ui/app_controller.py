@@ -440,6 +440,7 @@ class AppController(QObject):
                 self._on_content_copied,
                 self.window,
                 self.content.show_empty_state,
+                on_edit_note=self._on_edit_note_requested,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         else:
@@ -455,6 +456,7 @@ class AppController(QObject):
                 on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(
                     self.window, item
                 ),
+                on_edit_history=self._on_edit_history_requested,
             )
             self.footer.set_count(_format_count(len(self.cards)))
         self.content.refresh_content_geometry()
@@ -525,6 +527,14 @@ class AppController(QObject):
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         if self.loot_ctrl.open_edit_dialog(self.window, entry):
             self._on_loot_data_updated()
+
+    def _on_edit_history_requested(self, entry: Dict[str, Any]) -> None:
+        if self.history_ctrl.open_edit_dialog(self.window, entry):
+            self._on_history_data_updated()
+
+    def _on_edit_note_requested(self, entry: Dict[str, Any]) -> None:
+        if self.quick_note_ctrl.open_edit_dialog(self.window, entry):
+            self._on_notes_updated()
 
     def _on_export_loot_entry(self, entry_id: str) -> None:
         self.loot_ctrl.export_entry_to_file_with_feedback(entry_id, self.window)

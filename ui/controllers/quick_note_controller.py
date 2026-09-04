@@ -158,6 +158,30 @@ class QuickNoteController(QObject):
             logger.error(f"Failed to update text for note {entry_id}: {e}")
             return False
 
+    def open_edit_dialog(
+        self, parent_widget: Optional[QWidget], entry: Dict[str, Any]
+    ) -> bool:
+        """Opens modal dialog to edit a quick note."""
+        from ui.note_edit_dialog import EditNoteDialog
+
+        dlg = EditNoteDialog(entry, parent=parent_widget)
+        if dlg.exec():
+            data = dlg.get_data()
+            try:
+                res = self.quick_note_manager.update_entry(
+                    entry.get("id", ""),
+                    text=data["text"],
+                    category=data.get("category", "misc"),
+                    target_ip=data.get("target_ip", ""),
+                    status=data.get("status", "inbox"),
+                )
+                if res is not None:
+                    self.notes_updated.emit()
+                    return True
+            except Exception as e:
+                logger.error(f"Failed to save edited note: {e}")
+        return False
+
     def set_note_status(self, entry_id: str, status: str) -> bool:
         """Sets the triage status (inbox, followup, resolved) of a note."""
         try:
@@ -530,6 +554,7 @@ class QuickNoteController(QObject):
         on_copied: Optional[Callable[[str], None]],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None],
+        on_edit_note: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> List[QWidget]:
         """Renders notes inbox cards into the content layout."""
         self._rendered_cards = []
@@ -581,6 +606,12 @@ class QuickNoteController(QObject):
             )
             card.deleted.connect(self.delete_note)
             card.edited.connect(self.update_note_text)
+            if on_edit_note is not None:
+                card.edit_requested.connect(on_edit_note)
+            else:
+                card.edit_requested.connect(
+                    lambda entry, p=parent_widget: self.open_edit_dialog(p, entry)
+                )
             card.status_changed.connect(self.set_note_status)
             card.pin_toggled.connect(self.toggle_note_pinned)
             card.selection_changed.connect(self.on_card_selection_changed)

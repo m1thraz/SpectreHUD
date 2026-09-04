@@ -613,5 +613,16 @@
     "loot.export_failed_title": "Export fehlgeschlagen",
     "loot.export_failed_msg": "Loot-Datei konnte nicht exportiert werden:\n{error}",
     "loot.export_success_title": "Loot-Datei exportiert",
-    "loot.export_success_msg": "Gespeichert unter:\n{path}"
+    "loot.export_success_msg": "Gespeichert unter:\n{path}",
+    "history.edit_title": "SPECTRE // CLIPBOARD-EINTRAG BEARBEITEN",
+    "history.edit_tip": "Diesen Verlaufseintrag bearbeiten",
+    "history.lbl_target": "Ziel-IP (optional):",
+    "history.lbl_content": "Inhalt:",
+    "history.edit_hint": "Strg+Enter: Speichern | Esc: Abbrechen",
+    "note_dialog.title_edit": "SPECTRE // NOTIZ BEARBEITEN",
+    "note_dialog.lbl_phase": "Pentest-Phase:",
+    "note_dialog.lbl_status": "Status:",
+    "note_dialog.lbl_target": "Ziel-IP (optional):",
+    "note_dialog.lbl_text": "Notiztext:",
+    "note_dialog.edit_hint": "Strg+Enter: Speichern | Esc: Abbrechen"
 }

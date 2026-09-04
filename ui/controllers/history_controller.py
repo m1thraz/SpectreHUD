@@ -121,6 +121,34 @@ class HistoryController(QObject):
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_entry", e)
 
+    def update_entry(self, entry_id: str, text: str, target_ip: str = "") -> bool:
+        """Updates text and target IP of a clipboard history entry."""
+        try:
+            res = self.clipboard_watcher.update_entry(
+                entry_id=entry_id, text=text, target_ip=target_ip
+            )
+            if res is not None:
+                self.history_updated.emit()
+                return True
+            return False
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("update_entry", e)
+            return False
+
+    def open_edit_dialog(self, parent_widget: QWidget, entry: Dict[str, Any]) -> bool:
+        """Opens modal dialog to edit a clipboard history entry."""
+        from ui.history_edit_dialog import EditHistoryDialog
+
+        dlg = EditHistoryDialog(entry, parent=parent_widget)
+        if dlg.exec():
+            data = dlg.get_data()
+            return self.update_entry(
+                entry_id=entry.get("id", ""),
+                text=data["text"],
+                target_ip=data.get("target_ip", ""),
+            )
+        return False
+
     def toggle_pause(self) -> bool:
         is_paused = self.clipboard_watcher.toggle_pause()
         self.history_updated.emit()
@@ -234,6 +262,7 @@ class HistoryController(QObject):
         show_empty_state_fn: Callable[[str], None],
         on_copied: Optional[Callable[[str], None]] = None,
         on_add_to_note: Optional[Callable[[Dict[str, Any]], None]] = None,
+        on_edit_history: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> List[QWidget]:
         history_items = self.get_history(target_ip=target_ip, search_query=search_query)
 
@@ -255,6 +284,12 @@ class HistoryController(QObject):
             card.entry_deleted.connect(on_delete_entry)
             if on_copied is not None:
                 card.copied.connect(on_copied)
+            if on_edit_history is not None:
+                card.edit_requested.connect(on_edit_history)
+            else:
+                card.edit_requested.connect(
+                    lambda entry, p=parent_widget: self.open_edit_dialog(p, entry)
+                )
             content_layout.addWidget(card)
             rendered_cards.append(card)
 
