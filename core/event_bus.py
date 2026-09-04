@@ -46,7 +46,7 @@ class EventBus:
     boundary first (e.g. ``QMetaObject.invokeMethod(..., Qt.ConnectionType.QueuedConnection)``
     or a ``pyqtSignal`` connection with ``Qt.ConnectionType.QueuedConnection``).
 
-    Background publishers in SpectreHUD (``ClipboardWatcher``, ``HotkeyListener``) emit
+    Background publishers in SpectreHUD (for example ``HotkeyListener``) emit
     Qt signals to transfer control to the main thread before any widget interaction occurs.
     Subscribers that update UI state must follow the same pattern.
     """

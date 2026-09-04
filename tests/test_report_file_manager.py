@@ -15,8 +15,8 @@ from core.report_file_manager import ReportFileManager
 from core.validators import MAX_REPORT_FILE_SIZE
 
 
-class FakeClipboardWatcher:
-    """Minimal PyQt6-free stub for ClipboardWatcher."""
+class FakeClipboardHistory:
+    """Minimal stub for clipboard history."""
 
     def __init__(self, history: Optional[List[Dict[str, Any]]] = None):
         self.history = history or []
@@ -36,7 +36,7 @@ class TestReportFileManager(unittest.TestCase):
 
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.loot_mgr = LootManager(storage_file=self.temp_path / "config" / "loot.json")
-        self.clip_watcher = FakeClipboardWatcher()
+        self.clip_watcher = FakeClipboardHistory()
         self.report_mgr = ReportFileManager(self.project_mgr)
 
     def tearDown(self):
@@ -274,7 +274,7 @@ class TestReportFileManager(unittest.TestCase):
         tab = ReportEditorTab(
             report_file_manager=self.report_mgr,
             loot_manager=self.loot_mgr,
-            clipboard_watcher=self.clip_watcher,
+            clipboard_history=self.clip_watcher,
             export_coordinator=ExportCoordinator(
                 project_manager=self.project_mgr,
                 loot_manager=self.loot_mgr,

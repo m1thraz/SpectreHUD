@@ -1,7 +1,7 @@
 """
 Storage Abstraction Layer for SpectreHUD.
 
-Decouples core domain services (LootManager, ClipboardWatcher, ConfigManager, etc.)
+Decouples core domain services (LootManager, ClipboardHistory, ConfigManager, etc.)
 from physical disk I/O, allowing pure in-memory execution, mock testing,
 and safe atomic file persistence.
 """

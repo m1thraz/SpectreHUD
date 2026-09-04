@@ -86,7 +86,7 @@ class ReportEditorTab(QWidget):
         self,
         report_file_manager: ReportFileManager,
         loot_manager,
-        clipboard_watcher,
+        clipboard_history,
         parent: QWidget = None,
         config_manager: Optional[ConfigManager] = None,
         export_coordinator: Optional[ExportCoordinator] = None,
@@ -94,7 +94,7 @@ class ReportEditorTab(QWidget):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
         self.config = config_manager
         self.export_coordinator = export_coordinator
         theme_id = (
@@ -952,7 +952,7 @@ class ReportEditorTab(QWidget):
         try:
             new_content = self.report_file_manager.regenerate(
                 self.loot_manager,
-                self.clipboard_watcher,
+                self.clipboard_history,
                 project_name=self.current_project,
                 template=self.active_template,
             )

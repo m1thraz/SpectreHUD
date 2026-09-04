@@ -21,11 +21,12 @@ if app is None:
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.event_bus import EventBus, EventType
 from core.storage import PersistenceError
 from ui.app_controller import AppController
+from ui.clipboard_monitor import ClipboardMonitor
 
 
 class TestAppController(unittest.TestCase):
@@ -44,9 +45,10 @@ class TestAppController(unittest.TestCase):
         self.loot_mgr = LootManager(
             storage_file=self.temp_path / "loot.json", event_bus=self.event_bus
         )
-        self.clip_watcher = ClipboardWatcher(
+        self.clip_watcher = ClipboardHistory(
             storage_file=self.temp_path / "clipboard.json", event_bus=self.event_bus
         )
+        self.clipboard_monitor = ClipboardMonitor(self.clip_watcher)
         self.screenshot_mgr = MagicMock()
         self.screenshot_mgr.is_capture_available.return_value = True
         self.screenshot_mgr.capabilities.wayland = False
@@ -93,7 +95,8 @@ class TestAppController(unittest.TestCase):
             config_manager=self.config,
             snippet_manager=self.snippet_mgr,
             loot_manager=self.loot_mgr,
-            clipboard_watcher=self.clip_watcher,
+            clipboard_history=self.clip_watcher,
+            clipboard_monitor=self.clipboard_monitor,
             project_manager=self.project_mgr,
             screenshot_manager=self.screenshot_mgr,
             event_bus=self.event_bus,

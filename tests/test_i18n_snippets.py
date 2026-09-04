@@ -6,7 +6,7 @@ from core.config import ConfigManager, DEFAULT_CONFIG
 from core.i18n import set_locale, DEFAULT_LOCALE
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 
 
@@ -100,7 +100,7 @@ class TestI18nSnippets(unittest.TestCase):
             language="en",
         )
         loot_mgr = LootManager(storage_file=self.loot_file)
-        clip_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clip_watcher = ClipboardHistory(storage_file=self.clip_file)
         proj_mgr = ProjectManager(base_dir=self.projects_dir)
 
         window = create_main_window(

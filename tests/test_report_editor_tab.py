@@ -13,7 +13,7 @@ from PyQt6.QtGui import QShortcut
 
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.report_file_manager import ReportFileManager
 from core.i18n import t
 from ui.report.dialogs import ReportGenerationDialog
@@ -35,7 +35,9 @@ class TestReportEditorTab(unittest.TestCase):
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.project_mgr.create_project("TestBox", target_ip="10.10.10.42")
         self.loot_mgr = LootManager(storage_file=self.temp_path / "config" / "loot.json")
-        self.clip_watcher = ClipboardWatcher(storage_file=self.temp_path / "config" / "clip.json")
+        self.clip_watcher = ClipboardHistory(
+            storage_file=self.temp_path / "config" / "clip.json"
+        )
         self.report_file_mgr = ReportFileManager(self.project_mgr)
 
         self.tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
@@ -800,5 +802,4 @@ class TestReportEditorTab(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
 

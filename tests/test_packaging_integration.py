@@ -50,7 +50,9 @@ class TestPackagingIntegration(unittest.TestCase):
                 self.assertIn("core/config.py", names)
                 self.assertIn("core/snippet_manager.py", names)
                 self.assertIn("core/loot_manager.py", names)
-                self.assertIn("core/clipboard_watcher.py", names)
+                self.assertIn("core/clipboard_history.py", names)
+                self.assertIn("ui/clipboard_monitor.py", names)
+                self.assertNotIn("core/clipboard_watcher.py", names)
                 self.assertIn("core/project/__init__.py", names)
                 self.assertNotIn("core/project_manager.py", names)
 

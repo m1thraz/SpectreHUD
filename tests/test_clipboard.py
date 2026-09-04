@@ -2,18 +2,20 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.loot_manager import LootManager
+from core.report_builder import ReportBuilder
+from ui.clipboard_monitor import ClipboardMonitor
 
 
-class TestClipboardWatcher(unittest.TestCase):
+class TestClipboardHistory(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
         os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.storage_file = self.temp_path / "test_clip.json"
-        self.watcher = ClipboardWatcher(storage_file=self.storage_file)
+        self.watcher = ClipboardHistory(storage_file=self.storage_file)
 
     def tearDown(self):
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
@@ -96,9 +98,9 @@ class TestClipboardWatcher(unittest.TestCase):
         self.watcher.add_entry("ssh admin@10.10.10.77", target_ip="10.10.10.77")
 
         report_path = self.temp_path / "ctf_report.md"
-        result = self.watcher.export_report_markdown(
-            report_path, target_ip="10.10.10.77", loot_manager=loot_mgr
-        )
+        result = ReportBuilder(
+            loot_manager=loot_mgr, clipboard_watcher=self.watcher
+        ).export(report_path, target_ip="10.10.10.77")
 
         self.assertTrue(report_path.exists())
         content = report_path.read_text(encoding="utf-8")
@@ -113,25 +115,25 @@ class TestClipboardWatcher(unittest.TestCase):
         self.watcher.add_entry("test cmd 1")
         self.assertEqual(len(self.watcher.history), 1)
 
-        # Verify initial default is paused for privacy
-        self.assertTrue(self.watcher.is_paused)
+        monitor = ClipboardMonitor(self.watcher)
+        self.assertTrue(monitor.is_paused)
 
         signals_received = []
-        self.watcher.logging_state_changed.connect(lambda active: signals_received.append(active))
+        monitor.logging_state_changed.connect(lambda active: signals_received.append(active))
 
         # Toggle pause (paused -> active)
-        is_paused = self.watcher.toggle_pause()
+        is_paused = monitor.toggle_pause()
         self.assertFalse(is_paused)
         self.assertEqual(signals_received[-1], True)
 
         # Toggle pause again (active -> paused)
-        is_paused = self.watcher.toggle_pause()
+        is_paused = monitor.toggle_pause()
         self.assertTrue(is_paused)
         self.assertEqual(signals_received[-1], False)
 
         # Set active explicitly
-        self.watcher.set_paused(False)
-        self.assertFalse(self.watcher.is_paused)
+        monitor.set_paused(False)
+        self.assertFalse(monitor.is_paused)
         self.assertEqual(signals_received[-1], True)
 
         # Clear history

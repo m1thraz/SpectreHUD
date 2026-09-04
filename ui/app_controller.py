@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.screenshot_transaction_service import ScreenshotTransactionService
@@ -22,6 +22,7 @@ from core.event_bus import EventBus, EventType
 from core.storage import PersistenceError
 
 from ui.variable_bar import VariableBar
+from ui.clipboard_monitor import ClipboardMonitor
 from ui.panels.header_panel import HeaderPanel
 from ui.panels.search_panel import SearchPanel
 from ui.panels.content_panel import ContentPanel
@@ -67,7 +68,8 @@ class AppController(QObject):
         config_manager: ConfigManager,
         snippet_manager: SnippetManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
+        clipboard_monitor: ClipboardMonitor,
         project_manager: ProjectManager,
         screenshot_manager: ScreenshotManager,
         event_bus: EventBus,
@@ -85,7 +87,8 @@ class AppController(QObject):
         self.snippet_manager = snippet_manager
         self.project_manager = project_manager
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
+        self.clipboard_monitor = clipboard_monitor
         self.quick_note_manager = quick_note_manager
         self.screenshot_manager = screenshot_manager
         self.event_bus = event_bus
@@ -93,7 +96,7 @@ class AppController(QObject):
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_history=self.clipboard_history,
             quick_note_manager=self.quick_note_manager,
         )
         self.cards: List[QWidget] = []
@@ -113,7 +116,7 @@ class AppController(QObject):
         self.report_ctrl = ReportController(
             self.project_manager,
             self.loot_manager,
-            self.clipboard_watcher,
+            self.clipboard_history,
             parent_widget=self.window,
             config_manager=self.config,
         )
@@ -126,9 +129,10 @@ class AppController(QObject):
             parent=self,
         )
         self.history_ctrl = HistoryController(
-            self.clipboard_watcher,
-            self.loot_manager,
-            self.project_manager,
+            clipboard_history=self.clipboard_history,
+            clipboard_monitor=self.clipboard_monitor,
+            loot_manager=self.loot_manager,
+            project_manager=self.project_manager,
             event_bus=self.event_bus,
             parent=self,
         )
@@ -155,7 +159,7 @@ class AppController(QObject):
             parent=self,
         )
         self.clipboard_coord = ClipboardCoordinator(
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_monitor=self.clipboard_monitor,
             history_ctrl=self.history_ctrl,
             loot_ctrl=self.loot_ctrl,
             target_provider=self._target_provider,
@@ -183,7 +187,7 @@ class AppController(QObject):
             footer=self.footer,
             window=self.window,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_history=self.clipboard_history,
             # Resolve callbacks at invocation time so tests and runtime
             # extensions can replace the controller boundary deliberately.
             update_footer_status=lambda: self._update_footer_status(),
@@ -254,14 +258,14 @@ class AppController(QObject):
         self.screenshot_manager.screenshot_saved.connect(self._on_screenshot_saved)
         # Clipboard callbacks may originate outside the GUI thread.  Always
         # cross the Qt boundary before the coordinator touches UI state.
-        self.clipboard_watcher.entry_added.connect(
+        self.clipboard_monitor.entry_added.connect(
             self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection
         )
         if self.quick_note_manager and hasattr(self.quick_note_manager, "entry_added"):
             self.quick_note_manager.entry_added.connect(
                 lambda _: self._on_notes_updated(), Qt.ConnectionType.QueuedConnection
             )
-        self.clipboard_watcher.logging_state_changed.connect(self.header.update_rec_indicator)
+        self.clipboard_monitor.logging_state_changed.connect(self.header.update_rec_indicator)
         get_i18n().locale_changed.connect(self.retranslate_ui)
 
     def trigger_quick_note(self) -> None:

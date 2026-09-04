@@ -27,7 +27,7 @@ class TestReportRecoveryUI(unittest.TestCase):
         self.tab = ReportEditorTab(
             report_file_manager=self.mock_rfm,
             loot_manager=MagicMock(),
-            clipboard_watcher=MagicMock(),
+            clipboard_history=MagicMock(),
         )
 
     def tearDown(self):

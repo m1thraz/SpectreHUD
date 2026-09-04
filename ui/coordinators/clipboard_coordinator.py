@@ -8,8 +8,8 @@ from typing import Optional, Dict, Any, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from core.clipboard_watcher import ClipboardWatcher
 from core.logger import get_logger
+from ui.clipboard_monitor import ClipboardMonitor
 from ui.controllers.history_controller import HistoryController
 from ui.controllers.loot_controller import LootController
 
@@ -25,7 +25,7 @@ class ClipboardCoordinator(QObject):
 
     def __init__(
         self,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_monitor: ClipboardMonitor,
         history_ctrl: HistoryController,
         loot_ctrl: LootController,
         target_provider: Callable[[], str],
@@ -33,13 +33,13 @@ class ClipboardCoordinator(QObject):
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_monitor = clipboard_monitor
         self.history_ctrl = history_ctrl
         self.loot_ctrl = loot_ctrl
         self.target_provider = target_provider
         self.quick_note_ctrl = quick_note_ctrl
 
-        self.clipboard_watcher.set_target_provider(self.target_provider)
+        self.clipboard_monitor.set_target_provider(self.target_provider)
 
     def toggle_pause(self) -> None:
         """Toggles clipboard history recording pause/resume state."""

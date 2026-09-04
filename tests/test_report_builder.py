@@ -3,7 +3,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.report_builder import ReportBuilder
 
 
@@ -17,7 +17,7 @@ class TestReportBuilder(unittest.TestCase):
         self.clip_file = self.temp_path / "test_clip.json"
 
         self.loot_mgr = LootManager(storage_file=self.loot_file)
-        self.clip_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        self.clip_watcher = ClipboardHistory(storage_file=self.clip_file)
         self.builder = ReportBuilder(
             loot_manager=self.loot_mgr, clipboard_watcher=self.clip_watcher
         )
@@ -103,7 +103,7 @@ class TestReportBuilder(unittest.TestCase):
         self.assertNotIn("bob:pass2", report_10)
 
     def test_standalone_builder_without_clipboard_watcher(self):
-        """ReportBuilder works safely with only LootManager and no ClipboardWatcher."""
+        """ReportBuilder works safely with only LootManager and no clipboard history."""
         standalone_builder = ReportBuilder(loot_manager=self.loot_mgr, clipboard_watcher=None)
         self.loot_mgr.add_entry("credentials", "Standalone Admin", "admin:123", category="access")
         report = standalone_builder.build()
@@ -111,7 +111,7 @@ class TestReportBuilder(unittest.TestCase):
         self.assertIn("*Keine Clipboard-Historie aufgezeichnet.*", report)
 
     def test_standalone_builder_without_loot_manager(self):
-        """ReportBuilder works safely with only ClipboardWatcher and no LootManager."""
+        """ReportBuilder works safely with only clipboard history and no LootManager."""
         standalone_builder = ReportBuilder(loot_manager=None, clipboard_watcher=self.clip_watcher)
         self.clip_watcher.add_entry("whoami")
         report = standalone_builder.build()
@@ -183,4 +183,3 @@ class TestReportBuilder(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

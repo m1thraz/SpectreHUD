@@ -115,7 +115,7 @@ class TestClipboardCoordinatorCapture(unittest.TestCase):
         self.quick_note_ctrl.add_entry.return_value = {"id": "note-1", "text": "cmd"}
 
         self.coordinator = ClipboardCoordinator(
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_monitor=self.clipboard_watcher,
             history_ctrl=self.history_ctrl,
             loot_ctrl=self.loot_ctrl,
             target_provider=self.target_provider,
@@ -183,7 +183,7 @@ class TestHistoryControllerFilterPills(unittest.TestCase):
         from ui.controllers.history_controller import HistoryController
 
         controller = HistoryController(
-            clipboard_watcher=MagicMock(),
+            clipboard_history=MagicMock(),
             loot_manager=MagicMock(),
             project_manager=MagicMock(),
         )

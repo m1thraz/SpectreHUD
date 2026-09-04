@@ -22,7 +22,7 @@ class TestReportScrollSync(unittest.TestCase):
         self.tab = ReportEditorTab(
             report_file_manager=self.mock_rfm,
             loot_manager=MagicMock(),
-            clipboard_watcher=MagicMock(),
+            clipboard_history=MagicMock(),
         )
         self.tab.load_project("TestBox")
         self.tab._set_view_mode(ViewMode.SPLIT)

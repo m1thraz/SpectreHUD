@@ -135,8 +135,9 @@ def _start_replacement_process() -> bool:
 def _create_production_container():
     """Defers container imports until the single-instance lock is held."""
     from core.container import ServiceContainer
+    from ui.clipboard_monitor import ClipboardMonitor
 
-    return ServiceContainer.create_production()
+    return ServiceContainer.create_production(clipboard_monitor_factory=ClipboardMonitor)
 
 
 def main():
@@ -191,7 +192,7 @@ def main():
         container = _create_production_container()
         _startup_mark(started_at, "service container ready")
         apply_application_style(app, container.config_manager)
-        container.clipboard_watcher.start_listening()
+        container.clipboard_monitor.start_listening()
 
         # Main Window
         window = MainWindow(container=container)
@@ -323,7 +324,7 @@ def main():
             )
             act_rec_toggle.setText(rec_text)
 
-        container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
+        container.clipboard_monitor.logging_state_changed.connect(update_tray_state)
 
         def on_hotkeys_changed(data: dict):
             new_toggle = data.get(

@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict
 
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.config import ConfigManager
 from core.event_bus import EventBus, EventType
 from core.loot_manager import LootManager
@@ -28,7 +28,7 @@ class SettingsCoordinator:
         footer: FooterPanel,
         window: QWidget,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
         update_footer_status: Callable[[], None],
         load_active_project_state: Callable[[], None],
         refresh_filter_pills: Callable[[], None],
@@ -42,7 +42,7 @@ class SettingsCoordinator:
         self.footer = footer
         self.window = window
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
         self.update_footer_status = update_footer_status
         self.load_active_project_state = load_active_project_state
         self.refresh_filter_pills = refresh_filter_pills
@@ -122,8 +122,7 @@ class SettingsCoordinator:
             time_format = new_settings["time_format"]
             if hasattr(self.loot_manager, "set_time_format"):
                 self.loot_manager.set_time_format(time_format)
-            if hasattr(self.clipboard_watcher, "set_time_format"):
-                self.clipboard_watcher.set_time_format(time_format)
+            self.clipboard_history.set_time_format(time_format)
         if "language" in new_settings:
             self.retranslate_ui(new_settings["language"])
         else:

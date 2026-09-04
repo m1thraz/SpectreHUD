@@ -4,7 +4,7 @@ from pathlib import Path
 
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project_session_service import ProjectSessionService
 
@@ -20,13 +20,13 @@ class TestProjectSessionService(unittest.TestCase):
 
         self.project_manager = ProjectManager(base_dir=self.projects_dir)
         self.loot_manager = LootManager(storage_file=self.config_dir / "loot.json")
-        self.clipboard_watcher = ClipboardWatcher(storage_file=self.config_dir / "clip.json")
+        self.clipboard_watcher = ClipboardHistory(storage_file=self.config_dir / "clip.json")
         self.quick_note_manager = QuickNoteManager(storage_file=self.config_dir / "notes.json")
 
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_history=self.clipboard_watcher,
             quick_note_manager=self.quick_note_manager,
         )
 

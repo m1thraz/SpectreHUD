@@ -94,7 +94,12 @@ def test_contextual_core_view_actions_use_icon_plus_text(qapp):
 
     watcher = MagicMock()
     watcher.get_history.return_value = []
-    history = HistoryController(watcher, MagicMock(), MagicMock())
+    history = HistoryController(
+        watcher,
+        MagicMock(),
+        MagicMock(),
+        clipboard_monitor=watcher,
+    )
     pills_host = QWidget()
     pills_layout = QHBoxLayout(pills_host)
     history.build_filter_pills(pills_layout, lambda _filter: None, lambda: None, lambda: None, "Export")

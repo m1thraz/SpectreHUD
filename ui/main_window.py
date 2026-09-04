@@ -39,7 +39,10 @@ class MainWindow(QMainWindow):
         self.snippet_manager = container.snippet_manager
         self.project_manager = container.project_manager
         self.loot_manager = container.loot_manager
-        self.clipboard_watcher = container.clipboard_watcher
+        self.clipboard_history = container.clipboard_history
+        self.clipboard_monitor = container.clipboard_monitor
+        if self.clipboard_monitor is None:
+            raise ValueError("MainWindow requires a configured clipboard monitor")
         self.quick_note_manager = container.quick_note_manager
         self.screenshot_manager = container.screenshot_manager
 
@@ -72,7 +75,8 @@ class MainWindow(QMainWindow):
             config_manager=self.config,
             snippet_manager=self.snippet_manager,
             loot_manager=self.loot_manager,
-            clipboard_watcher=self.clipboard_watcher,
+            clipboard_history=self.clipboard_history,
+            clipboard_monitor=self.clipboard_monitor,
             project_manager=self.project_manager,
             screenshot_manager=self.screenshot_manager,
             event_bus=self.event_bus,
@@ -324,6 +328,10 @@ class MainWindow(QMainWindow):
 
     def prepare_for_shutdown(self) -> None:
         """Safety cleanup hook connected to QApplication.aboutToQuit."""
+        try:
+            self.clipboard_monitor.stop_listening()
+        except (TypeError, RuntimeError):
+            logger.exception("Failed to disconnect clipboard monitor during shutdown")
         try:
             if hasattr(self, "project_manager"):
                 self.project_manager.clear_project_key()

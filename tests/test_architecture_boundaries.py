@@ -9,6 +9,8 @@ REPORTING_ROOT = PROJECT_ROOT / "core" / "reporting"
 REPORT_EDITOR = PROJECT_ROOT / "ui" / "report_editor_tab.py"
 APP_CONTROLLER = PROJECT_ROOT / "ui" / "app_controller.py"
 PLATFORM_ROOT = PROJECT_ROOT / "core" / "platform"
+CLIPBOARD_HISTORY = PROJECT_ROOT / "core" / "clipboard_history.py"
+LEGACY_CLIPBOARD_WATCHER = PROJECT_ROOT / "core" / "clipboard_watcher.py"
 
 
 CORE_ROOT = PROJECT_ROOT / "core"
@@ -83,6 +85,25 @@ def test_platform_package_does_not_eagerly_import_qt():
         cwd=str(PROJECT_ROOT),
     )
     assert result.returncode == 0, f"Subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+
+
+def test_clipboard_history_is_headless_and_legacy_watcher_is_removed():
+    """Clipboard state belongs to core while Qt capture belongs to the UI adapter."""
+    assert CLIPBOARD_HISTORY.exists()
+    assert not LEGACY_CLIPBOARD_WATCHER.exists()
+    tree = ast.parse(
+        CLIPBOARD_HISTORY.read_text(encoding="utf-8"),
+        filename=str(CLIPBOARD_HISTORY),
+    )
+    qt_imports = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            qt_imports.extend(
+                alias.name for alias in node.names if alias.name.startswith("PyQt6")
+            )
+        elif isinstance(node, ast.ImportFrom) and (node.module or "").startswith("PyQt6"):
+            qt_imports.append(node.module or "")
+    assert qt_imports == []
 
 
 def test_local_path_opening_does_not_use_platform_shell_branches():

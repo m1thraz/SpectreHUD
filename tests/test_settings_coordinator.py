@@ -19,7 +19,7 @@ def _coordinator() -> SettingsCoordinator:
         footer=Mock(),
         window=Mock(),
         loot_manager=Mock(),
-        clipboard_watcher=Mock(),
+        clipboard_history=Mock(),
         update_footer_status=Mock(),
         load_active_project_state=Mock(),
         refresh_filter_pills=Mock(),
@@ -72,5 +72,5 @@ def test_runtime_settings_are_routed_to_existing_owners(tmp_path):
         refresh_content=coordinator.refresh_content,
     )
     coordinator.loot_manager.set_time_format.assert_called_once_with("24h")
-    coordinator.clipboard_watcher.set_time_format.assert_called_once_with("24h")
+    coordinator.clipboard_history.set_time_format.assert_called_once_with("24h")
     coordinator.retranslate_ui.assert_called_once_with("de")

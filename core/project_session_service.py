@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.logger import get_logger
 
 logger = get_logger("project_session_service")
@@ -17,29 +17,29 @@ class ProjectSessionService:
         self,
         project_manager: ProjectManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
         quick_note_manager: Optional[Any] = None,
     ):
         self.project_manager = project_manager
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
         self.quick_note_manager = quick_note_manager
 
     def load_project_session(self, project_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Loads the persisted state for the given project (or active project)
-        and populates the LootManager, ClipboardWatcher, and QuickNoteManager.
+        and populates the LootManager, ClipboardHistory, and QuickNoteManager.
         """
         pname = project_name or self.project_manager.get_active_project()
         state = self.project_manager.load_project_state(name=pname)
         if state:
             self.loot_manager.replace_entries(state.get("loot", []))
-            self.clipboard_watcher.replace_history(state.get("clipboard_history", []))
+            self.clipboard_history.replace_history(state.get("clipboard_history", []))
             if self.quick_note_manager:
                 self.quick_note_manager.replace_entries(state.get("quick_notes", []))
         else:
             self.loot_manager.replace_entries([])
-            self.clipboard_watcher.replace_history([])
+            self.clipboard_history.replace_history([])
             if self.quick_note_manager:
                 self.quick_note_manager.replace_entries([])
         return state or {}
@@ -60,7 +60,7 @@ class ProjectSessionService:
             "username": variables.get("username", ""),
             "password": variables.get("password", ""),
             "loot": self.loot_manager.get_all_entries(),
-            "clipboard_history": self.clipboard_watcher.get_all_history(),
+            "clipboard_history": self.clipboard_history.get_all_history(),
             "quick_notes": (
                 self.quick_note_manager.get_all_entries() if self.quick_note_manager else []
             ),

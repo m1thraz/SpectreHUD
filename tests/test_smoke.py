@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
 from core.report_builder import ReportBuilder
@@ -42,7 +42,7 @@ class TestAppSmoke(unittest.TestCase):
         self.snippet_mgr = SnippetManager(user_snippets_path=self.config_dir / "user_snippets.json")
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager(storage_file=self.config_dir / "loot.json")
-        self.clip_watcher = ClipboardWatcher(storage_file=self.config_dir / "clipboard.json")
+        self.clip_watcher = ClipboardHistory(storage_file=self.config_dir / "clipboard.json")
         self.screen_mgr = ScreenshotManager()
 
     def tearDown(self):

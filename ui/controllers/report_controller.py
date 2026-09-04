@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.report_file_manager import ReportFileManager
 from core.config import ConfigManager
 from core.reporting.note_formatter import append_report_note
@@ -21,7 +21,7 @@ class ReportController(QObject):
         self,
         project_manager: ProjectManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
         parent_widget: Optional[QWidget] = None,
         config_manager: Optional[ConfigManager] = None,
         export_coordinator: Optional["ExportCoordinator"] = None,
@@ -29,7 +29,7 @@ class ReportController(QObject):
         super().__init__(parent_widget)
         self.project_manager = project_manager
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
         self.config_manager = config_manager
         self.export_coordinator = export_coordinator
 
@@ -47,7 +47,7 @@ class ReportController(QObject):
             self.report_editor_tab = ReportEditorTab(
                 self.report_file_manager,
                 self.loot_manager,
-                self.clipboard_watcher,
+                self.clipboard_history,
                 parent=self.parent_widget,
                 config_manager=self.config_manager,
                 export_coordinator=self.export_coordinator,

@@ -11,6 +11,8 @@ semantic versioning.
 - Reduced UI orchestration coupling with registered mode renderers, container-only
   `MainWindow` construction, isolated shutdown and selection workflows, and smaller
   reporting/loot helpers without changing user-facing behavior.
+- Separated headless clipboard history and persistence from the Qt system-clipboard
+  monitor, preserving privacy defaults, capture behavior, and project-session storage.
 
 ## [2.0.9] - 2026-09-04
 

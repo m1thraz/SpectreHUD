@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.screenshot_manager import ScreenshotManager
 from core.screenshot_transaction_service import ScreenshotTransactionService
 from core.project_session_service import ProjectSessionService
@@ -42,7 +42,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()
-        self.clip_watcher = ClipboardWatcher()
+        self.clip_watcher = ClipboardHistory()
         self.screen_mgr = ScreenshotManager()
         self.session_service = ProjectSessionService(
             self.project_mgr, self.loot_mgr, self.clip_watcher

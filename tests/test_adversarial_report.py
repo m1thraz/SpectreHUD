@@ -12,9 +12,10 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.project import ProjectManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.screenshot_manager import ScreenshotManager
 from core.project_session_service import ProjectSessionService
+from ui.clipboard_monitor import ClipboardMonitor
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -41,7 +42,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()
-        self.clip_watcher = ClipboardWatcher()
+        self.clip_watcher = ClipboardHistory()
         self.screen_mgr = ScreenshotManager()
         self.session_service = ProjectSessionService(
             self.project_mgr, self.loot_mgr, self.clip_watcher
@@ -151,7 +152,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_isolated_test_container()
+        container = ServiceContainer.create_isolated_test_container(
+            clipboard_monitor_factory=ClipboardMonitor
+        )
         window = MainWindow(container=container)
 
         with patch.object(window.app.report_ctrl, "confirm_discard_if_dirty", return_value=False):
@@ -176,7 +179,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_isolated_test_container()
+        container = ServiceContainer.create_isolated_test_container(
+            clipboard_monitor_factory=ClipboardMonitor
+        )
         window = MainWindow(container=container)
 
         with patch.object(window.app, "save_current_project_state", return_value=False):
@@ -202,7 +207,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_isolated_test_container()
+        container = ServiceContainer.create_isolated_test_container(
+            clipboard_monitor_factory=ClipboardMonitor
+        )
         window = MainWindow(container=container)
         window.var_bar.txt_target.setText("192.168.1.77")
 
@@ -222,7 +229,11 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        window = MainWindow(container=ServiceContainer.create_isolated_test_container())
+        window = MainWindow(
+            container=ServiceContainer.create_isolated_test_container(
+                clipboard_monitor_factory=ClipboardMonitor
+            )
+        )
         with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=PersistenceError("disk full")):
                 with patch("ui.main_window.logger.warning") as warning:
@@ -238,7 +249,11 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        window = MainWindow(container=ServiceContainer.create_isolated_test_container())
+        window = MainWindow(
+            container=ServiceContainer.create_isolated_test_container(
+                clipboard_monitor_factory=ClipboardMonitor
+            )
+        )
         with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=ValueError("invalid geometry")):
                 with patch("ui.main_window.logger.exception") as exception:
@@ -260,7 +275,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         from ui.main_window import MainWindow
         from core.container import ServiceContainer
 
-        container = ServiceContainer.create_isolated_test_container()
+        container = ServiceContainer.create_isolated_test_container(
+            clipboard_monitor_factory=ClipboardMonitor
+        )
         window = MainWindow(container=container)
 
         evt = QCloseEvent()

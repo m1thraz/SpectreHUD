@@ -5,7 +5,7 @@ Centralizes lifecycle management, configuration, and dependency composition
 for all core domain services, storage backends, and event buses.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 from pathlib import Path
 import tempfile
 
@@ -14,7 +14,7 @@ from core.event_bus import EventBus
 from core.config import ConfigManager, get_default_config_dir
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectManager
 from core.screenshot_manager import ScreenshotManager
@@ -34,7 +34,8 @@ class ServiceContainer:
         snippet_manager: SnippetManager,
         project_manager: ProjectManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
+        clipboard_monitor: Optional[Any],
         screenshot_manager: ScreenshotManager,
         storage: StorageBackend,
         event_bus: EventBus,
@@ -44,7 +45,8 @@ class ServiceContainer:
         self.snippet_manager = snippet_manager
         self.project_manager = project_manager
         self.loot_manager = loot_manager
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
+        self.clipboard_monitor = clipboard_monitor
         self.quick_note_manager = (
             quick_note_manager
             if quick_note_manager is not None
@@ -62,7 +64,8 @@ class ServiceContainer:
         snippet_manager: SnippetManager,
         project_manager: ProjectManager,
         loot_manager: LootManager,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
+        clipboard_monitor_factory: Optional[Callable[[ClipboardHistory], Any]] = None,
         screenshot_manager: Optional[ScreenshotManager] = None,
         quick_note_manager: Optional[QuickNoteManager] = None,
         storage: Optional[StorageBackend] = None,
@@ -75,12 +78,18 @@ class ServiceContainer:
         construct application dependencies.
         """
         actual_event_bus = event_bus or EventBus()
+        clipboard_monitor = (
+            clipboard_monitor_factory(clipboard_history)
+            if clipboard_monitor_factory is not None
+            else None
+        )
         return cls(
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             project_manager=project_manager,
             loot_manager=loot_manager,
-            clipboard_watcher=clipboard_watcher,
+            clipboard_history=clipboard_history,
+            clipboard_monitor=clipboard_monitor,
             screenshot_manager=screenshot_manager or ScreenshotManager(),
             quick_note_manager=quick_note_manager,
             storage=storage or InMemoryStorageBackend(),
@@ -89,7 +98,10 @@ class ServiceContainer:
 
     @classmethod
     def create_production(
-        cls, config_dir: Optional[Path] = None, language: Optional[str] = None
+        cls,
+        config_dir: Optional[Path] = None,
+        language: Optional[str] = None,
+        clipboard_monitor_factory: Optional[Callable[[ClipboardHistory], Any]] = None,
     ) -> "ServiceContainer":
         """
         Creates a production service container backed by filesystem persistence
@@ -123,8 +135,13 @@ class ServiceContainer:
         loot_manager = LootManager(
             storage=session_storage, event_bus=event_bus, time_format=time_format
         )
-        clipboard_watcher = ClipboardWatcher(
+        clipboard_history = ClipboardHistory(
             storage=session_storage, event_bus=event_bus, time_format=time_format
+        )
+        clipboard_monitor = (
+            clipboard_monitor_factory(clipboard_history)
+            if clipboard_monitor_factory is not None
+            else None
         )
         quick_note_manager = QuickNoteManager(
             storage=session_storage, event_bus=event_bus, time_format=time_format
@@ -136,7 +153,8 @@ class ServiceContainer:
             snippet_manager=snippet_manager,
             project_manager=project_manager,
             loot_manager=loot_manager,
-            clipboard_watcher=clipboard_watcher,
+            clipboard_history=clipboard_history,
+            clipboard_monitor=clipboard_monitor,
             quick_note_manager=quick_note_manager,
             screenshot_manager=screenshot_manager,
             storage=storage,
@@ -152,6 +170,7 @@ class ServiceContainer:
         config_dir: Optional[Path] = None,
         storage: Optional[StorageBackend] = None,
         event_bus: Optional[EventBus] = None,
+        clipboard_monitor_factory: Optional[Callable[[ClipboardHistory], Any]] = None,
     ) -> "ServiceContainer":
         """
         Creates a test service container with isolated temporary directories and in-memory storage.
@@ -185,8 +204,13 @@ class ServiceContainer:
         loot_manager = LootManager(
             storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
         )
-        clipboard_watcher = ClipboardWatcher(
+        clipboard_history = ClipboardHistory(
             storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
+        )
+        clipboard_monitor = (
+            clipboard_monitor_factory(clipboard_history)
+            if clipboard_monitor_factory is not None
+            else None
         )
         quick_note_manager = QuickNoteManager(
             storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
@@ -198,7 +222,8 @@ class ServiceContainer:
             snippet_manager=snippet_manager,
             project_manager=project_manager,
             loot_manager=loot_manager,
-            clipboard_watcher=clipboard_watcher,
+            clipboard_history=clipboard_history,
+            clipboard_monitor=clipboard_monitor,
             quick_note_manager=quick_note_manager,
             screenshot_manager=screenshot_manager,
             storage=actual_storage,

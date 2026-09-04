@@ -10,7 +10,8 @@ from typing import Optional, Any
 
 from core.storage import StorageBackend, PersistenceError
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
+from ui.clipboard_monitor import ClipboardMonitor
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.project import ProjectManager
@@ -52,7 +53,7 @@ class TestPersistenceErrors(unittest.TestCase):
 
     def test_clipboard_watcher_raises_and_rolls_back_on_storage_failure(self):
         backend = FailingStorageBackend()
-        watcher = ClipboardWatcher(storage=backend)
+        watcher = ClipboardHistory(storage=backend)
         self.assertEqual(len(watcher.get_all_history()), 0)
 
         with self.assertRaises(PersistenceError):
@@ -139,7 +140,7 @@ class TestPersistenceErrors(unittest.TestCase):
                 self.saved_data = None
 
         flaky = FlakyStorageBackend()
-        watcher = ClipboardWatcher(storage=flaky)
+        watcher = ClipboardHistory(storage=flaky)
 
         # 1. First attempt fails due to storage error
         with self.assertRaises(PersistenceError):
@@ -193,11 +194,14 @@ class TestPersistenceErrors(unittest.TestCase):
 
         app = QApplication.instance() or QApplication([])
         backend = FailingStorageBackend()
-        watcher = ClipboardWatcher(storage=backend)
+        watcher = ClipboardHistory(storage=backend)
         loot_mgr = LootManager(storage=backend)
         proj_mgr = ProjectManager()
         ctrl = HistoryController(
-            clipboard_watcher=watcher, loot_manager=loot_mgr, project_manager=proj_mgr
+            clipboard_history=watcher,
+            clipboard_monitor=ClipboardMonitor(watcher),
+            loot_manager=loot_mgr,
+            project_manager=proj_mgr,
         )
 
         with patch.object(QMessageBox, "critical") as mock_box:

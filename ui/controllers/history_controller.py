@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.loot_manager import LootManager
 from core.project import ProjectManager
 from core.storage import PersistenceError, StorageError
@@ -19,6 +19,7 @@ from core.menu_actions import MenuAction
 from core.event_bus import EventBus, EventType
 from core.i18n import t
 from ui.history_card import HistoryCard
+from ui.clipboard_monitor import ClipboardMonitor
 from ui.styles.icons import icon
 
 logger = get_logger("history_controller")
@@ -32,14 +33,16 @@ class HistoryController(QObject):
 
     def __init__(
         self,
-        clipboard_watcher: ClipboardWatcher,
+        clipboard_history: ClipboardHistory,
         loot_manager: LootManager,
         project_manager: ProjectManager,
+        clipboard_monitor: Optional[ClipboardMonitor] = None,
         event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
-        self.clipboard_watcher = clipboard_watcher
+        self.clipboard_history = clipboard_history
+        self.clipboard_monitor = clipboard_monitor
         self.loot_manager = loot_manager
         self.project_manager = project_manager
         self.event_bus = event_bus if event_bus is not None else EventBus()
@@ -80,13 +83,13 @@ class HistoryController(QObject):
         active_filter = filter_type if filter_type is not None else self.current_history_filter
         actual_target = target_ip if active_filter == "target_only" else None
         actual_filter_type = active_filter if active_filter in ["commands", "outputs"] else "all"
-        return self.clipboard_watcher.get_history(
+        return self.clipboard_history.get_history(
             target_ip=actual_target, filter_type=actual_filter_type, search_query=search_query
         )
 
     def add_entry(self, text: str, target_ip: Optional[str] = None) -> None:
         try:
-            entry = self.clipboard_watcher.add_entry(text=text, target_ip=target_ip)
+            entry = self.clipboard_history.add_entry(text=text, target_ip=target_ip)
             if entry is not None:
                 self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:
@@ -107,7 +110,7 @@ class HistoryController(QObject):
             if reply != QMessageBox.StandardButton.Yes:
                 return False
         try:
-            self.clipboard_watcher.clear_history()
+            self.clipboard_history.clear_history()
             self.history_updated.emit()
             return True
         except (PersistenceError, StorageError, OSError) as e:
@@ -116,7 +119,7 @@ class HistoryController(QObject):
 
     def delete_entry(self, item_id: str) -> None:
         try:
-            if self.clipboard_watcher.delete_entry(item_id):
+            if self.clipboard_history.delete_entry(item_id):
                 self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:
             self._notify_persistence_error("delete_entry", e)
@@ -124,7 +127,7 @@ class HistoryController(QObject):
     def update_entry(self, entry_id: str, text: str, target_ip: str = "") -> bool:
         """Updates text and target IP of a clipboard history entry."""
         try:
-            res = self.clipboard_watcher.update_entry(
+            res = self.clipboard_history.update_entry(
                 entry_id=entry_id, text=text, target_ip=target_ip
             )
             if res is not None:
@@ -150,19 +153,21 @@ class HistoryController(QObject):
         return False
 
     def toggle_pause(self) -> bool:
-        is_paused = self.clipboard_watcher.toggle_pause()
+        if self.clipboard_monitor is None:
+            return True
+        is_paused = self.clipboard_monitor.toggle_pause()
         self.history_updated.emit()
         self.event_bus.publish(EventType.LOGGING_STATE_CHANGED, {"is_active": not is_paused})
         return is_paused
 
     def is_paused(self) -> bool:
-        return self.clipboard_watcher.is_paused
+        return self.clipboard_monitor is None or self.clipboard_monitor.is_paused
 
     def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None) -> str:
         from core.report_builder import ReportBuilder
 
         builder = ReportBuilder(
-            loot_manager=self.loot_manager, clipboard_watcher=self.clipboard_watcher
+            loot_manager=self.loot_manager, clipboard_watcher=self.clipboard_history
         )
         return builder.export(output_path, target_ip=target_ip)
 
@@ -170,7 +175,7 @@ class HistoryController(QObject):
         self, on_select_filter: Optional[Callable[[str], None]] = None
     ) -> List[MenuAction]:
         """Returns a list of MenuAction DTOs for filtering history."""
-        history_all = self.clipboard_watcher.get_history()
+        history_all = self.clipboard_history.get_history()
         pills = [
             ("all", f"All ({len(history_all)})"),
             ("target_only", "Target IP Only"),
@@ -215,7 +220,7 @@ class HistoryController(QObject):
         export_tooltip: str,
     ) -> None:
         self.filter_buttons.clear()
-        history_all = self.clipboard_watcher.get_history()
+        history_all = self.clipboard_history.get_history()
         pills = [
             ("all", f"All ({len(history_all)})"),
             ("target_only", "Target IP Only"),

@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from tests.window_factory import create_main_window
 
@@ -53,7 +53,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         window = create_main_window(
             config_manager=config_manager,
@@ -112,7 +112,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         window = create_main_window(
             config_manager=config_manager,
@@ -153,7 +153,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         window = create_main_window(
             config_manager=config_manager,
@@ -205,7 +205,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         project_manager.create_project("BoxToArchive", target_ip="10.10.10.99")
         project_manager.activate_project("BoxToArchive")
@@ -241,7 +241,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         window = create_main_window(
             config_manager=config_manager,

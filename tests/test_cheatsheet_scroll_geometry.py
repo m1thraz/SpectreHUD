@@ -8,7 +8,7 @@ import pytest
 from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QApplication, QSizePolicy
 
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.config import ConfigManager
 from core.loot_manager import LootManager
 from core.project import ProjectManager
@@ -33,7 +33,7 @@ def cheatsheet_window(tmp_path, qapp):
             language="en",
         ),
         loot_manager=LootManager(storage_file=config_dir / "loot.json"),
-        clipboard_watcher=ClipboardWatcher(storage_file=config_dir / "history.json"),
+        clipboard_watcher=ClipboardHistory(storage_file=config_dir / "history.json"),
         project_manager=ProjectManager(base_dir=tmp_path / "projects"),
     )
     window.resize(900, 700)

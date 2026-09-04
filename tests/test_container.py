@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QApplication
 
 from core.container import ServiceContainer
 from ui.main_window import MainWindow
+from ui.clipboard_monitor import ClipboardMonitor
 
 app = QApplication.instance()
 if not app:
@@ -30,7 +31,7 @@ class TestContainer(unittest.TestCase):
             self.assertIsNotNone(container.snippet_manager)
             self.assertIsNotNone(container.project_manager)
             self.assertIsNotNone(container.loot_manager)
-            self.assertIsNotNone(container.clipboard_watcher)
+            self.assertIsNotNone(container.clipboard_history)
             self.assertIsNotNone(container.screenshot_manager)
             self.assertIsNotNone(container.storage)
             self.assertIsNotNone(container.event_bus)
@@ -86,14 +87,24 @@ class TestContainer(unittest.TestCase):
         self.assertIsInstance(container.storage, InMemoryStorageBackend)
 
         # Adding entries in memory should not create user files on disk
-        clip = container.clipboard_watcher.add_entry("whoami")
+        clip = container.clipboard_history.add_entry("whoami")
         self.assertIsNotNone(clip)
-        self.assertEqual(len(container.clipboard_watcher.get_all_history()), 1)
+        self.assertEqual(len(container.clipboard_history.get_all_history()), 1)
+
+    def test_clipboard_monitor_factory_receives_container_history(self):
+        container = ServiceContainer.create_isolated_test_container(
+            clipboard_monitor_factory=ClipboardMonitor
+        )
+
+        self.assertIsNotNone(container.clipboard_monitor)
+        self.assertIs(container.clipboard_monitor.history, container.clipboard_history)
 
     @pytest.mark.integration
     def test_main_window_with_in_memory_container(self):
         container = ServiceContainer.create_isolated_test_container(
-            initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"}, language="en"
+            initial_config={"target_ip": "10.10.10.200", "theme": "cyber_dark"},
+            language="en",
+            clipboard_monitor_factory=ClipboardMonitor,
         )
         window = MainWindow(container=container)
         self.assertIsNotNone(window.app)

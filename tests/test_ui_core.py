@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.report_file_manager import ReportFileManager
 from core.net_detector import NetDetector
@@ -61,7 +61,7 @@ class TestUI(unittest.TestCase):
         snippet_manager = SnippetManager(user_snippets_path=self.custom_snippets_path)
         project_manager = ProjectManager(base_dir=self.projects_dir)
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
 
         window = create_main_window(
             config_manager=config_manager,
@@ -154,7 +154,7 @@ class TestUI(unittest.TestCase):
             config_manager=config_manager,
             snippet_manager=snippet_manager,
             loot_manager=LootManager(storage_file=self.loot_file),
-            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            clipboard_watcher=ClipboardHistory(storage_file=self.clip_file),
             project_manager=project_manager,
         )
         window.show()
@@ -179,7 +179,7 @@ class TestUI(unittest.TestCase):
             config_manager=ConfigManager(config_dir=self.config_dir),
             snippet_manager=SnippetManager(user_snippets_path=self.custom_snippets_path),
             loot_manager=LootManager(storage_file=self.loot_file),
-            clipboard_watcher=ClipboardWatcher(storage_file=self.clip_file),
+            clipboard_watcher=ClipboardHistory(storage_file=self.clip_file),
             project_manager=ProjectManager(base_dir=self.projects_dir),
         )
 
@@ -194,7 +194,7 @@ class TestUI(unittest.TestCase):
         project_manager = ProjectManager(base_dir=self.projects_dir)
         project_manager.create_project("BoxGamma")
         loot_manager = LootManager(storage_file=self.loot_file)
-        clipboard_watcher = ClipboardWatcher(storage_file=self.clip_file)
+        clipboard_watcher = ClipboardHistory(storage_file=self.clip_file)
         report_file_manager = ReportFileManager(project_manager)
 
         tab = ReportEditorTab(report_file_manager, loot_manager, clipboard_watcher)

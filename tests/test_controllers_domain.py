@@ -19,7 +19,8 @@ if app is None:
 
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
-from core.clipboard_watcher import ClipboardWatcher
+from core.clipboard_history import ClipboardHistory
+from ui.clipboard_monitor import ClipboardMonitor
 from core.project import ProjectManager
 from core.event_bus import EventBus, EventType
 from ui.controllers.project_controller import ProjectController
@@ -40,15 +41,20 @@ class TestControllersDomain(unittest.TestCase):
         self.loot_mgr = LootManager(
             storage_file=self.temp_path / "loot.json", event_bus=self.event_bus
         )
-        self.clip_watcher = ClipboardWatcher(
+        self.clip_watcher = ClipboardHistory(
             storage_file=self.temp_path / "clipboard.json", event_bus=self.event_bus
         )
+        self.clipboard_monitor = ClipboardMonitor(self.clip_watcher)
 
         self.project_ctrl = ProjectController(self.project_mgr, event_bus=self.event_bus)
         self.cheatsheet_ctrl = CheatsheetController(self.snippet_mgr, event_bus=self.event_bus)
         self.loot_ctrl = LootController(self.loot_mgr, self.project_mgr, event_bus=self.event_bus)
         self.history_ctrl = HistoryController(
-            self.clip_watcher, self.loot_mgr, self.project_mgr, event_bus=self.event_bus
+            self.clip_watcher,
+            self.loot_mgr,
+            self.project_mgr,
+            clipboard_monitor=self.clipboard_monitor,
+            event_bus=self.event_bus,
         )
 
     def tearDown(self):
@@ -475,13 +481,11 @@ class TestControllersDomain(unittest.TestCase):
         self.assertIn("DB User", content)
 
     def test_history_controller_export_report_uses_report_builder_directly(self):
-        """HistoryController.export_report_markdown must invoke ReportBuilder directly without using deprecated ClipboardWatcher.export_report_markdown."""
+        """HistoryController export must invoke ReportBuilder directly."""
         self.history_ctrl.add_entry("curl -s http://10.10.10.55/admin", target_ip="10.10.10.55")
         out_file = self.temp_path / "controller_history_export.md"
 
-        with patch.object(self.clip_watcher, "export_report_markdown") as mock_deprecated:
-            self.history_ctrl.export_report_markdown(out_file, target_ip="10.10.10.55")
-            mock_deprecated.assert_not_called()
+        self.history_ctrl.export_report_markdown(out_file, target_ip="10.10.10.55")
 
         self.assertTrue(out_file.exists())
         content = out_file.read_text(encoding="utf-8")

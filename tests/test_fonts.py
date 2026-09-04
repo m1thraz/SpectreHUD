@@ -28,7 +28,7 @@ def _runtime_style_harness():
         footer=Mock(),
         window=Mock(),
         loot_manager=Mock(),
-        clipboard_watcher=Mock(),
+        clipboard_history=Mock(),
         update_footer_status=Mock(),
         load_active_project_state=Mock(),
         refresh_filter_pills=Mock(),
