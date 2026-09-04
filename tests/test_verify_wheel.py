@@ -9,6 +9,13 @@ def test_reporting_template_engine_is_required_instead_of_removed_models_module(
     assert "core/reporting/models.py" not in REQUIRED_FILES
 
 
+def test_clipboard_history_and_monitor_are_required_instead_of_legacy_watcher():
+    """Verifier must require decoupled clipboard modules instead of legacy clipboard_watcher."""
+    assert "core/clipboard_history.py" in REQUIRED_FILES
+    assert "ui/clipboard_monitor.py" in REQUIRED_FILES
+    assert "core/clipboard_watcher.py" not in REQUIRED_FILES
+
+
 def test_wheel_verifier_uses_the_current_release_version():
     """Stale wheels must not be selected from a reused dist directory."""
     from core.cli import APP_VERSION

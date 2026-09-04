@@ -32,7 +32,7 @@ REQUIRED_FILES = [
     "core/config.py",
     "core/snippet_manager.py",
     "core/loot_manager.py",
-    "core/clipboard_watcher.py",
+    "core/clipboard_history.py",
     "core/screenshot_manager.py",
     "core/project_session_service.py",
     "core/validators.py",
@@ -62,6 +62,7 @@ REQUIRED_FILES = [
     "core/project/validator.py",
     # UI controllers
     "ui/main_window.py",
+    "ui/clipboard_monitor.py",
     "ui/controllers/__init__.py",
     "ui/controllers/cheatsheet_controller.py",
     "ui/controllers/loot_controller.py",
