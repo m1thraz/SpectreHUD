@@ -205,6 +205,8 @@ class AppController(QObject):
 
     @active_mode.setter
     def active_mode(self, mode: str) -> None:
+        if hasattr(self.navigation_coord, "_state_machine"):
+            self.navigation_coord._state_machine._active_mode = mode
         self.navigation_coord._active_mode = mode
 
     def _wire_signals(self) -> None:

@@ -131,6 +131,56 @@ class TestReportBuilder(unittest.TestCase):
         self.assertIn("CTF{flag}", expected_md.read_text(encoding="utf-8"))
         self.assertIn("Report erfolgreich generiert", msg)
 
+    def test_build_uses_project_manager_when_name_omitted(self):
+        """ReportBuilder pulls project name from project_manager when project_name is None."""
+        class DummyPM:
+            def get_active_project(self):
+                return "AutoDiscoveredProject"
+
+        builder = ReportBuilder(
+            loot_manager=self.loot_mgr,
+            clipboard_watcher=self.clip_watcher,
+            project_manager=DummyPM(),
+        )
+        report = builder.build()
+        self.assertIn("# Pentest Report: AutoDiscoveredProject", report)
+
+    def test_build_with_custom_template(self):
+        """Custom template passed to build() is respected."""
+        from core.reporting.template_engine import ReportTemplate, TemplateSection
+
+        custom_tmpl = ReportTemplate(
+            id="custom_test",
+            name="Custom Template",
+            language="de",
+            category="ctf",
+            complexity="simple",
+            sections=[
+                TemplateSection(type="header_metadata", title="Custom Title"),
+            ],
+        )
+        report = self.builder.build(project_name="MegaCorp", template=custom_tmpl)
+        self.assertIn("# Custom Title", report)
+
+    def test_export_atomic_write_failure(self):
+        """Failed atomic write returns expected error string."""
+        from unittest.mock import patch
+
+        out_file = self.temp_path / "test_report.md"
+        with patch("core.atomic_write.atomic_write_text", return_value=False):
+            msg = self.builder.export(out_file, project_name="FailTest")
+            self.assertIn("Fehler beim Generieren des Reports", msg)
+
+    def test_export_oserror_handling(self):
+        """OSError during export is caught and returned cleanly."""
+        from unittest.mock import patch
+
+        out_file = self.temp_path / "test_report.md"
+        with patch("core.atomic_write.atomic_write_text", side_effect=OSError("Disk write failed")):
+            msg = self.builder.export(out_file, project_name="OSErrorTest")
+            self.assertIn("Fehler beim Generieren des Reports: Disk write failed", msg)
+
 
 if __name__ == "__main__":
     unittest.main()
+

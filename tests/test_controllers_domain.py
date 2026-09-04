@@ -7,7 +7,15 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout
+
+app = QApplication.instance()
+if app is None:
+    app = QApplication([])
 
 from core.snippet_manager import SnippetManager
 from core.loot_manager import LootManager
@@ -312,6 +320,287 @@ class TestControllersDomain(unittest.TestCase):
         self.assertTrue(out_file.exists())
         content = out_file.read_text(encoding="utf-8")
         self.assertIn("curl -s http://10.10.10.55/admin", content)
+
+    def test_loot_controller_notify_persistence_error(self):
+        """_notify_persistence_error invokes QMessageBox.critical with parent or activeWindow."""
+        from core.storage import PersistenceError
+
+        with patch("ui.controllers.loot_controller.QMessageBox.critical") as mock_crit:
+            # 1. With parent_widget
+            parent = QWidget()
+            err = PersistenceError("disk fail")
+            self.loot_ctrl._notify_persistence_error("test_op", err, parent_widget=parent)
+            mock_crit.assert_called_once()
+            self.assertEqual(mock_crit.call_args[0][0], parent)
+            self.assertIn("disk fail", mock_crit.call_args[0][2])
+
+        with patch("ui.controllers.loot_controller.QMessageBox.critical") as mock_crit:
+            # 2. Without parent_widget (falls back to activeWindow or None)
+            self.loot_ctrl._notify_persistence_error("test_op", err, parent_widget=None)
+            mock_crit.assert_called_once()
+
+    def test_loot_controller_error_branches(self):
+        """Domain operations handle persistence and validation errors gracefully."""
+        from core.storage import StorageError, PersistenceError
+        from core.loot_manager import LootValidationError
+
+        # add_entry error
+        with patch.object(self.loot_mgr, "add_entry", side_effect=StorageError("cannot add")):
+            with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
+                result = self.loot_ctrl.add_entry("note", "Title", "Content")
+                self.assertEqual(result, {})
+                mock_notify.assert_called_once()
+
+        # update_entry error
+        with patch.object(self.loot_mgr, "update_entry", side_effect=LootValidationError("invalid")):
+            with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
+                result = self.loot_ctrl.update_entry("id1", "Title", "Content")
+                self.assertFalse(result)
+                mock_notify.assert_called_once()
+
+        # move_entry_to_category error
+        with patch.object(self.loot_mgr, "reorder_entry", side_effect=OSError("io error")):
+            with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
+                result = self.loot_ctrl.move_entry_to_category("id1", "recon", 0)
+                self.assertFalse(result)
+                mock_notify.assert_called_once()
+
+        # delete_entry error
+        with patch.object(self.loot_mgr, "delete_entry", side_effect=PersistenceError("io fail")):
+            with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
+                result = self.loot_ctrl.delete_entry("id1")
+                self.assertFalse(result)
+                mock_notify.assert_called_once()
+
+        # clear_entries error
+        with patch.object(self.loot_mgr, "clear_session", side_effect=PersistenceError("cannot clear")):
+            with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
+                self.loot_ctrl.clear_entries()
+                mock_notify.assert_called_once()
+
+    def test_loot_controller_clear_loot_dialog(self):
+        """clear_loot prompts user when parent_widget provided, or executes immediately."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        parent = QWidget()
+        self.loot_ctrl.add_entry("note", "Keep me?", "data")
+
+        # 1. User says No
+        with patch("ui.controllers.loot_controller.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            result = self.loot_ctrl.clear_loot(parent_widget=parent)
+            self.assertFalse(result)
+            self.assertEqual(len(self.loot_ctrl.get_entries()), 1)
+
+        # 2. User says Yes
+        with patch("ui.controllers.loot_controller.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes):
+            result = self.loot_ctrl.clear_loot(parent_widget=parent)
+            self.assertTrue(result)
+            self.assertEqual(len(self.loot_ctrl.get_entries()), 0)
+
+        # 3. Without parent_widget
+        self.loot_ctrl.add_entry("note", "Clear without prompt", "data")
+        result = self.loot_ctrl.clear_loot(parent_widget=None)
+        self.assertTrue(result)
+        self.assertEqual(len(self.loot_ctrl.get_entries()), 0)
+
+    def test_loot_controller_export_entry_to_file_with_feedback(self):
+        """export_entry_to_file_with_feedback reports success or warning."""
+        parent = QWidget()
+        entry = self.loot_ctrl.add_entry("note", "Reported Item", "some content", category="recon")
+
+        # Success case
+        with patch("ui.controllers.loot_controller.QMessageBox.information") as mock_info:
+            out_path = self.loot_ctrl.export_entry_to_file_with_feedback(entry["id"], parent_widget=parent)
+            self.assertIsNotNone(out_path)
+            self.assertTrue(out_path.is_file())
+            mock_info.assert_called_once()
+
+        # Failure case
+        with patch("ui.controllers.loot_controller.QMessageBox.warning") as mock_warn:
+            out_path = self.loot_ctrl.export_entry_to_file_with_feedback("non-existent-id", parent_widget=parent)
+            self.assertIsNone(out_path)
+            mock_warn.assert_called_once()
+
+    def test_loot_controller_filter_pills_and_selection(self):
+        """build_filter_pills populates buttons and select_loot_type updates styling and signals."""
+        layout = QHBoxLayout()
+        selected_types = []
+        exports = []
+        clears = []
+        toggle_views = []
+        obsidian_exports = []
+
+        self.loot_ctrl.build_filter_pills(
+            pills_layout=layout,
+            on_select_type=lambda t: selected_types.append(t),
+            on_export=lambda: exports.append(True),
+            on_clear=lambda: clears.append(True),
+            export_tooltip="Export tooltip",
+            on_export_obsidian=lambda: obsidian_exports.append(True),
+            on_toggle_view=lambda: toggle_views.append(True),
+            view_mode="list",
+        )
+
+        # Check buttons were created
+        self.assertIn("all", self.loot_ctrl.filter_buttons)
+        self.assertIn("credentials", self.loot_ctrl.filter_buttons)
+
+        # Test selecting loot type
+        emitted_types = []
+        self.loot_ctrl.loot_type_changed.connect(lambda t: emitted_types.append(t))
+
+        self.loot_ctrl.select_loot_type("credentials")
+        self.assertEqual(self.loot_ctrl.current_loot_type, "credentials")
+        self.assertEqual(emitted_types, ["credentials"])
+        self.assertEqual(self.loot_ctrl.filter_buttons["credentials"].property("class"), "FilterPillActive")
+        self.assertEqual(self.loot_ctrl.filter_buttons["all"].property("class"), "FilterPill")
+
+        # Test clicking buttons triggers callbacks
+        self.loot_ctrl.filter_buttons["all"].click()
+        self.assertEqual(selected_types, ["all"])
+
+        btn_view = layout.itemAt(layout.count() - 4).widget()
+        btn_view.click()
+        self.assertEqual(len(toggle_views), 1)
+
+        btn_exp = layout.itemAt(layout.count() - 3).widget()
+        btn_exp.click()
+        self.assertEqual(len(exports), 1)
+
+        btn_obs = layout.itemAt(layout.count() - 2).widget()
+        btn_obs.click()
+        self.assertEqual(len(obsidian_exports), 1)
+
+        btn_clr = layout.itemAt(layout.count() - 1).widget()
+        btn_clr.click()
+        self.assertEqual(len(clears), 1)
+
+    def test_loot_controller_render_content_and_board(self):
+        """render_content handles empty state and cards, render_board_content returns board."""
+        layout = QVBoxLayout()
+        parent = QWidget()
+        proj_dir = self.project_mgr.get_project_dir()
+        empty_states = []
+
+        # 1. Empty state
+        cards = self.loot_ctrl.render_content(
+            content_layout=layout,
+            search_query="",
+            proj_dir=proj_dir,
+            on_delete_loot=lambda _: None,
+            on_edit_loot=lambda _: None,
+            on_export_loot=lambda _: None,
+            parent_widget=parent,
+            show_empty_state_fn=lambda msg: empty_states.append(msg),
+        )
+        self.assertEqual(cards, [])
+        self.assertEqual(len(empty_states), 1)
+
+        # 2. Populated list content
+        self.loot_ctrl.add_entry("credentials", "Admin Cred", "admin:hunter2", category="access")
+        self.loot_ctrl.add_entry("note", "Recon Note", "found port 8080", category="recon")
+
+        cards = self.loot_ctrl.render_content(
+            content_layout=layout,
+            search_query="",
+            proj_dir=proj_dir,
+            on_delete_loot=lambda _: None,
+            on_edit_loot=lambda _: None,
+            on_export_loot=lambda _: None,
+            parent_widget=parent,
+            show_empty_state_fn=lambda msg: empty_states.append(msg),
+        )
+        # Should render 2 headers + 2 cards = 4 widgets
+        self.assertEqual(len(cards), 4)
+
+        # 3. Populated board content
+        board_cards = self.loot_ctrl.render_board_content(
+            content_layout=layout,
+            search_query="",
+            proj_dir=proj_dir,
+            on_delete_loot=lambda _: None,
+            on_edit_loot=lambda _: None,
+            on_export_loot=lambda _: None,
+            on_move_loot=lambda e, c, i: True,
+            parent_widget=parent,
+        )
+        self.assertEqual(len(board_cards), 1)
+
+    def test_loot_controller_open_add_dialog_non_modal(self):
+        """open_add_dialog non-modal mode creates floating dialog and handles accept/finish."""
+        with patch("ui.controllers.loot_controller.AddLootDialog") as MockDialog:
+            mock_dlg = MagicMock()
+            mock_dlg.isVisible.return_value = False
+            mock_dlg.width.return_value = 400
+            mock_dlg.height.return_value = 300
+            mock_dlg.get_data.return_value = {
+                "type": "note",
+                "title": "Floating Note",
+                "content": "Floating Content",
+                "target_ip": "10.10.10.10",
+                "category": "recon",
+                "severity": "info",
+            }
+            MockDialog.return_value = mock_dlg
+
+            accepted_callbacks = []
+            res = self.loot_ctrl.open_add_dialog(
+                modal=False,
+                target_ip="10.10.10.10",
+                on_accepted=lambda d: accepted_callbacks.append(d),
+            )
+            self.assertTrue(res)
+            self.assertIs(self.loot_ctrl._active_add_dialog, mock_dlg)
+            mock_dlg.show.assert_called_once()
+
+            # Second call while visible raises existing dialog
+            mock_dlg.isVisible.return_value = True
+            res2 = self.loot_ctrl.open_add_dialog(modal=False)
+            self.assertTrue(res2)
+            mock_dlg.raise_.assert_called()
+
+            # Trigger accepted callback
+            connect_accepted = [call[0][0] for call in mock_dlg.accepted.connect.call_args_list]
+            self.assertTrue(len(connect_accepted) > 0)
+            connect_accepted[0]()
+            self.assertEqual(len(accepted_callbacks), 1)
+            entries = self.loot_ctrl.get_entries()
+            self.assertTrue(any(e["title"] == "Floating Note" for e in entries))
+
+            # Trigger finished callback
+            connect_finished = [call[0][0] for call in mock_dlg.finished.connect.call_args_list]
+            self.assertTrue(len(connect_finished) > 0)
+            connect_finished[0]()
+            self.assertIsNone(self.loot_ctrl._active_add_dialog)
+
+    def test_loot_controller_open_edit_dialog(self):
+        """open_edit_dialog updates entry on accept and ignores on reject."""
+        entry = self.loot_ctrl.add_entry("note", "Original Title", "Original Content")
+
+        with patch("ui.controllers.loot_controller.AddLootDialog") as MockDialog:
+            mock_dlg = MagicMock()
+            MockDialog.return_value = mock_dlg
+
+            # 1. Accepted
+            mock_dlg.exec.return_value = True
+            mock_dlg.get_data.return_value = {
+                "title": "Edited Title",
+                "content": "Edited Content",
+                "target_ip": "10.10.10.99",
+                "category": "access",
+                "type": "credentials",
+                "severity": "high",
+            }
+            res = self.loot_ctrl.open_edit_dialog(QWidget(), entry)
+            self.assertTrue(res)
+            updated = self.loot_ctrl.get_entries()[0]
+            self.assertEqual(updated["title"], "Edited Title")
+            self.assertEqual(updated["type"], "credentials")
+
+            # 2. Rejected
+            mock_dlg.exec.return_value = False
+            res2 = self.loot_ctrl.open_edit_dialog(QWidget(), entry)
+            self.assertFalse(res2)
 
 
 if __name__ == "__main__":
