@@ -19,6 +19,18 @@ QFrame#HeaderBar {
     padding: 0px;
 }
 
+/* Header Navigation / Actions Divider */
+QFrame.HeaderDivider,
+QFrame[class~="HeaderDivider"],
+QFrame[class*="HeaderDivider"] {
+    background-color: {BORDER_A50};
+    min-width: 1px;
+    max-width: 1px;
+    width: 1px;
+    margin: 4px 4px;
+    border: none;
+}
+
 /* Filter Chips / Pills Bar Frame */
 QFrame#FilterPillsFrame {
     background-color: transparent;

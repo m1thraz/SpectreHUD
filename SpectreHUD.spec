@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
@@ -14,7 +15,7 @@ datas = [
     (str(data_dir / "themes"), "data/themes"),
     (str(data_dir / "icon.ico"), "data"),
     (str(data_dir / "icon.svg"), "data"),
-]
+] + collect_data_files("qtawesome")
 
 hidden_imports = [
     "pynput.keyboard._win32",
@@ -23,6 +24,7 @@ hidden_imports = [
     "PyQt6.QtGui",
     "PyQt6.QtWidgets",
     "pyperclip",
+    "qtawesome",
 ]
 
 a = Analysis(

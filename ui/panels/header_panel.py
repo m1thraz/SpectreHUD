@@ -1,7 +1,8 @@
 from typing import Optional
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QSize
 from core.i18n import t
+from ui.styles.icons import icon
 
 
 class HeaderPanel(QFrame):
@@ -64,9 +65,11 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
         layout.addWidget(self.btn_mode_history)
 
-        self.btn_mode_notes = QPushButton(t("header.mode_notes", "📌 Notes"))
+        self.btn_mode_notes = QPushButton(t("header.mode_notes", "Notes"))
         self.btn_mode_notes.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_notes.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_notes.setIcon(icon("fa5s.thumbtack"))
+        self.btn_mode_notes.setIconSize(QSize(13, 13))
         self.btn_mode_notes.clicked.connect(lambda: self.mode_changed.emit("notes"))
         layout.addWidget(self.btn_mode_notes)
 
@@ -88,11 +91,19 @@ class HeaderPanel(QFrame):
         self.btn_mode_report.clicked.connect(lambda: self.mode_changed.emit("report"))
         layout.addWidget(self.btn_mode_report)
 
+        # Navigation / Actions Separator
+        self.nav_separator = QFrame()
+        self.nav_separator.setFrameShape(QFrame.Shape.VLine)
+        self.nav_separator.setProperty("class", "HeaderDivider")
+        layout.addWidget(self.nav_separator)
+
         layout.addStretch()
 
         # Quick Note Button
-        self.btn_quick_note = QPushButton(t("header.note", "📌 Note"))
+        self.btn_quick_note = QPushButton(t("header.note", "Note"))
         self.btn_quick_note.setProperty("class", "ScreenshotBtn")
+        self.btn_quick_note.setIcon(icon("fa5s.pen"))
+        self.btn_quick_note.setIconSize(QSize(13, 13))
         self.btn_quick_note.setToolTip(
             t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)")
         )
@@ -102,6 +113,8 @@ class HeaderPanel(QFrame):
         # Screenshot Snip Button
         self.btn_screenshot = QPushButton(t("header.snip", "Snip"))
         self.btn_screenshot.setProperty("class", "ScreenshotBtn")
+        self.btn_screenshot.setIcon(icon("fa5s.crop-alt"))
+        self.btn_screenshot.setIconSize(QSize(13, 13))
         self.btn_screenshot.setToolTip(
             t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
         )
@@ -112,6 +125,8 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator = QPushButton("REC: Off")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
         self.btn_rec_indicator.setProperty("paused", "true")
+        self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#8b949e", color_active="#8b949e"))
+        self.btn_rec_indicator.setIconSize(QSize(10, 10))
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_rec_indicator.setToolTip(
             "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung."
@@ -120,8 +135,10 @@ class HeaderPanel(QFrame):
         layout.addWidget(self.btn_rec_indicator)
 
         # Settings & Hotkeys Button
-        self.btn_settings = QPushButton(t("header.opt", "⚙"))
+        self.btn_settings = QPushButton(t("header.opt", ""))
         self.btn_settings.setProperty("class", "ScreenshotBtn")
+        self.btn_settings.setIcon(icon("fa5s.cog"))
+        self.btn_settings.setIconSize(QSize(14, 14))
         self.btn_settings.setToolTip(
             t("header.opt_tip", "Einstellungen & Optionen öffnen (Ctrl+,)")
         )
@@ -186,12 +203,14 @@ class HeaderPanel(QFrame):
         """Updates the visual indicator for clipboard history recording state."""
         if is_active:
             self.btn_rec_indicator.setText("REC: ON")
+            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#ef4444", color_active="#ef4444"))
             self.btn_rec_indicator.setProperty("paused", "false")
             self.btn_rec_indicator.setToolTip(
                 "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+P zum Pausieren."
             )
         else:
             self.btn_rec_indicator.setText("REC: Off")
+            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#8b949e", color_active="#8b949e"))
             self.btn_rec_indicator.setProperty("paused", "true")
             self.btn_rec_indicator.setToolTip(
                 "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung."
@@ -201,7 +220,7 @@ class HeaderPanel(QFrame):
 
     def update_notes_badge(self, count: int = 0) -> None:
         """Updates Notes tab label with pending notes count if > 0."""
-        base_text = t("header.mode_notes", "📌 Notes")
+        base_text = t("header.mode_notes", "Notes")
         if count > 0:
             self.btn_mode_notes.setText(f"{base_text} [{count}]")
         else:
@@ -219,7 +238,7 @@ class HeaderPanel(QFrame):
         """Dynamically re-translates all texts on language changes."""
         self.btn_mode_cheatsheet.setText(t("header.mode_cheatsheet", "Cheatsheet"))
         self.btn_mode_history.setText(t("header.mode_history", "History"))
-        self.btn_mode_notes.setText(t("header.mode_notes", "📌 Notes"))
+        self.btn_mode_notes.setText(t("header.mode_notes", "Notes"))
         self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
         self.btn_mode_report.setToolTip(
@@ -228,13 +247,13 @@ class HeaderPanel(QFrame):
                 "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
             )
         )
-        self.btn_quick_note.setText(t("header.note", "📌 Note"))
+        self.btn_quick_note.setText(t("header.note", "Note"))
         self.btn_quick_note.setToolTip(t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)"))
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(
             t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
         )
-        self.btn_settings.setText(t("header.opt", "⚙"))
+        self.btn_settings.setText(t("header.opt", ""))
         self.btn_settings.setToolTip(
             t("header.opt_tip", "Einstellungen & Optionen öffnen (Ctrl+,)")
         )

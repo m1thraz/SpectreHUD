@@ -39,7 +39,8 @@ def test_close_button_is_styled_by_central_theme():
 def test_notes_mode_button_and_badge(qapp):
     header = HeaderPanel()
     assert hasattr(header, "btn_mode_notes")
-    assert "📌 Notes" in header.btn_mode_notes.text()
+    assert "Notes" in header.btn_mode_notes.text()
+    assert not header.btn_mode_notes.icon().isNull()
     assert header.btn_mode_notes.property("class") == "ModeSwitchBtn"
 
     emitted_modes = []
@@ -58,7 +59,7 @@ def test_notes_mode_button_and_badge(qapp):
 
     header.update_notes_badge(0)
     assert "[0]" not in header.btn_mode_notes.text()
-    assert "📌 Notes" in header.btn_mode_notes.text()
+    assert "Notes" in header.btn_mode_notes.text()
 
     header.deleteLater()
 
@@ -69,3 +70,38 @@ def test_project_button_class_and_theme(qapp):
     qss = build_app_theme(CYBER_DARK_PALETTE)
     assert f"QPushButton.{header.btn_project.property('class')}" in qss
     header.deleteLater()
+
+
+def test_header_icons_and_divider(qapp):
+    header = HeaderPanel()
+    # Check icons on action buttons
+    assert not header.btn_mode_notes.icon().isNull()
+    assert not header.btn_quick_note.icon().isNull()
+    assert not header.btn_screenshot.icon().isNull()
+    assert not header.btn_settings.icon().isNull()
+    assert not header.btn_rec_indicator.icon().isNull()
+
+    # Check separator exists and is styled
+    assert hasattr(header, "nav_separator")
+    assert header.nav_separator.property("class") == "HeaderDivider"
+    qss = build_app_theme(CYBER_DARK_PALETTE)
+    assert "HeaderDivider" in qss
+
+    header.deleteLater()
+
+
+def test_rec_indicator_icon_toggle(qapp):
+    header = HeaderPanel()
+    assert "REC: Off" in header.btn_rec_indicator.text()
+    assert not header.btn_rec_indicator.icon().isNull()
+
+    header.update_rec_indicator(True)
+    assert "REC: ON" in header.btn_rec_indicator.text()
+    assert not header.btn_rec_indicator.icon().isNull()
+
+    header.update_rec_indicator(False)
+    assert "REC: Off" in header.btn_rec_indicator.text()
+    assert not header.btn_rec_indicator.icon().isNull()
+
+    header.deleteLater()
+
