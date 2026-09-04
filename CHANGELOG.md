@@ -6,8 +6,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.0.9] - 2026-09-04
+
 ### Added
 
+- **Multi-Resolution Windows Application Icon**:
+  - Generated full multi-resolution `data/icon.ico` embedding 7 standard icon resolutions (`16x16`, `24x24`, `32x32`, `48x48`, `64x64`, `128x128`, `256x256`) directly from `icon.svg` so Windows Explorer, Desktop, Taskbar, and Alt+Tab render the custom icon crisply across all display scales.
 - **Double-Click to Edit for Loot, Notes, and History**:
   - **Loot**: Double-clicking any loot card (including its title and text) opens `AddLootDialog` in edit mode directly.
   - **Quick Notes**: Double-clicking any note card (or clicking the edit button) opens the new `EditNoteDialog` to adjust text, pentest phase category, triage status, and target IP.
@@ -39,6 +43,8 @@ semantic versioning.
 
 ### Fixed
 
+- **Debian Package Icon Installation Paths**:
+  - Corrected icon source search in `scripts/build_deb.py` to match the `/hicolor/<size>/apps/` structure, ensuring icons (48px, 128px, 256px, and scalable SVG) are cleanly copied into `/usr/share/icons/hicolor/...`.
 - **Click-Outside-to-Close for Quick Popups (Quick Note, Quick IP, Quick Loot)**:
   - Fixed focus-stealing timer loop issue where forced foreground capture prevented windows from closing on background click.
   - Quick popups now gain initial keyboard focus once upon opening (`ActiveWindowFocusReason`) and close cleanly on focus loss.
@@ -350,7 +356,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.8...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.9...HEAD
+[2.0.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.7...v2.0.8
 [2.0.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.6...v2.0.7
 [2.0.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.5...v2.0.6

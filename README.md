@@ -46,6 +46,7 @@ For the implementation details, see:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
+- [v2.0.9 release notes](docs/release_notes_v2.0.9.md)
 - [v2.0.8 release notes](docs/release_notes_v2.0.8.md)
 - [v2.0.7 release notes](docs/release_notes_v2.0.7.md)
 - [Pentest Mode](docs/pentest_mode.md)
