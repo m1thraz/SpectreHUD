@@ -69,6 +69,22 @@ curl -i http://10.10.10.10/admin
         self.assertIn("data:image/png;base64,", html_out)
         self.assertIn('alt="Proof Screenshot"', html_out)
 
+    def test_report_icon_uses_generic_image_embedding_and_print_path(self):
+        icon_dir = self.proj_dir / "assets" / "icons"
+        icon_dir.mkdir(parents=True)
+        icon_path = icon_dir / "fa5s_key_32.png"
+        icon_path.write_bytes(
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa75\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        markdown = "![Credential](assets/icons/fa5s_key_32.png)"
+
+        html_out = HtmlReportExporter.build_full_html(markdown, project_dir=self.proj_dir)
+
+        self.assertIn("data:image/png;base64,", html_out)
+        self.assertIn('alt="Credential"', html_out)
+        self.assertIn("@media print", html_out)
+        self.assertNotIn("FontAwesome", html_out)
+
     def test_sandbox_path_traversal_image_blocked(self):
         """An exported report must not embed files outside its project directory."""
         # Image outside sandbox
@@ -272,4 +288,3 @@ curl -i http://10.10.10.10/admin
 
 if __name__ == "__main__":
     unittest.main()
-

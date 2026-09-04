@@ -119,16 +119,21 @@ def build_format_toolbar(
     # Visual Divider between Ausrichtung and Einfügen
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 4: Einfügen (Image, Link, Table)
+    # Zone 4: Einfügen (Image, report icon, Link, Table)
     insert_buttons = (
-        ("🖼️", "report.format_image", "Insert Image", "image"),
-        ("🔗", "report.format_link", "Link", "link"),
-        ("▦", "report.format_table", "Table", "table"),
+        ("🖼️", None, "report.format_image", "Insert Image", "image"),
+        ("", "fa5s.icons", "report.insert_icon", "Insert Icon", "icon"),
+        ("🔗", None, "report.format_link", "Link", "link"),
+        ("▦", None, "report.format_table", "Table", "table"),
     )
-    for label, key, fallback, callback_key in insert_buttons:
+    for label, icon_name, key, fallback, callback_key in insert_buttons:
         btn = QPushButton(label, tools_container)
+        btn.setObjectName(f"btn_insert_{callback_key}")
         btn.setProperty("class", "SecondaryBtn FormatToolBtn")
         btn.setToolTip(t(key, fallback))
+        if icon_name:
+            btn.setIcon(icon(icon_name))
+            btn.setIconSize(QSize(14, 14))
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 

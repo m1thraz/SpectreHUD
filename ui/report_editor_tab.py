@@ -46,8 +46,10 @@ from core.platform.opener import open_path
 from ui.report.dialogs import (
     LootImagePickerDialog,
     MarkdownTableDialog,
+    ReportIconPickerDialog,
     ReportGenerationDialog,
 )
+from ui.report.icon_assets import ReportIconError, render_report_icon
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.toolbar import build_format_toolbar
@@ -156,6 +158,7 @@ class ReportEditorTab(QWidget):
                 "quote": self._format_quote,
                 "horizontal_rule": self._format_horizontal_rule,
                 "image": self._format_image,
+                "icon": self._format_icon,
                 "link": self._format_link,
                 "table": self._format_table,
             },
@@ -433,10 +436,7 @@ class ReportEditorTab(QWidget):
 
         button = None
         if hasattr(self, "format_toolbar_widget"):
-            for child in self.format_toolbar_widget.findChildren(QPushButton):
-                if child.text() == "🖼️":
-                    button = child
-                    break
+            button = self.format_toolbar_widget.findChild(QPushButton, "btn_insert_image")
 
         pos = (
             button.mapToGlobal(button.rect().bottomLeft())
@@ -531,6 +531,35 @@ class ReportEditorTab(QWidget):
         from ui.markdown_toolbar_actions import insert_image
 
         insert_image(self.editor, rel_path, alt_text=alt_text)
+
+    def _format_icon(self) -> None:
+        """Render a curated QtAwesome icon to a project PNG and insert it as Markdown."""
+        dialog = ReportIconPickerDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.selected_icon is None:
+            return
+
+        try:
+            pname = self.report_file_manager._resolve_project_name(self.current_project)
+            project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
+            definition = dialog.selected_icon
+            relative_path = render_report_icon(project_dir, definition.icon_name)
+        except (AttributeError, OSError, RuntimeError, ReportIconError) as exc:
+            logger.warning("Could not create report icon asset: %s", exc)
+            QMessageBox.warning(
+                self,
+                t("report.icon_error_title", "Icon could not be inserted"),
+                t(
+                    "report.icon_error_message",
+                    "The report icon could not be created:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+
+        from ui.markdown_toolbar_actions import insert_image
+
+        alt_text = t(definition.label_key, definition.key.replace("_", " ").title())
+        insert_image(self.editor, relative_path, alt_text=alt_text)
 
     def _report_font_key(self) -> str:
         return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"

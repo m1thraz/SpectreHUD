@@ -302,6 +302,39 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab._insert_loot_entry_image(entry)
         self.assertIn("![Root Proof](loot/proof.png)", self.tab.editor.toPlainText())
 
+    def test_insert_report_icon_is_undoable_and_survives_preview_roundtrip(self):
+        """Report icons stay ordinary project-local Markdown images end to end."""
+        from ui.report.icon_assets import REPORT_ICONS
+
+        definition = next(item for item in REPORT_ICONS if item.key == "credential")
+        with patch("ui.report_editor_tab.ReportIconPickerDialog") as picker:
+            picker.return_value.exec.return_value = QDialog.DialogCode.Accepted
+            picker.return_value.selected_icon = definition
+            self.tab._format_icon()
+
+        markdown_link = "![Credential](assets/icons/fa5s_user-secret_32.png)"
+        self.assertIn(markdown_link, self.tab.editor.toPlainText())
+        self.assertTrue(
+            (self.project_mgr.get_project_dir("TestBox") / "assets/icons/fa5s_user-secret_32.png").is_file()
+        )
+        self.assertTrue(self.tab.is_dirty())
+
+        self.tab.editor.undo()
+        self.assertNotIn(markdown_link, self.tab.editor.toPlainText())
+        self.tab.editor.redo()
+        self.assertIn(markdown_link, self.tab.editor.toPlainText())
+
+        self.tab.save()
+        self.tab._set_view_mode(ViewMode.PREVIEW)
+        cursor = self.tab.preview.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.insertText("\n\nPreview edit.")
+        self.tab._set_view_mode(ViewMode.SPLIT)
+
+        roundtrip = self.tab.editor.toPlainText()
+        self.assertIn(markdown_link, roundtrip)
+        self.assertIn("Preview edit.", roundtrip)
+
     def test_loot_image_picker_dialog(self):
         from ui.report.dialogs import LootImagePickerDialog
 
@@ -390,6 +423,5 @@ class TestReportEditorTab(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
 
 

@@ -25,6 +25,7 @@ class TestReportToolbar(unittest.TestCase):
             "quote": MagicMock(),
             "horizontal_rule": MagicMock(),
             "image": MagicMock(),
+            "icon": MagicMock(),
             "link": MagicMock(),
             "table": MagicMock(),
             "align_left": MagicMock(),
@@ -69,6 +70,12 @@ class TestReportToolbar(unittest.TestCase):
         self.assertIn("🖼️", buttons)
         buttons["🖼️"].click()
         self.callbacks["image"].assert_called_once()
+
+        icon_button = self.toolbar.findChild(QPushButton, "btn_insert_icon")
+        self.assertIsNotNone(icon_button)
+        self.assertFalse(icon_button.icon().isNull())
+        icon_button.click()
+        self.callbacks["icon"].assert_called_once()
 
         self.assertIn("❝", buttons)
         buttons["❝"].click()

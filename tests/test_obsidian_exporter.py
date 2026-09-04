@@ -38,6 +38,23 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
     assert (result.note_path.parent / "attachments" / "proof.png").read_bytes() == b"png"
 
 
+def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
+    vault, project = workspace
+    icon = project / "assets" / "icons" / "fa5s_key_32.png"
+    icon.parent.mkdir(parents=True)
+    icon.write_bytes(b"png-icon")
+
+    result = ObsidianExporter(vault).export_report(
+        project_name="Forest",
+        project_dir=project,
+        markdown="![Credential](assets/icons/fa5s_key_32.png)",
+    )
+
+    content = result.note_path.read_text(encoding="utf-8")
+    assert "![Credential](attachments/fa5s_key_32.png)" in content
+    assert (result.note_path.parent / "attachments" / "fa5s_key_32.png").read_bytes() == b"png-icon"
+
+
 def test_obsidian_export_preserves_existing_note_by_default(workspace):
     vault, project = workspace
     exporter = ObsidianExporter(vault)
@@ -106,4 +123,3 @@ def test_obsidian_report_export_strips_spectre_loot_markers(workspace):
     assert "spectre:loot" not in content
     assert "<!-- user note -->" in content
     assert "# Findings" in content
-

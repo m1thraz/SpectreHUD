@@ -6,6 +6,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Export-Robust QtAwesome Icons for Reports**:
+  - Added a searchable, categorized picker with 28 report- and pentest-focused icons.
+  - Icons are stored as reusable, theme-independent PNG assets and inserted as normal
+    Markdown images, preserving Live Preview, HTML/Print, Obsidian, and CherryTree support.
+
 ## [2.0.8] - 2026-09-04
 
 ### Added

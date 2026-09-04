@@ -30,6 +30,23 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
     assert "SMB signing disabled" in (package / "loot.html").read_text(encoding="utf-8")
 
 
+def test_cherrytree_report_icon_uses_generic_image_pipeline(package_workspace):
+    project, output = package_workspace
+    icon = project / "assets" / "icons" / "fa5s_key_32.png"
+    icon.parent.mkdir(parents=True)
+    icon.write_bytes(b"png-icon")
+
+    result = CherryTreeExporter(output).export_package(
+        project_name="Forest",
+        project_dir=project,
+        report_markdown="![Credential](assets/icons/fa5s_key_32.png)",
+        loot_entries=[],
+    )
+
+    assert 'src="images/fa5s_key_32.png"' in result.note_path.read_text(encoding="utf-8")
+    assert (result.note_path.parent / "images" / "fa5s_key_32.png").read_bytes() == b"png-icon"
+
+
 def test_cherrytree_export_validates_name_and_existing_project(package_workspace):
     """Normal validation rejects invalid package names and missing source folders."""
     project, output = package_workspace
@@ -71,4 +88,3 @@ def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
     content = result.note_path.read_text(encoding="utf-8")
     assert "spectre:loot" not in content
     assert "Finding text." in content
-

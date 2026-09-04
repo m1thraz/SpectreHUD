@@ -178,6 +178,10 @@ graph TD
   - **Bi-directional Scroll-Sync**: Synchronizes scrolling between Markdown editor and live preview in Split View mode with proportional ratio mapping and recursion guards.
   - **Hierarchical Outline Navigation**: `[ 📑 Sections ▾ ]` dropdown and `Ctrl+Shift+O` shortcut for jumping directly to any report section.
   - **Direct Image & Loot Screenshot Insert**: `🖼️` button and `Ctrl+Shift+I` shortcut with quick-insert for recent loot screenshots and searchable `LootImagePickerDialog`.
+  - **Export-Robust Report Icons**: A curated `ReportIconPickerDialog` resolves icons through
+    the central QtAwesome wrapper, while `ui/report/icon_assets.py` renders fixed-color PNGs
+    into the active project's `assets/icons/` directory. Reports store only ordinary relative
+    Markdown image links, so preview and all exporters remain icon-agnostic.
   - **Destructive Action Safety**: Red danger styling on `Regenerate`, explicit overwrite confirmation, and automatic pre-regeneration backup (`report.md.bak`).
 
 ### 2.9 Archival & Standalone Export Subsystems (`core/`)

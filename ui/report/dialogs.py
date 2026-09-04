@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -29,6 +29,13 @@ from core.theme_palette import (
     CYBER_CYAN,
     TEXT_PRIMARY,
 )
+from ui.report.icon_assets import (
+    REPORT_ICON_CATEGORIES,
+    REPORT_ICON_COLORS,
+    REPORT_ICONS,
+    ReportIconDefinition,
+)
+from ui.styles.icons import icon
 from ui.template_manager_dialog import TemplateManagerDialog
 
 
@@ -57,6 +64,104 @@ class MarkdownTableDialog(QDialog):
         insert.clicked.connect(self.accept)
         buttons.addWidget(insert)
         layout.addLayout(buttons)
+
+
+class ReportIconPickerDialog(QDialog):
+    """Small searchable picker for the curated report icon set."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.selected_icon: Optional[ReportIconDefinition] = None
+        self._filtered_icons: list[ReportIconDefinition] = []
+
+        self.setWindowTitle(t("report.icon_picker.title", "Insert Icon"))
+        self.resize(620, 430)
+        self.setMinimumSize(480, 320)
+
+        layout = QVBoxLayout(self)
+        filters = QHBoxLayout()
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            t("report.icon_picker.search", "Search report icons...")
+        )
+        self.search_edit.setClearButtonEnabled(True)
+        self.category_combo = QComboBox()
+        self.category_combo.addItem(t("report.icon_picker.category.all", "All Categories"), "")
+        for category in REPORT_ICON_CATEGORIES:
+            self.category_combo.addItem(
+                t(f"report.icon_picker.category.{category}", category.title()), category
+            )
+        filters.addWidget(self.search_edit, stretch=1)
+        filters.addWidget(self.category_combo)
+        layout.addLayout(filters)
+
+        self.list_widget = QListWidget()
+        self.list_widget.setViewMode(QListView.ViewMode.IconMode)
+        self.list_widget.setResizeMode(QListView.ResizeMode.Adjust)
+        self.list_widget.setMovement(QListView.Movement.Static)
+        self.list_widget.setIconSize(QSize(32, 32))
+        self.list_widget.setGridSize(QSize(135, 76))
+        self.list_widget.setSpacing(4)
+        self.list_widget.currentItemChanged.connect(self._on_selection_changed)
+        self.list_widget.itemDoubleClicked.connect(self._on_double_clicked)
+        layout.addWidget(self.list_widget, stretch=1)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel.clicked.connect(self.reject)
+        self.btn_insert = QPushButton(t("report.icon_picker.insert", "Insert Icon"))
+        self.btn_insert.setProperty("class", "PrimaryBtn")
+        self.btn_insert.setEnabled(False)
+        self.btn_insert.clicked.connect(self.accept)
+        buttons.addWidget(cancel)
+        buttons.addWidget(self.btn_insert)
+        layout.addLayout(buttons)
+
+        self.search_edit.textChanged.connect(self._populate)
+        self.category_combo.currentIndexChanged.connect(self._populate)
+        self._populate()
+
+    def _populate(self, *_args) -> None:
+        query = self.search_edit.text().strip().casefold()
+        category = str(self.category_combo.currentData() or "")
+        self.list_widget.clear()
+        self._filtered_icons = []
+        for definition in REPORT_ICONS:
+            label = t(definition.label_key, definition.key.replace("_", " ").title())
+            if category and definition.category != category:
+                continue
+            if query and query not in label.casefold() and query not in definition.key.casefold():
+                continue
+            item = QListWidgetItem(
+                icon(
+                    definition.icon_name,
+                    color=REPORT_ICON_COLORS["default"],
+                    color_active=None,
+                ),
+                label,
+            )
+            item.setData(Qt.ItemDataRole.UserRole, definition)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter)
+            item.setToolTip(label)
+            self.list_widget.addItem(item)
+            self._filtered_icons.append(definition)
+        if self.list_widget.count():
+            self.list_widget.setCurrentRow(0)
+        else:
+            self.selected_icon = None
+            self.btn_insert.setEnabled(False)
+
+    def _on_selection_changed(self, current: QListWidgetItem, _previous) -> None:
+        self.selected_icon = (
+            current.data(Qt.ItemDataRole.UserRole) if current is not None else None
+        )
+        self.btn_insert.setEnabled(self.selected_icon is not None)
+
+    def _on_double_clicked(self, item: QListWidgetItem) -> None:
+        self.selected_icon = item.data(Qt.ItemDataRole.UserRole)
+        if self.selected_icon is not None:
+            self.accept()
 
 
 class ReportGenerationDialog(QDialog):
@@ -340,4 +445,3 @@ class LootImagePickerDialog(QDialog):
     def _on_double_clicked(self, item: QListWidgetItem) -> None:
         if self.selected_entry:
             self.accept()
-
