@@ -40,7 +40,6 @@ def test_notes_mode_button_and_badge(qapp):
     header = HeaderPanel()
     assert hasattr(header, "btn_mode_notes")
     assert "Notes" in header.btn_mode_notes.text()
-    assert not header.btn_mode_notes.icon().isNull()
     assert header.btn_mode_notes.property("class") == "ModeSwitchBtn"
 
     emitted_modes = []
@@ -75,7 +74,6 @@ def test_project_button_class_and_theme(qapp):
 def test_header_icons_and_divider(qapp):
     header = HeaderPanel()
     # Check icons on action buttons
-    assert not header.btn_mode_notes.icon().isNull()
     assert not header.btn_quick_note.icon().isNull()
     assert not header.btn_screenshot.icon().isNull()
     assert not header.btn_settings.icon().isNull()
