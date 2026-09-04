@@ -434,7 +434,7 @@ REPORT_PRINT_CSS = """
     }
 
     h1, h2, h3, h4, h5, h6 {
-        color: #0969da !important;
+        color: #000000 !important;
         page-break-after: avoid;
         break-after: avoid;
         page-break-inside: avoid;
@@ -538,7 +538,7 @@ REPORT_PRINT_CSS = """
 
     th {
         background-color: #f6f8fa !important;
-        color: #0969da !important;
+        color: #1f2328 !important;
     }
 
     td {
@@ -583,7 +583,8 @@ REPORT_LIGHT_CSS = """
 
 .report-wrapper { box-shadow: 0 8px 24px rgba(31, 35, 40, 0.12); }
 .report-header { background: linear-gradient(135deg, #f6f8fa 0%, #ddf4ff 100%); }
-.brand-title, h1, h2, h3, h4 { color: #000000; }
+.brand-title, h1, h2, h3, h4, h5, h6 { color: #000000 !important; }
+h2 { border-bottom-color: #d0d7de; }
 .meta-item, .action-bar { background-color: #f6f8fa; }
 .btn-action { background-color: #ffffff; color: #1f2328; }
 pre { background-color: #f6f8fa; border-color: #d0d7de; }
@@ -592,7 +593,7 @@ p code, li code, blockquote code, td code { background-color: #eff1f3; border-co
 blockquote { background-color: #f6f8fa; }
 .screenshot-container { background-color: #f6f8fa; border-color: #d0d7de; }
 .report-footer { background-color: #ffffff; border-color: #d0d7de; }
-th { background-color: #f6f8fa; }
+th { background-color: #f6f8fa; color: #1f2328; }
 tr:nth-child(even) { background-color: #f6f8fa; }
 .spectre-page-break { border-top-color: #d0d7de; }
 .spectre-page-break::after { background-color: #ffffff; color: #57606a; border-color: #d0d7de; }

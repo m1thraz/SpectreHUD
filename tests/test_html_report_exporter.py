@@ -129,7 +129,7 @@ curl -i http://10.10.10.10/admin
 
         self.assertIn("--bg-color: #f6f8fa", light_html)
         self.assertIn("Light export theme", light_html)
-        self.assertIn(".brand-title, h1, h2, h3, h4 { color: #000000; }", light_html)
+        self.assertIn(".brand-title, h1, h2, h3, h4, h5, h6 { color: #000000 !important; }", light_html)
         self.assertNotIn("Light export theme", dark_html)
 
     def test_xss_prevention_in_images_and_links(self):
