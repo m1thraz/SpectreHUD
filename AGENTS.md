@@ -2,62 +2,67 @@
 
 ## Tiered Testing Workflow
 
-To maximize development velocity and minimize token / execution costs, follow this tiered testing hierarchy:
+To maximize development velocity and minimize token / execution costs, follow this tiered testing hierarchy (mit realen Richtwerten für die Laufzeit):
 
-### Tier 0: Pure Core Logic (<0.5s, Zero-Qt / Headless)
+### Tier 0: Pure Core Logic (~2.5–3.0s total, <0.5s Testlogik, Zero-Qt / Headless)
 - When developing pure services in `core/` (e.g. `snippet_filter`, `loot_filter`, `navigation_state`, `template_engine`, `fuzzy_matcher`, `validators`), run targeted headless tests first without starting any Qt event loop:
   ```bash
   python -m pytest tests/test_snippet_filter.py tests/test_loot_filter.py tests/test_navigation_state.py -q
   ```
+  *(Laufzeit: ca. 2.5–3.0s inklusive pytest Discovery)*
 
-### Tier 1: Architecture Boundaries Guard
+### Tier 1: Architecture Boundaries Guard (~2.0–2.5s)
 - Whenever modifying module imports, layers, or platform abstractions, verify architectural decoupling:
   ```bash
   python -m pytest tests/test_architecture_boundaries.py -q
   ```
-  *(Ensures `core/**` never imports `ui/**` and `core.platform` does not eagerly load PyQt6).*
+  *(Ensures `core/**` never imports `ui/**` and `core.platform` does not eagerly load PyQt6. Laufzeit: ca. 2.0–2.5s).*
 
-### Tier 2: Directly Affected Module Tests (Aggressive Scoping)
+### Tier 2: Directly Affected Module Tests (Aggressive Scoping: ~3–15s)
 - **STRICT RULE**: Never escalate to entire test suites if changes are confined to a single component, method, or UI element. Run only the directly mapped test file or scope strictly with `-k`:
   ```bash
-  python -m pytest tests/test_<module>.py -q
-  # Scoped execution on specific tests:
+  # Scoped execution on specific tests (ca. 3–5s):
   python -m pytest tests/test_report_editor_tab.py -k "<test_name>" -q
+
+  # Single UI/Qt component module (ca. 10–15s):
+  python -m pytest tests/test_<module>.py -q
   ```
 - After any failure, re-run only failed tests immediately:
   ```bash
-  # Re-run only the failed tests:
+  # Re-run only the failed tests (ca. 2–5s):
   python -m pytest --lf -q
   # Or run failed tests first, followed by the rest:
   python -m pytest --ff -q
   ```
 
-### Fast-Track: When to Skip Tier 3 / Tier 4
+### Fast-Track: When to Skip Tier 3 / Tier 4 (~8–10s)
 - **Reine UI-Texte, Lokalisierung (i18n), Docstrings, CSS-Tweaks oder Typo-Fixes**:
   Überspringe Tier 3 und Tier 4 vollständig! Führe nur gezielt aus:
   ```bash
   python -m pytest tests/test_architecture_boundaries.py tests/test_i18n_lint.py -q
   ruff check .
   ```
+  *(Laufzeit: ca. 8–10s total; `ruff check .` allein: <1.0s).*
 - **Lokale Tier 4 Optionalität**:
   Tier 4 (`./scripts/test_full.sh` / voller Lauf) ist lokal vor Übergabe optional, sofern Tier 0–2, Tier 1 und der Linter grün sind. Die vollständige Test-Matrix wird ohnehin auf GitHub Actions CI ausgeführt.
 
-### Tier 3: Fast Gate Suite (Local Iteration)
+### Tier 3: Fast Gate Suite (Local Iteration: ~20–30s parallel / ~80–90s seriell)
 - During major feature development and broad iteration, run the Fast Gate suite:
   ```bash
   ./scripts/test_fast.sh
-  # or: python -m pytest -m "not integration and not release" -n auto --dist=loadscope -x --tb=line -q
-  # (falls pytest-xdist fehlt: python -m pytest -m "not integration and not release" -x --tb=line -q)
+  # or with pytest-xdist: python -m pytest -m "not integration and not release" -n auto --dist=loadscope -x --tb=line -q
+  # (falls pytest-xdist fehlt / seriell: python -m pytest -m "not integration and not release" -x --tb=line -q -> ca. 80–90s)
   ```
 
-### Tier 4: Full Safety & Release Gate (Task Completion)
+### Tier 4: Full Safety & Release Gate (Task Completion: ~5–5.5 min)
 - For broad architectural changes or prior to major releases, run:
   ```bash
   ./scripts/test_full.sh
   # or: python scripts/run_tests.py
   ```
-- Run release tests (`python -m pytest -m release -q`) only for packaging, dependency, entry-point, installer, wheel, or release-metadata changes.
-- Always run the linter before handing tasks back:
+  *(Laufzeit: ca. 5.0–5.5 min für alle Tests inkl. voller Wheel-Packaging- und Qt-Integrationstests).*
+- Run release tests (`python -m pytest -m release -q` -> ca. 40–45s) only for packaging, dependency, entry-point, installer, wheel, or release-metadata changes.
+- Always run the linter before handing tasks back (ca. 0.8s):
   ```bash
   ruff check .
   ```
