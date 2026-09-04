@@ -112,3 +112,66 @@ def test_insert_image(qapp):
     assert edit.toPlainText() == "![Web Login Form](screenshots/login.png)"
 
 
+def test_align_text_selection_and_toggling(qapp):
+    from ui.markdown_toolbar_actions import align_text
+
+    edit = QPlainTextEdit("Heading")
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+
+    # 1. Align center
+    align_text(edit, "center")
+    assert edit.toPlainText() == '<p align="center">Heading</p>'
+
+    # 2. Align right (switches alignment)
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    align_text(edit, "right")
+    assert edit.toPlainText() == '<p align="right">Heading</p>'
+
+    # 3. Align right again (toggles off back to plain)
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    align_text(edit, "right")
+    assert edit.toPlainText() == "Heading"
+
+    # 4. Center then left (left strips tag)
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    align_text(edit, "center")
+    assert edit.toPlainText() == '<p align="center">Heading</p>'
+
+    cursor = edit.textCursor()
+    cursor.select(QTextCursor.SelectionType.Document)
+    edit.setTextCursor(cursor)
+    align_text(edit, "left")
+    assert edit.toPlainText() == "Heading"
+
+
+def test_align_text_no_selection(qapp):
+    from ui.markdown_toolbar_actions import align_text
+
+    # Empty document: inserts placeholder
+    edit = QPlainTextEdit("")
+    align_text(edit, "center")
+    assert edit.toPlainText() == '<p align="center">Text</p>'
+    assert edit.textCursor().selectedText() == "Text"
+
+    # Existing single line without selection: affects current line
+    edit = QPlainTextEdit("Sample Line")
+    cursor = edit.textCursor()
+    cursor.setPosition(3)  # In the middle of "Sample Line"
+    edit.setTextCursor(cursor)
+    align_text(edit, "center")
+    assert edit.toPlainText() == '<p align="center">Sample Line</p>'
+
+    # Align left unwraps back to normal
+    align_text(edit, "left")
+    assert edit.toPlainText() == "Sample Line"
+
+
+

@@ -27,6 +27,9 @@ class TestReportToolbar(unittest.TestCase):
             "image": MagicMock(),
             "link": MagicMock(),
             "table": MagicMock(),
+            "align_left": MagicMock(),
+            "align_center": MagicMock(),
+            "align_right": MagicMock(),
         })
         self.toolbar = build_format_toolbar(None, self.callbacks)
 
@@ -75,6 +78,26 @@ class TestReportToolbar(unittest.TestCase):
         buttons[">_"].click()
         self.callbacks["code_block"].assert_called_once()
 
+    def test_align_buttons_invoke_callbacks(self):
+        """Verifies text alignment buttons trigger their mapped callbacks."""
+        btn_left = self.toolbar.findChild(QPushButton, "btn_align_left")
+        btn_center = self.toolbar.findChild(QPushButton, "btn_align_center")
+        btn_right = self.toolbar.findChild(QPushButton, "btn_align_right")
+
+        self.assertIsNotNone(btn_left)
+        self.assertIsNotNone(btn_center)
+        self.assertIsNotNone(btn_right)
+
+        btn_left.click()
+        self.callbacks["align_left"].assert_called_once()
+
+        btn_center.click()
+        self.callbacks["align_center"].assert_called_once()
+
+        btn_right.click()
+        self.callbacks["align_right"].assert_called_once()
+
+
     def test_toggle_button_collapses_and_expands_tools(self):
         """Verifies clicking the toggle button collapses and expands the formatting tools."""
         self.assertFalse(self.toolbar.tools_container.isHidden())
@@ -89,6 +112,24 @@ class TestReportToolbar(unittest.TestCase):
         self.toolbar.btn_toggle.click()
         self.assertFalse(self.toolbar.tools_container.isHidden())
         self.assertEqual(self.toolbar.btn_toggle.text(), "▲")
+
+    def test_toggle_button_notifies_collapse_callback(self):
+        """Verifies on_toggle_collapse callback receives boolean state."""
+        events = []
+        tb = build_format_toolbar(
+            None, self.callbacks, on_toggle_collapse=lambda c: events.append(c)
+        )
+        try:
+            self.assertFalse(tb.is_collapsed())
+            tb.btn_toggle.click()
+            self.assertTrue(tb.is_collapsed())
+            self.assertEqual(events, [True])
+
+            tb.set_collapsed(False)
+            self.assertFalse(tb.is_collapsed())
+            self.assertEqual(events, [True, False])
+        finally:
+            tb.deleteLater()
 
 
 if __name__ == "__main__":

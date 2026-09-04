@@ -2,9 +2,11 @@
 
 from collections.abc import Callable
 
+from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.i18n import t
+from ui.styles.icons import icon
 
 
 def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
@@ -20,14 +22,19 @@ def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
     return divider
 
 
-def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None]]) -> QWidget:
+def build_format_toolbar(
+    parent: QWidget,
+    callbacks: dict[str, Callable[[], None]],
+    on_toggle_collapse: Callable[[bool], None] | None = None,
+) -> QWidget:
     """
-    Build the formatting toolbar split into 3 clear functional zones on the left,
+    Build the formatting toolbar split into 4 clear functional zones on the left,
     plus a collapse/minimize toggle button on the far right (under the status label):
     1. Struktur (Headings dropdown H1-H6, Quote, Lists, Horizontal Rule)
     2. Inline-Stil (Bold, Italic, Strikethrough, Inline Code, Code Block)
-    3. Einfügen (Image / Loot Screenshot, Link, Table)
-    4. Minimize/Expand Toggle Button (far right)
+    3. Ausrichtung (Align Left, Align Center, Align Right)
+    4. Einfügen (Image / Loot Screenshot, Link, Table)
+    5. Minimize/Expand Toggle Button (far right)
     """
     toolbar_widget = QWidget(parent)
     main_layout = QHBoxLayout(toolbar_widget)
@@ -86,10 +93,33 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
-    # Visual Divider between Inline-Stil and Einfügen
+    # Visual Divider between Inline-Stil and Ausrichtung
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 3: Einfügen (Image, Link, Table)
+    # Zone 3: Ausrichtung (Align Left, Align Center, Align Right)
+    align_buttons = (
+        ("fa5s.align-left", "report.format_align_left", "Align Left (Ctrl+Shift+L)", "align_left", "⫷"),
+        ("fa5s.align-center", "report.format_align_center", "Align Center (Ctrl+Shift+E)", "align_center", "≡"),
+        ("fa5s.align-right", "report.format_align_right", "Align Right (Ctrl+Shift+R)", "align_right", "⫸"),
+    )
+    for icon_name, key, fallback, callback_key, fallback_char in align_buttons:
+        btn = QPushButton(tools_container)
+        btn.setObjectName(f"btn_{callback_key}")
+        btn.setProperty("class", "SecondaryBtn FormatToolBtn")
+        btn.setToolTip(t(key, fallback))
+        ic = icon(icon_name)
+        if not ic.isNull():
+            btn.setIcon(ic)
+            btn.setIconSize(QSize(12, 12))
+        else:
+            btn.setText(fallback_char)
+        btn.clicked.connect(callbacks[callback_key])
+        tools_layout.addWidget(btn)
+
+    # Visual Divider between Ausrichtung and Einfügen
+    tools_layout.addWidget(create_toolbar_divider(tools_container))
+
+    # Zone 4: Einfügen (Image, Link, Table)
     insert_buttons = (
         ("🖼️", "report.format_image", "Insert Image", "image"),
         ("🔗", "report.format_link", "Link", "link"),
@@ -110,20 +140,35 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
     # -------------------------------------------------------------
     btn_toggle = QPushButton("▲", toolbar_widget)
     btn_toggle.setProperty("class", "SecondaryBtn FormatToolBtn ToolbarToggleBtn")
-    btn_toggle.setToolTip(t("report.toggle_toolbar_collapse", "Collapse formatting toolbar"))
+    btn_toggle.setToolTip(t("report.toggle_toolbar_collapse", "Collapse toolbar"))
 
     _collapsed = False
+
+    def _apply_collapsed_state() -> None:
+        tools_container.setVisible(not _collapsed)
+        btn_toggle.setText("▼" if _collapsed else "▲")
+        btn_toggle.setToolTip(
+            t("report.toggle_toolbar_expand", "Expand toolbar")
+            if _collapsed
+            else t("report.toggle_toolbar_collapse", "Collapse toolbar")
+        )
+        if on_toggle_collapse is not None:
+            on_toggle_collapse(_collapsed)
 
     def _on_toggle_clicked() -> None:
         nonlocal _collapsed
         _collapsed = not _collapsed
-        tools_container.setVisible(not _collapsed)
-        btn_toggle.setText("▼" if _collapsed else "▲")
-        btn_toggle.setToolTip(
-            t("report.toggle_toolbar_expand", "Expand formatting toolbar")
-            if _collapsed
-            else t("report.toggle_toolbar_collapse", "Collapse formatting toolbar")
-        )
+        _apply_collapsed_state()
+
+    def set_collapsed(collapsed: bool) -> None:
+        nonlocal _collapsed
+        if _collapsed == collapsed:
+            return
+        _collapsed = collapsed
+        _apply_collapsed_state()
+
+    def is_collapsed() -> bool:
+        return _collapsed
 
     btn_toggle.clicked.connect(_on_toggle_clicked)
     main_layout.addWidget(btn_toggle)
@@ -131,5 +176,7 @@ def build_format_toolbar(parent: QWidget, callbacks: dict[str, Callable[[], None
     # Expose elements for programmatic access / testing
     toolbar_widget.tools_container = tools_container
     toolbar_widget.btn_toggle = btn_toggle
+    toolbar_widget.set_collapsed = set_collapsed
+    toolbar_widget.is_collapsed = is_collapsed
 
     return toolbar_widget

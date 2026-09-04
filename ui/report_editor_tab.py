@@ -130,7 +130,8 @@ class ReportEditorTab(QWidget):
         layout.setSpacing(6)
 
         # Ebene 1: Dokumentaktionen (links) und Projekt-Status (rechts)
-        layout.addLayout(self._build_action_toolbar())
+        self.action_toolbar_widget = self._build_action_toolbar()
+        layout.addWidget(self.action_toolbar_widget)
 
         # Ebene 2: Formatierungsleiste (Struktur, Inline-Stil, Einfügen)
         self.format_toolbar_widget = build_format_toolbar(
@@ -147,6 +148,9 @@ class ReportEditorTab(QWidget):
                 "strikethrough": lambda: self._format_wrap("~~", "~~"),
                 "code": lambda: self._format_wrap("`", "`"),
                 "code_block": self._format_code_block,
+                "align_left": lambda: self._format_align("left"),
+                "align_center": lambda: self._format_align("center"),
+                "align_right": lambda: self._format_align("right"),
                 "list": lambda: self._format_list(False),
                 "numbered_list": lambda: self._format_list(True),
                 "quote": self._format_quote,
@@ -155,6 +159,7 @@ class ReportEditorTab(QWidget):
                 "link": self._format_link,
                 "table": self._format_table,
             },
+            on_toggle_collapse=self._on_toolbar_collapse_toggled,
         )
         layout.addWidget(self.format_toolbar_widget)
 
@@ -162,9 +167,17 @@ class ReportEditorTab(QWidget):
         self._setup_shortcuts()
         self._apply_view_mode(self._view_mode)
 
-    def _build_action_toolbar(self) -> QHBoxLayout:
+    def _on_toolbar_collapse_toggled(self, collapsed: bool) -> None:
+        """Collapse or expand Ebene 1 alongside Ebene 2."""
+        self.action_toolbar_widget.setVisible(not collapsed)
+        if not collapsed and self._view_mode == ViewMode.PREVIEW:
+            self.format_toolbar_widget.tools_container.setVisible(False)
+
+    def _build_action_toolbar(self) -> QWidget:
         """Build Ebene 1: Document actions on the left, status text on the right."""
-        toolbar = QHBoxLayout()
+        container = QWidget(self)
+        container.setObjectName("ReportActionToolbar")
+        toolbar = QHBoxLayout(container)
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
 
@@ -228,7 +241,7 @@ class ReportEditorTab(QWidget):
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
 
-        return toolbar
+        return container
 
     def _build_view_menu(self) -> None:
         """Populate the compact view selector."""
@@ -330,6 +343,9 @@ class ReportEditorTab(QWidget):
             ("Ctrl+I", lambda: self._format_wrap("*", "*")),
             ("Ctrl+K", lambda: self._format_wrap("`", "`")),
             ("Ctrl+Shift+X", lambda: self._format_wrap("~~", "~~")),
+            ("Ctrl+Shift+L", lambda: self._format_align("left")),
+            ("Ctrl+Shift+E", lambda: self._format_align("center")),
+            ("Ctrl+Shift+R", lambda: self._format_align("right")),
             ("Ctrl+Shift+Q", self._format_quote),
             ("Ctrl+Shift+I", self._format_image),
         ):
@@ -345,6 +361,11 @@ class ReportEditorTab(QWidget):
         from ui.markdown_toolbar_actions import wrap_selection
 
         wrap_selection(self.editor, prefix, suffix)
+
+    def _format_align(self, alignment: str) -> None:
+        from ui.markdown_toolbar_actions import align_text
+
+        align_text(self.editor, alignment)
 
     def _format_quote(self) -> None:
         from ui.markdown_toolbar_actions import insert_blockquote
@@ -725,7 +746,13 @@ class ReportEditorTab(QWidget):
         """Applies visibility and splitter layout for the selected view mode."""
         for action_mode, action in self._view_actions.items():
             action.setChecked(action_mode == mode)
-        self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
+        if hasattr(self, "format_toolbar_widget"):
+            if self.format_toolbar_widget.is_collapsed():
+                self.format_toolbar_widget.setVisible(True)
+                self.format_toolbar_widget.tools_container.setVisible(False)
+            else:
+                self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
+                self.format_toolbar_widget.tools_container.setVisible(mode != ViewMode.PREVIEW)
         if mode == ViewMode.EDITOR:
             self.editor.setVisible(True)
             self.preview.setVisible(False)

@@ -166,3 +166,72 @@ def insert_image(editor: QPlainTextEdit, image_path: str, alt_text: str = "Image
         _select_placeholder(editor, start, len(alt_text))
     editor.setFocus()
 
+
+ALIGN_TAG_RE = re.compile(
+    r"^\s*<p\s+align=[\"'](left|center|right)[\"']\s*>(.*?)</p>\s*$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def align_text(editor: QPlainTextEdit, alignment: str = "center") -> None:
+    """Sets or toggles text alignment using HTML paragraph tags (<p align="...">).
+
+    Supported alignments: 'left', 'center', 'right'.
+    - If current selection or block is wrapped in the requested alignment, unwraps it.
+    - If wrapped in a different alignment, changes to new alignment.
+    - If alignment is 'left' and text is plain, leaves plain (or unwraps any existing tag).
+    - If no selection, affects current block/line. If line is empty, inserts placeholder '<p align="...">Text</p>'.
+    """
+    align = alignment.strip().lower()
+    if align not in ("left", "center", "right"):
+        align = "center"
+
+    cursor = editor.textCursor()
+
+    if cursor.hasSelection():
+        selected = cursor.selectedText().replace("\u2029", "\n")
+        m = ALIGN_TAG_RE.match(selected)
+        if m:
+            existing_align = m.group(1).lower()
+            inner = m.group(2)
+            if existing_align == align or align == "left":
+                cursor.insertText(inner)
+            else:
+                cursor.insertText(f'<p align="{align}">{inner}</p>')
+        else:
+            if align == "left":
+                pass
+            else:
+                cursor.insertText(f'<p align="{align}">{selected}</p>')
+    else:
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+        line = cursor.selectedText().replace("\u2029", "\n")
+        stripped = line.strip()
+
+        if not stripped:
+            if align != "left":
+                prefix = f'<p align="{align}">'
+                placeholder = "Text"
+                suffix = "</p>"
+                start = cursor.position() + len(prefix)
+                cursor.insertText(f"{prefix}{placeholder}{suffix}")
+                _select_placeholder(editor, start, len(placeholder))
+        else:
+            m = ALIGN_TAG_RE.match(line)
+            if m:
+                existing_align = m.group(1).lower()
+                inner = m.group(2)
+                if existing_align == align or align == "left":
+                    cursor.insertText(inner)
+                else:
+                    cursor.insertText(f'<p align="{align}">{inner}</p>')
+            else:
+                if align == "left":
+                    pass
+                else:
+                    cursor.insertText(f'<p align="{align}">{line}</p>')
+
+    editor.setFocus()
+
+

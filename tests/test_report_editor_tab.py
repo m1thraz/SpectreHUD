@@ -369,6 +369,24 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(bak_path.exists())
         self.assertIn("Unsaved manual notes.", bak_path.read_text(encoding="utf-8"))
 
+    def test_toolbar_collapse_toggles_both_levels(self):
+        """Verifies that clicking the toolbar toggle button collapses and expands Ebene 1 and Ebene 2."""
+        self.assertFalse(self.tab.action_toolbar_widget.isHidden())
+        self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
+        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▲")
+
+        # Collapse both levels
+        self.tab.format_toolbar_widget.btn_toggle.click()
+        self.assertTrue(self.tab.action_toolbar_widget.isHidden())
+        self.assertTrue(self.tab.format_toolbar_widget.tools_container.isHidden())
+        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▼")
+
+        # Expand both levels
+        self.tab.format_toolbar_widget.btn_toggle.click()
+        self.assertFalse(self.tab.action_toolbar_widget.isHidden())
+        self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
+        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▲")
+
 
 if __name__ == "__main__":
     unittest.main()
