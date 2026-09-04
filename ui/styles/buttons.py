@@ -509,6 +509,15 @@ QPushButton[class*="SaveIconBtn"]:hover {
     color: {TEXT_WHITE};
 }
 
+/* Compact square hit-box shared by icon-only report toolbar controls. */
+QPushButton.ReportIconBtn,
+QPushButton[class~="ReportIconBtn"],
+QPushButton[class*="ReportIconBtn"] {
+    padding: 3px;
+    min-width: 26px;
+    max-width: 26px;
+}
+
 QPushButton.BrowseBtn {
     background-color: {CONTROL_A85};
     color: {CYBER_BLUE};

@@ -174,10 +174,16 @@ graph TD
 - **`DraftManager` (`draft_manager.py`)**: Real-time crash-resilience engine writing debounced atomic `.report.md.draft` snapshots every 5 seconds while editing. Cleans up automatically on normal save/discard and powers startup recovery prompts after unexpected terminations.
 - **`FindingMetrics` & `render_severity_badge` (`charts.py`)**: Calculates finding distribution and renders visual HTML severity badges (*Critical, High, Medium, Low, Info*).
 - **`ReportEditorTab` (`ui/report_editor_tab.py`)**: Composes the Markdown source editor, live preview, and reporting workflows:
-  - **Two-Tier Toolbar**: Tier 1 for document actions (`View ▾`, `Sections ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`), status display, and compact icon-save (`💾`); Tier 2 for formatting controls (`H ▾`, inline styles, inserts) with a collapsible minimize toggle (`▲` / `▼`).
+  - **Two-Tier Toolbar**: Tier 1 uses QtAwesome icons plus text for document actions
+    (`View ▾`, `Sections ▾`, `Add Missing Loot`, `Regenerate`, `Export ▾`), alongside the
+    status display and compact icon-only save action. Tier 2 keeps recognizable typographic
+    Markdown controls while using consistent QtAwesome icons for structural, alignment,
+    insert, and collapse/expand actions.
   - **Bi-directional Scroll-Sync**: Synchronizes scrolling between Markdown editor and live preview in Split View mode with proportional ratio mapping and recursion guards.
   - **Hierarchical Outline Navigation**: `[ 📑 Sections ▾ ]` dropdown and `Ctrl+Shift+O` shortcut for jumping directly to any report section.
-  - **Direct Image & Loot Screenshot Insert**: `🖼️` button and `Ctrl+Shift+I` shortcut with quick-insert for recent loot screenshots and searchable `LootImagePickerDialog`.
+  - **Direct Image & Loot Screenshot Insert**: QtAwesome image button and `Ctrl+Shift+I`
+    shortcut with quick-insert for recent loot screenshots and searchable
+    `LootImagePickerDialog`.
   - **Export-Robust Report Icons**: A curated `ReportIconPickerDialog` resolves icons through
     the central QtAwesome wrapper, while `ui/report/icon_assets.py` renders fixed-color PNGs
     into the active project's `assets/icons/` directory. Reports store only ordinary relative

@@ -7,6 +7,23 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.i18n import t
 from ui.styles.icons import icon
+from ui.styles.palette import CYBER_CYAN, TEXT_PRIMARY
+
+
+REPORT_TOOLBAR_ICON_SIZE = QSize(13, 13)
+
+
+def _apply_icon_button(
+    button: QPushButton,
+    icon_name: str,
+    accessible_name: str,
+    color: str,
+    active_color: str,
+) -> None:
+    """Apply the shared report-toolbar icon treatment to an icon-only button."""
+    button.setIcon(icon(icon_name, color=color, color_active=active_color))
+    button.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+    button.setAccessibleName(accessible_name)
 
 
 def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
@@ -26,15 +43,18 @@ def build_format_toolbar(
     parent: QWidget,
     callbacks: dict[str, Callable[[], None]],
     on_toggle_collapse: Callable[[bool], None] | None = None,
+    icon_color: str = CYBER_CYAN,
+    icon_active_color: str = TEXT_PRIMARY,
 ) -> QWidget:
     """
-    Build the formatting toolbar split into 4 clear functional zones on the left,
+    Build the formatting toolbar split into clear functional zones on the left,
     plus a collapse/minimize toggle button on the far right (under the status label):
     1. Struktur (Headings dropdown H1-H6, Quote, Lists, Horizontal Rule)
-    2. Inline-Stil (Bold, Italic, Strikethrough, Inline Code, Code Block)
-    3. Ausrichtung (Align Left, Align Center, Align Right)
-    4. Einfügen (Image / Loot Screenshot, Link, Table)
-    5. Minimize/Expand Toggle Button (far right)
+    2. Text-Stil (Bold, Italic, Strikethrough)
+    3. Code (Inline Code, Code Block)
+    4. Ausrichtung (Align Left, Align Center, Align Right)
+    5. Einfügen (Image / Loot Screenshot, Link, Table, Report Icon)
+    6. Minimize/Expand Toggle Button (far right)
     """
     toolbar_widget = QWidget(parent)
     main_layout = QHBoxLayout(toolbar_widget)
@@ -63,28 +83,32 @@ def build_format_toolbar(
     tools_layout.addWidget(btn_heading)
 
     structure_buttons = (
-        ("❝", "report.format_quote", "Blockquote", "quote"),
-        ("•", "report.format_list", "Bullet List", "list"),
-        ("1.", "report.format_numbered_list", "Numbered List", "numbered_list"),
-        ("―", "report.format_horizontal_rule", "Horizontal Rule", "horizontal_rule"),
+        ("", "fa5s.quote-right", "report.format_quote", "Blockquote", "quote"),
+        ("", "fa5s.list-ul", "report.format_list", "Bullet List", "list"),
+        ("", "fa5s.list-ol", "report.format_numbered_list", "Numbered List", "numbered_list"),
+        ("―", None, "report.format_horizontal_rule", "Horizontal Rule", "horizontal_rule"),
     )
-    for label, key, fallback, callback_key in structure_buttons:
+    for label, icon_name, key, fallback, callback_key in structure_buttons:
         btn = QPushButton(label, tools_container)
-        btn.setProperty("class", "SecondaryBtn FormatToolBtn")
-        btn.setToolTip(t(key, fallback))
+        btn.setObjectName(f"btn_{callback_key}")
+        tooltip = t(key, fallback)
+        btn.setToolTip(tooltip)
+        if icon_name:
+            btn.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+            _apply_icon_button(btn, icon_name, tooltip, icon_color, icon_active_color)
+        else:
+            btn.setProperty("class", "SecondaryBtn FormatToolBtn")
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
     # Visual Divider between Struktur and Inline-Stil
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 2: Inline-Stil (Bold, Italic, Strikethrough, Code, Code Block)
+    # Zone 2: Typographic text formatting remains immediately recognizable.
     inline_buttons = (
         ("B", "report.format_bold", "Bold", "bold"),
         ("I", "report.format_italic", "Italic", "italic"),
         ("S̶", "report.format_strikethrough", "Strikethrough", "strikethrough"),
-        ("</>", "report.format_code", "Inline Code", "code"),
-        (">_", "report.format_code_block", "Code Block", "code_block"),
     )
     for label, key, fallback, callback_key in inline_buttons:
         btn = QPushButton(label, tools_container)
@@ -93,47 +117,64 @@ def build_format_toolbar(
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
-    # Visual Divider between Inline-Stil and Ausrichtung
+    # Visual Divider between text formatting and code actions.
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 3: Ausrichtung (Align Left, Align Center, Align Right)
-    align_buttons = (
-        ("fa5s.align-left", "report.format_align_left", "Align Left (Ctrl+Shift+L)", "align_left", "⫷"),
-        ("fa5s.align-center", "report.format_align_center", "Align Center (Ctrl+Shift+E)", "align_center", "≡"),
-        ("fa5s.align-right", "report.format_align_right", "Align Right (Ctrl+Shift+R)", "align_right", "⫸"),
+    # Zone 3: Inline Code stays typographic; Code Block is a structural icon action.
+    btn_inline_code = QPushButton("</>", tools_container)
+    btn_inline_code.setObjectName("btn_code")
+    btn_inline_code.setProperty("class", "SecondaryBtn FormatToolBtn")
+    btn_inline_code.setToolTip(t("report.format_code", "Inline Code"))
+    btn_inline_code.clicked.connect(callbacks["code"])
+    tools_layout.addWidget(btn_inline_code)
+
+    btn_code_block = QPushButton(tools_container)
+    btn_code_block.setObjectName("btn_code_block")
+    btn_code_block.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+    code_block_tooltip = t("report.format_code_block", "Code Block")
+    btn_code_block.setToolTip(code_block_tooltip)
+    _apply_icon_button(
+        btn_code_block, "fa5s.code", code_block_tooltip, icon_color, icon_active_color
     )
-    for icon_name, key, fallback, callback_key, fallback_char in align_buttons:
+    btn_code_block.clicked.connect(callbacks["code_block"])
+    tools_layout.addWidget(btn_code_block)
+
+    # Visual Divider between Code and Ausrichtung
+    tools_layout.addWidget(create_toolbar_divider(tools_container))
+
+    # Zone 4: Ausrichtung (Align Left, Align Center, Align Right)
+    align_buttons = (
+        ("fa5s.align-left", "report.format_align_left", "Align Left (Ctrl+Shift+L)", "align_left"),
+        ("fa5s.align-center", "report.format_align_center", "Align Center (Ctrl+Shift+E)", "align_center"),
+        ("fa5s.align-right", "report.format_align_right", "Align Right (Ctrl+Shift+R)", "align_right"),
+    )
+    for icon_name, key, fallback, callback_key in align_buttons:
         btn = QPushButton(tools_container)
         btn.setObjectName(f"btn_{callback_key}")
-        btn.setProperty("class", "SecondaryBtn FormatToolBtn")
-        btn.setToolTip(t(key, fallback))
-        ic = icon(icon_name)
-        if not ic.isNull():
-            btn.setIcon(ic)
-            btn.setIconSize(QSize(12, 12))
-        else:
-            btn.setText(fallback_char)
+        btn.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+        tooltip = t(key, fallback)
+        btn.setToolTip(tooltip)
+        _apply_icon_button(btn, icon_name, tooltip, icon_color, icon_active_color)
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
     # Visual Divider between Ausrichtung and Einfügen
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 4: Einfügen (Image, report icon, Link, Table)
+    # Zone 5: Einfügen (Image, Link, Table, Report Icon)
     insert_buttons = (
-        ("🖼️", None, "report.format_image", "Insert Image", "image"),
-        ("", "fa5s.icons", "report.insert_icon", "Insert Icon", "icon"),
-        ("🔗", None, "report.format_link", "Link", "link"),
-        ("▦", None, "report.format_table", "Table", "table"),
+        ("fa5s.image", "report.format_image", "Insert Image", "image"),
+        ("fa5s.link", "report.format_link", "Link", "link"),
+        ("fa5s.table", "report.format_table", "Table", "table"),
+        ("fa5s.icons", "report.insert_icon", "Insert Icon", "icon"),
     )
-    for label, icon_name, key, fallback, callback_key in insert_buttons:
-        btn = QPushButton(label, tools_container)
+    for icon_name, key, fallback, callback_key in insert_buttons:
+        btn = QPushButton(tools_container)
         btn.setObjectName(f"btn_insert_{callback_key}")
-        btn.setProperty("class", "SecondaryBtn FormatToolBtn")
-        btn.setToolTip(t(key, fallback))
-        if icon_name:
-            btn.setIcon(icon(icon_name))
-            btn.setIconSize(QSize(14, 14))
+        btn.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+        tooltip = t(key, fallback)
+        btn.setToolTip(tooltip)
+        _apply_icon_button(btn, icon_name, tooltip, icon_color, icon_active_color)
         btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 
@@ -143,21 +184,30 @@ def build_format_toolbar(
     # -------------------------------------------------------------
     # Minimize / Expand Toggle Button (far right, under status label)
     # -------------------------------------------------------------
-    btn_toggle = QPushButton("▲", toolbar_widget)
-    btn_toggle.setProperty("class", "SecondaryBtn FormatToolBtn ToolbarToggleBtn")
-    btn_toggle.setToolTip(t("report.toggle_toolbar_collapse", "Collapse toolbar"))
+    btn_toggle = QPushButton(toolbar_widget)
+    btn_toggle.setObjectName("btn_toggle_toolbar")
+    btn_toggle.setProperty(
+        "class", "SecondaryBtn FormatToolBtn ReportIconBtn ToolbarToggleBtn"
+    )
 
     _collapsed = False
 
-    def _apply_collapsed_state() -> None:
+    def _apply_collapsed_state(*, notify: bool = True) -> None:
         tools_container.setVisible(not _collapsed)
-        btn_toggle.setText("▼" if _collapsed else "▲")
-        btn_toggle.setToolTip(
+        tooltip = (
             t("report.toggle_toolbar_expand", "Expand toolbar")
             if _collapsed
             else t("report.toggle_toolbar_collapse", "Collapse toolbar")
         )
-        if on_toggle_collapse is not None:
+        btn_toggle.setToolTip(tooltip)
+        _apply_icon_button(
+            btn_toggle,
+            "fa5s.chevron-down" if _collapsed else "fa5s.chevron-up",
+            tooltip,
+            icon_color,
+            icon_active_color,
+        )
+        if notify and on_toggle_collapse is not None:
             on_toggle_collapse(_collapsed)
 
     def _on_toggle_clicked() -> None:
@@ -175,6 +225,7 @@ def build_format_toolbar(
     def is_collapsed() -> bool:
         return _collapsed
 
+    _apply_collapsed_state(notify=False)
     btn_toggle.clicked.connect(_on_toggle_clicked)
     main_layout.addWidget(btn_toggle)
 

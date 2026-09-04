@@ -67,8 +67,9 @@ class TestReportToolbar(unittest.TestCase):
         buttons["B"].click()
         self.callbacks["bold"].assert_called_once()
 
-        self.assertIn("🖼️", buttons)
-        buttons["🖼️"].click()
+        image_button = self.toolbar.findChild(QPushButton, "btn_insert_image")
+        self.assertIsNotNone(image_button)
+        image_button.click()
         self.callbacks["image"].assert_called_once()
 
         icon_button = self.toolbar.findChild(QPushButton, "btn_insert_icon")
@@ -77,13 +78,45 @@ class TestReportToolbar(unittest.TestCase):
         icon_button.click()
         self.callbacks["icon"].assert_called_once()
 
-        self.assertIn("❝", buttons)
-        buttons["❝"].click()
+        quote_button = self.toolbar.findChild(QPushButton, "btn_quote")
+        self.assertIsNotNone(quote_button)
+        quote_button.click()
         self.callbacks["quote"].assert_called_once()
 
-        self.assertIn(">_", buttons)
-        buttons[">_"].click()
+        code_block_button = self.toolbar.findChild(QPushButton, "btn_code_block")
+        self.assertIsNotNone(code_block_button)
+        code_block_button.click()
         self.callbacks["code_block"].assert_called_once()
+
+    def test_structural_and_insert_actions_use_accessible_qtawesome_icons(self):
+        modernized_names = (
+            "btn_quote",
+            "btn_list",
+            "btn_numbered_list",
+            "btn_code_block",
+            "btn_insert_image",
+            "btn_insert_link",
+            "btn_insert_table",
+            "btn_insert_icon",
+        )
+        for name in modernized_names:
+            button = self.toolbar.findChild(QPushButton, name)
+            self.assertIsNotNone(button, name)
+            self.assertEqual(button.text(), "", name)
+            self.assertFalse(button.icon().isNull(), name)
+            self.assertTrue(button.toolTip(), name)
+            self.assertEqual(button.accessibleName(), button.toolTip(), name)
+
+        visible_labels = {button.text() for button in self.toolbar.findChildren(QPushButton)}
+        self.assertNotIn("❝", visible_labels)
+        self.assertNotIn("•", visible_labels)
+        self.assertNotIn("1.", visible_labels)
+        self.assertNotIn(">_", visible_labels)
+        self.assertNotIn("🖼️", visible_labels)
+        self.assertNotIn("🔗", visible_labels)
+        self.assertNotIn("▦", visible_labels)
+        self.assertIn("―", visible_labels)
+        self.assertIn("</>", visible_labels)
 
     def test_align_buttons_invoke_callbacks(self):
         """Verifies text alignment buttons trigger their mapped callbacks."""
@@ -108,17 +141,20 @@ class TestReportToolbar(unittest.TestCase):
     def test_toggle_button_collapses_and_expands_tools(self):
         """Verifies clicking the toggle button collapses and expands the formatting tools."""
         self.assertFalse(self.toolbar.tools_container.isHidden())
-        self.assertEqual(self.toolbar.btn_toggle.text(), "▲")
+        self.assertEqual(self.toolbar.btn_toggle.text(), "")
+        self.assertFalse(self.toolbar.btn_toggle.icon().isNull())
+        expanded_icon_key = self.toolbar.btn_toggle.icon().cacheKey()
 
         # Click to collapse
         self.toolbar.btn_toggle.click()
         self.assertTrue(self.toolbar.tools_container.isHidden())
-        self.assertEqual(self.toolbar.btn_toggle.text(), "▼")
+        self.assertEqual(self.toolbar.btn_toggle.text(), "")
+        self.assertNotEqual(self.toolbar.btn_toggle.icon().cacheKey(), expanded_icon_key)
 
         # Click to expand
         self.toolbar.btn_toggle.click()
         self.assertFalse(self.toolbar.tools_container.isHidden())
-        self.assertEqual(self.toolbar.btn_toggle.text(), "▲")
+        self.assertEqual(self.toolbar.btn_toggle.icon().cacheKey(), expanded_icon_key)
 
     def test_toggle_button_notifies_collapse_callback(self):
         """Verifies on_toggle_collapse callback receives boolean state."""

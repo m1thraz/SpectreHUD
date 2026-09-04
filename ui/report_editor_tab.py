@@ -43,6 +43,7 @@ from core.logger import get_logger
 from core.i18n import t
 from core.fonts import get_report_font_stack
 from core.platform.opener import open_path
+from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
     LootImagePickerDialog,
     MarkdownTableDialog,
@@ -52,7 +53,8 @@ from ui.report.dialogs import (
 from ui.report.icon_assets import ReportIconError, render_report_icon
 from ui.report.find_replace import FindReplaceBar
 from ui.report.preview import ReportDocument, ReportPreviewEdit
-from ui.report.toolbar import build_format_toolbar
+from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
+from ui.styles.icons import icon
 from core.reporting.outline import extract_headings
 from core.reporting.draft_manager import (
     discard_draft,
@@ -95,6 +97,12 @@ class ReportEditorTab(QWidget):
         self.clipboard_watcher = clipboard_watcher
         self.config = config_manager
         self.export_coordinator = export_coordinator
+        theme_id = (
+            self.config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
+            if self.config
+            else ThemeLoader.FALLBACK_THEME_ID
+        )
+        self._toolbar_palette = ThemeLoader().load_theme(theme_id)
         self.template_repo = TemplateRepository()
         self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
@@ -163,6 +171,8 @@ class ReportEditorTab(QWidget):
                 "table": self._format_table,
             },
             on_toggle_collapse=self._on_toolbar_collapse_toggled,
+            icon_color=self._toolbar_palette["CYBER_CYAN"],
+            icon_active_color=self._toolbar_palette["TEXT_PRIMARY"],
         )
         layout.addWidget(self.format_toolbar_widget)
 
@@ -188,6 +198,8 @@ class ReportEditorTab(QWidget):
         self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
         self.btn_change_view.setProperty("class", "SecondaryBtn")
         self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
+        self.btn_change_view.setIcon(self._toolbar_icon("fa5s.columns"))
+        self.btn_change_view.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
 
@@ -195,6 +207,8 @@ class ReportEditorTab(QWidget):
         self.btn_outline = QPushButton(t("report.outline", "Sections ▾"))
         self.btn_outline.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
         self.btn_outline.setToolTip(t("report.outline_tip", "Jump to section (Ctrl+Shift+O)"))
+        self.btn_outline.setIcon(self._toolbar_icon("fa5s.list"))
+        self.btn_outline.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.outline_menu = QMenu(self.btn_outline)
         self.outline_menu.aboutToShow.connect(self._populate_outline_menu)
         self.btn_outline.setMenu(self.outline_menu)
@@ -208,6 +222,8 @@ class ReportEditorTab(QWidget):
                 "Appends missing loot entries to the report without overwriting manual notes",
             )
         )
+        self.btn_append_loot.setIcon(self._toolbar_icon("fa5s.plus-circle"))
+        self.btn_append_loot.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_append_loot.clicked.connect(self._on_append_loot_clicked)
         toolbar.addWidget(self.btn_append_loot)
 
@@ -216,6 +232,10 @@ class ReportEditorTab(QWidget):
         self.btn_regenerate.setToolTip(
             t("report.regenerate_tip", "Updates report structure and appends new loot entries")
         )
+        self.btn_regenerate.setIcon(
+            self._toolbar_icon("fa5s.sync-alt", color=self._toolbar_palette["STATUS_ERROR"])
+        )
+        self.btn_regenerate.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
         toolbar.addWidget(self.btn_regenerate)
 
@@ -224,6 +244,8 @@ class ReportEditorTab(QWidget):
         self.btn_export.setToolTip(
             t("report.export_tip", "Choose how to export the current report")
         )
+        self.btn_export.setIcon(self._toolbar_icon("fa5s.file-export"))
+        self.btn_export.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
@@ -235,27 +257,41 @@ class ReportEditorTab(QWidget):
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         toolbar.addWidget(self.lbl_status)
 
-        # Kompakter Icon-Save Button (Diskette) rechts neben dem Status-Label
-        self.btn_save = QPushButton("💾")
-        self.btn_save.setProperty("class", "SecondaryBtn FormatToolBtn SaveIconBtn")
-        self.btn_save.setToolTip(
-            t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
+        # Kompakter QtAwesome-Save-Button rechts neben dem Status-Label
+        self.btn_save = QPushButton()
+        self.btn_save.setObjectName("btn_save_report")
+        self.btn_save.setProperty(
+            "class", "SecondaryBtn FormatToolBtn ReportIconBtn SaveIconBtn"
         )
+        save_tooltip = t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
+        self.btn_save.setToolTip(save_tooltip)
+        self.btn_save.setAccessibleName(save_tooltip)
+        self.btn_save.setIcon(self._toolbar_icon("fa5s.save"))
+        self.btn_save.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_save.clicked.connect(self.save)
         toolbar.addWidget(self.btn_save)
 
         return container
 
+    def _toolbar_icon(self, icon_name: str, color: Optional[str] = None):
+        """Create a toolbar icon using the active app theme through the central wrapper."""
+        return icon(
+            icon_name,
+            color=color or self._toolbar_palette["CYBER_CYAN"],
+            color_active=self._toolbar_palette["TEXT_PRIMARY"],
+        )
+
     def _build_view_menu(self) -> None:
         """Populate the compact view selector."""
         self.view_menu = QMenu(self.btn_change_view)
         self._view_actions = {}
-        for mode, key, fallback in (
-            (ViewMode.EDITOR, "report.mode_editor", "📝 Editor"),
-            (ViewMode.SPLIT, "report.mode_split", "◫ Split"),
-            (ViewMode.PREVIEW, "report.mode_preview", "👁️ Live Preview"),
+        for mode, key, fallback, icon_name in (
+            (ViewMode.EDITOR, "report.mode_editor", "Editor", "fa5s.edit"),
+            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.columns"),
+            (ViewMode.PREVIEW, "report.mode_preview", "Live Preview", "fa5s.eye"),
         ):
             action = QAction(t(key, fallback), self.view_menu)
+            action.setIcon(self._toolbar_icon(icon_name))
             action.setCheckable(True)
             action.triggered.connect(
                 lambda _checked=False, selected=mode: self._set_view_mode(selected)

@@ -9,6 +9,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog
 from PyQt6.QtCore import QMimeData, QUrl
+from PyQt6.QtGui import QShortcut
 
 from core.project import ProjectManager
 from core.loot_manager import LootManager
@@ -228,7 +229,9 @@ class TestReportEditorTab(unittest.TestCase):
     def test_btn_save_exists_as_compact_icon_in_toolbar(self):
         """Verify compact icon-save button exists on Tier 1 next to status label."""
         self.assertTrue(hasattr(self.tab, "btn_save"))
-        self.assertEqual(self.tab.btn_save.text(), "💾")
+        self.assertEqual(self.tab.btn_save.text(), "")
+        self.assertFalse(self.tab.btn_save.icon().isNull())
+        self.assertEqual(self.tab.btn_save.accessibleName(), self.tab.btn_save.toolTip())
         self.assertIn("SaveIconBtn", self.tab.btn_save.property("class"))
         self.tab.report_file_manager.save = MagicMock(return_value=True)
         self.tab._set_dirty(True)
@@ -364,6 +367,46 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertIn("AppendLootBtn", self.tab.btn_append_loot.property("class"))
         self.assertIn("RegenerateBtn", self.tab.btn_regenerate.property("class"))
 
+    def test_action_toolbar_keeps_text_and_adds_qtawesome_icons(self):
+        action_buttons = (
+            self.tab.btn_change_view,
+            self.tab.btn_outline,
+            self.tab.btn_append_loot,
+            self.tab.btn_regenerate,
+            self.tab.btn_export,
+        )
+        for button in action_buttons:
+            self.assertTrue(button.text())
+            self.assertFalse(button.icon().isNull(), button.text())
+
+        for action in self.tab._view_actions.values():
+            self.assertTrue(action.isCheckable())
+            self.assertFalse(action.icon().isNull())
+            self.assertNotRegex(action.text(), "[📝◫👁️]")
+
+    def test_toolbar_modernization_preserves_report_shortcuts(self):
+        shortcuts = {shortcut.key().toString() for shortcut in self.tab.findChildren(QShortcut)}
+        self.assertTrue(
+            {
+                "Ctrl+S",
+                "Ctrl+Shift+S",
+                "Ctrl+Shift+V",
+                "Ctrl+1",
+                "Ctrl+2",
+                "Ctrl+3",
+                "Ctrl+Shift+O",
+                "Ctrl+B",
+                "Ctrl+I",
+                "Ctrl+K",
+                "Ctrl+Shift+X",
+                "Ctrl+Shift+L",
+                "Ctrl+Shift+E",
+                "Ctrl+Shift+R",
+                "Ctrl+Shift+Q",
+                "Ctrl+Shift+I",
+            }.issubset(shortcuts)
+        )
+
     def test_regenerate_confirmation_aborts_on_user_no(self):
         """Destructive regenerate must prompt user with confirmation and abort when rejected."""
         self.tab.editor.setPlainText("# Important Custom Report Notes\nDo not overwrite!")
@@ -406,22 +449,25 @@ class TestReportEditorTab(unittest.TestCase):
         """Verifies that clicking the toolbar toggle button collapses and expands Ebene 1 and Ebene 2."""
         self.assertFalse(self.tab.action_toolbar_widget.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
-        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▲")
+        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "")
+        expanded_icon_key = self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey()
 
         # Collapse both levels
         self.tab.format_toolbar_widget.btn_toggle.click()
         self.assertTrue(self.tab.action_toolbar_widget.isHidden())
         self.assertTrue(self.tab.format_toolbar_widget.tools_container.isHidden())
-        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▼")
+        self.assertNotEqual(
+            self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
+        )
 
         # Expand both levels
         self.tab.format_toolbar_widget.btn_toggle.click()
         self.assertFalse(self.tab.action_toolbar_widget.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
-        self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "▲")
+        self.assertEqual(
+            self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
+        )
 
 
 if __name__ == "__main__":
     unittest.main()
-
-

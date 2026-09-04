@@ -13,6 +13,12 @@ semantic versioning.
   - Icons are stored as reusable, theme-independent PNG assets and inserted as normal
     Markdown images, preserving Live Preview, HTML/Print, Obsidian, and CherryTree support.
 
+### Changed
+
+- Modernized the Report Editor toolbars with consistent QtAwesome icons for structural,
+  insert, view, export, save, and collapse actions while retaining clear text labels and
+  typographic Markdown controls where they are more readable.
+
 ## [2.0.8] - 2026-09-04
 
 ### Added
