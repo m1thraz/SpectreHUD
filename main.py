@@ -29,6 +29,7 @@ from core.single_instance import (
 )
 from core.hotkey_listener import HotkeyListener
 from core.logger import get_logger
+from core.i18n import t
 from ui.main_window import MainWindow
 
 from ui.appearance import apply_application_style
@@ -62,9 +63,12 @@ def global_exception_hook(exctype, value, tb):
         active_win = app.activeWindow()
         QMessageBox.critical(
             active_win,
-            "Unerwarteter Fehler",
-            f"Ein unerwarteter Fehler ist aufgetreten:\n{value}\n\n"
-            f"Die Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten.",
+            t("main.crash_title", "Unerwarteter Fehler"),
+            t(
+                "main.crash_message",
+                "Ein unerwarteter Fehler ist aufgetreten:\n{error}\n\nDie Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten.",
+                error=value,
+            ),
         )
 
 
@@ -156,17 +160,23 @@ def main():
         logger.error("Could not acquire SpectreHUD application lock: %s", exc, exc_info=True)
         QMessageBox.critical(
             None,
-            "SpectreHUD konnte nicht starten",
-            "SpectreHUD konnte den Single-Instance-Lock nicht anlegen. "
-            "Bitte prüfe, ob das Konfigurationsverzeichnis verfügbar und beschreibbar ist.",
+            t("main.lock_error_title", "SpectreHUD konnte nicht starten"),
+            t(
+                "main.lock_error_message",
+                "SpectreHUD konnte den Single-Instance-Lock nicht anlegen. "
+                "Bitte prüfe, ob das Konfigurationsverzeichnis verfügbar und beschreibbar ist.",
+            ),
         )
         return
     _startup_mark(started_at, "application lock acquired")
     if application_lock is None:
         QMessageBox.information(
             None,
-            "SpectreHUD läuft bereits",
-            "SpectreHUD läuft bereits. Bitte schließe die vorhandene Instanz, bevor du es erneut startest.",
+            t("main.already_running_title", "SpectreHUD läuft bereits"),
+            t(
+                "main.already_running_message",
+                "SpectreHUD läuft bereits. Bitte schließe die vorhandene Instanz, bevor du es erneut startest.",
+            ),
         )
         return
 
@@ -231,37 +241,61 @@ def main():
         tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
         tray_menu = QMenu()
 
-        act_toggle = QAction(f"SpectreHUD anzeigen ({hotkey_toggle})", tray_menu)
+        act_toggle = QAction(
+            t("tray.toggle", "SpectreHUD anzeigen ({hotkey})", hotkey=hotkey_toggle),
+            tray_menu,
+        )
         act_toggle.triggered.connect(window.toggle_visibility)
         tray_menu.addAction(act_toggle)
 
-        act_note = QAction(f"Quick-Note erfassen ({hotkey_note})", tray_menu)
+        act_note = QAction(
+            t("tray.quick_note", "Quick-Note erfassen ({hotkey})", hotkey=hotkey_note),
+            tray_menu,
+        )
         act_note.triggered.connect(window.app.trigger_quick_note)
         tray_menu.addAction(act_note)
 
-        act_ip = QAction(f"Quick-IP (Target / LHOST) ({hotkey_ip})", tray_menu)
+        act_ip = QAction(
+            t("tray.quick_ip", "Quick-IP (Target / LHOST) ({hotkey})", hotkey=hotkey_ip),
+            tray_menu,
+        )
         act_ip.triggered.connect(window.app.trigger_quick_ip)
         tray_menu.addAction(act_ip)
 
-        act_loot = QAction(f"Loot erfassen ({hotkey_loot})", tray_menu)
+        act_loot = QAction(
+            t("tray.quick_loot", "Loot erfassen ({hotkey})", hotkey=hotkey_loot),
+            tray_menu,
+        )
         act_loot.triggered.connect(window.app.trigger_quick_loot)
         tray_menu.addAction(act_loot)
 
-        act_snip = QAction(f"Screenshot aufnehmen ({hotkey_snip})", tray_menu)
+        act_snip = QAction(
+            t("tray.screenshot", "Screenshot aufnehmen ({hotkey})", hotkey=hotkey_snip),
+            tray_menu,
+        )
         act_snip.triggered.connect(window.app.trigger_screenshot)
         tray_menu.addAction(act_snip)
 
-        act_rec_toggle = QAction("Clipboard-Logger aktivieren (Ctrl+P)", tray_menu)
+        act_rec_toggle = QAction(
+            t("tray.rec_enable", "Clipboard-Logger aktivieren (Ctrl+P)"),
+            tray_menu,
+        )
         act_rec_toggle.triggered.connect(window.app._toggle_pause_history)
         tray_menu.addAction(act_rec_toggle)
 
         tray_menu.addSeparator()
 
-        act_options = QAction("Optionen & Hotkeys... (Ctrl+,)", tray_menu)
+        act_options = QAction(
+            t("tray.options", "Optionen & Hotkeys... (Ctrl+,)"),
+            tray_menu,
+        )
         act_options.triggered.connect(window.app.open_settings_dialog)
         tray_menu.addAction(act_options)
 
-        act_quit = QAction(f"Beenden ({hotkey_quit})", tray_menu)
+        act_quit = QAction(
+            t("tray.quit", "Beenden ({hotkey})", hotkey=hotkey_quit),
+            tray_menu,
+        )
         act_quit.triggered.connect(lambda checked=False: handle_tray_quit(window, checked))
         tray_menu.addAction(act_quit)
 
@@ -282,9 +316,12 @@ def main():
             )
             status = "REC: ON" if is_active else "REC: Paused"
             tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
-            act_rec_toggle.setText(
-                f"Clipboard-Logger {'pausieren' if is_active else 'fortsetzen'} (Ctrl+P)"
+            rec_text = (
+                t("tray.rec_pause", "Clipboard-Logger pausieren (Ctrl+P)")
+                if is_active
+                else t("tray.rec_resume", "Clipboard-Logger fortsetzen (Ctrl+P)")
             )
+            act_rec_toggle.setText(rec_text)
 
         container.clipboard_watcher.logging_state_changed.connect(update_tray_state)
 
@@ -319,12 +356,22 @@ def main():
                 quit=new_quit,
             )
             hotkey_listener.update_config(new_cfg)
-            act_toggle.setText(f"SpectreHUD anzeigen ({new_toggle})")
-            act_snip.setText(f"Screenshot aufnehmen ({new_snip})")
-            act_note.setText(f"Quick-Note erfassen ({new_note})")
-            act_ip.setText(f"Quick-IP (Target / LHOST) ({new_ip})")
-            act_loot.setText(f"Loot erfassen ({new_loot})")
-            act_quit.setText(f"Beenden ({new_quit})")
+            act_toggle.setText(
+                t("tray.toggle", "SpectreHUD anzeigen ({hotkey})", hotkey=new_toggle)
+            )
+            act_snip.setText(
+                t("tray.screenshot", "Screenshot aufnehmen ({hotkey})", hotkey=new_snip)
+            )
+            act_note.setText(
+                t("tray.quick_note", "Quick-Note erfassen ({hotkey})", hotkey=new_note)
+            )
+            act_ip.setText(
+                t("tray.quick_ip", "Quick-IP (Target / LHOST) ({hotkey})", hotkey=new_ip)
+            )
+            act_loot.setText(
+                t("tray.quick_loot", "Loot erfassen ({hotkey})", hotkey=new_loot)
+            )
+            act_quit.setText(t("tray.quit", "Beenden ({hotkey})", hotkey=new_quit))
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
 

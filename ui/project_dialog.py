@@ -94,16 +94,22 @@ class NewProjectDialog(BaseHudDialog):
         layout.addLayout(dir_row)
 
         # 4. Optional encrypted project state (Pentest Mode)
-        self.chk_pentest_mode = QCheckBox("Pentest-Modus (project_state.json verschlüsseln)")
+        self.chk_pentest_mode = QCheckBox(
+            t("project_dialog.chk_pentest_mode", "Pentest Mode (encrypt project_state.json)")
+        )
         self.chk_pentest_mode.toggled.connect(self._toggle_pentest_mode_fields)
         layout.addWidget(self.chk_pentest_mode)
 
         self.txt_pentest_password = QLineEdit()
         self.txt_pentest_password.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_pentest_password.setPlaceholderText("Passwort für Pentest-Modus")
+        self.txt_pentest_password.setPlaceholderText(
+            t("project_dialog.ph_pentest_password", "Password for Pentest Mode")
+        )
         self.txt_pentest_password_confirm = QLineEdit()
         self.txt_pentest_password_confirm.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_pentest_password_confirm.setPlaceholderText("Passwort bestätigen")
+        self.txt_pentest_password_confirm.setPlaceholderText(
+            t("project_dialog.ph_pentest_confirm", "Confirm Password")
+        )
         layout.addWidget(self.txt_pentest_password)
         layout.addWidget(self.txt_pentest_password_confirm)
         self._toggle_pentest_mode_fields(False)
@@ -222,14 +228,19 @@ class NewProjectDialog(BaseHudDialog):
             password = self.txt_pentest_password.text()
             if not password:
                 QMessageBox.warning(
-                    self, "Passwort fehlt", "Für den Pentest-Modus ist ein Passwort erforderlich."
+                    self,
+                    t("project_dialog.err_missing_password_title", "Password Required"),
+                    t(
+                        "project_dialog.err_missing_password_msg",
+                        "A password is required for Pentest Mode.",
+                    ),
                 )
                 return
             if password != self.txt_pentest_password_confirm.text():
                 QMessageBox.warning(
                     self,
-                    "Passwörter stimmen nicht überein",
-                    "Bitte bestätige das gleiche Passwort.",
+                    t("project_dialog.err_mismatch_password_title", "Passwords Do Not Match"),
+                    t("project_dialog.err_mismatch_password_msg", "Please confirm the same password."),
                 )
                 return
 
@@ -255,28 +266,33 @@ class ProjectUnlockDialog(BaseHudDialog):
     """Minimal password prompt for an encrypted Pentest-Mode project."""
 
     def __init__(self, project_name: str, parent: Optional[QWidget] = None):
-        super().__init__(title="SPECTRE // PENTEST-MODUS ENTSPERREN", parent=parent)
+        super().__init__(
+            title=t("project_dialog.unlock_title", "SPECTRE // UNLOCK PENTEST MODE"), parent=parent
+        )
         self.project_name = project_name
         self.setMinimumWidth(420)
         layout = self.body_layout
         layout.addWidget(
             QLabel(
-                f"Das Projekt '{project_name}' verwendet den Pentest-Modus.\n"
-                "Gib das Passwort ein, um dessen project_state.json zu entsperren."
+                t(
+                    "project_dialog.unlock_description",
+                    "Project '{project_name}' uses Pentest Mode.\nEnter the password to unlock its project_state.json.",
+                    project_name=project_name,
+                )
             )
         )
         self.txt_password = QLineEdit()
         self.txt_password.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_password.setPlaceholderText("Passwort")
+        self.txt_password.setPlaceholderText(t("project_dialog.ph_password", "Password"))
         self.txt_password.returnPressed.connect(self._on_unlock)
         layout.addWidget(self.txt_password)
         buttons = QHBoxLayout()
         buttons.addStretch()
-        cancel = QPushButton("Abbrechen")
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
         cancel.setProperty("class", "SecondaryBtn")
         cancel.clicked.connect(self.reject)
         buttons.addWidget(cancel)
-        unlock = QPushButton("Entsperren")
+        unlock = QPushButton(t("project_dialog.btn_unlock", "Unlock"))
         unlock.setProperty("class", "PrimaryBtn")
         unlock.clicked.connect(self._on_unlock)
         buttons.addWidget(unlock)
@@ -284,7 +300,11 @@ class ProjectUnlockDialog(BaseHudDialog):
 
     def _on_unlock(self) -> None:
         if not self.txt_password.text():
-            QMessageBox.warning(self, "Passwort fehlt", "Bitte gib das Projektpasswort ein.")
+            QMessageBox.warning(
+                self,
+                t("project_dialog.err_missing_password_title", "Password Required"),
+                t("project_dialog.err_enter_password_msg", "Please enter the project password."),
+            )
             return
         self.accept()
 

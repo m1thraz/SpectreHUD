@@ -72,6 +72,7 @@ class ExportCoordinator(QObject):
         markdown: str,
         theme: str,
         report_font: str,
+        language: str = "en",
     ) -> None:
         """Render the current editor document as a standalone HTML report."""
         project_dir = self.project_manager.get_project_dir(project_name)
@@ -83,6 +84,7 @@ class ExportCoordinator(QObject):
             target_ip="",
             theme=theme,
             report_font=report_font,
+            language=language,
         ):
             raise ReportExportError(f"Could not write HTML report: {target}")
 

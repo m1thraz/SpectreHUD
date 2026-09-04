@@ -58,8 +58,12 @@ class HistoryController(QObject):
                 target_widget = app.activeWindow()
         QMessageBox.critical(
             target_widget,
-            "Speicherfehler",
-            f"Clipboard-Verlauf konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+            t("dialog.storage_error", "Speicherfehler"),
+            t(
+                "history.storage_error_msg",
+                "Clipboard-Verlauf konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+                error=str(error),
+            ),
         )
 
     # ------------------------------------------------------------------ #
@@ -260,14 +264,16 @@ class HistoryController(QObject):
 
         file_path, _ = QFileDialog.getSaveFileName(
             parent_widget,
-            "Pentest Report exportieren",
+            t("history.export_report_title", "Pentest Report exportieren"),
             str(default_file),
             "Markdown Files (*.md);;All Files (*)",
         )
         if file_path:
             out_path = Path(file_path)
             res = self.export_report_markdown(out_path, target_ip=target_ip)
-            QMessageBox.information(parent_widget, "Report Export", res)
+            QMessageBox.information(
+                parent_widget, t("history.export_result_title", "Report Export"), res
+            )
             return res
         return None
 

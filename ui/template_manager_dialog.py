@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog
+from core.i18n import t
 
 
 class TemplateManagerDialog(QDialog):
@@ -34,7 +35,7 @@ class TemplateManagerDialog(QDialog):
     ):
         super().__init__(parent)
         self.setObjectName("TemplateManagerDialog")
-        self.setWindowTitle("Report-Templates verwalten")
+        self.setWindowTitle(t("template_manager.title", "Report-Templates verwalten"))
         self.resize(750, 420)
 
         self.repo = repository or TemplateRepository()
@@ -47,7 +48,7 @@ class TemplateManagerDialog(QDialog):
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
 
-        lbl = QLabel("Verfügbare Report-Templates:")
+        lbl = QLabel(t("template_manager.available_templates", "Verfügbare Report-Templates:"))
         lbl.setStyleSheet("font-weight: bold;")
         layout.addWidget(lbl)
 
@@ -55,7 +56,14 @@ class TemplateManagerDialog(QDialog):
         self.table.setObjectName("TemplateTable")
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels(
-            ["Name", "ID", "Sprache", "Kategorie", "Komplexität", "Typ"]
+            [
+                t("template_manager.th_name", "Name"),
+                t("template_manager.th_id", "ID"),
+                t("template_manager.th_language", "Sprache"),
+                t("template_manager.th_category", "Kategorie"),
+                t("template_manager.th_complexity", "Komplexität"),
+                t("template_manager.th_type", "Typ"),
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(
@@ -83,30 +91,30 @@ class TemplateManagerDialog(QDialog):
         # Action Buttons Row
         btn_row = QHBoxLayout()
 
-        self.btn_new = QPushButton("＋ Neu...")
+        self.btn_new = QPushButton(t("template_manager.btn_new", "＋ Neu..."))
         self.btn_new.clicked.connect(self._on_new)
         btn_row.addWidget(self.btn_new)
 
-        self.btn_duplicate = QPushButton("⎘ Duplizieren")
+        self.btn_duplicate = QPushButton(t("template_manager.btn_duplicate", "⎘ Duplizieren"))
         self.btn_duplicate.clicked.connect(self._on_duplicate)
         btn_row.addWidget(self.btn_duplicate)
 
-        self.btn_edit = QPushButton("✎ Bearbeiten")
+        self.btn_edit = QPushButton(t("template_manager.btn_edit", "✎ Bearbeiten"))
         self.btn_edit.clicked.connect(self._on_edit)
         btn_row.addWidget(self.btn_edit)
 
-        self.btn_delete = QPushButton("✕ Löschen / Reset")
+        self.btn_delete = QPushButton(t("template_manager.btn_delete", "✕ Löschen / Reset"))
         self.btn_delete.clicked.connect(self._on_delete)
         btn_row.addWidget(self.btn_delete)
 
         btn_row.addStretch()
 
-        self.btn_select = QPushButton("Template anwenden")
+        self.btn_select = QPushButton(t("template_manager.btn_apply", "Template anwenden"))
         self.btn_select.setProperty("class", "PrimaryBtn")
         self.btn_select.clicked.connect(self._on_select)
         btn_row.addWidget(self.btn_select)
 
-        self.btn_close = QPushButton("Schließen")
+        self.btn_close = QPushButton(t("dialog.close", "Schließen"))
         self.btn_close.clicked.connect(self.reject)
         btn_row.addWidget(self.btn_close)
 
@@ -116,13 +124,17 @@ class TemplateManagerDialog(QDialog):
         self._templates = self.repo.get_all_templates()
         self.table.setRowCount(len(self._templates))
 
-        for row, t in enumerate(self._templates):
-            item_name = QTableWidgetItem(t.name)
-            item_id = QTableWidgetItem(t.id)
-            item_lang = QTableWidgetItem(t.language.upper())
-            item_cat = QTableWidgetItem(t.category.upper())
-            item_comp = QTableWidgetItem(t.complexity.capitalize())
-            type_str = "Werkseinstellung" if t.is_builtin else "Benutzerdefiniert"
+        for row, tmpl in enumerate(self._templates):
+            item_name = QTableWidgetItem(tmpl.name)
+            item_id = QTableWidgetItem(tmpl.id)
+            item_lang = QTableWidgetItem(tmpl.language.upper())
+            item_cat = QTableWidgetItem(tmpl.category.upper())
+            item_comp = QTableWidgetItem(tmpl.complexity.capitalize())
+            type_str = (
+                t("template_manager.type_builtin", "Werkseinstellung")
+                if tmpl.is_builtin
+                else t("template_manager.type_custom", "Benutzerdefiniert")
+            )
             item_type = QTableWidgetItem(type_str)
 
             for it in (item_name, item_id, item_lang, item_cat, item_comp, item_type):
@@ -146,11 +158,11 @@ class TemplateManagerDialog(QDialog):
         return None
 
     def _update_button_states(self) -> None:
-        t = self._get_selected_template()
-        has_sel = t is not None
+        tmpl = self._get_selected_template()
+        has_sel = tmpl is not None
         self.btn_duplicate.setEnabled(has_sel)
         self.btn_edit.setEnabled(has_sel)
-        self.btn_delete.setEnabled(has_sel and not t.is_builtin)
+        self.btn_delete.setEnabled(has_sel and not tmpl.is_builtin)
         self.btn_select.setEnabled(has_sel)
 
     def _on_new(self) -> None:
@@ -160,23 +172,27 @@ class TemplateManagerDialog(QDialog):
             self._load_templates()
 
     def _on_duplicate(self) -> None:
-        t = self._get_selected_template()
-        if not t:
+        tmpl = self._get_selected_template()
+        if not tmpl:
             return
 
         new_id, ok = QInputDialog.getText(
-            self, "Template duplizieren", f"Neue ID für Kopie von '{t.name}':", text=f"{t.id}_copy"
+            self,
+            t("template_manager.duplicate_title", "Template duplizieren"),
+            t("template_manager.duplicate_prompt", "Neue ID für Kopie von '{name}':", name=tmpl.name),
+            text=f"{tmpl.id}_copy",
         )
         if not ok or not new_id.strip():
             return
 
+        copy_suffix = t("template_manager.copy_suffix", " (Kopie)")
         dup = ReportTemplate(
             id=new_id.strip(),
-            name=f"{t.name} (Kopie)",
-            language=t.language,
-            category=t.category,
-            complexity=t.complexity,
-            sections=list(t.sections),
+            name=f"{tmpl.name}{copy_suffix}",
+            language=tmpl.language,
+            category=tmpl.category,
+            complexity=tmpl.complexity,
+            sections=list(tmpl.sections),
             is_builtin=False,
         )
         dlg = TemplateEditorDialog(template=dup, parent=self)
@@ -185,28 +201,32 @@ class TemplateManagerDialog(QDialog):
             self._load_templates()
 
     def _on_edit(self) -> None:
-        t = self._get_selected_template()
-        if not t:
+        tmpl = self._get_selected_template()
+        if not tmpl:
             return
-        dlg = TemplateEditorDialog(template=t, parent=self)
+        dlg = TemplateEditorDialog(template=tmpl, parent=self)
         if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_template:
             self.repo.save_user_template(dlg.result_template)
             self._load_templates()
 
     def _on_delete(self) -> None:
-        t = self._get_selected_template()
-        if not t or t.is_builtin:
+        tmpl = self._get_selected_template()
+        if not tmpl or tmpl.is_builtin:
             return
 
         reply = QMessageBox.question(
             self,
-            "Template löschen",
-            f"Möchtest du das Template '{t.name}' wirklich löschen?",
+            t("template_manager.delete_title", "Template löschen"),
+            t(
+                "template_manager.delete_confirm",
+                "Möchtest du das Template '{name}' wirklich löschen?",
+                name=tmpl.name,
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self.repo.delete_user_template(t.id)
+            self.repo.delete_user_template(tmpl.id)
             self._load_templates()
 
     def _on_select(self) -> None:

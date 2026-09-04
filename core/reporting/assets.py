@@ -40,7 +40,7 @@ class ImageEmbeddingBudget:
         self.embedded_bytes += file_size
 
 
-REPORT_CSS = """
+REPORT_BASE_CSS = """
 :root {
     --bg-color: #090d12;
     --container-bg: #0d1117;
@@ -354,18 +354,28 @@ tr:nth-child(even) {
 .severity-high { background-color: rgba(219, 109, 40, 0.2); color: #db6d28; border: 1px solid #db6d28; }
 .severity-medium { background-color: rgba(210, 153, 34, 0.2); color: #d29922; border: 1px solid #d29922; }
 .severity-low { background-color: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid #3fb950; }
+"""
 
+REPORT_PRINT_CSS = """
+/* Print & PDF Export Styling: Ensures clean pagination and prevents clipping of codeblocks, tables, and media */
 @media print {
+    @page {
+        margin: 1.5cm;
+    }
+
     body {
-        background-color: #ffffff;
-        color: #1f2328;
-        padding: 0;
+        background-color: #ffffff !important;
+        color: #1f2328 !important;
+        padding: 0 !important;
     }
 
     .report-wrapper {
-        border: none;
-        box-shadow: none;
-        max-width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        background-color: transparent !important;
     }
 
     .action-bar, .no-print {
@@ -373,51 +383,122 @@ tr:nth-child(even) {
     }
 
     main.report-body img {
-        resize: none;
+        resize: none !important;
     }
 
     .report-header {
-        background: #f6f8fa;
-        border-bottom: 2px solid #0969da;
-        color: #1f2328;
+        background: #f6f8fa !important;
+        border-bottom: 2px solid #0969da !important;
+        color: #1f2328 !important;
+        page-break-after: avoid;
+        break-after: avoid;
     }
 
     .brand-title {
-        color: #1f2328;
+        color: #1f2328 !important;
+    }
+
+    .brand-badge {
+        border: 1px solid #0969da !important;
     }
 
     h1, h2, h3, h4 {
-        color: #0969da;
+        color: #0969da !important;
+        page-break-after: avoid;
+        break-after: avoid;
     }
 
+    /* Print styling for codeblocks: no horizontal clipping, clean line wrapping, preserve indentation */
     pre {
-        background-color: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-left: 3px solid #1a7f37;
+        background-color: #f6f8fa !important;
+        border: 1px solid #d0d7de !important;
+        border-left: 3px solid #1a7f37 !important;
+        color: #1f2328 !important;
+        overflow: visible !important;
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        max-height: none !important;
+        page-break-inside: auto;
+        break-inside: auto;
     }
 
-    code {
-        color: #1a7f37;
+    pre code, code {
+        color: #1a7f37 !important;
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
     }
 
     p code, li code, blockquote code, td code {
-        background-color: #eff1f3;
-        border-color: #d0d7de;
-        color: #9a6700;
+        background-color: #eff1f3 !important;
+        border-color: #d0d7de !important;
+        color: #9a6700 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    blockquote {
+        background-color: #f6f8fa !important;
+        border-left: 4px solid #0969da !important;
+        color: #57606a !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     .screenshot-container {
-        background-color: #f6f8fa;
-        border-color: #d0d7de;
+        background-color: #f6f8fa !important;
+        border-color: #d0d7de !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .screenshot-img, img {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .table-container {
+        overflow: visible !important;
+        overflow-x: visible !important;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    th {
+        background-color: #f6f8fa !important;
+        color: #0969da !important;
+    }
+
+    td {
+        border-color: #d0d7de !important;
     }
 
     .report-footer {
-        background-color: #ffffff;
-        border-top: 1px solid #d0d7de;
+        background-color: #ffffff !important;
+        border-top: 1px solid #d0d7de !important;
+        color: #57606a !important;
+        page-break-before: avoid;
+        break-before: avoid;
     }
 }
 """
 
+REPORT_CSS = REPORT_BASE_CSS + "\n" + REPORT_PRINT_CSS
 
 REPORT_LIGHT_CSS = """
 /* Light export theme: optimized for client review and printed hand-outs. */
@@ -448,9 +529,13 @@ tr:nth-child(even) { background-color: #f6f8fa; }
 
 
 def get_report_css(theme: str = "dark", report_font_key: str = "segoe_ui") -> str:
-    """Returns report CSS for the selected standalone export theme."""
-    report_css = REPORT_CSS.replace("__REPORT_FONT_STACK__", get_report_font_stack(report_font_key))
-    return report_css + (REPORT_LIGHT_CSS if theme.lower() == "light" else "")
+    """Returns report CSS for the selected standalone export theme with print overrides."""
+    base = REPORT_BASE_CSS.replace(
+        "__REPORT_FONT_STACK__", get_report_font_stack(report_font_key)
+    )
+    theme_css = ("\n" + REPORT_LIGHT_CSS) if theme.lower() == "light" else ""
+    return f"{base}{theme_css}\n{REPORT_PRINT_CSS}"
+
 
 
 def encode_image_base64(image_path: Path) -> Optional[str]:

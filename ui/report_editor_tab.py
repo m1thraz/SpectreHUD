@@ -704,9 +704,12 @@ class ReportEditorTab(QWidget):
         if old_len > 200 and new_len < old_len * 0.6:
             reply = QMessageBox.warning(
                 self.window() if self else None,
-                "Ungewöhnlich große Änderung",
-                "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt "
-                "(möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",
+                t("report.warn_large_diff_title", "Ungewöhnlich große Änderung"),
+                t(
+                    "report.warn_large_diff_msg",
+                    "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt "
+                    "(möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",
+                ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
@@ -890,20 +893,26 @@ class ReportEditorTab(QWidget):
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Backup fehlgeschlagen")
+            msg.setWindowTitle(t("report.backup_failed_title", "Backup fehlgeschlagen"))
             msg.setText(
-                "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
-                "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen."
+                t(
+                    "report.backup_failed_msg",
+                    "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
+                    "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen.",
+                )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
         except ReportSaveError as e:
             logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Speichern fehlgeschlagen")
+            msg.setWindowTitle(t("report.save_failed_title", "Speichern fehlgeschlagen"))
             msg.setText(
-                "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
-                "Der bisherige Report bleibt erhalten."
+                t(
+                    "report.save_failed_msg",
+                    "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
+                    "Der bisherige Report bleibt erhalten.",
+                )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
@@ -941,8 +950,11 @@ class ReportEditorTab(QWidget):
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle(t("dialog.error", "Error"))
             msg.setText(
-                "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
-                "Zum Schutz deiner bestehenden Notizen wurde das Ergänzen abgebrochen."
+                t(
+                    "report.append_backup_failed_msg",
+                    "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
+                    "Zum Schutz deiner bestehenden Notizen wurde das Ergänzen abgebrochen.",
+                )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
@@ -952,8 +964,11 @@ class ReportEditorTab(QWidget):
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle(t("dialog.error", "Error"))
             msg.setText(
-                "Der ergänzte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
-                "Der bisherige Report bleibt erhalten."
+                t(
+                    "report.append_save_failed_msg",
+                    "Der ergänzte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
+                    "Der bisherige Report bleibt erhalten.",
+                )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
@@ -1063,7 +1078,10 @@ class ReportEditorTab(QWidget):
     def _on_export_copy_clicked(self) -> None:
         default_path = self.report_file_manager.get_report_path(self.current_project)
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Report-Kopie exportieren", str(default_path), "Markdown (*.md)"
+            self,
+            t("report.export_copy_dialog_title", "Report-Kopie exportieren"),
+            str(default_path),
+            "Markdown (*.md)",
         )
         if not file_path:
             return
@@ -1078,16 +1096,22 @@ class ReportEditorTab(QWidget):
         try:
             coordinator.export_report_markdown(target, self.editor.toPlainText())
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Exportiert")
-            msg.setText(f"Kopie gespeichert: {target.name}")
+            msg.setWindowTitle(t("report.export_saved_title", "Exportiert"))
+            msg.setText(
+                t("report.export_saved_msg", "Kopie gespeichert: {filename}", filename=target.name)
+            )
             msg.setIcon(QMessageBox.Icon.Information)
             msg.exec()
         except ReportExportError as exc:
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Fehler")
+            msg.setWindowTitle(t("dialog.error", "Fehler"))
             msg.setText(
-                f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden."
+                t(
+                    "report.export_failed_msg",
+                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
+                    filename=target.name,
+                )
             )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.exec()
@@ -1101,7 +1125,10 @@ class ReportEditorTab(QWidget):
             ".html"
         )
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "HTML-Report exportieren", str(default_path), "HTML (*.html)"
+            self,
+            t("report.export_html_dialog_title", "HTML-Report exportieren"),
+            str(default_path),
+            "HTML (*.html)",
         )
         if not file_path:
             return
@@ -1114,16 +1141,24 @@ class ReportEditorTab(QWidget):
         if coordinator is None:
             return
         try:
+            doc_lang = self.active_template.language if self.active_template else "en"
             coordinator.export_report_html(
                 target=target,
                 project_name=self.current_project,
                 markdown=self.editor.toPlainText(),
                 theme=theme,
                 report_font=self._report_font_key(),
+                language=doc_lang,
             )
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("HTML-Report exportiert")
-            msg.setText(f"HTML-Report gespeichert:\n{target.name}\n\nIm Standard-Browser öffnen?")
+            msg.setWindowTitle(t("report.export_html_success_title", "HTML-Report exportiert"))
+            msg.setText(
+                t(
+                    "report.export_html_success_msg",
+                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
+                    filename=target.name,
+                )
+            )
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             msg.setDefaultButton(QMessageBox.StandardButton.Yes)
@@ -1141,9 +1176,13 @@ class ReportEditorTab(QWidget):
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
             msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle("Fehler")
+            msg.setWindowTitle(t("dialog.error", "Fehler"))
             msg.setText(
-                f"Export fehlgeschlagen: Die Datei '{target.name}' konnte nicht gespeichert werden."
+                t(
+                    "report.export_failed_msg",
+                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
+                    filename=target.name,
+                )
             )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.exec()

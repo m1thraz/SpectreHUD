@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 from core.template_engine import TemplateEngine, SMART_PRESETS
 from ui.base_dialog import BaseHudDialog
+from core.i18n import t
 
 
 class ParamPromptDialog(BaseHudDialog):
@@ -26,7 +27,9 @@ class ParamPromptDialog(BaseHudDialog):
         cached_params: Dict[str, str] = None,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(title="SPECTRE // PARAMETER AUSFÜLLEN", parent=parent)
+        super().__init__(
+            title=t("param_prompt.title", "SPECTRE // PARAMETER AUSFÜLLEN"), parent=parent
+        )
         self.setMinimumWidth(540)
         self.resize(560, 380)
 
@@ -47,7 +50,9 @@ class ParamPromptDialog(BaseHudDialog):
             row = QVBoxLayout()
             row.setSpacing(2)
 
-            lbl = QLabel(f"Wert für {{{{{param}}}}}:")
+            lbl = QLabel(
+                t("param_prompt.value_for", "Wert für {{{param}}}:", param=param)
+            )
             lbl.setProperty("class", "FormLabel")
             row.addWidget(lbl)
 
@@ -55,7 +60,9 @@ class ParamPromptDialog(BaseHudDialog):
             default_val = self.cached_params.get(param, SMART_PRESETS.get(param, ""))
 
             txt = QLineEdit(default_val)
-            txt.setPlaceholderText(f"Wert für {param}...")
+            txt.setPlaceholderText(
+                t("param_prompt.ph_value", "Wert für {param}...", param=param)
+            )
             txt.textChanged.connect(self._update_preview)
             self.param_inputs[param] = txt
             row.addWidget(txt)
@@ -69,7 +76,7 @@ class ParamPromptDialog(BaseHudDialog):
             self.param_inputs[first_param].selectAll()
 
         # Live Command Preview Box
-        lbl_preview = QLabel("Live-Befehlsvorschau:")
+        lbl_preview = QLabel(t("param_prompt.preview_label", "Live-Befehlsvorschau:"))
         lbl_preview.setProperty("class", "FormLabel")
         layout.addWidget(lbl_preview)
 
@@ -83,17 +90,17 @@ class ParamPromptDialog(BaseHudDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        lbl_hint = QLabel("↵ Enter: Kopieren | Esc: Abbrechen")
+        lbl_hint = QLabel(t("param_prompt.hint", "↵ Enter: Kopieren | Esc: Abbrechen"))
         lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Abbrechen"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_copy = QPushButton("Übernehmen & Kopieren")
+        self.btn_copy = QPushButton(t("param_prompt.btn_copy", "Übernehmen & Kopieren"))
         self.btn_copy.setProperty("class", "PrimaryBtn")
         self.btn_copy.clicked.connect(self.accept)
         btn_layout.addWidget(self.btn_copy)

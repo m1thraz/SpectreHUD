@@ -129,7 +129,10 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator.setIconSize(QSize(10, 10))
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_rec_indicator.setToolTip(
-            "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung."
+            t(
+                "header.rec_tooltip_paused",
+                "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
+            )
         )
         self.btn_rec_indicator.clicked.connect(self.toggle_rec_requested.emit)
         layout.addWidget(self.btn_rec_indicator)
@@ -201,19 +204,26 @@ class HeaderPanel(QFrame):
 
     def update_rec_indicator(self, is_active: bool) -> None:
         """Updates the visual indicator for clipboard history recording state."""
+        self._rec_active = is_active
         if is_active:
             self.btn_rec_indicator.setText("REC: ON")
             self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#ef4444", color_active="#ef4444"))
             self.btn_rec_indicator.setProperty("paused", "false")
             self.btn_rec_indicator.setToolTip(
-                "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+P zum Pausieren."
+                t(
+                    "header.rec_tooltip_active",
+                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+P zum Pausieren.",
+                )
             )
         else:
             self.btn_rec_indicator.setText("REC: Off")
             self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#8b949e", color_active="#8b949e"))
             self.btn_rec_indicator.setProperty("paused", "true")
             self.btn_rec_indicator.setToolTip(
-                "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung."
+                t(
+                    "header.rec_tooltip_paused",
+                    "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
+                )
             )
         self.btn_rec_indicator.style().unpolish(self.btn_rec_indicator)
         self.btn_rec_indicator.style().polish(self.btn_rec_indicator)
@@ -267,3 +277,5 @@ class HeaderPanel(QFrame):
             )
         )
         self.btn_project.setToolTip(t("header.project_tip", "Aktives CTF-Projekt / Box wechseln"))
+        is_active = getattr(self, "_rec_active", False)
+        self.update_rec_indicator(is_active)

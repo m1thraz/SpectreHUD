@@ -203,11 +203,18 @@ class ProjectController(QObject):
             msg = QMessageBox(parent_widget)
             msg.setWindowTitle(t("project.archive_success_title", "Archiv erstellt"))
             msg.setText(
-                f"Die Box '{active_proj}' wurde erfolgreich archiviert:\n\n"
-                f"📁 ZIP-Datei: {zip_path.name}\n"
-                f"📄 Enthaltene Dateien: {file_count}\n"
-                f"📦 Komprimierte Größe: {size_str}\n\n"
-                f"Ordner im Explorer öffnen?"
+                t(
+                    "project.archive_success_msg",
+                    "Die Box '{project}' wurde erfolgreich archiviert:\n\n"
+                    "📁 ZIP-Datei: {zip}\n"
+                    "📄 Enthaltene Dateien: {count}\n"
+                    "📦 Komprimierte Größe: {size}\n\n"
+                    "Ordner im Explorer öffnen?",
+                    project=active_proj,
+                    zip=zip_path.name,
+                    count=file_count,
+                    size=size_str,
+                )
             )
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -225,10 +232,12 @@ class ProjectController(QObject):
                         ),
                     )
         else:
-            err = result.get("error", "Unbekannter Fehler")
+            err = result.get("error", t("common.unknown_error", "Unbekannter Fehler"))
             msg = QMessageBox(parent_widget)
             msg.setWindowTitle(t("project.archive_error_title", "Archivierung fehlgeschlagen"))
-            msg.setText(f"Fehler beim Erstellen des ZIP-Archivs:\n{err}")
+            msg.setText(
+                t("project.archive_error_msg", "Fehler beim Erstellen des ZIP-Archivs:\n{error}", error=err)
+            )
             msg.setIcon(QMessageBox.Icon.Critical)
             msg.exec()
 
@@ -250,8 +259,12 @@ class ProjectController(QObject):
                 logger.error(f"Failed to import project folder '{folder}': {e}")
                 QMessageBox.critical(
                     parent_widget,
-                    "Import fehlgeschlagen",
-                    f"Der Projektordner konnte nicht importiert werden:\n{e}",
+                    t("project.import_failed_title", "Import fehlgeschlagen"),
+                    t(
+                        "project.import_failed_msg",
+                        "Der Projektordner konnte nicht importiert werden:\n{error}",
+                        error=str(e),
+                    ),
                 )
 
     def open_new_project_dialog(
@@ -287,14 +300,22 @@ class ProjectController(QObject):
                     on_project_created(clean_name)
                     return True
                 except ProjectExistsError as e:
-                    QMessageBox.warning(parent_widget, "Projekt existiert bereits", str(e))
+                    QMessageBox.warning(
+                        parent_widget,
+                        t("project.exists_title", "Projekt existiert bereits"),
+                        str(e),
+                    )
                     return False
                 except (ProjectError, PersistenceError, StorageError, OSError) as e:
                     logger.error(f"Failed to create project '{pname}': {e}")
                     QMessageBox.critical(
                         parent_widget,
-                        "Projekt-Erstellung fehlgeschlagen",
-                        f"Das Projekt konnte nicht erstellt werden:\n{e}",
+                        t("project.create_failed_title", "Projekt-Erstellung fehlgeschlagen"),
+                        t(
+                            "project.create_failed_msg",
+                            "Das Projekt konnte nicht erstellt werden:\n{error}",
+                            error=str(e),
+                        ),
                     )
                     return False
         return False

@@ -20,16 +20,16 @@ release are intentionally left to the repository owner.
   (385 passed, 1 skipped, 15 subtests passed).
 - [x] Wheel builds and passes `scripts/verify_wheel.py` (139 files verified).
 - [x] Source and installed-wheel CLI smoke tests report `SpectreHUD 2.0.3`.
-- [x] Manual Windows smoke test confirms startup, HUD transparency, Report
+- [ ] Manual Windows smoke test confirms startup, HUD transparency, Report
   Editor transparency, theme changes, and clean shutdown.
 
 ## Repository-owner release steps
 
-- [x] Review, commit, and push the prepared v2.0.3 release state.
-- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [x] Create the annotated `v2.0.3` tag from the verified commit and push it.
-- [x] Confirm the release workflow publishes the Windows executable and wheel.
-- [x] Download the published executable and verify `--version`, startup,
+- [ ] Review, commit, and push the prepared v2.0.3 release state.
+- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [ ] Create the annotated `v2.0.3` tag from the verified commit and push it.
+- [ ] Confirm the release workflow publishes the Windows executable and wheel.
+- [ ] Download the published executable and verify `--version`, startup,
   Appearance settings, theme restart, and shutdown.
-- [x] Confirm the GitHub release description links to
+- [ ] Confirm the GitHub release description links to
   `docs/release_notes_v2.0.3.md`.

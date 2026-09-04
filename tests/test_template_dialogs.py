@@ -110,8 +110,9 @@ class TestTemplateDialogs(unittest.TestCase):
 
         # Check that duplicated template is in repository
         saved_t = self.repo.get_template("dup_test_1")
-        self.assertIsNotNone(saved_t)
-        self.assertTrue(saved_t.name.endswith("(Kopie)"))
+        from core.i18n import t
+        copy_suffix = t("template_manager.copy_suffix", " (Kopie)").strip()
+        self.assertTrue(saved_t.name.endswith(copy_suffix))
 
         # Delete the duplicated template
         # Find row of dup_test_1

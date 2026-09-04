@@ -172,6 +172,7 @@ class ProjectRepository:
         port: str = "4444",
         base_dir: Optional[Path] = None,
         allow_existing: bool = False,
+        lang: str = "de",
     ) -> Path:
         """
         Creates an isolated project directory structure transactionally.
@@ -206,7 +207,10 @@ class ProjectRepository:
             notes_file = proj_dir / "notes.md"
             if not notes_file.exists():
                 notes_content = create_initial_notes(
-                    project_name=clean_name, target_ip=target_ip, attacker_ip=attacker_ip
+                    project_name=clean_name,
+                    target_ip=target_ip,
+                    attacker_ip=attacker_ip,
+                    lang=lang,
                 )
                 if not atomic_write_text(notes_file, notes_content):
                     raise OSError(f"Failed to atomically create notes.md for {clean_name}")

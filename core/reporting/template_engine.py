@@ -76,7 +76,9 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
     date_str = now.strftime("%Y-%m-%d")
     pname = context.project_name or "Default"
     target_ip = context.target_ip or (context.metadata.get("target_ip") if context.metadata else "")
-    target_display = target_ip if target_ip and target_ip != "all" else "Alle Targets"
+    target_display = (
+        target_ip if target_ip and target_ip != "all" else ("Alle Targets" if lang == "de" else "All Targets")
+    )
 
     default_title = (
         f"Pentest Report: {pname}" if lang == "de" else f"Security Assessment Report: {pname}"
@@ -125,13 +127,15 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
 
     finding_rows = []
     findings_count = 0
+    t_fallback = "Unbenannt" if lang == "de" else "Unnamed"
+    status_text = "Offen" if lang == "de" else "Open"
     for entry in all_entries:
         sev = str(entry.get("severity", "info")).lower()
         if sev != "info":
             findings_count += 1
-            t = str(entry.get("title", "Unbenannt")).replace("|", "\\|").replace("\n", " ")
+            t = str(entry.get("title") or t_fallback).replace("|", "\\|").replace("\n", " ")
             cat = str(entry.get("category", "misc")).replace("|", "\\|").replace("\n", " ")
-            finding_rows.append(f"| {findings_count} | {t} | {sev.upper()} | {cat} | Offen |")
+            finding_rows.append(f"| {findings_count} | {t} | {sev.upper()} | {cat} | {status_text} |")
 
     if not finding_rows:
         finding_rows = ["| | | | | |"]
@@ -207,12 +211,13 @@ def _render_scope_limitations(section: TemplateSection, context: ReportContext, 
     return "\n".join(lines)
 
 
-def _render_loot_entry_block(entry: Dict[str, Any]) -> List[str]:
+def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[str]:
     entry_id = str(entry.get("id", "")).strip()
     marker = format_loot_marker(entry_id, loot_content_hash(entry)) if entry_id else ""
     entry_type = entry.get("type", "note")
     severity = str(entry.get("severity", "info")).lower()
-    title = entry.get("title", "Unbenannter Eintrag")
+    title_fallback = "Unbenannter Eintrag" if lang == "de" else "Unnamed Entry"
+    title = entry.get("title") or title_fallback
     content = (entry.get("content") or "").strip()
 
     sev_badge = ""
@@ -227,7 +232,8 @@ def _render_loot_entry_block(entry: Dict[str, Any]) -> List[str]:
     if entry.get("target_ip"):
         meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
     if entry.get("timestamp"):
-        meta.append(f"**Zeit:** {_wrap_inline_code(str(entry.get('timestamp')))}")
+        time_label = "**Zeit:**" if lang == "de" else "**Time:**"
+        meta.append(f"{time_label} {_wrap_inline_code(str(entry.get('timestamp')))}")
     if meta:
         lines.append(" | ".join(meta))
     lines.append("")
@@ -267,7 +273,7 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
         lines.append("")
     else:
         for entry in reversed(entries):
-            lines.extend(_render_loot_entry_block(entry))
+            lines.extend(_render_loot_entry_block(entry, lang=lang))
 
     placeholder = SECTION_NOTES_PLACEHOLDER_DE if lang == "de" else SECTION_NOTES_PLACEHOLDER_EN
     lines.append(placeholder)

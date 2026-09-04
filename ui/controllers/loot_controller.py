@@ -56,8 +56,12 @@ class LootController(QObject):
                 target_widget = app.activeWindow()
         QMessageBox.critical(
             target_widget,
-            "Speicherfehler",
-            f"Loot-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+            t("dialog.storage_error", "Speicherfehler"),
+            t(
+                "loot.storage_error_msg",
+                "Loot-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+                error=str(error),
+            ),
         )
 
     # ------------------------------------------------------------------ #
@@ -258,13 +262,23 @@ class LootController(QObject):
             logger.error("Loot file export failed for %s: %s", entry_id, exc, exc_info=True)
             QMessageBox.warning(
                 parent_widget,
-                "Export fehlgeschlagen",
-                f"Loot-Datei konnte nicht exportiert werden:\n{exc}",
+                t("loot.export_failed_title", "Export fehlgeschlagen"),
+                t(
+                    "loot.export_failed_msg",
+                    "Loot-Datei konnte nicht exportiert werden:\n{error}",
+                    error=str(exc),
+                ),
             )
             return None
 
         QMessageBox.information(
-            parent_widget, "Loot-Datei exportiert", f"Gespeichert unter:\n{output_path}"
+            parent_widget,
+            t("loot.export_success_title", "Loot-Datei exportiert"),
+            t(
+                "loot.export_success_msg",
+                "Gespeichert unter:\n{path}",
+                path=str(output_path),
+            ),
         )
         return output_path
 

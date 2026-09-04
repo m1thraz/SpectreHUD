@@ -114,6 +114,7 @@ def test_html_report_export_resolves_project_through_coordinator(tmp_path):
         target_ip="",
         theme="light",
         report_font="inter",
+        language="en",
     )
 
 

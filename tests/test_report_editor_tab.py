@@ -196,7 +196,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.find_replace.open()
         self.tab.find_replace.find_input.setText("alpha")
         self.assertTrue(self.tab.find_replace.isVisible())
-        self.assertEqual(self.tab.find_replace.count_label.text(), "2 Treffer")
+        self.assertEqual(self.tab.find_replace.count_label.text(), t("find_replace.matches_count", "{count} Treffer", count=2))
         self.tab.find_replace.replace_input.setText("omega")
         self.tab.find_replace.replace_all()
         self.assertEqual(self.tab.editor.toPlainText(), "omega beta omega")

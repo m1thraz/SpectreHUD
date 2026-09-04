@@ -124,6 +124,7 @@ class ProjectManager:
         base_dir: Optional[Path] = None,
         allow_existing: bool = False,
         pentest_password: Optional[str] = None,
+        lang: str = "de",
     ) -> Path:
         """
         Creates an isolated project workspace with category subfolders and loot,
@@ -137,6 +138,7 @@ class ProjectManager:
             port=port,
             base_dir=base_dir,
             allow_existing=allow_existing,
+            lang=lang,
         )
         if pentest_password is not None:
             self.repository.enable_pentest_mode(clean_name, pentest_password)

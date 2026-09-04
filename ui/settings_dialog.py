@@ -954,8 +954,12 @@ class SettingsDialog(BaseHudDialog):
             except WorkspaceError as e:
                 QMessageBox.warning(
                     self,
-                    "Ungültiger Workspace-Pfad",
-                    f"Das ausgewählte Workspace-Verzeichnis ist ungültig oder nicht beschreibbar:\n{e}",
+                    t("settings.invalid_workspace_title", "Ungültiger Workspace-Pfad"),
+                    t(
+                        "settings.invalid_workspace_msg",
+                        "Das ausgewählte Workspace-Verzeichnis ist ungültig oder nicht beschreibbar:\n{error}",
+                        error=str(e),
+                    ),
                 )
                 return
 
@@ -989,8 +993,12 @@ class SettingsDialog(BaseHudDialog):
         except PersistenceError as e:
             QMessageBox.critical(
                 self,
-                "Speichern fehlgeschlagen",
-                f"Die Einstellungen konnten nicht gespeichert werden:\n{e}",
+                t("settings.save_failed_title", "Speichern fehlgeschlagen"),
+                t(
+                    "settings.save_failed_msg",
+                    "Die Einstellungen konnten nicht gespeichert werden:\n{error}",
+                    error=str(e),
+                ),
             )
             return
 

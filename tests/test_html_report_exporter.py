@@ -245,6 +245,31 @@ curl -i http://10.10.10.10/admin
         self.assertNotIn("<script>", html_out_script)
         self.assertIn("&lt;script&gt;", html_out_script)
 
+    def test_print_css_rules_for_codeblocks_prevent_pdf_clipping(self):
+        """Ticket: Code blocks in PDF/print export must wrap and not clip due to overflow."""
+        html_out = HtmlReportExporter.build_full_html(
+            "```bash\nlong_command_arg1_arg2_arg3_arg4_long_string_that_needs_to_wrap\n```",
+            project_dir=self.proj_dir,
+            project_name="TestBox",
+            theme="dark",
+        )
+        self.assertIn("@media print", html_out)
+        self.assertIn("white-space: pre-wrap !important;", html_out)
+        self.assertIn("overflow: visible !important;", html_out)
+        self.assertIn("overflow-wrap: anywhere !important;", html_out)
+        self.assertIn("word-break: break-word !important;", html_out)
+
+    def test_print_css_included_in_both_dark_and_light_themes(self):
+        """Both dark and light themes must include print overrides at the end of the stylesheet."""
+        dark_html = HtmlReportExporter.build_full_html("# Dark", project_dir=self.proj_dir, theme="dark")
+        light_html = HtmlReportExporter.build_full_html("# Light", project_dir=self.proj_dir, theme="light")
+
+        for doc in (dark_html, light_html):
+            self.assertIn("@media print", doc)
+            self.assertIn("white-space: pre-wrap !important;", doc)
+            self.assertIn("overflow: visible !important;", doc)
+
 
 if __name__ == "__main__":
     unittest.main()
+

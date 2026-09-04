@@ -26,7 +26,9 @@ STRIP_MARKER_REGEX = re.compile(
 
 SECTION_NOTES_PLACEHOLDER_DE = "_Eigene Anmerkungen zu dieser Phase:_"
 SECTION_NOTES_PLACEHOLDER_EN = "_Notes & observations for this phase:_"
-FALLBACK_SECTION_TITLE = "Neu aus Loot ergänzt"
+FALLBACK_SECTION_TITLE_DE = "Neu aus Loot ergänzt"
+FALLBACK_SECTION_TITLE_EN = "New Loot Entries"
+FALLBACK_SECTION_TITLE = FALLBACK_SECTION_TITLE_DE
 
 
 def loot_content_hash(entry: Mapping[str, Any]) -> str:
@@ -181,11 +183,11 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
     return heading_map
 
 
-def _render_loot_block_text(entry: Mapping[str, Any]) -> str:
+def _render_loot_block_text(entry: Mapping[str, Any], lang: str = "de") -> str:
     """Renders a single markdown loot entry block including its canonical marker."""
     from core.reporting.template_engine import _render_loot_entry_block
 
-    lines = _render_loot_entry_block(dict(entry))
+    lines = _render_loot_entry_block(dict(entry), lang=lang)
     return "\n".join(lines) + "\n"
 
 
@@ -283,7 +285,7 @@ def append_missing_loot_to_text(
         sec_text = report_text[c_start:s_end]
 
         # Render loot blocks in the canonical phase order (matching template_engine's reversed)
-        rendered_blocks = "".join(_render_loot_block_text(e) for e in reversed(cat_entries))
+        rendered_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(cat_entries))
 
         # Check if empty placeholder notice is present to clean up
         empty_notice_de = "*Keine Einträge in dieser Phase.*"
@@ -341,10 +343,14 @@ def append_missing_loot_to_text(
     used_fallback = False
     if fallback_entries:
         used_fallback = True
-        # Check if fallback section already exists in updated text
-        fallback_header = f"## {FALLBACK_SECTION_TITLE}"
-        existing_fb_sections = [s for s in _find_h2_sections(updated_text) if s[0] == FALLBACK_SECTION_TITLE]
-        rendered_fb_blocks = "".join(_render_loot_block_text(e) for e in reversed(fallback_entries))
+        is_de = (language or "").lower().startswith("de")
+        fallback_title = FALLBACK_SECTION_TITLE_DE if is_de else FALLBACK_SECTION_TITLE_EN
+        fallback_header = f"## {fallback_title}"
+        existing_fb_sections = [
+            s for s in _find_h2_sections(updated_text)
+            if s[0] in (FALLBACK_SECTION_TITLE_DE, FALLBACK_SECTION_TITLE_EN, fallback_title)
+        ]
+        rendered_fb_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(fallback_entries))
 
         if existing_fb_sections:
             # Insert at the end of existing fallback section

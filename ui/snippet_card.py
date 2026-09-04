@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional
 from core.template_engine import TemplateEngine
 from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
+from core.i18n import t
 import pyperclip
 
 
@@ -47,12 +48,16 @@ class SnippetCard(QFrame):
         is_fav = bool(self.snippet.get("is_favorite", False))
         self.btn_fav = QPushButton("★" if is_fav else "☆")
         self.btn_fav.setProperty("class", "StarBtnActive" if is_fav else "StarBtn")
-        self.btn_fav.setToolTip("Favorit entfernen" if is_fav else "Als Favorit anheften")
+        self.btn_fav.setToolTip(
+            t("snippet.fav_remove", "Favorit entfernen")
+            if is_fav
+            else t("snippet.fav_add", "Als Favorit anheften")
+        )
         self.btn_fav.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_fav.clicked.connect(self._toggle_favorite)
         header_layout.addWidget(self.btn_fav, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        self.lbl_title = QLabel(self.snippet.get("title", "Unbenannter Befehl"))
+        self.lbl_title = QLabel(self.snippet.get("title") or t("snippet.unnamed", "Unbenannter Befehl"))
         self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_title.setObjectName("SnippetTitle")
         self.lbl_title.setWordWrap(True)
@@ -108,13 +113,15 @@ class SnippetCard(QFrame):
         # Inline Tweak Button
         self.btn_tweak = QPushButton("✏️")
         self.btn_tweak.setProperty("class", "TweakBtn")
-        self.btn_tweak.setToolTip("Befehl anpassen vor dem Kopieren")
+        self.btn_tweak.setToolTip(
+            t("snippet.tweak_tip", "Befehl anpassen vor dem Kopieren")
+        )
         self.btn_tweak.setFixedWidth(34)
         self.btn_tweak.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tweak.clicked.connect(self._open_command_editor)
         cmd_row.addWidget(self.btn_tweak, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        self.btn_copy = QPushButton("Copy")
+        self.btn_copy = QPushButton(t("snippet.copy", "Copy"))
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.setFixedWidth(85)
         self.btn_copy.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -154,7 +161,7 @@ class SnippetCard(QFrame):
             pass
 
         btn = target_btn or self.btn_copy
-        btn.setText("✓ Copied!")
+        btn.setText(t("snippet.copied", "✓ Copied!"))
         btn.setProperty("class", "CopyBtnSuccess")
         btn.style().unpolish(btn)
         btn.style().polish(btn)
@@ -164,7 +171,7 @@ class SnippetCard(QFrame):
 
     def _reset_copy_btn(self, btn: Optional[QPushButton] = None) -> None:
         target = btn or self.btn_copy
-        target.setText("Copy")
+        target.setText(t("snippet.copy", "Copy"))
         target.setProperty("class", "CopyBtn")
         target.style().unpolish(target)
         target.style().polish(target)
@@ -215,9 +222,11 @@ class SnippetCard(QFrame):
         self.snippet["is_favorite"] = new_state
 
         self.btn_fav.setText("★" if new_state else "☆")
-        self.btn_fav.setProperty("class", "StarBtnActive" if new_state else "StarBtn")
-        self.btn_fav.setToolTip("Favorit entfernen" if new_state else "Als Favorit anheften")
-        self.btn_fav.style().unpolish(self.btn_fav)
+        self.btn_fav.setToolTip(
+            t("snippet.fav_remove", "Favorit entfernen")
+            if new_state
+            else t("snippet.fav_add", "Als Favorit anheften")
+        )
         self.btn_fav.style().polish(self.btn_fav)
 
         self.favorite_toggled.emit(self.snippet.get("id", ""), new_state)

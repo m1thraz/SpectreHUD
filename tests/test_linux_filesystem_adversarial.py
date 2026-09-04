@@ -246,7 +246,7 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         self.assertTrue(atomic_write_bytes(bytes_target, b"\xde\xad\xbe\xef"))
         self.assertEqual(bytes_target.read_bytes(), b"\xde\xad\xbe\xef")
 
-        sample_data = {"tool": "SpectreHUD", "version": "2.0.4", "active": True}
+        sample_data = {"tool": "SpectreHUD", "version": "2.0.3", "active": True}
         self.assertTrue(atomic_write_json(json_target, sample_data))
         with json_target.open("r", encoding="utf-8") as f:
             self.assertEqual(json.load(f), sample_data)

@@ -141,8 +141,12 @@ class CheatsheetController(QObject):
                 target_widget = app.activeWindow()
         QMessageBox.critical(
             target_widget,
-            "Speicherfehler",
-            f"Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+            t("dialog.storage_error", "Speicherfehler"),
+            t(
+                "cheatsheet.storage_error_msg",
+                "Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
+                error=str(error),
+            ),
         )
 
     # ------------------------------------------------------------------ #

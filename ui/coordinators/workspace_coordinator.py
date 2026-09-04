@@ -60,7 +60,11 @@ class WorkspaceCoordinator(QObject):
         except ProjectSecurityMetaError as exc:
             logger.error("Invalid Pentest-Mode metadata for '%s': %s", project_name, exc)
             if window is not None:
-                QMessageBox.critical(window, "Pentest-Modus fehlerhaft", str(exc))
+                QMessageBox.critical(
+                    window,
+                    t("project.pentest_meta_error_title", "Pentest-Modus fehlerhaft"),
+                    str(exc),
+                )
                 return False
             raise
         if not needs_unlock:
@@ -75,10 +79,16 @@ class WorkspaceCoordinator(QObject):
                 if self.project_manager.unlock_project(project_name, dialog.get_password()):
                     return True
             except ProjectSecurityMetaError as exc:
-                QMessageBox.critical(window, "Pentest-Modus fehlerhaft", str(exc))
+                QMessageBox.critical(
+                    window,
+                    t("project.pentest_meta_error_title", "Pentest-Modus fehlerhaft"),
+                    str(exc),
+                )
                 return False
             QMessageBox.warning(
-                window, "Entsperren fehlgeschlagen", "Das Passwort ist nicht korrekt."
+                window,
+                t("project.unlock_failed_title", "Entsperren fehlgeschlagen"),
+                t("project.unlock_failed_msg", "Das Passwort ist nicht korrekt."),
             )
 
     def save_current_project_session(self, variables: Dict[str, str]) -> bool:
@@ -112,14 +122,22 @@ class WorkspaceCoordinator(QObject):
             msg.setWindowTitle(t("general.save_failed", "Speichern fehlgeschlagen"))
             if project_unavailable:
                 msg.setText(
-                    f"Der Projektordner des aktiven Projekts '{current_proj}' wurde außerhalb von SpectreHUD "
-                    "verschoben oder gelöscht. SpectreHUD hat ihn nicht neu erstellt.\n\n"
-                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
+                    t(
+                        "workspace.switch_folder_missing",
+                        "Der Projektordner des aktiven Projekts '{project}' wurde außerhalb von SpectreHUD "
+                        "verschoben oder gelöscht. SpectreHUD hat ihn nicht neu erstellt.\n\n"
+                        "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
+                        project=current_proj,
+                    )
                 )
             else:
                 msg.setText(
-                    f"Der Zustand des aktuellen Projekts '{current_proj}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
-                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?"
+                    t(
+                        "workspace.switch_save_failed",
+                        "Der Zustand des aktuellen Projekts '{project}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
+                        "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
+                        project=current_proj,
+                    )
                 )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(
@@ -250,7 +268,9 @@ class WorkspaceCoordinator(QObject):
                         "general.workspace_restore_failed",
                         "The workspace switch failed and the previous session could not be restored safely. "
                         "Please restart SpectreHUD before making further changes.\n\n"
-                        f"Switch error: {switch_err}\nRestore error: {restore_err}",
+                        "Switch error: {switch_err}\nRestore error: {restore_err}",
+                        switch_err=switch_err,
+                        restore_err=restore_err,
                     ),
                 )
                 return False
@@ -259,7 +279,8 @@ class WorkspaceCoordinator(QObject):
                 t("general.workspace_error", "Workspace Error"),
                 t(
                     "general.workspace_switch_failed",
-                    f"Failed to switch workspace directory:\n{switch_err}\n\nThe previous workspace has been restored.",
+                    "Failed to switch workspace directory:\n{switch_err}\n\nThe previous workspace has been restored.",
+                    switch_err=switch_err,
                 ),
             )
             return False

@@ -25,16 +25,27 @@ from PyQt6.QtWidgets import (
 
 from core.reporting.template_engine import ReportTemplate, TemplateSection
 from core.loot_manager import CATEGORIES
+from core.i18n import t
 
 
-SECTION_TYPE_NAMES = {
-    "header_metadata": "Header & Metadaten",
-    "executive_summary": "Executive Summary & Findings-Matrix",
-    "scope_limitations": "Scope & Limitations",
-    "phase_section": "Phasen-Sektion (Loot-Kategorie)",
-    "remediation_table": "Remediation & Maßnahmenplan",
-    "appendix": "Anhang (Befehlsverlauf & Screenshots)",
+SECTION_TYPE_KEYS = {
+    "header_metadata": ("template_editor.sec_header", "Header & Metadaten"),
+    "executive_summary": ("template_editor.sec_summary", "Executive Summary & Findings-Matrix"),
+    "scope_limitations": ("template_editor.sec_scope", "Scope & Limitations"),
+    "phase_section": ("template_editor.sec_phase", "Phasen-Sektion (Loot-Kategorie)"),
+    "remediation_table": ("template_editor.sec_remediation", "Remediation & Maßnahmenplan"),
+    "appendix": ("template_editor.sec_appendix", "Anhang (Befehlsverlauf & Screenshots)"),
 }
+
+
+def get_section_type_name(sec_type: str) -> str:
+    key_info = SECTION_TYPE_KEYS.get(sec_type)
+    if key_info:
+        return t(key_info[0], key_info[1])
+    return sec_type
+
+
+SECTION_TYPE_NAMES = {k: v[1] for k, v in SECTION_TYPE_KEYS.items()}
 
 
 class SectionEditDialog(QDialog):
@@ -43,7 +54,7 @@ class SectionEditDialog(QDialog):
     def __init__(self, section: Optional[TemplateSection] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("TemplateSectionEditDialog")
-        self.setWindowTitle("Sektion konfigurieren")
+        self.setWindowTitle(t("template_editor.edit_section_title", "Sektion konfigurieren"))
         self.resize(420, 260)
 
         self._initial_section = section
@@ -56,30 +67,34 @@ class SectionEditDialog(QDialog):
 
         form = QFormLayout()
         self.combo_type = QComboBox()
-        for key, name in SECTION_TYPE_NAMES.items():
-            self.combo_type.addItem(name, key)
+        for key in SECTION_TYPE_KEYS:
+            self.combo_type.addItem(get_section_type_name(key), key)
         self.combo_type.currentIndexChanged.connect(self._on_type_changed)
-        form.addRow("Typ:", self.combo_type)
+        form.addRow(t("template_editor.lbl_type", "Typ:"), self.combo_type)
 
         self.txt_title = QLineEdit()
-        self.txt_title.setPlaceholderText("(Optionaler individueller Titel)")
-        form.addRow("Titel:", self.txt_title)
+        self.txt_title.setPlaceholderText(
+            t("template_editor.ph_title", "(Optionaler individueller Titel)")
+        )
+        form.addRow(t("template_editor.lbl_title", "Titel:"), self.txt_title)
 
         self.combo_category = QComboBox()
         for cat in CATEGORIES:
             self.combo_category.addItem(cat["name"], cat["id"])
-        self.row_category = form.addRow("Loot-Kategorie:", self.combo_category)
+        self.row_category = form.addRow(
+            t("template_editor.lbl_category", "Loot-Kategorie:"), self.combo_category
+        )
 
         layout.addLayout(form)
         layout.addStretch()
 
         btn_box = QHBoxLayout()
         btn_box.addStretch()
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Abbrechen"))
         self.btn_cancel.clicked.connect(self.reject)
         btn_box.addWidget(self.btn_cancel)
 
-        self.btn_ok = QPushButton("OK")
+        self.btn_ok = QPushButton(t("dialog.ok", "OK"))
         self.btn_ok.setProperty("class", "PrimaryBtn")
         self.btn_ok.clicked.connect(self.accept)
         btn_box.addWidget(self.btn_ok)
@@ -119,7 +134,12 @@ class TemplateEditorDialog(QDialog):
     def __init__(self, template: Optional[ReportTemplate] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("TemplateEditorDialog")
-        self.setWindowTitle("Template-Editor" if template else "Neues Report-Template erstellen")
+        title = (
+            t("template_editor.title_edit", "Template-Editor")
+            if template
+            else t("template_editor.title_new", "Neues Report-Template erstellen")
+        )
+        self.setWindowTitle(title)
         self.resize(600, 520)
 
         self._template = template
@@ -134,31 +154,40 @@ class TemplateEditorDialog(QDialog):
         form = QFormLayout()
 
         self.txt_id = QLineEdit()
-        self.txt_id.setPlaceholderText("z.B. custom_pentest_de")
-        form.addRow("Template-ID:", self.txt_id)
+        self.txt_id.setPlaceholderText(t("template_editor.ph_id", "z.B. custom_pentest_de"))
+        form.addRow(t("template_editor.lbl_id", "Template-ID:"), self.txt_id)
 
         self.txt_name = QLineEdit()
-        self.txt_name.setPlaceholderText("z.B. Mein Pentest Standard (DE)")
-        form.addRow("Name:", self.txt_name)
+        self.txt_name.setPlaceholderText(
+            t("template_editor.ph_name", "z.B. Mein Pentest Standard (DE)")
+        )
+        form.addRow(t("template_editor.lbl_name", "Name:"), self.txt_name)
 
         self.combo_lang = QComboBox()
         self.combo_lang.addItem("Deutsch (de)", "de")
         self.combo_lang.addItem("English (en)", "en")
-        form.addRow("Sprache:", self.combo_lang)
+        form.addRow(t("template_editor.lbl_language", "Sprache:"), self.combo_lang)
 
         self.combo_cat = QComboBox()
-        self.combo_cat.addItem("Pentest (pentest)", "pentest")
-        self.combo_cat.addItem("CTF Challenge (ctf)", "ctf")
-        form.addRow("Kategorie:", self.combo_cat)
+        self.combo_cat.addItem(t("template_editor.cat_pentest", "Pentest (pentest)"), "pentest")
+        self.combo_cat.addItem(t("template_editor.cat_ctf", "CTF Challenge (ctf)"), "ctf")
+        form.addRow(t("template_editor.lbl_category", "Kategorie:"), self.combo_cat)
 
         self.combo_comp = QComboBox()
-        self.combo_comp.addItem("Umfassend (complex)", "complex")
-        self.combo_comp.addItem("Kompakt / Quick (simple)", "simple")
-        form.addRow("Komplexität:", self.combo_comp)
+        self.combo_comp.addItem(t("template_editor.comp_complex", "Umfassend (complex)"), "complex")
+        self.combo_comp.addItem(
+            t("template_editor.comp_simple", "Kompakt / Quick (simple)"), "simple"
+        )
+        form.addRow(t("template_editor.lbl_complexity", "Komplexität:"), self.combo_comp)
 
         layout.addLayout(form)
 
-        lbl_sec = QLabel("Sektionen (Reihenfolge von oben nach unten):")
+        lbl_sec = QLabel(
+            t(
+                "template_editor.lbl_sections",
+                "Sektionen (Reihenfolge von oben nach unten):",
+            )
+        )
         lbl_sec.setStyleSheet("color: #f0f6fc; font-weight: bold; margin-top: 8px;")
         layout.addWidget(lbl_sec)
 
@@ -169,23 +198,23 @@ class TemplateEditorDialog(QDialog):
         sec_layout.addWidget(self.list_sections, stretch=1)
 
         btn_col = QVBoxLayout()
-        self.btn_add_sec = QPushButton("＋ Hinzufügen")
+        self.btn_add_sec = QPushButton(t("template_editor.btn_add_sec", "＋ Hinzufügen"))
         self.btn_add_sec.clicked.connect(self._on_add_section)
         btn_col.addWidget(self.btn_add_sec)
 
-        self.btn_edit_sec = QPushButton("✎ Bearbeiten")
+        self.btn_edit_sec = QPushButton(t("template_editor.btn_edit_sec", "✎ Bearbeiten"))
         self.btn_edit_sec.clicked.connect(self._on_edit_section)
         btn_col.addWidget(self.btn_edit_sec)
 
-        self.btn_move_up = QPushButton("▲ Nach oben")
+        self.btn_move_up = QPushButton(t("template_editor.btn_move_up", "▲ Nach oben"))
         self.btn_move_up.clicked.connect(self._on_move_up)
         btn_col.addWidget(self.btn_move_up)
 
-        self.btn_move_down = QPushButton("▼ Nach unten")
+        self.btn_move_down = QPushButton(t("template_editor.btn_move_down", "▼ Nach unten"))
         self.btn_move_down.clicked.connect(self._on_move_down)
         btn_col.addWidget(self.btn_move_down)
 
-        self.btn_remove_sec = QPushButton("✕ Entfernen")
+        self.btn_remove_sec = QPushButton(t("template_editor.btn_remove_sec", "✕ Entfernen"))
         self.btn_remove_sec.clicked.connect(self._on_remove_section)
         btn_col.addWidget(self.btn_remove_sec)
         btn_col.addStretch()
@@ -197,11 +226,11 @@ class TemplateEditorDialog(QDialog):
         btn_box = QHBoxLayout()
         btn_box.addStretch()
 
-        self.btn_cancel = QPushButton("Abbrechen")
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Abbrechen"))
         self.btn_cancel.clicked.connect(self.reject)
         btn_box.addWidget(self.btn_cancel)
 
-        self.btn_save = QPushButton("Speichern")
+        self.btn_save = QPushButton(t("dialog.save", "Speichern"))
         self.btn_save.setProperty("class", "PrimaryBtn")
         self.btn_save.clicked.connect(self._on_save)
         btn_box.addWidget(self.btn_save)
@@ -209,12 +238,16 @@ class TemplateEditorDialog(QDialog):
         layout.addLayout(btn_box)
 
     def _format_section_item(self, section: TemplateSection) -> str:
-        type_str = SECTION_TYPE_NAMES.get(section.type, section.type)
+        type_str = get_section_type_name(section.type)
         details = []
         if section.category_id:
-            details.append(f"Kategorie: {section.category_id}")
+            details.append(
+                t("template_editor.item_category", "Kategorie: {category}", category=section.category_id)
+            )
         if section.title:
-            details.append(f"Titel: '{section.title}'")
+            details.append(
+                t("template_editor.item_title", "Titel: '{title}'", title=section.title)
+            )
         detail_str = f" ({', '.join(details)})" if details else ""
         return f"{type_str}{detail_str}"
 
@@ -286,22 +319,40 @@ class TemplateEditorDialog(QDialog):
         name = self.txt_name.text().strip()
 
         if not tid:
-            QMessageBox.warning(self, "Ungültige Eingabe", "Bitte eine Template-ID eingeben.")
+            QMessageBox.warning(
+                self,
+                t("dialog.invalid_input", "Ungültige Eingabe"),
+                t("template_editor.err_no_id", "Bitte eine Template-ID eingeben."),
+            )
             return
 
         if not re.match(r"^[a-zA-Z0-9_-]+$", tid):
             QMessageBox.warning(
-                self, "Ungültige ID", "Die ID darf nur Buchstaben, Ziffern, '_' und '-' enthalten."
+                self,
+                t("dialog.invalid_input", "Ungültige ID"),
+                t(
+                    "template_editor.err_invalid_id",
+                    "Die ID darf nur Buchstaben, Ziffern, '_' und '-' enthalten.",
+                ),
             )
             return
 
         if not name:
-            QMessageBox.warning(self, "Ungültige Eingabe", "Bitte einen Template-Namen eingeben.")
+            QMessageBox.warning(
+                self,
+                t("dialog.invalid_input", "Ungültige Eingabe"),
+                t("template_editor.err_no_name", "Bitte einen Template-Namen eingeben."),
+            )
             return
 
         if self.list_sections.count() == 0:
             QMessageBox.warning(
-                self, "Keine Sektionen", "Das Template muss mindestens eine Sektion enthalten."
+                self,
+                t("dialog.warning", "Keine Sektionen"),
+                t(
+                    "template_editor.err_no_sections",
+                    "Das Template muss mindestens eine Sektion enthalten.",
+                ),
             )
             return
 

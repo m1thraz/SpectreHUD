@@ -3,6 +3,8 @@
 from PyQt6.QtGui import QTextCursor, QTextDocument
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton, QWidget
 
+from core.i18n import t
+
 
 class FindReplaceBar(QWidget):
     """Owns the find/replace UI and operates on an injected source editor."""
@@ -14,24 +16,24 @@ class FindReplaceBar(QWidget):
         layout.setContentsMargins(4, 2, 4, 2)
 
         self.find_input = QLineEdit(self)
-        self.find_input.setPlaceholderText("Suchen …")
+        self.find_input.setPlaceholderText(t("find_replace.find_placeholder", "Suchen …"))
         self.find_input.textChanged.connect(self.update_count)
         self.find_input.returnPressed.connect(self.find_next)
         self.replace_input = QLineEdit(self)
-        self.replace_input.setPlaceholderText("Ersetzen durch …")
-        self.count_label = QLabel("0 Treffer", self)
+        self.replace_input.setPlaceholderText(t("find_replace.replace_placeholder", "Ersetzen durch …"))
+        self.count_label = QLabel(t("find_replace.matches_count", "{count} Treffer", count=0), self)
         previous = QPushButton("↑", self)
-        previous.setToolTip("Vorheriger Treffer")
+        previous.setToolTip(t("find_replace.previous_match", "Vorheriger Treffer"))
         previous.clicked.connect(self.find_previous)
         next_button = QPushButton("↓", self)
-        next_button.setToolTip("Nächster Treffer")
+        next_button.setToolTip(t("find_replace.next_match", "Nächster Treffer"))
         next_button.clicked.connect(self.find_next)
-        replace = QPushButton("Ersetzen", self)
+        replace = QPushButton(t("find_replace.replace", "Ersetzen"), self)
         replace.clicked.connect(self.replace_current)
-        replace_all = QPushButton("Alle ersetzen", self)
+        replace_all = QPushButton(t("find_replace.replace_all", "Alle ersetzen"), self)
         replace_all.clicked.connect(self.replace_all)
         close = QPushButton("×", self)
-        close.setToolTip("Suche schließen (Esc)")
+        close.setToolTip(t("find_replace.close_tip", "Suche schließen (Esc)"))
         close.clicked.connect(self.close_bar)
         for widget in (
             self.find_input,
@@ -59,7 +61,7 @@ class FindReplaceBar(QWidget):
     def update_count(self) -> None:
         needle = self.find_input.text()
         if not needle:
-            self.count_label.setText("0 Treffer")
+            self.count_label.setText(t("find_replace.matches_count", "{count} Treffer", count=0))
             return
         document = self.editor.document()
         cursor = document.find(needle)
@@ -67,7 +69,7 @@ class FindReplaceBar(QWidget):
         while not cursor.isNull():
             count += 1
             cursor = document.find(needle, cursor)
-        self.count_label.setText(f"{count} Treffer")
+        self.count_label.setText(t("find_replace.matches_count", "{count} Treffer", count=count))
 
     def find(self, backwards: bool = False) -> None:
         needle = self.find_input.text()

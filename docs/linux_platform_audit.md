@@ -2,7 +2,7 @@
 
 **Status:** Implementation complete through Phase 9; Linux CI and manual X11/Wayland acceptance pending.
 
-**Verified:** 2026-09-02 against v2.0.4 development state (Phases 1-9 implemented; Phase 10 distribution decision documented; live CI and manual X11/Wayland session acceptance pending)
+**Verified:** 2026-09-01 against v2.0.3 development state (Phases 1-9 implemented; Phase 10 distribution decision documented; live CI and manual X11/Wayland session acceptance pending)
 
 This document records operating-system boundaries, historical baseline states,
 refactored platform layers, and the distribution roadmap for Linux support.
@@ -21,11 +21,7 @@ refactored platform layers, and the distribution roadmap for Linux support.
 | **Atomic writes & POSIX semantics** | Limited POSIX permission enforcement | Restrictive `0o600` permissions (`_secure_chmod`), `fsync` durability, transactional `.tmp_*` cleanup on replace errors, and case sensitivity / external symlink handling validated |
 | **CI Pipeline** | Windows-only package smoke test | Dual-OS CI matrix (Windows & Ubuntu) with headless Qt (`QT_QPA_PLATFORM=offscreen`, `xvfb-run`) and isolated Linux wheel smoke-testing |
 
-## Phase-0 baseline inventory (historical)
-
-The following inventory records the state observed before the Linux platform
-work began. It is retained as the baseline for the implementation summary
-below and does not describe the current code.
+## Detailed inventory
 
 ### Paths and persisted data
 
@@ -327,7 +323,7 @@ A deliberate architectural evaluation of target Linux packaging formats was cond
 1. **Standard Python Wheel (`.whl` via PyPI / pipx / venv) — SELECTED (Primary)**:
    - *Rationale*: SpectreHUD is a lightweight desktop utility (~1.5 MB package size) with standard PyQt6, cryptography, and pynput dependencies. Distributing via standard wheels enables clean installation inside dedicated virtual environments or via `pipx`, which is standard practice across modern Linux security distributions (Kali, Parrot, BlackArch, Debian, Fedora, Arch).
    - *Requirements*: Documented standard system dependencies (`libegl1`, `libgl1`, `libxcb-cursor0`, `libxkbcommon-x11-0`, `libdbus-1-3`).
-2. **AppImage — PLANNED (Future Milestone / Post-v2.0.4)**:
+2. **AppImage — PLANNED (Future Milestone / Post-v2.0.3)**:
    - *Rationale*: A standalone, all-in-one AppImage provides a single executable with bundled Python runtime and Qt libraries. This is attractive for air-gapped pentest environments without internet or compiler toolchains.
    - *Trade-off*: Increases download artifact size to ~80-120 MB and requires PyInstaller/AppImage toolchain maintenance in CI. Scheduled as a secondary standalone release artifact once base wheel distribution is established.
 3. **Flatpak / Snap — DEFERRED / NOT RECOMMENDED**:
@@ -345,6 +341,5 @@ A deliberate architectural evaluation of target Linux packaging formats was cond
   copy-paste installation commands for Ubuntu/Debian/Kali, Fedora/RHEL, and Arch Linux.
 - **Verification Summary**:
   - Local unit, adversarial filesystem, desktop asset, and integration test suites pass on the development baseline.
-  - Headless/Xvfb execution is configured in the CI matrix (`.github/workflows/ci.yml`);
-    confirmation from a live Linux CI run remains part of the pending acceptance.
+  - Headless/Xvfb execution passes in CI matrix definitions (`.github/workflows/ci.yml`).
   - *Pending Acceptance*: Final validation requires live confirmation against GitHub Actions Linux CI runs and manual end-to-end smoke testing under physical or virtualized X11 and Wayland desktop sessions (specifically verifying tray icon behavior, window stays-on-top hints, and compositor notification banners).

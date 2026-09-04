@@ -116,8 +116,12 @@ class I18nManager(QObject):
         loc_dict = self._translations.get(self._current_locale, {})
         text = loc_dict.get(key)
 
-        if text is None:
-            # Fallback to German
+        if text is None and self._current_locale != DEFAULT_LOCALE:
+            # Fallback to DEFAULT_LOCALE ("en")
+            text = self._translations.get(DEFAULT_LOCALE, {}).get(key)
+
+        if text is None and self._current_locale != "de" and DEFAULT_LOCALE != "de":
+            # Secondary fallback to "de" if available
             text = self._translations.get("de", {}).get(key)
 
         if text is None:

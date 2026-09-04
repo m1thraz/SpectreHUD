@@ -4,7 +4,7 @@ Metadata templates and default structure generation for project workspaces.
 
 from typing import Dict, Any, Optional
 
-DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
+DEFAULT_NOTES_TEMPLATE_DE = """# CTF Write-Up & Notes: {project_name}
 
 - **Target IP:** `{target_ip}`
 - **Attacker IP / LHOST:** `{attacker_ip}`
@@ -37,18 +37,55 @@ DEFAULT_NOTES_TEMPLATE = """# CTF Write-Up & Notes: {project_name}
 -
 """
 
+DEFAULT_NOTES_TEMPLATE_EN = """# CTF Write-Up & Notes: {project_name}
+
+- **Target IP:** `{target_ip}`
+- **Attacker IP / LHOST:** `{attacker_ip}`
+- **Created at:** {created_at}
+
+---
+
+## 1. Reconnaissance & Port Scans
+- **Nmap Initial Scan:**
+```bash
+# Nmap initial results
+```
+
+---
+
+## 2. Initial Access & Exploitation
+- **Vulnerability:**
+- **Procedure:**
+
+---
+
+## 3. Privilege Escalation
+- **User Flag:**
+- **Root / Admin Escalation:**
+- **Root Flag:**
+
+---
+
+## 4. Notes & Lessons Learned
+-
+"""
+
+DEFAULT_NOTES_TEMPLATE = DEFAULT_NOTES_TEMPLATE_DE
+
 
 def create_initial_notes(
     project_name: str,
     target_ip: str = "TBD",
     attacker_ip: str = "TBD",
     created_at: Optional[str] = None,
+    lang: str = "de",
 ) -> str:
     """Renders initial notes.md markdown text for a new project."""
     from core.validators import format_timestamp
 
     ts = created_at or format_timestamp()
-    return DEFAULT_NOTES_TEMPLATE.format(
+    tmpl = DEFAULT_NOTES_TEMPLATE_DE if (lang or "").lower().startswith("de") else DEFAULT_NOTES_TEMPLATE_EN
+    return tmpl.format(
         project_name=project_name,
         target_ip=target_ip or "TBD",
         attacker_ip=attacker_ip or "TBD",

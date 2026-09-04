@@ -17,6 +17,7 @@ def render_report_html(
     timestamp: Optional[str] = None,
     theme: str = "dark",
     report_font: str = "segoe_ui",
+    language: str = "en",
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
@@ -33,8 +34,14 @@ def render_report_html(
         download_filename.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     )
 
+    is_de = (language or "").lower().startswith("de")
+    html_lang = "de" if is_de else "en"
+    date_label = "Datum:" if is_de else "Date:"
+    btn_print = "🖨 Drucken / PDF Exportieren" if is_de else "🖨 Print / Export PDF"
+    btn_save = "💾 Bearbeitete Version speichern" if is_de else "💾 Save Edited HTML"
+
     return f"""<!DOCTYPE html>
-<html lang="de">
+<html lang="{html_lang}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,13 +62,13 @@ def render_report_html(
             <div class="header-meta">
                 <div class="meta-item"><strong>Box:</strong> {html.escape(pname)}</div>
                 <div class="meta-item"><strong>Target:</strong> {html.escape(target_str)}</div>
-                <div class="meta-item"><strong>Datum:</strong> {now_str}</div>
+                <div class="meta-item"><strong>{date_label}</strong> {now_str}</div>
             </div>
         </header>
 
         <div class="action-bar no-print">
-            <button class="btn-action" onclick="window.print()">🖨 Drucken / PDF Exportieren</button>
-            <button class="btn-action" onclick="downloadEditedHtml()">💾 Bearbeitete Version speichern</button>
+            <button class="btn-action" onclick="window.print()">{btn_print}</button>
+            <button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>
         </div>
 
         <main class="report-body" contenteditable="true" spellcheck="false">
