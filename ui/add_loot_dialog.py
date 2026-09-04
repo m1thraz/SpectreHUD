@@ -66,7 +66,26 @@ class AddLootDialog(BaseHudDialog):
             default_content or initial_content or content or kwargs.get("text", "")
         )
 
+        # When opened non-modally (Quick Loot), set to True after first activation
+        # so clicking outside dismisses the window. Stays False in modal (exec()) mode.
+        self._dismiss_on_deactivate = False
+        self._has_been_active = False
+
         self._init_form()
+
+    def changeEvent(self, event) -> None:
+        """In non-modal mode: close when the window loses focus after having been active."""
+        if (
+            event is not None
+            and event.type() == event.Type.ActivationChange
+            and self._dismiss_on_deactivate
+        ):
+            if self.isActiveWindow():
+                self._has_been_active = True
+            elif self._has_been_active:
+                self.close()
+        super().changeEvent(event)
+
 
     def _init_form(self) -> None:
         layout = self.body_layout

@@ -246,7 +246,8 @@ class QuickIpPopup(QWidget):
         self.raise_()
         self.activateWindow()
 
-        # Immediate and queued focus to ensure reliable keyboard capture across platforms
+        # Give keyboard focus once on open — single queued call so Qt finishes
+        # painting before focus is set; no repeated timer so click-outside still dismisses
         self._force_focus_target()
         QTimer.singleShot(0, self._force_focus_target)
-        QTimer.singleShot(50, self._force_focus_target)
+

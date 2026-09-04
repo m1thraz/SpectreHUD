@@ -55,6 +55,7 @@ class QuickNotePopup(QWidget):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
+        self._has_been_active = False
         self.current_category = (
             default_category if default_category in VALID_CATEGORY_IDS else "misc"
         )
@@ -202,6 +203,15 @@ class QuickNotePopup(QWidget):
             return
         super().keyPressEvent(event)
 
+    def changeEvent(self, event) -> None:
+        """Dismisses popup when focus/activation is lost after having been active."""
+        if event is not None and event.type() == event.Type.ActivationChange:
+            if self.isActiveWindow():
+                self._has_been_active = True
+            elif self._has_been_active:
+                self.close()
+        super().changeEvent(event)
+
     def accept(self) -> None:
         """Submits the note if text is non-empty and closes."""
         text = self.text_edit.toPlainText().strip()
@@ -220,6 +230,7 @@ class QuickNotePopup(QWidget):
             self.select_category(default_category)
 
         self.text_edit.clear()
+        self._has_been_active = False
 
         cursor_pos = QCursor.pos()
         screen = QGuiApplication.screenAt(cursor_pos) or QGuiApplication.primaryScreen()
@@ -239,4 +250,6 @@ class QuickNotePopup(QWidget):
         self.show()
         self.raise_()
         self.activateWindow()
-        self.text_edit.setFocus()
+        # Give keyboard focus once on open — no repeated timer so click-outside still dismisses
+        self.text_edit.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+

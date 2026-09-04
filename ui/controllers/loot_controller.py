@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 from pathlib import Path
@@ -567,33 +566,14 @@ class LootController(QObject):
             self._active_add_dialog = dlg
 
             dlg.show()
-            if os.name == "nt":
-                try:
-                    import ctypes
-
-                    user32 = ctypes.windll.user32
-                    kernel32 = ctypes.windll.kernel32
-                    hwnd = int(dlg.winId())
-                    fg = user32.GetForegroundWindow()
-                    if fg != hwnd:
-                        fore_thread = user32.GetWindowThreadProcessId(fg, None)
-                        app_thread = kernel32.GetCurrentThreadId()
-                        if fore_thread != app_thread and fore_thread != 0:
-                            user32.AttachThreadInput(fore_thread, app_thread, True)
-                            user32.BringWindowToTop(hwnd)
-                            user32.SetForegroundWindow(hwnd)
-                            user32.AttachThreadInput(fore_thread, app_thread, False)
-                        else:
-                            user32.BringWindowToTop(hwnd)
-                            user32.SetForegroundWindow(hwnd)
-                except Exception:
-                    pass
-
             dlg.raise_()
             dlg.activateWindow()
             if hasattr(dlg, "txt_title"):
-                dlg.txt_title.setFocus()
+                dlg.txt_title.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+            # Enable click-outside-to-close now that initial focus is set
+            dlg._dismiss_on_deactivate = True
             return True
+
 
         dlg = AddLootDialog(
             parent=parent_widget,
