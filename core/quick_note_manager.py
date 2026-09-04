@@ -84,6 +84,9 @@ class QuickNoteManager(QObject):
         category: str = "misc",
         target_ip: Optional[str] = None,
         *,
+        status: str = "inbox",
+        pinned: bool = False,
+        source: Optional[Dict[str, str]] = None,
         persist: bool = True,
     ) -> Optional[Dict[str, Any]]:
         """Adds a new quick note entry and optionally persists it."""
@@ -98,6 +101,17 @@ class QuickNoteManager(QObject):
         if cat not in VALID_CATEGORY_IDS:
             cat = "misc"
 
+        clean_status = str(status or "inbox").strip().lower()
+        if clean_status not in {"inbox", "followup", "resolved"}:
+            clean_status = "inbox"
+
+        clean_pinned = bool(pinned)
+        clean_source = None
+        if isinstance(source, dict):
+            clean_source = {
+                "type": str(source.get("type") or "")[:64],
+                "id": str(source.get("id") or "")[:128],
+            }
 
         entry = {
             "id": f"note_{uuid.uuid4().hex[:8]}",
@@ -105,6 +119,9 @@ class QuickNoteManager(QObject):
             "category": cat,
             "target_ip": str(target_ip or "").strip(),
             "timestamp": format_timestamp(time_format=self.time_format),
+            "status": clean_status,
+            "pinned": clean_pinned,
+            "source": clean_source,
         }
 
         new_notes = [entry, *self.notes]
@@ -119,6 +136,67 @@ class QuickNoteManager(QObject):
         self._publish_updated("add", entry)
         return entry
 
+    def update_entry(
+        self,
+        entry_id: str,
+        *,
+        persist: bool = True,
+        **changes,
+    ) -> Optional[Dict[str, Any]]:
+        """Updates fields of an existing quick note and persists the change."""
+        idx = -1
+        for i, n in enumerate(self.notes):
+            if n.get("id") == entry_id:
+                idx = i
+                break
+        if idx == -1:
+            return None
+
+        current = dict(self.notes[idx])
+
+        if "text" in changes:
+            clean_text = str(changes["text"] or "").strip()
+            if not clean_text:
+                return None
+            if len(clean_text) > MAX_CLIPBOARD_TEXT_LENGTH:
+                clean_text = clean_text[:MAX_CLIPBOARD_TEXT_LENGTH]
+            current["text"] = clean_text
+
+        if "category" in changes:
+            cat = str(changes["category"] or "misc").strip().lower()
+            current["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
+
+        if "target_ip" in changes:
+            current["target_ip"] = str(changes["target_ip"] or "").strip()
+
+        if "status" in changes:
+            st = str(changes["status"] or "inbox").strip().lower()
+            if st in {"inbox", "followup", "resolved"}:
+                current["status"] = st
+
+        if "pinned" in changes:
+            current["pinned"] = bool(changes["pinned"])
+
+        if "source" in changes:
+            src = changes["source"]
+            if isinstance(src, dict):
+                current["source"] = {
+                    "type": str(src.get("type") or "")[:64],
+                    "id": str(src.get("id") or "")[:128],
+                }
+            elif src is None:
+                current["source"] = None
+
+        new_notes = list(self.notes)
+        new_notes[idx] = current
+
+        if persist and not self.storage.save_json("quick_notes", new_notes):
+            raise PersistenceError("Could not persist updated quick note to storage.")
+
+        self.notes = new_notes
+        self._publish_updated("update", current)
+        return dict(current)
+
     def get_all_entries(self) -> List[Dict[str, Any]]:
         """Returns a copy of all current quick notes."""
         return [dict(n) for n in self.notes]
@@ -128,22 +206,47 @@ class QuickNoteManager(QObject):
         category: Optional[str] = None,
         target_ip: Optional[str] = None,
         search_query: Optional[str] = None,
+        status: Optional[str] = None,
+        pinned: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
-        """Returns filtered quick notes."""
+        """Returns filtered and prioritized quick notes."""
         results = self.notes
         if category and category != "all":
             results = [n for n in results if n.get("category") == category]
         if target_ip:
             tip = target_ip.strip()
             results = [n for n in results if n.get("target_ip") == tip]
+        if status and status != "all":
+            st = status.strip().lower()
+            results = [n for n in results if n.get("status", "inbox") == st]
+        if pinned is not None:
+            results = [n for n in results if bool(n.get("pinned", False)) == pinned]
+
         if search_query and search_query.strip():
             sq = search_query.strip().lower()
             results = [
                 n
                 for n in results
-                if sq in n.get("text", "").lower() or sq in n.get("category", "").lower()
+                if sq in n.get("text", "").lower()
+                or sq in n.get("category", "").lower()
+                or sq in n.get("target_ip", "").lower()
+                or sq in n.get("status", "").lower()
             ]
-        return [dict(n) for n in results]
+
+        # Prioritized sorting:
+        # 1. pinned first
+        # 2. uncompleted next (status != "resolved")
+        # 3. resolved
+        # Preserves newest-first order within each bucket.
+        sorted_results = sorted(
+            results,
+            key=lambda n: (
+                0 if n.get("pinned", False) else 1,
+                1 if n.get("status", "inbox") == "resolved" else 0,
+            ),
+        )
+
+        return [dict(n) for n in sorted_results]
 
     def delete_entry(self, entry_id: str, *, persist: bool = True) -> bool:
         """Deletes a quick note by id."""

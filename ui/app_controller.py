@@ -109,9 +109,17 @@ class AppController(QObject):
         self.loot_ctrl = LootController(
             self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self
         )
+        self.report_ctrl = ReportController(
+            self.project_manager,
+            self.loot_manager,
+            self.clipboard_watcher,
+            parent_widget=self.window,
+            config_manager=self.config,
+        )
         self.quick_note_ctrl = QuickNoteController(
             quick_note_manager=self.quick_note_manager,
             loot_controller=self.loot_ctrl,
+            report_controller=self.report_ctrl,
             target_provider=self._target_provider,
             event_bus=self.event_bus,
             parent=self,
@@ -122,13 +130,6 @@ class AppController(QObject):
             self.project_manager,
             event_bus=self.event_bus,
             parent=self,
-        )
-        self.report_ctrl = ReportController(
-            self.project_manager,
-            self.loot_manager,
-            self.clipboard_watcher,
-            parent_widget=self.window,
-            config_manager=self.config,
         )
         self.project_ctrl = ProjectController(
             self.project_manager, event_bus=self.event_bus, parent=self

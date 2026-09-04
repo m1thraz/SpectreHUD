@@ -1,5 +1,7 @@
 """
 Visual card displaying a single Quick Note in the Inbox / History panel.
+Supports inline editing, status triage (inbox/followup/resolved), pinning,
+Markdown-light rendering, multi-selection, and promotion/export to Loot or Report.
 """
 
 from typing import Dict, Any, Optional
@@ -9,56 +11,113 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QPlainTextEdit,
+    QCheckBox,
+    QMenu,
     QWidget,
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
+from PyQt6.QtGui import QKeyEvent, QAction
 import pyperclip
 
 from core.logger import get_logger
 from core.i18n import t
+from ui.styles.icons import icon
+from ui.styles.palette import CYBER_CYAN
 
 logger = get_logger("quick_note_card")
 
 
+class NoteEditor(QPlainTextEdit):
+    """Inline plain text editor with Ctrl+Enter save and Esc cancel shortcuts."""
+
+    save_requested = pyqtSignal()
+    cancel_requested = pyqtSignal()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if (
+            event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            self.save_requested.emit()
+            event.accept()
+            return
+        if event.key() == Qt.Key.Key_Escape:
+            self.cancel_requested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
 class QuickNoteCard(QFrame):
     """
-    Card displaying a quick thought note with one-click copy, deletion,
-    and promotion to formal Loot.
+    Card displaying a quick thought note with inline editing, status triage,
+    pinning, multi-selection, and send-to actions (Loot or Report).
     """
 
     copied = pyqtSignal(str)
     promote_requested = pyqtSignal(dict)
+    send_to_report_requested = pyqtSignal(dict)
     deleted = pyqtSignal(str)
+    edited = pyqtSignal(str, str)  # (note_id, new_text)
+    status_changed = pyqtSignal(str, str)  # (note_id, new_status)
+    pin_toggled = pyqtSignal(str, bool)  # (note_id, new_pinned)
+    selection_changed = pyqtSignal(str, bool)  # (note_id, is_selected)
 
     def __init__(self, entry: Dict[str, Any], parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("SnippetCard")
-        self.entry = entry
+        self.entry = dict(entry)
+        self.is_editing = False
         self._init_ui()
+        self._update_status_style()
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
 
-        # Header Row: Note Badge, Category, Time, Target, Delete
+        # ------------------------------------------------------------------ #
+        # Header Row: Checkbox, Pin, Status Pill, Category, Time, Target, Delete
+        # ------------------------------------------------------------------ #
         header_layout = QHBoxLayout()
         header_layout.setSpacing(6)
 
-        # Quick Note Type Badge
-        lbl_type = QLabel("📌 NOTE")
-        lbl_type.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_type.setStyleSheet(
-            "background-color: rgba(210, 153, 34, 0.18); color: #e3b341; "
-            "border: 1px solid rgba(210, 153, 34, 0.4); border-radius: 4px; "
-            "padding: 2px 6px; font-size: 10px; font-weight: bold;"
+        # 1. Selection Checkbox for Bulk Triage
+        self.chk_select = QCheckBox()
+        self.chk_select.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.chk_select.setToolTip(t("quick_note.select_tip", "Select for bulk action"))
+        self.chk_select.toggled.connect(
+            lambda checked: self.selection_changed.emit(self.entry.get("id", ""), checked)
         )
-        header_layout.addWidget(lbl_type)
+        header_layout.addWidget(self.chk_select)
 
-        # Phase Category Badge
-        cat = self.entry.get("category", "misc").upper()
+        # 2. Pin Button
+        is_pinned = bool(self.entry.get("pinned", False))
+        self.btn_pin = QPushButton()
+        self.btn_pin.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_pin.setIcon(icon("fa5s.thumbtack", color=CYBER_CYAN if is_pinned else "#8b949e"))
+        self.btn_pin.setIconSize(QSize(11, 11))
+        self.btn_pin.setFixedSize(22, 20)
+        self._style_pin_button(is_pinned)
+        self.btn_pin.setToolTip(
+            t("quick_note.unpin_tip", "Unpin note")
+            if is_pinned
+            else t("quick_note.pin_tip", "Pin note to top")
+        )
+        self.btn_pin.clicked.connect(self._toggle_pin)
+        header_layout.addWidget(self.btn_pin)
+
+        # 3. Status Pill Button (Inbox, Follow-up, Resolved)
+        self.btn_status = QPushButton()
+        self.btn_status.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._build_status_menu()
+        header_layout.addWidget(self.btn_status)
+
+        # 4. Phase Category Badge
+        cat = str(self.entry.get("category", "misc")).upper()
         lbl_cat = QLabel(cat)
         lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
         lbl_cat.setStyleSheet(
@@ -68,8 +127,8 @@ class QuickNoteCard(QFrame):
         )
         header_layout.addWidget(lbl_cat)
 
-        # Time Badge
-        ts = self.entry.get("timestamp", "")
+        # 5. Time Badge
+        ts = str(self.entry.get("timestamp", ""))
         time_display = ts.split(" ")[-1] if " " in ts else ts
         if time_display:
             lbl_time = QLabel(time_display)
@@ -81,8 +140,8 @@ class QuickNoteCard(QFrame):
             )
             header_layout.addWidget(lbl_time)
 
-        # Target IP Badge (if present)
-        target_ip = self.entry.get("target_ip", "")
+        # 6. Target IP Badge (if present)
+        target_ip = str(self.entry.get("target_ip", "")).strip()
         if target_ip:
             lbl_target = QLabel(target_ip)
             lbl_target.setTextFormat(Qt.TextFormat.PlainText)
@@ -95,7 +154,7 @@ class QuickNoteCard(QFrame):
 
         header_layout.addStretch()
 
-        # Delete Button
+        # 7. Delete Button
         btn_delete = QPushButton("✕")
         btn_delete.setProperty("class", "DangerBtn")
         btn_delete.setToolTip(t("quick_note.delete_tip", "Delete this quick note"))
@@ -104,12 +163,15 @@ class QuickNoteCard(QFrame):
 
         layout.addLayout(header_layout)
 
-        # Content Box Row
-        content_row = QHBoxLayout()
-        content_row.setSpacing(8)
+        # ------------------------------------------------------------------ #
+        # Content Row: Markdown-Light Content / Inline Editor + Action Buttons
+        # ------------------------------------------------------------------ #
+        self.content_row = QHBoxLayout()
+        self.content_row.setSpacing(8)
 
+        # Content View Mode (Markdown-Light)
         self.lbl_content = QLabel(self.entry.get("text", ""))
-        self.lbl_content.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_content.setTextFormat(Qt.TextFormat.MarkdownText)
         self.lbl_content.setObjectName("CommandLabel")
         self.lbl_content.setWordWrap(True)
         self.lbl_content.setTextInteractionFlags(
@@ -117,33 +179,206 @@ class QuickNoteCard(QFrame):
             | Qt.TextInteractionFlag.TextSelectableByKeyboard
         )
         self.lbl_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        content_row.addWidget(self.lbl_content, stretch=1)
+        self.content_row.addWidget(self.lbl_content, stretch=1)
 
-        # Action Buttons Column
-        action_col = QVBoxLayout()
-        action_col.setSpacing(4)
+        # Content Edit Mode Container (initially hidden)
+        self.edit_container = QWidget()
+        edit_layout = QVBoxLayout(self.edit_container)
+        edit_layout.setContentsMargins(0, 0, 0, 0)
+        edit_layout.setSpacing(4)
+
+        self.editor = NoteEditor()
+        self.editor.setPlainText(self.entry.get("text", ""))
+        self.editor.setMaximumHeight(120)
+        self.editor.setStyleSheet(
+            "QPlainTextEdit { background-color: rgba(22, 27, 34, 0.95); color: #f0f6fc; "
+            "border: 1px solid #00e5ff; border-radius: 4px; padding: 4px; font-size: 12px; }"
+        )
+        self.editor.save_requested.connect(self._save_edit)
+        self.editor.cancel_requested.connect(self._cancel_edit)
+        edit_layout.addWidget(self.editor)
+
+        edit_btns = QHBoxLayout()
+        edit_btns.setSpacing(6)
+        lbl_hint = QLabel(t("quick_note.edit_shortcut_hint", "Ctrl+Enter: Save | Esc: Cancel"))
+        lbl_hint.setStyleSheet("color: #8b949e; font-size: 10px;")
+        edit_btns.addWidget(lbl_hint)
+        edit_btns.addStretch()
+
+        btn_save_edit = QPushButton(t("quick_note.save", "Save"))
+        btn_save_edit.setProperty("class", "PrimaryBtn")
+        btn_save_edit.setFixedSize(55, 22)
+        btn_save_edit.clicked.connect(self._save_edit)
+        edit_btns.addWidget(btn_save_edit)
+
+        btn_cancel_edit = QPushButton(t("quick_note.cancel", "Cancel"))
+        btn_cancel_edit.setProperty("class", "SecondaryBtn")
+        btn_cancel_edit.setFixedSize(55, 22)
+        btn_cancel_edit.clicked.connect(self._cancel_edit)
+        edit_btns.addWidget(btn_cancel_edit)
+
+        edit_layout.addLayout(edit_btns)
+        self.edit_container.setVisible(False)
+        self.content_row.addWidget(self.edit_container, stretch=1)
+
+        # ------------------------------------------------------------------ #
+        # Action Buttons Column: Copy, Edit, Send to...
+        # ------------------------------------------------------------------ #
+        self.action_col = QVBoxLayout()
+        self.action_col.setSpacing(4)
 
         self.btn_copy = QPushButton("Copy")
         self.btn_copy.setProperty("class", "CopyBtn")
-        self.btn_copy.setMinimumWidth(95)
+        self.btn_copy.setMinimumWidth(85)
         self.btn_copy.clicked.connect(self._copy_content)
-        action_col.addWidget(self.btn_copy)
+        self.action_col.addWidget(self.btn_copy)
 
-        self.btn_promote = QPushButton("★ Promote")
-        self.btn_promote.setProperty("class", "SecondaryBtn")
-        self.btn_promote.setStyleSheet(
+        self.btn_edit = QPushButton(t("quick_note.edit", "Edit"))
+        self.btn_edit.setProperty("class", "SecondaryBtn")
+        self.btn_edit.setIcon(icon("fa5s.pen", color="#79c0ff"))
+        self.btn_edit.setIconSize(QSize(10, 10))
+        self.btn_edit.setMinimumWidth(85)
+        self.btn_edit.clicked.connect(self._start_edit)
+        self.action_col.addWidget(self.btn_edit)
+
+        # Send to Dropdown Menu (Loot or Report)
+        self.btn_send = QPushButton("Send to ▾")
+        self.btn_send.setProperty("class", "SecondaryBtn")
+        self.btn_send.setStyleSheet(
             "QPushButton { border-color: rgba(210, 153, 34, 0.6); color: #e3b341; } "
             "QPushButton:hover { background-color: rgba(210, 153, 34, 0.2); border-color: #e3b341; }"
         )
-        self.btn_promote.setToolTip(
-            t("quick_note.promote_tip", "Promote note to formal Loot and remove from inbox")
-        )
-        self.btn_promote.setMinimumWidth(95)
-        self.btn_promote.clicked.connect(lambda: self.promote_requested.emit(self.entry))
-        action_col.addWidget(self.btn_promote)
+        self.btn_send.setMinimumWidth(85)
+        self._build_send_menu()
+        self.action_col.addWidget(self.btn_send)
 
-        content_row.addLayout(action_col)
-        layout.addLayout(content_row)
+        self.content_row.addLayout(self.action_col)
+        layout.addLayout(self.content_row)
+
+    # ------------------------------------------------------------------ #
+    # Status & Pin Helpers
+    # ------------------------------------------------------------------ #
+
+    def _build_status_menu(self) -> None:
+        status_menu = QMenu(self.btn_status)
+        for s_code, s_label in [
+            ("inbox", t("quick_note.status_inbox", "📥 Inbox")),
+            ("followup", t("quick_note.status_followup", "⏳ Follow-up")),
+            ("resolved", t("quick_note.status_resolved", "✓ Resolved")),
+        ]:
+            action = QAction(s_label, status_menu)
+            action.triggered.connect(lambda checked=False, st=s_code: self._change_status(st))
+            status_menu.addAction(action)
+        self.btn_status.setMenu(status_menu)
+
+    def _change_status(self, new_status: str) -> None:
+        self.entry["status"] = new_status
+        self._update_status_style()
+        self.status_changed.emit(self.entry.get("id", ""), new_status)
+
+    def _update_status_style(self) -> None:
+        st = str(self.entry.get("status", "inbox")).lower()
+        if st == "followup":
+            self.btn_status.setText(t("quick_note.status_followup_short", "⏳ Follow-up ▾"))
+            self.btn_status.setStyleSheet(
+                "background-color: rgba(210, 153, 34, 0.2); color: #e3b341; "
+                "border: 1px solid rgba(210, 153, 34, 0.5); border-radius: 4px; "
+                "padding: 2px 6px; font-size: 10px; font-weight: bold;"
+            )
+            self.lbl_content.setStyleSheet("color: #f0f6fc;")
+        elif st == "resolved":
+            self.btn_status.setText(t("quick_note.status_resolved_short", "✓ Resolved ▾"))
+            self.btn_status.setStyleSheet(
+                "background-color: rgba(57, 211, 83, 0.15); color: #56d364; "
+                "border: 1px solid rgba(57, 211, 83, 0.4); border-radius: 4px; "
+                "padding: 2px 6px; font-size: 10px; font-weight: bold;"
+            )
+            # Subtle dimming of text for resolved notes
+            self.lbl_content.setStyleSheet("color: #8b949e;")
+        else:
+            self.btn_status.setText(t("quick_note.status_inbox_short", "📥 Inbox ▾"))
+            self.btn_status.setStyleSheet(
+                "background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; "
+                "border: 1px solid rgba(56, 139, 253, 0.4); border-radius: 4px; "
+                "padding: 2px 6px; font-size: 10px; font-weight: bold;"
+            )
+            self.lbl_content.setStyleSheet("color: #f0f6fc;")
+
+    def _toggle_pin(self) -> None:
+        current_pin = bool(self.entry.get("pinned", False))
+        new_pin = not current_pin
+        self.entry["pinned"] = new_pin
+        self._style_pin_button(new_pin)
+        self.btn_pin.setIcon(icon("fa5s.thumbtack", color=CYBER_CYAN if new_pin else "#8b949e"))
+        self.btn_pin.setToolTip(
+            t("quick_note.unpin_tip", "Unpin note")
+            if new_pin
+            else t("quick_note.pin_tip", "Pin note to top")
+        )
+        self.pin_toggled.emit(self.entry.get("id", ""), new_pin)
+
+    def _style_pin_button(self, is_pinned: bool) -> None:
+        if is_pinned:
+            self.btn_pin.setStyleSheet(
+                "QPushButton { background-color: rgba(0, 229, 255, 0.2); "
+                "border: 1px solid #00e5ff; border-radius: 4px; padding: 1px; } "
+                "QPushButton:hover { background-color: rgba(0, 229, 255, 0.35); }"
+            )
+        else:
+            self.btn_pin.setStyleSheet(
+                "QPushButton { background-color: transparent; "
+                "border: 1px solid rgba(139, 148, 158, 0.3); border-radius: 4px; padding: 1px; } "
+                "QPushButton:hover { background-color: rgba(139, 148, 158, 0.2); border-color: #8b949e; }"
+            )
+
+    # ------------------------------------------------------------------ #
+    # Send To Menu (Loot / Report)
+    # ------------------------------------------------------------------ #
+
+    def _build_send_menu(self) -> None:
+        send_menu = QMenu(self.btn_send)
+
+        act_loot = QAction(t("quick_note.send_loot", "★ Send to Loot"), send_menu)
+        act_loot.triggered.connect(lambda: self.promote_requested.emit(self.entry))
+        send_menu.addAction(act_loot)
+
+        act_report = QAction(t("quick_note.send_report", "📝 Send to Report"), send_menu)
+        act_report.triggered.connect(lambda: self.send_to_report_requested.emit(self.entry))
+        send_menu.addAction(act_report)
+
+        self.btn_send.setMenu(send_menu)
+
+    # ------------------------------------------------------------------ #
+    # Inline Editing Actions
+    # ------------------------------------------------------------------ #
+
+    def _start_edit(self) -> None:
+        self.is_editing = True
+        self.lbl_content.setVisible(False)
+        self.editor.setPlainText(self.entry.get("text", ""))
+        self.edit_container.setVisible(True)
+        self.editor.setFocus()
+
+    def _save_edit(self) -> None:
+        new_text = self.editor.toPlainText().strip()
+        if not new_text:
+            return
+        self.is_editing = False
+        self.entry["text"] = new_text
+        self.lbl_content.setText(new_text)
+        self.edit_container.setVisible(False)
+        self.lbl_content.setVisible(True)
+        self.edited.emit(self.entry.get("id", ""), new_text)
+
+    def _cancel_edit(self) -> None:
+        self.is_editing = False
+        self.editor.setPlainText(self.entry.get("text", ""))
+        self.edit_container.setVisible(False)
+        self.lbl_content.setVisible(True)
+
+    # ------------------------------------------------------------------ #
+    # Copy Helper
+    # ------------------------------------------------------------------ #
 
     def _copy_content(self) -> None:
         """Copies note text to system clipboard."""
@@ -169,3 +404,9 @@ class QuickNoteCard(QFrame):
         self.btn_copy.setProperty("class", "CopyBtn")
         self.btn_copy.style().unpolish(self.btn_copy)
         self.btn_copy.style().polish(self.btn_copy)
+
+    def set_selected(self, selected: bool) -> None:
+        """Sets the checkbox state without triggering redundant events."""
+        self.chk_select.blockSignals(True)
+        self.chk_select.setChecked(selected)
+        self.chk_select.blockSignals(False)

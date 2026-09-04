@@ -94,3 +94,36 @@ class ReportController(QObject):
     def refresh_font_configuration(self) -> None:
         if self.report_editor_tab is not None:
             self.report_editor_tab.refresh_font_configuration()
+
+    def append_note(self, note: dict) -> bool:
+        """Appends a quick note to the active project's report.md."""
+        text = str(note.get("text") or "").strip()
+        if not text:
+            return False
+
+        cat = str(note.get("category") or "misc").upper()
+        ts = str(note.get("timestamp") or "")
+        target_ip = str(note.get("target_ip") or "").strip()
+
+        header = f"### Note ({cat})"
+        if target_ip:
+            header += f" - [{target_ip}]"
+        if ts:
+            header += f" ({ts})"
+
+        block = f"\n\n{header}\n\n{text}\n"
+
+        if self.report_editor_tab is not None:
+            current = self.report_editor_tab.editor.toPlainText()
+            if not current.strip():
+                current = f"# CTF Report - {self.project_manager.get_active_project()}\n"
+            self.report_editor_tab.editor.setPlainText(current.rstrip() + block)
+            self.report_editor_tab.save()
+            return True
+
+        current = self.report_file_manager.load() or ""
+        if not current.strip():
+            current = f"# CTF Report - {self.project_manager.get_active_project()}\n"
+        new_content = current.rstrip() + block
+        return self.report_file_manager.save(new_content)
+

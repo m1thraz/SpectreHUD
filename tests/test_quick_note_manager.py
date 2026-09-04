@@ -99,6 +99,100 @@ class TestQuickNoteManager(unittest.TestCase):
         self.assertNotEqual(e1["id"], e2["id"])
         self.assertEqual(len(self.manager.get_all_entries()), 2)
 
+    def test_new_fields_and_defaults(self):
+        entry = self.manager.add_entry("Test Defaults")
+        self.assertEqual(entry["status"], "inbox")
+        self.assertFalse(entry["pinned"])
+        self.assertIsNone(entry["source"])
+
+        # With explicit values
+        src = {"type": "history", "id": "hist_123"}
+        custom = self.manager.add_entry(
+            "Custom note", status="followup", pinned=True, source=src
+        )
+        self.assertEqual(custom["status"], "followup")
+        self.assertTrue(custom["pinned"])
+        self.assertEqual(custom["source"], src)
+
+    def test_legacy_note_compatibility(self):
+        legacy = [
+            {
+                "id": "old_note_1",
+                "text": "Old note without new fields",
+                "category": "recon",
+                "target_ip": "10.10.10.5",
+                "timestamp": "2026-09-01 10:00:00",
+            }
+        ]
+        self.manager.replace_entries_and_persist(legacy)
+        new_mgr = QuickNoteManager(storage=self.storage)
+        notes = new_mgr.get_all_entries()
+        self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0]["status"], "inbox")
+        self.assertFalse(notes[0]["pinned"])
+        self.assertIsNone(notes[0]["source"])
+
+    def test_update_entry_and_event_bus(self):
+        bus_events = []
+        self.event_bus.subscribe(EventType.QUICK_NOTES_UPDATED, bus_events.append)
+
+        e = self.manager.add_entry("Original text", category="recon")
+        bus_events.clear()
+
+        # Update text and status
+        updated = self.manager.update_entry(
+            e["id"], text="Updated text", status="followup", pinned=True
+        )
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated["text"], "Updated text")
+        self.assertEqual(updated["status"], "followup")
+        self.assertTrue(updated["pinned"])
+        self.assertEqual(updated["id"], e["id"])  # ID must remain identical
+
+        # Check persistence
+        reloaded = QuickNoteManager(storage=self.storage).get_all_entries()
+        self.assertEqual(reloaded[0]["text"], "Updated text")
+        self.assertEqual(reloaded[0]["status"], "followup")
+
+        # Check event bus
+        self.assertEqual(len(bus_events), 1)
+        self.assertEqual(bus_events[0]["action"], "update")
+        self.assertEqual(bus_events[0]["entry"]["id"], e["id"])
+
+        # Update non-existent entry returns None
+        self.assertIsNone(self.manager.update_entry("non_existent_id", text="ABC"))
+
+        # Empty text update returns None without corrupting note
+        self.assertIsNone(self.manager.update_entry(e["id"], text="   "))
+        self.assertEqual(self.manager.get_all_entries()[0]["text"], "Updated text")
+
+    def test_sorting_and_status_filtering(self):
+        # Add 4 notes
+        n1 = self.manager.add_entry("Note 1 - resolved", status="resolved")
+        n2 = self.manager.add_entry("Note 2 - inbox", status="inbox")
+        n3 = self.manager.add_entry("Note 3 - followup pinned", status="followup", pinned=True)
+        n4 = self.manager.add_entry("Note 4 - inbox pinned", status="inbox", pinned=True)
+
+        # get_entries() default sort:
+        # Pinned first (n4, n3), unresolved unpinned next (n2), resolved last (n1)
+        entries = self.manager.get_entries()
+        self.assertEqual([e["id"] for e in entries], [n4["id"], n3["id"], n2["id"], n1["id"]])
+
+        # Filter by status
+        followups = self.manager.get_entries(status="followup")
+        self.assertEqual(len(followups), 1)
+        self.assertEqual(followups[0]["id"], n3["id"])
+
+        resolved = self.manager.get_entries(status="resolved")
+        self.assertEqual(len(resolved), 1)
+        self.assertEqual(resolved[0]["id"], n1["id"])
+
+        # Filter by pinned
+        pinned_notes = self.manager.get_entries(pinned=True)
+        self.assertEqual(len(pinned_notes), 2)
+        self.assertEqual([e["id"] for e in pinned_notes], [n4["id"], n3["id"]])
+
 
 if __name__ == "__main__":
     unittest.main()
+

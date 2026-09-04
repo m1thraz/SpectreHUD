@@ -2,12 +2,22 @@
 Quick Note Controller for SpectreHUD.
 
 Coordinates the QuickNotePopup, quick note persistence, promotion to loot,
-and UI inbox synchronization.
+reporting export, inline editing, status triage, pinning, and bulk actions.
 """
 
-from typing import Optional, Callable, Dict, Any, List
+from typing import Optional, Callable, Dict, Any, List, Set
 from PyQt6.QtCore import QObject, pyqtSignal, Qt
-from PyQt6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QMessageBox
+from PyQt6.QtWidgets import (
+    QWidget,
+    QPushButton,
+    QHBoxLayout,
+    QVBoxLayout,
+    QMessageBox,
+    QLabel,
+    QFrame,
+    QMenu,
+)
+from PyQt6.QtGui import QAction
 
 from core.quick_note_manager import QuickNoteManager
 from core.loot_manager import VALID_CATEGORY_IDS
@@ -16,13 +26,15 @@ from core.logger import get_logger
 from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
+from ui.styles.palette import CYBER_CYAN, TEXT_MUTED
 
 logger = get_logger("quick_note_controller")
 
 
 class QuickNoteController(QObject):
     """
-    Manages quick note capture popup lifecycle, persistence, and loot promotion.
+    Manages quick note capture popup lifecycle, persistence, triage workflow,
+    inline editing, and promotion to loot or report.
     """
 
     note_added = pyqtSignal(dict)
@@ -32,6 +44,7 @@ class QuickNoteController(QObject):
         self,
         quick_note_manager: QuickNoteManager,
         loot_controller: Optional[Any] = None,
+        report_controller: Optional[Any] = None,
         target_provider: Optional[Callable[[], str]] = None,
         event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None,
@@ -39,11 +52,18 @@ class QuickNoteController(QObject):
         super().__init__(parent)
         self.quick_note_manager = quick_note_manager
         self.loot_controller = loot_controller
+        self.report_controller = report_controller
         self.target_provider = target_provider
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.last_category: str = "misc"
         self.current_category_filter: str = "all"
+        self.current_status_filter: str = "all"
+        self.selected_note_ids: Set[str] = set()
         self.filter_buttons: Dict[str, QPushButton] = {}
+        self.btn_phase: Optional[QPushButton] = None
+        self.bulk_bar: Optional[QFrame] = None
+        self.bulk_bar_lbl: Optional[QLabel] = None
+        self._rendered_cards: List[QuickNoteCard] = []
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
@@ -73,7 +93,13 @@ class QuickNoteController(QObject):
         self.last_category = cat if cat in VALID_CATEGORY_IDS else "misc"
 
     def add_entry(
-        self, text: str, category: str = "misc", target_ip: Optional[str] = None
+        self,
+        text: str,
+        category: str = "misc",
+        target_ip: Optional[str] = None,
+        status: str = "inbox",
+        pinned: bool = False,
+        source: Optional[Dict[str, str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Directly adds a quick note entry."""
         clean_cat = category if category in VALID_CATEGORY_IDS else "misc"
@@ -85,7 +111,12 @@ class QuickNoteController(QObject):
         )
         try:
             entry = self.quick_note_manager.add_entry(
-                text=text, category=clean_cat, target_ip=resolved_target or ""
+                text=text,
+                category=clean_cat,
+                target_ip=resolved_target or "",
+                status=status,
+                pinned=pinned,
+                source=source,
             )
             if entry:
                 self.note_added.emit(entry)
@@ -117,9 +148,37 @@ class QuickNoteController(QObject):
             logger.error(f"Failed to save quick note: {e}")
             return None
 
+    def update_note_text(self, entry_id: str, new_text: str) -> bool:
+        """Updates the text content of an existing note."""
+        try:
+            res = self.quick_note_manager.update_entry(entry_id, text=new_text)
+            return res is not None
+        except Exception as e:
+            logger.error(f"Failed to update text for note {entry_id}: {e}")
+            return False
+
+    def set_note_status(self, entry_id: str, status: str) -> bool:
+        """Sets the triage status (inbox, followup, resolved) of a note."""
+        try:
+            res = self.quick_note_manager.update_entry(entry_id, status=status)
+            return res is not None
+        except Exception as e:
+            logger.error(f"Failed to set status for note {entry_id}: {e}")
+            return False
+
+    def toggle_note_pinned(self, entry_id: str, pinned: bool) -> bool:
+        """Toggles the pinned state of a note."""
+        try:
+            res = self.quick_note_manager.update_entry(entry_id, pinned=pinned)
+            return res is not None
+        except Exception as e:
+            logger.error(f"Failed to toggle pin for note {entry_id}: {e}")
+            return False
+
     def delete_note(self, entry_id: str) -> bool:
         """Deletes a quick note."""
         try:
+            self.selected_note_ids.discard(entry_id)
             return self.quick_note_manager.delete_entry(entry_id)
         except Exception as e:
             logger.error(f"Failed to delete quick note {entry_id}: {e}")
@@ -141,7 +200,6 @@ class QuickNoteController(QObject):
         category = entry.get("category", "misc")
         target_ip = entry.get("target_ip", "")
 
-        # Default title is the first sentence or first 30 chars
         first_line = text.split("\n")[0].strip()
         default_title = first_line[:30] if len(first_line) > 30 else first_line
 
@@ -159,13 +217,138 @@ class QuickNoteController(QObject):
             return True
         return False
 
+    def send_to_report(
+        self, entry: Dict[str, Any], parent_widget: Optional[QWidget] = None
+    ) -> bool:
+        """Appends a quick note to the active project report and marks it as resolved."""
+        if not self.report_controller:
+            logger.warning("No report_controller configured for send_to_report.")
+            return False
+
+        try:
+            success = self.report_controller.append_note(entry)
+            if success:
+                entry_id = entry.get("id")
+                if entry_id:
+                    self.set_note_status(entry_id, "resolved")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to send note to report: {e}")
+            return False
+
+    # ------------------------------------------------------------------ #
+    # Bulk Triage & Selection
+    # ------------------------------------------------------------------ #
+
+    def on_card_selection_changed(self, entry_id: str, is_selected: bool) -> None:
+        """Tracks selection state for bulk triage operations."""
+        if is_selected:
+            self.selected_note_ids.add(entry_id)
+        else:
+            self.selected_note_ids.discard(entry_id)
+        self._update_bulk_bar()
+
+    def _update_bulk_bar(self) -> None:
+        if not self.bulk_bar:
+            return
+        count = len(self.selected_note_ids)
+        if count > 0:
+            if self.bulk_bar_lbl:
+                self.bulk_bar_lbl.setText(
+                    t("quick_note.bulk_selected_count", f"{count} selected").replace("{count}", str(count))
+                )
+            self.bulk_bar.setVisible(True)
+        else:
+            self.bulk_bar.setVisible(False)
+
+    def clear_selection(self) -> None:
+        """Clears all selected notes."""
+        self.selected_note_ids.clear()
+        for card in self._rendered_cards:
+            card.set_selected(False)
+        self._update_bulk_bar()
+
+    def bulk_set_status(self, status: str) -> None:
+        """Applies a triage status to all currently selected notes."""
+        if not self.selected_note_ids:
+            return
+        for entry_id in list(self.selected_note_ids):
+            try:
+                self.quick_note_manager.update_entry(entry_id, status=status)
+            except Exception as e:
+                logger.error(f"Failed to bulk update note {entry_id}: {e}")
+        self.clear_selection()
+        self.notes_updated.emit()
+
+    def bulk_delete_notes(self, parent_widget: Optional[QWidget] = None) -> bool:
+        """Deletes all currently selected notes after user confirmation."""
+        if not self.selected_note_ids:
+            return False
+
+        if parent_widget:
+            count = len(self.selected_note_ids)
+            confirm_msg = t(
+                "quick_note.bulk_delete_confirm",
+                f"Are you sure you want to delete {count} selected quick note(s)?",
+            ).replace("{count}", str(count))
+            reply = QMessageBox.question(
+                parent_widget,
+                t("quick_note.bulk_delete_title", "Delete Notes"),
+                confirm_msg,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+
+        for entry_id in list(self.selected_note_ids):
+            try:
+                self.quick_note_manager.delete_entry(entry_id)
+            except Exception as e:
+                logger.error(f"Failed to bulk delete note {entry_id}: {e}")
+        self.clear_selection()
+        self.notes_updated.emit()
+        return True
+
+    # ------------------------------------------------------------------ #
+    # Filter & Search
+    # ------------------------------------------------------------------ #
+
     def select_filter(self, filter_id: str) -> None:
-        """Selects active category filter and updates pill styles."""
-        self.current_category_filter = filter_id
+        """Selects active status or category filter and updates pill styles."""
+        if filter_id in ("all", "inbox", "followup", "resolved", "pinned"):
+            self.current_status_filter = filter_id
+            if filter_id == "all":
+                self.current_category_filter = "all"
+        elif filter_id.startswith("cat:"):
+            self.current_category_filter = filter_id[4:]
+        elif filter_id in VALID_CATEGORY_IDS:
+            self.current_category_filter = filter_id
+
         for fid, btn in self.filter_buttons.items():
-            btn.setProperty("class", "FilterPillActive" if fid == filter_id else "FilterPill")
+            is_active = (
+                (fid == self.current_status_filter)
+                if fid in ("all", "inbox", "followup", "resolved", "pinned")
+                else (fid == self.current_category_filter)
+            )
+            btn.setProperty("class", "FilterPillActive" if is_active else "FilterPill")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
+
+        if self.btn_phase:
+            cat_display = (
+                self.current_category_filter.capitalize()
+                if self.current_category_filter != "all"
+                else t("quick_note.all_phases", "All Phases")
+            )
+            self.btn_phase.setText(f"{cat_display} ▾")
+            is_cat_active = self.current_category_filter != "all"
+            self.btn_phase.setProperty(
+                "class", "FilterPillActive" if is_cat_active else "FilterPill"
+            )
+            self.btn_phase.style().unpolish(self.btn_phase)
+            self.btn_phase.style().polish(self.btn_phase)
 
     def build_filter_pills(
         self,
@@ -173,28 +356,71 @@ class QuickNoteController(QObject):
         on_select_filter: Callable[[str], None],
         on_clear: Callable[[], None],
     ) -> None:
-        """Builds category filter pills and Clear action button for Notes mode."""
+        """Builds status triage pills, phase filter dropdown, and Clear action button."""
         self.filter_buttons.clear()
         all_notes = self.quick_note_manager.get_all_entries()
 
-        pills = [("all", f"All ({len(all_notes)})")]
-        for cat in ["recon", "access", "privesc", "postex", "scripts", "misc"]:
-            count = sum(1 for n in all_notes if n.get("category") == cat)
-            pills.append((cat, f"{cat.capitalize()} ({count})"))
+        total = len(all_notes)
+        inbox_cnt = sum(1 for n in all_notes if n.get("status", "inbox") == "inbox")
+        follow_cnt = sum(1 for n in all_notes if n.get("status") == "followup")
+        resolved_cnt = sum(1 for n in all_notes if n.get("status") == "resolved")
+        pinned_cnt = sum(1 for n in all_notes if bool(n.get("pinned", False)))
 
-        for pid, ptext in pills:
+        # 1. Status Pills
+        status_pills = [
+            ("all", f"All ({total})"),
+            ("inbox", f"Inbox ({inbox_cnt})"),
+            ("followup", f"Follow-up ({follow_cnt})"),
+            ("resolved", f"Resolved ({resolved_cnt})"),
+            ("pinned", f"📌 Pinned ({pinned_cnt})"),
+        ]
+
+        for pid, ptext in status_pills:
             btn = QPushButton(ptext)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty(
                 "class",
-                "FilterPillActive" if self.current_category_filter == pid else "FilterPill",
+                "FilterPillActive" if self.current_status_filter == pid else "FilterPill",
             )
             btn.clicked.connect(lambda checked=False, fid=pid: on_select_filter(fid))
             self.filter_buttons[pid] = btn
             pills_layout.addWidget(btn)
 
+        # 2. Phase Category Dropdown Menu
+        cat_display = (
+            self.current_category_filter.capitalize()
+            if self.current_category_filter != "all"
+            else t("quick_note.all_phases", "All Phases")
+        )
+        self.btn_phase = QPushButton(f"{cat_display} ▾")
+        self.btn_phase.setCursor(Qt.CursorShape.PointingHandCursor)
+        is_cat_active = self.current_category_filter != "all"
+        self.btn_phase.setProperty(
+            "class", "FilterPillActive" if is_cat_active else "FilterPill"
+        )
+        self.btn_phase.setToolTip(t("quick_note.phase_filter_tip", "Filter by pentest phase"))
+
+        phase_menu = QMenu(self.btn_phase)
+        act_all = QAction(t("quick_note.all_phases", "All Phases"), phase_menu)
+        act_all.triggered.connect(lambda: on_select_filter("cat:all"))
+        phase_menu.addAction(act_all)
+
+        for cat in ["recon", "access", "privesc", "postex", "scripts", "misc"]:
+            count = sum(1 for n in all_notes if n.get("category") == cat)
+            act = QAction(f"{cat.capitalize()} ({count})", phase_menu)
+            act.triggered.connect(lambda checked=False, c=cat: on_select_filter(f"cat:{c}"))
+            phase_menu.addAction(act)
+            # Retain programmatic reference in filter_buttons for category testing/compat
+            dummy_btn = QPushButton(f"{cat.capitalize()} ({count})")
+            dummy_btn.setVisible(False)
+            self.filter_buttons[cat] = dummy_btn
+
+        self.btn_phase.setMenu(phase_menu)
+        pills_layout.addWidget(self.btn_phase)
+
         pills_layout.addStretch()
 
+        # 3. Clear All Button
         btn_clear = QPushButton("Clear")
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip(
@@ -227,6 +453,61 @@ class QuickNoteController(QObject):
             logger.error(f"Failed to clear quick notes: {e}")
             return False
 
+    def _create_bulk_bar(self, parent_widget: Optional[QWidget]) -> QFrame:
+        """Creates the horizontal bulk triage action bar."""
+        frame = QFrame()
+        frame.setObjectName("QuickNoteBulkBar")
+        frame.setStyleSheet(
+            "QFrame#QuickNoteBulkBar { background-color: rgba(0, 229, 255, 0.08); "
+            "border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 6px; } "
+            "QPushButton { font-size: 11px; padding: 2px 8px; border-radius: 4px; }"
+        )
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(6)
+
+        self.bulk_bar_lbl = QLabel(t("quick_note.bulk_selected_count", "0 selected"))
+        self.bulk_bar_lbl.setStyleSheet(f"color: {CYBER_CYAN}; font-weight: bold; font-size: 11px;")
+        layout.addWidget(self.bulk_bar_lbl)
+
+        lbl_mark = QLabel(t("quick_note.bulk_mark_as", "Mark:"))
+        lbl_mark.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 11px;")
+        layout.addWidget(lbl_mark)
+
+        btn_inbox = QPushButton(t("quick_note.status_inbox_short", "📥 Inbox"))
+        btn_inbox.setProperty("class", "SecondaryBtn")
+        btn_inbox.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_inbox.clicked.connect(lambda: self.bulk_set_status("inbox"))
+        layout.addWidget(btn_inbox)
+
+        btn_followup = QPushButton(t("quick_note.status_followup_short", "⏳ Follow-up"))
+        btn_followup.setProperty("class", "SecondaryBtn")
+        btn_followup.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_followup.clicked.connect(lambda: self.bulk_set_status("followup"))
+        layout.addWidget(btn_followup)
+
+        btn_resolved = QPushButton(t("quick_note.status_resolved_short", "✓ Resolved"))
+        btn_resolved.setProperty("class", "SecondaryBtn")
+        btn_resolved.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_resolved.clicked.connect(lambda: self.bulk_set_status("resolved"))
+        layout.addWidget(btn_resolved)
+
+        layout.addStretch()
+
+        btn_delete = QPushButton(t("quick_note.bulk_delete", "Delete Selected"))
+        btn_delete.setProperty("class", "DangerBtn")
+        btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_delete.clicked.connect(lambda: self.bulk_delete_notes(parent_widget))
+        layout.addWidget(btn_delete)
+
+        btn_deselect = QPushButton(t("quick_note.bulk_deselect", "✕ Deselect"))
+        btn_deselect.setProperty("class", "SecondaryBtn")
+        btn_deselect.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_deselect.clicked.connect(self.clear_selection)
+        layout.addWidget(btn_deselect)
+
+        return frame
+
     def render_content(
         self,
         content_layout: QVBoxLayout,
@@ -236,19 +517,40 @@ class QuickNoteController(QObject):
         show_empty_state_fn: Callable[[str], None],
     ) -> List[QWidget]:
         """Renders notes inbox cards into the content layout."""
+        self._rendered_cards = []
+
         cat_filter = (
-            None if self.current_category_filter == "all" else self.current_category_filter
+            None if self.current_category_filter in ("all", "") else self.current_category_filter
         )
+        pinned_filter: Optional[bool] = None
+        status_filter: Optional[str] = None
+
+        if self.current_status_filter == "pinned":
+            pinned_filter = True
+        elif self.current_status_filter != "all":
+            status_filter = self.current_status_filter
+
         notes = self.quick_note_manager.get_entries(
             category=cat_filter,
+            status=status_filter,
+            pinned=pinned_filter,
             search_query=search_query,
         )
+
+        # Retain selection of only still existing items
+        existing_ids = {n.get("id") for n in self.quick_note_manager.get_all_entries()}
+        self.selected_note_ids = {nid for nid in self.selected_note_ids if nid in existing_ids}
+
+        # Create and attach bulk bar
+        self.bulk_bar = self._create_bulk_bar(parent_widget)
+        self._update_bulk_bar()
+        content_layout.addWidget(self.bulk_bar)
 
         if not notes:
             show_empty_state_fn(
                 t(
                     "quick_note.empty_state",
-                    "No quick notes in inbox. Use global hotkey (Ctrl+Alt+N) or click '📌 Note' to capture thoughts.",
+                    "No quick notes found. Use global hotkey (Ctrl+Alt+N) or click '📌 Note' to capture thoughts.",
                 )
             )
             return []
@@ -259,10 +561,23 @@ class QuickNoteController(QObject):
             card.promote_requested.connect(
                 lambda entry, p=parent_widget: self.promote_to_loot(entry, parent_widget=p)
             )
+            card.send_to_report_requested.connect(
+                lambda entry, p=parent_widget: self.send_to_report(entry, parent_widget=p)
+            )
             card.deleted.connect(self.delete_note)
+            card.edited.connect(self.update_note_text)
+            card.status_changed.connect(self.set_note_status)
+            card.pin_toggled.connect(self.toggle_note_pinned)
+            card.selection_changed.connect(self.on_card_selection_changed)
+
+            if item.get("id") in self.selected_note_ids:
+                card.set_selected(True)
+
             if on_copied is not None:
                 card.copied.connect(on_copied)
+
             content_layout.addWidget(card)
             rendered_cards.append(card)
+            self._rendered_cards.append(card)
 
         return rendered_cards

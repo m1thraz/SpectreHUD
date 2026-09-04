@@ -220,12 +220,29 @@ def validate_quick_note_entry(entry: Any) -> Optional[Dict[str, Any]]:
         :MAX_TIMESTAMP_LENGTH
     ]
 
+    status = str(entry.get("status") or "inbox").strip().lower()
+    if status not in {"inbox", "followup", "resolved"}:
+        status = "inbox"
+
+    pinned = bool(entry.get("pinned", False))
+
+    source_val = entry.get("source")
+    source: Optional[Dict[str, str]] = None
+    if isinstance(source_val, dict):
+        source = {
+            "type": str(source_val.get("type") or "")[:64],
+            "id": str(source_val.get("id") or "")[:128],
+        }
+
     return {
         "id": entry_id or _stable_hash_id("note_gen", text),
         "text": text,
         "category": category,
         "target_ip": target_ip,
         "timestamp": timestamp,
+        "status": status,
+        "pinned": pinned,
+        "source": source,
     }
 
 
