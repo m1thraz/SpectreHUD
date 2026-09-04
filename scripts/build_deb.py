@@ -157,18 +157,22 @@ def prepare_deb_staging_tree(project_dir: Path, staging_dir: Path, version: str)
         (apps_dir / "spectrehud.desktop").write_text(content, encoding="utf-8")
 
     # 5. Icons
-    icon_src_dir = project_dir / "resources" / "linux" / "icons"
-    if icon_src_dir.exists():
+    icons_root = project_dir / "resources" / "linux" / "icons"
+    if icons_root.exists():
         for size in ["48x48", "128x128", "256x256"]:
             target_icon_dir = icons_base / size / "apps"
             target_icon_dir.mkdir(parents=True, exist_ok=True)
-            png_icon = icon_src_dir / size / "spectrehud.png"
+            png_icon = icons_root / "hicolor" / size / "apps" / "spectrehud.png"
+            if not png_icon.exists():
+                png_icon = icons_root / size / "spectrehud.png"
             if png_icon.exists():
                 shutil.copy2(png_icon, target_icon_dir / "spectrehud.png")
 
         scalable_dir = icons_base / "scalable" / "apps"
         scalable_dir.mkdir(parents=True, exist_ok=True)
-        svg_icon = icon_src_dir / "scalable" / "spectrehud.svg"
+        svg_icon = icons_root / "hicolor" / "scalable" / "apps" / "spectrehud.svg"
+        if not svg_icon.exists():
+            svg_icon = icons_root / "scalable" / "spectrehud.svg"
         if svg_icon.exists():
             shutil.copy2(svg_icon, scalable_dir / "spectrehud.svg")
 
