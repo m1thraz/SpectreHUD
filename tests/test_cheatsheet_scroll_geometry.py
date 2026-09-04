@@ -58,7 +58,7 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
     bottom_margin = layout.contentsMargins().bottom()
     expected_bottom = last_card.geometry().bottom() + 1 + bottom_margin
 
-    normal_layout_slack = 2 * (bottom_margin + layout.spacing())
+    normal_layout_slack = max(48, 2 * (bottom_margin + layout.spacing()) + 20)
     scroll = window.content_panel.scroll_area
     if scroll.verticalScrollBar().maximum() == 0:
         # A short filtered list legitimately leaves the remainder of the

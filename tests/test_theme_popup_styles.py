@@ -5,10 +5,6 @@ from pathlib import Path
 import subprocess
 import sys
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
@@ -51,9 +47,12 @@ def _run_isolated_qt_probe(name: str) -> None:
     QApplication, popup, palette and rendering path while isolating its lifecycle
     from pytest's shared application instance.
     """
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     result = subprocess.run(
         [sys.executable, str(Path(__file__).resolve()), name],
-        cwd=PROJECT_ROOT,
+        cwd=Path(__file__).resolve().parents[1],
+        env=env,
         capture_output=True,
         text=True,
         timeout=30,
