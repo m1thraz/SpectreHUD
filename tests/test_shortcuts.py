@@ -116,3 +116,22 @@ def test_footer_panel_shortcuts_integration():
     footer.update_hotkey_display("<ctrl>+<alt>+h")
     assert "Ctrl+/" in footer.btn_shortcuts.text() or "Shortcuts" in footer.btn_shortcuts.text()
 
+
+def test_main_window_shortcuts_integration():
+    from tests.window_factory import create_main_window
+
+    window = create_main_window()
+    assert hasattr(window, "shortcut_help")
+    assert hasattr(window, "shortcut_help_f1")
+    assert hasattr(window, "app")
+    assert hasattr(window, "open_shortcuts_dialog")
+
+    # Trigger open_shortcuts_dialog
+    window.open_shortcuts_dialog()
+    assert window.app.shortcuts_dialog is not None
+    assert window.app.shortcuts_dialog.isVisible()
+
+    window.app.shortcuts_dialog.close()
+    window.close()
+
+

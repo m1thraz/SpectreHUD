@@ -259,10 +259,10 @@ class MainWindow(QMainWindow):
         )
         self.shortcut_fullscreen.setContext(Qt.ShortcutContext.WindowShortcut)
         self.shortcut_help = QShortcut(
-            QKeySequence("Ctrl+/"), self, activated=self.app.open_shortcuts_dialog
+            QKeySequence("Ctrl+/"), self, activated=lambda: self.app.open_shortcuts_dialog()
         )
         self.shortcut_help_f1 = QShortcut(
-            QKeySequence("F1"), self, activated=self.app.open_shortcuts_dialog
+            QKeySequence("F1"), self, activated=lambda: self.app.open_shortcuts_dialog()
         )
 
     def _center_on_screen(self) -> None:
@@ -336,6 +336,11 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------
     def _get_resize_edge(self, pos: QPoint) -> str:
         return self.frame_manager.get_resize_edge(pos)
+
+    def open_shortcuts_dialog(self) -> None:
+        """Opens or focuses the central keyboard shortcuts help dialog."""
+        if hasattr(self, "app") and self.app:
+            self.app.open_shortcuts_dialog()
 
     def request_quit(self, quit_app: bool = True) -> bool:
         """Delegate the transactional shutdown workflow."""
