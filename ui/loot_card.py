@@ -22,7 +22,7 @@ from core.i18n import t
 from core.platform.opener import open_path
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
-from ui.elided_label import configure_badge_label
+from ui.elided_label import ElidedLabel, configure_badge_label
 from ui.wrapped_value_view import WrappedValueView
 import pyperclip
 
@@ -45,8 +45,9 @@ class LootCard(QFrame):
         self,
         entry: Dict[str, Any],
         project_dir: Optional[Path] = None,
-        parent: QWidget = None,
+        parent: Optional[QWidget] = None,
         board_mode: bool = False,
+        density: str = "comfortable",  # "compact" | "comfortable"
     ):
         super().__init__(parent)
         self.setObjectName("lootCard")
@@ -55,79 +56,39 @@ class LootCard(QFrame):
         self.entry = entry
         self.project_dir = project_dir
         self.board_mode = board_mode
+        self.density = density
         self.setProperty("boardCard", board_mode)
+        self.setProperty("cardDensity", density)
         self._full_content = str(self.entry.get("content", ""))
         self._drag_start_position = None
+        self._action_bar_widget: Optional[QWidget] = None
         self._init_ui()
 
     def _init_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(6)
-
-        # Row 1 (Metadata & Actions): Type Badge, Target IP, Time, Stretch, Edit, Export, Obsidian, Delete
-        header_layout = QHBoxLayout()
-        header_layout.setSpacing(6)
-
-        # 1. Type Badge
         entry_type = self.entry.get("type", "note")
         badge_info = next(
             (t for t in LOOT_TYPES if t["id"] == entry_type),
             {"name": "Note", "icon": "", "badge_class": "BadgeNote"},
         )
-
-        lbl_badge = QLabel(badge_info["name"].upper())
-        self.lbl_badge = lbl_badge
-        lbl_badge.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
-        configure_badge_label(lbl_badge, lbl_badge.text(), padding=18)
-        header_layout.addWidget(lbl_badge)
-
-        if self.board_mode:
-            layout.addLayout(header_layout)
-            header_layout = QHBoxLayout()
-            header_layout.setSpacing(6)
-
-        # 2. Target IP (if set)
         target_ip = self.entry.get("target_ip", "")
-        if target_ip:
-            lbl_target = QLabel(target_ip)
-            lbl_target.setTextFormat(Qt.TextFormat.PlainText)
-            lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
-            if self.board_mode:
-                lbl_target.setWordWrap(True)
-                lbl_target.setMinimumWidth(0)
-                lbl_target.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-            else:
-                configure_badge_label(lbl_target, target_ip, padding=8)
-            header_layout.addWidget(lbl_target, stretch=1)
-
-        # 3. Timestamp
         timestamp = self.entry.get("timestamp", "")
-        if timestamp:
-            time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
-            lbl_time = QLabel(time_part)
-            lbl_time.setTextFormat(Qt.TextFormat.PlainText)
-            lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
-            configure_badge_label(lbl_time, time_part, padding=6)
-            header_layout.addWidget(lbl_time)
+        title_text = self.entry.get("title", "Unbenannt")
+        phase = get_phase(self.entry.get("category", "misc"))
 
-        header_layout.addStretch()
+        # Shared action buttons inside self._action_bar_widget (hidden in resting state)
+        self._action_bar_widget = QWidget(self)
+        self._action_bar_widget.setObjectName("LootCardActionBar")
+        action_layout = QHBoxLayout(self._action_bar_widget)
+        action_layout.setContentsMargins(0, 0, 0, 0)
+        action_layout.setSpacing(4)
 
-        if self.board_mode:
-            layout.addLayout(header_layout)
-            header_layout = QHBoxLayout()
-            header_layout.setSpacing(6)
-            header_layout.addStretch()
-
-        # 4. Action Buttons (Edit, Export, Obsidian, Delete)
         self.btn_edit = QPushButton()
         self.btn_edit.setIcon(icon("fa5s.pen"))
         self.btn_edit.setIconSize(CARD_ICON_SIZE)
         self.btn_edit.setProperty("class", "CardIconBtn")
         self.btn_edit.setToolTip(t("loot.edit_tip", "Edit or recategorize this entry"))
         self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
-        header_layout.addWidget(self.btn_edit)
+        action_layout.addWidget(self.btn_edit)
 
         self.btn_export_file = QPushButton()
         self.btn_export_file.setIcon(icon("fa5s.download"))
@@ -139,7 +100,7 @@ class LootCard(QFrame):
         self.btn_export_file.clicked.connect(
             lambda: self.export_requested.emit(self.entry.get("id", ""))
         )
-        header_layout.addWidget(self.btn_export_file)
+        action_layout.addWidget(self.btn_export_file)
 
         self.btn_export_obsidian = QPushButton()
         self.btn_export_obsidian.setIcon(icon("fa5s.book-open"))
@@ -151,22 +112,28 @@ class LootCard(QFrame):
         self.btn_export_obsidian.clicked.connect(
             lambda: self.obsidian_export_requested.emit(self.entry.get("id", ""))
         )
-        header_layout.addWidget(self.btn_export_obsidian)
+        action_layout.addWidget(self.btn_export_obsidian)
 
         self.btn_delete = QPushButton()
-        self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+        self.btn_delete.setIcon(icon("fa5s.trash"))
         self.btn_delete.setIconSize(CARD_ICON_SIZE)
         self.btn_delete.setProperty("class", "CardDangerIconBtn")
         self.btn_delete.setToolTip(t("loot.delete_tip", "Delete this entry"))
         self.btn_delete.clicked.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
-        header_layout.addWidget(self.btn_delete)
+        self.btn_delete.installEventFilter(self)
+        action_layout.addWidget(self.btn_delete)
 
-        layout.addLayout(header_layout)
+        self._action_bar_widget.setVisible(False)
 
-        # Row 2: Grip Handle Icon, Title & Category Badge
-        title_row = QHBoxLayout()
-        title_row.setSpacing(6)
+        # Shared copy button
+        self.btn_copy = QPushButton()
+        self.btn_copy.setIcon(icon("fa5s.copy"))
+        self.btn_copy.setIconSize(CARD_ICON_SIZE)
+        self.btn_copy.setProperty("class", "CardIconBtn")
+        self.btn_copy.setToolTip(t("loot.copy_tip", "Copy this entry"))
+        self.btn_copy.clicked.connect(self._copy_content)
 
+        # Shared grip handle & phase badge
         self.lbl_grip = QLabel()
         grip_pix = icon("fa5s.grip-vertical", color="#6e7681").pixmap(QSize(12, 14))
         if not grip_pix.isNull():
@@ -174,79 +141,149 @@ class LootCard(QFrame):
         self.lbl_grip.setFixedWidth(12)
         self.lbl_grip.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_grip.setToolTip(t("loot.drag_tip", "Drag to move to another phase column"))
-        title_row.addWidget(self.lbl_grip)
 
-        title_text = self.entry.get("title", "Unbenannt")
-        self.lbl_title = QLabel(title_text)
-        self.lbl_title.setWordWrap(True)
-        self.lbl_title.setMinimumWidth(0)
-        self.lbl_title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_title.setObjectName("SnippetTitle")
-        self.lbl_title.installEventFilter(self)
-        title_row.addWidget(self.lbl_title, stretch=1)
+        self.lbl_cat = QLabel(phase.short)
+        self.lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_cat.setProperty("class", "CategoryBadge")
+        self.lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=phase.long))
+        configure_badge_label(self.lbl_cat, phase.short, padding=14)
 
-        phase = get_phase(self.entry.get("category", "misc"))
-        lbl_cat = QLabel(phase.short)
-        lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_cat.setProperty("class", "CategoryBadge")
-        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=phase.long))
-        configure_badge_label(lbl_cat, phase.short, padding=14)
-        title_row.addWidget(lbl_cat)
+        if self.density == "compact":
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(8, 5, 8, 5)
+            layout.setSpacing(0)
 
-        layout.addLayout(title_row)
+            compact_row = QHBoxLayout()
+            compact_row.setContentsMargins(0, 0, 0, 0)
+            compact_row.setSpacing(6)
 
-        # If Screenshot: Show image thumbnail & open button
-        img_path = self._resolve_image_path()
-        if entry_type == "screenshot" and img_path and img_path.exists():
-            thumb_row = QHBoxLayout()
-            thumb_row.setSpacing(8)
+            compact_row.addWidget(self.lbl_grip)
 
-            lbl_thumb = QLabel()
-            pix = QPixmap(str(img_path))
-            if not pix.isNull():
-                scaled = pix.scaledToHeight(75, Qt.TransformationMode.SmoothTransformation)
-                lbl_thumb.setPixmap(scaled)
-                lbl_thumb.setStyleSheet("border: 1px solid #30363d; border-radius: 4px;")
-                thumb_row.addWidget(lbl_thumb)
+            self.lbl_title = ElidedLabel(title_text)
+            self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
+            self.lbl_title.setObjectName("SnippetTitle")
+            self.lbl_title.installEventFilter(self)
+            compact_row.addWidget(self.lbl_title, stretch=1)
 
-            btn_open_img = QPushButton("Open")
-            btn_open_img.setProperty("class", "SecondaryBtn")
-            btn_open_img.setToolTip(
-                t("loot.open_screenshot_tip", "Open screenshot in the default image viewer")
+            compact_row.addWidget(self.lbl_cat)
+            compact_row.addWidget(self._action_bar_widget)
+            compact_row.addWidget(self.btn_copy)
+
+            layout.addLayout(compact_row)
+
+            # Hidden metadata/content widgets to preserve attribute contract
+            self.lbl_badge = QLabel(badge_info["name"].upper())
+            self.lbl_badge.setVisible(False)
+            self.lbl_content = WrappedValueView(self._full_content)
+            self.lbl_content.setVisible(False)
+
+            tooltip_lines = [f"[{badge_info['name'].upper()}] {title_text}"]
+            if target_ip:
+                tooltip_lines.append(f"Target: {target_ip}")
+            if timestamp:
+                time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
+                tooltip_lines.append(f"Time: {time_part}")
+            if self._full_content:
+                tooltip_lines.append(f"\n{self._full_content}")
+            self.setToolTip("\n".join(tooltip_lines))
+        else:
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(6)
+
+            # Row 1 (Metadata & Actions): Consolidated single row
+            header_layout = QHBoxLayout()
+            header_layout.setSpacing(6)
+
+            self.lbl_badge = QLabel(badge_info["name"].upper())
+            self.lbl_badge.setTextFormat(Qt.TextFormat.PlainText)
+            self.lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
+            configure_badge_label(self.lbl_badge, self.lbl_badge.text(), padding=18)
+            header_layout.addWidget(self.lbl_badge)
+
+            if target_ip:
+                self.lbl_target = QLabel(target_ip)
+                self.lbl_target.setTextFormat(Qt.TextFormat.PlainText)
+                self.lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
+                if self.board_mode:
+                    self.lbl_target.setWordWrap(True)
+                    self.lbl_target.setMinimumWidth(0)
+                    self.lbl_target.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+                else:
+                    configure_badge_label(self.lbl_target, target_ip, padding=8)
+                header_layout.addWidget(self.lbl_target)
+
+            if timestamp:
+                time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
+                self.lbl_time = QLabel(time_part)
+                self.lbl_time.setTextFormat(Qt.TextFormat.PlainText)
+                self.lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
+                configure_badge_label(self.lbl_time, time_part, padding=6)
+                header_layout.addWidget(self.lbl_time)
+
+            header_layout.addStretch()
+            header_layout.addWidget(self._action_bar_widget)
+            layout.addLayout(header_layout)
+
+            # Row 2: Grip Handle Icon, Title & Category Badge
+            title_row = QHBoxLayout()
+            title_row.setSpacing(6)
+            title_row.addWidget(self.lbl_grip)
+
+            self.lbl_title = ElidedLabel(title_text)
+            self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
+            self.lbl_title.setObjectName("SnippetTitle")
+            self.lbl_title.installEventFilter(self)
+            title_row.addWidget(self.lbl_title, stretch=1)
+
+            title_row.addWidget(self.lbl_cat)
+            layout.addLayout(title_row)
+
+            # If Screenshot: Show image thumbnail & open button
+            img_path = self._resolve_image_path()
+            if entry_type == "screenshot" and img_path and img_path.exists():
+                thumb_row = QHBoxLayout()
+                thumb_row.setSpacing(8)
+
+                lbl_thumb = QLabel()
+                pix = QPixmap(str(img_path))
+                if not pix.isNull():
+                    scaled = pix.scaledToHeight(75, Qt.TransformationMode.SmoothTransformation)
+                    lbl_thumb.setPixmap(scaled)
+                    lbl_thumb.setStyleSheet("border: 1px solid #30363d; border-radius: 4px;")
+                    thumb_row.addWidget(lbl_thumb)
+
+                btn_open_img = QPushButton("Open")
+                btn_open_img.setProperty("class", "SecondaryBtn")
+                btn_open_img.setToolTip(
+                    t("loot.open_screenshot_tip", "Open screenshot in the default image viewer")
+                )
+                btn_open_img.clicked.connect(lambda: self._open_image(img_path))
+                thumb_row.addWidget(btn_open_img, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+                thumb_row.addStretch()
+                layout.addLayout(thumb_row)
+
+            # Row 4: Content Box & Copy Button Row
+            content_row = QHBoxLayout()
+            content_row.setSpacing(8)
+
+            self.lbl_content = WrappedValueView(self._full_content)
+            self.lbl_content.setObjectName("CommandLabel")
+            self.lbl_content.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+                | Qt.TextInteractionFlag.TextSelectableByKeyboard
             )
-            btn_open_img.clicked.connect(lambda: self._open_image(img_path))
-            thumb_row.addWidget(btn_open_img, alignment=Qt.AlignmentFlag.AlignVCenter)
+            self.lbl_content.installEventFilter(self)
+            self.lbl_content.viewport().installEventFilter(self)
+            self.lbl_content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            self.lbl_content.setMinimumWidth(0)
+            content_row.addWidget(self.lbl_content, stretch=1)
 
-            thumb_row.addStretch()
-            layout.addLayout(thumb_row)
+            content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
+            layout.addLayout(content_row)
 
-        # Content Box & Copy Button Row
-        content_row = QHBoxLayout()
-        content_row.setSpacing(8)
-
-        self.lbl_content = WrappedValueView(self._full_content)
-        self.lbl_content.setObjectName("CommandLabel")
-        self.lbl_content.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse
-            | Qt.TextInteractionFlag.TextSelectableByKeyboard
-        )
-        self.lbl_content.installEventFilter(self)
-        self.lbl_content.viewport().installEventFilter(self)
-        self.lbl_content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        self.lbl_content.setMinimumWidth(0)
-        content_row.addWidget(self.lbl_content, stretch=1)
-
-        self.btn_copy = QPushButton()
-        self.btn_copy.setIcon(icon("fa5s.copy"))
-        self.btn_copy.setIconSize(CARD_ICON_SIZE)
-        self.btn_copy.setProperty("class", "CardIconBtn")
-        self.btn_copy.setToolTip(t("loot.copy_tip", "Copy this entry"))
-        self.btn_copy.clicked.connect(self._copy_content)
-        content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
-
-        layout.addLayout(content_row)
-        QTimer.singleShot(0, self._update_content_height)
+            QTimer.singleShot(0, self._update_content_height)
 
     def _update_content_height(self) -> None:
         # Setting a minimum can synchronously resize the text viewport again.
@@ -255,7 +292,7 @@ class LootCard(QFrame):
         self._updating_content_height = True
         try:
             for label in (getattr(self, "lbl_content", None), getattr(self, "lbl_title", None)):
-                if label is not None:
+                if label is not None and label.isVisible():
                     required = label.heightForWidth(label.width())
                     if required >= 0 and required != label.minimumHeight():
                         label.setMinimumHeight(required)
@@ -272,7 +309,28 @@ class LootCard(QFrame):
         if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
             QTimer.singleShot(0, self._update_content_height)
 
+    def enterEvent(self, event) -> None:
+        if self._action_bar_widget is not None:
+            self._action_bar_widget.setVisible(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        if self._action_bar_widget is not None:
+            self._action_bar_widget.setVisible(False)
+        super().leaveEvent(event)
+
+    def _on_delete_hover_enter(self, event) -> None:
+        self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
+
+    def _on_delete_hover_leave(self, event) -> None:
+        self.btn_delete.setIcon(icon("fa5s.trash"))
+
     def eventFilter(self, watched, event) -> bool:
+        if watched == getattr(self, "btn_delete", None):
+            if event.type() == QEvent.Type.Enter:
+                self._on_delete_hover_enter(event)
+            elif event.type() == QEvent.Type.Leave:
+                self._on_delete_hover_leave(event)
         if event.type() == QEvent.Type.Resize:
             self._update_content_height()
         if event.type() == QEvent.Type.MouseButtonDblClick:

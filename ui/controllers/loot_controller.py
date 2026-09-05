@@ -337,6 +337,8 @@ class LootController(QObject):
         on_export_obsidian: Optional[Callable[[], None]] = None,
         on_toggle_view: Optional[Callable[[], None]] = None,
         view_mode: str = "list",
+        on_toggle_density: Optional[Callable[[], None]] = None,
+        density: str = "comfortable",
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
@@ -382,6 +384,24 @@ class LootController(QObject):
             btn_view.clicked.connect(on_toggle_view)
             pills_layout.addWidget(btn_view)
 
+        if on_toggle_density is not None:
+            showing_compact = density == "compact"
+            btn_density = QPushButton(
+                t("loot.density_comfortable", "Comfortable")
+                if showing_compact
+                else t("loot.density_compact", "Compact")
+            )
+            btn_density.setObjectName("LootDensityToggleButton")
+            btn_density.setProperty("class", "MiniActionBtn")
+            btn_density.setToolTip(
+                t(
+                    "loot.toggle_density_tip",
+                    "Switch between comfortable and compact card density",
+                )
+            )
+            btn_density.clicked.connect(on_toggle_density)
+            pills_layout.addWidget(btn_density)
+
         btn_export = QPushButton("Export (.md)")
         btn_export.setObjectName("LootExportButton")
         btn_export.setProperty("class", "MiniActionBtn")
@@ -419,6 +439,7 @@ class LootController(QObject):
         show_empty_state_fn: Callable[[str], None],
         on_export_obsidian: Optional[Callable[[str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
+        density: str = "comfortable",
     ) -> List[QWidget]:
         loot_entries = self.get_entries(
             target_ip=None, entry_type=self.current_loot_type, search_query=search_query
@@ -445,7 +466,7 @@ class LootController(QObject):
             rendered_cards.append(sec_header)
 
             for entry in cat_entries:
-                card = LootCard(entry, proj_dir, parent=parent_widget)
+                card = LootCard(entry, proj_dir, parent=parent_widget, density=density)
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 card.export_requested.connect(on_export_loot)
@@ -470,6 +491,7 @@ class LootController(QObject):
         parent_widget: QWidget,
         on_export_obsidian: Optional[Callable[[str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
+        density: str = "comfortable",
     ) -> List[QWidget]:
         """Renders the alternate Kanban presentation using the same LootCards."""
         loot_entries = self.get_entries(
@@ -487,6 +509,7 @@ class LootController(QObject):
             on_export_obsidian=on_export_obsidian,
             on_copied=on_copied,
             parent=parent_widget,
+            density=density,
         )
         content_layout.addWidget(board)
         return [board]

@@ -376,6 +376,8 @@ class AppController(QObject):
             lambda: self.export_coord.export_loot_to_obsidian(self.window),
             self._toggle_loot_view,
             self.config.get("loot_view_mode", "list"),
+            self._toggle_loot_density,
+            self.config.get("loot_density", "comfortable"),
         )
 
     def _build_history_pills(self) -> None:
@@ -444,6 +446,7 @@ class AppController(QObject):
         )
         def export_obsidian(entry_id: str) -> None:
             self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+        density = self.config.get("loot_density", "comfortable")
         if self.config.get("loot_view_mode", "list") == "board":
             cards = self.loot_ctrl.render_board_content(
                 content_layout,
@@ -456,6 +459,7 @@ class AppController(QObject):
                 self.window,
                 on_export_obsidian=export_obsidian,
                 on_copied=self._on_content_copied,
+                density=density,
             )
         else:
             cards = self.loot_ctrl.render_content(
@@ -469,6 +473,7 @@ class AppController(QObject):
                 self.content.show_empty_state,
                 on_export_obsidian=export_obsidian,
                 on_copied=self._on_content_copied,
+                density=density,
             )
         return RenderResult(cards, self._format_entry_count(len(cards)))
 
@@ -528,6 +533,27 @@ class AppController(QObject):
                 t(
                     "loot.view_switch_failed",
                     "The Loot view could not be changed:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+        self.refresh_filter_pills()
+        self.refresh_content()
+
+    def _toggle_loot_density(self) -> None:
+        """Persist and immediately apply the alternate card density."""
+        current_density = self.config.get("loot_density", "comfortable")
+        next_density = "comfortable" if current_density == "compact" else "compact"
+        try:
+            self.config.set("loot_density", next_density)
+        except PersistenceError as exc:
+            logger.error(f"Could not persist Loot density: {exc}")
+            QMessageBox.critical(
+                self.window,
+                t("loot.density_switch_failed_title", "Density switch failed"),
+                t(
+                    "loot.density_switch_failed",
+                    "The card density could not be changed:\n{error}",
                     error=str(exc),
                 ),
             )

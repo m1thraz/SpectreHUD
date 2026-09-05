@@ -208,8 +208,10 @@ class LootBoard(QScrollArea):
         on_export_obsidian: Optional[Callable[[str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
         parent: Optional[QWidget] = None,
+        density: str = "comfortable",
     ):
         super().__init__(parent)
+        self.density = density
         self.columns: Dict[str, LootBoardDropArea] = {}
         self.setWidgetResizable(False)
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -217,6 +219,7 @@ class LootBoard(QScrollArea):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setMinimumHeight(430)
         self.setProperty("class", "LootBoard")
+        self.viewport().setAutoFillBackground(True)
 
         board_content = QWidget(self)
         layout = QHBoxLayout(board_content)
@@ -239,6 +242,7 @@ class LootBoard(QScrollArea):
                     project_dir,
                     parent=column.cards_container,
                     board_mode=True,
+                    density=density,
                 )
                 card.loot_deleted.connect(on_delete)
                 card.edit_requested.connect(on_edit)

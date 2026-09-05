@@ -105,6 +105,16 @@ QLabel[class="LootBoardColumnIndicator"], QLabel#LootBoardColumnIndicator {
     font-weight: 600;
 }
 
+QScrollArea[class="LootBoard"],
+QScrollArea[class="LootBoard"] > QWidget > QWidget {
+    background-color: {LOOT_COLUMN_SURFACE};
+    border: none;
+}
+
+QWidget#LootCardActionBar {
+    background: transparent;
+}
+
 QScrollArea#LootColumnScrollArea {
     background: transparent;
     border: none;

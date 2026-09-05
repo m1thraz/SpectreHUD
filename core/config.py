@@ -26,6 +26,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "auto_hide_on_copy": False,
     "always_on_top": True,
     "loot_view_mode": "list",
+    "loot_density": "comfortable",
     "ui_font": "segoe_ui",
     "code_font": "consolas",
     "report_font": "segoe_ui",
