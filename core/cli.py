@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 
-APP_VERSION = "2.0.9"
+APP_VERSION = "2.1.0"
 
 
 def write_cli(lines: list[str]) -> None:
