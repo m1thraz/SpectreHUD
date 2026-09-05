@@ -188,6 +188,7 @@
     "settings.lbl_behavior_section": "Overlay Behavior",
     "settings.lbl_theme_section": "Application Theme",
     "settings.lbl_typography_section": "Typography",
+    "settings.glass_intensity_tip": "0: off. Higher values strengthen gradient, reflection and grain.",
     "settings.lbl_transparency_section": "Simulated Glass",
     "settings.lbl_hud_transparency": "HUD Glass Intensity",
     "settings.lbl_report_transparency": "Report Glass Intensity",

@@ -147,13 +147,17 @@ graph TD
   the running application stylesheet immediately, while report typography stays
   scoped to report preview and export. Installed families are detected through
   Qt; unavailable curated choices remain visible but disabled. HUD and Report Editor
-  surfaces use `ui/glass_panel.py`: an opaque theme-coloured gradient, a shared
-  lazily generated 128px noise tile, and a subtle highlight edge. The main window
+  surfaces use `ui/glass_panel.py`: an opaque four-stop diagonal gradient, a soft radial light reflection,
+  shared lazily generated fine (128px) and smoothly enlarged coarse (256px)
+  noise tiles, and a subtle highlight edge. The texture layers use 5.5% and
+  4.5% painter opacity over the opaque base; they never expose the desktop. The main window
   no longer branches on compositor availability and never enables desktop
   translucency. Rounded panel corners are painted over an opaque theme base.
   The independent glass-intensity controls range from 0 to 30 (defaults 5/0);
   existing `hud_transparency` and `report_transparency` storage keys are retained
-  for compatibility, but now control gradient tone rather than desktop alpha.
+  for compatibility. At 0 the surface is a flat opaque theme colour; increasing
+  the value scales gradient, reflection, grain and highlight edges together,
+  reaching full strength at 30. No desktop alpha is introduced.
   Report source and preview each sit inside a glass panel; their text viewports
   remain transparent only to that internal surface. Both controls update through
   the shared QSS runtime path, including lazily created report panels.

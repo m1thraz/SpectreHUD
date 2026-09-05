@@ -22,14 +22,29 @@ def test_rendered_glass_is_opaque_and_changes_with_intensity(qapp, theme):
         low = panel.grab().toImage()
         assert panel.glassColor == QColor(palette["BG_DARK"])
         assert all(
-            low.pixelColor(x, y).alpha() == 255
+            low.pixelColor(x, y) == QColor(palette["BG_DARK"])
             for x in range(low.width())
             for y in range(low.height())
         )
+        panel.setStyleSheet(build_app_theme(palette, hud_transparency=15))
+        middle = panel.grab().toImage()
         panel.setStyleSheet(build_app_theme(palette, hud_transparency=30))
         high = panel.grab().toImage()
         assert low != high
+        assert low != middle != high
+
+        def deviation(image):
+            base = QColor(palette["BG_DARK"])
+            return sum(
+                abs(image.pixelColor(x, y).lightness() - base.lightness())
+                for x in range(10, image.width() - 10, 4)
+                for y in range(10, image.height() - 10, 4)
+            )
+
+        assert deviation(middle) < deviation(high)
         assert high == panel.grab().toImage()
+        panel.setStyleSheet(build_app_theme(palette, hud_transparency=0))
+        assert panel.grab().toImage() == low
         other = GlassPanel()
         assert panel._noise.cacheKey() == other._noise.cacheKey()
         other.deleteLater()

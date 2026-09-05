@@ -531,12 +531,16 @@ class AppearanceSettingsPage(QWidget):
         row.addWidget(label_widget)
 
         slider = QSlider(Qt.Orientation.Horizontal)
+        effect_hint = t("settings.glass_intensity_tip", "0: off. Higher values strengthen gradient, reflection and grain.")
+        label_widget.setToolTip(effect_hint)
+        slider.setToolTip(effect_hint)
         slider.setRange(0, 30)
         slider.setValue(value)
         slider.setProperty("class", "TransparencySlider")
         row.addWidget(slider, stretch=1)
 
         spin = QSpinBox()
+        spin.setToolTip(effect_hint)
         spin.setRange(0, 30)
         spin.setSuffix("")
         spin.setValue(value)

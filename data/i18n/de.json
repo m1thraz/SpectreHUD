@@ -188,6 +188,7 @@
     "settings.lbl_behavior_section": "Overlay-Verhalten",
     "settings.lbl_theme_section": "Anwendungs-Theme",
     "settings.lbl_typography_section": "Schriftarten",
+    "settings.glass_intensity_tip": "0: aus. Höhere Werte verstärken Verlauf, Lichtreflex und Körnung.",
     "settings.lbl_transparency_section": "Simuliertes Glas",
     "settings.lbl_hud_transparency": "HUD-Glasintensität",
     "settings.lbl_report_transparency": "Report-Glasintensität",

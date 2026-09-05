@@ -8,6 +8,9 @@ semantic versioning.
 
 ### Fixed
 
+- Make glass intensity control every effect layer: 0 disables the effect,
+  while higher values progressively increase gradient, reflection and grain.
+
 - Keep wrapped command cards tall enough for their full text after resizing,
   changing fonts, or substituting variables, including long SQL commands.
 
@@ -15,6 +18,9 @@ semantic versioning.
   standalone Debian bundle so global hotkeys can start on X11.
 
 ### Changed
+
+- Give simulated glass more depth with a four-stop diagonal gradient, a soft
+  light reflection, and cached fine/coarse grain over the opaque background.
 
 - Replace desktop translucency in the main HUD and report surfaces with opaque,
   theme-aware simulated glass (gradient, cached grain, and highlight edge).
