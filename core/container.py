@@ -18,6 +18,7 @@ from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectManager
 from core.screenshots.manager import ScreenshotManager
+from core.phase_context import PhaseContext
 from core.logger import get_logger
 
 logger = get_logger("container")
@@ -40,6 +41,7 @@ class ServiceContainer:
         storage: StorageBackend,
         event_bus: EventBus,
         quick_note_manager: Optional[QuickNoteManager] = None,
+        phase_context: Optional[PhaseContext] = None,
     ):
         self.config_manager = config_manager
         self.snippet_manager = snippet_manager
@@ -51,6 +53,11 @@ class ServiceContainer:
             quick_note_manager
             if quick_note_manager is not None
             else QuickNoteManager(event_bus=event_bus)
+        )
+        self.phase_context = (
+            phase_context
+            if phase_context is not None
+            else PhaseContext(event_bus=event_bus)
         )
         self.screenshot_manager = screenshot_manager
         self.storage = storage
@@ -68,6 +75,7 @@ class ServiceContainer:
         clipboard_monitor_factory: Optional[Callable[[ClipboardHistory], Any]] = None,
         screenshot_manager: Optional[ScreenshotManager] = None,
         quick_note_manager: Optional[QuickNoteManager] = None,
+        phase_context: Optional[PhaseContext] = None,
         storage: Optional[StorageBackend] = None,
         event_bus: Optional[EventBus] = None,
     ) -> "ServiceContainer":
@@ -92,6 +100,7 @@ class ServiceContainer:
             clipboard_monitor=clipboard_monitor,
             screenshot_manager=screenshot_manager or ScreenshotManager(),
             quick_note_manager=quick_note_manager,
+            phase_context=phase_context or PhaseContext(event_bus=actual_event_bus),
             storage=storage or InMemoryStorageBackend(),
             event_bus=actual_event_bus,
         )
@@ -147,6 +156,7 @@ class ServiceContainer:
             storage=session_storage, event_bus=event_bus, time_format=time_format
         )
         screenshot_manager = ScreenshotManager()
+        phase_context = PhaseContext(event_bus=event_bus)
 
         return cls(
             config_manager=config_manager,
@@ -156,6 +166,7 @@ class ServiceContainer:
             clipboard_history=clipboard_history,
             clipboard_monitor=clipboard_monitor,
             quick_note_manager=quick_note_manager,
+            phase_context=phase_context,
             screenshot_manager=screenshot_manager,
             storage=storage,
             event_bus=event_bus,
@@ -216,6 +227,7 @@ class ServiceContainer:
             storage=actual_storage, event_bus=actual_event_bus, time_format=time_format
         )
         screenshot_manager = ScreenshotManager()
+        phase_context = PhaseContext(event_bus=actual_event_bus)
 
         return cls(
             config_manager=config_manager,
@@ -225,6 +237,7 @@ class ServiceContainer:
             clipboard_history=clipboard_history,
             clipboard_monitor=clipboard_monitor,
             quick_note_manager=quick_note_manager,
+            phase_context=phase_context,
             screenshot_manager=screenshot_manager,
             storage=actual_storage,
             event_bus=actual_event_bus,

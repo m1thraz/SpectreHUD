@@ -26,10 +26,14 @@ class ClipboardMonitor(QObject):
         self.history = history
         self._is_paused = True
         self._target_provider: Optional[Callable[[], str]] = None
+        self._phase_provider: Optional[Callable[[], Optional[str]]] = None
         self._clipboard = None
 
     def set_target_provider(self, provider: Callable[[], str]) -> None:
         self._target_provider = provider
+
+    def set_phase_provider(self, provider: Callable[[], Optional[str]]) -> None:
+        self._phase_provider = provider
 
     def start_listening(self) -> bool:
         """Connect once to the current QApplication clipboard."""
@@ -67,7 +71,15 @@ class ClipboardMonitor(QObject):
                     target_ip = self._target_provider() or ""
                 except (TypeError, ValueError, AttributeError) as exc:
                     logger.debug("Error resolving target_ip in clipboard provider: %s", exc)
-            entry = self.history.add_entry(text, target_ip=target_ip, persist=False)
+            phase_id = None
+            if self._phase_provider:
+                try:
+                    phase_id = self._phase_provider()
+                except (TypeError, ValueError, AttributeError) as exc:
+                    logger.debug("Error resolving phase_id in clipboard provider: %s", exc)
+            entry = self.history.add_entry(
+                text, target_ip=target_ip, phase_id=phase_id, persist=False
+            )
             if entry is not None:
                 self.entry_added.emit(entry)
         except (RuntimeError, OSError) as exc:

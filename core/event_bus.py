@@ -30,6 +30,7 @@ class EventType(str, Enum):
     VARIABLES_CHANGED = "variables_changed"
     HOTKEY_SETTINGS_CHANGED = "hotkey_settings_changed"
     QUICK_NOTES_UPDATED = "quick_notes_updated"
+    ACTIVE_PHASE_CHANGED = "active_phase_changed"
 
 
 class EventBus:

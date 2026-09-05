@@ -63,7 +63,7 @@ class ClipboardHistory:
             )
 
     def add_entry(
-        self, text: str, target_ip: str = "", *, persist: bool = True
+        self, text: str, target_ip: str = "", *, persist: bool = True, phase_id: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Add a sanitized history entry if it is valid and not a duplicate."""
         if not text or not text.strip():
@@ -89,6 +89,8 @@ class ClipboardHistory:
             "char_count": char_count,
             "is_multiline": lines_count > 2 or char_count > 120,
         }
+        if phase_id:
+            entry["phase_id"] = str(phase_id).strip()
         new_history = [entry, *self.history][:MAX_HISTORY_ENTRIES]
 
         if persist and not self.storage.save_json("clipboard", new_history):

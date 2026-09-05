@@ -248,6 +248,12 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+3"), self, activated=lambda: self.app.switch_mode("notes"))
         QShortcut(QKeySequence("Ctrl+4"), self, activated=lambda: self.app.switch_mode("loot"))
         QShortcut(QKeySequence("Ctrl+5"), self, activated=lambda: self.app.switch_mode("report"))
+        for order in range(1, 7):
+            QShortcut(
+                QKeySequence(f"Ctrl+Alt+{order}"),
+                self,
+                activated=lambda o=order: self.app.activate_phase_by_order(o, source="hotkey"),
+            )
         self.shortcut_fullscreen = QShortcut(
             QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen
         )
@@ -340,6 +346,11 @@ class MainWindow(QMainWindow):
                 self.project_manager.clear_project_key()
         except Exception:
             logger.exception("Failed to clear Pentest-Mode session key during shutdown")
+        try:
+            if hasattr(self, "app") and hasattr(self.app, "phase_hud") and self.app.phase_hud:
+                self.app.phase_hud.close()
+        except Exception:
+            pass
         try:
             if hasattr(self, "hotkey_listener") and self.hotkey_listener:
                 self.hotkey_listener.stop()

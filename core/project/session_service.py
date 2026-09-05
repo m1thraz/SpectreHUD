@@ -19,16 +19,18 @@ class ProjectSessionService:
         loot_manager: LootManager,
         clipboard_history: ClipboardHistory,
         quick_note_manager: Optional[Any] = None,
+        phase_context: Optional[Any] = None,
     ):
         self.project_manager = project_manager
         self.loot_manager = loot_manager
         self.clipboard_history = clipboard_history
         self.quick_note_manager = quick_note_manager
+        self.phase_context = phase_context
 
     def load_project_session(self, project_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Loads the persisted state for the given project (or active project)
-        and populates the LootManager, ClipboardHistory, and QuickNoteManager.
+        and populates the LootManager, ClipboardHistory, QuickNoteManager, and PhaseContext.
         """
         pname = project_name or self.project_manager.get_active_project()
         state = self.project_manager.load_project_state(name=pname)
@@ -37,11 +39,15 @@ class ProjectSessionService:
             self.clipboard_history.replace_history(state.get("clipboard_history", []))
             if self.quick_note_manager:
                 self.quick_note_manager.replace_entries(state.get("quick_notes", []))
+            if self.phase_context:
+                self.phase_context.set_active_phase(state.get("active_phase"), source="project_load")
         else:
             self.loot_manager.replace_entries([])
             self.clipboard_history.replace_history([])
             if self.quick_note_manager:
                 self.quick_note_manager.replace_entries([])
+            if self.phase_context:
+                self.phase_context.clear_active_phase(source="project_load")
         return state or {}
 
     def save_project_session(
@@ -49,7 +55,7 @@ class ProjectSessionService:
     ) -> bool:
         """
         Persists the current runtime session state (target variables, session loot,
-        clipboard history, quick notes) into the project's project_state.json.
+        clipboard history, quick notes, active phase) into the project's project_state.json.
         Returns True on successful save, False otherwise.
         """
         pname = project_name or self.project_manager.get_active_project()
@@ -63,6 +69,9 @@ class ProjectSessionService:
             "clipboard_history": self.clipboard_history.get_all_history(),
             "quick_notes": (
                 self.quick_note_manager.get_all_entries() if self.quick_note_manager else []
+            ),
+            "active_phase": (
+                self.phase_context.active_phase_id if self.phase_context else None
             ),
         }
         return self.project_manager.save_project_state(name=pname, state=state)

@@ -228,6 +228,9 @@ def main():
         hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
         hotkey_listener.quick_ip_requested.connect(window.app.trigger_quick_ip)
         hotkey_listener.quick_loot_requested.connect(window.app.trigger_quick_loot)
+        hotkey_listener.phase_requested.connect(
+            lambda order: window.app.activate_phase_by_order(order, source="hotkey")
+        )
         hotkey_listener.quit_requested.connect(window.request_quit)
         hotkey_listener.start()
         _startup_mark(started_at, "hotkey listener started")

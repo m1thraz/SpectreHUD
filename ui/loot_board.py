@@ -55,12 +55,13 @@ class LootBoardDropArea(QFrame):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.viewport().setObjectName("LootColumnViewport")
         scroll.setStyleSheet(
             "QScrollArea#LootColumnScrollArea, QWidget#LootColumnViewport { background: transparent; border: none; }"
         )
         scroll.setWidget(self.cards_container)
+        self.scroll = scroll
         layout.addWidget(scroll, stretch=1)
 
     def add_card(self, card: LootCard) -> None:

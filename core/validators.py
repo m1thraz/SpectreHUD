@@ -177,7 +177,9 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
     lines_count = text.count("\n") + 1
     is_multiline = ("\n" in text) or (char_count > 120)
 
-    return {
+    phase_id = str(entry.get("phase_id")).strip()[:64] if entry.get("phase_id") else None
+
+    result = {
         "id": entry_id or _stable_hash_id("clip_gen", text),
         "text": text,
         "target_ip": target_ip,
@@ -186,6 +188,9 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "char_count": char_count,
         "is_multiline": is_multiline,
     }
+    if phase_id:
+        result["phase_id"] = phase_id
+    return result
 
 
 def validate_clipboard_list(
@@ -284,6 +289,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "loot": [],
         "clipboard_history": [],
         "quick_notes": [],
+        "active_phase": None,
     }
 
     if not isinstance(data, dict):
@@ -302,6 +308,11 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "loot": validate_loot_list(data.get("loot")),
         "clipboard_history": validate_clipboard_list(data.get("clipboard_history")),
         "quick_notes": validate_quick_notes_list(data.get("quick_notes")),
+        "active_phase": (
+            str(data.get("active_phase")).strip().lower()
+            if data.get("active_phase")
+            else None
+        ),
     }
 
 

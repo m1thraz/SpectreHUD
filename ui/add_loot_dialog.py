@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QMessageBox,
 )
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from core.loot.manager import LOOT_TYPES, CATEGORIES
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
@@ -37,10 +37,14 @@ class AddLootDialog(BaseHudDialog):
         content: str = "",
         entry_id: Optional[str] = None,
         is_edit: bool = False,
+        on_export_file: Optional[Callable[[str], None]] = None,
+        on_export_obsidian: Optional[Callable[[str], None]] = None,
         **kwargs,
     ):
         self.entry_id = entry_id or kwargs.get("id")
         self.is_edit = is_edit or bool(self.entry_id)
+        self.on_export_file = on_export_file
+        self.on_export_obsidian = on_export_obsidian
         dialog_title = t(
             "loot_dialog.title_edit" if self.is_edit else "loot_dialog.title_new",
             "SPECTRE // EDIT SESSION LOOT" if self.is_edit else "SPECTRE // CAPTURE SESSION LOOT",
@@ -191,6 +195,23 @@ class AddLootDialog(BaseHudDialog):
         lbl_hint = QLabel(t("loot_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
         lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
+
+        if self.is_edit and self.entry_id:
+            self.btn_export_file = QPushButton(t("loot.export_file", "Export (.md)"))
+            self.btn_export_file.setProperty("class", "SecondaryBtn")
+            if self.on_export_file:
+                self.btn_export_file.clicked.connect(lambda: self.on_export_file(self.entry_id))
+            btn_layout.addWidget(self.btn_export_file)
+
+            self.btn_export_obsidian = QPushButton(t("loot.export_obsidian", "Obsidian"))
+            self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
+            if self.on_export_obsidian:
+                self.btn_export_obsidian.clicked.connect(lambda: self.on_export_obsidian(self.entry_id))
+            btn_layout.addWidget(self.btn_export_obsidian)
+        else:
+            self.btn_export_file = None
+            self.btn_export_obsidian = None
+
         btn_layout.addStretch()
 
         self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))

@@ -173,12 +173,11 @@ def test_kanban_cards_preserve_full_wrapped_values_without_inner_scrollbars(qapp
             assert card.lbl_content.maximumHeight() == 16777215
             assert card.width() <= recon_column.width()
 
-        # Verify column scroll area disables visible scrollbars completely
+        # Verify column scroll area enables vertical scrollbar as needed and disables horizontal scrollbar
         column_scrolls = recon_column.findChildren(QScrollArea)
         assert len(column_scrolls) == 1
-        assert column_scrolls[0].verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        assert column_scrolls[0].verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
         assert column_scrolls[0].horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        assert column_scrolls[0].verticalScrollBar().isVisible() is False
 
         cards[0].btn_edit.click()
         assert edited == [entries[0]]

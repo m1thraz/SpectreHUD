@@ -48,6 +48,7 @@ class QuickNoteController(QObject):
         loot_controller: Optional[Any] = None,
         report_controller: Optional[Any] = None,
         target_provider: Optional[Callable[[], str]] = None,
+        phase_provider: Optional[Callable[[], Optional[str]]] = None,
         event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None,
     ):
@@ -56,6 +57,7 @@ class QuickNoteController(QObject):
         self.loot_controller = loot_controller
         self.report_controller = report_controller
         self.target_provider = target_provider
+        self._phase_provider = phase_provider
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.last_category: str = "misc"
         self.current_category_filter: str = "all"
@@ -76,6 +78,10 @@ class QuickNoteController(QObject):
     def _on_notes_updated(self, payload: Optional[Dict[str, Any]] = None) -> None:
         self.notes_updated.emit()
 
+    def set_phase_provider(self, provider: Callable[[], Optional[str]]) -> None:
+        """Sets the callback returning the globally active pentest phase key."""
+        self._phase_provider = provider
+
     def get_popup(self) -> QuickNotePopup:
         """Returns the lazily instantiated QuickNotePopup instance."""
         if self._popup is None:
@@ -85,8 +91,16 @@ class QuickNoteController(QObject):
 
     def show_popup(self) -> None:
         """Opens the QuickNote popup at current cursor position."""
+        category = self.last_category
+        if self._phase_provider:
+            try:
+                active_phase = self._phase_provider()
+                if active_phase and active_phase in VALID_CATEGORY_IDS:
+                    category = active_phase
+            except Exception as e:
+                logger.debug(f"Failed to query active phase from provider: {e}")
         popup = self.get_popup()
-        popup.show_at_cursor(default_category=self.last_category)
+        popup.show_at_cursor(default_category=category)
 
     @property
     def current_category(self) -> str:
@@ -99,14 +113,24 @@ class QuickNoteController(QObject):
     def add_entry(
         self,
         text: str,
-        category: str = "misc",
+        category: Optional[str] = None,
         target_ip: Optional[str] = None,
         status: str = "inbox",
         pinned: bool = False,
         source: Optional[Dict[str, str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Directly adds a quick note entry."""
-        clean_cat = category if category in VALID_CATEGORY_IDS else "misc"
+        if category is None:
+            active_phase = self._phase_provider() if self._phase_provider else None
+            chosen_cat = (
+                active_phase
+                if active_phase and active_phase in VALID_CATEGORY_IDS
+                else self.last_category
+            )
+        else:
+            chosen_cat = category
+
+        clean_cat = chosen_cat if chosen_cat in VALID_CATEGORY_IDS else "misc"
         self.last_category = clean_cat
         resolved_target = (
             target_ip

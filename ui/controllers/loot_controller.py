@@ -31,16 +31,22 @@ class LootController(QObject):
         self,
         loot_manager: LootManager,
         project_manager: ProjectManager,
+        phase_provider: Optional[Callable[[], Optional[str]]] = None,
         event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self.loot_manager = loot_manager
         self.project_manager = project_manager
+        self._phase_provider = phase_provider
         self.event_bus = event_bus if event_bus is not None else EventBus()
         self.current_loot_type: str = "all"
         self.filter_buttons: Dict[str, QPushButton] = {}
         self._active_add_dialog: Optional[AddLootDialog] = None
+
+    def set_phase_provider(self, provider: Callable[[], Optional[str]]) -> None:
+        """Sets the callback returning the globally active pentest phase key."""
+        self._phase_provider = provider
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -532,6 +538,14 @@ class LootController(QObject):
         If modal=True (default), runs synchronously as a blocking modal dialog.
         If modal=False, opens non-modally as a floating remote control window.
         """
+        if default_category == "misc" and getattr(self, "_phase_provider", None):
+            try:
+                active_phase = self._phase_provider()
+                if active_phase:
+                    default_category = active_phase
+            except Exception as e:
+                logger.debug(f"Failed to query active phase in open_add_dialog: {e}")
+
         if not modal:
             if self._active_add_dialog is not None and self._active_add_dialog.isVisible():
                 self._active_add_dialog.raise_()
@@ -622,7 +636,13 @@ class LootController(QObject):
             return True
         return False
 
-    def open_edit_dialog(self, parent_widget: QWidget, entry: Dict[str, Any]) -> bool:
+    def open_edit_dialog(
+        self,
+        parent_widget: QWidget,
+        entry: Dict[str, Any],
+        on_export_file: Optional[Callable[[str], None]] = None,
+        on_export_obsidian: Optional[Callable[[str], None]] = None,
+    ) -> bool:
         dlg = AddLootDialog(
             parent=parent_widget,
             entry_id=entry.get("id"),
@@ -633,6 +653,8 @@ class LootController(QObject):
             default_title=entry.get("title", ""),
             default_content=entry.get("content", ""),
             default_severity=entry.get("severity", "info"),
+            on_export_file=on_export_file,
+            on_export_obsidian=on_export_obsidian,
         )
         if dlg.exec():
             data = dlg.get_data()

@@ -10,9 +10,10 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QGraphicsOpacityEffect,
     QMessageBox,
+    QMenu,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent
-from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent, QPoint
+from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QContextMenuEvent, QCursor
 from typing import Dict, Any, Optional
 from core.loot.manager import LOOT_TYPES
 from core.phases import get_phase
@@ -166,7 +167,6 @@ class LootCard(QFrame):
             compact_row.addWidget(self.lbl_title, stretch=1)
 
             compact_row.addWidget(self.lbl_cat)
-            compact_row.addWidget(self._action_bar_widget)
             compact_row.addWidget(self.btn_copy)
 
             layout.addLayout(compact_row)
@@ -222,7 +222,7 @@ class LootCard(QFrame):
                 header_layout.addWidget(self.lbl_time)
 
             header_layout.addStretch()
-            header_layout.addWidget(self._action_bar_widget)
+            header_layout.addWidget(self.btn_copy)
             layout.addLayout(header_layout)
 
             # Row 2: Grip Handle Icon, Title & Category Badge
@@ -264,10 +264,7 @@ class LootCard(QFrame):
                 thumb_row.addStretch()
                 layout.addLayout(thumb_row)
 
-            # Row 4: Content Box & Copy Button Row
-            content_row = QHBoxLayout()
-            content_row.setSpacing(8)
-
+            # Row 4: Content Box
             self.lbl_content = WrappedValueView(self._full_content)
             self.lbl_content.setObjectName("CommandLabel")
             self.lbl_content.setTextInteractionFlags(
@@ -278,10 +275,7 @@ class LootCard(QFrame):
             self.lbl_content.viewport().installEventFilter(self)
             self.lbl_content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.lbl_content.setMinimumWidth(0)
-            content_row.addWidget(self.lbl_content, stretch=1)
-
-            content_row.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
-            layout.addLayout(content_row)
+            layout.addWidget(self.lbl_content)
 
             QTimer.singleShot(0, self._update_content_height)
 
@@ -310,13 +304,9 @@ class LootCard(QFrame):
             QTimer.singleShot(0, self._update_content_height)
 
     def enterEvent(self, event) -> None:
-        if self._action_bar_widget is not None:
-            self._action_bar_widget.setVisible(True)
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:
-        if self._action_bar_widget is not None:
-            self._action_bar_widget.setVisible(False)
         super().leaveEvent(event)
 
     def _on_delete_hover_enter(self, event) -> None:
@@ -337,7 +327,57 @@ class LootCard(QFrame):
             if hasattr(event, "button") and event.button() == Qt.MouseButton.LeftButton:
                 self.edit_requested.emit(self.entry)
                 return True
+        if event.type() == QEvent.Type.ContextMenu:
+            pos = (
+                event.globalPos()
+                if hasattr(event, "globalPos")
+                else (
+                    event.globalPosition().toPoint()
+                    if hasattr(event, "globalPosition")
+                    else QCursor.pos()
+                )
+            )
+            self._show_context_menu(pos)
+            return True
         return super().eventFilter(watched, event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        self._show_context_menu(event.globalPos())
+        event.accept()
+
+    def _create_context_menu(self) -> QMenu:
+        menu = QMenu(self)
+        self._last_context_menu = menu
+
+        edit_action = menu.addAction(icon("fa5s.pen"), t("loot.edit", "Edit"))
+        edit_action.triggered.connect(lambda: self.edit_requested.emit(self.entry))
+
+        export_file_action = menu.addAction(
+            icon("fa5s.download"), t("loot.export_file", "Export (.md)")
+        )
+        export_file_action.triggered.connect(
+            lambda: self.export_requested.emit(self.entry.get("id", ""))
+        )
+
+        export_obsidian_action = menu.addAction(
+            icon("fa5s.book-open"), t("loot.export_obsidian", "Obsidian")
+        )
+        export_obsidian_action.triggered.connect(
+            lambda: self.obsidian_export_requested.emit(self.entry.get("id", ""))
+        )
+
+        menu.addSeparator()
+
+        delete_action = menu.addAction(
+            icon("fa5s.trash", color=STATUS_ERROR), t("loot.delete", "Delete")
+        )
+        delete_action.triggered.connect(lambda: self.deleted.emit(self.entry.get("id", "")))
+
+        return menu
+
+    def _show_context_menu(self, global_pos: QPoint) -> None:
+        menu = self._create_context_menu()
+        menu.exec(global_pos)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:

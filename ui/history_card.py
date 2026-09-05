@@ -97,6 +97,20 @@ class HistoryCard(QFrame):
             configure_badge_label(lbl_target, target_ip, padding=14)
             header_layout.addWidget(lbl_target)
 
+        # Phase Badge (if present)
+        phase_id = self.entry.get("phase_id", "")
+        if phase_id:
+            from core.phases import get_phase
+            phase_obj = get_phase(phase_id)
+            lbl_phase = QLabel(phase_obj.short)
+            lbl_phase.setTextFormat(Qt.TextFormat.PlainText)
+            lbl_phase.setToolTip(f"Phase: {phase_obj.long}")
+            lbl_phase.setStyleSheet(
+                "background-color: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.35); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;"
+            )
+            configure_badge_label(lbl_phase, phase_obj.short, padding=14)
+            header_layout.addWidget(lbl_phase)
+
         # Stats Badge
         lines_count = self.entry.get("lines_count", 1)
         char_count = self.entry.get("char_count", 0)

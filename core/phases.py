@@ -92,10 +92,13 @@ PHASE_ALIASES: Dict[str, str] = {
 }
 
 
-def normalize_phase_key(val: Optional[str]) -> str:
-    """Normalize any string (key, alias, or legacy title) to a canonical phase key."""
+def try_normalize_phase_key(val: Optional[str]) -> Optional[str]:
+    """
+    Attempt to normalize a string (key, alias, short name, long name, or order)
+    to a canonical phase key. Returns None if unrecognized or empty.
+    """
     if not val:
-        return DEFAULT_PHASE_KEY
+        return None
 
     clean = str(val).strip().lower()
     if clean in PHASES_BY_KEY:
@@ -128,7 +131,16 @@ def normalize_phase_key(val: Optional[str]) -> str:
             if phase.order == num:
                 return phase.key
 
-    return DEFAULT_PHASE_KEY
+    return None
+
+
+def normalize_phase_key(val: Optional[str]) -> str:
+    """Normalize any string (key, alias, or legacy title) to a canonical phase key.
+    Falls back to DEFAULT_PHASE_KEY ('misc') if unrecognized or empty.
+    """
+    norm = try_normalize_phase_key(val)
+    return norm if norm is not None else DEFAULT_PHASE_KEY
+
 
 
 def get_phase(name_or_key: Optional[str]) -> Phase:

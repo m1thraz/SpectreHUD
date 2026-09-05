@@ -120,8 +120,32 @@ QScrollArea#LootColumnScrollArea {
     border: none;
 }
 
-QScrollArea#LootColumnScrollArea QScrollBar:vertical,
 QScrollArea#LootColumnScrollArea QScrollBar:horizontal {
+    background: transparent;
+    width: 0px;
+    height: 0px;
+}
+
+QScrollArea#LootColumnScrollArea QScrollBar:vertical {
+    background: transparent;
+    width: 4px;
+    margin: 0px;
+}
+
+QScrollArea#LootColumnScrollArea QScrollBar::handle:vertical {
+    background: {BORDER_A80};
+    border-radius: 2px;
+    min-height: 20px;
+}
+
+QScrollArea#LootColumnScrollArea QScrollBar::handle:vertical:hover {
+    background: {CYBER_CYAN};
+}
+
+QScrollArea#LootColumnScrollArea QScrollBar::add-line:vertical,
+QScrollArea#LootColumnScrollArea QScrollBar::sub-line:vertical,
+QScrollArea#LootColumnScrollArea QScrollBar::add-page:vertical,
+QScrollArea#LootColumnScrollArea QScrollBar::sub-page:vertical {
     background: transparent;
     width: 0px;
     height: 0px;

@@ -19,8 +19,10 @@ from core.project.session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType
+from core.phase_context import PhaseContext
 from core.storage import PersistenceError
 
+from ui.phase_toast_hud import PhaseToastHUD
 from ui.variable_bar import VariableBar
 from ui.clipboard_monitor import ClipboardMonitor
 from ui.panels.header_panel import HeaderPanel
@@ -74,6 +76,7 @@ class AppController(QObject):
         screenshot_manager: ScreenshotManager,
         event_bus: EventBus,
         quick_note_manager: Optional[Any] = None,
+        phase_context: Optional[PhaseContext] = None,
     ):
         super().__init__(window)
         self.window = window
@@ -93,11 +96,17 @@ class AppController(QObject):
         self.screenshot_manager = screenshot_manager
         self.event_bus = event_bus
 
+        self.phase_context = (
+            phase_context if phase_context is not None else PhaseContext(event_bus=self.event_bus)
+        )
+        self.phase_hud = PhaseToastHUD()
+
         self.session_service = ProjectSessionService(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
             clipboard_history=self.clipboard_history,
             quick_note_manager=self.quick_note_manager,
+            phase_context=self.phase_context,
         )
         self.cards: List[QWidget] = []
 
@@ -105,13 +114,18 @@ class AppController(QObject):
         self._target_provider = lambda: (
             self.var_bar.txt_target.text().strip() if hasattr(self.var_bar, "txt_target") else ""
         )
+        self._phase_provider = lambda: self.phase_context.active_phase_id
 
         # Domain Controllers
         self.cheatsheet_ctrl = CheatsheetController(
             self.snippet_manager, event_bus=self.event_bus, parent=self
         )
         self.loot_ctrl = LootController(
-            self.loot_manager, self.project_manager, event_bus=self.event_bus, parent=self
+            self.loot_manager,
+            self.project_manager,
+            phase_provider=self._phase_provider,
+            event_bus=self.event_bus,
+            parent=self,
         )
         self.report_ctrl = ReportController(
             self.project_manager,
@@ -125,9 +139,11 @@ class AppController(QObject):
             loot_controller=self.loot_ctrl,
             report_controller=self.report_ctrl,
             target_provider=self._target_provider,
+            phase_provider=self._phase_provider,
             event_bus=self.event_bus,
             parent=self,
         )
+        self.clipboard_monitor.set_phase_provider(self._phase_provider)
         self.history_ctrl = HistoryController(
             clipboard_history=self.clipboard_history,
             clipboard_monitor=self.clipboard_monitor,
@@ -269,7 +285,62 @@ class AppController(QObject):
                 lambda _: self._on_notes_updated(), Qt.ConnectionType.QueuedConnection
             )
         self.clipboard_monitor.logging_state_changed.connect(self.header.update_rec_indicator)
+        self.header.phase_menu_requested.connect(self._show_phase_menu)
+        self.event_bus.subscribe(EventType.ACTIVE_PHASE_CHANGED, self._on_active_phase_changed)
         get_i18n().locale_changed.connect(self.retranslate_ui)
+
+    def activate_phase(self, phase_id: Optional[str], source: str = "ui") -> None:
+        """Activates a pentest phase, updating the active project context."""
+        self.phase_context.set_active_phase(phase_id, source=source)
+
+    def activate_phase_by_order(self, order: int, source: str = "hotkey") -> None:
+        """Activates a pentest phase by 1-based order index (1..6)."""
+        from core.phases import PHASES
+
+        for phase in PHASES:
+            if phase.order == order:
+                changed = self.phase_context.set_active_phase(phase.key, source=source)
+                if not changed and source == "hotkey":
+                    self.phase_hud.show_phase(phase.key)
+                return
+
+    def _on_active_phase_changed(self, payload: Dict[str, Any]) -> None:
+        """Handles phase change event from event bus."""
+        phase_id = payload.get("phase_id")
+        source = payload.get("source", "")
+        self.header.set_phase(phase_id)
+        if source == "hotkey":
+            self.phase_hud.show_phase(phase_id)
+
+    def _show_phase_menu(self, button: QPushButton) -> None:
+        """Opens the phase selection popup menu under the header phase pill."""
+        from PyQt6.QtWidgets import QMenu
+        from core.phases import PHASES
+
+        menu = QMenu(self.window)
+        menu.setProperty("class", "SecondaryMenu")
+
+        active_id = self.phase_context.active_phase_id
+
+        for phase in PHASES:
+            label = f"{phase.order}. {phase.long} ({phase.short})"
+            act = menu.addAction(label)
+            act.setCheckable(True)
+            act.setChecked(active_id == phase.key)
+            act.triggered.connect(
+                lambda checked, k=phase.key: self.activate_phase(k, source="header_menu")
+            )
+
+        menu.addSeparator()
+        act_none = menu.addAction(t("phases.unassigned", "Unassigned"))
+        act_none.setCheckable(True)
+        act_none.setChecked(active_id is None)
+        act_none.triggered.connect(
+            lambda: self.activate_phase(None, source="header_menu")
+        )
+
+        pos = button.mapToGlobal(button.rect().bottomLeft())
+        menu.exec(pos)
 
     def trigger_quick_note(self) -> None:
         """Opens the lightweight quick note capture popup."""
@@ -283,9 +354,11 @@ class AppController(QObject):
     def trigger_quick_loot(self) -> None:
         """Opens the Add-Loot dialog non-modally as a floating remote control."""
         target_ip = self._target_provider()
+        default_cat = self.phase_context.active_phase_id or "misc"
         self.loot_ctrl.open_add_dialog(
             parent_widget=None,
             target_ip=target_ip,
+            default_category=default_cat,
             modal=False,
             on_accepted=lambda _data: self._on_loot_data_updated(),
         )
@@ -589,7 +662,15 @@ class AppController(QObject):
             self.quick_note_ctrl.show_popup()
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
-        if self.loot_ctrl.open_edit_dialog(self.window, entry):
+        def export_obsidian(entry_id: str) -> None:
+            self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+
+        if self.loot_ctrl.open_edit_dialog(
+            self.window,
+            entry,
+            on_export_file=self._on_export_loot_entry,
+            on_export_obsidian=export_obsidian,
+        ):
             self._on_loot_data_updated()
 
     def _on_edit_history_requested(self, entry: Dict[str, Any]) -> None:

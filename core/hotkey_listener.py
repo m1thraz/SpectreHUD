@@ -33,6 +33,12 @@ class HotkeyConfig:
     quick_ip: str = "<ctrl>+<alt>+i"
     quick_loot: str = "<ctrl>+<alt>+l"
     quit: str = "<ctrl>+<alt>+q"
+    phase_1: str = "<ctrl>+<alt>+1"
+    phase_2: str = "<ctrl>+<alt>+2"
+    phase_3: str = "<ctrl>+<alt>+3"
+    phase_4: str = "<ctrl>+<alt>+4"
+    phase_5: str = "<ctrl>+<alt>+5"
+    phase_6: str = "<ctrl>+<alt>+6"
 
 
 def normalize_hotkey_for_pynput(hotkey_str: str) -> str:
@@ -78,6 +84,7 @@ class HotkeyListener(QObject):
     quick_ip_requested = pyqtSignal()
     quick_loot_requested = pyqtSignal()
     quit_requested = pyqtSignal()
+    phase_requested = pyqtSignal(int)
 
     def __init__(
         self,
@@ -103,6 +110,7 @@ class HotkeyListener(QObject):
         self._last_quick_ip_time = 0.0
         self._last_quick_loot_time = 0.0
         self._last_quit_time = 0.0
+        self._last_phase_time = 0.0
         self._debounce_cooldown = 0.35  # seconds
 
     @property
@@ -170,6 +178,20 @@ class HotkeyListener(QObject):
             if norm_quit:
                 hotkey_mapping[norm_quit] = self._fire_quit_trigger
 
+            phase_configs = [
+                (self.config.phase_1, 1),
+                (self.config.phase_2, 2),
+                (self.config.phase_3, 3),
+                (self.config.phase_4, 4),
+                (self.config.phase_5, 5),
+                (self.config.phase_6, 6),
+            ]
+            for hk, order in phase_configs:
+                if hk:
+                    norm = normalize_hotkey_for_pynput(hk)
+                    if norm:
+                        hotkey_mapping[norm] = lambda o=order: self._fire_phase_trigger(o)
+
             listener = keyboard.GlobalHotKeys(hotkey_mapping)
             listener.daemon = True
             listener.start()
@@ -226,6 +248,15 @@ class HotkeyListener(QObject):
         if now - self._last_quit_time >= self._debounce_cooldown:
             self._last_quit_time = now
             self.quit_requested.emit()
+
+    def _fire_phase_trigger(self, order: int) -> None:
+        """Debounces and emits phase request signal safely."""
+        now = time.time()
+        last_order = getattr(self, "_last_phase_order", None)
+        if order != last_order or (now - self._last_phase_time >= 0.15):
+            self._last_phase_time = now
+            self._last_phase_order = order
+            self.phase_requested.emit(order)
 
     def stop(self) -> None:
         """Stops the global hotkey listener."""
