@@ -109,6 +109,25 @@ def test_search_reduces_scroll_range_without_stale_content_height(cheatsheet_win
     _assert_last_card_matches_content_bottom(cheatsheet_window)
 
 
+@pytest.mark.parametrize("width", [740, 1200])
+def test_wrapped_commands_receive_their_full_height(cheatsheet_window, width):
+    from ui.styles import build_app_theme
+    from ui.styles.palette import CYBER_DARK_PALETTE
+
+    window = cheatsheet_window
+    window.setStyleSheet(build_app_theme(CYBER_DARK_PALETTE))
+    window.resize(width, 700)
+    for _ in range(5):
+        QApplication.processEvents()
+    for card in window.cards:
+        if isinstance(card, SnippetCard):
+            label = card.lbl_command
+            required = label.heightForWidth(label.width())
+            assert label.height() >= required, (
+                card.snippet.get("title"), label.width(), label.height(), required
+            )
+
+
 @pytest.mark.parametrize(
     "command",
     (

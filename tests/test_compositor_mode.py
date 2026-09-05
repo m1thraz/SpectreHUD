@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 
 from core.platform.capabilities import detect_platform_capabilities
-from ui.main_window import MainWindow
+from ui.glass_panel import GlassPanel
 from tests.window_factory import create_main_window
 
 app = QApplication.instance() or QApplication(sys.argv)
@@ -40,26 +40,22 @@ class TestCompositorMode(unittest.TestCase):
         )
         self.assertTrue(caps_wayland.compositor)
 
-    def test_main_window_adaptive_margins_and_translucency(self):
-        # 1. Non-composited mode
-        with patch.object(MainWindow, "_detect_compositor", return_value=False):
-            win_no_comp = create_main_window()
-            self.assertFalse(win_no_comp.has_compositor)
-            self.assertFalse(win_no_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
-            central = win_no_comp.centralWidget()
-            margins = central.layout().contentsMargins()
-            self.assertEqual((margins.left(), margins.top(), margins.right(), margins.bottom()), (0, 0, 0, 0))
-            win_no_comp.close()
-
-        # 2. Composited mode
-        with patch.object(MainWindow, "_detect_compositor", return_value=True):
-            win_comp = create_main_window()
-            self.assertTrue(win_comp.has_compositor)
-            self.assertTrue(win_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
-            central = win_comp.centralWidget()
-            margins = central.layout().contentsMargins()
-            self.assertEqual((margins.left(), margins.top(), margins.right(), margins.bottom()), (10, 10, 10, 10))
-            win_comp.close()
+    def test_main_window_is_opaque_with_identical_margins(self):
+        for enabled in ("0", "1"):
+            with patch.dict("os.environ", {"SPECTREHUD_COMPOSITOR": enabled}):
+                window = create_main_window()
+                try:
+                    self.assertFalse(
+                        window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                    )
+                    self.assertIsInstance(window.hud_frame, GlassPanel)
+                    margins = window.centralWidget().layout().contentsMargins()
+                    self.assertEqual(
+                        (margins.left(), margins.top(), margins.right(), margins.bottom()),
+                        (0, 0, 0, 0),
+                    )
+                finally:
+                    window.close()
 
 
 if __name__ == "__main__":

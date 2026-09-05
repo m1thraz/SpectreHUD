@@ -30,6 +30,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "code_font": "consolas",
     "report_font": "segoe_ui",
     "theme": "cyber_dark",
+    # Legacy key names; values now control simulated glass intensity, not desktop alpha.
     "hud_transparency": 5,
     "report_transparency": 0,
     "language": "en",
@@ -42,7 +43,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 
 
 def clamp_transparency(value: object, default: int) -> int:
-    """Normalize supported transparency preferences to an integer from 0 to 30."""
+    """Normalize legacy glass-intensity preferences to an integer from 0 to 30."""
     try:
         transparency = int(value)
     except (TypeError, ValueError, OverflowError):

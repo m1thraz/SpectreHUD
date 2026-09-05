@@ -2,12 +2,13 @@ import os
 import time
 from typing import Dict, Any, List
 
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QFrame
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QPoint, QEvent, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
 
 from core.logger import get_logger
 
+from ui.glass_panel import GlassPanel
 from ui.variable_bar import VariableBar
 from ui.panels import HeaderPanel, SearchPanel, ContentPanel, FooterPanel
 from ui.app_controller import AppController
@@ -128,14 +129,6 @@ class MainWindow(QMainWindow):
         if self._initial_content_pending:
             QTimer.singleShot(0, self._render_initial_content)
 
-    def _detect_compositor(self) -> bool:
-        if self.config:
-            cfg = self.config.get("compositor", None)
-            if cfg is not None:
-                return bool(cfg)
-        from core.platform import detect_platform_capabilities
-        return detect_platform_capabilities().compositor
-
     # -------------------------------------------------------------
     # Window Frame, Geometry, & Layout Assembly
     # -------------------------------------------------------------
@@ -152,12 +145,7 @@ class MainWindow(QMainWindow):
         if is_always_on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
 
-        self.has_compositor = self._detect_compositor()
         self.setWindowFlags(flags)
-        if self.has_compositor:
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        else:
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
         app_icon = get_app_icon()
         if not app_icon.isNull():
@@ -170,20 +158,11 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         outer_layout = QVBoxLayout(central_widget)
-        if self.has_compositor:
-            outer_layout.setContentsMargins(10, 10, 10, 10)
-        else:
-            outer_layout.setContentsMargins(0, 0, 0, 0)
-            central_widget.setStyleSheet("background-color: #0d1117;")
+        outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
 
-        # Main HUD Glass Frame
-        self.hud_frame = QFrame()
+        self.hud_frame = GlassPanel()
         self.hud_frame.setObjectName("HudFrame")
-        if not self.has_compositor:
-            self.hud_frame.setStyleSheet(
-                "QFrame#HudFrame { border-radius: 0px; background-color: #0d1117; }"
-            )
         self.hud_frame.setMouseTracking(True)
 
         hud_layout = QVBoxLayout(self.hud_frame)

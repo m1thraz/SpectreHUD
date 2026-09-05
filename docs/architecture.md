@@ -57,7 +57,7 @@ graph TD
 ## 2. Architectural Layers & Components
 
 ### 2.1 UI Presentation Layer (`ui/`)
-- **`MainWindow` (`ui/main_window.py`)**: Frameless, transparent, Spotlight-style overlay shell. Serves as the **Single Composition Root** of the application. Resolves dependencies from `ServiceContainer` (or direct test arguments) and passes fully instantiated services to `AppController`. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
+- **`MainWindow` (`ui/main_window.py`)**: Frameless, opaque, Spotlight-style overlay shell with simulated glass. Serves as the **Single Composition Root** of the application. Resolves dependencies from `ServiceContainer` (or direct test arguments) and passes fully instantiated services to `AppController`. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
 - **Panels (`ui/panels/`)**:
   - `HeaderPanel`: Title, project switcher dropdown, language toggle, and action buttons.
   - `SearchPanel`: Real-time fuzzy query input with filter tags.
@@ -75,7 +75,7 @@ graph TD
 ### 2.2 Domain Controllers & Coordinators (`ui/controllers/` & `ui/coordinators/`)
 - **`AppController` (`ui/app_controller.py`)**: High-level UI orchestrator connecting panels, mode switching, and domain controllers. It receives fully resolved services from `MainWindow` and never instantiates domain services or accesses `ServiceContainer` directly.
 - **Application Coordinators (`ui/coordinators/`)**:
-  - `SettingsCoordinator`: Owns application style application, font metrics, and transparency updates.
+  - `SettingsCoordinator`: Owns application style application, font metrics, and glass-intensity updates.
   - `ExportCoordinator`: Bridges UI export actions (Markdown, HTML, Obsidian, CherryTree) to pure core exporters.
   - `WorkspaceCoordinator`: Coordinates multi-project switching and cache eviction across controllers.
   - `NavigationCoordinator`: Handles mode switching (Cheatsheet, Loot, History, Report Editor) and header/footer states.
@@ -137,7 +137,7 @@ graph TD
   Gruvbox, Tokyo Night, Blue Team, etc.), validates their required palette tokens, and falls
   back to Cyber Dark when a selected theme cannot be loaded.
 - **Appearance settings (`ui/settings_dialog.py`)**: Owns theme, typography, and
-  independent HUD/Report Editor transparency preferences separately from
+  independent HUD/Report Editor glass-intensity preferences separately from
   general behaviour settings. Curated typography stacks provide resilient native fallbacks
   across UI (IBM Plex Sans, Manrope), Code/Monospace (IBM Plex Mono, Iosevka, Hack), and
   Reports (Source Serif 4, Lato, Cambria). A changed theme emits a
@@ -146,11 +146,19 @@ graph TD
   and starts the replacement process. Application and code font changes rebuild
   the running application stylesheet immediately, while report typography stays
   scoped to report preview and export. Installed families are detected through
-  Qt; unavailable curated choices remain visible but disabled. HUD transparency
-  defaults to the established 5% glass rendering, while the Report Editor's two
-  writing surfaces default to fully opaque and do not affect its toolbar or
-  surrounding chrome. Both values apply immediately through the shared
-  `ui/appearance.py` runtime path. That same path derives tooltip base/text
+  Qt; unavailable curated choices remain visible but disabled. HUD and Report Editor
+  surfaces use `ui/glass_panel.py`: an opaque theme-coloured gradient, a shared
+  lazily generated 128px noise tile, and a subtle highlight edge. The main window
+  no longer branches on compositor availability and never enables desktop
+  translucency. Rounded panel corners are painted over an opaque theme base.
+  The independent glass-intensity controls range from 0 to 30 (defaults 5/0);
+  existing `hud_transparency` and `report_transparency` storage keys are retained
+  for compatibility, but now control gradient tone rather than desktop alpha.
+  Report source and preview each sit inside a glass panel; their text viewports
+  remain transparent only to that internal surface. Both controls update through
+  the shared QSS runtime path, including lazily created report panels.
+  This change is scoped to the main HUD and report: separate dialogs and capture
+  popups retain their existing window behaviour. The shared appearance path derives tooltip base/text
   colours from the active palette and guards transient Qt tooltip labels from
   the local MainScrollArea stylesheet cascade. Loot list/Kanban
   selection is intentionally controlled and persisted from the Loot view itself.
@@ -162,7 +170,7 @@ graph TD
   - `cards.py`: Snippet card containers and code blocks.
   - `dialogs.py`: Modal dialogues, form layouts, and inputs.
   - `theme.py`: Builds the complete application stylesheet from the active
-    palette, application/code-font selections and the two bounded transparency
+    palette, application/code-font selections and the two bounded glass-intensity
     values.
 
 ### 2.8 Structured Template Engine & Reporting Subsystem (`core/reporting/`)

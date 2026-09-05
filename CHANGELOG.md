@@ -8,10 +8,18 @@ semantic versioning.
 
 ### Fixed
 
+- Keep wrapped command cards tall enough for their full text after resizing,
+  changing fonts, or substituting variables, including long SQL commands.
+
 - Include pynput's dynamically loaded Xorg keyboard and mouse backends in the
   standalone Debian bundle so global hotkeys can start on X11.
 
 ### Changed
+
+- Replace desktop translucency in the main HUD and report surfaces with opaque,
+  theme-aware simulated glass (gradient, cached grain, and highlight edge).
+  Rename appearance controls to glass intensity while retaining saved settings;
+  the main window now uses the same layout with or without a compositor.
 
 - Reduced UI orchestration coupling with registered mode renderers, container-only
   `MainWindow` construction, isolated shutdown and selection workflows, and smaller

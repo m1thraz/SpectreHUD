@@ -454,7 +454,7 @@ class AppearanceSettingsPage(QWidget):
         theme_layout.addWidget(restart_hint)
         layout.addWidget(card_theme)
 
-        lbl_transparency = QLabel(t("settings.lbl_transparency_section", "Transparency"))
+        lbl_transparency = QLabel(t("settings.lbl_transparency_section", "Simulated Glass"))
         lbl_transparency.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_transparency)
 
@@ -465,7 +465,7 @@ class AppearanceSettingsPage(QWidget):
 
         self.slider_hud_transparency, self.spin_hud_transparency = self._add_transparency_control(
             transparency_layout,
-            t("settings.lbl_hud_transparency", "HUD Transparency"),
+            t("settings.lbl_hud_transparency", "HUD Glass Intensity"),
             clamp_transparency(self.config.get("hud_transparency", 5), 5),
         )
         self.slider_report_transparency, self.spin_report_transparency = (
@@ -473,7 +473,7 @@ class AppearanceSettingsPage(QWidget):
                 transparency_layout,
                 t(
                     "settings.lbl_report_transparency",
-                    "Report Editor Transparency",
+                    "Report Glass Intensity",
                 ),
                 clamp_transparency(self.config.get("report_transparency", 0), 0),
             )
@@ -538,7 +538,7 @@ class AppearanceSettingsPage(QWidget):
 
         spin = QSpinBox()
         spin.setRange(0, 30)
-        spin.setSuffix(" %")
+        spin.setSuffix("")
         spin.setValue(value)
         spin.setProperty("class", "TransparencySpin")
         spin.setMinimumWidth(68)

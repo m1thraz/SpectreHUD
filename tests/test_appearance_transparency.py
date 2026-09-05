@@ -1,4 +1,4 @@
-"""Regression coverage for runtime appearance and independent transparency."""
+"""Runtime appearance and independent glass intensity using legacy saved keys."""
 
 from unittest.mock import Mock, patch
 
@@ -50,13 +50,22 @@ def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
     return app, applied_theme, qss
 
 
-def _assert_hud_background(qss: str, expected: str) -> None:
-    assert (f"QFrame#HudFrame {{\n    background-color: {expected};") in qss
+def _assert_hud_background(qss: str, expected: tuple[str, int]) -> None:
+    _assert_glass_properties(qss, "QFrame#HudFrame", expected)
 
 
-def _assert_report_background(qss: str, expected: str) -> None:
-    assert (f"QPlainTextEdit.ReportSourceEditor {{\n    background-color: {expected};") in qss
-    assert (f"QTextEdit.ReportPreview {{\n    background-color: {expected};") in qss
+def _assert_report_background(qss: str, expected: tuple[str, int]) -> None:
+    _assert_glass_properties(qss, "QFrame.ReportGlassPanel", expected)
+    assert "QPlainTextEdit.ReportSourceEditor {\n    background-color: transparent;" in qss
+    assert "QTextEdit.ReportPreview {\n    background-color: transparent;" in qss
+
+
+def _assert_glass_properties(qss, selector, expected):
+    color, intensity = expected
+    assert (
+        f"{selector} {{\n    qproperty-glassColor: {color};\n    qproperty-glassIntensity: {intensity};"
+        in qss
+    )
 
 
 def test_missing_transparency_preferences_use_reference_defaults():
@@ -98,12 +107,12 @@ def test_loaded_transparency_preferences_are_clamped(
 @pytest.mark.parametrize(
     ("transparency", "expected"),
     [
-        (0, "rgba(13, 17, 23, 1)"),
-        (5, "rgba(13, 17, 23, 0.95)"),
-        (20, "rgba(13, 17, 23, 0.8)"),
+        (0, ("#0d1117", 0)),
+        (5, ("#0d1117", 5)),
+        (20, ("#0d1117", 20)),
     ],
 )
-def test_hud_transparency_controls_only_hud_opacity(transparency, expected):
+def test_legacy_hud_preference_controls_only_hud_glass(transparency, expected):
     qss = build_app_theme(
         CYBER_DARK_PALETTE,
         hud_transparency=transparency,
@@ -111,14 +120,14 @@ def test_hud_transparency_controls_only_hud_opacity(transparency, expected):
     )
 
     _assert_hud_background(qss, expected)
-    _assert_report_background(qss, "rgba(13, 17, 23, 1)")
+    _assert_report_background(qss, ("#0d1117", 0))
 
 
 @pytest.mark.parametrize(
     ("transparency", "expected"),
     [
-        (0, "rgba(13, 17, 23, 1)"),
-        (10, "rgba(13, 17, 23, 0.9)"),
+        (0, ("#0d1117", 0)),
+        (10, ("#0d1117", 10)),
     ],
 )
 def test_report_transparency_controls_only_editor_surfaces(
@@ -131,7 +140,7 @@ def test_report_transparency_controls_only_editor_surfaces(
         report_transparency=transparency,
     )
 
-    _assert_hud_background(qss, "rgba(13, 17, 23, 0.95)")
+    _assert_hud_background(qss, ("#0d1117", 5))
     _assert_report_background(qss, expected)
 
 
@@ -143,8 +152,8 @@ def test_theme_change_reuses_transparency_with_new_base_colors():
         report_transparency=10,
     )
 
-    _assert_hud_background(qss, "rgba(245, 247, 250, 0.8)")
-    _assert_report_background(qss, "rgba(245, 247, 250, 0.9)")
+    _assert_hud_background(qss, ("#f5f7fa", 20))
+    _assert_report_background(qss, ("#f5f7fa", 10))
 
 
 def test_save_apply_updates_both_transparencies_without_restart():
@@ -164,8 +173,8 @@ def test_save_apply_updates_both_transparencies_without_restart():
         )
 
         qss = runtime_app.setStyleSheet.call_args.args[0]
-        _assert_hud_background(qss, "rgba(13, 17, 23, 0.8)")
-        _assert_report_background(qss, "rgba(13, 17, 23, 0.9)")
+        _assert_hud_background(qss, ("#0d1117", 20))
+        _assert_report_background(qss, ("#0d1117", 10))
 
 
 def test_font_and_transparency_updates_share_one_runtime_apply():
@@ -200,8 +209,8 @@ def test_font_and_transparency_updates_share_one_runtime_apply():
         runtime_app.setStyleSheet.assert_called_once()
         assert UI_FONT_STACKS["inter"] in qss
         assert CODE_FONT_STACKS["jetbrains_mono"] in qss
-        _assert_hud_background(qss, "rgba(13, 17, 23, 0.88)")
-        _assert_report_background(qss, "rgba(13, 17, 23, 0.93)")
+        _assert_hud_background(qss, ("#0d1117", 12))
+        _assert_report_background(qss, ("#0d1117", 7))
 
 
 def test_daylight_apply_updates_tooltip_palette_and_keeps_global_qss():
@@ -249,8 +258,8 @@ def test_reapplying_theme_refreshes_tooltip_palette_without_resetting_values():
         tooltip_palette = QToolTip.palette()
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipBase).name() == nord["BG_SURFACE"]
         assert tooltip_palette.color(QPalette.ColorRole.ToolTipText).name() == nord["TEXT_PRIMARY"]
-        _assert_hud_background(qss, "rgba(46, 52, 64, 0.82)")
-        _assert_report_background(qss, "rgba(46, 52, 64, 0.94)")
+        _assert_hud_background(qss, ("#2e3440", 18))
+        _assert_report_background(qss, ("#2e3440", 6))
         assert config.get("hud_transparency") == 18
         assert config.get("report_transparency") == 6
     finally:

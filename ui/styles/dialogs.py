@@ -289,8 +289,13 @@ QCheckBox::indicator:checked {
 }
 
 /* Report Editor & Preview */
+QFrame.ReportGlassPanel {
+    qproperty-glassColor: {BG_DARK};
+    qproperty-glassIntensity: {REPORT_INTENSITY};
+}
+
 QPlainTextEdit.ReportSourceEditor {
-    background-color: {REPORT_EDITOR_BACKGROUND};
+    background-color: transparent;
     color: {TEXT_SECONDARY};
     border: 1px solid {BORDER_DEFAULT};
     border-radius: 8px;
@@ -304,7 +309,7 @@ QPlainTextEdit.ReportSourceEditor:focus {
 }
 
 QTextEdit.ReportPreview {
-    background-color: {REPORT_EDITOR_BACKGROUND};
+    background-color: transparent;
     color: {TEXT_PRIMARY};
     border: 1px solid {BORDER_DEFAULT};
     border-radius: 8px;

@@ -3,9 +3,10 @@ Card Containers, Frames, Code Blocks, and HUD Glass Styles for SpectreHUD.
 """
 
 CARDS_QSS_TEMPLATE = """
-/* Outer HUD Frame with Glassmorphism / Acrylic Glow */
+/* Opaque simulated glass; painted by GlassPanel. */
 QFrame#HudFrame {
-    background-color: {HUD_BACKGROUND};
+    qproperty-glassColor: {BG_DARK};
+    qproperty-glassIntensity: {HUD_INTENSITY};
     border: 1px solid {CYAN_A35};
     border-radius: 14px;
 }

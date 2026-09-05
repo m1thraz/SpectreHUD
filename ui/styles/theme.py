@@ -46,8 +46,8 @@ def build_app_theme(
         {
             "ui_font": ui_font,
             "code_font": code_font,
-            "HUD_BACKGROUND": with_alpha(context["BG_DARK"], 100 - hud_value),
-            "REPORT_EDITOR_BACKGROUND": with_alpha(context["BG_DARK"], 100 - report_value),
+            "HUD_INTENSITY": str(hud_value),
+            "REPORT_INTENSITY": str(report_value),
         }
     )
     raw = "\n".join(

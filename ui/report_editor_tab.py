@@ -52,6 +52,7 @@ from ui.report.dialogs import (
 )
 from ui.report.icon_assets import ReportIconError, render_report_icon
 from ui.report.find_replace import FindReplaceBar
+from ui.glass_panel import GlassPanel
 from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
@@ -321,7 +322,8 @@ class ReportEditorTab(QWidget):
         self._highlighter = MarkdownHighlighter(self.editor.document())
         self.find_replace = FindReplaceBar(self.editor, self)
         layout.addWidget(self.find_replace)
-        self.splitter.addWidget(self.editor)
+        self.editor_glass = self._wrap_glass_surface(self.editor)
+        self.splitter.addWidget(self.editor_glass)
 
         self.preview_document = ReportDocument(parent=self)
         self._apply_preview_font()
@@ -330,7 +332,8 @@ class ReportEditorTab(QWidget):
         self.preview.setDocument(self.preview_document)
         self.preview.setReadOnly(True)
         self.preview.setProperty("class", "ReportPreview")
-        self.splitter.addWidget(self.preview)
+        self.preview_glass = self._wrap_glass_surface(self.preview)
+        self.splitter.addWidget(self.preview_glass)
 
         # Bi-directional scroll-sync between editor and live preview in Split mode
         self.editor.verticalScrollBar().valueChanged.connect(self._on_editor_scroll)
@@ -339,6 +342,16 @@ class ReportEditorTab(QWidget):
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 1)
         layout.addWidget(self.splitter, stretch=1)
+
+    @staticmethod
+    def _wrap_glass_surface(editor):
+        panel = GlassPanel()
+        panel.setProperty("class", "ReportGlassPanel")
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(editor)
+        editor.viewport().setAutoFillBackground(False)
+        return panel
 
     def _setup_shortcuts(self) -> None:
         """Register report editing and view-mode shortcuts."""
@@ -828,14 +841,14 @@ class ReportEditorTab(QWidget):
                 self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
                 self.format_toolbar_widget.tools_container.setVisible(mode != ViewMode.PREVIEW)
         if mode == ViewMode.EDITOR:
-            self.editor.setVisible(True)
-            self.preview.setVisible(False)
+            self.editor_glass.setVisible(True)
+            self.preview_glass.setVisible(False)
         elif mode == ViewMode.PREVIEW:
-            self.editor.setVisible(False)
-            self.preview.setVisible(True)
+            self.editor_glass.setVisible(False)
+            self.preview_glass.setVisible(True)
         elif mode == ViewMode.SPLIT:
-            self.editor.setVisible(True)
-            self.preview.setVisible(True)
+            self.editor_glass.setVisible(True)
+            self.preview_glass.setVisible(True)
             total_w = self.splitter.width() or 800
             self.splitter.setSizes([total_w // 2, total_w // 2])
             self._sync_scroll_editor_to_preview()

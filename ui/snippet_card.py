@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
 )
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize, QEvent
 from typing import Dict, Any, Optional
 from core.template_engine import TemplateEngine
 from ui.param_prompt_dialog import ParamPromptDialog
@@ -120,6 +120,7 @@ class SnippetCard(QFrame):
         )
         self.lbl_command.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.lbl_command.setMinimumWidth(0)
+        self.lbl_command.installEventFilter(self)
 
         cmd_row.addWidget(self.lbl_command, stretch=1)
 
@@ -147,6 +148,35 @@ class SnippetCard(QFrame):
 
         layout.addLayout(cmd_row)
 
+    def _update_wrapped_height(self) -> None:
+        """Prevent the scroll layout from shrinking wrapped text to one line."""
+        if self.layout() is None:
+            return
+        label = getattr(self, "lbl_command", None)
+        if label is not None:
+            text_height = label.heightForWidth(label.width())
+            if text_height >= 0 and text_height != label.minimumHeight():
+                label.setMinimumHeight(text_height)
+                self.layout().invalidate()
+        required = self.layout().totalHeightForWidth(self.width())
+        if required >= 0 and required != self.minimumHeight():
+            self.setMinimumHeight(required)
+            self.updateGeometry()
+
+    def eventFilter(self, watched, event) -> bool:
+        if watched is getattr(self, "lbl_command", None) and event.type() == QEvent.Type.Resize:
+            self._update_wrapped_height()
+        return super().eventFilter(watched, event)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_wrapped_height()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            QTimer.singleShot(0, self._update_wrapped_height)
+
     def _open_command_editor(self) -> None:
         """Opens a roomy modal editor before copying an ad-hoc command variant."""
         dialog = CommandEditDialog(self._rendered_command, parent=self.window())
@@ -161,6 +191,7 @@ class SnippetCard(QFrame):
         template = self.snippet.get("template", "")
         self._rendered_command = TemplateEngine.render(template, variables)
         self.lbl_command.setText(self._rendered_command)
+        self._update_wrapped_height()
 
     def _perform_clipboard_copy(
         self, text_to_copy: str, target_btn: Optional[QPushButton] = None
