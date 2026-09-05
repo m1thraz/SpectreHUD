@@ -35,6 +35,10 @@ semantic versioning.
 
 ### Fixed
 
+- Restore visible Kanban card surfaces by scoping scroll-area styles and enforcing
+  theme-derived card/column contrast. Keep type badges fully visible in narrow
+  columns and show complete wrapped loot values instead of five-line previews.
+
 - Prevent badge clipping (e.g. "TARC" instead of "TARGET") by computing dynamic badge
   minimum widths and gracefully truncating card titles with `ElidedLabel` (`…`).
 - Make glass intensity control every effect layer: 0 disables the effect,

@@ -76,7 +76,14 @@ class ContentPanel(QWidget):
         # Preserve the original render hierarchy used by the HUD glass effect.
         # The local transparent scroll-area surface allows the themed background
         # below the content zone to remain visible.
-        self.scroll_area.setStyleSheet("background: transparent; border: none;")
+        self.scroll_area.viewport().setObjectName("MainScrollViewport")
+        self.scroll_area.setStyleSheet(
+            "QScrollArea#MainScrollArea, QWidget#MainScrollViewport, "
+            "QFrame#SnippetCard, QFrame#SnippetCard QWidget, "
+            "QFrame#lootCard[boardCard=\"false\"], QFrame#lootCard[boardCard=\"false\"] QWidget, "
+            "ReportEditorTab, ReportEditorTab QWidget "
+            "{ background: transparent; border: none; }"
+        )
 
         self.content_container = ViewportBoundContent()
         self.content_layout = QVBoxLayout(self.content_container)

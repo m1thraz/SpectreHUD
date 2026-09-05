@@ -49,23 +49,36 @@ QFrame#CompactVarBar {
 }
 
 /* Snippet & Loot Cards */
-QFrame#SnippetCard,
-QFrame#lootCard {
+QFrame#SnippetCard {
     background-color: {SURFACE_A85};
     border: 1px solid {BORDER_A70};
     border-radius: 10px;
     padding: 4px;
 }
 
-QFrame#SnippetCard:hover,
-QFrame#lootCard:hover {
+QFrame#SnippetCard:hover {
     border: 1px solid {CYAN_A50};
     background-color: {CARD_HOVER_A90};
 }
 
 /* Kanban columns reuse LootCards while retaining clear phase boundaries. */
+QFrame#lootCard[boardCard="true"] {
+    background-color: {LOOT_CARD_SURFACE};
+    border: 1px solid {LOOT_CARD_BORDER};
+    border-radius: 10px;
+}
+
+QFrame#lootCard[boardCard="true"]:hover {
+    background-color: {LOOT_CARD_SURFACE};
+    border: 1px solid {CYBER_CYAN};
+}
+
+QWidget#LootCardsContainer {
+    background: transparent;
+}
+
 QFrame[class="LootBoardColumn"] {
-    background-color: {DARK_A72};
+    background-color: {LOOT_COLUMN_SURFACE};
     border: 1px solid {BORDER_A80};
     border-radius: 8px;
 }
@@ -105,7 +118,7 @@ QScrollArea#LootColumnScrollArea QScrollBar:horizontal {
 }
 
 /* Command Code Display Box */
-QLabel#CommandLabel {
+QLabel#CommandLabel, QTextEdit#CommandLabel {
     background-color: {CODE_A95};
     border: 1px solid {BORDER_A80};
     border-radius: 6px;

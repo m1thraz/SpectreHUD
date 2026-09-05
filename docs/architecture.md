@@ -70,12 +70,19 @@ graph TD
   same Loot domain entries. Its drop areas support moves between phases and
   reordering within a phase, provide drag feedback, and commit positions through
   the existing Loot persistence workflow rather than maintaining separate board
-  state. Cards (`QFrame#lootCard`) feature tactile styling with theme surface colors,
-  10px rounded borders, hover elevation, a vertical grip handle (`fa5s.grip-vertical`),
-  interactive drag cursors (`OpenHandCursor` / `ClosedHandCursor`), and 60% drag opacity.
-  The board features a right-edge scroll gradient fade and a dynamic visible column count
-  indicator ("Spalte 1–3 von 6") in the footer. Card titles use `ElidedLabel` with graceful
-  `…` truncation, while badge labels reserve dynamic font-metric widths to prevent badge clipping.
+  state. Cards (`QFrame#lootCard`) use dedicated opaque theme-derived card,
+  column and border tokens. Card and column colours maintain at least a
+  14-point HSL lightness difference, with 10px corners, internal padding and
+  8px spacing between cards. Scroll-area transparency selectors explicitly preserve flat non-board
+  content surfaces. Raised loot-card styling is restricted to `boardCard=true`,
+  so Kanban changes do not introduce boxes into Cheatsheet, History or Notes.
+  Board metadata and actions occupy separate rows. Badges measure their final
+  styled fonts again after style/font changes; titles wrap without elision.
+  Loot values use a read-only `WrappedValueView` with word-boundary-or-anywhere
+  wrapping and full document height, preserving paths, hashes and credentials
+  without ellipses or active inner scrollbars. The column owns scrolling.
+  The board retains its grip handles, drag feedback, persistent ordering and
+  visible-column indicator.
 - **`QuickNotesView` & `QuickNoteCard` (`ui/quick_note_card.py`)**: Dedicated quick thought
   and finding inbox supporting triage status pills (`inbox`, `followup`, `resolved`), priority
   pinning, inline editing, dual-destination promotion (`Send to Loot` / `Send to Report`),

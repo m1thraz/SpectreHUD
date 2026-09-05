@@ -41,6 +41,17 @@ def build_app_theme(
     ui_font = get_ui_font_stack(ui_font_key)
     code_font = get_code_font_stack(code_font_key)
     context = dict(palette)
+    # Dedicated opaque Kanban surfaces with a minimum 14-point HSL lightness gap.
+    column = QColor(context["BG_DARK"])
+    hue, saturation, lightness, _alpha = column.getHslF()
+    direction = 1 if lightness < 0.5 else -1
+    context["LOOT_COLUMN_SURFACE"] = column.name()
+    context["LOOT_CARD_SURFACE"] = QColor.fromHslF(
+        hue, saturation, lightness + direction * 0.14
+    ).name()
+    context["LOOT_CARD_BORDER"] = QColor.fromHslF(
+        hue, saturation, max(0, min(1, lightness + direction * 0.30))
+    ).name()
     hud_value = clamp_transparency(hud_transparency, 5)
     report_value = clamp_transparency(report_transparency, 0)
     bleed_value = clamp_transparency(bleed_through, 0)

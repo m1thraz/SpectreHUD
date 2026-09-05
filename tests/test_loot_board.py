@@ -125,7 +125,7 @@ def test_drop_area_resets_drag_highlight_after_leave_and_drop(qapp):
     area.deleteLater()
 
 
-def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars(qapp):
+def test_kanban_cards_preserve_full_wrapped_values_without_inner_scrollbars(qapp):
     edited = []
     contents = [
         "\n".join(f"multiline finding {index}" for index in range(30)),
@@ -165,14 +165,13 @@ def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars(qapp)
         assert len(cards) == 3
 
         for card, full_content in zip(cards, contents):
-            assert card.findChildren(QAbstractScrollArea) == []
-            assert card.lbl_content.text() != full_content
-            assert card.lbl_content.text().endswith("…")
-            expected_maximum = card.lbl_content.fontMetrics().lineSpacing() * 5
-            margins = card.lbl_content.contentsMargins()
-            expected_maximum += margins.top() + margins.bottom()
-            assert card.lbl_content.maximumHeight() == expected_maximum
-            assert card.height() < 500
+            for surface in card.findChildren(QAbstractScrollArea):
+                assert surface.verticalScrollBar().maximum() == 0
+                assert surface.horizontalScrollBar().maximum() == 0
+            assert card.lbl_content.text() == full_content
+            assert card.lbl_content.height() >= card.lbl_content.heightForWidth(card.lbl_content.width())
+            assert card.lbl_content.maximumHeight() == 16777215
+            assert card.width() <= recon_column.width()
 
         # Verify column scroll area disables visible scrollbars completely
         column_scrolls = recon_column.findChildren(QScrollArea)

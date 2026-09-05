@@ -76,7 +76,7 @@ def _assert_transparent_scroll_surfaces(
     assert not scroll.widget().autoFillBackground()
 
 
-def test_main_scroll_area_keeps_original_local_glass_path(qapp):
+def test_main_scroll_area_scopes_transparency_to_scroll_surfaces(qapp):
     qss = build_app_theme(ThemeLoader().load_theme("daylight"))
     assert "QScrollArea#MainScrollArea" in qss
     assert "QScrollArea#SettingsScrollArea" in qss
@@ -85,7 +85,13 @@ def test_main_scroll_area_keeps_original_local_glass_path(qapp):
     assert panel.scroll_area.objectName() == "MainScrollArea"
     _assert_transparent_scroll_surfaces(
         panel.scroll_area,
-        expected_local_style="background: transparent; border: none;",
+        expected_local_style=(
+            "QScrollArea#MainScrollArea, QWidget#MainScrollViewport, "
+            "QFrame#SnippetCard, QFrame#SnippetCard QWidget, "
+            'QFrame#lootCard[boardCard="false"], QFrame#lootCard[boardCard="false"] QWidget, '
+            "ReportEditorTab, ReportEditorTab QWidget "
+            "{ background: transparent; border: none; }"
+        ),
     )
     panel.deleteLater()
 
@@ -184,3 +190,53 @@ if __name__ == "__main__":
     finally:
         QToolTip.hideText()
         application.processEvents()
+
+
+@pytest.mark.parametrize("kind", ["cheatsheet", "history", "notes", "loot"])
+def test_non_board_cards_keep_flat_backgrounds(qapp, kind):
+    from PyQt6.QtCore import QPoint
+    from PyQt6.QtGui import QColor
+    from PyQt6.QtWidgets import QWidget, QVBoxLayout
+    from ui.snippet_card import SnippetCard
+    from ui.history_card import HistoryCard
+    from ui.quick_note_card import QuickNoteCard
+    from ui.loot_card import LootCard
+
+    root = QWidget()
+    root.setObjectName("FlatTestRoot")
+    root.setStyleSheet(
+        build_app_theme(ThemeLoader().load_theme("cyber_dark"))
+        + "QWidget#FlatTestRoot { background-color: #202126; }"
+    )
+    layout = QVBoxLayout(root)
+    panel = ContentPanel()
+    layout.addWidget(panel)
+    entry = {
+        "id": "flat",
+        "title": "Example",
+        "content": "example value",
+        "text": "example note",
+        "type": "note",
+        "category": "recon",
+    }
+    if kind == "cheatsheet":
+        card = SnippetCard(
+            {**entry, "template": "curl http://example.test", "description": "Example"}, {}
+        )
+    else:
+        card = {"history": HistoryCard, "notes": QuickNoteCard, "loot": LootCard}[kind](entry)
+    panel.content_layout.addWidget(card)
+    root.resize(900, 600)
+    root.show()
+    for _ in range(5):
+        qapp.processEvents()
+    try:
+        image = root.grab().toImage()
+        point = card.mapTo(root, QPoint(card.width() // 2, 3))
+        assert image.pixelColor(point) == QColor("#202126")
+        content = getattr(card, "lbl_command", None) or card.lbl_content
+        point = content.mapTo(root, QPoint(3, 3))
+        assert image.pixelColor(point) == QColor("#202126")
+    finally:
+        root.close()
+        root.deleteLater()

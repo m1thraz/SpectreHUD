@@ -1,7 +1,7 @@
 """Elided label and badge helper utilities for responsive card headers."""
 
 from typing import Optional
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QObject, QEvent, QTimer
 from PyQt6.QtWidgets import QLabel, QSizePolicy, QWidget
 
 
@@ -48,6 +48,26 @@ class ElidedLabel(QLabel):
         super().setText(elided)
 
 
+class _BadgeMetricsGuard(QObject):
+    """Refresh badge bounds after Qt applies the actual theme font and padding."""
+
+    def __init__(self, label, padding):
+        super().__init__(label)
+        self.label = label
+        self.padding = padding
+
+    def refresh(self):
+        label = self.label
+        width = max(label.fontMetrics().horizontalAdvance(label.text()) + self.padding,
+                    label.sizeHint().width())
+        label.setMinimumWidth(width)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QEvent.Type.Polish, QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            QTimer.singleShot(0, self.refresh)
+        return False
+
+
 def configure_badge_label(label: QLabel, text: str, padding: int = 14) -> QLabel:
     """Configures a badge label with dynamic minimum width and fixed vertical policy.
 
@@ -57,4 +77,7 @@ def configure_badge_label(label: QLabel, text: str, padding: int = 14) -> QLabel
     label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     min_width = label.fontMetrics().horizontalAdvance(text) + padding
     label.setMinimumWidth(min_width)
+    guard = _BadgeMetricsGuard(label, padding)
+    label.installEventFilter(guard)
+    label._badge_metrics_guard = guard
     return label

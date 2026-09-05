@@ -42,6 +42,7 @@ class LootBoardDropArea(QFrame):
         layout.addWidget(title)
 
         self.cards_container = QWidget(self)
+        self.cards_container.setObjectName("LootCardsContainer")
         self.cards_layout = QVBoxLayout(self.cards_container)
         self.cards_layout.setContentsMargins(4, 4, 4, 4)
         self.cards_layout.setSpacing(8)
@@ -55,8 +56,10 @@ class LootBoardDropArea(QFrame):
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("background: transparent; border: none;")
-        scroll.viewport().setStyleSheet("background: transparent; border: none;")
+        scroll.viewport().setObjectName("LootColumnViewport")
+        scroll.setStyleSheet(
+            "QScrollArea#LootColumnScrollArea, QWidget#LootColumnViewport { background: transparent; border: none; }"
+        )
         scroll.setWidget(self.cards_container)
         layout.addWidget(scroll, stretch=1)
 
@@ -235,7 +238,7 @@ class LootBoard(QScrollArea):
                     entry,
                     project_dir,
                     parent=column.cards_container,
-                    preview_line_limit=5,
+                    board_mode=True,
                 )
                 card.loot_deleted.connect(on_delete)
                 card.edit_requested.connect(on_edit)
