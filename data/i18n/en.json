@@ -242,6 +242,7 @@
     "loot.open_screenshot_error_message": "The screenshot could not be opened:\n{path}",
     "loot.column_indicator_single": "Column {current} of {total}",
     "loot.column_indicator_range": "Column {first}–{last} of {total}",
+    "loot.drag_tip": "Drag to move to another phase column",
     "history.empty_state": "No clipboard history recorded yet. Enable REC (Ctrl+P) and copy commands in your terminal.",
     "history.clear_title": "Clear History",
     "history.clear_confirm": "Are you sure you want to delete all recorded clipboard history for this project?",

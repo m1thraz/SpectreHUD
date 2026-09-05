@@ -49,14 +49,16 @@ QFrame#CompactVarBar {
 }
 
 /* Snippet & Loot Cards */
-QFrame#SnippetCard {
+QFrame#SnippetCard,
+QFrame#lootCard {
     background-color: {SURFACE_A85};
     border: 1px solid {BORDER_A70};
-    border-radius: 8px;
-    padding: 2px;
+    border-radius: 10px;
+    padding: 4px;
 }
 
-QFrame#SnippetCard:hover {
+QFrame#SnippetCard:hover,
+QFrame#lootCard:hover {
     border: 1px solid {CYAN_A50};
     background-color: {CARD_HOVER_A90};
 }

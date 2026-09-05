@@ -43,8 +43,8 @@ class LootBoardDropArea(QFrame):
 
         self.cards_container = QWidget(self)
         self.cards_layout = QVBoxLayout(self.cards_container)
-        self.cards_layout.setContentsMargins(0, 0, 0, 0)
-        self.cards_layout.setSpacing(6)
+        self.cards_layout.setContentsMargins(4, 4, 4, 4)
+        self.cards_layout.setSpacing(8)
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.cards_container.setAcceptDrops(True)
         self.cards_container.installEventFilter(self)

@@ -242,6 +242,7 @@
     "loot.open_screenshot_error_message": "Der Screenshot konnte nicht geöffnet werden:\n{path}",
     "loot.column_indicator_single": "Spalte {current} von {total}",
     "loot.column_indicator_range": "Spalte {first}–{last} von {total}",
+    "loot.drag_tip": "Ziehen, um in eine andere Phase zu verschieben",
     "history.empty_state": "Keine Clipboard-Historie vorhanden. Aktiviere REC (Ctrl+P) und kopiere Befehle im Terminal.",
     "history.clear_title": "Historie leeren",
     "history.clear_confirm": "Möchtest du wirklich den gesamten aufgezeichneten Verlauf dieses Projekts löschen?",

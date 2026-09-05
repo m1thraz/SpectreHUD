@@ -47,7 +47,9 @@ class LootCard(QFrame):
         preview_line_limit: Optional[int] = None,
     ):
         super().__init__(parent)
-        self.setObjectName("SnippetCard")
+        self.setObjectName("lootCard")
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
         self.entry = entry
         self.project_dir = project_dir
         self.preview_line_limit = max(1, int(preview_line_limit)) if preview_line_limit else None
@@ -142,9 +144,18 @@ class LootCard(QFrame):
 
         layout.addLayout(header_layout)
 
-        # Row 2: Title & Category Badge
+        # Row 2: Grip Handle Icon, Title & Category Badge
         title_row = QHBoxLayout()
         title_row.setSpacing(6)
+
+        self.lbl_grip = QLabel()
+        grip_pix = icon("fa5s.grip-vertical", color="#6e7681").pixmap(QSize(12, 14))
+        if not grip_pix.isNull():
+            self.lbl_grip.setPixmap(grip_pix)
+        self.lbl_grip.setFixedWidth(12)
+        self.lbl_grip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_grip.setToolTip(t("loot.drag_tip", "Drag to move to another phase column"))
+        title_row.addWidget(self.lbl_grip)
 
         title_text = self.entry.get("title", "Unbenannt")
         self.lbl_title = ElidedLabel(title_text)
@@ -329,7 +340,13 @@ class LootCard(QFrame):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.position().toPoint()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
         super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self._drag_start_position = None
+        super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if (
@@ -347,12 +364,14 @@ class LootCard(QFrame):
                 drag.setPixmap(self.grab())
                 drag.setHotSpot(self._drag_start_position)
                 opacity_effect = QGraphicsOpacityEffect(self)
-                opacity_effect.setOpacity(0.45)
+                opacity_effect.setOpacity(0.60)
                 self.setGraphicsEffect(opacity_effect)
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
                 try:
                     drag.exec(Qt.DropAction.MoveAction)
                 finally:
                     self.setGraphicsEffect(None)
+                    self.setCursor(Qt.CursorShape.OpenHandCursor)
             self._drag_start_position = None
             event.accept()
             return
