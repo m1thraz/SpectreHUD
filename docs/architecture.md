@@ -23,7 +23,8 @@ graph TD
 
     subgraph Dependency Injection & Domain Services
         Root --> Container[ServiceContainer: core/container.py]
-        Container --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, ReportFileManager]
+        Container --> Services[Domain Services: LootManager, SnippetManager, ProjectManager, QuickNoteManager, ReportFileManager]
+        Services --> Phases[Pentest Taxonomy: core/phases.py]
         Services --> Storage[StorageBackend: FileStorageBackend / InMemory]
         Services --> Security[ProjectLockService + crypto_service]
         Storage --> Filesystem[(Atomic Filesystem / OS)]
@@ -32,14 +33,14 @@ graph TD
     subgraph UI Orchestration & Event Delivery
         Root --> AppCtrl[AppController: UI Action Coordinator]
         AppCtrl --> Coordinators[Coordinators: Settings, Export, Workspace, Navigation, Clipboard]
-        AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, History, Project, Report]
+        AppCtrl --> DomainCtrls[Domain Controllers: Cheatsheet, Loot, Notes, History, Project, Report]
         DomainCtrls --> EventBus[EventBus: core/event_bus.py]
         DomainCtrls --> Services
     end
 
     subgraph Presentation Surfaces
         Root --> Panels[Panels: Header, Search, VariableBar + Scope/Auth Popovers, Footer]
-        Root --> Views[Content Views: CheatsheetList, LootBoard/Table, HistoryTable]
+        Root --> Views[Content Views: CheatsheetList, LootBoard/Table, QuickNotes, HistoryTable]
         Root --> ReportTab[ReportEditorTab: Two-Tier Toolbar, Split Scroll-Sync, Outline, Preview]
     end
 
@@ -59,18 +60,26 @@ graph TD
 ### 2.1 UI Presentation Layer (`ui/`)
 - **`MainWindow` (`ui/main_window.py`)**: Frameless, opaque, Spotlight-style overlay shell with simulated glass. Serves as the **Single Composition Root** of the application. Resolves dependencies from `ServiceContainer` (or direct test arguments) and passes fully instantiated services to `AppController`. Handles native window movement, geometry positioning, global keyboard shortcuts and tray integration. A double-click on a non-interactive empty area (or `Ctrl + Space`) toggles fullscreen.
 - **Panels (`ui/panels/`)**:
-  - `HeaderPanel`: Title, project switcher dropdown, language toggle, and action buttons.
+  - `HeaderPanel`: Title, project switcher dropdown, language toggle, and mode navigation buttons (`Cheatsheet`, `Loot`, `Notes`, `History`, `Report Editor`). Features real-time unread badge counts on the Notes tab.
   - `SearchPanel`: Real-time fuzzy query input with filter tags.
   - `VariableBar`: Dynamic template parameter substitutions (`{target_ip}`, `{lhost}`, `{lport}`, `{wordlist}`, `{domain}`, `{subnet}`, `{dns_server}`, `{hash_file}`, etc.). Features embedded 1-click circular vector copy buttons inside all inputs, dedicated Scope and Auth popovers, and immediate HUD reflection.
-  - `ContentPanel`: Multi-mode view container (Cheatsheet, Loot, History, Report Editor).
-  - `FooterPanel`: Status bar, shortcut hints, and active recording indicators.
-- **Dialogs (`ui/`)**: Modal forms for snippets, loot, custom variables, settings, template management and Pentest-Mode unlock. Dialog text is resolved through the active locale where available.
+  - `ContentPanel`: Multi-mode view container (Cheatsheet, Loot, Quick Notes, History, Report Editor).
+  - `FooterPanel`: Status bar, shortcut hints, active recording indicators, and visible column count.
+- **Dialogs (`ui/`)**: Modal forms for snippets, loot, quick notes, history commands, custom variables, settings, template management and Pentest-Mode unlock. Dialog text is resolved through the active locale where available.
 - **`LootBoard` (`ui/loot_board.py`)**: Alternate Kanban presentation of the
   same Loot domain entries. Its drop areas support moves between phases and
   reordering within a phase, provide drag feedback, and commit positions through
   the existing Loot persistence workflow rather than maintaining separate board
-  state. Cards use font-metric-based, five-line previews without nested scroll
-  areas; the full entry remains owned by the existing detail and copy workflows.
+  state. Cards (`QFrame#lootCard`) feature tactile styling with theme surface colors,
+  10px rounded borders, hover elevation, a vertical grip handle (`fa5s.grip-vertical`),
+  interactive drag cursors (`OpenHandCursor` / `ClosedHandCursor`), and 60% drag opacity.
+  The board features a right-edge scroll gradient fade and a dynamic visible column count
+  indicator ("Spalte 1–3 von 6") in the footer. Card titles use `ElidedLabel` with graceful
+  `…` truncation, while badge labels reserve dynamic font-metric widths to prevent badge clipping.
+- **`QuickNotesView` & `QuickNoteCard` (`ui/quick_note_card.py`)**: Dedicated quick thought
+  and finding inbox supporting triage status pills (`inbox`, `followup`, `resolved`), priority
+  pinning, inline editing, dual-destination promotion (`Send to Loot` / `Send to Report`),
+  and standardized phase badges displaying short uppercase labels with full phase tooltips.
 
 ### 2.2 Domain Controllers & Coordinators (`ui/controllers/` & `ui/coordinators/`)
 - **`AppController` (`ui/app_controller.py`)**: High-level UI orchestrator connecting panels, mode switching, and domain controllers. It receives fully resolved services from `MainWindow` and never instantiates domain services or accesses `ServiceContainer` directly.
@@ -78,11 +87,12 @@ graph TD
   - `SettingsCoordinator`: Owns application style application, font metrics, and glass-intensity updates.
   - `ExportCoordinator`: Bridges UI export actions (Markdown, HTML, Obsidian, CherryTree) to pure core exporters.
   - `WorkspaceCoordinator`: Coordinates multi-project switching and cache eviction across controllers.
-  - `NavigationCoordinator`: Handles mode switching (Cheatsheet, Loot, History, Report Editor) and header/footer states.
+  - `NavigationCoordinator`: Handles mode switching (Cheatsheet, Loot, Notes, History, Report Editor) and header/footer states.
   - `ClipboardCoordinator`: Handles system clipboard monitoring and variable auto-detection.
 - **Sub-Controllers (`ui/controllers/`)**:
   - `CheatsheetController`: Filtering, variable substitution, and snippet copying.
   - `LootController`: Loot CRUD operations, tabular search, and board interactions.
+  - `QuickNoteController`: Quick note inbox triage, status transitions, pinning, search filtering, and promotion to Loot or Report.
   - `HistoryController`: Clipboard command log ingestion, filtering, and loot promotions.
   - `ProjectController`: Project creation, switching, validation, and metadata persistence.
   - `ReportController`: Lazily constructs the report tab on first use, then coordinates report loading, Markdown editing and export.
@@ -92,16 +102,17 @@ graph TD
 
 ### 2.3 Reactive Event Bus (`core/event_bus.py`)
 - Provides loose coupling between services and controllers via publish/subscribe.
-- **`EventType` Events**: `PROJECT_CHANGED`, `PROJECT_CREATED`, `PROJECT_ACTIVATED`, `LOOT_UPDATED`, `HISTORY_UPDATED`, `SNIPPETS_UPDATED`, `LOGGING_STATE_CHANGED`, `MODE_CHANGED`, `SCREENSHOT_SAVED`, `LANGUAGE_CHANGED`, `SEARCH_CHANGED`, `VARIABLES_CHANGED`, and `HOTKEY_SETTINGS_CHANGED`.
+- **`EventType` Events**: `PROJECT_CHANGED`, `PROJECT_CREATED`, `PROJECT_ACTIVATED`, `LOOT_UPDATED`, `QUICK_NOTES_UPDATED`, `HISTORY_UPDATED`, `SNIPPETS_UPDATED`, `LOGGING_STATE_CHANGED`, `MODE_CHANGED`, `SCREENSHOT_SAVED`, `LANGUAGE_CHANGED`, `SEARCH_CHANGED`, `VARIABLES_CHANGED`, and `HOTKEY_SETTINGS_CHANGED`.
 - **Thread-Safe & Fault-Tolerant**: Protected by `threading.RLock`, with exception isolation so a failing subscriber cannot crash the publisher or other listeners.
-- **State-Mutation Contract**: Each successful loot or clipboard-history mutation emits
+- **State-Mutation Contract**: Each successful loot, quick note, or clipboard-history mutation emits
   exactly one domain event, published by its owning service rather than a controller.
   `LOOT_UPDATED` payloads always contain `action`, `entry`, and `entries`;
+  `QUICK_NOTES_UPDATED` payloads always contain `action`, `entry`, and `notes`;
   `HISTORY_UPDATED` payloads always contain `action`, `entry`, and `history`.
   `entry` is `null` for whole-collection actions such as `clear` and `replace`.
 
 ### 2.4 Dependency Injection & Service Container (`core/container.py`)
-- **`ServiceContainer`**: Coordinates all core managers, storage backends, and event buses in one place.
+- **`ServiceContainer`**: Coordinates all core managers (`LootManager`, `SnippetManager`, `ProjectManager`, `QuickNoteManager`, `ClipboardHistory`, `ScreenshotManager`, `ConfigManager`), storage backends, and event buses in one place.
 - **Factory Methods**:
   - `ServiceContainer.create_production(...)`: Instantiates filesystem-backed storage, default config directories, and locale settings.
   - `ServiceContainer.create_isolated_test_container(...)`: Uses in-memory storage for configuration and session data, plus isolated temporary filesystem directories for filesystem-dependent services such as `ProjectManager` and `ReportFileManager`. It is designed for test isolation and does not guarantee zero disk I/O.
@@ -209,6 +220,14 @@ graph TD
 ### 2.10 Dynamic Internationalization Subsystem (`core/i18n.py`)
 - **`I18nManager`**: Thread-safe internationalization runtime supporting live locale switching (`de` / `en`) without application restart.
 - **Parametric Interpolation**: Supports variable substitution (e.g. `{count}`, `{target}`) and fallback defaults for the application surfaces that use the active locale. Remaining literal dialog text is tracked as UI-localization work rather than implied to be universally translated.
+
+### 2.11 Pentest Phase Taxonomy & Normalization Subsystem (`core/phases.py`)
+- **Central Single Source of Truth**: Establishes a unified definition for the 6 canonical pentest phases:
+  `recon` (RECON), `access` (ACCESS), `privesc` (PRIVESC), `postex` (POSTEX), `scripts` (SCRIPTS), and `misc` (MISC).
+- **Pure Core Isolation (Zero-Qt)**: The `Phase` dataclass (`key`, `short`, `long`, `order`, `icon`) is decoupled from Qt, ensuring strict architectural compliance with Tier 1 headless core boundaries.
+- **Resilient Normalization Engine**: `normalize_phase_key()` and `get_phase()` resolve case insensitivity, synonyms (`initial` → `access`, `lateral` → `postex`, `poc` → `scripts`), numeric indices (`1` → `recon`), and legacy full titles (`1. Reconnaissance & Enumeration` → `recon`), falling back safely to `misc`.
+- **Badge & Tooltip Standardization**: Provides short uppercase text (`phase.short`) for compact card badges and comprehensive descriptions (`phase.long`) for tooltips across `LootCard`, `QuickNoteCard`, and `LootBoard`.
+- **Backwards Compatibility**: Derives `CATEGORIES` and `VALID_CATEGORY_IDS` in `core/loot/manager.py` directly from `PHASES`, preventing data loss across existing project session files and migrations.
 
 ---
 

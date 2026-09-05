@@ -19,15 +19,15 @@
   <rect x="435" y="95" width="330" height="72" class="box"/>
   <text x="600" y="125" class="text">Bootstrap · main.py</text><text x="600" y="150" class="small">QApplication · QLockFile · HotkeyListener</text>
   <rect x="75" y="235" width="260" height="88" class="box"/>
-  <text x="205" y="268" class="text">Qt UI</text><text x="205" y="293" class="small">MainWindow · Panels · Dialogs</text>
+  <text x="205" y="268" class="text">Qt UI</text><text x="205" y="293" class="small">MainWindow · Panels · Views · Dialogs</text>
   <rect x="470" y="235" width="260" height="88" class="box"/>
   <text x="600" y="268" class="text">AppController</text><text x="600" y="293" class="small">Workflow orchestration</text>
   <rect x="865" y="235" width="260" height="88" class="box"/>
   <text x="995" y="268" class="text">ServiceContainer</text><text x="995" y="293" class="small">Production composition</text>
   <rect x="60" y="410" width="350" height="100" class="service"/>
-  <text x="235" y="445" class="text">Domain Controllers</text><text x="235" y="471" class="small">Cheatsheet · Loot · History · Project · Report</text>
+  <text x="235" y="442" class="text">Domain Controllers</text><text x="235" y="465" class="small">Cheatsheet · Loot · Notes · History</text><text x="235" y="485" class="small">Project · Report</text>
   <rect x="485" y="410" width="270" height="100" class="service"/>
-  <text x="620" y="445" class="text">Domain Services</text><text x="620" y="471" class="small">Snippets · Loot · Projects · Clipboard · Screenshots</text>
+  <text x="620" y="442" class="text">Domain Services</text><text x="620" y="465" class="small">Snippets · Loot · Notes · Projects</text><text x="620" y="485" class="small">Clipboard · Screenshots · Phases</text>
   <rect x="830" y="410" width="300" height="100" class="service"/>
   <text x="980" y="445" class="text">EventBus</text><text x="980" y="471" class="small">Stable domain-event contracts</text>
   <rect x="220" y="570" width="320" height="82" class="storage"/>

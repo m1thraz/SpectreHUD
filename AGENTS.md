@@ -36,6 +36,10 @@ To maximize development velocity and minimize token / execution costs, follow th
   ```
 
 ### Fast-Track: When to Skip Tier 3 / Tier 4 (~8–10s)
+- **Reine Dokumentation, Markdown (`.md`), Grafiken (`.svg`, `.png`) oder Changelog-Updates (Zero-Code Changes)**:
+  - **STRIKTES VERBOT von Tests und Lintern!** Überspringe Tier 0 bis Tier 4 sowie `ruff check .` vollständig!
+  - Da keinerlei Python-Code oder Importe berührt wurden, haben Testläufe und Linter absolut keinen Mehrwert und verschwenden nur Zeit und Token.
+  - Direkt nach den Datei-Edits synchronisieren und an den User zurückmelden.
 - **Reine UI-Texte, Lokalisierung (i18n), Docstrings, CSS-Tweaks oder Typo-Fixes**:
   Überspringe Tier 3 und Tier 4 vollständig! Führe nur gezielt aus:
   ```bash
@@ -62,7 +66,7 @@ To maximize development velocity and minimize token / execution costs, follow th
   ```
   *(Laufzeit: ca. 5.0–5.5 min für alle Tests inkl. voller Wheel-Packaging- und Qt-Integrationstests).*
 - Run release tests (`python -m pytest -m release -q` -> ca. 40–45s) only for packaging, dependency, entry-point, installer, wheel, or release-metadata changes.
-- Always run the linter before handing tasks back (ca. 0.8s):
+- Always run the linter before handing tasks back (ca. 0.8s) – **außer bei reinen Doku-/Asset-Änderungen**:
   ```bash
   ruff check .
   ```
