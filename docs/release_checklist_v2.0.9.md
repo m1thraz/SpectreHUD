@@ -20,9 +20,9 @@ release are intentionally left to the repository owner.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.0.9 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated v2.0.9 tag from the verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable, Debian packages, and wheel.
-- [ ] Download the published executable/deb and verify --version, startup, and UI.
-- [ ] Confirm the GitHub release description links to docs/release_notes_v2.0.9.md.
+- [x] Review, commit, and push the prepared v2.0.9 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated v2.0.9 tag from the verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable, Debian packages, and wheel.
+- [x] Download the published executable/deb and verify --version, startup, and UI.
+- [x] Confirm the GitHub release description links to docs/release_notes_v2.0.9.md.
