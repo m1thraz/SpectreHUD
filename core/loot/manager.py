@@ -1,7 +1,7 @@
 import uuid
 import warnings
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 
 from core.logger import get_logger
 from core.storage import (
@@ -38,7 +38,7 @@ CATEGORIES = [
     {"id": "misc", "name": "6. Miscellaneous", "order": 6, "icon": ""},
 ]
 
-VALID_CATEGORY_IDS = {c["id"] for c in CATEGORIES}
+VALID_CATEGORY_IDS: Set[str] = {str(c["id"]) for c in CATEGORIES}
 
 
 class LootValidationError(ValueError):

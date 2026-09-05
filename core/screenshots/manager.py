@@ -28,6 +28,11 @@ class ScreenshotSaveError(RuntimeError):
 logger = get_logger("screenshot")
 
 
+def _grab_window(screen: Any, window_id: int = 0) -> QPixmap:
+    """Helper wrapping QScreen.grabWindow to bridge PyQt6 stub voidptr vs int."""
+    return screen.grabWindow(window_id)  # type: ignore[arg-type,no-any-return]
+
+
 class ScreenshotManager(QObject):
     """
     Coordinates desktop screenshots across single and multi-monitor setups,
@@ -92,7 +97,7 @@ class ScreenshotManager(QObject):
         if len(screens) == 1:
             primary = screens[0]
             try:
-                pix = primary.grabWindow(0)
+                pix = _grab_window(primary, 0)
                 if not pix.isNull():
                     geom = primary.geometry()
                     bbox = VirtualDesktopBoundingBox(
@@ -135,7 +140,7 @@ class ScreenshotManager(QObject):
 
             for s, s_geom in zip(screens, screen_geoms):
                 try:
-                    pix = s.grabWindow(0)
+                    pix = _grab_window(s, 0)
                     if pix.isNull():
                         logger.warning(
                             f"Screen '{s.name()}' returned null pixmap on grab (e.g. Wayland restriction)."
@@ -162,11 +167,11 @@ class ScreenshotManager(QObject):
                 logger.warning(
                     "All multi-monitor screen grabs failed. Attempting primary screen fallback."
                 )
-                primary = QGuiApplication.primaryScreen()
-                if primary:
-                    fallback_pix = primary.grabWindow(0)
+                fallback_screen = QGuiApplication.primaryScreen()
+                if fallback_screen is not None:
+                    fallback_pix = _grab_window(fallback_screen, 0)
                     if not fallback_pix.isNull():
-                        geom = primary.geometry()
+                        geom = fallback_screen.geometry()
                         return fallback_pix, VirtualDesktopBoundingBox(
                             geom.x(), geom.y(), geom.width(), geom.height()
                         )
@@ -177,12 +182,12 @@ class ScreenshotManager(QObject):
                 f"Unexpected error during multi-monitor virtual desktop capture: {e}", exc_info=True
             )
             # Fallback to primary screen
-            primary = QGuiApplication.primaryScreen()
-            if primary:
+            fallback_screen = QGuiApplication.primaryScreen()
+            if fallback_screen is not None:
                 try:
-                    fallback_pix = primary.grabWindow(0)
+                    fallback_pix = _grab_window(fallback_screen, 0)
                     if not fallback_pix.isNull():
-                        geom = primary.geometry()
+                        geom = fallback_screen.geometry()
                         return fallback_pix, VirtualDesktopBoundingBox(
                             geom.x(), geom.y(), geom.width(), geom.height()
                         )

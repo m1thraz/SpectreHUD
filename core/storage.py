@@ -129,12 +129,12 @@ class FileStorageBackend(StorageBackend):
         self.max_file_size = max_file_size
         self._lock = threading.RLock()
 
+        self.single_file_path: Optional[Path] = None
         if single_file_path is not None:
             self.single_file_path = Path(single_file_path)
             self.base_dir = self.single_file_path.parent
         elif base_dir is not None:
             self.base_dir = Path(base_dir)
-            self.single_file_path = None
         else:
             raise ValueError("FileStorageBackend requires either base_dir or single_file_path.")
 

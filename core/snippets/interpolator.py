@@ -179,7 +179,12 @@ class TemplateEngine:
         result = template
         for key, val in aliases.items():
             pattern = re.compile(rf"\{{\{{\s*{re.escape(key)}\s*\}}\}}", re.IGNORECASE)
-            result = pattern.sub(lambda m, v=val: v, result)
+            repl_text = val
+
+            def _replacer(_m: re.Match[str], text: str = repl_text) -> str:
+                return text
+
+            result = pattern.sub(_replacer, result)
 
         return result
 

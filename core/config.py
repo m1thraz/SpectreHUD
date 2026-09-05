@@ -46,7 +46,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 def clamp_transparency(value: object, default: int) -> int:
     """Normalize legacy glass-intensity preferences to an integer from 0 to 30."""
     try:
-        transparency = int(value)
+        if isinstance(value, (int, float, str, bytes)):
+            transparency = int(value)
+        else:
+            transparency = default
     except (TypeError, ValueError, OverflowError):
         transparency = default
     return max(0, min(30, transparency))

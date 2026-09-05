@@ -173,16 +173,16 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
     if template and hasattr(template, "sections"):
         for sec in template.sections:
             if getattr(sec, "type", None) == "phase_section":
-                cat_id = getattr(sec, "category_id", None) or "misc"
-                cat_obj = next((c for c in CATEGORIES if c["id"] == cat_id), None)
-                default_name = cat_obj["name"] if cat_obj else cat_id.capitalize()
-                title = getattr(sec, "title", None) or default_name
+                cat_id = str(getattr(sec, "category_id", None) or "misc")
+                cat_obj = next((c for c in CATEGORIES if str(c.get("id")) == cat_id), None)
+                default_name = str(cat_obj.get("name")) if cat_obj else cat_id.capitalize()
+                title = str(getattr(sec, "title", None) or default_name)
                 heading_map[cat_id] = title
 
     for cat in CATEGORIES:
-        cid = cat["id"]
-        if cid not in heading_map:
-            heading_map[cid] = cat["name"]
+        cid = str(cat.get("id", ""))
+        if cid and cid not in heading_map:
+            heading_map[cid] = str(cat.get("name", cid.capitalize()))
 
     return heading_map
 

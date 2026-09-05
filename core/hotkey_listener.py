@@ -170,9 +170,10 @@ class HotkeyListener(QObject):
             if norm_quit:
                 hotkey_mapping[norm_quit] = self._fire_quit_trigger
 
-            self._listener = keyboard.GlobalHotKeys(hotkey_mapping)
-            self._listener.daemon = True
-            self._listener.start()
+            listener = keyboard.GlobalHotKeys(hotkey_mapping)
+            listener.daemon = True
+            listener.start()
+            self._listener = listener
             self._running = True
             logger.info(f"Registered global hotkeys: {list(hotkey_mapping.keys())}")
             return True

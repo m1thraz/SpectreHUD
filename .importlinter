@@ -1,0 +1,12 @@
+[importlinter]
+root_packages =
+    core
+    ui
+
+[importlinter:contract:1]
+name = Core must not import UI
+type = forbidden
+source_modules =
+    core
+forbidden_modules =
+    ui

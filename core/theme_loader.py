@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Set
+from typing import Any, Dict, List, Mapping, Optional, Set
 
 from core.logger import get_logger
 from core.theme_palette import CYBER_DARK_PALETTE
@@ -21,7 +21,7 @@ class ThemeLoader:
     def get_required_tokens(self) -> Set[str]:
         return set(CYBER_DARK_PALETTE)
 
-    def validate_palette(self, palette: Mapping[str, Any]) -> List[str]:
+    def validate_palette(self, palette: Optional[Mapping[str, Any]]) -> List[str]:
         """Return required tokens that are absent or do not contain string values."""
         if not isinstance(palette, Mapping):
             return sorted(self.get_required_tokens())
@@ -100,6 +100,9 @@ class ThemeLoader:
             if not definition or definition.get("id") != selected_id:
                 continue
             palette = definition.get("palette")
+            if not isinstance(palette, Mapping):
+                logger.warning("Theme '%s' has invalid palette in %s", selected_id, path)
+                break
             missing = self.validate_palette(palette)
             if not missing:
                 return {token: str(palette[token]) for token in self.get_required_tokens()}
