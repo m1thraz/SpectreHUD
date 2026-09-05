@@ -107,7 +107,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
                     attempts = [False, True]
 
-                    def fake_unlock(name, pwd):
+                    def fake_unlock(*_):
                         return attempts.pop(0)
 
                     with patch.object(self.project_mgr, "unlock_project", side_effect=fake_unlock):

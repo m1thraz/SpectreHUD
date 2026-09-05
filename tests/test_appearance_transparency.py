@@ -51,18 +51,18 @@ def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
 
 
 def _assert_hud_background(qss: str, expected: tuple[str, int]) -> None:
-    _assert_glass_properties(qss, "QFrame#HudFrame", expected)
+    _assert_glass_properties(qss, expected)
     color, _ = expected
     assert f"background-color: {color};" in qss
 
 
 def _assert_report_background(qss: str, expected: tuple[str, int]) -> None:
-    _assert_glass_properties(qss, "QFrame.ReportGlassPanel", expected)
+    _assert_glass_properties(qss, expected)
     assert "QPlainTextEdit.ReportSourceEditor {\n    background-color: transparent;" in qss
     assert "QTextEdit.ReportPreview {\n    background-color: transparent;" in qss
 
 
-def _assert_glass_properties(qss, selector, expected):
+def _assert_glass_properties(qss, expected):
     color, intensity = expected
     assert f"qproperty-glassColor: {color};" in qss
     assert f"qproperty-glassIntensity: {intensity};" in qss
