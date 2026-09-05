@@ -6,32 +6,41 @@ semantic versioning.
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- Make glass intensity control every effect layer: 0 disables the effect,
-  while higher values progressively increase gradient, reflection and grain.
-
-- Keep wrapped command cards tall enough for their full text after resizing,
-  changing fonts, or substituting variables, including long SQL commands.
-
-- Include pynput's dynamically loaded Xorg keyboard and mouse backends in the
-  standalone Debian bundle so global hotkeys can start on X11.
+- **Centralized Pentest Phase Taxonomy & Standardized Badges**:
+  - Single source of truth in `core/phases.py` for all 6 pentest phases (`RECON`, `ACCESS`, `PRIVESC`, `POSTEX`, `SCRIPTS`, `MISC`), including alias resolution and backward-compatible `CATEGORIES`.
+  - Standardized phase badges across Loot and Quick Notes cards displaying short uppercase labels with full phase titles as tooltips.
+  - Automatic normalization and migration for legacy phase strings and shorthand aliases in `LootMigrator` and `QuickNoteManager`.
+- **Kanban Loot Board Card Styling & Tactile Drag**:
+  - Elevated card appearance (`QFrame#lootCard`) with theme surface styling, rounded borders, and hover glow.
+  - Tactile drag handle (`fa5s.grip-vertical`), responsive drag cursors (`OpenHand` / `ClosedHand`), and 60% drag opacity.
+  - Dynamic visible column count indicator ("Spalte 1–3 von 6") and right-edge scroll fade.
 
 ### Changed
 
 - Give simulated glass more depth with a four-stop diagonal gradient, a soft
   light reflection, and cached fine/coarse grain over the opaque background.
-
 - Replace desktop translucency in the main HUD and report surfaces with opaque,
   theme-aware simulated glass (gradient, cached grain, and highlight edge).
   Rename appearance controls to glass intensity while retaining saved settings;
   the main window now uses the same layout with or without a compositor.
-
 - Reduced UI orchestration coupling with registered mode renderers, container-only
   `MainWindow` construction, isolated shutdown and selection workflows, and smaller
   reporting/loot helpers without changing user-facing behavior.
 - Separated headless clipboard history and persistence from the Qt system-clipboard
   monitor, preserving privacy defaults, capture behavior, and project-session storage.
+
+### Fixed
+
+- Prevent badge clipping (e.g. "TARC" instead of "TARGET") by computing dynamic badge
+  minimum widths and gracefully truncating card titles with `ElidedLabel` (`…`).
+- Make glass intensity control every effect layer: 0 disables the effect,
+  while higher values progressively increase gradient, reflection and grain.
+- Keep wrapped command cards tall enough for their full text after resizing,
+  changing fonts, or substituting variables, including long SQL commands.
+- Include pynput's dynamically loaded Xorg keyboard and mouse backends in the
+  standalone Debian bundle so global hotkeys can start on X11.
 
 ## [2.0.9] - 2026-09-04
 
