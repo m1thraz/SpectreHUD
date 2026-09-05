@@ -51,16 +51,7 @@ class HeaderPanel(QFrame):
         self.btn_project.clicked.connect(lambda: self.project_menu_requested.emit(self.btn_project))
         layout.addWidget(self.btn_project)
 
-        # Phase Selection Dropdown Trigger
-        self.btn_phase = QPushButton(t("header.phase_unassigned", "Phase: Unassigned ▾"))
-        self.btn_phase.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_phase.setProperty("class", "ProjectSelectBtn")
-        self.btn_phase.setToolTip(
-            t("header.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
-        )
-        self.btn_phase.clicked.connect(lambda: self.phase_menu_requested.emit(self.btn_phase))
-        layout.addWidget(self.btn_phase)
-
+        self.btn_phase: Optional[QPushButton] = None
         layout.addSpacing(4)
 
         # Mode Switcher Tabs
@@ -214,12 +205,13 @@ class HeaderPanel(QFrame):
     def set_phase(self, phase_key: Optional[str]) -> None:
         """Updates the phase dropdown button text."""
         self._current_phase_key = phase_key
-        if not phase_key:
-            self.btn_phase.setText(t("header.phase_unassigned", "Phase: Unassigned ▾"))
-        else:
-            from core.phases import get_phase
-            phase = get_phase(phase_key)
-            self.btn_phase.setText(f"{phase.short} ▾")
+        if self.btn_phase:
+            if not phase_key:
+                self.btn_phase.setText(t("header.phase_unassigned", "Phase: Unassigned ▾"))
+            else:
+                from core.phases import get_phase
+                phase = get_phase(phase_key)
+                self.btn_phase.setText(f"{phase.short} ▾")
 
     def update_rec_indicator(self, is_active: bool) -> None:
         """Updates the visual indicator for clipboard history recording state."""
@@ -296,9 +288,10 @@ class HeaderPanel(QFrame):
             )
         )
         self.btn_project.setToolTip(t("header.project_tip", "Aktives CTF-Projekt / Box wechseln"))
-        self.btn_phase.setToolTip(
-            t("header.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
-        )
-        self.set_phase(getattr(self, "_current_phase_key", None))
+        if self.btn_phase:
+            self.btn_phase.setToolTip(
+                t("header.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
+            )
+            self.set_phase(getattr(self, "_current_phase_key", None))
         is_active = getattr(self, "_rec_active", False)
         self.update_rec_indicator(is_active)

@@ -21,10 +21,12 @@ class FooterPanel(QFrame):
 
     always_on_top_toggled = pyqtSignal(bool)
     shortcuts_requested = pyqtSignal()
+    phase_menu_requested = pyqtSignal(QPushButton)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("HudFooter")
+        self._current_phase_key: Optional[str] = None
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -59,6 +61,19 @@ class FooterPanel(QFrame):
         )
         self.btn_shortcuts.clicked.connect(self.shortcuts_requested.emit)
         layout.addWidget(self.btn_shortcuts)
+
+        layout.addSpacing(6)
+
+        # 2. Phase Dropdown Menu Trigger
+        self.btn_phase = QPushButton(t("footer.phase_unassigned", "Phase: Unassigned ▾"), self)
+        self.btn_phase.setObjectName("FooterPhaseBtn")
+        self.btn_phase.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_phase.setToolTip(
+            t("footer.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
+        )
+        self.btn_phase.clicked.connect(lambda: self.phase_menu_requested.emit(self.btn_phase))
+        self._apply_phase_button_style(None)
+        layout.addWidget(self.btn_phase)
 
         # Legacy label kept for backward compatibility
         self.lbl_status = QLabel("", self)
@@ -124,6 +139,57 @@ class FooterPanel(QFrame):
         ]
         return " + ".join(parts)
 
+    def _apply_phase_button_style(self, phase_key: Optional[str]) -> None:
+        if not phase_key:
+            self.btn_phase.setStyleSheet(
+                """
+                QPushButton#FooterPhaseBtn {
+                    background-color: transparent;
+                    border: 1px solid rgba(0, 229, 255, 0.25);
+                    border-radius: 4px;
+                    color: #8b949e;
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 2px 8px;
+                }
+                QPushButton#FooterPhaseBtn:hover {
+                    color: #00e5ff;
+                    border-color: rgba(0, 229, 255, 0.6);
+                    background-color: rgba(0, 229, 255, 0.08);
+                }
+                """
+            )
+        else:
+            self.btn_phase.setStyleSheet(
+                """
+                QPushButton#FooterPhaseBtn {
+                    background-color: rgba(0, 229, 255, 0.12);
+                    border: 1px solid #00e5ff;
+                    border-radius: 4px;
+                    color: #00e5ff;
+                    font-size: 11px;
+                    font-weight: 700;
+                    padding: 2px 8px;
+                }
+                QPushButton#FooterPhaseBtn:hover {
+                    background-color: rgba(0, 229, 255, 0.22);
+                    border-color: #00e5ff;
+                }
+                """
+            )
+
+    def set_phase(self, phase_key: Optional[str]) -> None:
+        """Updates the footer phase dropdown button text and styling."""
+        self._current_phase_key = phase_key
+        if not phase_key:
+            self.btn_phase.setText(t("footer.phase_unassigned", "Phase: Unassigned ▾"))
+        else:
+            from core.phases import get_phase
+
+            phase = get_phase(phase_key)
+            self.btn_phase.setText(f"{phase.short} ▾")
+        self._apply_phase_button_style(phase_key)
+
     def update_hotkey_display(
         self,
         hotkey_raw: str = "<ctrl>+<alt>+h",
@@ -136,6 +202,10 @@ class FooterPanel(QFrame):
         self.btn_shortcuts.setToolTip(
             t("footer.shortcuts_tip", "Tastenkürzel-Übersicht öffnen (Ctrl+/)")
         )
+        self.btn_phase.setToolTip(
+            t("footer.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
+        )
+        self.set_phase(self._current_phase_key)
         self.lbl_status.setText(t("footer.shortcuts_hint", "Ctrl+/  Shortcuts"))
         self.chk_always_on_top.setText(t("footer.always_on_top", "Im Vordergrund"))
         self.chk_always_on_top.setToolTip(

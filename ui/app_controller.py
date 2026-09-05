@@ -291,7 +291,9 @@ class AppController(QObject):
                 lambda _: self._on_notes_updated(), Qt.ConnectionType.QueuedConnection
             )
         self.clipboard_monitor.logging_state_changed.connect(self.header.update_rec_indicator)
-        self.header.phase_menu_requested.connect(self._show_phase_menu)
+        self.footer.phase_menu_requested.connect(self._show_phase_menu)
+        if hasattr(self.header, "phase_menu_requested"):
+            self.header.phase_menu_requested.connect(self._show_phase_menu)
         self.event_bus.subscribe(EventType.ACTIVE_PHASE_CHANGED, self._on_active_phase_changed)
         get_i18n().locale_changed.connect(self.retranslate_ui)
 
@@ -314,13 +316,16 @@ class AppController(QObject):
         """Handles phase change event from event bus."""
         phase_id = payload.get("phase_id")
         source = payload.get("source", "")
-        self.header.set_phase(phase_id)
+        self.footer.set_phase(phase_id)
+        if hasattr(self.header, "set_phase"):
+            self.header.set_phase(phase_id)
         if source == "hotkey":
             self.phase_hud.show_phase(phase_id)
 
     def _show_phase_menu(self, button: QPushButton) -> None:
-        """Opens the phase selection popup menu under the header phase pill."""
+        """Opens the phase selection popup menu over the footer phase button."""
         from PyQt6.QtWidgets import QMenu
+        from PyQt6.QtCore import QPoint
         from core.phases import PHASES
 
         menu = QMenu(self.window)
@@ -334,7 +339,7 @@ class AppController(QObject):
             act.setCheckable(True)
             act.setChecked(active_id == phase.key)
             act.triggered.connect(
-                lambda checked, k=phase.key: self.activate_phase(k, source="header_menu")
+                lambda checked, k=phase.key: self.activate_phase(k, source="phase_menu")
             )
 
         menu.addSeparator()
@@ -342,10 +347,11 @@ class AppController(QObject):
         act_none.setCheckable(True)
         act_none.setChecked(active_id is None)
         act_none.triggered.connect(
-            lambda: self.activate_phase(None, source="header_menu")
+            lambda: self.activate_phase(None, source="phase_menu")
         )
 
-        pos = button.mapToGlobal(button.rect().bottomLeft())
+        size = menu.sizeHint()
+        pos = button.mapToGlobal(QPoint(0, -size.height() - 4))
         menu.exec(pos)
 
     def open_shortcuts_dialog(self) -> None:

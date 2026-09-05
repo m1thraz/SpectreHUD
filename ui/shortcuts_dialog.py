@@ -159,6 +159,8 @@ class ShortcutSection(QWidget):
         super().__init__(parent)
         self.title = title
         self.rows: List[ShortcutRow] = []
+        self.setAutoFillBackground(False)
+        self.setStyleSheet("background: transparent; background-color: transparent;")
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 4, 0, 8)
@@ -197,6 +199,23 @@ class ShortcutHelpDialog(BaseHudDialog):
         super().__init__(title=t("shortcuts.title", "SPECTRE // SHORTCUTS"), parent=parent)
         self.config_manager = config_manager
         self.resize(620, 520)
+
+        # Enforce dark cyber background on the dialog frame and container
+        self.hud_frame.setStyleSheet(
+            """
+            QFrame#DialogHudFrame {
+                background-color: #0d1117;
+                border: 1px solid rgba(0, 229, 255, 0.35);
+                border-radius: 12px;
+            }
+            """
+        )
+        if hasattr(self, "content_container") and self.content_container:
+            self.content_container.setAutoFillBackground(False)
+            self.content_container.setStyleSheet(
+                "background: transparent; background-color: transparent;"
+            )
+
         self._sections: List[ShortcutSection] = []
         self._init_dialog_ui()
 
@@ -211,7 +230,10 @@ class ShortcutHelpDialog(BaseHudDialog):
 
         self.txt_search = QLineEdit(self)
         self.txt_search.setPlaceholderText(
-            t("shortcuts.search_placeholder", "Shortcuts oder Aktionen filtern (z. B. 'Phase', 'Loot', 'Ctrl+S')...")
+            t(
+                "shortcuts.search_placeholder",
+                "Shortcuts oder Aktionen filtern (z. B. 'Phase', 'Loot', 'Ctrl+S')...",
+            )
         )
         self.txt_search.setStyleSheet(
             """
@@ -236,13 +258,20 @@ class ShortcutHelpDialog(BaseHudDialog):
 
         # Scrollable container for shortcut sections
         scroll = QScrollArea(self)
+        scroll.setObjectName("ShortcutsScrollArea")
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setAutoFillBackground(False)
+        scroll.viewport().setAutoFillBackground(False)
+        scroll.viewport().setObjectName("ShortcutsScrollViewport")
         scroll.setStyleSheet(
             """
-            QScrollArea {
+            QScrollArea#ShortcutsScrollArea,
+            QWidget#ShortcutsScrollViewport,
+            QWidget#ShortcutsContainer {
                 background: transparent;
+                background-color: transparent;
                 border: none;
             }
             QScrollBar:vertical {
@@ -266,6 +295,9 @@ class ShortcutHelpDialog(BaseHudDialog):
         )
 
         container = QWidget()
+        container.setObjectName("ShortcutsContainer")
+        container.setAutoFillBackground(False)
+        container.setStyleSheet("background: transparent; background-color: transparent;")
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(0, 4, 6, 4)
         container_layout.setSpacing(6)

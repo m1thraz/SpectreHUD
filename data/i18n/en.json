@@ -655,6 +655,8 @@
     "note_dialog.edit_hint": "Ctrl+Enter: Save | Esc: Cancel",
     "footer.shortcuts_hint": "Ctrl+/  Shortcuts",
     "footer.shortcuts_tip": "Show keyboard shortcuts overview (Ctrl+/)",
+    "footer.phase_unassigned": "Phase: Unassigned ▾",
+    "footer.phase_tip": "Select active pentest phase (Ctrl+Alt+1..6)",
     "shortcuts.title": "SPECTRE // SHORTCUTS",
     "shortcuts.search_placeholder": "Filter shortcuts or actions (e.g. 'Phase', 'Loot', 'Ctrl+S')...",
     "shortcuts.scope_global_badge": "GLOBAL",

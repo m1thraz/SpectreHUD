@@ -30,7 +30,8 @@ QLineEdit.CompactVarInput {
     border: 1px solid {BORDER_A60};
     border-radius: 5px;
     color: {CYBER_BLUE};
-    padding: 3px 8px;
+    padding: 4px 9px;
+    min-height: 20px;
     font-family: {code_font};
     font-size: 12px;
     font-weight: 600;

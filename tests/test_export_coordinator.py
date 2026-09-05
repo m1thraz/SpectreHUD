@@ -142,3 +142,16 @@ def test_cherrytree_report_export_uses_shared_project_and_loot_state(tmp_path):
         loot_entries=[{"id": "loot-1"}],
         report_font="inter",
     )
+
+
+def test_export_coordinator_export_loot_delegates_to_history_ctrl():
+    coordinator, project_manager = _coordinator({}, Path("/tmp/project"))
+    project_manager.get_active_project.return_value = "Forest"
+    mock_window = MagicMock()
+
+    coordinator.export_loot(mock_window)
+
+    coordinator.history_ctrl.export_report_dialog.assert_called_once_with(
+        mock_window, "10.10.10.10", "Forest"
+    )
+

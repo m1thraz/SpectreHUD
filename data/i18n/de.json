@@ -655,6 +655,8 @@
     "note_dialog.edit_hint": "Strg+Enter: Speichern | Esc: Abbrechen",
     "footer.shortcuts_hint": "Ctrl+/  Shortcuts",
     "footer.shortcuts_tip": "Tastenkürzel-Übersicht öffnen (Ctrl+/)",
+    "footer.phase_unassigned": "Phase: Nicht zugewiesen ▾",
+    "footer.phase_tip": "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)",
     "shortcuts.title": "SPECTRE // SHORTCUTS",
     "shortcuts.search_placeholder": "Shortcuts oder Aktionen filtern (z. B. 'Phase', 'Loot', 'Ctrl+S')...",
     "shortcuts.scope_global_badge": "GLOBAL",

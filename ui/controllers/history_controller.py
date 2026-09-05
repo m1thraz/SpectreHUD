@@ -301,9 +301,12 @@ class HistoryController(QObject):
         return rendered_cards
 
     def export_report_dialog(
-        self, parent_widget: QWidget, target_ip: Optional[str] = None
+        self,
+        parent_widget: QWidget,
+        target_ip: Optional[str] = None,
+        active_project: Optional[str] = None,
     ) -> Optional[str]:
-        active_proj = self.project_manager.get_active_project()
+        active_proj = active_project or self.project_manager.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
         default_file = proj_dir / "report.md"
 

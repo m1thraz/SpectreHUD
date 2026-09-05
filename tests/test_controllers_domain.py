@@ -491,6 +491,14 @@ class TestControllersDomain(unittest.TestCase):
         content = out_file.read_text(encoding="utf-8")
         self.assertIn("curl -s http://10.10.10.55/admin", content)
 
+    def test_history_controller_export_report_dialog_accepts_active_project(self):
+        """HistoryController.export_report_dialog accepts parent, target_ip, and active_project."""
+        with patch("ui.controllers.history_controller.QFileDialog.getSaveFileName", return_value=("", "")):
+            res = self.history_ctrl.export_report_dialog(
+                QWidget(), target_ip="10.10.10.55", active_project="default"
+            )
+            self.assertIsNone(res)
+
     def test_loot_controller_notify_persistence_error(self):
         """_notify_persistence_error invokes QMessageBox.critical with parent or activeWindow."""
         from core.storage import PersistenceError

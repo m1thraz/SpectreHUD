@@ -98,6 +98,19 @@ def test_shortcuts_dialog_empty_search():
     dialog.close()
 
 
+def test_shortcuts_dialog_background_styling():
+    from PyQt6.QtWidgets import QScrollArea
+
+    dialog = ShortcutHelpDialog()
+    assert "#0d1117" in dialog.hud_frame.styleSheet()
+    scroll = dialog.findChild(QScrollArea)
+    assert scroll is not None
+    assert not scroll.autoFillBackground()
+    assert not scroll.viewport().autoFillBackground()
+    dialog.close()
+
+
+
 def test_footer_panel_shortcuts_integration():
     from ui.panels.footer_panel import FooterPanel
 
@@ -105,12 +118,27 @@ def test_footer_panel_shortcuts_integration():
     assert hasattr(footer, "btn_shortcuts")
     assert hasattr(footer, "shortcuts_requested")
     assert hasattr(footer, "lbl_status")
+    assert hasattr(footer, "btn_phase")
+    assert hasattr(footer, "phase_menu_requested")
 
-    # Verify signal emission on click
+    # Verify shortcuts signal emission on click
     emitted = []
     footer.shortcuts_requested.connect(lambda: emitted.append(True))
     footer.btn_shortcuts.click()
     assert len(emitted) == 1
+
+    # Verify phase menu signal emission on click
+    phase_emitted = []
+    footer.phase_menu_requested.connect(lambda btn: phase_emitted.append(btn))
+    footer.btn_phase.click()
+    assert len(phase_emitted) == 1
+    assert phase_emitted[0] == footer.btn_phase
+
+    # Test phase text updates
+    footer.set_phase("recon")
+    assert "RECON" in footer.btn_phase.text()
+    footer.set_phase(None)
+    assert "Unassigned" in footer.btn_phase.text() or "Nicht zugewiesen" in footer.btn_phase.text()
 
     # Verify update_hotkey_display doesn't crash and preserves button text
     footer.update_hotkey_display("<ctrl>+<alt>+h")
