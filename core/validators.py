@@ -98,7 +98,9 @@ def is_file_size_valid(file_path: Any, max_bytes: int) -> bool:
 
 def _stable_hash_id(prefix: str, content: str) -> str:
     """Generates a deterministic, process-independent fallback ID using MD5."""
-    digest = hashlib.md5(content.encode("utf-8", errors="replace")).hexdigest()[:8]
+    digest = hashlib.md5(
+        content.encode("utf-8", errors="replace"), usedforsecurity=False
+    ).hexdigest()[:8]
     return f"{prefix}_{digest}"
 
 
