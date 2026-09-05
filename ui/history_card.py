@@ -17,6 +17,7 @@ from core.logger import get_logger
 from core.i18n import t
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
+from ui.elided_label import configure_badge_label
 
 logger = get_logger(__name__)
 
@@ -82,6 +83,7 @@ class HistoryCard(QFrame):
         lbl_time.setStyleSheet(
             "background-color: rgba(56, 139, 253, 0.15); color: #79c0ff; border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;"
         )
+        configure_badge_label(lbl_time, time_display, padding=14)
         header_layout.addWidget(lbl_time)
 
         # Target IP Badge (if present)
@@ -92,6 +94,7 @@ class HistoryCard(QFrame):
             lbl_target.setStyleSheet(
                 "background-color: rgba(0, 229, 255, 0.12); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: bold;"
             )
+            configure_badge_label(lbl_target, target_ip, padding=14)
             header_layout.addWidget(lbl_target)
 
         # Stats Badge
@@ -105,6 +108,7 @@ class HistoryCard(QFrame):
         lbl_stats = QLabel(type_str)
         lbl_stats.setTextFormat(Qt.TextFormat.PlainText)
         lbl_stats.setStyleSheet("color: #8b949e; font-size: 10px;")
+        configure_badge_label(lbl_stats, type_str, padding=6)
         header_layout.addWidget(lbl_stats)
 
         header_layout.addStretch()

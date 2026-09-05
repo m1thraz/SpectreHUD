@@ -80,6 +80,16 @@ QLabel[class="LootBoardColumnTitle"] {
     padding: 2px;
 }
 
+QLabel[class="LootBoardColumnIndicator"], QLabel#LootBoardColumnIndicator {
+    background-color: {DARK_A72};
+    color: {CYBER_BLUE_LIGHT};
+    border: 1px solid {ACTIVE_BLUE_A40};
+    border-radius: 11px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 QScrollArea#LootColumnScrollArea {
     background: transparent;
     border: none;

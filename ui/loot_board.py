@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from PyQt6.QtCore import Qt, QMimeData, QEvent
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.i18n import t
 from core.loot.manager import CATEGORIES
 from ui.loot_card import LootCard
 
@@ -143,6 +145,52 @@ class LootBoardDropArea(QFrame):
         return super().eventFilter(watched, event)
 
 
+class ScrollFadeOverlay(QWidget):
+    """Subtle gradient overlay on the scroll area edges to indicate off-screen content."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self._fade_left = False
+        self._fade_right = False
+
+    def set_fade(self, left: bool, right: bool) -> None:
+        if self._fade_left != left or self._fade_right != right:
+            self._fade_left = left
+            self._fade_right = right
+            self.update()
+
+    def paintEvent(self, event) -> None:
+        if not (self._fade_left or self._fade_right):
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        fade_width = 24
+        w = self.width()
+        h = self.height()
+
+        if w <= fade_width:
+            return
+
+        transparent = QColor(13, 17, 23, 0)
+        opaque = QColor(13, 17, 23, 220)
+
+        if self._fade_right:
+            grad_r = QLinearGradient(w - fade_width, 0, w, 0)
+            grad_r.setColorAt(0.0, transparent)
+            grad_r.setColorAt(1.0, opaque)
+            painter.fillRect(w - fade_width, 0, fade_width, h, grad_r)
+
+        if self._fade_left:
+            grad_l = QLinearGradient(0, 0, fade_width, 0)
+            grad_l.setColorAt(0.0, opaque)
+            grad_l.setColorAt(1.0, transparent)
+            painter.fillRect(0, 0, fade_width, h, grad_l)
+
+
 class LootBoard(QScrollArea):
     """Horizontally scrollable board composed of one column per loot category."""
 
@@ -203,3 +251,66 @@ class LootBoard(QScrollArea):
         layout.addStretch()
         board_content.setMinimumWidth(len(CATEGORIES) * 280)
         self.setWidget(board_content)
+
+        self._fade_overlay = ScrollFadeOverlay(self)
+        self.column_indicator = QLabel(self)
+        self.column_indicator.setObjectName("LootBoardColumnIndicator")
+        self.column_indicator.setProperty("class", "LootBoardColumnIndicator")
+        self.column_indicator.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.column_indicator.hide()
+
+        self.horizontalScrollBar().valueChanged.connect(self._update_scroll_visibility)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_scroll_visibility()
+
+    def _update_scroll_visibility(self) -> None:
+        vp_geom = self.viewport().geometry()
+        self._fade_overlay.setGeometry(vp_geom)
+        self._fade_overlay.raise_()
+
+        sb = self.horizontalScrollBar()
+        can_scroll_right = sb.value() < sb.maximum()
+        can_scroll_left = sb.value() > sb.minimum()
+        self._fade_overlay.set_fade(can_scroll_left, can_scroll_right)
+
+        total_cols = len(CATEGORIES)
+        if sb.maximum() > 0 and total_cols > 0:
+            col_width_with_spacing = 280
+            scroll_val = sb.value()
+            vp_width = self.viewport().width()
+
+            first_idx = max(0, scroll_val // col_width_with_spacing)
+            last_idx = min(
+                total_cols - 1,
+                max(first_idx, (scroll_val + vp_width - 20) // col_width_with_spacing),
+            )
+
+            if first_idx == last_idx:
+                text = t(
+                    "loot.column_indicator_single",
+                    "Spalte {current} von {total}",
+                    current=first_idx + 1,
+                    total=total_cols,
+                )
+            else:
+                text = t(
+                    "loot.column_indicator_range",
+                    "Spalte {first}–{last} von {total}",
+                    first=first_idx + 1,
+                    last=last_idx + 1,
+                    total=total_cols,
+                )
+
+            self.column_indicator.setText(text)
+            self.column_indicator.adjustSize()
+
+            sb_h = sb.height() if sb.isVisible() else 0
+            x = self.width() - self.column_indicator.width() - 14
+            y = self.height() - self.column_indicator.height() - sb_h - 6
+            self.column_indicator.move(max(0, x), max(0, y))
+            self.column_indicator.show()
+            self.column_indicator.raise_()
+        else:
+            self.column_indicator.hide()

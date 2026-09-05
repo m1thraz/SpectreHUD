@@ -21,6 +21,7 @@ from core.i18n import t
 from core.platform.opener import open_path
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
+from ui.elided_label import ElidedLabel, configure_badge_label
 import pyperclip
 
 logger = get_logger("loot_card")
@@ -60,7 +61,7 @@ class LootCard(QFrame):
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(6)
 
-        # Header Row: Type Badge, Category Badge, Title, Target IP, Time, Edit, Delete
+        # Row 1 (Metadata & Actions): Type Badge, Target IP, Time, Stretch, Edit, Export, Obsidian, Delete
         header_layout = QHBoxLayout()
         header_layout.setSpacing(6)
 
@@ -74,50 +75,31 @@ class LootCard(QFrame):
         lbl_badge = QLabel(badge_info["name"])
         lbl_badge.setTextFormat(Qt.TextFormat.PlainText)
         lbl_badge.setProperty("class", f"LootBadge {badge_info['badge_class']}")
+        configure_badge_label(lbl_badge, badge_info["name"], padding=14)
         header_layout.addWidget(lbl_badge)
 
-        # 2. Category Badge
-        cat_id = self.entry.get("category", "misc")
-        cat_info = next(
-            (c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""}
-        )
-        cat_short_name = (
-            cat_info["name"].split(".")[1].strip().split("&")[0].strip()
-            if "." in cat_info["name"]
-            else cat_info["name"]
-        )
-        lbl_cat = QLabel(cat_short_name)
-        lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
-        lbl_cat.setProperty("class", "CategoryBadge")
-        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=cat_info["name"]))
-        header_layout.addWidget(lbl_cat)
-
-        # 3. Title
-        self.lbl_title = QLabel(self.entry.get("title", "Unbenannt"))
-        self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_title.setObjectName("SnippetTitle")
-        self.lbl_title.setWordWrap(True)
-        self.lbl_title.installEventFilter(self)
-        header_layout.addWidget(self.lbl_title, stretch=1)
-
-        # 4. Target IP (if set)
+        # 2. Target IP (if set)
         target_ip = self.entry.get("target_ip", "")
         if target_ip:
             lbl_target = QLabel(target_ip)
             lbl_target.setTextFormat(Qt.TextFormat.PlainText)
             lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
+            configure_badge_label(lbl_target, target_ip, padding=8)
             header_layout.addWidget(lbl_target)
 
-        # 5. Timestamp
+        # 3. Timestamp
         timestamp = self.entry.get("timestamp", "")
         if timestamp:
             time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
             lbl_time = QLabel(time_part)
             lbl_time.setTextFormat(Qt.TextFormat.PlainText)
             lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
+            configure_badge_label(lbl_time, time_part, padding=6)
             header_layout.addWidget(lbl_time)
 
-        # 6. Edit Button
+        header_layout.addStretch()
+
+        # 4. Action Buttons (Edit, Export, Obsidian, Delete)
         self.btn_edit = QPushButton()
         self.btn_edit.setIcon(icon("fa5s.pen"))
         self.btn_edit.setIconSize(CARD_ICON_SIZE)
@@ -126,7 +108,6 @@ class LootCard(QFrame):
         self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
         header_layout.addWidget(self.btn_edit)
 
-        # 7. Export Button
         self.btn_export_file = QPushButton()
         self.btn_export_file.setIcon(icon("fa5s.download"))
         self.btn_export_file.setIconSize(CARD_ICON_SIZE)
@@ -151,7 +132,6 @@ class LootCard(QFrame):
         )
         header_layout.addWidget(self.btn_export_obsidian)
 
-        # 8. Delete Button
         self.btn_delete = QPushButton()
         self.btn_delete.setIcon(icon("fa5s.trash", color=STATUS_ERROR))
         self.btn_delete.setIconSize(CARD_ICON_SIZE)
@@ -161,6 +141,35 @@ class LootCard(QFrame):
         header_layout.addWidget(self.btn_delete)
 
         layout.addLayout(header_layout)
+
+        # Row 2: Title & Category Badge
+        title_row = QHBoxLayout()
+        title_row.setSpacing(6)
+
+        title_text = self.entry.get("title", "Unbenannt")
+        self.lbl_title = ElidedLabel(title_text)
+        self.lbl_title.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_title.setObjectName("SnippetTitle")
+        self.lbl_title.installEventFilter(self)
+        title_row.addWidget(self.lbl_title, stretch=1)
+
+        cat_id = self.entry.get("category", "misc")
+        cat_info = next(
+            (c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""}
+        )
+        cat_short_name = (
+            cat_info["name"].split(".")[1].strip().split("&")[0].strip()
+            if "." in cat_info["name"]
+            else cat_info["name"]
+        )
+        lbl_cat = QLabel(cat_short_name)
+        lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
+        lbl_cat.setProperty("class", "CategoryBadge")
+        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=cat_info["name"]))
+        configure_badge_label(lbl_cat, cat_short_name, padding=14)
+        title_row.addWidget(lbl_cat)
+
+        layout.addLayout(title_row)
 
         # If Screenshot: Show image thumbnail & open button
         img_path = self._resolve_image_path()
@@ -241,6 +250,8 @@ class LootCard(QFrame):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        if hasattr(self, "lbl_title") and isinstance(self.lbl_title, ElidedLabel):
+            self.lbl_title._update_elision()
         if self.preview_line_limit is not None:
             self._update_content_preview()
 

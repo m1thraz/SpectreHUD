@@ -186,3 +186,50 @@ def test_kanban_cards_use_bounded_elided_previews_without_inner_scrollbars(qapp)
         assert edited[0]["content"] == contents[0]
         board.hide()
         board.deleteLater()
+
+
+def test_loot_board_scroll_fade_and_column_indicator(qapp):
+    entries = []
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        board = LootBoard(
+            entries=entries,
+            project_dir=Path(tmp_dir),
+            on_delete=lambda _id: None,
+            on_edit=lambda _e: None,
+            on_export=lambda _id: None,
+            on_move=lambda _id, _cat, _idx: True,
+        )
+        board.resize(600, 450)
+        board.show()
+        for _ in range(3):
+            qapp.processEvents()
+
+        assert board._fade_overlay is not None
+        assert board._fade_overlay._fade_right is True
+        assert board._fade_overlay._fade_left is False
+
+        assert board.column_indicator.isVisible() is True
+        indicator_text = board.column_indicator.text()
+        assert "1" in indicator_text
+        assert "6" in indicator_text
+
+        sb = board.horizontalScrollBar()
+        sb.setValue(560)
+        for _ in range(3):
+            qapp.processEvents()
+
+        assert board._fade_overlay._fade_left is True
+        assert board._fade_overlay._fade_right is True
+        assert "3" in board.column_indicator.text()
+
+        sb.setValue(sb.maximum())
+        for _ in range(3):
+            qapp.processEvents()
+
+        assert board._fade_overlay._fade_left is True
+        assert board._fade_overlay._fade_right is False
+        assert "6" in board.column_indicator.text()
+
+        board.hide()
+        board.deleteLater()
+

@@ -16,6 +16,7 @@ from ui.command_edit_dialog import CommandEditDialog
 from core.i18n import t
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING, TEXT_DIMMED
+from ui.elided_label import configure_badge_label
 import pyperclip
 
 
@@ -78,6 +79,7 @@ class SnippetCard(QFrame):
         self.lbl_category = QLabel(cat_text)
         self.lbl_category.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_category.setObjectName("SnippetCategory")
+        configure_badge_label(self.lbl_category, cat_text, padding=12)
         header_layout.addWidget(
             self.lbl_category, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )

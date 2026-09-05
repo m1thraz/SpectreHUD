@@ -26,6 +26,7 @@ from core.logger import get_logger
 from core.i18n import t
 from ui.styles.icons import icon
 from ui.styles.palette import CYBER_CYAN, STATUS_ERROR, STATUS_SUCCESS
+from ui.elided_label import configure_badge_label
 
 logger = get_logger("quick_note_card")
 
@@ -134,6 +135,7 @@ class QuickNoteCard(QFrame):
             "border: 1px solid rgba(110, 118, 129, 0.4); border-radius: 4px; "
             "padding: 2px 6px; font-size: 10px; font-weight: bold;"
         )
+        configure_badge_label(lbl_cat, cat, padding=14)
         header_layout.addWidget(lbl_cat)
 
         # 5. Time Badge
@@ -147,6 +149,7 @@ class QuickNoteCard(QFrame):
                 "border: 1px solid rgba(56, 139, 253, 0.3); border-radius: 4px; "
                 "padding: 2px 6px; font-size: 10px; font-weight: bold;"
             )
+            configure_badge_label(lbl_time, time_display, padding=14)
             header_layout.addWidget(lbl_time)
 
         # 6. Target IP Badge (if present)
@@ -159,6 +162,7 @@ class QuickNoteCard(QFrame):
                 "border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 4px; "
                 "padding: 2px 6px; font-size: 10px; font-weight: bold;"
             )
+            configure_badge_label(lbl_target, target_ip, padding=14)
             header_layout.addWidget(lbl_target)
 
         header_layout.addStretch()
