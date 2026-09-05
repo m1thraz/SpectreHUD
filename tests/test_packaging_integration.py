@@ -48,8 +48,10 @@ class TestPackagingIntegration(unittest.TestCase):
                 # 3. Core modules and canonical project package
                 self.assertTrue(any(n.startswith("core/") for n in names))
                 self.assertIn("core/config.py", names)
-                self.assertIn("core/snippet_manager.py", names)
-                self.assertIn("core/loot_manager.py", names)
+                self.assertIn("core/snippets/manager.py", names)
+                self.assertNotIn("core/snippet_manager.py", names)
+                self.assertIn("core/loot/manager.py", names)
+                self.assertNotIn("core/loot_manager.py", names)
                 self.assertIn("core/clipboard_history.py", names)
                 self.assertIn("ui/clipboard_monitor.py", names)
                 self.assertNotIn("core/clipboard_watcher.py", names)
