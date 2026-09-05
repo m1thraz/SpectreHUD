@@ -29,7 +29,6 @@ dev = [
     "pytest-cov>=4.0.0",
     "coverage>=7.0.0",
     "pyinstaller>=6.0.0",
-    "flake8>=6.0.0",
     "ruff>=0.1.0",
 ]
 
@@ -91,5 +90,21 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["F841"]
+
+[tool.deptry]
+extend_exclude = [".wheel-venv"]
+
+[tool.deptry.package_module_name_map]
+pyinstaller = "PyInstaller"
+pytest-xdist = "xdist"
+
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "pytest-timeout",
+    "pytest-xdist",
+    "pytest-cov",
+    "coverage",
+    "ruff",
+]
 
 

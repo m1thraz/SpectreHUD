@@ -282,7 +282,7 @@ for the two trust boundaries and their test rationale.
   - Multi-OS matrix: `ubuntu-latest`, `windows-latest`.
   - Python matrix: `3.10`, `3.11`, `3.12`, `3.13`.
   - Linux headless display setup using `xvfb-run`.
-  - Automated `flake8` syntax validation, pytest execution and Linux coverage reporting.
+  - Automated `ruff` syntax validation, pytest execution and Linux coverage reporting.
   - Fresh-wheel installation and CLI smoke tests on Windows and Linux; the
     standalone executable remains a Windows artifact.
 
