@@ -79,6 +79,7 @@ def apply_application_style(
             config.get("code_font", "consolas"),
             hud_transparency=config.get("hud_transparency", 5),
             report_transparency=config.get("report_transparency", 0),
+            bleed_through=config.get("bleed_through", 0),
         )
     )
     apply_tooltip_palette(theme_palette)

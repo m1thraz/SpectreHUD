@@ -69,6 +69,7 @@ class TestSettingsDialog(unittest.TestCase):
         page.combo_report_font.setCurrentIndex(page.combo_report_font.findData("georgia"))
         page.slider_hud_transparency.setValue(20)
         page.spin_report_transparency.setValue(10)
+        page.slider_bleed_through.setValue(12)
 
         settings = page.get_settings()
         self.assertNotIn("loot_view_mode", settings)
@@ -78,6 +79,7 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(settings["theme"], "cyber_dark")
         self.assertEqual(settings["hud_transparency"], 20)
         self.assertEqual(settings["report_transparency"], 10)
+        self.assertEqual(settings["bleed_through"], 12)
 
     def test_appearance_transparency_controls_are_independent_and_bounded(self):
         page = AppearanceSettingsPage(self.config_manager)
@@ -86,14 +88,24 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(page.slider_hud_transparency.maximum(), 30)
         self.assertEqual(page.slider_hud_transparency.value(), 5)
         self.assertEqual(page.slider_report_transparency.value(), 0)
+        self.assertEqual(page.slider_bleed_through.value(), 0)
+        self.assertEqual(page.slider_bleed_through.minimum(), 0)
+        self.assertEqual(page.slider_bleed_through.maximum(), 30)
 
         page.spin_hud_transparency.setValue(17)
         self.assertEqual(page.slider_hud_transparency.value(), 17)
         self.assertEqual(page.slider_report_transparency.value(), 0)
+        self.assertEqual(page.slider_bleed_through.value(), 0)
 
         page.slider_report_transparency.setValue(9)
         self.assertEqual(page.spin_report_transparency.value(), 9)
         self.assertEqual(page.slider_hud_transparency.value(), 17)
+        self.assertEqual(page.slider_bleed_through.value(), 0)
+
+        page.spin_bleed_through.setValue(25)
+        self.assertEqual(page.slider_bleed_through.value(), 25)
+        self.assertEqual(page.slider_hud_transparency.value(), 17)
+        self.assertEqual(page.slider_report_transparency.value(), 9)
 
     def test_appearance_page_has_no_redundant_loot_view_switch(self):
         page = AppearanceSettingsPage(self.config_manager)
@@ -190,6 +202,29 @@ class TestSettingsDialog(unittest.TestCase):
         page = HotkeySettingsPage(self.config_manager, capabilities=wayland_caps)
         labels = [lbl.text() for lbl in page.findChildren(QLabel)]
         self.assertTrue(any("Wayland" in text or "Globale" in text or "Global" in text for text in labels))
+
+    def test_settings_dialog_applies_transparency_only_on_save(self):
+        """Transparency sliders update settings applied only upon saving."""
+        dlg = SettingsDialog(self.config_manager)
+        applied = []
+        dlg.settings_applied.connect(applied.append)
+
+        dlg.page_appearance.slider_bleed_through.setValue(22)
+        dlg.page_appearance.slider_hud_transparency.setValue(14)
+        dlg.page_appearance.slider_report_transparency.setValue(8)
+
+        # No settings applied yet before saving
+        self.assertEqual(len(applied), 0)
+
+        dlg._on_save_settings()
+
+        self.assertEqual(len(applied), 1)
+        self.assertEqual(applied[0]["bleed_through"], 22)
+        self.assertEqual(applied[0]["hud_transparency"], 14)
+        self.assertEqual(applied[0]["report_transparency"], 8)
+        self.assertEqual(self.config_manager.get("bleed_through"), 22)
+
+        dlg.close()
 
 
 if __name__ == "__main__":

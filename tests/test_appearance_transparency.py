@@ -52,6 +52,8 @@ def _apply_style_without_native_qt_state(config: ConfigManager, theme_id=None):
 
 def _assert_hud_background(qss: str, expected: tuple[str, int]) -> None:
     _assert_glass_properties(qss, "QFrame#HudFrame", expected)
+    color, _ = expected
+    assert f"background-color: {color};" in qss
 
 
 def _assert_report_background(qss: str, expected: tuple[str, int]) -> None:
@@ -62,10 +64,8 @@ def _assert_report_background(qss: str, expected: tuple[str, int]) -> None:
 
 def _assert_glass_properties(qss, selector, expected):
     color, intensity = expected
-    assert (
-        f"{selector} {{\n    qproperty-glassColor: {color};\n    qproperty-glassIntensity: {intensity};"
-        in qss
-    )
+    assert f"qproperty-glassColor: {color};" in qss
+    assert f"qproperty-glassIntensity: {intensity};" in qss
 
 
 def test_missing_transparency_preferences_use_reference_defaults():
@@ -264,3 +264,52 @@ def test_reapplying_theme_refreshes_tooltip_palette_without_resetting_values():
         assert config.get("report_transparency") == 6
     finally:
         QToolTip.setPalette(old_palette)
+
+
+def test_bleed_through_clamping_and_default():
+    config = ConfigManager(storage=InMemoryStorageBackend(initial_data={"config": {}}))
+    assert config.get("bleed_through") == 0
+
+    config_clamped = ConfigManager(
+        storage=InMemoryStorageBackend(
+            initial_data={
+                "config": {
+                    "bleed_through": 99,
+                }
+            }
+        )
+    )
+    assert config_clamped.get("bleed_through") == 30
+
+    config_neg = ConfigManager(
+        storage=InMemoryStorageBackend(
+            initial_data={
+                "config": {
+                    "bleed_through": -10,
+                }
+            }
+        )
+    )
+    assert config_neg.get("bleed_through") == 0
+
+
+def test_build_app_theme_bleed_through():
+    palette = CYBER_DARK_PALETTE
+    # When 0 (default): bleedThrough is 0, HUD_GLASS_COLOR is opaque BG_DARK
+    qss_zero = build_app_theme(palette, hud_transparency=10, bleed_through=0)
+    assert "qproperty-bleedThrough: 0;" in qss_zero
+    assert f"qproperty-glassColor: {palette['BG_DARK']};" in qss_zero
+
+    # When 20: bleedThrough is 20, HUD_GLASS_COLOR has rgba alpha (100 - 20 = 80%)
+    qss_bleed = build_app_theme(palette, hud_transparency=10, bleed_through=20)
+    assert "qproperty-bleedThrough: 20;" in qss_bleed
+    assert "rgba(" in qss_bleed
+
+
+def test_settings_coordinator_applies_bleed_through_to_window():
+    config = ConfigManager(storage=InMemoryStorageBackend(initial_data={"config": {}}))
+    harness = _controller_harness(config)
+    harness.window.set_bleed_through = Mock()
+
+    harness.apply({"bleed_through": 25})
+    harness.window.set_bleed_through.assert_called_once_with(25)

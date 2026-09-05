@@ -137,7 +137,10 @@ class AppController(QObject):
             parent=self,
         )
         self.project_ctrl = ProjectController(
-            self.project_manager, event_bus=self.event_bus, parent=self
+            self.project_manager,
+            event_bus=self.event_bus,
+            parent=self,
+            config_manager=self.config,
         )
 
         self.navigation_coord = NavigationCoordinator(

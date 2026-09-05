@@ -478,6 +478,29 @@ class AppearanceSettingsPage(QWidget):
                 clamp_transparency(self.config.get("report_transparency", 0), 0),
             )
         )
+        self.slider_bleed_through, self.spin_bleed_through = (
+            self._add_transparency_control(
+                transparency_layout,
+                t(
+                    "settings.lbl_bleed_through",
+                    "Echter Hintergrund-Durchblick",
+                ),
+                clamp_transparency(self.config.get("bleed_through", 0), 0),
+                effect_hint=t(
+                    "settings.bleed_through_tip",
+                    "0: Deaktiviert. Lässt echten Bildschirminhalt hinter dem HUD durchscheinen (OPSEC-Risiko bei Pentest-Sessions/Screenshots).",
+                ),
+            )
+        )
+        bleed_hint = QLabel(
+            t(
+                "settings.bleed_through_warning",
+                "Lässt echten Bildschirminhalt hinter dem HUD durchscheinen. Bei aktiven Pentest-Sessions kann dadurch sichtbarer Inhalt (Terminal, Notizen, Zielsystem-Daten) in Screenshots oder bei Bildschirmfreigabe sichtbar werden.",
+            )
+        )
+        bleed_hint.setProperty("class", "HintLabel")
+        bleed_hint.setWordWrap(True)
+        transparency_layout.addWidget(bleed_hint)
         layout.addWidget(card_transparency)
 
         lbl_typography = QLabel(t("settings.lbl_typography_section", "Typography"))
@@ -524,6 +547,7 @@ class AppearanceSettingsPage(QWidget):
         parent_layout: QVBoxLayout,
         label: str,
         value: int,
+        effect_hint: Optional[str] = None,
     ) -> tuple[QSlider, QSpinBox]:
         row = QHBoxLayout()
         label_widget = QLabel(label)
@@ -531,16 +555,19 @@ class AppearanceSettingsPage(QWidget):
         row.addWidget(label_widget)
 
         slider = QSlider(Qt.Orientation.Horizontal)
-        effect_hint = t("settings.glass_intensity_tip", "0: off. Higher values strengthen gradient, reflection and grain.")
-        label_widget.setToolTip(effect_hint)
-        slider.setToolTip(effect_hint)
+        hint = effect_hint or t(
+            "settings.glass_intensity_tip",
+            "0: off. Higher values strengthen gradient, reflection and grain.",
+        )
+        label_widget.setToolTip(hint)
+        slider.setToolTip(hint)
         slider.setRange(0, 30)
         slider.setValue(value)
         slider.setProperty("class", "TransparencySlider")
         row.addWidget(slider, stretch=1)
 
         spin = QSpinBox()
-        spin.setToolTip(effect_hint)
+        spin.setToolTip(hint)
         spin.setRange(0, 30)
         spin.setSuffix("")
         spin.setValue(value)
@@ -615,6 +642,7 @@ class AppearanceSettingsPage(QWidget):
             "report_font": self.combo_report_font.currentData() or "segoe_ui",
             "hud_transparency": self.slider_hud_transparency.value(),
             "report_transparency": self.slider_report_transparency.value(),
+            "bleed_through": self.slider_bleed_through.value(),
         }
 
 

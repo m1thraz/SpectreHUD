@@ -1,6 +1,7 @@
 """Rendered glass remains opaque, theme-aware, and stable across repaints."""
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QPlainTextEdit
 
@@ -70,4 +71,45 @@ def test_report_text_viewport_exposes_glass_without_changing_content(qapp):
         assert image.pixelColor(200, 100) != image.pixelColor(200, 260)
     finally:
         panel.close()
+        panel.deleteLater()
+
+
+def test_glass_panel_bleed_through_opacity(qapp):
+    panel = GlassPanel()
+    try:
+        # Default: 0 (opaque)
+        assert panel.bleedThrough == 0
+        assert not panel.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert panel._panel_opacity == 1.0
+        assert panel.glassColor.alpha() == 255
+
+        # 15: 50% of the bleed range -> panel opacity 0.75, WA_TranslucentBackground True
+        panel.set_bleed_through(15)
+        assert panel.bleedThrough == 15
+        assert panel.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert panel._panel_opacity == 0.75
+        expected_alpha_15 = int(255 * 85 / 100.0)
+        assert panel.glassColor.alpha() == expected_alpha_15
+
+        # 30: maximum bleed -> panel opacity 0.5, WA_TranslucentBackground True
+        panel.set_bleed_through(30)
+        assert panel.bleedThrough == 30
+        assert panel.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert panel._panel_opacity == 0.5
+        expected_alpha_30 = int(255 * 70 / 100.0)
+        assert panel.glassColor.alpha() == expected_alpha_30
+
+        # Reset back to 0 -> fully opaque, WA_TranslucentBackground False
+        panel.set_bleed_through(0)
+        assert panel.bleedThrough == 0
+        assert not panel.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert panel._panel_opacity == 1.0
+        assert panel.glassColor.alpha() == 255
+
+        # Clamping check: negative clamps to 0, >30 clamps to 30
+        panel.set_bleed_through(-5)
+        assert panel.bleedThrough == 0
+        panel.set_bleed_through(50)
+        assert panel.bleedThrough == 30
+    finally:
         panel.deleteLater()

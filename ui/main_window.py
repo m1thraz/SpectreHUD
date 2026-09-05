@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt, QPoint, QEvent, QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut, QGuiApplication, QMouseEvent
 
 from core.logger import get_logger
+from core.config import clamp_transparency
 
 from ui.glass_panel import GlassPanel
 from ui.variable_bar import VariableBar
@@ -129,6 +130,15 @@ class MainWindow(QMainWindow):
         if self._initial_content_pending:
             QTimer.singleShot(0, self._render_initial_content)
 
+    def _detect_compositor(self) -> bool:
+        if self.config:
+            cfg = self.config.get("compositor", None)
+            if cfg is not None:
+                return bool(cfg)
+        from core.platform import detect_platform_capabilities
+
+        return detect_platform_capabilities().compositor
+
     # -------------------------------------------------------------
     # Window Frame, Geometry, & Layout Assembly
     # -------------------------------------------------------------
@@ -145,7 +155,12 @@ class MainWindow(QMainWindow):
         if is_always_on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
 
+        self.has_compositor = self._detect_compositor()
         self.setWindowFlags(flags)
+        if self.has_compositor:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        else:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
         app_icon = get_app_icon()
         if not app_icon.isNull():
@@ -161,8 +176,10 @@ class MainWindow(QMainWindow):
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
 
+        bleed_through = clamp_transparency(self.config.get("bleed_through", 0), 0)
         self.hud_frame = GlassPanel()
         self.hud_frame.setObjectName("HudFrame")
+        self.hud_frame.set_bleed_through(bleed_through)
         self.hud_frame.setMouseTracking(True)
 
         hud_layout = QVBoxLayout(self.hud_frame)
@@ -294,6 +311,13 @@ class MainWindow(QMainWindow):
             self.showNormal()
         else:
             self.showFullScreen()
+
+    def set_bleed_through(self, value: int) -> None:
+        """Dynamically update window and panel bleed-through transparency."""
+        bleed = clamp_transparency(value, 0)
+        if hasattr(self, "hud_frame") and self.hud_frame:
+            self.hud_frame.set_bleed_through(bleed)
+        self.update()
 
     # -------------------------------------------------------------
     # Frameless Window Event Routing Delegated to WindowFrameManager

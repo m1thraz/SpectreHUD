@@ -5,7 +5,7 @@ Typography, Font Hierarchies, Badges, and Text Styles for SpectreHUD.
 TYPOGRAPHY_QSS_TEMPLATE = """
 /* Transparent Base Container & Global Fonts */
 QWidget#CentralWidget {
-    background-color: {BG_DARK};
+    background-color: transparent;
     font-family: {ui_font};
     font-size: 13px;
     color: {TEXT_SECONDARY};

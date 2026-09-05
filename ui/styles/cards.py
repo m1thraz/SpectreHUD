@@ -3,10 +3,12 @@ Card Containers, Frames, Code Blocks, and HUD Glass Styles for SpectreHUD.
 """
 
 CARDS_QSS_TEMPLATE = """
-/* Opaque simulated glass; painted by GlassPanel. */
+/* Simulated glass with optional desktop bleed-through; painted by GlassPanel. */
 QFrame#HudFrame {
-    qproperty-glassColor: {BG_DARK};
+    background-color: {HUD_BACKGROUND};
+    qproperty-glassColor: {HUD_GLASS_COLOR};
     qproperty-glassIntensity: {HUD_INTENSITY};
+    qproperty-bleedThrough: {BLEED_THROUGH};
     border: 1px solid {CYAN_A35};
     border-radius: 14px;
 }

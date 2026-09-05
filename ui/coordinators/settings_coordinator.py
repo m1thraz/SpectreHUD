@@ -65,6 +65,7 @@ class SettingsCoordinator:
             or selected_code_font != self.applied_code_font
             or "hud_transparency" in new_settings
             or "report_transparency" in new_settings
+            or "bleed_through" in new_settings
         )
         if appearance_changed:
             # A selected theme still activates only through controlled restart.
@@ -72,6 +73,11 @@ class SettingsCoordinator:
                 self.applied_theme if selected_theme != self.applied_theme else selected_theme
             )
             self.apply_application_style(theme_id=active_theme)
+
+        if "bleed_through" in new_settings:
+            bleed_val = new_settings["bleed_through"]
+            if hasattr(self.window, "set_bleed_through"):
+                self.window.set_bleed_through(bleed_val)
 
         if "report_font" in new_settings:
             self.report_ctrl.refresh_font_configuration()

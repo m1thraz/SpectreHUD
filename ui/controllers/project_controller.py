@@ -32,10 +32,12 @@ class ProjectController(QObject):
         project_manager: ProjectManager,
         event_bus: Optional[EventBus] = None,
         parent: Optional[QObject] = None,
+        config_manager: Optional[Any] = None,
     ):
         super().__init__(parent)
         self.project_manager = project_manager
         self.event_bus = event_bus if event_bus is not None else EventBus()
+        self.config = config_manager
 
     # ------------------------------------------------------------------ #
     # Pure Domain & DTO Methods (UI-Independent)
@@ -64,6 +66,8 @@ class ProjectController(QObject):
             base_dir=base_dir,
             pentest_password=pentest_password,
         )
+        if pentest_password and self.config is not None:
+            self.config.set("bleed_through", 0)
         clean_name = self.project_manager._sanitize_name(name)
         self.project_created.emit(clean_name)
         return clean_name
@@ -297,6 +301,11 @@ class ProjectController(QObject):
                         base_dir=Path(custom_base) if custom_base else None,
                         pentest_password=data.get("pentest_password"),
                     )
+                    if data.get("pentest_mode") or data.get("pentest_password"):
+                        if self.config is not None:
+                            self.config.set("bleed_through", 0)
+                        if parent_widget is not None and hasattr(parent_widget, "set_bleed_through"):
+                            parent_widget.set_bleed_through(0)
                     on_project_created(clean_name)
                     return True
                 except ProjectExistsError as e:

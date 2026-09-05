@@ -33,6 +33,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     # Legacy key names; values now control simulated glass intensity, not desktop alpha.
     "hud_transparency": 5,
     "report_transparency": 0,
+    "bleed_through": 0,
     "language": "en",
     "time_format": "24h",
     "workspace_dir": str(projects_dir()),
@@ -116,7 +117,11 @@ class ConfigManager:
                 migrated = True
             cfg = DEFAULT_CONFIG.copy()
             cfg.update(loaded)
-            for key, default in (("hud_transparency", 5), ("report_transparency", 0)):
+            for key, default in (
+                ("hud_transparency", 5),
+                ("report_transparency", 0),
+                ("bleed_through", 0),
+            ):
                 normalized = clamp_transparency(cfg.get(key), default)
                 if cfg.get(key) != normalized:
                     migrated = True

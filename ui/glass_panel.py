@@ -8,14 +8,23 @@ from ui.styles.noise import generate_coarse_noise_pixmap, generate_noise_pixmap
 
 
 class GlassPanel(QFrame):
-    """Paint a theme-coloured gradient and shared grain without desktop alpha."""
+    """Paint a theme-coloured gradient and shared grain with optional background bleed."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._raw_base_color = QColor("#0d1117")
         self._base_color = QColor("#0d1117")
         self._intensity = 5
+        self._real_alpha = 0
+        self._panel_opacity = 1.0
         self._noise = generate_noise_pixmap()
         self._coarse_noise = generate_coarse_noise_pixmap()
+
+    def _sync_base_color(self) -> None:
+        self._base_color = QColor(self._raw_base_color)
+        if self._real_alpha > 0:
+            alpha = int(255 * (100 - self._real_alpha) / 100.0)
+            self._base_color.setAlpha(min(self._base_color.alpha(), max(0, min(255, alpha))))
 
     @pyqtProperty(QColor)
     def glassColor(self):
@@ -23,8 +32,8 @@ class GlassPanel(QFrame):
 
     @glassColor.setter
     def glassColor(self, color):
-        self._base_color = QColor(color)
-        self._base_color.setAlpha(255)
+        self._raw_base_color = QColor(color)
+        self._sync_base_color()
         self.update()
 
     @pyqtProperty(int)
@@ -36,17 +45,45 @@ class GlassPanel(QFrame):
         self._intensity = max(0, min(30, value))
         self.update()
 
+    def set_bleed_through(self, value: int) -> None:
+        self._real_alpha = max(0, min(30, int(value)))
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, self._real_alpha > 0)
+        top = self.window()
+        if top is not None and top is not self:
+            top.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, self._real_alpha > 0)
+        # Fake-Glass-Deckkraft sinkt, wenn echter Bleed steigt
+        self._panel_opacity = max(0.5, 1.0 - (self._real_alpha / 30.0) * 0.5)
+        self._sync_base_color()
+        self.update()
+        if top is not None and top is not self:
+            top.update()
+
+    @pyqtProperty(int)
+    def bleedThrough(self):
+        return self._real_alpha
+
+    @bleedThrough.setter
+    def bleedThrough(self, value):
+        self.set_bleed_through(value)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Fill even the corners: this surface never exposes the desktop.
-        painter.fillRect(self.rect(), self._base_color)
+        if self._real_alpha > 0 or self._base_color.alpha() < 255:
+            rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+            path = QPainterPath()
+            path.addRoundedRect(rect, 14, 14)
+            painter.fillPath(path, self._base_color)
+        else:
+            painter.fillRect(self.rect(), self._base_color)
+            path = None
         if self._intensity == 0:
             return
         strength = self._intensity / 30.0
-        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        path = QPainterPath()
-        path.addRoundedRect(rect, 8, 8)
+        if path is None:
+            rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+            path = QPainterPath()
+            path.addRoundedRect(rect, 14, 14)
         painter.setClipPath(path)
         gradient = QLinearGradient(0, 0, max(1, self.width()), max(1, self.height()))
         # Keep light palettes light; only dark palettes brighten with intensity.
@@ -66,25 +103,25 @@ class GlassPanel(QFrame):
         gradient.setColorAt(0.32, self._base_color.lighter(104) if light else top.darker(112))
         gradient.setColorAt(0.68, self._base_color.darker(104 if light else 110))
         gradient.setColorAt(1, bottom)
-        painter.setOpacity(strength)
+        painter.setOpacity(strength * self._panel_opacity)
         painter.fillRect(rect, gradient)
 
         sheen = QRadialGradient(
             self.width() * 0.22, self.height() * 0.12, max(1, self.width() * 0.65)
         )
-        sheen.setColorAt(0, QColor(255, 255, 255, 24))
-        sheen.setColorAt(0.4, QColor(255, 255, 255, 7))
+        sheen.setColorAt(0, QColor(255, 255, 255, int(24 * self._panel_opacity)))
+        sheen.setColorAt(0.4, QColor(255, 255, 255, int(7 * self._panel_opacity)))
         sheen.setColorAt(1, QColor(255, 255, 255, 0))
         painter.fillRect(rect, sheen)
 
-        painter.setOpacity(0.045 * strength)
+        painter.setOpacity(0.045 * strength * self._panel_opacity)
         painter.fillRect(rect, QBrush(self._coarse_noise))
-        painter.setOpacity(0.055 * strength)
+        painter.setOpacity(0.055 * strength * self._panel_opacity)
         painter.fillRect(rect, QBrush(self._noise))
-        painter.setOpacity(strength)
-        painter.setPen(QColor(255, 255, 255, 30))
+        painter.setOpacity(strength * self._panel_opacity)
+        painter.setPen(QColor(255, 255, 255, int(30 * self._panel_opacity)))
         painter.drawLine(4, 1, self.width() - 4, 1)
         painter.setClipping(False)
         painter.setPen(QColor(255, 255, 255, 18))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRoundedRect(rect, 8, 8)
+        painter.drawRoundedRect(rect, 14, 14)

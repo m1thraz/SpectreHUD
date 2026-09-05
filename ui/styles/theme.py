@@ -35,6 +35,7 @@ def build_app_theme(
     code_font_key: str = "consolas",
     hud_transparency: object = 5,
     report_transparency: object = 0,
+    bleed_through: object = 0,
 ) -> str:
     """Build application QSS from a validated palette and curated font keys."""
     ui_font = get_ui_font_stack(ui_font_key)
@@ -42,12 +43,27 @@ def build_app_theme(
     context = dict(palette)
     hud_value = clamp_transparency(hud_transparency, 5)
     report_value = clamp_transparency(report_transparency, 0)
+    bleed_value = clamp_transparency(bleed_through, 0)
+
+    # Durchblick / echte Transparenz wird rein durch bleed_through gesteuert:
+    # Bei bleed_through == 0 bleibt die Oberfläche 100% opak (BG_DARK).
+    if bleed_value > 0:
+        hud_color = with_alpha(context["BG_DARK"], 100 - bleed_value)
+    else:
+        hud_color = context["BG_DARK"]
+
+    report_color = context["BG_DARK"]
+
     context.update(
         {
             "ui_font": ui_font,
             "code_font": code_font,
             "HUD_INTENSITY": str(hud_value),
             "REPORT_INTENSITY": str(report_value),
+            "BLEED_THROUGH": str(bleed_value),
+            "HUD_BACKGROUND": hud_color,
+            "HUD_GLASS_COLOR": hud_color,
+            "REPORT_EDITOR_BACKGROUND": report_color,
         }
     )
     raw = "\n".join(

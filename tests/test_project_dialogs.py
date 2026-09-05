@@ -131,6 +131,52 @@ class TestProjectDialogs(unittest.TestCase):
         self.assertIn("⚠️", dlg.lbl_path_preview.text())
         dlg.deleteLater()
 
+    def test_pentest_mode_resets_bleed_through(self):
+        """Creating a pentest project resets bleed_through to 0 in config and window."""
+        from core.config import ConfigManager
+        from core.storage import InMemoryStorageBackend
+        from ui.controllers.project_controller import ProjectController
+        from unittest.mock import Mock
+
+        cfg = ConfigManager(storage=InMemoryStorageBackend(initial_data={"config": {"bleed_through": 22}}))
+        self.assertEqual(cfg.get("bleed_through"), 22)
+
+        ctrl = ProjectController(self.project_mgr, config_manager=cfg)
+        mock_window = Mock()
+        mock_window.set_bleed_through = Mock()
+
+        # Direct create_project with pentest_password
+        ctrl.create_project("PentestDirect", pentest_password="secret_pass")
+        self.assertEqual(cfg.get("bleed_through"), 0)
+
+        # Dialog flow
+        cfg.set("bleed_through", 18)
+        self.assertEqual(cfg.get("bleed_through"), 18)
+
+        fake_dlg = Mock()
+        fake_dlg.exec.return_value = True
+        fake_dlg.get_data.return_value = {
+            "name": "PentestViaDialog",
+            "target_ip": "10.10.10.1",
+            "attacker_ip": "10.10.14.2",
+            "port": "4444",
+            "base_dir": None,
+            "pentest_mode": True,
+            "pentest_password": "dialog_pass",
+        }
+        with patch("ui.controllers.project_controller.NewProjectDialog", return_value=fake_dlg):
+            callback = Mock()
+            success = ctrl.open_new_project_dialog(
+                parent_widget=mock_window,
+                default_target="",
+                default_attacker="",
+                default_port="4444",
+                on_project_created=callback,
+            )
+            self.assertTrue(success)
+            self.assertEqual(cfg.get("bleed_through"), 0)
+            mock_window.set_bleed_through.assert_called_with(0)
+
 
 if __name__ == "__main__":
     unittest.main()
