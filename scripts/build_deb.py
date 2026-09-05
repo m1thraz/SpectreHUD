@@ -218,6 +218,11 @@ def build_pyinstaller_bundle(project_dir: Path, output_bundle_dir: Path) -> bool
         "PyQt6.QtWidgets",
         "--hidden-import",
         "pynput",
+        # pynput loads platform backends dynamically; freeze the Linux X11 backends.
+        "--hidden-import",
+        "pynput.keyboard._xorg",
+        "--hidden-import",
+        "pynput.mouse._xorg",
         "--hidden-import",
         "pyperclip",
         "--hidden-import",

@@ -6,6 +6,11 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+- Include pynput's dynamically loaded Xorg keyboard and mouse backends in the
+  standalone Debian bundle so global hotkeys can start on X11.
+
 ### Changed
 
 - Reduced UI orchestration coupling with registered mode renderers, container-only
