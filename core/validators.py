@@ -5,8 +5,10 @@ when loading user-editable JSON files.
 """
 
 import hashlib
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from core.phases import normalize_phase_key
 
 
 # Product size limits reject accidentally selected, corrupt, or impractically large files.
@@ -213,9 +215,7 @@ def validate_quick_note_entry(entry: Any) -> Optional[Dict[str, Any]]:
 
     text = raw_text[:MAX_CLIPBOARD_TEXT_LENGTH]
     entry_id = str(entry.get("id") or "")[:64]
-    category = str(entry.get("category") or "misc").strip().lower()
-    if category not in {"recon", "access", "privesc", "postex", "scripts", "misc"}:
-        category = "misc"
+    category = normalize_phase_key(entry.get("category"))
 
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[

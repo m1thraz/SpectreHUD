@@ -17,7 +17,7 @@ from core.storage import (
     FileStorageBackend,
     PersistenceError,
 )
-from core.loot.manager import VALID_CATEGORY_IDS
+from core.phases import normalize_phase_key
 from core.validators import (
     format_timestamp,
     validate_quick_notes_list,
@@ -97,9 +97,7 @@ class QuickNoteManager(QObject):
         if len(clean_text) > MAX_CLIPBOARD_TEXT_LENGTH:
             clean_text = clean_text[:MAX_CLIPBOARD_TEXT_LENGTH]
 
-        cat = str(category or "misc").strip().lower()
-        if cat not in VALID_CATEGORY_IDS:
-            cat = "misc"
+        cat = normalize_phase_key(category)
 
         clean_status = str(status or "inbox").strip().lower()
         if clean_status not in {"inbox", "followup", "resolved"}:
@@ -163,8 +161,7 @@ class QuickNoteManager(QObject):
             current["text"] = clean_text
 
         if "category" in changes:
-            cat = str(changes["category"] or "misc").strip().lower()
-            current["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
+            current["category"] = normalize_phase_key(changes["category"])
 
         if "target_ip" in changes:
             current["target_ip"] = str(changes["target_ip"] or "").strip()

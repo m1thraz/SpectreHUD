@@ -104,3 +104,33 @@ def test_history_card_reserves_target_badge_width(qapp):
 
     container.hide()
     container.deleteLater()
+
+
+def test_cards_render_standardized_phase_badges(qapp, tmp_path):
+    loot_entry = {
+        "id": "loot-phase-test",
+        "type": "credentials",
+        "category": "initial",  # alias for access
+        "title": "Shell access",
+        "timestamp": "2026-09-05 14:00:00",
+        "content": "test",
+    }
+    loot_card = LootCard(loot_entry, project_dir=tmp_path)
+    labels = loot_card.findChildren(QLabel)
+    cat_lbl = next((lbl for lbl in labels if lbl.property("class") == "CategoryBadge"), None)
+    assert cat_lbl is not None
+    assert cat_lbl.text() == "ACCESS"
+    assert "Initial Access & Exploitation" in cat_lbl.toolTip()
+
+    note_entry = {
+        "id": "note-phase-test",
+        "text": "Note text",
+        "category": "lateral",  # alias for postex
+        "timestamp": "14:05:00",
+    }
+    note_card = QuickNoteCard(note_entry)
+    note_labels = note_card.findChildren(QLabel)
+    note_cat_lbl = next((lbl for lbl in note_labels if lbl.text() == "POSTEX"), None)
+    assert note_cat_lbl is not None
+    assert note_cat_lbl.toolTip() == "Post-Exploitation & Lateral Movement"
+

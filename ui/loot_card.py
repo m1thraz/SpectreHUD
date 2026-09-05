@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
 from typing import Dict, Any, Optional
-from core.loot.manager import LOOT_TYPES, CATEGORIES
+from core.loot.manager import LOOT_TYPES
+from core.phases import get_phase
 from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
@@ -164,20 +165,12 @@ class LootCard(QFrame):
         self.lbl_title.installEventFilter(self)
         title_row.addWidget(self.lbl_title, stretch=1)
 
-        cat_id = self.entry.get("category", "misc")
-        cat_info = next(
-            (c for c in CATEGORIES if c["id"] == cat_id), {"name": "Miscellaneous", "icon": ""}
-        )
-        cat_short_name = (
-            cat_info["name"].split(".")[1].strip().split("&")[0].strip()
-            if "." in cat_info["name"]
-            else cat_info["name"]
-        )
-        lbl_cat = QLabel(cat_short_name)
+        phase = get_phase(self.entry.get("category", "misc"))
+        lbl_cat = QLabel(phase.short)
         lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
         lbl_cat.setProperty("class", "CategoryBadge")
-        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=cat_info["name"]))
-        configure_badge_label(lbl_cat, cat_short_name, padding=14)
+        lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=phase.long))
+        configure_badge_label(lbl_cat, phase.short, padding=14)
         title_row.addWidget(lbl_cat)
 
         layout.addLayout(title_row)

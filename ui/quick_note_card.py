@@ -24,6 +24,7 @@ import pyperclip
 
 from core.logger import get_logger
 from core.i18n import t
+from core.phases import get_phase
 from ui.styles.icons import icon
 from ui.styles.palette import CYBER_CYAN, STATUS_ERROR, STATUS_SUCCESS
 from ui.elided_label import configure_badge_label
@@ -127,15 +128,16 @@ class QuickNoteCard(QFrame):
         header_layout.addWidget(self.btn_status)
 
         # 4. Phase Category Badge
-        cat = str(self.entry.get("category", "misc")).upper()
-        lbl_cat = QLabel(cat)
+        phase = get_phase(self.entry.get("category", "misc"))
+        lbl_cat = QLabel(phase.short)
         lbl_cat.setTextFormat(Qt.TextFormat.PlainText)
+        lbl_cat.setToolTip(phase.long)
         lbl_cat.setStyleSheet(
             "background-color: rgba(110, 118, 129, 0.2); color: #c9d1d9; "
             "border: 1px solid rgba(110, 118, 129, 0.4); border-radius: 4px; "
             "padding: 2px 6px; font-size: 10px; font-weight: bold;"
         )
-        configure_badge_label(lbl_cat, cat, padding=14)
+        configure_badge_label(lbl_cat, phase.short, padding=14)
         header_layout.addWidget(lbl_cat)
 
         # 5. Time Badge

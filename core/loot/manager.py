@@ -17,6 +17,7 @@ from core.validators import (
     MAX_TITLE_LENGTH,
 )
 from core.loot.migrator import LootMigrator
+from core.phases import PHASES
 
 logger = get_logger("loot")
 
@@ -30,15 +31,11 @@ LOOT_TYPES = [
 ]
 
 CATEGORIES = [
-    {"id": "recon", "name": "1. Reconnaissance & Enumeration", "order": 1, "icon": ""},
-    {"id": "access", "name": "2. Initial Access & Exploitation", "order": 2, "icon": ""},
-    {"id": "privesc", "name": "3. Privilege Escalation", "order": 3, "icon": ""},
-    {"id": "postex", "name": "4. Post-Exploitation & Lateral Movement", "order": 4, "icon": ""},
-    {"id": "scripts", "name": "5. Custom Scripts & PoCs", "order": 5, "icon": ""},
-    {"id": "misc", "name": "6. Miscellaneous", "order": 6, "icon": ""},
+    {"id": p.key, "name": f"{p.order}. {p.long}", "order": p.order, "icon": p.icon}
+    for p in PHASES
 ]
 
-VALID_CATEGORY_IDS: Set[str] = {str(c["id"]) for c in CATEGORIES}
+VALID_CATEGORY_IDS: Set[str] = {c["id"] for c in CATEGORIES}
 
 
 class LootValidationError(ValueError):

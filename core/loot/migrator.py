@@ -2,6 +2,7 @@
 
 from typing import Any, Collection, Dict, List, Mapping, Tuple
 
+from core.phases import normalize_phase_key
 from core.validators import VALID_SEVERITIES
 
 
@@ -21,8 +22,11 @@ class LootMigrator:
 
         for entry in normalized_entries:
             category = entry.get("category")
-            if not category or category not in valid_category_ids:
-                entry["category"] = "misc"
+            normalized_cat = normalize_phase_key(category)
+            if normalized_cat not in valid_category_ids:
+                normalized_cat = "misc"
+            if normalized_cat != category:
+                entry["category"] = normalized_cat
                 changed = True
 
             severity = entry.get("severity")
