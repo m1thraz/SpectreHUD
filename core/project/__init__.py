@@ -23,7 +23,7 @@ from core.project.repository import (
     get_default_config_dir,
 )
 from core.project.manager import ProjectManager
-from core.project_lock_service import ProjectLockedError, ProjectSecurityMetaError
+from core.project.lock_service import ProjectLockedError, ProjectSecurityMetaError
 
 __all__ = [
     "ProjectManager",

@@ -11,11 +11,11 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshot_manager import ScreenshotManager
-from core.screenshot_transaction_service import ScreenshotTransactionService
-from core.project_session_service import ProjectSessionService
+from core.screenshots.manager import ScreenshotManager
+from core.screenshots.transaction_service import ScreenshotTransactionService
+from core.project.session_service import ProjectSessionService
 
 
 class TestWorkflowRobustness(unittest.TestCase):

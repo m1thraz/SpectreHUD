@@ -2,9 +2,9 @@ import os
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.report_builder import ReportBuilder
+from core.reporting.builder import ReportBuilder
 
 
 class TestReportBuilder(unittest.TestCase):

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
 from core.logger import get_logger
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 
 
 logger = get_logger(__name__)

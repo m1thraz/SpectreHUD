@@ -8,11 +8,11 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
-from core.report_file_manager import ReportFileManager
+from core.reporting.file_manager import ReportFileManager
 from core.net_detector import NetDetector
 from core.i18n import t
 from tests.window_factory import create_main_window

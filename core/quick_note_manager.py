@@ -17,7 +17,7 @@ from core.storage import (
     FileStorageBackend,
     PersistenceError,
 )
-from core.loot_manager import VALID_CATEGORY_IDS
+from core.loot.manager import VALID_CATEGORY_IDS
 from core.validators import (
     format_timestamp,
     validate_quick_notes_list,

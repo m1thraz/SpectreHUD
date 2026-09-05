@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 from core.clipboard_history import ClipboardHistory
 from core.config import ConfigManager
 from core.event_bus import EventBus, EventType
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.theme_loader import ThemeLoader
 from ui.appearance import apply_application_style
 from ui.controllers.report_controller import ReportController

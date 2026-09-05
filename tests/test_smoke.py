@@ -12,12 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
-from core.screenshot_manager import ScreenshotManager
-from core.report_builder import ReportBuilder
+from core.screenshots.manager import ScreenshotManager
+from core.reporting.builder import ReportBuilder
 from tests.window_factory import create_main_window
 
 pytestmark = pytest.mark.integration

@@ -8,7 +8,7 @@ keine zusätzliche Markdown-Dependency nötig). Vorschau wird debounced
 (300ms nach letzter Änderung) aktualisiert, damit schnelles Tippen nicht
 bei jedem Tastendruck neu rendert.
 
-Bewusste Trennung von core.report_file_manager.ReportFileManager: dieses
+Bewusste Trennung von core.reporting.file_manager.ReportFileManager: dieses
 Widget kennt nur "lade Text rein / hol Text raus", die eigentliche
 Backup-vor-Regenerierung-Logik lebt im FileManager, nicht hier - damit
 sie ohne Qt testbar bleibt.
@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence
 
-from core.report_file_manager import ReportFileManager
+from core.reporting.file_manager import ReportFileManager
 from core.config import ConfigManager
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
@@ -960,7 +960,7 @@ class ReportEditorTab(QWidget):
             return
         self.active_template = dialog.selected_template
 
-        from core.report_file_manager import ReportBackupError, ReportSaveError
+        from core.reporting.file_manager import ReportBackupError, ReportSaveError
 
         try:
             new_content = self.report_file_manager.regenerate(
@@ -1018,7 +1018,7 @@ class ReportEditorTab(QWidget):
                 )
                 return
 
-        from core.report_file_manager import ReportBackupError, ReportSaveError
+        from core.reporting.file_manager import ReportBackupError, ReportSaveError
 
         cursor = self.editor.textCursor()
         saved_pos = cursor.position()

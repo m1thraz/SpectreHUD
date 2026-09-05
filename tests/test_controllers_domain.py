@@ -17,8 +17,8 @@ app = QApplication.instance()
 if app is None:
     app = QApplication([])
 
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
 from core.project import ProjectManager
@@ -512,7 +512,7 @@ class TestControllersDomain(unittest.TestCase):
     def test_loot_controller_error_branches(self):
         """Domain operations handle persistence and validation errors gracefully."""
         from core.storage import StorageError, PersistenceError
-        from core.loot_manager import LootValidationError
+        from core.loot.manager import LootValidationError
 
         # add_entry error
         with patch.object(self.loot_mgr, "add_entry", side_effect=StorageError("cannot add")):

@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QSize, QEvent
 from typing import Dict, Any, Optional
-from core.template_engine import TemplateEngine
+from core.snippets.interpolator import TemplateEngine
 from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
 from core.i18n import t

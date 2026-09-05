@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction
 
 from core.quick_note_manager import QuickNoteManager
-from core.loot_manager import VALID_CATEGORY_IDS
+from core.loot.manager import VALID_CATEGORY_IDS
 from core.event_bus import EventBus, EventType
 from core.logger import get_logger
 from core.i18n import t

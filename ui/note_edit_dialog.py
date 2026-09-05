@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QKeySequence, QShortcut
 
 from ui.base_dialog import BaseHudDialog
-from core.loot_manager import VALID_CATEGORY_IDS
+from core.loot.manager import VALID_CATEGORY_IDS
 from core.i18n import t
 
 NOTE_PHASES = [

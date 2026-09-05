@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 
-from core.snippet_manager import SnippetManager
+from core.snippets.manager import SnippetManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction

@@ -21,8 +21,8 @@ if app is None:
 from core.config import ConfigManager
 from core.project import ProjectManager
 from core.project.validator import WorkspaceError
-from core.project_session_service import ProjectSessionService
-from core.project_lock_service import ProjectSecurityMetaError
+from core.project.session_service import ProjectSessionService
+from core.project.lock_service import ProjectSecurityMetaError
 from core.event_bus import EventBus, EventType
 from ui.coordinators.workspace_coordinator import WorkspaceCoordinator
 

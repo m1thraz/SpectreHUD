@@ -285,7 +285,7 @@ class SnippetManager:
         and persists them to user_snippets.json in a single atomic batch write.
         Returns the number of snippets imported.
         """
-        from core.snippet_importer import import_snippets_from_file
+        from core.snippets.importer import import_snippets_from_file
 
         parsed = import_snippets_from_file(file_path)
         if not parsed:
@@ -370,7 +370,7 @@ class SnippetManager:
         Filters snippets by category and ranks them using pure snippet_filter service.
         Supports fuzzy typo tolerance, tool prefix prioritization, acronyms, and tag/syntax matching.
         """
-        from core.snippet_filter import filter_and_rank_snippets
+        from core.snippets.filter import filter_and_rank_snippets
 
         return filter_and_rank_snippets(
             snippets=self.snippets,

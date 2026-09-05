@@ -88,11 +88,11 @@ project_state.json
 security_meta.json
 
 # Local Workspaces, Projects & Exports
-projects/
-spectre_projects/
-workspace/
-boxes/
-loot/
+/projects/
+/spectre_projects/
+/workspace/
+/boxes/
+/loot/
 tmp/
 temp/
 .test-*/

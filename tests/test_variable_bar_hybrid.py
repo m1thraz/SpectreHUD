@@ -6,7 +6,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PyQt6.QtWidgets import QApplication
 from ui.variable_bar import VariableBar
-from core.template_engine import TemplateEngine
+from core.snippets.interpolator import TemplateEngine
 
 
 @pytest.fixture
@@ -192,7 +192,7 @@ def test_copy_button_i18n_retranslate(var_bar):
 
 
 def test_subnet_dns_hash_file_popovers(var_bar):
-    from core.template_engine import TemplateEngine
+    from core.snippets.interpolator import TemplateEngine
 
     # Set subnet and dns in ScopePopover
     var_bar.popover_scope.txt_subnet.setText("192.168.10.0/24")

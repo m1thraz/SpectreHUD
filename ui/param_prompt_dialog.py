@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QWidget,
 )
-from core.template_engine import TemplateEngine, SMART_PRESETS
+from core.snippets.interpolator import TemplateEngine, SMART_PRESETS
 from ui.base_dialog import BaseHudDialog
 from core.i18n import t
 

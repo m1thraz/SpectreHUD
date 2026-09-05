@@ -10,9 +10,9 @@ from PyQt6.QtWidgets import QApplication, QSizePolicy
 
 from core.clipboard_history import ClipboardHistory
 from core.config import ConfigManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.project import ProjectManager
-from core.snippet_manager import SnippetManager
+from core.snippets.manager import SnippetManager
 from tests.window_factory import create_main_window
 from ui.main_window import MainWindow
 from ui.panels.content_panel import ContentPanel

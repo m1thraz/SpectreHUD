@@ -18,7 +18,7 @@ from core.crypto_service import (
 )
 from core.logger import get_logger
 from core.project.validator import validate_project_name
-from core.project_lock_service import (
+from core.project.lock_service import (
     ProjectLockedError,
     ProjectLockService,
     ProjectSecurityMetaError,

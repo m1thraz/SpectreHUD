@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from typing import Dict, Any, Optional
-from core.loot_manager import LOOT_TYPES, CATEGORIES
+from core.loot.manager import LOOT_TYPES, CATEGORIES
 from core.i18n import t
 from ui.base_dialog import BaseHudDialog
 

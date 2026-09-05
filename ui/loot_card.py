@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QTextLayout, QTextOption
 from typing import Dict, Any, Optional
-from core.loot_manager import LOOT_TYPES, CATEGORIES
+from core.loot.manager import LOOT_TYPES, CATEGORIES
 from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t

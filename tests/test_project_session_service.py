@@ -3,10 +3,10 @@ import tempfile
 from pathlib import Path
 
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
-from core.project_session_service import ProjectSessionService
+from core.project.session_service import ProjectSessionService
 
 
 class TestProjectSessionService(unittest.TestCase):

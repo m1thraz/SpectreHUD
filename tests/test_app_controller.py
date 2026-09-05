@@ -19,8 +19,8 @@ if app is None:
     app = QApplication([])
 
 from core.config import ConfigManager
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.event_bus import EventBus, EventType

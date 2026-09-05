@@ -12,10 +12,10 @@ from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshot_manager import ScreenshotManager
-from core.project_session_service import ProjectSessionService
+from core.screenshots.manager import ScreenshotManager
+from core.project.session_service import ProjectSessionService
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -180,7 +180,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         must RAISE ReportSaveError rather than returning content and signalling false success.
         """
         from unittest.mock import patch
-        from core.report_file_manager import ReportFileManager, ReportSaveError
+        from core.reporting.file_manager import ReportFileManager, ReportSaveError
 
         rfm = ReportFileManager(self.project_mgr)
         self.project_mgr.create_project("BoxSaveBomb")
@@ -201,7 +201,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         from unittest.mock import patch
         from PyQt6.QtGui import QImage, QPixmap
         from PyQt6.QtWidgets import QWidget
-        from core.screenshot_manager import ScreenshotManager
+        from core.screenshots.manager import ScreenshotManager
 
         snip_mgr = ScreenshotManager()
         self.project_mgr.create_project("BoxSnipFail")

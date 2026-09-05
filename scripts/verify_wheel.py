@@ -28,21 +28,30 @@ REQUIRED_FILES = [
     "data/themes/slate.json",
     "data/themes/solarized.json",
     "data/themes/warm_night.json",
-    # Core managers
+    # Core modules & services
     "core/config.py",
-    "core/snippet_manager.py",
-    "core/loot_manager.py",
     "core/clipboard_history.py",
-    "core/screenshot_manager.py",
-    "core/project_session_service.py",
     "core/validators.py",
     "core/atomic_write.py",
-    "core/report_builder.py",
-    "core/report_file_manager.py",
     "core/box_archiver.py",
     "core/i18n.py",
     "core/display_geometry.py",
     "core/theme_loader.py",
+    # Snippets package
+    "core/snippets/__init__.py",
+    "core/snippets/manager.py",
+    "core/snippets/filter.py",
+    "core/snippets/importer.py",
+    "core/snippets/interpolator.py",
+    # Loot package
+    "core/loot/__init__.py",
+    "core/loot/manager.py",
+    "core/loot/filter.py",
+    "core/loot/migrator.py",
+    # Screenshots package
+    "core/screenshots/__init__.py",
+    "core/screenshots/manager.py",
+    "core/screenshots/transaction_service.py",
     # Cross-platform support boundary
     "core/platform/__init__.py",
     "core/platform/capabilities.py",
@@ -51,6 +60,8 @@ REQUIRED_FILES = [
     "core/platform/network.py",
     # Reporting subsystem
     "core/reporting/__init__.py",
+    "core/reporting/builder.py",
+    "core/reporting/file_manager.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The
     # former reporting/models.py module was removed during the refactor.
     "core/reporting/template_engine.py",
@@ -60,6 +71,8 @@ REQUIRED_FILES = [
     "core/project/__init__.py",
     "core/project/repository.py",
     "core/project/validator.py",
+    "core/project/lock_service.py",
+    "core/project/session_service.py",
     # UI controllers
     "ui/main_window.py",
     "ui/clipboard_monitor.py",

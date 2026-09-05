@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, Callable
 import re
 
-from core.loot_manager import CATEGORIES
+from core.loot.manager import CATEGORIES
 from core.reporting.charts import render_severity_badge
 from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 from core.logger import get_logger

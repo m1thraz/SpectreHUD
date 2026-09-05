@@ -3,7 +3,7 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot_manager import LootLimitError, LootManager, LootValidationError
+from core.loot.manager import LootLimitError, LootManager, LootValidationError
 from core.validators import MAX_CONTENT_LENGTH, MAX_LOOT_ENTRIES
 from core.storage import PersistenceError
 from unittest.mock import patch

@@ -5,7 +5,7 @@ Runs in memory without Qt or GUI widgets.
 """
 
 import pytest
-from core.loot_filter import (
+from core.loot.filter import (
     filter_loot_entries,
     count_loot_by_type,
     count_loot_by_category,

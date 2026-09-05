@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, Any, Tuple
 
 from core.reporting.loot_sync import append_missing_loot_to_text
-from core.report_builder import ReportBuilder
+from core.reporting.builder import ReportBuilder
 from core.logger import get_logger
 
 logger = get_logger("report_file_manager")

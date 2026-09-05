@@ -27,7 +27,7 @@ from core.project.validator import (
     WorkspaceError,
     validate_workspace_directory,
 )
-from core.report_file_manager import (
+from core.reporting.file_manager import (
     ReportBackupError,
     ReportFileManager,
     ReportSaveError,

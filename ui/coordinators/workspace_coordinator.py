@@ -11,13 +11,13 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 from core.project import ProjectManager
 from core.project.validator import WorkspaceError, validate_workspace_directory
 from core.config import ConfigManager
-from core.project_session_service import ProjectSessionService
+from core.project.session_service import ProjectSessionService
 from core.event_bus import EventBus, EventType
 from core.i18n import t
 from core.logger import get_logger
 from ui.controllers.project_controller import ProjectController
 from ui.project_dialog import ProjectUnlockDialog
-from core.project_lock_service import ProjectSecurityMetaError
+from core.project.lock_service import ProjectSecurityMetaError
 from ui.controllers.report_controller import ReportController
 
 logger = get_logger(__name__)

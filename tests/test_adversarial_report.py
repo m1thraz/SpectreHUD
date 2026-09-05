@@ -11,10 +11,10 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshot_manager import ScreenshotManager
-from core.project_session_service import ProjectSessionService
+from core.screenshots.manager import ScreenshotManager
+from core.project.session_service import ProjectSessionService
 from ui.clipboard_monitor import ClipboardMonitor
 
 
@@ -58,7 +58,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         Loot and clipboard content containing backticks must use adaptive
         fences so that generated Markdown remains structurally correct.
         """
-        from core.report_builder import ReportBuilder
+        from core.reporting.builder import ReportBuilder
 
         # Add credentials containing triple backticks.
         malicious_cred = "admin\n```\n# FAKE EXECUTIVE SUMMARY INJECTION\n```"
@@ -108,7 +108,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         User variables containing backslash sequences must not crash rendering
         or alter the entered text.
         """
-        from core.template_engine import TemplateEngine
+        from core.snippets.interpolator import TemplateEngine
 
         # 1. Invalid regex group backreference \1 (would crash re.sub with re.error)
         res1 = TemplateEngine.render("curl {{TARGET_IP}}", {"target_ip": r"10.10.10.1\1"})

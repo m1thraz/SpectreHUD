@@ -191,3 +191,7 @@ class TemplateEngine:
         merged_vars = dict(variables)
         merged_vars.update(custom_params)
         return TemplateEngine.render(template, merged_vars)
+
+
+# Backward-compatible and domain-specific alias
+SnippetInterpolator = TemplateEngine

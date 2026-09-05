@@ -16,7 +16,7 @@ from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError
 from core.reporting import HtmlReportExporter
 from core.i18n import t
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.logger import get_logger
 from ui.controllers.history_controller import HistoryController
 

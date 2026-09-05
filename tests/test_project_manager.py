@@ -4,7 +4,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.project import ProjectManager, InvalidProjectNameError
-from core.loot_manager import CATEGORIES
+from core.loot.manager import CATEGORIES
 
 
 class TestProjectManager(unittest.TestCase):

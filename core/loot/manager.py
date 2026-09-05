@@ -16,7 +16,7 @@ from core.validators import (
     MAX_TARGET_IP_LENGTH,
     MAX_TITLE_LENGTH,
 )
-from core.loot_migrator import LootMigrator
+from core.loot.migrator import LootMigrator
 
 logger = get_logger("loot")
 
@@ -378,7 +378,7 @@ class LootManager:
         search_query: str = "",
     ) -> List[Dict[str, Any]]:
         """Filters loot entries by target IP, type, category and search term."""
-        from core.loot_filter import filter_loot_entries
+        from core.loot.filter import filter_loot_entries
 
         return filter_loot_entries(
             entries=self.entries,
@@ -390,27 +390,27 @@ class LootManager:
 
     def get_type_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
         """Returns count of entries grouped by loot type."""
-        from core.loot_filter import count_loot_by_type
+        from core.loot.filter import count_loot_by_type
 
         return count_loot_by_type(self.entries, LOOT_TYPES, target_ip=target_ip)
 
     def get_category_counts(self, target_ip: Optional[str] = None) -> Dict[str, int]:
         """Returns count of entries grouped by category."""
-        from core.loot_filter import count_loot_by_category
+        from core.loot.filter import count_loot_by_category
 
         return count_loot_by_category(self.entries, CATEGORIES, target_ip=target_ip)
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        """DEPRECATED: Use core.report_builder.ReportBuilder instead.
+        """DEPRECATED: Use core.reporting.builder.ReportBuilder instead.
 
         Delegates to ReportBuilder for unified reporting.
         """
         warnings.warn(
-            "LootManager.export_loot() is deprecated; use core.report_builder.ReportBuilder instead.",
+            "LootManager.export_loot() is deprecated; use core.reporting.builder.ReportBuilder instead.",
             DeprecationWarning,
             stacklevel=2,
         )
-        from core.report_builder import ReportBuilder
+        from core.reporting.builder import ReportBuilder
 
         builder = ReportBuilder(loot_manager=self)
         return builder.export(output_path, target_ip=target_ip)

@@ -5,7 +5,7 @@ These tests run entirely in memory without requiring a Qt event loop or QApplica
 """
 
 import pytest
-from core.snippet_filter import (
+from core.snippets.filter import (
     filter_by_category,
     tokenize_query,
     filter_and_rank_snippets,

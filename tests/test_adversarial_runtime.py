@@ -10,10 +10,10 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
 from core.project import ProjectManager, InvalidProjectNameError
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshot_manager import ScreenshotManager
-from core.project_session_service import ProjectSessionService
+from core.screenshots.manager import ScreenshotManager
+from core.project.session_service import ProjectSessionService
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -112,7 +112,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         """
         from unittest.mock import MagicMock
         from PyQt6.QtGui import QPixmap, QImage
-        from core.screenshot_manager import ScreenshotManager
+        from core.screenshots.manager import ScreenshotManager
 
         snip_mgr = ScreenshotManager()
         self.project_mgr.create_project("BoxRollback")
@@ -148,7 +148,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         in-memory state without triggering storage write operations.
         """
         from unittest.mock import MagicMock
-        from core.project_session_service import ProjectSessionService
+        from core.project.session_service import ProjectSessionService
 
         mock_storage = MagicMock()
         self.loot_mgr.storage = mock_storage

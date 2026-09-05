@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from core.config import ConfigManager, DEFAULT_CONFIG
 from core.i18n import set_locale, DEFAULT_LOCALE
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 

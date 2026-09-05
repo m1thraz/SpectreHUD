@@ -97,7 +97,7 @@ def setup_logger(
 def get_logger(module_name: Optional[str] = None) -> logging.Logger:
     """
     Returns a structured logger hierarchically namespaced under 'spectrehud'.
-    Handles __name__ (e.g. 'core.loot_manager' -> 'spectrehud.core.loot_manager')
+    Handles __name__ (e.g. 'core.loot.manager' -> 'spectrehud.core.loot.manager')
     and short tags (e.g. 'loot' -> 'spectrehud.loot') without duplication.
     """
     base = setup_logger("spectrehud")

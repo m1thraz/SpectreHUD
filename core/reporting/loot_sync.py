@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
-from core.loot_manager import CATEGORIES
+from core.loot.manager import CATEGORIES
 
 # Regex matching SpectreHUD loot markers strictly: <!-- spectre:loot:{id}:{hash} -->
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")

@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.template_engine import TemplateEngine
+from core.snippets.interpolator import TemplateEngine
 
 
 class TestTemplateParams(unittest.TestCase):
@@ -66,7 +66,7 @@ class TestTemplateParams(unittest.TestCase):
         self.assertEqual(rendered, "smbclient //10.10.10.70/share -U alice%Password123!")
 
     def test_full_parameter_tags_and_smart_presets(self):
-        from core.template_engine import SMART_PRESETS
+        from core.snippets.interpolator import SMART_PRESETS
 
         all_tags = [
             "DOMAIN",

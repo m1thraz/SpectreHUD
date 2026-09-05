@@ -16,7 +16,7 @@ from core.project.validator import (
 from core.project.repository import (
     ProjectRepository,
 )
-from core.project_lock_service import ProjectLockService
+from core.project.lock_service import ProjectLockService
 
 logger = get_logger("projects")
 

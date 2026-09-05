@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint
 from PyQt6.QtGui import QCursor, QGuiApplication, QKeyEvent
 
-from core.loot_manager import VALID_CATEGORY_IDS
+from core.loot.manager import VALID_CATEGORY_IDS
 from core.i18n import t
 
 

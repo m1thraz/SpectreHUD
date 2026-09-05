@@ -12,9 +12,9 @@ from PyQt6.QtCore import QMimeData, QUrl
 from PyQt6.QtGui import QShortcut
 
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.report_file_manager import ReportFileManager
+from core.reporting.file_manager import ReportFileManager
 from core.i18n import t
 from ui.report.dialogs import ReportGenerationDialog
 from ui.report.preview import ReportPreviewEdit
@@ -674,7 +674,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertIn("MySQL Root", self.tab.editor.toPlainText())
 
         # 3. ReportBackupError handling
-        from core.report_file_manager import ReportBackupError, ReportSaveError
+        from core.reporting.file_manager import ReportBackupError, ReportSaveError
 
         with (
             patch.object(

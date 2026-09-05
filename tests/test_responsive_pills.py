@@ -7,7 +7,7 @@ import pytest
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
 from PyQt6.QtGui import QFontMetrics, QFont
 
-from core.snippet_manager import SnippetManager
+from core.snippets.manager import SnippetManager
 from ui.controllers.cheatsheet_controller import (
     CheatsheetController,
     _order_categories,

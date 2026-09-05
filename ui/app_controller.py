@@ -9,13 +9,13 @@ from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.config import ConfigManager
-from core.snippet_manager import SnippetManager
-from core.loot_manager import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
-from core.screenshot_manager import ScreenshotManager
-from core.screenshot_transaction_service import ScreenshotTransactionService
-from core.project_session_service import ProjectSessionService
+from core.screenshots.manager import ScreenshotManager
+from core.screenshots.transaction_service import ScreenshotTransactionService
+from core.project.session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
 from core.event_bus import EventBus, EventType

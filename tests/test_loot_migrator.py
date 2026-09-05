@@ -1,6 +1,6 @@
 """Tests for the isolated loot schema migrator."""
 
-from core.loot_migrator import LootMigrator
+from core.loot.migrator import LootMigrator
 
 
 VALID_CATEGORIES = {"recon", "access", "misc"}

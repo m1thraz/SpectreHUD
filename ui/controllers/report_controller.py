@@ -3,9 +3,9 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from core.project import ProjectManager
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.report_file_manager import ReportFileManager
+from core.reporting.file_manager import ReportFileManager
 from core.config import ConfigManager
 from core.reporting.note_formatter import append_report_note
 

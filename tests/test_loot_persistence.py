@@ -3,7 +3,7 @@ import json
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot_manager import LootManager
+from core.loot.manager import LootManager
 from core.storage import PersistenceError
 from unittest.mock import patch
 

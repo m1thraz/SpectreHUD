@@ -3,8 +3,8 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.clipboard_history import ClipboardHistory
-from core.loot_manager import LootManager
-from core.report_builder import ReportBuilder
+from core.loot.manager import LootManager
+from core.reporting.builder import ReportBuilder
 from ui.clipboard_monitor import ClipboardMonitor
 
 

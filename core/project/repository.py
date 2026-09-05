@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, List, Union
 from core.logger import get_logger
 from core.storage import PersistenceError
 from core.atomic_write import atomic_write_json, atomic_write_text
-from core.project_lock_service import ProjectLockService
+from core.project.lock_service import ProjectLockService
 from core.project.validator import (
     validate_project_name,
     validate_workspace_boundary,

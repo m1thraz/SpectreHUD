@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional
 from PyQt6.QtCore import Qt, QMimeData, QEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from core.loot_manager import CATEGORIES
+from core.loot.manager import CATEGORIES
 from ui.loot_card import LootCard
 
 
