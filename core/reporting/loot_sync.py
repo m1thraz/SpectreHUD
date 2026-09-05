@@ -230,6 +230,89 @@ def _match_section_for_category(
     return None
 
 
+def _compute_section_insertion(
+    sec_text: str,
+    c_start: int,
+    s_end: int,
+    rendered_blocks: str,
+    report_text: str,
+) -> Tuple[int, int, str]:
+    """Determines insertion position, replacement length, and insertion content for a section."""
+    # Check if empty placeholder notice is present to clean up
+    empty_notice_de = "*Keine Einträge in dieser Phase.*"
+    empty_notice_en = "*No entries captured for this phase.*"
+    empty_notice_match = None
+    for enotice in (empty_notice_de, empty_notice_en):
+        if enotice in sec_text:
+            empty_notice_match = enotice
+            break
+
+    # Check for notes placeholder
+    notes_pos = -1
+    for placeholder in (SECTION_NOTES_PLACEHOLDER_DE, SECTION_NOTES_PLACEHOLDER_EN):
+        idx = sec_text.find(placeholder)
+        if idx != -1:
+            notes_pos = idx
+            break
+
+    if empty_notice_match is not None:
+        # Replace empty notice with rendered blocks
+        en_idx = sec_text.find(empty_notice_match)
+        # Check for trailing newlines after notice
+        en_len = len(empty_notice_match)
+        while en_idx + en_len < len(sec_text) and sec_text[en_idx + en_len] in "\r\n":
+            en_len += 1
+        return (c_start + en_idx, en_len, rendered_blocks)
+
+    if notes_pos != -1:
+        # Insert right before notes placeholder
+        insert_pos = c_start + notes_pos
+        # Ensure proper newline spacing before placeholder
+        insert_content = rendered_blocks
+        if not insert_content.endswith("\n\n"):
+            insert_content += "\n"
+        return (insert_pos, 0, insert_content)
+
+    # Insert at the end of the section
+    insert_pos = s_end
+    prefix = ""
+    if insert_pos > 0 and not report_text[:insert_pos].endswith("\n\n"):
+        prefix = "\n" if report_text[:insert_pos].endswith("\n") else "\n\n"
+    return (insert_pos, 0, prefix + rendered_blocks)
+
+
+def _apply_fallback_section(
+    updated_text: str,
+    fallback_entries: List[Dict[str, Any]],
+    language: str,
+) -> str:
+    """Inserts or appends fallback section for unmatched loot categories."""
+    is_de = (language or "").lower().startswith("de")
+    fallback_title = FALLBACK_SECTION_TITLE_DE if is_de else FALLBACK_SECTION_TITLE_EN
+    fallback_header = f"## {fallback_title}"
+    existing_fb_sections = [
+        s for s in _find_h2_sections(updated_text)
+        if s[0] in (FALLBACK_SECTION_TITLE_DE, FALLBACK_SECTION_TITLE_EN, fallback_title)
+    ]
+    rendered_fb_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(fallback_entries))
+
+    if existing_fb_sections:
+        # Insert at the end of existing fallback section
+        all_s = _find_h2_sections(updated_text)
+        fb_idx = next(i for i, s in enumerate(all_s) if s[1] == existing_fb_sections[-1][1])
+        fb_s_end = all_s[fb_idx + 1][1] if fb_idx + 1 < len(all_s) else len(updated_text)
+        prefix = ""
+        if not updated_text[:fb_s_end].endswith("\n\n"):
+            prefix = "\n" if updated_text[:fb_s_end].endswith("\n") else "\n\n"
+        return updated_text[:fb_s_end] + prefix + rendered_fb_blocks + updated_text[fb_s_end:]
+
+    # Append new fallback section at document end
+    prefix = "\n\n" if not updated_text.endswith("\n\n") else ""
+    if not updated_text.endswith("\n") and updated_text:
+        prefix = "\n\n"
+    return updated_text + prefix + f"{fallback_header}\n\n" + rendered_fb_blocks
+
+
 def append_missing_loot_to_text(
     report_text: str,
     loot_entries: Iterable[Mapping[str, Any]],
@@ -290,48 +373,7 @@ def append_missing_loot_to_text(
 
         # Render loot blocks in the canonical phase order (matching template_engine's reversed)
         rendered_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(cat_entries))
-
-        # Check if empty placeholder notice is present to clean up
-        empty_notice_de = "*Keine Einträge in dieser Phase.*"
-        empty_notice_en = "*No entries captured for this phase.*"
-        empty_notice_match = None
-        for enotice in (empty_notice_de, empty_notice_en):
-            if enotice in sec_text:
-                empty_notice_match = enotice
-                break
-
-        # Check for notes placeholder
-        notes_pos = -1
-        for placeholder in (SECTION_NOTES_PLACEHOLDER_DE, SECTION_NOTES_PLACEHOLDER_EN):
-            idx = sec_text.find(placeholder)
-            if idx != -1:
-                notes_pos = idx
-                break
-
-        if empty_notice_match is not None:
-            # Replace empty notice with rendered blocks
-            en_idx = sec_text.find(empty_notice_match)
-            # Check for trailing newlines after notice
-            en_len = len(empty_notice_match)
-            while en_idx + en_len < len(sec_text) and sec_text[en_idx + en_len] in "\r\n":
-                en_len += 1
-            insert_pos = c_start + en_idx
-            insertions.append((insert_pos, en_len, rendered_blocks))
-        elif notes_pos != -1:
-            # Insert right before notes placeholder
-            insert_pos = c_start + notes_pos
-            # Ensure proper newline spacing before placeholder
-            insert_content = rendered_blocks
-            if not insert_content.endswith("\n\n"):
-                insert_content += "\n"
-            insertions.append((insert_pos, 0, insert_content))
-        else:
-            # Insert at the end of the section
-            insert_pos = s_end
-            prefix = ""
-            if insert_pos > 0 and not report_text[:insert_pos].endswith("\n\n"):
-                prefix = "\n" if report_text[:insert_pos].endswith("\n") else "\n\n"
-            insertions.append((insert_pos, 0, prefix + rendered_blocks))
+        insertions.append(_compute_section_insertion(sec_text, c_start, s_end, rendered_blocks, report_text))
 
     # Apply insertions from bottom to top so positions remain valid
     insertions.sort(key=lambda x: x[0], reverse=True)
@@ -344,33 +386,9 @@ def append_missing_loot_to_text(
         )
 
     # Handle fallback section if any categories were not matched
-    used_fallback = False
+    used_fallback = bool(fallback_entries)
     if fallback_entries:
-        used_fallback = True
-        is_de = (language or "").lower().startswith("de")
-        fallback_title = FALLBACK_SECTION_TITLE_DE if is_de else FALLBACK_SECTION_TITLE_EN
-        fallback_header = f"## {fallback_title}"
-        existing_fb_sections = [
-            s for s in _find_h2_sections(updated_text)
-            if s[0] in (FALLBACK_SECTION_TITLE_DE, FALLBACK_SECTION_TITLE_EN, fallback_title)
-        ]
-        rendered_fb_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(fallback_entries))
-
-        if existing_fb_sections:
-            # Insert at the end of existing fallback section
-            all_s = _find_h2_sections(updated_text)
-            fb_idx = next(i for i, s in enumerate(all_s) if s[1] == existing_fb_sections[-1][1])
-            fb_s_end = all_s[fb_idx + 1][1] if fb_idx + 1 < len(all_s) else len(updated_text)
-            prefix = ""
-            if not updated_text[:fb_s_end].endswith("\n\n"):
-                prefix = "\n" if updated_text[:fb_s_end].endswith("\n") else "\n\n"
-            updated_text = updated_text[:fb_s_end] + prefix + rendered_fb_blocks + updated_text[fb_s_end:]
-        else:
-            # Append new fallback section at document end
-            prefix = "\n\n" if not updated_text.endswith("\n\n") else ""
-            if not updated_text.endswith("\n") and updated_text:
-                prefix = "\n\n"
-            updated_text = updated_text + prefix + f"{fallback_header}\n\n" + rendered_fb_blocks
+        updated_text = _apply_fallback_section(updated_text, fallback_entries, language)
 
     return AppendResult(
         text=updated_text,

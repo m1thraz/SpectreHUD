@@ -322,32 +322,14 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
     return "\n".join(lines)
 
 
-def _render_appendix(section: TemplateSection, context: ReportContext, lang: str) -> str:
-    clip_history = context.clipboard_history
-    target_ip = context.target_ip
-    filtered_clips = (
-        [
-            c
-            for c in clip_history
-            if not target_ip or target_ip == "all" or c.get("target_ip") == target_ip
-        ]
-        if clip_history
-        else []
-    )
-    screenshot_entries = [
-        e
-        for e in context.loot_entries
-        if e.get("type") == "screenshot"
-        and (not target_ip or target_ip == "all" or e.get("target_ip") == target_ip)
-    ]
-
-    lines = [
+def _render_appendix_a_history(filtered_clips: List[Dict[str, Any]], lang: str) -> List[str]:
+    """Renders Appendix A: Terminal Command History lines."""
+    heading = (
         "## Anhang A: Chronologischer Befehlsverlauf (Terminal History)"
         if lang == "de"
-        else "## Appendix A: Terminal Command History",
-        "",
-    ]
-
+        else "## Appendix A: Terminal Command History"
+    )
+    lines = [heading, ""]
     if not filtered_clips:
         no_cmds = (
             "*Keine Clipboard-Historie aufgezeichnet.*"
@@ -368,12 +350,13 @@ def _render_appendix(section: TemplateSection, context: ReportContext, lang: str
             lines.append(f"#### {i}. {_wrap_inline_code(ts)}{target_tag}")
             lines.extend(_wrap_code_fence(item.get("text", ""), lang="bash"))
             lines.append("")
+    return lines
 
-    lines.append("---")
-    lines.append("")
-    lines.append("## Anhang B: Screenshots" if lang == "de" else "## Appendix B: Screenshots")
-    lines.append("")
 
+def _render_appendix_b_screenshots(screenshot_entries: List[Dict[str, Any]], lang: str) -> List[str]:
+    """Renders Appendix B: Screenshots lines."""
+    heading = "## Anhang B: Screenshots" if lang == "de" else "## Appendix B: Screenshots"
+    lines = [heading, ""]
     if not screenshot_entries:
         no_screens = (
             "*Keine Screenshots in diesem Projekt vorhanden.*"
@@ -391,6 +374,32 @@ def _render_appendix(section: TemplateSection, context: ReportContext, lang: str
             else:
                 lines.append(f"![{stitle}]({scontent})")
             lines.append("")
+    return lines
+
+
+def _render_appendix(section: TemplateSection, context: ReportContext, lang: str) -> str:
+    clip_history = context.clipboard_history
+    target_ip = context.target_ip
+    filtered_clips = (
+        [
+            c
+            for c in clip_history
+            if not target_ip or target_ip == "all" or c.get("target_ip") == target_ip
+        ]
+        if clip_history
+        else []
+    )
+    screenshot_entries = [
+        e
+        for e in context.loot_entries
+        if e.get("type") == "screenshot"
+        and (not target_ip or target_ip == "all" or e.get("target_ip") == target_ip)
+    ]
+
+    lines = _render_appendix_a_history(filtered_clips, lang)
+    lines.append("---")
+    lines.append("")
+    lines.extend(_render_appendix_b_screenshots(screenshot_entries, lang))
 
     return "\n".join(lines)
 

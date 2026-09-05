@@ -215,6 +215,27 @@ def format_inline(text: str) -> str:
     return res
 
 
+def _render_html_table(table_rows: List[List[str]]) -> List[str]:
+    """Renders a parsed markdown table (header + body rows) to HTML lines."""
+    if not table_rows:
+        return []
+    lines = ['<div class="table-container"><table>', "<thead><tr>"]
+    header = table_rows[0]
+    for cell in header:
+        lines.append(f"<th>{format_inline(cell)}</th>")
+    lines.append("</tr></thead>")
+    if len(table_rows) > 1:
+        lines.append("<tbody>")
+        for row in table_rows[1:]:
+            lines.append("<tr>")
+            for cell in row:
+                lines.append(f"<td>{format_inline(cell)}</td>")
+            lines.append("</tr>")
+        lines.append("</tbody>")
+    lines.append("</table></div>")
+    return lines
+
+
 def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
     """Converts Markdown text to HTML body structure."""
     clean_md = strip_report_markers(md_text)
@@ -241,21 +262,7 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
     def _flush_table():
         nonlocal in_table, table_rows
         if in_table and table_rows:
-            html_lines.append('<div class="table-container"><table>')
-            header = table_rows[0]
-            html_lines.append("<thead><tr>")
-            for cell in header:
-                html_lines.append(f"<th>{format_inline(cell)}</th>")
-            html_lines.append("</tr></thead>")
-            if len(table_rows) > 1:
-                html_lines.append("<tbody>")
-                for row in table_rows[1:]:
-                    html_lines.append("<tr>")
-                    for cell in row:
-                        html_lines.append(f"<td>{format_inline(cell)}</td>")
-                    html_lines.append("</tr>")
-                html_lines.append("</tbody>")
-            html_lines.append("</table></div>")
+            html_lines.extend(_render_html_table(table_rows))
             in_table = False
             table_rows = []
 

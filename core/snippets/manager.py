@@ -152,12 +152,8 @@ class SnippetManager:
         """Returns True if the snippet ID is pinned as a favorite."""
         return snippet_id in self.favorite_ids
 
-    def load_all(self) -> None:
-        """Loads both default bundled snippets and user-added custom snippets."""
-        self.categories = []
-        self.snippets = []
-
-        # 1. Load default snippets
+    def _load_default_snippets(self) -> None:
+        """Loads default bundled snippets from default_snippets_path."""
         from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
 
         if self.default_snippets_path.exists() and is_file_size_valid(
@@ -198,28 +194,44 @@ class SnippetManager:
                     f"Error reading default snippets from {self.default_snippets_path}: {e}"
                 )
 
-        # 2. Load user custom snippets
+    def _load_user_snippets(self) -> List[Dict[str, Any]]:
+        """Loads and validates custom user snippets from user_snippets_path."""
+        from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
+
+        user_snippets: List[Dict[str, Any]] = []
+        if not self.user_snippets_path.exists():
+            return user_snippets
+
+        if not is_file_size_valid(self.user_snippets_path, MAX_SNIPPETS_FILE_SIZE):
+            logger.error(
+                f"User snippets file {self.user_snippets_path} exceeds maximum size limit of {MAX_SNIPPETS_FILE_SIZE} bytes. Rejecting oversized file."
+            )
+            return user_snippets
+
+        from core.validators import validate_user_snippets
+
+        try:
+            with open(self.user_snippets_path, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                user_snippets = validate_user_snippets(user_data)
+                for s in user_snippets:
+                    s["is_favorite"] = s.get("id") in self.favorite_ids
+        except (json.JSONDecodeError, RecursionError) as e:
+            logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
+        except (OSError, UnicodeDecodeError, KeyError) as e:
+            logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")
+
+        return user_snippets
+
+    def load_all(self) -> None:
+        """Loads both default bundled snippets and user-added custom snippets."""
+        self.categories = []
+        self.snippets = []
+
+        self._load_default_snippets()
+
         custom_category = {"id": "custom_snippets", "name": "Custom Notes & Snippets", "icon": ""}
-
-        user_snippets = []
-        if self.user_snippets_path.exists():
-            if not is_file_size_valid(self.user_snippets_path, MAX_SNIPPETS_FILE_SIZE):
-                logger.error(
-                    f"User snippets file {self.user_snippets_path} exceeds maximum size limit of {MAX_SNIPPETS_FILE_SIZE} bytes. Rejecting oversized file."
-                )
-            else:
-                from core.validators import validate_user_snippets
-
-                try:
-                    with open(self.user_snippets_path, "r", encoding="utf-8") as f:
-                        user_data = json.load(f)
-                        user_snippets = validate_user_snippets(user_data)
-                        for s in user_snippets:
-                            s["is_favorite"] = s.get("id") in self.favorite_ids
-                except (json.JSONDecodeError, RecursionError) as e:
-                    logger.error(f"Corrupted user snippets JSON at {self.user_snippets_path}: {e}")
-                except (OSError, UnicodeDecodeError, KeyError) as e:
-                    logger.error(f"Error reading user snippets from {self.user_snippets_path}: {e}")
+        user_snippets = self._load_user_snippets()
 
         if not any(c["id"] == "custom_snippets" for c in self.categories):
             self.categories.append(custom_category)

@@ -106,26 +106,8 @@ class FuzzyMatcher:
 
             # 8. Fuzzy / Typo Tolerance (only for tokens of length >= 3)
             if token_score == 0.0 and t_len >= 3:
-                # Typo candidates: primary tool names and tags
                 candidates = [template_first_word, title_first_word] + tags
-                for w in candidates:
-                    if not w or len(w) < 3:
-                        continue
-                    w_len = len(w)
-                    # 1. Missing character in query (e.g. 'nmp' for 'nmap', 'chisl' for 'chisel', 'hydr' for 'hydra')
-                    if w_len == t_len + 1 and cls._is_subsequence(token, w):
-                        token_score = max(token_score, 45.0)
-                        break
-                    # 2. Extra character in query (e.g. 'curll' for 'curl', 'nmapp' for 'nmap')
-                    if t_len == w_len + 1 and w_len >= 4 and cls._is_subsequence(w, token):
-                        token_score = max(token_score, 45.0)
-                        break
-                    # 3. Single substitution/transposition typo (e.g. 'whos' for 'whois', length >= 4)
-                    if t_len == w_len and t_len >= 4:
-                        ratio = difflib.SequenceMatcher(None, token, w).ratio()
-                        if ratio >= 0.75:
-                            token_score = max(token_score, 40.0 * ratio)
-                            break
+                token_score = cls._score_fuzzy_typo(token, t_len, candidates)
 
             # If any token in a multi-token query fails to match, reject snippet
             if token_score == 0.0:
@@ -134,6 +116,26 @@ class FuzzyMatcher:
             total_snippet_score += token_score
 
         return total_snippet_score
+
+    @classmethod
+    def _score_fuzzy_typo(cls, token: str, t_len: int, candidates: List[str]) -> float:
+        """Evaluates typo tolerance (Rule 8) against primary tool names and tags."""
+        for w in candidates:
+            if not w or len(w) < 3:
+                continue
+            w_len = len(w)
+            # 1. Missing character in query (e.g. 'nmp' for 'nmap', 'chisl' for 'chisel', 'hydr' for 'hydra')
+            if w_len == t_len + 1 and cls._is_subsequence(token, w):
+                return 45.0
+            # 2. Extra character in query (e.g. 'curll' for 'curl', 'nmapp' for 'nmap')
+            if t_len == w_len + 1 and w_len >= 4 and cls._is_subsequence(w, token):
+                return 45.0
+            # 3. Single substitution/transposition typo (e.g. 'whos' for 'whois', length >= 4)
+            if t_len == w_len and t_len >= 4:
+                ratio = difflib.SequenceMatcher(None, token, w).ratio()
+                if ratio >= 0.75:
+                    return 40.0 * ratio
+        return 0.0
 
     @classmethod
     def rank_snippets(
