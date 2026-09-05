@@ -308,6 +308,7 @@ class TestAppController(unittest.TestCase):
             mock_add.assert_called_once_with(
                 parent_widget=None,
                 target_ip="10.10.10.55",
+                default_category="misc",
                 modal=False,
                 on_accepted=unittest.mock.ANY,
             )
@@ -503,6 +504,23 @@ class TestAppController(unittest.TestCase):
                         mock_show.assert_called_once()
                         mock_raise.assert_called_once()
                         mock_act.assert_called_once()
+
+    def test_open_shortcuts_dialog(self):
+        self.assertIsNone(self.controller.shortcuts_dialog)
+        self.controller.open_shortcuts_dialog()
+        self.assertIsNotNone(self.controller.shortcuts_dialog)
+        first_instance = self.controller.shortcuts_dialog
+        self.assertTrue(first_instance.isVisible())
+
+        # Second call should not recreate, but raise existing
+        with patch.object(first_instance, "raise_") as mock_raise:
+            with patch.object(first_instance, "activateWindow") as mock_act:
+                self.controller.open_shortcuts_dialog()
+                self.assertIs(self.controller.shortcuts_dialog, first_instance)
+                mock_raise.assert_called_once()
+                mock_act.assert_called_once()
+
+        first_instance.close()
 
 
 if __name__ == "__main__":

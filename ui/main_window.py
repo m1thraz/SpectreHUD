@@ -258,6 +258,12 @@ class MainWindow(QMainWindow):
             QKeySequence("Ctrl+Space"), self, activated=self.toggle_fullscreen
         )
         self.shortcut_fullscreen.setContext(Qt.ShortcutContext.WindowShortcut)
+        self.shortcut_help = QShortcut(
+            QKeySequence("Ctrl+/"), self, activated=self.app.open_shortcuts_dialog
+        )
+        self.shortcut_help_f1 = QShortcut(
+            QKeySequence("F1"), self, activated=self.app.open_shortcuts_dialog
+        )
 
     def _center_on_screen(self) -> None:
         screen = QGuiApplication.primaryScreen()
@@ -349,6 +355,11 @@ class MainWindow(QMainWindow):
         try:
             if hasattr(self, "app") and hasattr(self.app, "phase_hud") and self.app.phase_hud:
                 self.app.phase_hud.close()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "app") and hasattr(self.app, "_shortcuts_dialog") and self.app._shortcuts_dialog:
+                self.app._shortcuts_dialog.close()
         except Exception:
             pass
         try:

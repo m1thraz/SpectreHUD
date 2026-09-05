@@ -228,12 +228,17 @@ class AppController(QObject):
             "report": CallbackContentRenderer(lambda: None, self._render_report),
         }
 
+        self._shortcuts_dialog = None
         self._wire_signals()
 
         # Synchronize initial language
         initial_lang = self.config.get("language", "en")
         get_i18n().set_locale(initial_lang)
         self.snippet_manager.set_language(initial_lang)
+
+    @property
+    def shortcuts_dialog(self):
+        return self._shortcuts_dialog
 
     @property
     def active_mode(self) -> str:
@@ -264,6 +269,7 @@ class AppController(QObject):
         self.var_bar.variables_changed.connect(self._on_variables_changed)
         self.var_bar.add_snippet_clicked.connect(self._on_add_button_clicked)
         self.footer.always_on_top_toggled.connect(self._on_always_on_top_toggled)
+        self.footer.shortcuts_requested.connect(self.open_shortcuts_dialog)
 
         # Data & Controller Events
         self.cheatsheet_ctrl.snippets_updated.connect(self._on_data_updated)
@@ -341,6 +347,24 @@ class AppController(QObject):
 
         pos = button.mapToGlobal(button.rect().bottomLeft())
         menu.exec(pos)
+
+    def open_shortcuts_dialog(self) -> None:
+        """Opens or focuses the central shortcut overview dialog."""
+        if (
+            hasattr(self, "_shortcuts_dialog")
+            and self._shortcuts_dialog is not None
+            and self._shortcuts_dialog.isVisible()
+        ):
+            self._shortcuts_dialog.raise_()
+            self._shortcuts_dialog.activateWindow()
+            return
+
+        from ui.shortcuts_dialog import ShortcutHelpDialog
+
+        self._shortcuts_dialog = ShortcutHelpDialog(
+            config_manager=self.config, parent=self.window
+        )
+        self._shortcuts_dialog.show()
 
     def trigger_quick_note(self) -> None:
         """Opens the lightweight quick note capture popup."""

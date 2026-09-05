@@ -1,5 +1,13 @@
 from typing import Optional
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QCheckBox, QSizeGrip, QWidget
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizeGrip,
+    QWidget,
+)
 from PyQt6.QtCore import pyqtSignal, Qt
 from core.i18n import t
 
@@ -12,6 +20,7 @@ class FooterPanel(QFrame):
     """
 
     always_on_top_toggled = pyqtSignal(bool)
+    shortcuts_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -22,21 +31,38 @@ class FooterPanel(QFrame):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(14, 4, 6, 4)
 
-        # 1. Hotkey Status Hint Label
-        self.lbl_status = QLabel(
-            t(
-                "footer.status",
-                "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {loot_hotkey}: Loot | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
-                hotkey="Ctrl+Alt+H",
-                ip_hotkey="Ctrl+Alt+I",
-                note_hotkey="Ctrl+Alt+N",
-                loot_hotkey="Ctrl+Alt+L",
-                quit_hotkey="Ctrl+Alt+Q",
-            )
+        # 1. Hotkey Status Hint -> Clean single entry point to Shortcuts overview
+        self.btn_shortcuts = QPushButton(t("footer.shortcuts_hint", "Ctrl+/  Shortcuts"), self)
+        self.btn_shortcuts.setObjectName("FooterShortcutsBtn")
+        self.btn_shortcuts.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_shortcuts.setToolTip(
+            t("footer.shortcuts_tip", "Tastenkürzel-Übersicht öffnen (Ctrl+/)")
         )
-        self.lbl_status.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_status.setObjectName("FooterText")
-        layout.addWidget(self.lbl_status)
+        self.btn_shortcuts.setStyleSheet(
+            """
+            QPushButton#FooterShortcutsBtn {
+                background-color: transparent;
+                border: 1px solid rgba(0, 229, 255, 0.25);
+                border-radius: 4px;
+                color: #8b949e;
+                font-size: 11px;
+                font-weight: 700;
+                font-family: Consolas, "Courier New", monospace;
+                padding: 2px 8px;
+            }
+            QPushButton#FooterShortcutsBtn:hover {
+                color: #00e5ff;
+                border-color: rgba(0, 229, 255, 0.6);
+                background-color: rgba(0, 229, 255, 0.08);
+            }
+            """
+        )
+        self.btn_shortcuts.clicked.connect(self.shortcuts_requested.emit)
+        layout.addWidget(self.btn_shortcuts)
+
+        # Legacy label kept for backward compatibility
+        self.lbl_status = QLabel("", self)
+        self.lbl_status.setVisible(False)
 
         layout.addStretch()
 
@@ -100,28 +126,17 @@ class FooterPanel(QFrame):
 
     def update_hotkey_display(
         self,
-        hotkey_raw: str,
+        hotkey_raw: str = "<ctrl>+<alt>+h",
         quit_hotkey_raw: str = "<ctrl>+<alt>+q",
         quick_note_hotkey_raw: str = "<ctrl>+<alt>+n",
         quick_ip_hotkey_raw: str = "<ctrl>+<alt>+i",
         quick_loot_hotkey_raw: str = "<ctrl>+<alt>+l",
     ) -> None:
-        hotkey_display = self._format_hotkey(hotkey_raw)
-        quit_hotkey_display = self._format_hotkey(quit_hotkey_raw)
-        quick_note_display = self._format_hotkey(quick_note_hotkey_raw)
-        quick_ip_display = self._format_hotkey(quick_ip_hotkey_raw)
-        quick_loot_display = self._format_hotkey(quick_loot_hotkey_raw)
-        self.lbl_status.setText(
-            t(
-                "footer.status",
-                "{hotkey}: Toggle | {ip_hotkey}: IP | {note_hotkey}: Note | {loot_hotkey}: Loot | {quit_hotkey}: Quit | Ctrl+P: REC | Ctrl+S: Snip | Esc: Hide",
-                hotkey=hotkey_display,
-                ip_hotkey=quick_ip_display,
-                note_hotkey=quick_note_display,
-                loot_hotkey=quick_loot_display,
-                quit_hotkey=quit_hotkey_display,
-            )
+        self.btn_shortcuts.setText(t("footer.shortcuts_hint", "Ctrl+/  Shortcuts"))
+        self.btn_shortcuts.setToolTip(
+            t("footer.shortcuts_tip", "Tastenkürzel-Übersicht öffnen (Ctrl+/)")
         )
+        self.lbl_status.setText(t("footer.shortcuts_hint", "Ctrl+/  Shortcuts"))
         self.chk_always_on_top.setText(t("footer.always_on_top", "Im Vordergrund"))
         self.chk_always_on_top.setToolTip(
             t(
