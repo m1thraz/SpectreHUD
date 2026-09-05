@@ -6,6 +6,24 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **Central Keyboard Shortcut Overview & Help Dialog**:
+  - Compact, dark-themed `ShortcutHelpDialog` accessible via `Ctrl+/` (or `F1`) displaying all global and in-app shortcuts grouped by category (*Pentest Phases*, *Quick Capture & Controls*, *Navigation & Modes*, *General*, *Report Editor*).
+  - Real-time search filter across key sequences and descriptions with automatic empty-category hiding.
+  - Distinct visual scoping for `GLOBAL` (system-wide) vs. `IN-APP` shortcuts and styled key badges.
+  - Single source of truth in pure Python headless service `core/shortcuts.py` (`ShortcutDefinition`), dynamically reflecting custom global hotkeys from configuration.
+- **Active Pentest Phase Workflow Mode**:
+  - Global hotkeys (`Ctrl+Alt+1..6`) and header dropdown to switch active pentest phase at any time.
+  - Automatic inheritance of active phase for newly created Quick Loot, Quick Notes, and Clipboard History entries.
+  - Multi-monitor HUD toast overlay confirming background phase switches on the screen where the cursor currently resides.
+
+### Changed
+
+- **Simplified Footer Status**:
+  - Replaced crowded multi-shortcut status text in the bottom footer with a single compact, clickable button hint (`Ctrl+/  Shortcuts`).
+  - Preserved existing entry count, Always-on-Top checkbox, and corner resize grip.
+
 ## [2.1.0] - 2026-09-05
 
 ### Added
@@ -34,6 +52,9 @@ semantic versioning.
   monitor, preserving privacy defaults, capture behavior, and project-session storage.
 
 ### Fixed
+
+- Restore flat Cheatsheet, History, Notes and list surfaces after the Kanban
+  contrast change; restrict raised loot-card styling to board cards.
 
 - Restore visible Kanban card surfaces by scoping scroll-area styles and enforcing
   theme-derived card/column contrast. Keep type badges fully visible in narrow
