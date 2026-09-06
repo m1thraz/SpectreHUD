@@ -288,7 +288,7 @@ class ObsidianExporter:
         """Append marker-new loot while preserving user-owned note content.
 
         The resolved Markdown target must remain inside the configured vault, preventing
-        path and symlink escapes. Existing note markers provide cross-call idempotence;
+        path and symlink escapes. Existing note entry markers provide cross-call idempotence;
         attachments remain outside this operation, and atomic replacement preserves the
         prior note on write failure.
         """

@@ -18,7 +18,6 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from core.loot.manager import CATEGORIES
 
-# Regex matching SpectreHUD loot markers strictly: <!-- spectre:loot:{id}:{hash} -->
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")
 STRIP_MARKER_REGEX = re.compile(
     r"<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\r?\n?"
@@ -200,19 +199,16 @@ def _match_section_for_category(
     section_bounds: List[Tuple[str, int, int]],
 ) -> Optional[Tuple[str, int, int]]:
     """Matches a category to an existing H2 section by title, substring, or standard keywords."""
-    # 1. Exact match (case-insensitive)
     for title, c_start, s_end in section_bounds:
         if title.strip().lower() == expected_title.strip().lower():
             return (title, c_start, s_end)
 
-    # 2. Substring match
     for title, c_start, s_end in section_bounds:
         t_clean = title.strip().lower()
         exp_clean = expected_title.strip().lower()
         if exp_clean in t_clean or t_clean in exp_clean:
             return (title, c_start, s_end)
 
-    # 3. Semantic category keyword matching
     keywords: Dict[str, List[str]] = {
         "recon": ["recon", "enumeration", "discovery", "footprint", "information gathering"],
         "access": ["initial access", "exploitation", "access"],
@@ -237,7 +233,6 @@ def _compute_section_insertion(
     report_text: str,
 ) -> Tuple[int, int, str]:
     """Determines insertion position, replacement length, and insertion content for a section."""
-    # Check if empty placeholder notice is present to clean up
     empty_notice_de = "*Keine Einträge in dieser Phase.*"
     empty_notice_en = "*No entries captured for this phase.*"
     empty_notice_match = None
@@ -246,7 +241,6 @@ def _compute_section_insertion(
             empty_notice_match = enotice
             break
 
-    # Check for notes placeholder
     notes_pos = -1
     for placeholder in (SECTION_NOTES_PLACEHOLDER_DE, SECTION_NOTES_PLACEHOLDER_EN):
         idx = sec_text.find(placeholder)
@@ -255,24 +249,19 @@ def _compute_section_insertion(
             break
 
     if empty_notice_match is not None:
-        # Replace empty notice with rendered blocks
         en_idx = sec_text.find(empty_notice_match)
-        # Check for trailing newlines after notice
         en_len = len(empty_notice_match)
         while en_idx + en_len < len(sec_text) and sec_text[en_idx + en_len] in "\r\n":
             en_len += 1
         return (c_start + en_idx, en_len, rendered_blocks)
 
     if notes_pos != -1:
-        # Insert right before notes placeholder
         insert_pos = c_start + notes_pos
-        # Ensure proper newline spacing before placeholder
         insert_content = rendered_blocks
         if not insert_content.endswith("\n\n"):
             insert_content += "\n"
         return (insert_pos, 0, insert_content)
 
-    # Insert at the end of the section
     insert_pos = s_end
     prefix = ""
     if insert_pos > 0 and not report_text[:insert_pos].endswith("\n\n"):
@@ -296,7 +285,6 @@ def _apply_fallback_section(
     rendered_fb_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(fallback_entries))
 
     if existing_fb_sections:
-        # Insert at the end of existing fallback section
         all_s = _find_h2_sections(updated_text)
         fb_idx = next(i for i, s in enumerate(all_s) if s[1] == existing_fb_sections[-1][1])
         fb_s_end = all_s[fb_idx + 1][1] if fb_idx + 1 < len(all_s) else len(updated_text)
@@ -305,7 +293,6 @@ def _apply_fallback_section(
             prefix = "\n" if updated_text[:fb_s_end].endswith("\n") else "\n\n"
         return updated_text[:fb_s_end] + prefix + rendered_fb_blocks + updated_text[fb_s_end:]
 
-    # Append new fallback section at document end
     prefix = "\n\n" if not updated_text.endswith("\n\n") else ""
     if not updated_text.endswith("\n") and updated_text:
         prefix = "\n\n"
@@ -318,14 +305,10 @@ def append_missing_loot_to_text(
     template: Optional[Any] = None,
     language: str = "de",
 ) -> AppendResult:
-    """Additively inserts missing loot entries into their matching phase sections.
+    """Insert only marker-missing loot while preserving all other report bytes.
 
-    Guarantees:
-    - Existing report text outside insertion slices is preserved 100% byte-for-byte.
-    - Stale entries are NOT touched or duplicated.
-    - Entries are inserted before phase note placeholders if present, otherwise at end of phase.
-    - Unmatched categories are placed under a single '## Neu aus Loot ergänzt' fallback section at end.
-    - Preserves exact reversed(phase_entries) rendering order matching regenerate().
+    Stale loot markers remain untouched. Matching entries precede the notes insertion
+    anchor in regeneration order; unmatched categories share one fallback section.
     """
     state = classify_loot_report_state(report_text, loot_entries)
     if not state.missing:
@@ -336,7 +319,6 @@ def append_missing_loot_to_text(
             fallback_categories=(),
         )
 
-    # Group missing entries by category preserving source order
     by_category: Dict[str, List[Dict[str, Any]]] = {}
     for entry in state.missing:
         cat = str(entry.get("category", "misc") or "misc")
@@ -345,14 +327,11 @@ def append_missing_loot_to_text(
     heading_map = _get_category_heading_map(template)
     sections = _find_h2_sections(report_text)
 
-    # Build section range bounds: (title, start_pos, end_pos)
     section_bounds: List[Tuple[str, int, int]] = []
     for idx, (title, s_start, c_start) in enumerate(sections):
         s_end = sections[idx + 1][1] if idx + 1 < len(sections) else len(report_text)
         section_bounds.append((title, c_start, s_end))
 
-    # Determine insertion points
-    # We collect insertions as (insert_pos, replace_len, insertion_text)
     insertions: List[Tuple[int, int, str]] = []
     fallback_entries: List[Dict[str, Any]] = []
     fallback_categories: List[str] = []
@@ -370,11 +349,10 @@ def append_missing_loot_to_text(
         sec_title, c_start, s_end = matched_section
         sec_text = report_text[c_start:s_end]
 
-        # Render loot blocks in the canonical phase order (matching template_engine's reversed)
         rendered_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(cat_entries))
         insertions.append(_compute_section_insertion(sec_text, c_start, s_end, rendered_blocks, report_text))
 
-    # Apply insertions from bottom to top so positions remain valid
+    # Bottom-up application keeps offsets calculated from the original text valid.
     insertions.sort(key=lambda x: x[0], reverse=True)
     updated_text = report_text
     for insert_pos, replace_len, insert_content in insertions:
@@ -384,7 +362,6 @@ def append_missing_loot_to_text(
             + updated_text[insert_pos + replace_len :]
         )
 
-    # Handle fallback section if any categories were not matched
     used_fallback = bool(fallback_entries)
     if fallback_entries:
         updated_text = _apply_fallback_section(updated_text, fallback_entries, language)

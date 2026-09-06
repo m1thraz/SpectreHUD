@@ -218,11 +218,10 @@ def _render_scope_limitations(section: TemplateSection, context: ReportContext, 
 
 
 def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[str]:
-    """Render the canonical loot block shared by regeneration and additive sync.
+    """Emit the stable loot-block shape shared by regeneration and additive sync.
 
-    The marker preceding each heading carries identity and content-hash protocol state;
-    its placement and the type-specific body structure must remain sync-compatible,
-    not merely render to visually equivalent Markdown.
+    When an ID exists, its canonical loot marker must immediately precede the heading;
+    type-specific bodies must remain structurally stable, not merely visually equivalent.
     """
     entry_id = str(entry.get("id", "")).strip()
     marker = format_loot_marker(entry_id, loot_content_hash(entry)) if entry_id else ""
@@ -267,12 +266,7 @@ def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[st
 
 
 def _render_phase_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
-    """Keep one canonical category in the ordering expected by report synchronization.
-
-    Loot is stored newest-first, so entries are reversed for report order. The notes
-    placeholder must follow generated loot because additive sync uses it as its stable
-    insertion boundary for preserving user-authored notes.
-    """
+    """Emit one category oldest-first with the notes insertion anchor after its loot."""
     category_id = section.category_id or "misc"
     cat_obj = next((c for c in CATEGORIES if c["id"] == category_id), None)
     cat_name = cat_obj["name"] if cat_obj else category_id.capitalize()

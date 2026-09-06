@@ -916,11 +916,10 @@ class ReportEditorTab(QWidget):
         super().closeEvent(event)
 
     def _on_regenerate_clicked(self) -> None:
-        """Regenerate destructively while preserving the latest user-authored Markdown.
+        """Commit and save user Markdown before destructive regeneration.
 
-        Preview edits are committed and dirty source is saved before confirmation and
-        backup, so failures cannot silently replace the newest manual work. Unlike the
-        additive loot path, successful regeneration owns the complete report structure.
+        Confirmation follows that save so the backup captures the latest work; unlike
+        additive sync, successful regeneration replaces the complete report structure.
         """
         if not self.current_project:
             return

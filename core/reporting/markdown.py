@@ -237,7 +237,7 @@ def _render_html_table(table_rows: List[List[str]]) -> List[str]:
 
 
 def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
-    """Convert the line-oriented report subset after marker stripping and image resolution.
+    """Convert the line-oriented report subset after loot-marker stripping and image resolution.
 
     Block precedence and delayed inline escaping are structural and export-safety invariants,
     not interchangeable parsing stages.
@@ -281,7 +281,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
     for line in lines:
         stripped = line.strip()
 
-        # Code Fences ```
         if stripped.startswith("```"):
             if in_code_block:
                 raw_code = "\n".join(code_block_lines)
@@ -306,7 +305,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
             code_block_lines.append(line)
             continue
 
-        # Manual Page Break: <!-- spectre:pagebreak -->
         if PAGEBREAK_REGEX.fullmatch(stripped):
             _flush_list()
             _flush_table()
@@ -314,7 +312,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
             html_lines.append(PAGEBREAK_HTML)
             continue
 
-        # Blockquotes >
         if stripped.startswith(">"):
             _flush_list()
             _flush_table()
@@ -324,7 +321,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
         elif in_blockquote:
             _flush_blockquote()
 
-        # Table Rows |
         if stripped.startswith("|") and stripped.endswith("|"):
             _flush_list()
             _flush_blockquote()
@@ -340,7 +336,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
         elif in_table:
             _flush_table()
 
-        # Lists (- or * or 1.)
         unordered_match = re.match(r"^[-*]\s+(.*)$", stripped)
         ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
 

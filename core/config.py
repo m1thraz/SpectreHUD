@@ -100,7 +100,6 @@ class ConfigManager:
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
             migrated = False
-            # Migrate legacy hotkeys to new Ctrl+Alt defaults
             if loaded.get("hotkey") in [
                 "<ctrl>+<shift>+c",
                 "ctrl+shift+c",
