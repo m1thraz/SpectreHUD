@@ -467,19 +467,19 @@ class AppController(QObject):
         self.clipboard_coord.toggle_pause()
 
     def _on_pills_width_changed(self, width: int) -> None:
-        if self.active_mode == "cheatsheet":
-            self.cheatsheet_ctrl.update_pills_width(
-                width, self._select_category, self.search.get_pills_layout()
-            )
-
-    def _on_mode_switched(self, mode: str) -> None:
-        self.refresh_filter_pills()
-        self.refresh_content()
-
-    def refresh_filter_pills(self) -> None:
-        self.search.clear_pills()
-        self._renderer_for_mode().build_pills()
-
+        if self.active_mode == "cheatsheet":
+            self.cheatsheet_ctrl.update_pills_width(
+                width, self._select_category, self.search.get_pills_layout()
+            )
+
+    def _on_mode_switched(self, mode: str) -> None:
+        self.var_bar.set_add_visible(mode in ("cheatsheet", "loot"))
+        self.refresh_filter_pills()
+        self.refresh_content()
+
+    def refresh_filter_pills(self) -> None:
+        self.search.clear_pills()
+        self._renderer_for_mode().build_pills()
     def _renderer_for_mode(self) -> ContentRenderer:
         """Return the registered renderer, preserving History as legacy fallback."""
         return self._renderers.get(self.active_mode, self._renderers["history"])

@@ -1,12 +1,12 @@
 """
-Tests for HistoryCard Split-Button Capture and ClipboardCoordinator.add_history_to_note.
+Tests for HistoryCard Promote button and ClipboardCoordinator.add_history_to_note.
 """
 
 import unittest
-from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QApplication, QWidget
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QMouseEvent
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
+
+from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect, QWidget
 
 from ui.history_card import HistoryCard
 from ui.coordinators.clipboard_coordinator import ClipboardCoordinator
@@ -15,7 +15,7 @@ from ui.coordinators.clipboard_coordinator import ClipboardCoordinator
 app = QApplication.instance() or QApplication([])
 
 
-class TestHistoryCardSplitButton(unittest.TestCase):
+class TestHistoryCardPromoteButton(unittest.TestCase):
     def setUp(self):
         self.entry = {
             "id": "hist-123",
@@ -29,78 +29,160 @@ class TestHistoryCardSplitButton(unittest.TestCase):
     def tearDown(self):
         self.card.close()
 
-    def test_split_button_initial_state(self):
-        self.assertIsNotNone(self.card.btn_capture)
+    def test_promote_button_initial_state(self):
+        self.assertIsNotNone(self.card.btn_promote)
+        label = self.card.btn_promote.text()
         self.assertTrue(
-            "Erfassen" in self.card.btn_capture.text() or "Capture" in self.card.btn_capture.text()
+            "Promote" in label or "Übernehmen" in label,
+            f"Unexpected button label: {label!r}",
         )
-        self.assertIsNotNone(self.card.btn_capture.menu())
+        # No pre-attached QMenu — menu is created dynamically on click.
+        self.assertIsNone(self.card.btn_promote.menu())
 
-    def test_main_click_emits_transfer_to_note(self):
+    def test_no_permanent_edit_or_delete_buttons(self):
+        self.assertFalse(hasattr(self.card, "btn_edit"))
+        self.assertFalse(hasattr(self.card, "btn_delete"))
+
+    def test_promote_note_emits_transfer_to_note_and_disables_button(self):
         notes_emitted = []
         loot_emitted = []
         self.card.transfer_to_note.connect(notes_emitted.append)
         self.card.transfer_to_loot.connect(loot_emitted.append)
 
-        # Click the main button
-        self.card.btn_capture.click()
+        self.card._on_promote_note()
 
         self.assertEqual(len(notes_emitted), 1)
         self.assertEqual(notes_emitted[0]["id"], "hist-123")
-        self.assertEqual(notes_emitted[0]["text"], "nmap -sC -sV 10.10.10.50")
         self.assertEqual(len(loot_emitted), 0)
-        # Verify visual feedback
-        self.assertNotIn("✓", self.card.btn_capture.text())
-        self.assertFalse(self.card.btn_capture.icon().isNull())
+        # Button must be disabled after promoting to notes (no double-promote).
+        self.assertFalse(self.card.btn_promote.isEnabled())
 
-    def test_mouse_press_left_part_triggers_note(self):
-        notes_emitted = []
-        self.card.transfer_to_note.connect(notes_emitted.append)
-
-        # Simulate mouse click on the left portion of the button (x = 20)
-        self.card.btn_capture.resize(100, 30)
-        ev = QMouseEvent(
-            QMouseEvent.Type.MouseButtonPress,
-            QPointF(20, 15),
-            Qt.MouseButton.LeftButton,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier,
-        )
-        self.card.btn_capture.mousePressEvent(ev)
-
-        self.assertEqual(len(notes_emitted), 1)
-        self.assertEqual(notes_emitted[0]["id"], "hist-123")
-
-    def test_menu_actions_exist_and_trigger_signals(self):
-        menu = self.card.btn_capture.menu()
-        self.assertIsNotNone(menu)
-        actions = menu.actions()
-        self.assertEqual(len(actions), 2)
-
-        # Action 0: Als Note erfassen
-        notes_emitted = []
-        self.card.transfer_to_note.connect(notes_emitted.append)
-        actions[0].trigger()
-        self.assertEqual(len(notes_emitted), 1)
-        self.assertEqual(notes_emitted[0]["id"], "hist-123")
-
-        # Action 1: Als Loot erfassen
+    def test_promote_loot_emits_transfer_to_loot(self):
         loot_emitted = []
+        notes_emitted = []
         self.card.transfer_to_loot.connect(loot_emitted.append)
-        actions[1].trigger()
+        self.card.transfer_to_note.connect(notes_emitted.append)
+
+        self.card._on_promote_loot()
+
         self.assertEqual(len(loot_emitted), 1)
         self.assertEqual(loot_emitted[0]["id"], "hist-123")
+        self.assertEqual(len(notes_emitted), 0)
 
-    def test_visual_feedback_resets(self):
-        self.card._on_capture_note()
-        self.assertNotIn("✓", self.card.btn_capture.text())
-        self.assertFalse(self.card.btn_capture.icon().isNull())
-        self.assertFalse(self.card.btn_capture.isEnabled())
-        self.card._reset_capture_btn()
+    def test_promote_note_feedback_label_contains_expected_text(self):
+        from core.i18n import t
+        self.card._on_promote_note()
+        # Text should be the promoted feedback, not the original label.
+        promoted_text = t("history.promoted_as_note", "Note ✓")
+        self.assertEqual(self.card.btn_promote.text(), promoted_text)
+
+    def test_reset_promote_btn_restores_initial_state(self):
+        self.card._on_promote_note()
+        self.card._reset_promote_btn()
+        label = self.card.btn_promote.text()
         self.assertTrue(
-            "Erfassen" in self.card.btn_capture.text() or "Capture" in self.card.btn_capture.text()
+            "Promote" in label or "Übernehmen" in label,
+            f"Unexpected button label after reset: {label!r}",
         )
-        self.assertTrue(self.card.btn_capture.isEnabled())
+        self.assertTrue(self.card.btn_promote.isEnabled())
+
+    def test_context_menu_has_edit_and_delete_actions(self):
+        """contextMenuEvent must produce a menu with exactly two actions."""
+        from PyQt6.QtCore import QPoint
+        from PyQt6.QtGui import QContextMenuEvent
+
+        menus_created = []
+        original_exec = None
+
+        # Intercept QMenu.exec to avoid blocking on native menu.
+        import ui.history_card as hc_mod
+
+        original_QMenu = hc_mod.QMenu
+
+        class CapturingMenu(original_QMenu):
+            def exec(self, pos=None):  # type: ignore[override]
+                menus_created.append(self)
+
+        with patch.object(hc_mod, "QMenu", CapturingMenu):
+            ev = QContextMenuEvent(QContextMenuEvent.Reason.Mouse, QPoint(5, 5))
+            self.card.contextMenuEvent(ev)
+
+        self.assertEqual(len(menus_created), 1)
+        actions = menus_created[0].actions()
+        self.assertEqual(len(actions), 2, f"Expected 2 context actions, got {len(actions)}")
+
+    def test_copy_button_present_and_permanent(self):
+        self.assertTrue(hasattr(self.card, "btn_copy"))
+        # Not explicitly hidden — permanent in the resting layout.
+        self.assertFalse(self.card.btn_copy.isHidden())
+
+
+class TestHistoryCardAgeOpacity(unittest.TestCase):
+    def _make_card(self, age_hours: float) -> HistoryCard:
+        ts = (datetime.now() - timedelta(hours=age_hours)).strftime("%Y-%m-%d %H:%M:%S")
+        entry = {"id": "x", "text": "test", "timestamp": ts}
+        return HistoryCard(entry)
+
+    def tearDown(self):
+        # Cards are closed in individual tests where created.
+        pass
+
+    def test_fresh_entry_no_opacity_reduction(self):
+        card = self._make_card(0.1)
+        effect = card.graphicsEffect()
+        if effect is not None:
+            self.assertIsInstance(effect, QGraphicsOpacityEffect)
+            self.assertAlmostEqual(effect.opacity(), 1.0, places=2)
+        card.close()
+
+    def test_old_entry_opacity_at_floor(self):
+        card = self._make_card(8.0)
+        effect = card.graphicsEffect()
+        self.assertIsNotNone(effect, "Old entry must have an opacity effect")
+        self.assertIsInstance(effect, QGraphicsOpacityEffect)
+        self.assertAlmostEqual(effect.opacity(), 0.5, places=2)
+        card.close()
+
+    def test_medium_age_entry_partial_fade(self):
+        card = self._make_card(3.0)  # 2 < 3 < 6 → 0.65
+        effect = card.graphicsEffect()
+        self.assertIsNotNone(effect)
+        self.assertIsInstance(effect, QGraphicsOpacityEffect)
+        self.assertAlmostEqual(effect.opacity(), 0.65, places=2)
+        card.close()
+
+    def test_no_timestamp_no_effect(self):
+        """Entry without parseable timestamp must not crash and has no effect."""
+        card = HistoryCard({"id": "y", "text": "no ts"})
+        # Either no effect, or full opacity — never raises.
+        effect = card.graphicsEffect()
+        if effect is not None:
+            self.assertIsInstance(effect, QGraphicsOpacityEffect)
+            self.assertAlmostEqual(effect.opacity(), 1.0, places=2)
+        card.close()
+
+
+class TestHistoryCardMetaLine(unittest.TestCase):
+    def test_meta_line_contains_time_and_target(self):
+        entry = {
+            "id": "m1",
+            "text": "ls",
+            "timestamp": "2026-09-06 10:00:00",
+            "target_ip": "10.0.0.1",
+        }
+        card = HistoryCard(entry)
+        meta = card.lbl_meta.text()
+        self.assertIn("10:00:00", meta)
+        self.assertIn("10.0.0.1", meta)
+        card.close()
+
+    def test_meta_line_omits_missing_fields(self):
+        entry = {"id": "m2", "text": "whoami", "timestamp": ""}
+        card = HistoryCard(entry)
+        meta = card.lbl_meta.text()
+        # Should not contain stray separators from empty fields.
+        self.assertNotIn("·  ·", meta)
+        card.close()
 
 
 class TestClipboardCoordinatorCapture(unittest.TestCase):
