@@ -124,6 +124,8 @@
     "report.view_preview_short": "Live-Vorschau",
     "report.toggle_toolbar_collapse": "Toolbar einklappen",
     "report.toggle_toolbar_expand": "Toolbar ausklappen",
+    "report.view_light": "Report-Fenster auf hellen Modus umstellen",
+    "report.view_dark": "Report-Fenster auf dunklen Modus umstellen",
     "report.outline": "Gliederung ▾",
     "report.outline_tip": "Zu Abschnitt springen (Strg+Umschalt+O)",
     "report.no_headings": "Keine Überschriften im Dokument",

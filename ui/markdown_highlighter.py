@@ -27,12 +27,28 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
     def __init__(self, document):
         super().__init__(document)
-        self.header_format = self._format(CYBER_BLUE_LIGHT, bold=True)
-        self.bold_format = self._format(CYBER_CYAN, bold=True)
-        self.italic_format = self._format(TEXT_MUTED, italic=True)
-        self.code_format = self._format(TEXT_CODE, font_family="Consolas")
-        self.link_format = self._format(CYBER_CYAN)
-        self.list_format = self._format(STATUS_GREEN_LIGHT)
+        self.set_light_mode(False)
+
+    def set_light_mode(self, enabled: bool) -> None:
+        colors = (
+            ("#0550ae", "#0969da", "#57606a", "#1a7f37", "#0969da", "#1a7f37")
+            if enabled
+            else (
+                CYBER_BLUE_LIGHT,
+                CYBER_CYAN,
+                TEXT_MUTED,
+                TEXT_CODE,
+                CYBER_CYAN,
+                STATUS_GREEN_LIGHT,
+            )
+        )
+        self.header_format = self._format(colors[0], bold=True)
+        self.bold_format = self._format(colors[1], bold=True)
+        self.italic_format = self._format(colors[2], italic=True)
+        self.code_format = self._format(colors[3], font_family="Consolas")
+        self.link_format = self._format(colors[4])
+        self.list_format = self._format(colors[5])
+        self.rehighlight()
 
     @staticmethod
     def _format(

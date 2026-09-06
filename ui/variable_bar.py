@@ -10,6 +10,7 @@ from ui.styles.palette import STATUS_SUCCESS
 
 
 VARIABLE_BAR_ICON_SIZE = QSize(12, 12)
+COLLAPSED_RESTORE_SIZE = 16
 
 
 class VariableBar(QFrame):
@@ -31,6 +32,8 @@ class VariableBar(QFrame):
         self.initial_vars = initial_vars
         self._collapsed = False
         self._add_visible = True
+        self._expanded_minimum_height = self.minimumHeight()
+        self._expanded_maximum_height = self.maximumHeight()
 
         # Secondary popover frames
         self.popover_auth = AuthPopover(self)
@@ -149,8 +152,13 @@ class VariableBar(QFrame):
         self.setProperty("collapsed", self._collapsed)
         if self._collapsed:
             self._outer_layout.setContentsMargins(0, 0, 0, 0)
+            self.btn_collapse.setFixedSize(COLLAPSED_RESTORE_SIZE, COLLAPSED_RESTORE_SIZE)
+            self.setFixedHeight(COLLAPSED_RESTORE_SIZE)
         else:
+            self.setMinimumHeight(self._expanded_minimum_height)
+            self.setMaximumHeight(self._expanded_maximum_height)
             self._outer_layout.setContentsMargins(12, 4, 12, 4)
+            self.btn_collapse.setFixedSize(22, 22)
         self.style().unpolish(self)
         self.style().polish(self)
         if self._collapsed:

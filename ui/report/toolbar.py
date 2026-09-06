@@ -11,6 +11,7 @@ from ui.styles.palette import CYBER_CYAN, TEXT_PRIMARY
 
 
 REPORT_TOOLBAR_ICON_SIZE = QSize(13, 13)
+COLLAPSED_RESTORE_SIZE = 16
 
 
 def _apply_icon_button(
@@ -61,6 +62,8 @@ def build_format_toolbar(
     main_layout = QHBoxLayout(toolbar_widget)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(3)
+    expanded_minimum_height = toolbar_widget.minimumHeight()
+    expanded_maximum_height = toolbar_widget.maximumHeight()
 
     # -------------------------------------------------------------
     # Tools Container: Holds all formatting buttons and dividers
@@ -199,6 +202,13 @@ def build_format_toolbar(
     def _apply_collapsed_state(*, notify: bool = True) -> None:
         tools_container.setVisible(not _collapsed)
         toolbar_widget.setProperty("collapsed", _collapsed)
+        if _collapsed:
+            btn_toggle.setFixedSize(COLLAPSED_RESTORE_SIZE, COLLAPSED_RESTORE_SIZE)
+            toolbar_widget.setFixedHeight(COLLAPSED_RESTORE_SIZE)
+        else:
+            toolbar_widget.setMinimumHeight(expanded_minimum_height)
+            toolbar_widget.setMaximumHeight(expanded_maximum_height)
+            btn_toggle.setFixedSize(22, 22)
         toolbar_widget.style().unpolish(toolbar_widget)
         toolbar_widget.style().polish(toolbar_widget)
         tooltip = (

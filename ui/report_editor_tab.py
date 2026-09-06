@@ -109,6 +109,7 @@ class ReportEditorTab(QWidget):
         self.current_project: Optional[str] = None
         self._dirty = False
         self._view_mode = ViewMode.SPLIT
+        self._light_report_view = False
         self._preview_markdown_snapshot: Optional[str] = None
 
         self._syncing_scroll = False
@@ -136,7 +137,8 @@ class ReportEditorTab(QWidget):
     # ------------------------------------------------------------------ #
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        self._main_layout = QVBoxLayout(self)
+        layout = self._main_layout
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
@@ -185,6 +187,7 @@ class ReportEditorTab(QWidget):
     def _on_toolbar_collapse_toggled(self, collapsed: bool) -> None:
         """Collapse or expand Ebene 1 alongside Ebene 2."""
         self.action_toolbar_widget.setVisible(not collapsed)
+        self._main_layout.setSpacing(0 if collapsed else 6)
         if not collapsed and self._view_mode == ViewMode.PREVIEW:
             self.format_toolbar_widget.tools_container.setVisible(False)
 
@@ -250,6 +253,16 @@ class ReportEditorTab(QWidget):
         self.btn_export.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
+
+        self.btn_report_theme = QPushButton()
+        self.btn_report_theme.setObjectName("btn_report_theme")
+        self.btn_report_theme.setProperty(
+            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
+        )
+        self.btn_report_theme.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.btn_report_theme.clicked.connect(self._toggle_report_color_mode)
+        toolbar.addWidget(self.btn_report_theme)
+        self._update_report_theme_button()
 
         # Verschiebe Status-Text nach rechts auf Ebene 1
         toolbar.addStretch()
@@ -334,6 +347,7 @@ class ReportEditorTab(QWidget):
         self.preview.setProperty("class", "ReportPreview")
         self.preview_glass = self._wrap_glass_surface(self.preview)
         self.splitter.addWidget(self.preview_glass)
+        self._apply_report_color_mode()
 
         # Bi-directional scroll-sync between editor and live preview in Split mode
         self.editor.verticalScrollBar().valueChanged.connect(self._on_editor_scroll)
@@ -626,23 +640,89 @@ class ReportEditorTab(QWidget):
         preview_font = QFont(primary_font, 10)
         preview_font.setStyleHint(QFont.StyleHint.SansSerif)
         self.preview_document.setDefaultFont(preview_font)
-        self.preview_document.setDefaultStyleSheet(
-            """
-            body { font-family: __REPORT_FONT_STACK__; font-size: 13px; color: #f0f6fc; line-height: 1.6; }
-            h1, h2, h3, h4, h5, h6 { color: #58a6ff; font-family: __REPORT_FONT_STACK__; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
-            h1 { font-size: 18px; border-bottom: 1px solid #30363d; padding-bottom: 4px; }
-            h2 { font-size: 15px; border-bottom: 1px solid #21262d; padding-bottom: 3px; color: #79c0ff; }
-            h3 { font-size: 14px; color: #a5d6ff; }
-            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: #161b22; color: #7ee787; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
-            pre { background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 8px; }
-            blockquote { border-left: 3px solid #388bfd; margin: 8px 0; padding-left: 10px; color: #8b949e; }
-            hr { border: 0; border-top: 1px solid #30363d; margin: 14px 0; }
-            a { color: #58a6ff; text-decoration: none; }
-            img { max-width: 100%; border-radius: 6px; border: 1px solid #30363d; margin: 8px 0; }
+        palette = (
+            {
+                "text": "#1f2328",
+                "heading": "#0550ae",
+                "heading_2": "#0969da",
+                "heading_3": "#0550ae",
+                "border": "#d0d7de",
+                "code_bg": "#f6f8fa",
+                "code": "#1a7f37",
+                "quote": "#57606a",
+                "link": "#0969da",
+            }
+            if self._light_report_view
+            else {
+                "text": "#f0f6fc",
+                "heading": "#58a6ff",
+                "heading_2": "#79c0ff",
+                "heading_3": "#a5d6ff",
+                "border": "#30363d",
+                "code_bg": "#161b22",
+                "code": "#7ee787",
+                "quote": "#8b949e",
+                "link": "#58a6ff",
+            }
+        )
+        css = """
+            body { font-family: __REPORT_FONT_STACK__; font-size: 13px; color: __TEXT__; line-height: 1.6; }
+            h1, h2, h3, h4, h5, h6 { color: __HEADING__; font-family: __REPORT_FONT_STACK__; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
+            h1 { font-size: 18px; border-bottom: 1px solid __BORDER__; padding-bottom: 4px; }
+            h2 { font-size: 15px; border-bottom: 1px solid __BORDER__; padding-bottom: 3px; color: __HEADING_2__; }
+            h3 { font-size: 14px; color: __HEADING_3__; }
+            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: __CODE_BG__; color: __CODE__; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
+            pre { background-color: __CODE_BG__; border: 1px solid __BORDER__; border-radius: 6px; padding: 8px; }
+            blockquote { border-left: 3px solid __LINK__; margin: 8px 0; padding-left: 10px; color: __QUOTE__; }
+            hr { border: 0; border-top: 1px solid __BORDER__; margin: 14px 0; }
+            a { color: __LINK__; text-decoration: none; }
+            img { max-width: 100%; border-radius: 6px; border: 1px solid __BORDER__; margin: 8px 0; }
             ul, ol { padding-left: 20px; margin: 6px 0; }
             li { margin: 3px 0; }
             p { margin: 6px 0; }
-        """.replace("__REPORT_FONT_STACK__", report_font)
+        """
+        replacements = {
+            "__REPORT_FONT_STACK__": report_font,
+            "__TEXT__": palette["text"],
+            "__HEADING__": palette["heading"],
+            "__HEADING_2__": palette["heading_2"],
+            "__HEADING_3__": palette["heading_3"],
+            "__BORDER__": palette["border"],
+            "__CODE_BG__": palette["code_bg"],
+            "__CODE__": palette["code"],
+            "__QUOTE__": palette["quote"],
+            "__LINK__": palette["link"],
+        }
+        for marker, value in replacements.items():
+            css = css.replace(marker, value)
+        self.preview_document.setDefaultStyleSheet(css)
+
+    def _toggle_report_color_mode(self) -> None:
+        self._light_report_view = not self._light_report_view
+        self._apply_report_color_mode()
+
+    def _apply_report_color_mode(self) -> None:
+        for widget in (self.editor, self.preview, self.editor_glass, self.preview_glass):
+            widget.setProperty("reportLight", self._light_report_view)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+        self._highlighter.set_light_mode(self._light_report_view)
+        self._apply_preview_font()
+        self._update_report_theme_button()
+        self._update_preview()
+
+    def _update_report_theme_button(self) -> None:
+        if not hasattr(self, "btn_report_theme"):
+            return
+        tooltip = (
+            t("report.view_dark", "Switch report panes to dark mode")
+            if self._light_report_view
+            else t("report.view_light", "Switch report panes to light mode")
+        )
+        self.btn_report_theme.setToolTip(tooltip)
+        self.btn_report_theme.setAccessibleName(tooltip)
+        self.btn_report_theme.setIcon(
+            self._toolbar_icon("fa5s.moon" if self._light_report_view else "fa5s.sun")
         )
 
     def refresh_font_configuration(self) -> None:

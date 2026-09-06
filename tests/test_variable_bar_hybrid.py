@@ -129,12 +129,14 @@ def test_collapse_hides_complete_variable_bar_surface(var_bar):
     assert not var_bar._content.isVisible()
     assert not var_bar.btn_add.isVisible()
     assert not var_bar.btn_collapse.isHidden()
+    assert var_bar.height() == 16
 
     var_bar.btn_collapse.click()
 
     assert var_bar.property("collapsed") is False
     assert not var_bar._content.isHidden()
     assert not var_bar.btn_add.isHidden()
+    assert var_bar.maximumHeight() > 16
 
 
 def test_template_engine_interpolates_popover_variables(var_bar):

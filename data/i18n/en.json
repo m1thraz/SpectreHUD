@@ -124,6 +124,8 @@
     "report.view_preview_short": "Live Preview",
     "report.toggle_toolbar_collapse": "Collapse toolbar",
     "report.toggle_toolbar_expand": "Expand toolbar",
+    "report.view_light": "Switch report panes to light mode",
+    "report.view_dark": "Switch report panes to dark mode",
     "report.outline": "Sections ▾",
     "report.outline_tip": "Jump to section (Ctrl+Shift+O)",
     "report.no_headings": "No headings in document",

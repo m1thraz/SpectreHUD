@@ -386,6 +386,25 @@ class TestReportEditorTab(unittest.TestCase):
             self.assertFalse(action.icon().isNull())
             self.assertNotRegex(action.text(), "[📝◫👁️]")
 
+    def test_report_color_toggle_only_switches_report_panes(self):
+        button = self.tab.btn_report_theme
+        self.assertFalse(button.icon().isNull())
+        self.assertFalse(self.tab._light_report_view)
+
+        button.click()
+
+        self.assertTrue(self.tab._light_report_view)
+        self.assertTrue(self.tab.editor.property("reportLight"))
+        self.assertTrue(self.tab.preview.property("reportLight"))
+        self.assertTrue(self.tab.editor_glass.property("reportLight"))
+        self.assertIn("#1f2328", self.tab.preview_document.defaultStyleSheet())
+
+        button.click()
+
+        self.assertFalse(self.tab._light_report_view)
+        self.assertFalse(self.tab.editor.property("reportLight"))
+        self.assertIn("#f0f6fc", self.tab.preview_document.defaultStyleSheet())
+
     def test_toolbar_modernization_preserves_report_shortcuts(self):
         shortcuts = {shortcut.key().toString() for shortcut in self.tab.findChildren(QShortcut)}
         self.assertTrue(
@@ -460,6 +479,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab.format_toolbar_widget.tools_container.isHidden())
         self.assertTrue(self.tab.format_toolbar_widget.property("collapsed"))
         self.assertFalse(self.tab.format_toolbar_widget.btn_toggle.isHidden())
+        self.assertEqual(self.tab._main_layout.spacing(), 0)
         self.assertNotEqual(
             self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
         )
@@ -469,6 +489,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(self.tab.action_toolbar_widget.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.property("collapsed"))
+        self.assertEqual(self.tab._main_layout.spacing(), 6)
         self.assertEqual(
             self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
         )

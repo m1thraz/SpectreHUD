@@ -320,6 +320,25 @@ QTextEdit.ReportPreview {
     line-height: 1.6;
 }
 
+QFrame.ReportGlassPanel[reportLight="true"] {
+    qproperty-glassColor: #ffffff;
+    qproperty-glassIntensity: 0;
+}
+
+QPlainTextEdit.ReportSourceEditor[reportLight="true"],
+QTextEdit.ReportPreview[reportLight="true"] {
+    background-color: #ffffff;
+    color: #1f2328;
+    border-color: #d0d7de;
+    selection-background-color: #b6d7ff;
+    selection-color: #1f2328;
+}
+
+QPlainTextEdit.ReportSourceEditor[reportLight="true"]:focus,
+QTextEdit.ReportPreview[reportLight="true"]:focus {
+    border-color: #0969da;
+}
+
 /* Dialogs & Message Boxes Fallback */
 QDialog, QMessageBox {
     background-color: {BG_SURFACE};
