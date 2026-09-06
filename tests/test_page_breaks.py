@@ -21,6 +21,11 @@ from core.reporting.template_engine import (
 )
 from core.reporting.template_repository import template_to_dict, dict_to_template
 from ui.markdown_toolbar_actions import insert_page_break
+from ui.report_editor_tab import (
+    PREVIEW_PAGEBREAK_LABEL,
+    _markdown_with_preview_pagebreaks,
+    _strip_preview_pagebreaks,
+)
 
 # Ensure QApplication exists for UI-related tests
 app = QApplication.instance() or QApplication([])
@@ -192,6 +197,18 @@ Text 3
         reconciled = preserve_markers_in_preview_roundtrip(original_md, stripped_md)
         self.assertIn("<!-- spectre:loot:entry_123:abcdef123456 -->", reconciled)
         self.assertIn(PAGEBREAK_MARKER, reconciled)
+
+    def test_preview_surrogate_skips_fenced_code_and_is_removed_before_commit(self):
+        markdown = (
+            "Intro\n\n<!-- spectre:pagebreak -->\n\nOutro\n\n"
+            "```html\n<!-- spectre:pagebreak -->\n```"
+        )
+
+        preview_markdown = _markdown_with_preview_pagebreaks(markdown)
+
+        self.assertEqual(preview_markdown.count("SPECTRE_PAGEBREAK_PREVIEW_TOKEN"), 1)
+        self.assertIn("```html\n<!-- spectre:pagebreak -->\n```", preview_markdown)
+        self.assertNotIn(PREVIEW_PAGEBREAK_LABEL, _strip_preview_pagebreaks(PREVIEW_PAGEBREAK_LABEL))
 
 
 class TestTemplateIntegration(unittest.TestCase):

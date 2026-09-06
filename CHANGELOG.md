@@ -10,6 +10,7 @@ semantic versioning.
 
 * Optional one-note-at-a-time focus review for working through the Quick Notes backlog.
 * Local light/dark appearance toggle for the Report Editor and live-preview panes.
+* Compact live-preview indicators for manual report page breaks.
 
 ### Changed
 

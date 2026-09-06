@@ -16,6 +16,7 @@ sie ohne Qt testbar bleibt.
 
 from enum import Enum
 from pathlib import Path
+import re
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -32,7 +33,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QMenu,
 )
-from PyQt6.QtGui import QAction, QFont, QShortcut, QKeySequence
+from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
 from core.reporting.file_manager import ReportFileManager
 from core.config import ConfigManager
@@ -69,6 +70,43 @@ logger = get_logger("report_editor")
 PREVIEW_DEBOUNCE_MS = 300
 DRAFT_DEBOUNCE_MS = 5_000
 AUTOSAVE_INTERVAL_MS = 45_000
+PREVIEW_PAGEBREAK_TOKEN = "SPECTRE_PAGEBREAK_PREVIEW_TOKEN"
+PREVIEW_PAGEBREAK_LABEL = "──────── PAGE BREAK ────────"
+PREVIEW_PAGEBREAK_LINE_RE = re.compile(
+    rf"(?m)^.*{re.escape(PREVIEW_PAGEBREAK_LABEL)}.*(?:\r?\n)?"
+)
+
+
+def _markdown_with_preview_pagebreaks(markdown: str) -> str:
+    """Expose page-break comments to Qt while preserving fenced code examples."""
+    from core.reporting.loot_sync import PAGEBREAK_REGEX
+
+    lines = markdown.splitlines()
+    in_fence = False
+    fence_marker = ""
+    rendered = []
+    for line in lines:
+        stripped = line.lstrip()
+        opening = re.match(r"(`{3,}|~{3,})", stripped)
+        if opening:
+            marker = opening.group(1)
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker[0]
+            elif marker[0] == fence_marker:
+                in_fence = False
+                fence_marker = ""
+            rendered.append(line)
+        elif not in_fence and PAGEBREAK_REGEX.fullmatch(line.strip()):
+            rendered.append(PREVIEW_PAGEBREAK_TOKEN)
+        else:
+            rendered.append(line)
+    return "\n".join(rendered)
+
+
+def _strip_preview_pagebreaks(markdown: str) -> str:
+    """Remove the visual surrogate before canonical markers are reconciled."""
+    return PREVIEW_PAGEBREAK_LINE_RE.sub("", markdown)
 
 
 class ViewMode(Enum):
@@ -857,7 +895,7 @@ class ReportEditorTab(QWidget):
         """Commits rich-text edits from the preview document back to the markdown editor."""
         from core.reporting.loot_sync import preserve_markers_in_preview_roundtrip
 
-        raw_markdown = self.preview_document.toMarkdown()
+        raw_markdown = _strip_preview_pagebreaks(self.preview_document.toMarkdown())
         new_markdown = preserve_markers_in_preview_roundtrip(
             self._preview_markdown_snapshot or "", raw_markdown
         )
@@ -1476,8 +1514,23 @@ class ReportEditorTab(QWidget):
                 self.current_project
             )
             self.preview_document.set_project_dir(proj_dir)
-        self.preview.setMarkdown(self.editor.toPlainText())
+        self.preview.setMarkdown(_markdown_with_preview_pagebreaks(self.editor.toPlainText()))
+        self._decorate_preview_pagebreaks()
         self._sync_scroll_editor_to_preview()
+
+    def _decorate_preview_pagebreaks(self) -> None:
+        cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN)
+        while not cursor.isNull():
+            char_format = QTextCharFormat()
+            char_format.setForeground(QColor("#57606a" if self._light_report_view else "#8b949e"))
+            char_format.setFontWeight(QFont.Weight.DemiBold)
+            cursor.insertText(PREVIEW_PAGEBREAK_LABEL, char_format)
+            block_format = cursor.blockFormat()
+            block_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            block_format.setTopMargin(3)
+            block_format.setBottomMargin(3)
+            cursor.setBlockFormat(block_format)
+            cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN, cursor)
 
     def _update_status_label(self) -> None:
         if not self.current_project:
