@@ -122,8 +122,8 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
 def _render_executive_summary(section: TemplateSection, context: ReportContext, lang: str) -> str:
     """Treat every non-``info`` loot item as a finding in the report matrix.
 
-    Only canonical finding severities contribute to the summary totals. Table-facing
-    values are escaped, and an empty row preserves the generated report structure.
+    Only canonical finding severities contribute to summary totals. Pipes and newlines in
+    titles/categories cannot alter table structure; an empty row preserves its shape.
     """
     all_entries = context.loot_entries
     critical = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "critical")

@@ -31,7 +31,7 @@ def filter_loot_entries(
 ) -> List[Dict[str, Any]]:
     """Keep untargeted global loot visible in target views.
 
-    Type aliases normalize both criteria and entries; defensive results preserve input order.
+    Type aliases normalize comparisons; defensive result copies preserve input values and order.
     """
     if not entries:
         return []

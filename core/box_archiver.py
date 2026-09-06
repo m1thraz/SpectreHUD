@@ -23,10 +23,10 @@ class BoxArchiver:
 
     @staticmethod
     def archive_project(project_dir: Path, output_zip: Optional[Path] = None) -> Dict[str, Any]:
-        """Atomically replace the destination with a root-prefixed temporary archive.
+        """Build a project-root-prefixed temporary ZIP, then atomically replace its destination.
 
         Hidden or excluded files, symlinks, output artifacts, and out-of-root paths are omitted.
-        Output/archive failures use the result mapping; partial temporary archives are cleaned.
+        Output/archive failures use the result mapping; partial-archive cleanup is best-effort.
         """
         proj_path = Path(project_dir).resolve()
         if not proj_path.exists() or not proj_path.is_dir():
