@@ -7,7 +7,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QMimeData, Qt
-from PyQt6.QtWidgets import QAbstractScrollArea, QScrollArea
+from PyQt6.QtWidgets import QAbstractScrollArea, QScrollArea, QSizePolicy
 
 from core.loot.manager import CATEGORIES
 from ui.loot_board import LOOT_ENTRY_MIME_TYPE, LootBoard, LootBoardDropArea
@@ -227,6 +227,64 @@ def test_loot_board_scroll_fade_and_column_indicator(qapp):
         assert board._fade_overlay._fade_left is True
         assert board._fade_overlay._fade_right is False
         assert "6" in board.column_indicator.text()
+
+
+def test_columns_fill_viewport_height_and_follow_board_resize(qapp, tmp_path):
+    entries = [
+        {
+            "id": f"recon-{index}",
+            "type": "note",
+            "category": "recon",
+            "title": f"Finding {index}",
+            "content": "details\n" * 6,
+        }
+        for index in range(10)
+    ]
+    entries.append(
+        {
+            "id": "access-one",
+            "type": "note",
+            "category": "access",
+            "title": "One finding",
+            "content": "details",
+        }
+    )
+    board = LootBoard(
+        entries=entries,
+        project_dir=tmp_path,
+        on_delete=lambda _id: None,
+        on_edit=lambda _entry: None,
+        on_export=lambda _id: None,
+        on_move=lambda _id, _category, _index: True,
+    )
+    board.resize(720, 500)
+    board.show()
+    try:
+        for _ in range(3):
+            qapp.processEvents()
+
+        assert board._board_content.height() == board.viewport().height()
+        column_heights = {column.height() for column in board.columns.values()}
+        assert len(column_heights) == 1
+        assert all(
+            column.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Fixed
+            and column.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Expanding
+            for column in board.columns.values()
+        )
+        assert board.columns["recon"].scroll.verticalScrollBar().maximum() > 0
+        assert board.horizontalScrollBar().maximum() > 0
+
+        previous_height = board._board_content.height()
+        board.resize(720, 640)
+        for _ in range(3):
+            qapp.processEvents()
+
+        assert board._board_content.height() == board.viewport().height()
+        assert board._board_content.height() > previous_height
+        assert len({column.height() for column in board.columns.values()}) == 1
+    finally:
+        board.close()
+        board.deleteLater()
 
         board.hide()
         board.deleteLater()

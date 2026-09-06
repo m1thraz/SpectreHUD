@@ -301,12 +301,15 @@ class ObsidianExporter:
         except OSError as exc:
             raise ExternalExportError("Could not read the existing Obsidian note.") from exc
         existing_ids = set(_ENTRY_MARKER_RE.findall(existing))
-        new_entries = [entry for entry in entries if str(entry.get("id", "")) not in existing_ids]
-        skipped = tuple(
-            str(entry.get("id", ""))
-            for entry in entries
-            if str(entry.get("id", "")) in existing_ids
-        )
+        new_entries: list[Mapping[str, Any]] = []
+        skipped_ids: list[str] = []
+        for entry in entries:
+            entry_id = str(entry.get("id", ""))
+            if entry_id in existing_ids:
+                skipped_ids.append(entry_id)
+            else:
+                new_entries.append(entry)
+        skipped = tuple(skipped_ids)
         rendered = self._loot_markdown(new_entries)
         if rendered:
             separator = "\n\n" if existing.rstrip() else ""

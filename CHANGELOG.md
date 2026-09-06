@@ -24,6 +24,10 @@ semantic versioning.
   - Replaced crowded multi-shortcut status text in the bottom footer with a single compact, clickable button hint (`Ctrl+/  Shortcuts`).
   - Preserved existing entry count, Always-on-Top checkbox, and corner resize grip.
 
+### Fixed
+
+- Keep Obsidian loot-append deduplication metadata accurate for one-shot iterables such as generators.
+
 ## [2.1.0] - 2026-09-05
 
 ### Added
@@ -50,6 +54,8 @@ semantic versioning.
   reporting/loot helpers without changing user-facing behavior.
 - Separated headless clipboard history and persistence from the Qt system-clipboard
   monitor, preserving privacy defaults, capture behavior, and project-session storage.
+- Stretched Loot Kanban columns to the full visible board height while preserving
+  horizontal board scrolling and per-column vertical scrolling.
 
 ### Fixed
 

@@ -104,6 +104,35 @@ def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspac
     assert second.skipped_entry_ids == ("loot-1",)
 
 
+def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
+    vault, project = workspace
+    exporter = ObsidianExporter(vault)
+    note = exporter.export_report(
+        project_name="Forest", project_dir=project, markdown="# Manual report"
+    ).note_path
+    existing_entry = {
+        "id": "loot-1",
+        "type": "credentials",
+        "title": "Admin",
+        "content": "admin:secret",
+    }
+    new_entry = {
+        "id": "loot-2",
+        "type": "note",
+        "title": "Host",
+        "content": "10.10.10.8",
+    }
+    exporter.append_loot(project_name="Forest", entries=[existing_entry], note_path=note)
+
+    entries = (entry for entry in (existing_entry, new_entry))
+    result = exporter.append_loot(project_name="Forest", entries=entries, note_path=note)
+
+    content = note.read_text(encoding="utf-8")
+    assert result.skipped_entry_ids == ("loot-1",)
+    assert content.count("spectrehud-entry:loot-1") == 1
+    assert content.count("spectrehud-entry:loot-2") == 1
+
+
 def test_obsidian_uri_is_url_encoded(workspace):
     vault, project = workspace
     exporter = ObsidianExporter(vault, "CTF Notes")

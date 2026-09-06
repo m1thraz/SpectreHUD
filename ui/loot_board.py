@@ -5,7 +5,15 @@ from typing import Any, Callable, Dict, List, Optional
 
 from PyQt6.QtCore import Qt, QMimeData, QEvent
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.i18n import t
 from core.loot.manager import CATEGORIES
@@ -30,6 +38,7 @@ class LootBoardDropArea(QFrame):
         self.entry_ids: List[str] = []
         self.setAcceptDrops(True)
         self.setProperty("class", "LootBoardColumn")
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -222,8 +231,8 @@ class LootBoard(QScrollArea):
         self.setProperty("class", "LootBoard")
         self.viewport().setAutoFillBackground(True)
 
-        board_content = QWidget(self)
-        layout = QHBoxLayout(board_content)
+        self._board_content = QWidget(self)
+        layout = QHBoxLayout(self._board_content)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(10)
 
@@ -235,7 +244,7 @@ class LootBoard(QScrollArea):
             for category in CATEGORIES
         }
         for category in CATEGORIES:
-            column = LootBoardDropArea(category, on_move, board_content)
+            column = LootBoardDropArea(category, on_move, self._board_content)
             column.setFixedWidth(270)
             for entry in entries_by_category[category["id"]]:
                 card = LootCard(
@@ -257,8 +266,8 @@ class LootBoard(QScrollArea):
             layout.addWidget(column)
 
         layout.addStretch()
-        board_content.setMinimumWidth(len(CATEGORIES) * 280)
-        self.setWidget(board_content)
+        self._board_content.setMinimumWidth(len(CATEGORIES) * 280)
+        self.setWidget(self._board_content)
 
         self._fade_overlay = ScrollFadeOverlay(self)
         self.column_indicator = QLabel(self)
@@ -271,6 +280,7 @@ class LootBoard(QScrollArea):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self._board_content.setFixedHeight(self.viewport().height())
         self._update_scroll_visibility()
 
     def _update_scroll_visibility(self) -> None:

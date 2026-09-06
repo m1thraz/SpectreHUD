@@ -75,6 +75,12 @@ To maximize development velocity and minimize token / execution costs, follow th
 
 ## Testing Principles & Constraints
 
+### Comments
+- Prefer WHY over WHAT.
+- Comment only non-obvious invariants, constraints, failure semantics, ownership/security boundaries, ordering, lifecycle, platform quirks, or intentional oddities.
+- Do not restate code, names, types, or obvious control flow.
+- Do not optimize docstring coverage; trivial WHAT-docstrings are token tax.
+
 ### Parallelization & Worker Isolation
 - `scripts/test_fast.sh` and `scripts/test_full.sh` run in parallel by default with `pytest-xdist` and `--dist=loadscope`.
 - If a test appears flaky or order-dependent, reproduce the individual test serially with `-n0` before attributing the failure to application code.

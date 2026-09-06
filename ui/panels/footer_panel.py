@@ -43,26 +43,23 @@ class FooterPanel(QFrame):
         self.btn_shortcuts.setStyleSheet(
             """
             QPushButton#FooterShortcutsBtn {
-                background-color: transparent;
-                border: 1px solid rgba(0, 229, 255, 0.25);
-                border-radius: 4px;
+                background: transparent;
+                border: none;
                 color: #8b949e;
                 font-size: 11px;
                 font-weight: 700;
                 font-family: Consolas, "Courier New", monospace;
-                padding: 2px 8px;
+                padding: 2px 4px;
             }
             QPushButton#FooterShortcutsBtn:hover {
                 color: #00e5ff;
-                border-color: rgba(0, 229, 255, 0.6);
-                background-color: rgba(0, 229, 255, 0.08);
             }
             """
         )
         self.btn_shortcuts.clicked.connect(self.shortcuts_requested.emit)
         layout.addWidget(self.btn_shortcuts)
 
-        layout.addSpacing(6)
+        layout.addSpacing(10)
 
         # 2. Phase Dropdown Menu Trigger
         self.btn_phase = QPushButton(t("footer.phase_unassigned", "Phase: Unassigned ▾"), self)
@@ -144,18 +141,15 @@ class FooterPanel(QFrame):
             self.btn_phase.setStyleSheet(
                 """
                 QPushButton#FooterPhaseBtn {
-                    background-color: transparent;
-                    border: 1px solid rgba(0, 229, 255, 0.25);
-                    border-radius: 4px;
+                    background: transparent;
+                    border: none;
                     color: #8b949e;
                     font-size: 11px;
                     font-weight: 700;
-                    padding: 2px 8px;
+                    padding: 2px 4px;
                 }
                 QPushButton#FooterPhaseBtn:hover {
                     color: #00e5ff;
-                    border-color: rgba(0, 229, 255, 0.6);
-                    background-color: rgba(0, 229, 255, 0.08);
                 }
                 """
             )
@@ -163,17 +157,15 @@ class FooterPanel(QFrame):
             self.btn_phase.setStyleSheet(
                 """
                 QPushButton#FooterPhaseBtn {
-                    background-color: rgba(0, 229, 255, 0.12);
-                    border: 1px solid #00e5ff;
-                    border-radius: 4px;
+                    background: transparent;
+                    border: none;
                     color: #00e5ff;
                     font-size: 11px;
                     font-weight: 700;
-                    padding: 2px 8px;
+                    padding: 2px 4px;
                 }
                 QPushButton#FooterPhaseBtn:hover {
-                    background-color: rgba(0, 229, 255, 0.22);
-                    border-color: #00e5ff;
+                    color: #79c0ff;
                 }
                 """
             )
