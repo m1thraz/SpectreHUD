@@ -17,6 +17,9 @@ class VariableBar(QFrame):
     Compact horizontal status bar for Target IP, LHOST, Port and Auto-Detect,
     combined with quick-access popovers for Auth (User/Pass/Domain/Hash) and Scope (Wordlist/URL).
     Emits `variables_changed` whenever any input field changes.
+
+    A chevron toggle on the far right hides the complete bar surface and leaves
+    only the restore control visible.
     """
 
     variables_changed = pyqtSignal(dict)
@@ -26,6 +29,8 @@ class VariableBar(QFrame):
         super().__init__(parent)
         self.setObjectName("CompactVarBar")
         self.initial_vars = initial_vars
+        self._collapsed = False
+        self._add_visible = True
 
         # Secondary popover frames
         self.popover_auth = AuthPopover(self)
@@ -49,8 +54,14 @@ class VariableBar(QFrame):
         self._update_badge_buttons()
 
     def _init_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 4, 12, 4)
+        self._outer_layout = QHBoxLayout(self)
+        self._outer_layout.setContentsMargins(12, 4, 12, 4)
+        self._outer_layout.setSpacing(8)
+
+        # --- Content container (everything that collapses) ---
+        self._content = QWidget(self)
+        layout = QHBoxLayout(self._content)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
         # 1. Target IP Input
@@ -93,7 +104,7 @@ class VariableBar(QFrame):
         self.btn_auth.clicked.connect(lambda: self.popover_auth.show_below(self.btn_auth))
         layout.addWidget(self.btn_auth)
 
-        # 6. Scope Popover Button (Wordlist, Target URL)
+        # 5. Scope Popover Button (Wordlist, Target URL)
         self.btn_scope = QPushButton("Scope ▾")
         self.btn_scope.setIcon(icon("fa5s.folder"))
         self.btn_scope.setIconSize(VARIABLE_BAR_ICON_SIZE)
@@ -102,16 +113,64 @@ class VariableBar(QFrame):
         self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
         layout.addWidget(self.btn_scope)
 
-        layout.addStretch()
+        self._outer_layout.addWidget(self._content)
+        self._outer_layout.addStretch()
 
-        # 7. Add Snippet Button
+        # 6. Add Snippet Button — only shown in cheatsheet mode (see set_add_visible)
         self.btn_add = QPushButton(t("varbar.add_btn", "Neu"))
         self.btn_add.setIcon(icon("fa5s.plus"))
         self.btn_add.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_add.setProperty("class", "MiniPrimaryBtn")
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
-        layout.addWidget(self.btn_add)
+        self.btn_add.setVisible(True)
+        self._outer_layout.addWidget(self.btn_add)
+
+        # --- Chevron toggle (always visible, far right) ---
+        self.btn_collapse = QPushButton(self)
+        self.btn_collapse.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+        self.btn_collapse.setFixedSize(22, 22)
+        self.btn_collapse.clicked.connect(self._toggle_collapsed)
+        self._outer_layout.addWidget(self.btn_collapse)
+
+        self._apply_collapsed_state()
+
+    # ------------------------------------------------------------------ #
+    # Collapse / expand
+    # ------------------------------------------------------------------ #
+
+    def _toggle_collapsed(self) -> None:
+        self._collapsed = not self._collapsed
+        self._apply_collapsed_state()
+
+    def _apply_collapsed_state(self) -> None:
+        self._content.setVisible(not self._collapsed)
+        self.btn_add.setVisible(self._add_visible and not self._collapsed)
+        self.setProperty("collapsed", self._collapsed)
+        if self._collapsed:
+            self._outer_layout.setContentsMargins(0, 0, 0, 0)
+        else:
+            self._outer_layout.setContentsMargins(12, 4, 12, 4)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        if self._collapsed:
+            tip = t("varbar.expand_tip", "Show variable bar")
+            ico = "fa5s.chevron-down"
+        else:
+            tip = t("varbar.collapse_tip", "Hide variable bar")
+            ico = "fa5s.chevron-up"
+        self.btn_collapse.setToolTip(tip)
+        self.btn_collapse.setIcon(icon(ico))
+        self.btn_collapse.setIconSize(VARIABLE_BAR_ICON_SIZE)
+
+    def set_add_visible(self, visible: bool) -> None:
+        """Show or hide the New-snippet button (only relevant in cheatsheet mode)."""
+        self._add_visible = visible
+        self.btn_add.setVisible(visible and not self._collapsed)
+
+    # ------------------------------------------------------------------ #
+    # Badge / popover helpers
+    # ------------------------------------------------------------------ #
 
     def _update_badge_buttons(self) -> None:
         """Refreshes text and active styling on Auth and Scope buttons."""
@@ -158,6 +217,11 @@ class VariableBar(QFrame):
         self.popover_auth.retranslate()
         self.popover_scope.retranslate()
         self._update_badge_buttons()
+        self._apply_collapsed_state()
+
+    # ------------------------------------------------------------------ #
+    # IP auto-detection
+    # ------------------------------------------------------------------ #
 
     def auto_detect_ip(self) -> None:
         """Runs the network detector and fills the LHOST if an IP is detected."""
@@ -174,6 +238,10 @@ class VariableBar(QFrame):
     def _reset_auto_button(self) -> None:
         self.btn_auto.setText(t("varbar.auto", "Auto"))
         self.btn_auto.setIcon(icon("fa5s.crosshairs"))
+
+    # ------------------------------------------------------------------ #
+    # Data access
+    # ------------------------------------------------------------------ #
 
     def _on_values_changed(self) -> None:
         self.variables_changed.emit(self.get_variables())

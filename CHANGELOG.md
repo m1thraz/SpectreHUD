@@ -13,6 +13,7 @@ semantic versioning.
 ### Changed
 
 * Redesigned Quick Notes as a chronological, age-aware stream with simplified rows, contextual actions, completion undo, and an explicit bulk-selection mode.
+* Variable Bar collapse now hides the complete bar surface and its actions, leaving only the restore control visible.
 
 ## [2.1.1] - 2026-09-06
 

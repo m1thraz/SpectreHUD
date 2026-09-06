@@ -41,11 +41,19 @@ QFrame#FilterPillsFrame {
     border-bottom: 1px solid {BORDER_A40};
 }
 
-/* Compact Variable Status Bar Frame */
+/* Compact Variable Status Bar Frame —
+   SURFACE_A70 matches HeaderBar so the bar blends into the glass panel
+   instead of sitting in front of it as an opaque slab. */
 QFrame#CompactVarBar {
-    background-color: {PANEL_A80};
+    background-color: {SURFACE_A70};
     border-bottom: 1px solid {BORDER_A40};
     padding: 5px 12px;
+}
+
+QFrame#CompactVarBar[collapsed="true"] {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
 }
 
 /* Snippet & Loot Cards */

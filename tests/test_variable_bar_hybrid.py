@@ -122,6 +122,21 @@ def test_password_visibility_uses_qtawesome_state_icons(qapp):
     assert toggle.icon().cacheKey() != hidden_icon_key
 
 
+def test_collapse_hides_complete_variable_bar_surface(var_bar):
+    var_bar.btn_collapse.click()
+
+    assert var_bar.property("collapsed") is True
+    assert not var_bar._content.isVisible()
+    assert not var_bar.btn_add.isVisible()
+    assert not var_bar.btn_collapse.isHidden()
+
+    var_bar.btn_collapse.click()
+
+    assert var_bar.property("collapsed") is False
+    assert not var_bar._content.isHidden()
+    assert not var_bar.btn_add.isHidden()
+
+
 def test_template_engine_interpolates_popover_variables(var_bar):
     vars_dict = var_bar.get_variables()
 
@@ -213,5 +228,3 @@ def test_subnet_dns_hash_file_popovers(var_bar):
         rendered
         == "nmap -sn 192.168.10.0/24 --dns-servers 192.168.10.1 -oN nmap.txt && john /opt/wordlists/ntlm.hashes"
     )
-
-
