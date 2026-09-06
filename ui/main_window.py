@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from typing import Dict, Any, List
 
@@ -315,6 +316,34 @@ class MainWindow(QMainWindow):
             )
             self.raise_()
             self.activateWindow()
+            self.search_panel.set_focus()
+
+    def bring_to_front(self) -> None:
+        """Restores, un-minimizes, shows and activates the HUD window in foreground."""
+        if not self.isVisible():
+            self.show()
+        if self.isMinimized():
+            self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized)
+            self.showNormal()
+        self.setWindowState(
+            self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive
+        )
+        self.raise_()
+        self.activateWindow()
+
+        # On Windows, enforce foreground window via Win32 API to bypass foreground lock
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                hwnd = int(self.winId())
+                SW_RESTORE = 9
+                ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+
+        if hasattr(self, "search_panel"):
             self.search_panel.set_focus()
 
     def toggle_fullscreen(self) -> None:

@@ -142,18 +142,37 @@ if lock is not None:
                 # TemporaryDirectory removes the lock directory.
                 self._clear_terminated_owner_lock(config_dir)
 
-    def test_existing_instance_stops_before_container_initialization(self):
+    def test_existing_instance_notifies_and_exits_without_popup(self):
         import main
 
         app = MagicMock()
         with (
             patch.object(main, "QApplication", return_value=app),
             patch.object(main, "acquire_application_lock", return_value=None),
+            patch.object(main, "notify_running_instance", return_value=True) as notify,
             patch.object(main, "_create_production_container") as create_container,
             patch.object(main.QMessageBox, "information") as show_message,
         ):
             main.main()
 
+        notify.assert_called_once()
+        create_container.assert_not_called()
+        show_message.assert_not_called()
+
+    def test_existing_instance_falls_back_to_popup_if_notification_fails(self):
+        import main
+
+        app = MagicMock()
+        with (
+            patch.object(main, "QApplication", return_value=app),
+            patch.object(main, "acquire_application_lock", return_value=None),
+            patch.object(main, "notify_running_instance", return_value=False) as notify,
+            patch.object(main, "_create_production_container") as create_container,
+            patch.object(main.QMessageBox, "information") as show_message,
+        ):
+            main.main()
+
+        notify.assert_called_once()
         create_container.assert_not_called()
         show_message.assert_called_once()
 
@@ -173,6 +192,35 @@ if lock is not None:
 
         create_container.assert_not_called()
         show_message.assert_called_once()
+
+    def test_ipc_server_and_client_notification_flow(self):
+        from core.single_instance import start_single_instance_server, notify_running_instance
+        from PyQt6.QtWidgets import QApplication
+
+        # Ensure a QApplication instance exists for QLocalServer/QLocalSocket events
+        _app = QApplication.instance() or QApplication(["test"])
+
+        activated = []
+
+        def on_activate():
+            activated.append(True)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_dir = Path(temp_dir)
+            server = start_single_instance_server(on_activate, config_dir=config_dir)
+            self.assertIsNotNone(server)
+
+            try:
+                success = notify_running_instance(config_dir=config_dir, timeout_ms=2000)
+                self.assertTrue(success)
+                _app.processEvents()
+                self.assertEqual(len(activated), 1)
+            finally:
+                server.close()
+
+            # After server closed, notify should fail cleanly
+            failed = notify_running_instance(config_dir=config_dir, timeout_ms=300)
+            self.assertFalse(failed)
 
 
 if __name__ == "__main__":

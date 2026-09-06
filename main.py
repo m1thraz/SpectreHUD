@@ -26,6 +26,8 @@ from core.single_instance import (
     ApplicationLockError,
     acquire_application_lock,
     release_application_lock,
+    start_single_instance_server,
+    notify_running_instance,
 )
 from core.hotkey_listener import HotkeyListener
 from core.logger import get_logger
@@ -171,6 +173,12 @@ def main():
         return
     _startup_mark(started_at, "application lock acquired")
     if application_lock is None:
+        # A running instance is already active. Notify it to bring its window to front
+        # and exit cleanly without showing an error popup.
+        if notify_running_instance():
+            logger.info("SpectreHUD is already running; existing instance brought to front.")
+            return
+
         QMessageBox.information(
             None,
             t("main.already_running_title", "SpectreHUD läuft bereits"),
@@ -183,6 +191,7 @@ def main():
 
     app_icon = get_app_icon()
     hotkey_listener = None
+    ipc_server = None
     restart_requested = False
     try:
         if not app_icon.isNull():
@@ -202,6 +211,9 @@ def main():
             window.setWindowIcon(app_icon)
         window.show()
         _startup_mark(started_at, "MainWindow shown")
+
+        # Single Instance IPC Server for focus-on-secondary-launch
+        ipc_server = start_single_instance_server(on_activate=window.bring_to_front)
 
         # Global Hotkey Listener
         from core.hotkey_listener import HotkeyConfig
@@ -391,6 +403,8 @@ def main():
     finally:
         if hotkey_listener is not None:
             hotkey_listener.stop()
+        if ipc_server is not None:
+            ipc_server.close()
         release_application_lock(application_lock)
 
     if restart_requested:
