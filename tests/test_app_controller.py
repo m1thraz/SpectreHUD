@@ -104,6 +104,7 @@ class TestAppController(unittest.TestCase):
         )
 
     def tearDown(self):
+        self.controller.dispose()
         self.event_bus.clear()
         self.window.deleteLater()
         os.environ.pop("SPECTRE_CONFIG_DIR", None)
@@ -114,6 +115,17 @@ class TestAppController(unittest.TestCase):
         self.assertEqual(self.controller.active_mode, "cheatsheet")
         self.controller.active_mode = "loot"
         self.assertEqual(self.controller.active_mode, "loot")
+
+    def test_dispose_stops_global_locale_callbacks(self):
+        """Disposed controllers must not react while Qt deletion remains deferred."""
+        from core.i18n import get_i18n
+
+        with patch.object(self.controller, "refresh_content") as refresh_content:
+            self.controller.dispose()
+            get_i18n().set_locale("de")
+            refresh_content.assert_not_called()
+
+        self.controller.dispose()
 
     def test_mode_switching_and_toggling(self):
         """switch_mode and toggle_mode update navigation coordinator and refresh UI."""

@@ -156,6 +156,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             clipboard_monitor_factory=ClipboardMonitor
         )
         window = MainWindow(container=container)
+        self.addCleanup(window.app.dispose)
 
         with patch.object(window.app.report_ctrl, "confirm_discard_if_dirty", return_value=False):
             with patch("PyQt6.QtWidgets.QApplication.quit") as mock_quit:
@@ -163,6 +164,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                 self.assertFalse(
                     res, "request_quit must return False when report is dirty and user cancels"
                 )
+                self.assertFalse(window.app._disposed)
                 mock_quit.assert_not_called()
 
     # -------------------------------------------------------------------------
@@ -183,6 +185,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             clipboard_monitor_factory=ClipboardMonitor
         )
         window = MainWindow(container=container)
+        self.addCleanup(window.app.dispose)
 
         with patch.object(window.app, "save_current_project_state", return_value=False):
             with patch.object(QMessageBox, "exec", return_value=0):
@@ -193,6 +196,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                             res,
                             "request_quit must return False when state save fails and user cancels",
                         )
+                        self.assertFalse(window.app._disposed)
                         mock_quit.assert_not_called()
 
     # -------------------------------------------------------------------------
@@ -211,11 +215,13 @@ class TestWorkflowRobustness(unittest.TestCase):
             clipboard_monitor_factory=ClipboardMonitor
         )
         window = MainWindow(container=container)
+        self.addCleanup(window.app.dispose)
         window.var_bar.txt_target.setText("192.168.1.77")
 
         with patch("PyQt6.QtWidgets.QApplication.quit"):
             res = window.request_quit()
             self.assertTrue(res)
+            self.assertTrue(window.app._disposed)
 
             # Verify persisted state
             state = container.project_manager.load_project_state()
@@ -234,6 +240,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                 clipboard_monitor_factory=ClipboardMonitor
             )
         )
+        self.addCleanup(window.app.dispose)
         with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=PersistenceError("disk full")):
                 with patch("ui.main_window.logger.warning") as warning:
@@ -254,6 +261,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                 clipboard_monitor_factory=ClipboardMonitor
             )
         )
+        self.addCleanup(window.app.dispose)
         with patch.object(window.app, "save_current_project_state", return_value=True):
             with patch.object(window.config, "update", side_effect=ValueError("invalid geometry")):
                 with patch("ui.main_window.logger.exception") as exception:
@@ -279,6 +287,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             clipboard_monitor_factory=ClipboardMonitor
         )
         window = MainWindow(container=container)
+        self.addCleanup(window.app.dispose)
 
         evt = QCloseEvent()
         with patch.object(window, "request_quit", return_value=False):

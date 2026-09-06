@@ -343,11 +343,16 @@ class MainWindow(QMainWindow):
             self.app.open_shortcuts_dialog()
 
     def request_quit(self, quit_app: bool = True) -> bool:
-        """Delegate the transactional shutdown workflow."""
-        return self.shutdown_coordinator.request_quit(quit_app=quit_app)
+        """Detach process-scoped callbacks only after shutdown succeeds."""
+        should_quit = self.shutdown_coordinator.request_quit(quit_app=quit_app)
+        if should_quit:
+            self.app.dispose()
+        return should_quit
 
     def prepare_for_shutdown(self) -> None:
         """Safety cleanup hook connected to QApplication.aboutToQuit."""
+        if hasattr(self, "app") and self.app:
+            self.app.dispose()
         try:
             self.clipboard_monitor.stop_listening()
         except (TypeError, RuntimeError):

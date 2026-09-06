@@ -3,6 +3,7 @@ Tests for Finding 2: Transactional Persistence and PersistenceError semantics.
 Ensures that storage failures never leave in-memory state mutated while disk I/O failed.
 """
 
+import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -246,14 +247,15 @@ class TestPersistenceErrors(unittest.TestCase):
         app = QApplication.instance() or QApplication([])
         err = PersistenceError("Simulated disk write failure")
 
-        with patch.object(QMessageBox, "critical") as mock_box:
-            try:
-                raise err
-            except PersistenceError:
-                exctype, value, tb = sys.exc_info()
-                global_exception_hook(exctype, value, tb)
+        with patch.dict(os.environ, {"SPECTREHUD_NO_GUI_CRASH_POPUP": ""}):
+            with patch.object(QMessageBox, "critical") as mock_box:
+                try:
+                    raise err
+                except PersistenceError:
+                    exctype, value, tb = sys.exc_info()
+                    global_exception_hook(exctype, value, tb)
 
-            mock_box.assert_called_once()
+                mock_box.assert_called_once()
 
 
 if __name__ == "__main__":

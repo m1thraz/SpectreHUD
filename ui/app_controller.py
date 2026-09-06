@@ -95,6 +95,9 @@ class AppController(QObject):
         self.quick_note_manager = quick_note_manager
         self.screenshot_manager = screenshot_manager
         self.event_bus = event_bus
+        self._i18n = get_i18n()
+        self._unsubscribe_active_phase = None
+        self._disposed = False
 
         self.phase_context = (
             phase_context if phase_context is not None else PhaseContext(event_bus=self.event_bus)
@@ -233,7 +236,7 @@ class AppController(QObject):
 
         # Synchronize initial language
         initial_lang = self.config.get("language", "en")
-        get_i18n().set_locale(initial_lang)
+        self._i18n.set_locale(initial_lang)
         self.snippet_manager.set_language(initial_lang)
 
     @property
@@ -249,6 +252,20 @@ class AppController(QObject):
         if hasattr(self.navigation_coord, "_state_machine"):
             self.navigation_coord._state_machine._active_mode = mode
         self.navigation_coord._active_mode = mode
+
+    def dispose(self) -> None:
+        """Detach process-lifetime subscriptions before deferred Qt deletion."""
+        if self._disposed:
+            return
+        self._disposed = True
+
+        if self._unsubscribe_active_phase is not None:
+            self._unsubscribe_active_phase()
+            self._unsubscribe_active_phase = None
+        try:
+            self._i18n.locale_changed.disconnect(self.retranslate_ui)
+        except (TypeError, RuntimeError):
+            pass
 
     def _wire_signals(self) -> None:
         # Header & Navigation
@@ -294,8 +311,10 @@ class AppController(QObject):
         self.footer.phase_menu_requested.connect(self._show_phase_menu)
         if hasattr(self.header, "phase_menu_requested"):
             self.header.phase_menu_requested.connect(self._show_phase_menu)
-        self.event_bus.subscribe(EventType.ACTIVE_PHASE_CHANGED, self._on_active_phase_changed)
-        get_i18n().locale_changed.connect(self.retranslate_ui)
+        self._unsubscribe_active_phase = self.event_bus.subscribe(
+            EventType.ACTIVE_PHASE_CHANGED, self._on_active_phase_changed
+        )
+        self._i18n.locale_changed.connect(self.retranslate_ui)
 
     def activate_phase(self, phase_id: Optional[str], source: str = "ui") -> None:
         """Activates a pentest phase, updating the active project context."""

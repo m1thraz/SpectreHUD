@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-09-06
+
 ### Added
 
 * Central keyboard shortcut overview (`Ctrl+/` / `F1`) with searchable, categorized global and in-app shortcuts.
@@ -208,7 +210,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.9...v2.1.0
 [2.0.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.8...v2.0.9
 [2.0.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.7...v2.0.8
