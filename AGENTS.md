@@ -20,7 +20,10 @@ Run after import, layering, dependency, or platform-abstraction changes:
 python -m pytest tests/test_architecture_boundaries.py -q
 ```
 
-Guards: `core/**` must not import `ui/**` or eagerly load PyQt6.
+Guards:
+
+* `core/**` must not import `ui/**`.
+* `core.platform` must not eagerly load PyQt6.
 
 ### Tier 2 — Affected Tests (~3–15s)
 
@@ -41,9 +44,7 @@ python -m pytest --lf -q
 
 Typical rerun: ~2–5s.
 
-### Tier 3 — Fast Gate
-
-~20–30s parallel / ~80–90s serial.
+### Tier 3 — Fast Gate (~20–30s parallel / ~80–90s serial)
 
 For broad changes or cross-component development:
 
@@ -51,13 +52,13 @@ For broad changes or cross-component development:
 ./scripts/test_fast.sh
 ```
 
-Fallback:
+Serial fallback:
 
 ```bash
 python -m pytest -m "not integration and not release" -x --tb=line -q
 ```
 
-### Tier 4 — Full Gate (~5.0–5.5 min)
+### Tier 4 — Full Safety & Release Gate (~5–7 min)
 
 For broad architectural changes or major release validation:
 
@@ -84,13 +85,24 @@ Tier 4 is optional for normal local handover when targeted tests and lint pass; 
 * Pure docs/assets (`.md`, `.svg`, `.png`, changelog): **no tests or linters**.
 * UI text, i18n, docstrings, CSS, typos: skip Tier 3/4; run only relevant targeted checks plus:
 
-  ```bash
-  ruff check .
-  ```
+```bash
+ruff check .
+```
 
-  Typical total: ~8–10s.
-* `ruff check .` alone: <1s.
-* Always lint before handover unless only docs/assets changed.
+Typical total: ~8–10s.
+`ruff check .` alone: <1s.
+
+Always lint before handover unless only docs/assets changed.
+
+---
+
+## Long-Running Commands
+
+* Run known long tasks as one blocking shell command and wait for its exit.
+* Do not poll, narrate progress, or inspect logs while the command is within its documented expected runtime.
+* Inspect output only after exit; on failure, read only the actionable log tail.
+* If the execution environment returns control before completion, do not poll before the expected runtime has elapsed.
+* If polling is unavoidable, use coarse intervals and report only completion, failure, timeout, prompt, or unexpected delay.
 
 ---
 
@@ -123,6 +135,6 @@ If a test appears flaky or order-dependent, reproduce it serially with `-n0` bef
 
 * Redirect suite output to a temporary log.
 * Success: report only final result and elapsed time.
-* Failure: report only the actionable traceback / final 30–50 lines.
+* Failure: report only the actionable traceback or final 30–50 lines.
 * Diagnose by rerunning the single failing test with `-v`, not the full suite.
 * Use `--tb=line` for fast iteration and `--tb=short` for completion/CI.
