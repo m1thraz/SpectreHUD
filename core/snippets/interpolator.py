@@ -195,7 +195,7 @@ class TemplateEngine:
     def render_with_custom(
         template: str, variables: Dict[str, Any], custom_params: Dict[str, str]
     ) -> str:
-        """Fully renders template resolving both globals and custom inline parameters."""
+        """Merge custom values over globals, then apply ``render``'s blank-value contract."""
         merged_vars = dict(variables)
         merged_vars.update(custom_params)
         return TemplateEngine.render(template, merged_vars)

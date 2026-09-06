@@ -143,8 +143,8 @@ class QuickNoteManager(QObject):
     ) -> Optional[Dict[str, Any]]:
         """Stage normalized fields on a copy; missing entries or empty text return ``None``.
 
-        Persistence precedes memory/event commit; invalid statuses, unsupported sources, and
-        unknown fields leave existing values unchanged.
+        When requested, persistence precedes memory/event commit; invalid statuses,
+        unsupported sources, and unknown fields leave existing values unchanged.
         """
         idx = -1
         for i, n in enumerate(self.notes):

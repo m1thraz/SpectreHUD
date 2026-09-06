@@ -188,7 +188,6 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
 
 
 def _render_loot_block_text(entry: Mapping[str, Any], lang: str = "de") -> str:
-    """Renders a single markdown loot entry block including its canonical marker."""
     from core.reporting.template_engine import _render_loot_entry_block
 
     lines = _render_loot_entry_block(dict(entry), lang=lang)

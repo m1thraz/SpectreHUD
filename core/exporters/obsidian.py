@@ -288,8 +288,9 @@ class ObsidianExporter:
         """Append marker-new loot while preserving user-owned note content.
 
         The resolved Markdown target must remain inside the configured vault, preventing
-        path and symlink escapes. Markers provide idempotence; attachments remain outside
-        this operation, and atomic replacement preserves the prior note on write failure.
+        path and symlink escapes. Existing note markers provide cross-call idempotence;
+        attachments remain outside this operation, and atomic replacement preserves the
+        prior note on write failure.
         """
         target = Path(note_path) if note_path is not None else self.note_path_for(project_name)
         try:
