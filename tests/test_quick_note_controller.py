@@ -252,7 +252,7 @@ class TestQuickNoteController(unittest.TestCase):
         layout = QVBoxLayout(container)
         empty_fn = MagicMock()
 
-        # Default all filter renders both
+        # The default stream hides completed notes; Resolved remains explicit.
         cards = self.controller.render_content(
             content_layout=layout,
             search_query="",
@@ -260,7 +260,8 @@ class TestQuickNoteController(unittest.TestCase):
             parent_widget=container,
             show_empty_state_fn=empty_fn,
         )
-        self.assertEqual(len(cards), 2)
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0].entry["id"], e1["id"])
 
         # Filter by inbox
         self.controller.select_filter("inbox")
@@ -385,6 +386,22 @@ class TestAppControllerAddButtonAndNotesIntegration(unittest.TestCase):
         self.controller.header.update_notes_badge.assert_called_once_with(2)
         self.controller.refresh_filter_pills.assert_called_once()
         self.controller.refresh_content.assert_called_once()
+
+    def test_notes_badge_counts_only_open_notes(self):
+        from ui.app_controller import AppController
+
+        self.controller.quick_note_manager.get_all_entries.return_value = [
+            {"id": "n1", "status": "inbox"},
+            {"id": "n2", "status": "followup"},
+            {"id": "n3", "status": "resolved"},
+        ]
+        self.controller._update_notes_badge = AppController._update_notes_badge.__get__(
+            self.controller
+        )
+
+        self.controller._update_notes_badge()
+
+        self.controller.header.update_notes_badge.assert_called_once_with(2)
 
 
 if __name__ == "__main__":

@@ -68,6 +68,68 @@ QFrame#lootCard[boardCard="true"] {
     border-radius: 10px;
 }
 
+QFrame#QuickNoteStreamCard {
+    background: transparent;
+    border: none;
+}
+
+QFrame#QuickNoteStreamCard[overdue="true"] {
+    border-left: 2px solid {WARNING_A40};
+}
+
+QLabel#QuickNoteText {
+    color: {TEXT_PRIMARY};
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    padding: 4px;
+}
+
+QLabel#QuickNoteText[resolved="true"] {
+    color: {TEXT_MUTED};
+}
+
+QLabel#QuickNoteMeta {
+    color: {TEXT_MUTED};
+    background: transparent;
+    border: none;
+    font-size: 10px;
+}
+
+QFrame#QuickNoteFocusReview {
+    background-color: {BG_SURFACE};
+    border: 1px solid {CYAN_A50};
+    border-radius: 10px;
+}
+
+QLabel#QuickNoteReviewText {
+    color: {TEXT_PRIMARY};
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    padding: 12px;
+}
+
+QLabel.QuickNoteReviewProgress,
+QLabel[class="QuickNoteReviewProgress"] {
+    color: {CYBER_CYAN};
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QFrame#QuickNoteReviewSummary {
+    background-color: transparent;
+    border: 1px solid {BORDER_A40};
+    border-radius: 6px;
+}
+
+QLabel#QuickNoteReviewSummaryText {
+    color: {TEXT_MUTED};
+    background: transparent;
+    border: none;
+    font-size: 11px;
+}
+
 QFrame#lootCard[boardCard="true"]:hover {
     background-color: {LOOT_CARD_SURFACE};
     border: 1px solid {CYBER_CYAN};

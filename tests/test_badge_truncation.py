@@ -45,10 +45,10 @@ def test_loot_card_reserves_badge_width_and_elides_title(qapp, tmp_path):
     container.deleteLater()
 
 
-def test_quick_note_card_reserves_target_badge_width(qapp):
+def test_quick_note_stream_keeps_target_out_of_default_row(qapp):
     entry = {
         "id": "note-truncation-test",
-        "content": "Check internal staging credentials",
+        "text": "Check internal staging credentials",
         "category": "access",
         "target_ip": "TARGET",
         "timestamp": "14:05:00",
@@ -65,11 +65,10 @@ def test_quick_note_card_reserves_target_badge_width(qapp):
         qapp.processEvents()
 
     labels = card.findChildren(QLabel)
-    target_label = next((lbl for lbl in labels if lbl.text() == "TARGET"), None)
-    assert target_label is not None
-    advance = target_label.fontMetrics().horizontalAdvance("TARGET")
-    assert target_label.minimumWidth() >= advance + 14
-    assert target_label.width() >= advance
+    assert all(lbl.text() != "TARGET" for lbl in labels)
+    assert "ACCESS" in card.lbl_meta.text()
+    context_texts = [action.text() for action in card._build_context_menu().actions()]
+    assert "TARGET" in context_texts
 
     container.hide()
     container.deleteLater()
@@ -129,8 +128,5 @@ def test_cards_render_standardized_phase_badges(qapp, tmp_path):
         "timestamp": "14:05:00",
     }
     note_card = QuickNoteCard(note_entry)
-    note_labels = note_card.findChildren(QLabel)
-    note_cat_lbl = next((lbl for lbl in note_labels if lbl.text() == "POSTEX"), None)
-    assert note_cat_lbl is not None
-    assert note_cat_lbl.toolTip() == "Post-Exploitation & Lateral Movement"
+    assert "POSTEX" in note_card.lbl_meta.text()
 

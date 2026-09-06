@@ -6,6 +6,7 @@ persisted to project storage under 'quick_notes'.
 """
 
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -25,6 +26,16 @@ from core.validators import (
 )
 
 logger = get_logger("quick_notes")
+
+
+def _timestamp_sort_key(entry: Dict[str, Any]) -> datetime:
+    value = str(entry.get("timestamp", "")).strip()
+    for pattern in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %I:%M:%S %p"):
+        try:
+            return datetime.strptime(value, pattern)
+        except ValueError:
+            continue
+    return datetime.min
 
 
 class QuickNoteManager(QObject):
@@ -210,7 +221,7 @@ class QuickNoteManager(QObject):
         status: Optional[str] = None,
         pinned: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
-        """Returns filtered and prioritized quick notes."""
+        """Return filtered notes in reverse chronological stream order."""
         results = self.notes
         if category and category != "all":
             results = [n for n in results if n.get("category") == category]
@@ -234,18 +245,7 @@ class QuickNoteManager(QObject):
                 or sq in n.get("status", "").lower()
             ]
 
-        # Prioritized sorting:
-        # 1. pinned first
-        # 2. uncompleted next (status != "resolved")
-        # 3. resolved
-        # Preserves newest-first order within each bucket.
-        sorted_results = sorted(
-            results,
-            key=lambda n: (
-                0 if n.get("pinned", False) else 1,
-                1 if n.get("status", "inbox") == "resolved" else 0,
-            ),
-        )
+        sorted_results = sorted(results, key=_timestamp_sort_key, reverse=True)
 
         return [dict(n) for n in sorted_results]
 

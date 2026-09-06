@@ -173,8 +173,7 @@ class TestQuickNoteManager(unittest.TestCase):
         n3 = self.manager.add_entry("Note 3 - followup pinned", status="followup", pinned=True)
         n4 = self.manager.add_entry("Note 4 - inbox pinned", status="inbox", pinned=True)
 
-        # get_entries() default sort:
-        # Pinned first (n4, n3), unresolved unpinned next (n2), resolved last (n1)
+        # Equal timestamps retain newest insertion order.
         entries = self.manager.get_entries()
         self.assertEqual([e["id"] for e in entries], [n4["id"], n3["id"], n2["id"], n1["id"]])
 
@@ -192,7 +191,34 @@ class TestQuickNoteManager(unittest.TestCase):
         self.assertEqual(len(pinned_notes), 2)
         self.assertEqual([e["id"] for e in pinned_notes], [n4["id"], n3["id"]])
 
+    def test_stream_sorting_is_chronological_not_status_or_pin_priority(self):
+        self.manager.replace_entries(
+            [
+                {
+                    "id": "pinned-old",
+                    "text": "Pinned old",
+                    "timestamp": "2026-09-06 08:00:00",
+                    "pinned": True,
+                },
+                {
+                    "id": "resolved-middle",
+                    "text": "Resolved middle",
+                    "timestamp": "2026-09-06 09:00:00",
+                    "status": "resolved",
+                },
+                {
+                    "id": "newest",
+                    "text": "Newest",
+                    "timestamp": "2026-09-06 10:00:00",
+                },
+            ]
+        )
+
+        self.assertEqual(
+            [entry["id"] for entry in self.manager.get_entries()],
+            ["newest", "resolved-middle", "pinned-old"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
-

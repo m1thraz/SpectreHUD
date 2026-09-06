@@ -6,6 +6,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Optional one-note-at-a-time focus review for working through the Quick Notes backlog.
+
+### Changed
+
+* Redesigned Quick Notes as a chronological, age-aware stream with simplified rows, contextual actions, completion undo, and an explicit bulk-selection mode.
+
 ## [2.1.1] - 2026-09-06
 
 ### Added

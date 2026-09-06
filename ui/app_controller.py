@@ -445,7 +445,15 @@ class AppController(QObject):
             self.refresh_content()
 
     def _update_notes_badge(self) -> None:
-        count = len(self.quick_note_manager.get_all_entries()) if self.quick_note_manager else 0
+        count = (
+            sum(
+                1
+                for note in self.quick_note_manager.get_all_entries()
+                if note.get("status", "inbox") != "resolved"
+            )
+            if self.quick_note_manager
+            else 0
+        )
         self.header.update_notes_badge(count)
 
     def switch_mode(self, mode: str) -> None:
@@ -606,7 +614,6 @@ class AppController(QObject):
             self._on_content_copied,
             self.window,
             self.content.show_empty_state,
-            on_edit_note=self._on_edit_note_requested,
         )
         return RenderResult(cards, self._format_entry_count(len(cards)))
 

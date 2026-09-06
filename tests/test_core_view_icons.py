@@ -55,20 +55,17 @@ def test_loot_card_uses_icons_for_card_actions(qapp):
         _assert_icon_only(button)
 
 
-def test_quick_note_card_combines_status_text_with_icons(qapp):
+def test_quick_note_card_keeps_only_primary_and_copy_actions_visible(qapp):
     card = QuickNoteCard(
         {"id": "note-1", "text": "Follow this up", "status": "inbox", "category": "misc"}
     )
 
-    for button in (card.btn_delete, card.btn_copy, card.btn_edit):
+    for button in (card.btn_complete, card.btn_copy):
         _assert_icon_only(button)
 
-    assert card.btn_status.text()
-    assert not card.btn_status.icon().isNull()
-    assert all(not action.icon().isNull() for action in card.btn_status.menu().actions())
-    assert card.btn_send.text()
-    assert not card.btn_send.icon().isNull()
-    assert all(not action.icon().isNull() for action in card.btn_send.menu().actions())
+    context_actions = [action for action in card._build_context_menu().actions() if not action.isSeparator()]
+    assert context_actions
+    assert all(not action.icon().isNull() for action in context_actions)
 
 
 def test_history_card_uses_icons_and_keeps_capture_text(qapp):

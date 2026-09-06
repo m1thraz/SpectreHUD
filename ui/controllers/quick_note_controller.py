@@ -5,8 +5,9 @@ Coordinates the QuickNotePopup, quick note persistence, promotion to loot,
 reporting export, inline editing, status triage, pinning, and bulk actions.
 """
 
+from datetime import datetime
 from typing import Optional, Callable, Dict, Any, List, Set
-from PyQt6.QtCore import QObject, pyqtSignal, Qt
+from PyQt6.QtCore import QObject, pyqtSignal, Qt, QSize
 from PyQt6.QtWidgets import (
     QWidget,
     QPushButton,
@@ -26,7 +27,9 @@ from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
 from ui.quick_note_bulk_bar import QuickNoteBulkBar
+from ui.quick_note_focus_review import QuickNoteFocusReview, QuickNoteReviewSummary
 from ui.note_selection_model import NoteSelectionModel
+from ui.styles.icons import icon
 
 logger = get_logger("quick_note_controller")
 
@@ -65,6 +68,16 @@ class QuickNoteController(QObject):
         self.selection_model = NoteSelectionModel()
         self.filter_buttons: Dict[str, QPushButton] = {}
         self.btn_phase: Optional[QPushButton] = None
+        self.btn_select_mode: Optional[QPushButton] = None
+        self.btn_review_mode: Optional[QPushButton] = None
+        self.selection_mode = False
+        self.review_mode = False
+        self._pending_completions: Dict[str, str] = {}
+        self._suppressed_event_ids: Set[str] = set()
+        self._review_queue_ids: List[str] = []
+        self._review_seen_count = 0
+        self._review_completed_count = 0
+        self._review_total = 0
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
@@ -76,6 +89,10 @@ class QuickNoteController(QObject):
         return self.selection_model.snapshot()
 
     def _on_notes_updated(self, payload: Optional[Dict[str, Any]] = None) -> None:
+        entry = (payload or {}).get("entry") or {}
+        entry_id = entry.get("id")
+        if entry_id in self._pending_completions or entry_id in self._suppressed_event_ids:
+            return
         self.notes_updated.emit()
 
     def set_phase_provider(self, provider: Callable[[], Optional[str]]) -> None:
@@ -307,6 +324,50 @@ class QuickNoteController(QObject):
             self.selection_cleared.emit()
         self._update_bulk_bar()
 
+    def set_selection_mode(self, enabled: bool) -> None:
+        self.selection_mode = bool(enabled)
+        if self.selection_mode:
+            self.set_review_mode(False, refresh=False)
+        else:
+            self.clear_selection()
+        self.notes_updated.emit()
+
+    def set_review_mode(self, enabled: bool, *, refresh: bool = True) -> None:
+        self.review_mode = bool(enabled)
+        if self.review_mode:
+            self.selection_mode = False
+            self.clear_selection()
+            self._review_queue_ids = []
+            self._review_seen_count = 0
+            self._review_completed_count = 0
+            self._review_total = 0
+        if refresh:
+            self.notes_updated.emit()
+
+    def begin_completion(self, entry_id: str, card: QuickNoteCard) -> bool:
+        entry = next(
+            (note for note in self.quick_note_manager.get_all_entries() if note.get("id") == entry_id),
+            None,
+        )
+        if entry is None or entry.get("status", "inbox") == "resolved":
+            return False
+        self._pending_completions[entry_id] = entry.get("status", "inbox")
+        if not self.set_note_status(entry_id, "resolved"):
+            self._pending_completions.pop(entry_id, None)
+            return False
+        card.show_completion_pending()
+        return True
+
+    def undo_completion(self, entry_id: str) -> bool:
+        previous_status = self._pending_completions.pop(entry_id, None)
+        if previous_status is None:
+            return False
+        return self.set_note_status(entry_id, previous_status)
+
+    def finalize_completion(self, entry_id: str) -> None:
+        if self._pending_completions.pop(entry_id, None) is not None:
+            self.notes_updated.emit()
+
     def bulk_set_status(self, status: str) -> None:
         """Applies a triage status to all currently selected notes."""
         if not self.selection_model:
@@ -364,6 +425,12 @@ class QuickNoteController(QObject):
         elif filter_id in VALID_CATEGORY_IDS:
             self.current_category_filter = filter_id
 
+        if self.review_mode:
+            self._review_queue_ids = []
+            self._review_seen_count = 0
+            self._review_completed_count = 0
+            self._review_total = 0
+
         for fid, btn in self.filter_buttons.items():
             is_active = (
                 (fid == self.current_status_filter)
@@ -398,7 +465,7 @@ class QuickNoteController(QObject):
         self.filter_buttons.clear()
         all_notes = self.quick_note_manager.get_all_entries()
 
-        total = len(all_notes)
+        open_cnt = sum(1 for n in all_notes if n.get("status", "inbox") != "resolved")
         inbox_cnt = sum(1 for n in all_notes if n.get("status", "inbox") == "inbox")
         follow_cnt = sum(1 for n in all_notes if n.get("status") == "followup")
         resolved_cnt = sum(1 for n in all_notes if n.get("status") == "resolved")
@@ -406,15 +473,26 @@ class QuickNoteController(QObject):
 
         # 1. Status Pills
         status_pills = [
-            ("all", f"All ({total})"),
-            ("inbox", f"Inbox ({inbox_cnt})"),
-            ("followup", f"Follow-up ({follow_cnt})"),
-            ("resolved", f"Resolved ({resolved_cnt})"),
-            ("pinned", f"📌 Pinned ({pinned_cnt})"),
+            ("all", f"{t('quick_note.filter_all', 'Open')} ({open_cnt})", None),
+            ("inbox", f"{t('quick_note.status_inbox', 'Inbox')} ({inbox_cnt})", None),
+            (
+                "followup",
+                f"{t('quick_note.status_followup', 'Follow-up')} ({follow_cnt})",
+                None,
+            ),
+            (
+                "resolved",
+                f"{t('quick_note.status_resolved', 'Resolved')} ({resolved_cnt})",
+                None,
+            ),
+            ("pinned", f"{t('quick_note.pinned', 'Pinned')} ({pinned_cnt})", "fa5s.thumbtack"),
         ]
 
-        for pid, ptext in status_pills:
+        for pid, ptext, icon_name in status_pills:
             btn = QPushButton(ptext)
+            if icon_name:
+                btn.setIcon(icon(icon_name))
+                btn.setIconSize(QSize(11, 11))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty(
                 "class",
@@ -456,10 +534,34 @@ class QuickNoteController(QObject):
         self.btn_phase.setMenu(phase_menu)
         pills_layout.addWidget(self.btn_phase)
 
+        self.btn_select_mode = QPushButton(t("quick_note.select_mode", "Select"))
+        self.btn_select_mode.setIcon(icon("fa5s.check-square"))
+        self.btn_select_mode.setIconSize(QSize(11, 11))
+        self.btn_select_mode.setCheckable(True)
+        self.btn_select_mode.setChecked(self.selection_mode)
+        self.btn_select_mode.setProperty(
+            "class", "FilterPillActive" if self.selection_mode else "FilterPill"
+        )
+        self.btn_select_mode.clicked.connect(self.set_selection_mode)
+        pills_layout.addWidget(self.btn_select_mode)
+
+        self.btn_review_mode = QPushButton(t("quick_note.review_mode", "Focus review"))
+        self.btn_review_mode.setIcon(icon("fa5s.tasks"))
+        self.btn_review_mode.setIconSize(QSize(11, 11))
+        self.btn_review_mode.setCheckable(True)
+        self.btn_review_mode.setChecked(self.review_mode)
+        self.btn_review_mode.setProperty(
+            "class", "FilterPillActive" if self.review_mode else "FilterPill"
+        )
+        self.btn_review_mode.clicked.connect(self.set_review_mode)
+        pills_layout.addWidget(self.btn_review_mode)
+
         pills_layout.addStretch()
 
         # 3. Clear All Button
-        btn_clear = QPushButton("Clear")
+        btn_clear = QPushButton(t("quick_note.clear", "Clear"))
+        btn_clear.setIcon(icon("fa5s.trash"))
+        btn_clear.setIconSize(QSize(11, 11))
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip(
             t("quick_note.clear_tip", "Clear all quick notes in the inbox for this project")
@@ -512,7 +614,47 @@ class QuickNoteController(QObject):
         show_empty_state_fn: Callable[[str], None],
         on_edit_note: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> List[QWidget]:
-        """Renders notes inbox cards into the content layout."""
+        """Render the selected Notes presentation without changing domain state."""
+        notes = self._filtered_notes(search_query)
+
+        existing_ids = {n.get("id") for n in self.quick_note_manager.get_all_entries()}
+        self.selection_model.retain(existing_ids)
+
+        if self.review_mode:
+            return self._render_focus_review(content_layout, notes, parent_widget)
+
+        if self._review_completed_count:
+            content_layout.addWidget(
+                QuickNoteReviewSummary(self._review_completed_count, parent=parent_widget)
+            )
+
+        if self.selection_mode:
+            bulk_bar = self._create_bulk_bar(parent_widget)
+            self._update_bulk_bar()
+            content_layout.addWidget(bulk_bar)
+
+        if not notes:
+            show_empty_state_fn(
+                t(
+                    "quick_note.empty_state",
+                    "No quick notes found. Use Ctrl+Alt+N or the Note button to capture thoughts.",
+                )
+            )
+            return []
+
+        rendered_cards: List[QWidget] = []
+        render_now = datetime.now()
+        for item in notes:
+            card = QuickNoteCard(item, parent=parent_widget, now=render_now)
+            self._wire_card(card, parent_widget, on_copied, on_edit_note)
+            card.set_selection_mode(self.selection_mode)
+            if item.get("id") in self.selection_model:
+                card.set_selected(True)
+            content_layout.addWidget(card)
+            rendered_cards.append(card)
+        return rendered_cards
+
+    def _filtered_notes(self, search_query: str) -> List[Dict[str, Any]]:
         cat_filter = (
             None if self.current_category_filter in ("all", "") else self.current_category_filter
         )
@@ -530,54 +672,115 @@ class QuickNoteController(QObject):
             pinned=pinned_filter,
             search_query=search_query,
         )
+        if self.current_status_filter == "all":
+            notes = [n for n in notes if n.get("status", "inbox") != "resolved"]
+        return notes
 
-        # Retain selection of only still existing items
-        existing_ids = {n.get("id") for n in self.quick_note_manager.get_all_entries()}
-        self.selection_model.retain(existing_ids)
+    def _wire_card(
+        self,
+        card: QuickNoteCard,
+        parent_widget: QWidget,
+        on_copied: Optional[Callable[[str], None]],
+        on_edit_note: Optional[Callable[[Dict[str, Any]], None]],
+    ) -> None:
+        card.promote_requested.connect(
+            lambda entry, p=parent_widget: self.promote_to_loot(entry, parent_widget=p)
+        )
+        card.send_to_report_requested.connect(
+            lambda entry, p=parent_widget: self.send_to_report(entry, parent_widget=p)
+        )
+        card.deleted.connect(self.delete_note)
+        card.edited.connect(self.update_note_text)
+        if on_edit_note is not None:
+            card.edit_requested.connect(on_edit_note)
+        card.status_changed.connect(self.set_note_status)
+        card.pin_toggled.connect(self.toggle_note_pinned)
+        card.selection_changed.connect(self.on_card_selection_changed)
+        card.completion_requested.connect(
+            lambda entry_id, rendered=card: self.begin_completion(entry_id, rendered)
+        )
+        card.completion_undo_requested.connect(self.undo_completion)
+        card.completion_expired.connect(self.finalize_completion)
+        self.selection_cleared.connect(card.clear_selection)
+        if on_copied is not None:
+            card.copied.connect(on_copied)
 
-        # Create and attach bulk bar
-        bulk_bar = self._create_bulk_bar(parent_widget)
-        self._update_bulk_bar()
-        content_layout.addWidget(bulk_bar)
+    def _render_focus_review(
+        self,
+        content_layout: QVBoxLayout,
+        notes: List[Dict[str, Any]],
+        parent_widget: QWidget,
+    ) -> List[QWidget]:
+        eligible = [n for n in reversed(notes) if n.get("status", "inbox") != "resolved"]
+        entries_by_id = {n.get("id"): n for n in eligible}
+        if not self._review_queue_ids and self._review_total == 0:
+            self._review_queue_ids = [n.get("id") for n in eligible if n.get("id")]
+            self._review_total = len(self._review_queue_ids)
+        else:
+            self._review_queue_ids = [
+                entry_id for entry_id in self._review_queue_ids if entry_id in entries_by_id
+            ]
 
-        if not notes:
-            show_empty_state_fn(
-                t(
-                    "quick_note.empty_state",
-                    "No quick notes found. Use global hotkey (Ctrl+Alt+N) or click '📌 Note' to capture thoughts.",
-                )
-            )
+        if not self._review_queue_ids:
+            summary = QuickNoteReviewSummary(self._review_completed_count, parent=parent_widget)
+            content_layout.addWidget(summary)
             return []
 
-        rendered_cards: List[QWidget] = []
-        for item in notes:
-            card = QuickNoteCard(item, parent=parent_widget)
-            card.promote_requested.connect(
-                lambda entry, p=parent_widget: self.promote_to_loot(entry, parent_widget=p)
-            )
-            card.send_to_report_requested.connect(
-                lambda entry, p=parent_widget: self.send_to_report(entry, parent_widget=p)
-            )
-            card.deleted.connect(self.delete_note)
-            card.edited.connect(self.update_note_text)
-            if on_edit_note is not None:
-                card.edit_requested.connect(on_edit_note)
-            else:
-                card.edit_requested.connect(
-                    lambda entry, p=parent_widget: self.open_edit_dialog(p, entry)
-                )
-            card.status_changed.connect(self.set_note_status)
-            card.pin_toggled.connect(self.toggle_note_pinned)
-            card.selection_changed.connect(self.on_card_selection_changed)
+        entry = entries_by_id[self._review_queue_ids[0]]
+        review = QuickNoteFocusReview(
+            entry,
+            position=min(self._review_seen_count + 1, self._review_total),
+            total=self._review_total,
+            parent=parent_widget,
+        )
+        review.promote_requested.connect(
+            lambda note, p=parent_widget: self._review_promote(note, p)
+        )
+        review.complete_requested.connect(self._review_complete)
+        review.delete_requested.connect(self._review_delete)
+        review.next_requested.connect(self._review_next)
+        content_layout.addWidget(review)
+        return [review]
 
-            self.selection_cleared.connect(card.clear_selection)
+    def _advance_review(self, entry_id: str, *, completed: bool) -> None:
+        if entry_id in self._review_queue_ids:
+            self._review_queue_ids.remove(entry_id)
+        self._review_seen_count += 1
+        if completed:
+            self._review_completed_count += 1
+        self.notes_updated.emit()
 
-            if item.get("id") in self.selection_model:
-                card.set_selected(True)
+    def _review_complete(self, entry_id: str) -> None:
+        self._suppressed_event_ids.add(entry_id)
+        try:
+            success = self.set_note_status(entry_id, "resolved")
+        finally:
+            self._suppressed_event_ids.discard(entry_id)
+        if success:
+            self._advance_review(entry_id, completed=True)
 
-            if on_copied is not None:
-                card.copied.connect(on_copied)
+    def _review_delete(self, entry_id: str) -> None:
+        self._suppressed_event_ids.add(entry_id)
+        try:
+            success = self.delete_note(entry_id)
+        finally:
+            self._suppressed_event_ids.discard(entry_id)
+        if success:
+            self._advance_review(entry_id, completed=True)
 
-            content_layout.addWidget(card)
-            rendered_cards.append(card)
-        return rendered_cards
+    def _review_promote(self, entry: Dict[str, Any], parent_widget: QWidget) -> None:
+        entry_id = entry.get("id", "")
+        self._suppressed_event_ids.add(entry_id)
+        try:
+            success = self.promote_to_loot(entry, parent_widget=parent_widget)
+        finally:
+            self._suppressed_event_ids.discard(entry_id)
+        if success:
+            self._advance_review(entry_id, completed=True)
+
+    def _review_next(self) -> None:
+        if not self._review_queue_ids:
+            return
+        self._review_queue_ids.pop(0)
+        self._review_seen_count += 1
+        self.notes_updated.emit()
