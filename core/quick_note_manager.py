@@ -141,7 +141,11 @@ class QuickNoteManager(QObject):
         persist: bool = True,
         **changes,
     ) -> Optional[Dict[str, Any]]:
-        """Updates fields of an existing quick note and persists the change."""
+        """Stage normalized fields on a copy; missing entries or empty text return ``None``.
+
+        Persistence precedes memory/event commit; invalid statuses, unsupported sources, and
+        unknown fields leave existing values unchanged.
+        """
         idx = -1
         for i, n in enumerate(self.notes):
             if n.get("id") == entry_id:

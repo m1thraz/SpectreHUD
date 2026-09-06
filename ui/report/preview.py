@@ -59,6 +59,12 @@ class ReportDocument(QTextDocument):
                 pass
 
     def loadResource(self, resource_type: int, name: QUrl):
+        """Resolve preview images through bounded, project-scoped candidates.
+
+        Authored paths precede the legacy ``loot/<basename>`` fallback so same-named
+        files keep deterministic meaning. Valid images are limited to 15 MiB and
+        cached by URL; non-image or unresolved resources remain owned by Qt.
+        """
         if resource_type != int(QTextDocument.ResourceType.ImageResource) and resource_type != 2:
             return super().loadResource(resource_type, name)
 

@@ -59,6 +59,12 @@ class ClipboardMonitor(QObject):
         self._clipboard = None
 
     def _on_clipboard_changed(self) -> None:
+        """Capture accepted clipboard changes without taking persistence ownership.
+
+        Paused or unattached monitors are inert, and expected provider failures degrade to
+        unscoped metadata. History performs acceptance and deduplication before signaling;
+        ``persist=False`` keeps live capture in session state until workspace persistence.
+        """
         if self._is_paused or self._clipboard is None:
             return
         try:

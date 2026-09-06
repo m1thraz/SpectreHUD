@@ -916,13 +916,18 @@ class ReportEditorTab(QWidget):
         super().closeEvent(event)
 
     def _on_regenerate_clicked(self) -> None:
+        """Regenerate destructively while preserving the latest user-authored Markdown.
+
+        Preview edits are committed and dirty source is saved before confirmation and
+        backup, so failures cannot silently replace the newest manual work. Unlike the
+        additive loot path, successful regeneration owns the complete report structure.
+        """
         if not self.current_project:
             return
 
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
 
-        # Save pending editor edits first so the backup safely captures them
         if self._dirty:
             if not self.save():
                 logger.error(
@@ -972,7 +977,7 @@ class ReportEditorTab(QWidget):
             self.editor.blockSignals(True)
             self.editor.setPlainText(new_content)
             self.editor.blockSignals(False)
-            self._set_dirty(False)  # regenerate() hat bereits erfolgreich gespeichert
+            self._set_dirty(False)
             self._update_preview()
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")

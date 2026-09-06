@@ -66,6 +66,12 @@ class ProjectRegistry:
 
     @staticmethod
     def _discover_base(base_dir: Path) -> Dict[str, Path]:
+        """Discover only unambiguous physical project directories without mutating state.
+
+        Hidden, symlinked, out-of-root, or individually unresolvable candidates are ignored.
+        Paths whose names collapse to the same sanitized identity are all discarded rather
+        than binding that logical project name to an arbitrary directory.
+        """
         discovered: Dict[str, Path] = {}
         if not base_dir.exists():
             return discovered

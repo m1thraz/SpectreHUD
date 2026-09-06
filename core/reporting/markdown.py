@@ -237,7 +237,11 @@ def _render_html_table(table_rows: List[List[str]]) -> List[str]:
 
 
 def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
-    """Converts Markdown text to HTML body structure."""
+    """Convert the line-oriented report subset after marker stripping and image resolution.
+
+    Block precedence and delayed inline escaping are structural and export-safety invariants,
+    not interchangeable parsing stages.
+    """
     clean_md = strip_report_markers(md_text)
     processed_md = resolve_and_embed_images(clean_md, project_dir)
 

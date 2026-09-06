@@ -23,9 +23,10 @@ class BoxArchiver:
 
     @staticmethod
     def archive_project(project_dir: Path, output_zip: Optional[Path] = None) -> Dict[str, Any]:
-        """
-        Compresses all files in project_dir into output_zip.
-        Returns dict with keys: 'success', 'zip_path', 'file_count', 'total_bytes', 'compressed_bytes', 'error'.
+        """Atomically replace the destination with a root-prefixed temporary archive.
+
+        Hidden or excluded files, symlinks, output artifacts, and out-of-root paths are omitted.
+        Output/archive failures use the result mapping; partial temporary archives are cleaned.
         """
         proj_path = Path(project_dir).resolve()
         if not proj_path.exists() or not proj_path.is_dir():
@@ -71,11 +72,9 @@ class BoxArchiver:
             ) as zf:
                 for root, dirs, files in os.walk(proj_path):
                     root_path = Path(root).resolve()
-                    # Security: Disallow symlink escapes outside project_dir
                     if not root_path.is_relative_to(proj_path):
                         continue
 
-                    # Filter out hidden or excluded files
                     for filename in files:
                         if filename.startswith(".") or filename in EXCLUDED_FILENAMES:
                             continue
@@ -83,7 +82,6 @@ class BoxArchiver:
                             continue
 
                         file_path = root_path / filename
-                        # Skip the output zip file itself or temp files
                         if file_path in (output_zip, tmp_zip):
                             continue
 
@@ -94,7 +92,6 @@ class BoxArchiver:
                             file_count += 1
                             total_raw_bytes += file_path.stat().st_size
 
-            # Atomically replace destination with completed tmp archive
             os.replace(tmp_zip, output_zip)
             compressed_size = output_zip.stat().st_size if output_zip.exists() else 0
             logger.info(

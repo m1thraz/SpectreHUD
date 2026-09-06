@@ -49,7 +49,11 @@ def normalize_template_variables(text: str) -> str:
 
 
 def parse_snippets_json(content: str) -> List[Dict[str, Any]]:
-    """Parses snippet definitions from JSON string (array or object)."""
+    """Accept legacy lists, single objects, and wrapper shapes; malformed JSON returns ``[]``.
+
+    Invalid items are skipped, wrapper defaults and tag coercion are tolerated, and accepted
+    templates receive canonical SpectreHUD placeholders.
+    """
     snippets: List[Dict[str, Any]] = []
     try:
         data = json.loads(content)

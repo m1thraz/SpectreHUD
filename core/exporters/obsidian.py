@@ -285,6 +285,12 @@ class ObsidianExporter:
         entries: Iterable[Mapping[str, Any]],
         note_path: Optional[Path | str] = None,
     ) -> ExportResult:
+        """Append marker-new loot while preserving user-owned note content.
+
+        The resolved Markdown target must remain inside the configured vault, preventing
+        path and symlink escapes. Markers provide idempotence; attachments remain outside
+        this operation, and atomic replacement preserves the prior note on write failure.
+        """
         target = Path(note_path) if note_path is not None else self.note_path_for(project_name)
         try:
             target = target.resolve()

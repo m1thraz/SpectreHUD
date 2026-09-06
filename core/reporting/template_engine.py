@@ -120,6 +120,11 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
 
 
 def _render_executive_summary(section: TemplateSection, context: ReportContext, lang: str) -> str:
+    """Treat every non-``info`` loot item as a finding in the report matrix.
+
+    Only canonical finding severities contribute to the summary totals. Table-facing
+    values are escaped, and an empty row preserves the generated report structure.
+    """
     all_entries = context.loot_entries
     critical = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "critical")
     high = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "high")
@@ -213,6 +218,12 @@ def _render_scope_limitations(section: TemplateSection, context: ReportContext, 
 
 
 def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[str]:
+    """Render the canonical loot block shared by regeneration and additive sync.
+
+    The marker preceding each heading carries identity and content-hash protocol state;
+    its placement and the type-specific body structure must remain sync-compatible,
+    not merely render to visually equivalent Markdown.
+    """
     entry_id = str(entry.get("id", "")).strip()
     marker = format_loot_marker(entry_id, loot_content_hash(entry)) if entry_id else ""
     entry_type = entry.get("type", "note")
@@ -256,6 +267,12 @@ def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[st
 
 
 def _render_phase_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
+    """Keep one canonical category in the ordering expected by report synchronization.
+
+    Loot is stored newest-first, so entries are reversed for report order. The notes
+    placeholder must follow generated loot because additive sync uses it as its stable
+    insertion boundary for preserving user-authored notes.
+    """
     category_id = section.category_id or "misc"
     cat_obj = next((c for c in CATEGORIES if c["id"] == category_id), None)
     cat_name = cat_obj["name"] if cat_obj else category_id.capitalize()

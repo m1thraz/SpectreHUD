@@ -29,23 +29,20 @@ def filter_loot_entries(
     category: Optional[str] = None,
     search_query: str = "",
 ) -> List[Dict[str, Any]]:
-    """
-    Filters loot entries by target IP, entry type, category, and fulltext query.
+    """Keep untargeted global loot visible in target views.
 
-    Returns defensive copies of matching dictionaries.
+    Type aliases normalize both criteria and entries; defensive results preserve input order.
     """
     if not entries:
         return []
 
     results = entries
 
-    # Filter by target IP
     if target_ip and target_ip != "all":
         results = [
             e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")
         ]
 
-    # Filter by entry type
     if entry_type and entry_type != "all":
         norm_type = TYPE_ALIASES.get(entry_type.lower(), entry_type)
         results = [
@@ -54,11 +51,9 @@ def filter_loot_entries(
             if TYPE_ALIASES.get(str(e.get("type", "")).lower(), e.get("type")) == norm_type
         ]
 
-    # Filter by category
     if category and category != "all":
         results = [e for e in results if e.get("category") == category]
 
-    # Filter by fulltext search query
     if search_query and search_query.strip():
         q = search_query.strip().lower()
         matched = []

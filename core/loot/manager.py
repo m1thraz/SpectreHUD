@@ -243,7 +243,11 @@ class LootManager:
         return entry
 
     def update_entry(self, entry_id: str, **fields) -> Optional[Dict[str, Any]]:
-        """Updates fields of an existing entry by ID and persists changes."""
+        """Stage only mutable loot fields on copies; unknown fields are ignored.
+
+        Category moves append at the destination, category/severity/type values normalize,
+        and persistence precedes memory and the single update event.
+        """
         from core.validators import VALID_SEVERITIES
 
         new_entries = [dict(e) for e in self.entries]

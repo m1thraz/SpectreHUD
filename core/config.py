@@ -91,6 +91,12 @@ class ConfigManager:
             self.session_param_cache[param_name.upper()] = value
 
     def load_config(self) -> Dict[str, Any]:
+        """Merge stored overrides with defaults and best-effort legacy migrations.
+
+        Normalized in-memory state is established before optional write-back. Persistence
+        failure is suppressed here so startup can proceed; explicit saves remain the
+        durable error-reporting boundary.
+        """
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
             migrated = False

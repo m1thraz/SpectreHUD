@@ -26,6 +26,7 @@ semantic versioning.
 
 ### Fixed
 
+- Preserve snippet presets and unresolved placeholders when supplied template values are blank.
 - Keep Obsidian loot-append deduplication metadata accurate for one-shot iterables such as generators.
 
 ## [2.1.0] - 2026-09-05

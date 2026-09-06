@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.snippets.interpolator import TemplateEngine
+from core.snippets.interpolator import SMART_PRESETS, TemplateEngine
 
 
 class TestTemplateParams(unittest.TestCase):
@@ -43,6 +43,37 @@ class TestTemplateParams(unittest.TestCase):
         rendered = TemplateEngine.render_with_custom(tmpl, variables, custom)
         self.assertEqual(rendered, "hashcat -m 1000 -a 0 ntlm.txt /usr/share/wordlists/rockyou.txt")
 
+    def test_blank_standard_values_keep_presets_and_placeholders(self):
+        tmpl = "{{TARGET_IP}} {{ATTACKER_IP}} {{PORT}} {{WORDLIST}} {{USERNAME}}"
+        variables = {
+            "target_ip": "",
+            "attacker_ip": "   ",
+            "port": "",
+            "wordlist": "\t",
+            "username": "",
+        }
+
+        rendered = TemplateEngine.render(tmpl, variables)
+
+        self.assertEqual(
+            rendered,
+            f"10.10.10.10 10.10.14.5 4444 {SMART_PRESETS['WORDLIST']} {{{{USERNAME}}}}",
+        )
+
+    def test_blank_custom_value_keeps_placeholder_visible(self):
+        rendered = TemplateEngine.render_with_custom(
+            "curl {{TARGET_IP}}/{{ENDPOINT}}",
+            {"target_ip": "10.10.10.20"},
+            {"ENDPOINT": ""},
+        )
+
+        self.assertEqual(rendered, "curl 10.10.10.20/{{ENDPOINT}}")
+
+    def test_non_blank_alias_value_still_overrides_default(self):
+        rendered = TemplateEngine.render("connect {{RHOST}}", {"RHOST": "192.0.2.10"})
+
+        self.assertEqual(rendered, "connect 192.0.2.10")
+
     def test_username_password_globals(self):
         tmpl = "hydra -l {{USERNAME}} -p {{PASSWORD}} ssh://{{TARGET_IP}}:{{PORT}}"
         variables = {
@@ -66,8 +97,6 @@ class TestTemplateParams(unittest.TestCase):
         self.assertEqual(rendered, "smbclient //10.10.10.70/share -U alice%Password123!")
 
     def test_full_parameter_tags_and_smart_presets(self):
-        from core.snippets.interpolator import SMART_PRESETS
-
         all_tags = [
             "DOMAIN",
             "DNS_SERVER",

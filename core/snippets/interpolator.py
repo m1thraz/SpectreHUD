@@ -114,9 +114,10 @@ class TemplateEngine:
 
     @staticmethod
     def render(template: str, variables: Dict[str, Any]) -> str:
-        """
-        Renders template with standard global variables.
-        Unresolved custom parameters remain as {{PARAM}} for visual clarity until copied.
+        """Treat blank values as unset so presets and placeholders remain usable.
+
+        Non-blank supplied keys override aliases case-insensitively. Callable replacement
+        preserves user backslashes literally, while unresolved placeholders remain visible.
         """
         if not template:
             return ""
@@ -172,9 +173,11 @@ class TemplateEngine:
             "DNS": dns_server if dns_server else "{{DNS}}",
         }
 
-        # Include custom variables if provided
         for k, v in variables.items():
-            aliases[k.upper()] = str(v)
+            supplied_value = str(v)
+            if not supplied_value.strip():
+                continue
+            aliases[k.upper()] = supplied_value
 
         result = template
         for key, val in aliases.items():
