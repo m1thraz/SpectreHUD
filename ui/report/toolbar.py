@@ -165,13 +165,12 @@ def build_format_toolbar(
     # Visual Divider between Ausrichtung and Einfügen
     tools_layout.addWidget(create_toolbar_divider(tools_container))
 
-    # Zone 5: Einfügen (Image, Link, Table, Report Icon, Page Break)
+    # Zone 5: Einfügen (Image, Link, Table, Report Icon)
     insert_buttons = (
         ("fa5s.image", "report.format_image", "Insert Image", "image"),
         ("fa5s.link", "report.format_link", "Link", "link"),
         ("fa5s.table", "report.format_table", "Table", "table"),
         ("fa5s.icons", "report.insert_icon", "Insert Icon", "icon"),
-        ("fa5s.file-alt", "report.format_page_break", "Insert Page Break", "page_break"),
     )
     for icon_name, key, fallback, callback_key in insert_buttons:
         btn = QPushButton(tools_container)
@@ -183,6 +182,34 @@ def build_format_toolbar(
         if callback_key in callbacks and callbacks[callback_key]:
             btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
+
+    btn_spacer = QPushButton(tools_container)
+    btn_spacer.setObjectName("btn_insert_spacer")
+    btn_spacer.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+    spacer_tip = t("report.format_spacer", "Insert vertical space")
+    btn_spacer.setToolTip(spacer_tip)
+    _apply_icon_button(btn_spacer, "fa5s.arrows-alt-v", spacer_tip, icon_color, icon_active_color)
+    spacer_menu = QMenu(btn_spacer)
+    for size in ("small", "medium", "large"):
+        action = spacer_menu.addAction(
+            t(f"report.format_spacer_{size}", size.title())
+        )
+        action.triggered.connect(
+            lambda _=False, spacer_size=size: callbacks[f"spacer_{spacer_size}"]()
+        )
+    btn_spacer.setMenu(spacer_menu)
+    tools_layout.addWidget(btn_spacer)
+
+    btn_page_break = QPushButton(tools_container)
+    btn_page_break.setObjectName("btn_insert_page_break")
+    btn_page_break.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+    page_break_tip = t("report.format_page_break", "Insert Page Break")
+    btn_page_break.setToolTip(page_break_tip)
+    _apply_icon_button(
+        btn_page_break, "fa5s.file-alt", page_break_tip, icon_color, icon_active_color
+    )
+    btn_page_break.clicked.connect(callbacks["page_break"])
+    tools_layout.addWidget(btn_page_break)
 
     main_layout.addWidget(tools_container)
     main_layout.addStretch()

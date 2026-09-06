@@ -18,7 +18,7 @@ from core.atomic_write import atomic_write_bytes, atomic_write_text
 from core.exporters.base import ExportResult, ExternalExportError
 from core.project.validator import sanitize_filename_component, validate_project_name
 from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE
-from core.reporting.loot_sync import strip_report_markers
+from core.reporting.loot_sync import SPACER_REGEX, strip_report_markers
 
 
 _IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+[^)]*)?\)")
@@ -231,6 +231,12 @@ class ObsidianExporter:
             destination_dir / f"{self._safe_project_name(project_name)}.md", overwrite
         )
         clean_markdown = strip_report_markers(str(markdown))
+        clean_markdown = SPACER_REGEX.sub(
+            lambda match: {"small": "<br>", "medium": "<br>\n<br>", "large": "<br>\n<br>\n<br>"}[
+                match.group(1).lower()
+            ],
+            clean_markdown,
+        )
         rewritten, attachments, warnings = self._copy_attachments(
             clean_markdown, source_dir, destination_dir
         )

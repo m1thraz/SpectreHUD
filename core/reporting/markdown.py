@@ -11,6 +11,7 @@ from core.reporting.assets import encode_image_base64, ImageEmbeddingBudget
 from core.reporting.loot_sync import (
     PAGEBREAK_HTML,
     PAGEBREAK_REGEX,
+    SPACER_REGEX,
     strip_report_markers,
 )
 from core.logger import get_logger
@@ -310,6 +311,17 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
             _flush_table()
             _flush_blockquote()
             html_lines.append(PAGEBREAK_HTML)
+            continue
+
+        spacer_match = SPACER_REGEX.fullmatch(stripped)
+        if spacer_match:
+            _flush_list()
+            _flush_table()
+            _flush_blockquote()
+            size = spacer_match.group(1).lower()
+            html_lines.append(
+                f'<div class="spectre-spacer spacer-{size}" aria-hidden="true"></div>'
+            )
             continue
 
         if stripped.startswith(">"):

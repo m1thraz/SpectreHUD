@@ -10,6 +10,8 @@ from core.reporting.styles import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGH
 from core.reporting.loot_sync import (
     PAGEBREAK_MARKER,
     PAGEBREAK_HTML,
+    SPACER_REGEX,
+    format_spacer_marker,
     preserve_markers_in_preview_roundtrip,
 )
 from core.reporting.markdown import convert_markdown_to_html
@@ -20,7 +22,7 @@ from core.reporting.template_engine import (
     TemplateRenderer,
 )
 from core.reporting.template_repository import template_to_dict, dict_to_template
-from ui.markdown_toolbar_actions import insert_page_break
+from ui.markdown_toolbar_actions import insert_page_break, insert_spacer
 from ui.report_editor_tab import (
     PREVIEW_PAGEBREAK_LABEL,
     _markdown_with_preview_pagebreaks,
@@ -76,6 +78,12 @@ class TestPageBreakConversion(unittest.TestCase):
         self.assertNotIn(PAGEBREAK_HTML, html)
         self.assertIn("&lt;!-- spectre:pagebreak --&gt;", html)
 
+    def test_spacer_markers_render_with_bounded_sizes(self):
+        for size in ("small", "medium", "large"):
+            marker = format_spacer_marker(size)
+            self.assertIsNotNone(SPACER_REGEX.fullmatch(marker))
+            self.assertIn(f'class="spectre-spacer spacer-{size}"', convert_markdown_to_html(marker))
+
 
 class TestPrintCssRules(unittest.TestCase):
     """Test print CSS rules preventing micro-breaks and handling page breaks."""
@@ -119,6 +127,7 @@ class TestPrintCssRules(unittest.TestCase):
 
     def test_light_theme_styling(self):
         self.assertIn(".spectre-page-break { border-top-color: #d0d7de; }", REPORT_LIGHT_CSS)
+        self.assertIn(".spectre-spacer.spacer-medium { height: 1rem; }", REPORT_BASE_CSS)
 
 
 class TestPreviewRoundtrip(unittest.TestCase):
@@ -209,6 +218,11 @@ Text 3
         self.assertEqual(preview_markdown.count("SPECTRE_PAGEBREAK_PREVIEW_TOKEN"), 1)
         self.assertIn("```html\n<!-- spectre:pagebreak -->\n```", preview_markdown)
         self.assertNotIn(PREVIEW_PAGEBREAK_LABEL, _strip_preview_pagebreaks(PREVIEW_PAGEBREAK_LABEL))
+
+    def test_preserves_spacer_dropped_by_preview(self):
+        original = "Before\n\n<!-- spectre:spacer:large -->\n\n## After"
+        reconciled = preserve_markers_in_preview_roundtrip(original, "Before\n\n## After")
+        self.assertIn("<!-- spectre:spacer:large -->", reconciled)
 
 
 class TestTemplateIntegration(unittest.TestCase):
@@ -314,6 +328,16 @@ class TestToolbarPageBreak(unittest.TestCase):
 
         editor.redo()
         self.assertIn(PAGEBREAK_MARKER, editor.toPlainText())
+
+    def test_insert_spacer_uses_selected_bounded_size(self):
+        editor = QPlainTextEdit()
+        editor.setPlainText("Before")
+
+        insert_spacer(editor, "medium")
+
+        self.assertIn("<!-- spectre:spacer:medium -->", editor.toPlainText())
+        editor.undo()
+        self.assertEqual(editor.toPlainText(), "Before")
 
 
 if __name__ == "__main__":

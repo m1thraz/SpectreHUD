@@ -72,14 +72,24 @@ DRAFT_DEBOUNCE_MS = 5_000
 AUTOSAVE_INTERVAL_MS = 45_000
 PREVIEW_PAGEBREAK_TOKEN = "SPECTRE_PAGEBREAK_PREVIEW_TOKEN"
 PREVIEW_PAGEBREAK_LABEL = "──────── PAGE BREAK ────────"
+PREVIEW_SPACER_TOKENS = {
+    size: f"SPECTRE_SPACER_PREVIEW_{size.upper()}" for size in ("small", "medium", "large")
+}
+PREVIEW_SPACER_LABELS = {
+    "small": "──── SPACER · SMALL ────",
+    "medium": "──── SPACER · MEDIUM ────",
+    "large": "──── SPACER · LARGE ────",
+}
 PREVIEW_PAGEBREAK_LINE_RE = re.compile(
-    rf"(?m)^.*{re.escape(PREVIEW_PAGEBREAK_LABEL)}.*(?:\r?\n)?"
+    rf"(?m)^.*(?:{re.escape(PREVIEW_PAGEBREAK_LABEL)}|"
+    + "|".join(re.escape(label) for label in PREVIEW_SPACER_LABELS.values())
+    + r").*(?:\r?\n)?"
 )
 
 
 def _markdown_with_preview_pagebreaks(markdown: str) -> str:
     """Expose page-break comments to Qt while preserving fenced code examples."""
-    from core.reporting.loot_sync import PAGEBREAK_REGEX
+    from core.reporting.loot_sync import PAGEBREAK_REGEX, SPACER_REGEX
 
     lines = markdown.splitlines()
     in_fence = False
@@ -99,6 +109,8 @@ def _markdown_with_preview_pagebreaks(markdown: str) -> str:
             rendered.append(line)
         elif not in_fence and PAGEBREAK_REGEX.fullmatch(line.strip()):
             rendered.append(PREVIEW_PAGEBREAK_TOKEN)
+        elif not in_fence and (spacer_match := SPACER_REGEX.fullmatch(line.strip())):
+            rendered.append(PREVIEW_SPACER_TOKENS[spacer_match.group(1).lower()])
         else:
             rendered.append(line)
     return "\n".join(rendered)
@@ -211,6 +223,9 @@ class ReportEditorTab(QWidget):
                 "link": self._format_link,
                 "table": self._format_table,
                 "page_break": self._format_page_break,
+                "spacer_small": lambda: self._format_spacer("small"),
+                "spacer_medium": lambda: self._format_spacer("medium"),
+                "spacer_large": lambda: self._format_spacer("large"),
             },
             on_toggle_collapse=self._on_toolbar_collapse_toggled,
             icon_color=self._toolbar_palette["CYBER_CYAN"],
@@ -508,6 +523,11 @@ class ReportEditorTab(QWidget):
         from ui.markdown_toolbar_actions import insert_page_break
 
         insert_page_break(self.editor)
+
+    def _format_spacer(self, size: str) -> None:
+        from ui.markdown_toolbar_actions import insert_spacer
+
+        insert_spacer(self.editor, size)
 
     def _format_image(self) -> None:
         """Offers screenshot insertion from Loot or local filesystem browse."""
@@ -1531,6 +1551,21 @@ class ReportEditorTab(QWidget):
             block_format.setBottomMargin(3)
             cursor.setBlockFormat(block_format)
             cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN, cursor)
+        for size, token in PREVIEW_SPACER_TOKENS.items():
+            cursor = self.preview_document.find(token)
+            while not cursor.isNull():
+                char_format = QTextCharFormat()
+                char_format.setForeground(
+                    QColor("#6e7781" if self._light_report_view else "#6e7681")
+                )
+                cursor.insertText(PREVIEW_SPACER_LABELS[size], char_format)
+                block_format = cursor.blockFormat()
+                block_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                margin = {"small": 3, "medium": 7, "large": 14}[size]
+                block_format.setTopMargin(margin)
+                block_format.setBottomMargin(margin)
+                cursor.setBlockFormat(block_format)
+                cursor = self.preview_document.find(token, cursor)
 
     def _update_status_label(self) -> None:
         if not self.current_project:

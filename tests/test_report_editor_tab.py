@@ -421,6 +421,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertIn(PAGEBREAK_MARKER, self.tab.editor.toPlainText())
         self.assertNotIn(PREVIEW_PAGEBREAK_LABEL, self.tab.editor.toPlainText())
 
+    def test_live_preview_shows_spacer_size_and_preserves_marker(self):
+        from ui.report_editor_tab import PREVIEW_SPACER_LABELS
+
+        marker = "<!-- spectre:spacer:large -->"
+        self.tab.editor.setPlainText(f"Before\n\n{marker}\n\nAfter")
+        self.tab._update_preview()
+
+        self.assertIn(PREVIEW_SPACER_LABELS["large"], self.tab.preview.toPlainText())
+        self.tab._preview_markdown_snapshot = self.tab.editor.toPlainText()
+        self.tab._commit_preview_to_markdown()
+        self.assertIn(marker, self.tab.editor.toPlainText())
+        self.assertNotIn(PREVIEW_SPACER_LABELS["large"], self.tab.editor.toPlainText())
+
     def test_toolbar_modernization_preserves_report_shortcuts(self):
         shortcuts = {shortcut.key().toString() for shortcut in self.tab.findChildren(QShortcut)}
         self.assertTrue(

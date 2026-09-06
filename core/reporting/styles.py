@@ -318,6 +318,11 @@ tr:nth-child(even) {
 .severity-medium { background-color: rgba(210, 153, 34, 0.2); color: #d29922; border: 1px solid #d29922; }
 .severity-low { background-color: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid #3fb950; }
 
+.spectre-spacer { display: block; break-inside: avoid; }
+.spectre-spacer.spacer-small { height: 0.5rem; }
+.spectre-spacer.spacer-medium { height: 1rem; }
+.spectre-spacer.spacer-large { height: 2rem; }
+
 /* Screen-mode styling for manual pagebreak marker */
 @media screen {
     .spectre-page-break {

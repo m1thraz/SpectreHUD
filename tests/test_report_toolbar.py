@@ -32,6 +32,9 @@ class TestReportToolbar(unittest.TestCase):
             "align_center": MagicMock(),
             "align_right": MagicMock(),
             "page_break": MagicMock(),
+            "spacer_small": MagicMock(),
+            "spacer_medium": MagicMock(),
+            "spacer_large": MagicMock(),
         })
         self.toolbar = build_format_toolbar(None, self.callbacks)
 
@@ -72,6 +75,12 @@ class TestReportToolbar(unittest.TestCase):
         self.assertIsNotNone(image_button)
         image_button.click()
         self.callbacks["image"].assert_called_once()
+
+        spacer_button = self.toolbar.findChild(QPushButton, "btn_insert_spacer")
+        self.assertIsNotNone(spacer_button)
+        self.assertEqual(len(spacer_button.menu().actions()), 3)
+        spacer_button.menu().actions()[1].trigger()
+        self.callbacks["spacer_medium"].assert_called_once()
 
         icon_button = self.toolbar.findChild(QPushButton, "btn_insert_icon")
         self.assertIsNotNone(icon_button)

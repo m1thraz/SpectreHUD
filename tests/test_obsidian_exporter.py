@@ -38,6 +38,19 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
     assert (result.note_path.parent / "attachments" / "proof.png").read_bytes() == b"png"
 
 
+def test_obsidian_report_translates_spacers_to_renderable_breaks(workspace):
+    vault, project = workspace
+    result = ObsidianExporter(vault).export_report(
+        project_name="Forest",
+        project_dir=project,
+        markdown="Before\n\n<!-- spectre:spacer:medium -->\n\nAfter",
+    )
+
+    content = result.note_path.read_text(encoding="utf-8")
+    assert "spectre:spacer" not in content
+    assert "<br>\n<br>" in content
+
+
 def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
     vault, project = workspace
     icon = project / "assets" / "icons" / "fa5s_key_32.png"

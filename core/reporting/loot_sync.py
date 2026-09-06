@@ -26,6 +26,16 @@ STRIP_MARKER_REGEX = re.compile(
 PAGEBREAK_MARKER = "<!-- spectre:pagebreak -->"
 PAGEBREAK_HTML = '<div class="spectre-page-break" contenteditable="false"></div>'
 PAGEBREAK_REGEX = re.compile(r"<!--\s*spectre:pagebreak\s*-->", re.IGNORECASE)
+SPACER_REGEX = re.compile(
+    r"<!--\s*spectre:spacer:(small|medium|large)\s*-->", re.IGNORECASE
+)
+
+
+def format_spacer_marker(size: str) -> str:
+    normalized = str(size).lower()
+    if normalized not in {"small", "medium", "large"}:
+        raise ValueError(f"Unsupported report spacer size: {size!r}")
+    return f"<!-- spectre:spacer:{normalized} -->"
 
 SECTION_NOTES_PLACEHOLDER_DE = "_Eigene Anmerkungen zu dieser Phase:_"
 SECTION_NOTES_PLACEHOLDER_EN = "_Notes & observations for this phase:_"
@@ -425,6 +435,25 @@ def _reconcile_pagebreaks(original_markdown: str, current_markdown: str) -> str:
     return result
 
 
+def _reconcile_spacers(original_markdown: str, current_markdown: str) -> str:
+    result = current_markdown
+    search_start = 0
+    for match in SPACER_REGEX.finditer(original_markdown):
+        marker = format_spacer_marker(match.group(1))
+        remaining = original_markdown[match.end():].lstrip("\r\n")
+        anchor = remaining.split("\n", 1)[0].strip() if remaining else ""
+        if anchor:
+            idx = result.find(anchor, search_start)
+            if idx != -1 and marker not in result[max(0, idx - 100):idx]:
+                separator = "" if idx == 0 or result[:idx].endswith("\n\n") else "\n\n"
+                insertion = f"{separator}{marker}\n\n"
+                result = result[:idx] + insertion + result[idx:]
+                search_start = idx + len(insertion) + len(anchor)
+        elif marker not in result:
+            result = result.rstrip() + f"\n\n{marker}\n"
+    return result
+
+
 def preserve_markers_in_preview_roundtrip(
     original_markdown: str, converted_markdown: str
 ) -> str:
@@ -470,5 +499,6 @@ def preserve_markers_in_preview_roundtrip(
 
     # 2. Reconcile manual page breaks
     result_markdown = _reconcile_pagebreaks(original_markdown, result_markdown)
+    result_markdown = _reconcile_spacers(original_markdown, result_markdown)
 
     return result_markdown
