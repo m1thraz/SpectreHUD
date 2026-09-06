@@ -458,6 +458,8 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.format_toolbar_widget.btn_toggle.click()
         self.assertTrue(self.tab.action_toolbar_widget.isHidden())
         self.assertTrue(self.tab.format_toolbar_widget.tools_container.isHidden())
+        self.assertTrue(self.tab.format_toolbar_widget.property("collapsed"))
+        self.assertFalse(self.tab.format_toolbar_widget.btn_toggle.isHidden())
         self.assertNotEqual(
             self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
         )
@@ -466,6 +468,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.format_toolbar_widget.btn_toggle.click()
         self.assertFalse(self.tab.action_toolbar_widget.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
+        self.assertFalse(self.tab.format_toolbar_widget.property("collapsed"))
         self.assertEqual(
             self.tab.format_toolbar_widget.btn_toggle.icon().cacheKey(), expanded_icon_key
         )

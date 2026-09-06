@@ -57,6 +57,7 @@ def build_format_toolbar(
     6. Minimize/Expand Toggle Button (far right)
     """
     toolbar_widget = QWidget(parent)
+    toolbar_widget.setObjectName("ReportFormatToolbar")
     main_layout = QHBoxLayout(toolbar_widget)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setSpacing(3)
@@ -191,11 +192,15 @@ def build_format_toolbar(
     btn_toggle.setProperty(
         "class", "SecondaryBtn FormatToolBtn ReportIconBtn ToolbarToggleBtn"
     )
+    btn_toggle.setFixedSize(22, 22)
 
     _collapsed = False
 
     def _apply_collapsed_state(*, notify: bool = True) -> None:
         tools_container.setVisible(not _collapsed)
+        toolbar_widget.setProperty("collapsed", _collapsed)
+        toolbar_widget.style().unpolish(toolbar_widget)
+        toolbar_widget.style().polish(toolbar_widget)
         tooltip = (
             t("report.toggle_toolbar_expand", "Expand toolbar")
             if _collapsed

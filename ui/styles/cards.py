@@ -56,6 +56,12 @@ QFrame#CompactVarBar[collapsed="true"] {
     padding: 0px;
 }
 
+QWidget#ReportFormatToolbar[collapsed="true"] {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+}
+
 /* Snippet & Loot Cards */
 QFrame#SnippetCard {
     background-color: {SURFACE_A85};

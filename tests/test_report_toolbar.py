@@ -149,12 +149,15 @@ class TestReportToolbar(unittest.TestCase):
         # Click to collapse
         self.toolbar.btn_toggle.click()
         self.assertTrue(self.toolbar.tools_container.isHidden())
+        self.assertTrue(self.toolbar.property("collapsed"))
         self.assertEqual(self.toolbar.btn_toggle.text(), "")
+        self.assertFalse(self.toolbar.btn_toggle.isHidden())
         self.assertNotEqual(self.toolbar.btn_toggle.icon().cacheKey(), expanded_icon_key)
 
         # Click to expand
         self.toolbar.btn_toggle.click()
         self.assertFalse(self.toolbar.tools_container.isHidden())
+        self.assertFalse(self.toolbar.property("collapsed"))
         self.assertEqual(self.toolbar.btn_toggle.icon().cacheKey(), expanded_icon_key)
 
     def test_toggle_button_notifies_collapse_callback(self):
