@@ -82,6 +82,7 @@ class HistoryCard(QFrame):
         self.lbl_meta.setObjectName("QuickNoteMeta")
         self.lbl_meta.setTextFormat(Qt.TextFormat.PlainText)
         footer.addWidget(self.lbl_meta)
+
         footer.addStretch()
 
         self.btn_copy = QPushButton()
@@ -118,6 +119,7 @@ class HistoryCard(QFrame):
         phase_id = self.entry.get("phase_id", "")
         if phase_id:
             from core.phases import get_phase
+
             phase_part = get_phase(phase_id).short
 
         lines_count = self.entry.get("lines_count", 1)

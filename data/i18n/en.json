@@ -62,6 +62,8 @@
     "varbar.no_ip": "No IP",
     "varbar.add_btn": "New",
     "varbar.add_btn_tip": "Create new command snippet (Ctrl+N)",
+    "varbar.collapse_tip": "Hide variable bar",
+    "varbar.expand_tip": "Show variable bar",
     "varbar.auth_title": "Authentication",
     "varbar.auth_tip": "Manage username, password, port, domain & hash/file",
     "varbar.domain": "Domain:",

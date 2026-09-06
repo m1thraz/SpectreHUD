@@ -113,11 +113,9 @@ def test_clipboard_monitor_and_history_phase_tagging(qapp, tmp_path):
     assert len(reloaded_entries) == 1
     assert reloaded_entries[0].get("phase_id") == "privesc"
 
-    # Verify HistoryCard renders phase badge
+    # Verify HistoryCard retains the phase in its compact metadata line.
     card = HistoryCard(entry=reloaded_entries[0])
-    # Check that a label with short badge "PRIVESC" exists
-    badge_found = any(getattr(child, "text", lambda: "")() == "PRIVESC" for child in card.findChildren(object))
-    assert badge_found is True
+    assert "PRIVESC" in card.lbl_meta.text()
 
 
 def test_project_session_service_active_phase_persistence(tmp_path):

@@ -62,6 +62,8 @@
     "varbar.no_ip": "Keine IP",
     "varbar.add_btn": "Neu",
     "varbar.add_btn_tip": "Neuen Befehl anlegen (Ctrl+N)",
+    "varbar.collapse_tip": "Variablenleiste ausblenden",
+    "varbar.expand_tip": "Variablenleiste einblenden",
     "varbar.auth_title": "Authentifizierung",
     "varbar.auth_tip": "Benutzer, Passwort, Port, Domain & Hash/Datei verwalten",
     "varbar.domain": "Domain:",

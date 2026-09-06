@@ -74,7 +74,7 @@ def test_quick_note_stream_keeps_target_out_of_default_row(qapp):
     container.deleteLater()
 
 
-def test_history_card_reserves_target_badge_width(qapp):
+def test_history_card_preserves_target_in_compact_metadata(qapp):
     entry = {
         "id": "hist-truncation-test",
         "text": "curl -s http://TARGET/api/keys",
@@ -94,12 +94,7 @@ def test_history_card_reserves_target_badge_width(qapp):
     for _ in range(3):
         qapp.processEvents()
 
-    labels = card.findChildren(QLabel)
-    target_label = next((lbl for lbl in labels if lbl.text() == "TARGET"), None)
-    assert target_label is not None
-    advance = target_label.fontMetrics().horizontalAdvance("TARGET")
-    assert target_label.minimumWidth() >= advance + 14
-    assert target_label.width() >= advance
+    assert "TARGET" in card.lbl_meta.text()
 
     container.hide()
     container.deleteLater()

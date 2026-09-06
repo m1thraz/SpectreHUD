@@ -73,11 +73,10 @@ def test_history_card_uses_icons_and_keeps_capture_text(qapp):
         {"id": "history-1", "text": "id", "timestamp": "12:00", "char_count": 2}
     )
 
-    _assert_icon_only(card.btn_delete)
     _assert_icon_only(card.btn_copy)
-    assert card.btn_capture.text()
-    assert not card.btn_capture.icon().isNull()
-    assert all(not action.icon().isNull() for action in card.btn_capture.menu().actions())
+    assert card.btn_promote.text()
+    assert not card.btn_promote.icon().isNull()
+    assert not hasattr(card, "btn_delete")
 
 
 def test_contextual_core_view_actions_use_icon_plus_text(qapp):
