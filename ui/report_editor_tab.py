@@ -1272,7 +1272,7 @@ class ReportEditorTab(QWidget):
 
         choices = (
             ("markdown", t("report.export_copy", "Export Copy...")),
-            ("html", t("report.export_html", "Export HTML...")),
+            ("html", t("report.export_html", "Export HTML/PDF")),
             ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
             ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
         )
@@ -1506,35 +1506,28 @@ class ReportEditorTab(QWidget):
             )
         )
         msg.setIcon(QMessageBox.Icon.Question)
-        interactive_dark = msg.addButton(
-            t("report.html_profile_interactive_dark", "Interactive — Dark"),
-            QMessageBox.ButtonRole.AcceptRole,
-        )
-        interactive_light = msg.addButton(
-            t("report.html_profile_interactive_light", "Interactive — Light"),
-            QMessageBox.ButtonRole.ActionRole,
-        )
         professional_button = msg.addButton(
             t("report.html_profile_professional", "Professional Print"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        classic_web_button = msg.addButton(
+            t("report.html_profile_classic_web", "Classic Webversion (editable)"),
             QMessageBox.ButtonRole.ActionRole,
         )
         cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
-        msg.setDefaultButton(interactive_dark)
+        msg.setDefaultButton(professional_button)
         # QMessageBox otherwise calculates its width from the text labels and
         # can elide the two longer theme choices on Windows.
         msg.setMinimumWidth(640)
-        interactive_dark.setMinimumWidth(170)
-        interactive_light.setMinimumWidth(170)
         professional_button.setMinimumWidth(170)
+        classic_web_button.setMinimumWidth(210)
         cancel_button.setMinimumWidth(100)
         msg.exec()
 
-        if msg.clickedButton() is interactive_dark:
-            return "dark", "interactive"
-        if msg.clickedButton() is interactive_light:
-            return "light", "interactive"
         if msg.clickedButton() is professional_button:
             return "light", "professional_print"
+        if msg.clickedButton() is classic_web_button:
+            return "light", "interactive"
         return None
 
     # ------------------------------------------------------------------ #

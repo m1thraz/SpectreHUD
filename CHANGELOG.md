@@ -10,6 +10,10 @@ semantic versioning.
 
 * Cancel delayed Quick-IP and snippet-copy feedback when their widgets are closed, preventing stale Qt callbacks from touching deleted buttons.
 
+### Changed
+
+* Renamed the report action to Export HTML/PDF and simplified its choices to Professional Print first and an editable classic web version, removing the Report Editor's dark export option.
+
 ## [2.1.2] - 2026-09-07
 
 ### Added

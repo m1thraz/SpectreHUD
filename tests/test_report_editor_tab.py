@@ -92,16 +92,17 @@ class TestReportEditorTab(unittest.TestCase):
         dialog = dialogs[0]
         self.assertGreaterEqual(dialog.minimumWidth(), 640)
         buttons = {button.text(): button for button in dialog.buttons()}
+        self.assertNotIn("Interactive — Dark", buttons)
+        professional = buttons[t("report.html_profile_professional", "Professional Print")]
+        classic_web = buttons[
+            t("report.html_profile_classic_web", "Classic Webversion (editable)")
+        ]
+        self.assertIs(dialog.defaultButton(), professional)
+        self.assertLess(dialog.buttons().index(professional), dialog.buttons().index(classic_web))
         self.assertGreaterEqual(
-            buttons[t("report.html_profile_interactive_dark", "Interactive — Dark")].minimumWidth(), 170
+            professional.minimumWidth(), 170
         )
-        self.assertGreaterEqual(
-            buttons[t("report.html_profile_interactive_light", "Interactive — Light")].minimumWidth(), 170
-        )
-        self.assertGreaterEqual(
-            buttons[t("report.html_profile_professional", "Professional Print")].minimumWidth(),
-            170,
-        )
+        self.assertGreaterEqual(classic_web.minimumWidth(), 210)
 
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""
@@ -573,7 +574,7 @@ class TestReportEditorTab(unittest.TestCase):
         # 2. Cancelled file dialog
         with (
             patch.object(
-                self.tab, "_select_html_export_options", return_value=("dark", "interactive")
+                self.tab, "_select_html_export_options", return_value=("light", "interactive")
             ),
             patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")),
         ):
@@ -611,7 +612,7 @@ class TestReportEditorTab(unittest.TestCase):
         coordinator.export_report_html.side_effect = ReportExportError("HTML write failed")
         with (
             patch.object(
-                self.tab, "_select_html_export_options", return_value=("dark", "interactive")
+                self.tab, "_select_html_export_options", return_value=("light", "interactive")
             ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
@@ -784,6 +785,7 @@ class TestReportEditorTab(unittest.TestCase):
                 mock_dlg.exec.side_effect = fake_exec
                 choice = self.tab._select_export_type()
                 self.assertEqual(choice, "html")
+                self.assertIn("Export HTML/PDF", [btn.text() for btn in added_buttons])
 
         # 2. Cancel selection
         with patch("ui.report_editor_tab.QDialog") as MockDialog:
