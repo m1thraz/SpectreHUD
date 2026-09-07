@@ -101,7 +101,7 @@ def render_report_html(
     if is_professional:
         btn_print = "Drucken / PDF exportieren" if is_de else "Print / Export PDF"
         report_css += _professional_page_css(pname, classification, language)
-    editable = "false" if is_professional else "true"
+    editable = "true"
     print_guidance = (
         "Browser-Kopf- und Fußzeilen für ein sauberes PDF deaktivieren."
         if is_de
@@ -110,11 +110,7 @@ def render_report_html(
     action_guidance = (
         f'<span class="print-guidance">{print_guidance}</span>' if is_professional else ""
     )
-    save_button = (
-        ""
-        if is_professional
-        else f'<button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>'
-    )
+    save_button = f'<button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>'
     footer = (
         ""
         if is_professional

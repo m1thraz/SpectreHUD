@@ -1532,7 +1532,7 @@ class ReportEditorTab(QWidget):
         msg.setInformativeText(
             t(
                 "report.html_profile_hint",
-                "Professional Print uses a controlled A4 layout; the classic web version remains editable. Generate the PDF from the exported HTML file.",
+                "Both exports remain editable in the browser; Professional Print uses a controlled A4 layout. Generate the PDF from the exported HTML file.",
             )
         )
         msg.setIcon(QMessageBox.Icon.Question)

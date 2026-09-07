@@ -365,7 +365,7 @@
     "report.html_theme_light": "Light — Kunde / Druck",
     "report.html_profile_title": "HTML-Exportprofil wählen",
     "report.html_profile_message": "Wie soll der HTML-Report dargestellt werden?",
-    "report.html_profile_hint": "Professional Print nutzt ein kontrolliertes A4-Layout; die klassische Webversion bleibt editierbar. Das PDF wird aus der exportierten HTML-Datei erzeugt.",
+    "report.html_profile_hint": "Beide Exporte bleiben im Browser editierbar; Professional Print nutzt ein kontrolliertes A4-Layout. Das PDF wird aus der exportierten HTML-Datei erzeugt.",
     "report.html_profile_classic_web": "Klassische Webversion (editierbar)",
     "report.html_profile_professional": "Professional Print",
     "report.change_view": "Ansicht ändern",

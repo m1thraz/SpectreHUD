@@ -619,7 +619,7 @@ tr:nth-child(even) { background-color: #f6f8fa; }
 """
 
 REPORT_PROFESSIONAL_CSS = """
-/* Professional Print is deliberately isolated from the editable interactive report. */
+/* Professional Print presentation is deliberately isolated from the interactive profile. */
 body[data-report-profile="professional_print"] {
     --report-text: #20272d;
     --report-muted: #66717a;

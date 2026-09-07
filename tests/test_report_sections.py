@@ -586,7 +586,9 @@ def test_professional_cover_precedes_body_and_is_profile_isolated():
     assert '<section class="report-section report-header-metadata">' not in professional
     assert "break-after: page" in professional
     assert "--report-accent: #315f66" in professional
-    assert '<main class="report-body" contenteditable="false"' in professional
+    assert '<main class="report-body" contenteditable="true"' in professional
+    assert "downloadEditedHtml()" in professional
+    assert "Save Edited HTML" in professional
     assert "Northwind" in professional
     assert "10.10.10.42" in professional
     assert "Confidential" in professional
