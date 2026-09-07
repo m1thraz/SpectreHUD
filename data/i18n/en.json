@@ -370,6 +370,8 @@
     "report.html_profile_professional": "Professional Print",
     "report.change_view": "Change View",
     "report.change_view_tip": "Choose report editor layout",
+    "report.show_metadata": "Show Spectre metadata",
+    "report.hide_metadata": "Hide Spectre metadata",
     "report.format_headings": "Headings (H1–H6)",
     "report.format_h1": "Heading 1",
     "report.format_h2": "Heading 2",

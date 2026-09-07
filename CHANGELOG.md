@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Protected Report Editor metadata view that hides Spectre markers by default and exposes them through an explicit toolbar toggle.
+
 ### Fixed
 
 * Cancel delayed Quick-IP and snippet-copy feedback when their widgets are closed, preventing stale Qt callbacks from touching deleted buttons.

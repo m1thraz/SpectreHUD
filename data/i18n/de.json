@@ -370,6 +370,8 @@
     "report.html_profile_professional": "Professional Print",
     "report.change_view": "Ansicht ändern",
     "report.change_view_tip": "Layout des Report-Editors auswählen",
+    "report.show_metadata": "Spectre-Metadaten anzeigen",
+    "report.hide_metadata": "Spectre-Metadaten ausblenden",
     "report.format_headings": "Überschriften (H1–H6)",
     "report.format_h1": "Überschrift 1",
     "report.format_h2": "Überschrift 2",

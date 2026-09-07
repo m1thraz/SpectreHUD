@@ -404,6 +404,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(self.tab.editor.property("reportLight"))
         self.assertIn("#f0f6fc", self.tab.preview_document.defaultStyleSheet())
 
+    def test_metadata_toggle_reveals_protected_source_markers(self):
+        marker = "<!-- spectre:section:start:executive_summary -->"
+        self.tab.editor.setPlainText(f"{marker}\n## Summary")
+
+        self.assertFalse(self.tab.btn_report_metadata.isChecked())
+        self.assertFalse(self.tab.editor.document().firstBlock().isVisible())
+        self.assertEqual(self.tab.editor.toPlainText(), f"{marker}\n## Summary")
+
+        self.tab.btn_report_metadata.click()
+
+        self.assertTrue(self.tab.editor.metadata_visible())
+        self.assertTrue(self.tab.editor.document().firstBlock().isVisible())
+
     def test_live_preview_shows_compact_pagebreak_indicator(self):
         from core.reporting.loot_sync import PAGEBREAK_MARKER
         from ui.report_editor_tab import PREVIEW_PAGEBREAK_LABEL

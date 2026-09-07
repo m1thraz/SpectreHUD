@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QSplitter,
-    QPlainTextEdit,
     QPushButton,
     QLabel,
     QMessageBox,
@@ -55,6 +54,7 @@ from ui.report.icon_assets import ReportIconError, render_report_icon
 from ui.report.find_replace import FindReplaceBar
 from ui.glass_panel import GlassPanel
 from ui.report.preview import ReportDocument, ReportPreviewEdit
+from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
 from core.reporting.outline import extract_headings
@@ -307,6 +307,17 @@ class ReportEditorTab(QWidget):
         self.btn_export.clicked.connect(self._on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
+        self.btn_report_metadata = QPushButton()
+        self.btn_report_metadata.setObjectName("btn_report_metadata")
+        self.btn_report_metadata.setProperty(
+            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
+        )
+        self.btn_report_metadata.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.btn_report_metadata.setCheckable(True)
+        self.btn_report_metadata.toggled.connect(self._toggle_report_metadata)
+        toolbar.addWidget(self.btn_report_metadata)
+        self._update_report_metadata_button()
+
         self.btn_report_theme = QPushButton()
         self.btn_report_theme.setObjectName("btn_report_theme")
         self.btn_report_theme.setProperty(
@@ -372,7 +383,7 @@ class ReportEditorTab(QWidget):
         """Build the Markdown editor, find bar, and live preview splitter."""
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        self.editor = QPlainTextEdit()
+        self.editor = ReportSourceEditor()
         self.editor.setPlaceholderText(
             t(
                 "report.editor_placeholder",
@@ -758,6 +769,25 @@ class ReportEditorTab(QWidget):
     def _toggle_report_color_mode(self) -> None:
         self._light_report_view = not self._light_report_view
         self._apply_report_color_mode()
+
+    def _toggle_report_metadata(self, visible: bool) -> None:
+        self.editor.set_metadata_visible(visible)
+        self._update_report_metadata_button()
+
+    def _update_report_metadata_button(self) -> None:
+        if not hasattr(self, "btn_report_metadata"):
+            return
+        visible = self.editor.metadata_visible() if hasattr(self, "editor") else False
+        tooltip = (
+            t("report.hide_metadata", "Hide Spectre metadata")
+            if visible
+            else t("report.show_metadata", "Show Spectre metadata")
+        )
+        self.btn_report_metadata.setToolTip(tooltip)
+        self.btn_report_metadata.setAccessibleName(tooltip)
+        self.btn_report_metadata.setIcon(
+            self._toolbar_icon("fa5s.eye" if visible else "fa5s.eye-slash")
+        )
 
     def _apply_report_color_mode(self) -> None:
         for widget in (self.editor, self.preview, self.editor_glass, self.preview_glass):
