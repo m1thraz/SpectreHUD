@@ -24,19 +24,19 @@ release are intentionally left to the repository owner after CI validation.
 - [x] The v2.1.2 wheel contains 198 files, passes repository verification, and
   passes fresh-environment
   `--version` / `--help` smoke tests.
-- [ ] Manual smoke test confirms startup, Quick Notes stream/focus review, collapsed
+- [x] Manual smoke test confirms startup, Quick Notes stream/focus review, collapsed
   toolbar restoration, Interactive export, Professional Print, Add Missing Loot,
   Obsidian/CherryTree export, and clean shutdown.
-- [ ] Manual browser-print review confirms clean PDF output with browser-native headers
+- [x] Manual browser-print review confirms clean PDF output with browser-native headers
   and footers disabled.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.1.2 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated v2.1.2 tag from the CI-verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable, Debian packages,
+- [x] Review, commit, and push the prepared v2.1.2 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated v2.1.2 tag from the CI-verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable, Debian packages,
   and wheel.
-- [ ] Download the published executable/deb and verify `--version`, startup, and UI.
-- [ ] Confirm the GitHub release description links to
+- [x] Download the published executable/deb and verify `--version`, startup, and UI.
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.1.2.md`.
