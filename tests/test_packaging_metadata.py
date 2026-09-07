@@ -18,6 +18,9 @@ def test_project_metadata_uses_pep_621_compatible_license_table():
     assert 'spectrehud = "spectrehud_launcher:main"' in content
     assert 'license = { text = "MIT" }' in content
     assert 'requires = ["setuptools>=61.0", "wheel"]' in content
+    # Release tests build without isolation so they remain usable in restricted CI
+    # environments; the active development environment must therefore provide bdist_wheel.
+    assert '"wheel>=0.41.0"' in content
 
 
 def test_windows_spec_includes_runtime_data_directories():
