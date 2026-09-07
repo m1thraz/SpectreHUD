@@ -9,6 +9,7 @@ semantic versioning.
 ### Fixed
 
 * Cancel delayed Quick-IP and snippet-copy feedback when their widgets are closed, preventing stale Qt callbacks from touching deleted buttons.
+* Allow note text to be edited inline in Focus Review mode while retaining the details dialog for phase, target, and status changes.
 
 ### Changed
 

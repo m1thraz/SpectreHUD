@@ -113,12 +113,18 @@ QFrame#QuickNoteFocusReview {
     border-radius: 10px;
 }
 
-QLabel#QuickNoteReviewText {
+QPlainTextEdit#QuickNoteReviewEditor {
     color: {TEXT_PRIMARY};
-    background: transparent;
-    border: none;
+    background-color: {BG_CARD};
+    border: 1px solid {BORDER_A40};
+    border-radius: 6px;
     font-size: 16px;
     padding: 12px;
+    selection-background-color: {CYAN_A35};
+}
+
+QPlainTextEdit#QuickNoteReviewEditor:focus {
+    border-color: {CYAN_A60};
 }
 
 QLabel.QuickNoteReviewProgress,

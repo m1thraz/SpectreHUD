@@ -165,6 +165,33 @@ def test_focus_review_is_oldest_first_and_advances_after_actions(qapp):
     assert controller._review_completed_count == 2
 
 
+def test_focus_review_can_edit_the_current_note(qapp):
+    controller = _controller([_entry("one", "2026-09-06 10:00:00")])
+    controller.set_review_mode(True, refresh=False)
+    parent = QWidget()
+    review = _render(controller, parent)[0]
+    controller.open_edit_dialog = MagicMock(return_value=True)
+
+    review.btn_edit.click()
+
+    controller.open_edit_dialog.assert_called_once_with(parent, review.entry)
+
+
+def test_focus_review_saves_note_text_inline(qapp):
+    controller = _controller([_entry("one", "2026-09-06 10:00:00")])
+    controller.set_review_mode(True, refresh=False)
+    parent = QWidget()
+    review = _render(controller, parent)[0]
+
+    review.editor.setPlainText("Updated during focused review")
+    assert review.btn_save_text.isEnabled()
+    review.editor.save_requested.emit()
+
+    saved = controller.quick_note_manager.get_all_entries()[0]
+    assert saved["text"] == "Updated during focused review"
+    assert not review.btn_save_text.isEnabled()
+
+
 def test_focus_next_advances_without_counting_completion(qapp):
     controller = _controller([_entry("one", "2026-09-06 10:00:00")])
     controller.set_review_mode(True, refresh=False)

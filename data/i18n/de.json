@@ -489,6 +489,7 @@
     "quick_note.unpin_tip": "Anheftung aufheben",
     "quick_note.delete_tip": "Diese Quick-Note löschen",
     "quick_note.edit": "Bearbeiten",
+    "quick_note.edit_details": "Details bearbeiten",
     "quick_note.save": "Speichern",
     "quick_note.cancel": "Abbrechen",
     "quick_note.edit_shortcut_hint": "Strg+Enter: Speichern | Esc: Abbrechen",

@@ -489,6 +489,7 @@
     "quick_note.unpin_tip": "Unpin note",
     "quick_note.delete_tip": "Delete this quick note",
     "quick_note.edit": "Edit",
+    "quick_note.edit_details": "Edit details",
     "quick_note.save": "Save",
     "quick_note.cancel": "Cancel",
     "quick_note.edit_shortcut_hint": "Ctrl+Enter: Save | Esc: Cancel",

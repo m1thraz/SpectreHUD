@@ -736,6 +736,10 @@ class QuickNoteController(QObject):
         review.promote_requested.connect(
             lambda note, p=parent_widget: self._review_promote(note, p)
         )
+        review.edit_requested.connect(
+            lambda note, p=parent_widget: self.open_edit_dialog(p, note)
+        )
+        review.text_save_requested.connect(self.update_note_text)
         review.complete_requested.connect(self._review_complete)
         review.delete_requested.connect(self._review_delete)
         review.next_requested.connect(self._review_next)
