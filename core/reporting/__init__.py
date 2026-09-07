@@ -17,6 +17,12 @@ from core.reporting.markdown import (
     convert_markdown_to_html,
 )
 from core.reporting.template import render_report_html
+from core.reporting.profiles import ReportExportProfile
+from core.reporting.section_markers import (
+    RenderedSection,
+    reconcile_section_markers,
+    segment_report_markdown,
+)
 from core.reporting.charts import render_severity_badge, render_metrics_summary
 from core.reporting.template_engine import (
     TemplateSection,
@@ -42,6 +48,10 @@ __all__ = [
     "resolve_and_embed_images",
     "convert_markdown_to_html",
     "render_report_html",
+    "ReportExportProfile",
+    "RenderedSection",
+    "reconcile_section_markers",
+    "segment_report_markdown",
     "render_severity_badge",
     "render_metrics_summary",
     "TemplateSection",

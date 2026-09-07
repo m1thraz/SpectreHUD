@@ -12,6 +12,7 @@ semantic versioning.
 * Local light/dark appearance toggle for the Report Editor and live-preview panes.
 * Compact live-preview indicators for manual report page breaks.
 * Cross-export report spacers with small, medium, and large toolbar presets.
+* Interactive and Professional Print HTML export profiles backed by persistent semantic report-section markers.
 
 ### Changed
 

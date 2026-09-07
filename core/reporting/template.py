@@ -18,6 +18,7 @@ def render_report_html(
     theme: str = "dark",
     report_font: str = "segoe_ui",
     language: str = "en",
+    profile: str = "interactive",
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
@@ -50,7 +51,7 @@ def render_report_html(
 {report_css}
     </style>
 </head>
-<body>
+<body data-report-profile="{html.escape(profile)}">
     <div class="report-wrapper">
         <header class="report-header">
             <div>

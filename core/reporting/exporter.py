@@ -15,6 +15,8 @@ from core.reporting.markdown import (
     convert_markdown_to_html,
 )
 from core.reporting.template import render_report_html
+from core.reporting.profiles import ReportExportProfile
+from core.reporting.section_markers import segment_report_markdown, strip_section_markers
 
 logger = get_logger(__name__)
 
@@ -50,6 +52,36 @@ class HtmlReportExporter:
         return convert_markdown_to_html(md_text, project_dir=project_dir)
 
     @classmethod
+    def _professional_body_html(
+        cls, markdown_content: str, project_dir: Optional[Path]
+    ) -> str:
+        embedded_markdown = resolve_and_embed_images(markdown_content, project_dir)
+        class_names = {
+            "header_metadata": "report-header-metadata",
+            "executive_summary": "report-executive",
+            "scope_limitations": "report-scope",
+            "phase_section": "report-phase",
+            "remediation_table": "report-remediation",
+            "appendix": "report-appendix",
+        }
+        html_segments = []
+        for segment in segment_report_markdown(embedded_markdown):
+            body = convert_markdown_to_html(
+                strip_section_markers(segment.markdown), project_dir=None
+            )
+            if not segment.is_structured:
+                html_segments.append(body)
+                continue
+            phase_attr = (
+                f' data-phase="{segment.category_id}"' if segment.category_id else ""
+            )
+            html_segments.append(
+                f'<section class="report-section {class_names[segment.section_type]}"'
+                f"{phase_attr}>{body}</section>"
+            )
+        return "\n".join(html_segments)
+
+    @classmethod
     def build_full_html(
         cls,
         markdown_content: str,
@@ -59,9 +91,15 @@ class HtmlReportExporter:
         theme: str = "dark",
         report_font: str = "segoe_ui",
         language: str = "en",
+        profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
     ) -> str:
         """Generates the full, styled HTML document ready for export."""
-        body_html = cls.markdown_to_html(markdown_content, project_dir=project_dir)
+        active_profile = ReportExportProfile(profile)
+        body_html = (
+            cls._professional_body_html(markdown_content, project_dir)
+            if active_profile is ReportExportProfile.PROFESSIONAL_PRINT
+            else cls.markdown_to_html(markdown_content, project_dir=project_dir)
+        )
         pname = project_name or (project_dir.name if project_dir else "Target")
         return render_report_html(
             body_html=body_html,
@@ -70,6 +108,7 @@ class HtmlReportExporter:
             theme=theme,
             report_font=report_font,
             language=language,
+            profile=active_profile.value,
         )
 
     @classmethod
@@ -83,6 +122,7 @@ class HtmlReportExporter:
         theme: str = "dark",
         report_font: str = "segoe_ui",
         language: str = "en",
+        profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
     ) -> bool:
         """Renders HTML from Markdown and writes it atomically to output_path."""
         out = Path(output_path)
@@ -97,6 +137,7 @@ class HtmlReportExporter:
             theme=theme,
             report_font=report_font,
             language=language,
+            profile=profile,
         )
         try:
             return atomic_write_text(out, full_html, encoding="utf-8")

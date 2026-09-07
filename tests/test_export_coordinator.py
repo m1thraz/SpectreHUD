@@ -115,6 +115,7 @@ def test_html_report_export_resolves_project_through_coordinator(tmp_path):
         theme="light",
         report_font="inter",
         language="en",
+        profile="interactive",
     )
 
 
@@ -154,4 +155,3 @@ def test_export_coordinator_export_loot_delegates_to_history_ctrl():
     coordinator.history_ctrl.export_report_dialog.assert_called_once_with(
         mock_window, "10.10.10.10", "Forest"
     )
-

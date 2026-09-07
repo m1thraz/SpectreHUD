@@ -7,12 +7,18 @@ section renderers, and rendering context to generate professional Markdown pente
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from collections import Counter
 from typing import Dict, Any, List, Optional, Callable
 import re
 
 from core.loot.manager import CATEGORIES
 from core.reporting.charts import render_severity_badge
 from core.reporting.loot_sync import format_loot_marker, loot_content_hash
+from core.reporting.section_markers import (
+    section_base_identity,
+    section_identity,
+    wrap_section_markdown,
+)
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -430,6 +436,9 @@ class TemplateRenderer:
     def render(self, template: ReportTemplate, context: ReportContext) -> str:
         lang = template.language if template.language in ("de", "en") else "de"
         parts: List[str] = []
+        base_identities = [section_base_identity(s.type, s.category_id) for s in template.sections]
+        identity_counts = Counter(base_identities)
+        identity_ordinals: Counter[str] = Counter()
 
         for section in template.sections:
             renderer = self.SECTION_RENDERERS.get(section.type)
@@ -439,7 +448,17 @@ class TemplateRenderer:
                     sec_text = rendered_sec.strip()
                     if section.page_break_before:
                         sec_text = f"<!-- spectre:pagebreak -->\n\n{sec_text}"
-                    parts.append(sec_text)
+                    base_identity = section_base_identity(section.type, section.category_id)
+                    identity_ordinals[base_identity] += 1
+                    ordinal = (
+                        identity_ordinals[base_identity]
+                        if identity_counts[base_identity] > 1
+                        else None
+                    )
+                    identity = section_identity(
+                        section.type, section.category_id, ordinal=ordinal
+                    )
+                    parts.append(wrap_section_markdown(sec_text, identity))
 
         body = "\n\n---\n\n".join(parts)
 

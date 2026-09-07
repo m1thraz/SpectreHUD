@@ -1343,9 +1343,10 @@ class ReportEditorTab(QWidget):
             msg.exec()
 
     def _on_export_html_clicked(self) -> None:
-        theme = self._select_html_export_theme()
-        if theme is None:
+        export_options = self._select_html_export_options()
+        if export_options is None:
             return
+        theme, profile = export_options
 
         default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(
             ".html"
@@ -1375,6 +1376,7 @@ class ReportEditorTab(QWidget):
                 theme=theme,
                 report_font=self._report_font_key(),
                 language=doc_lang,
+                profile=profile,
             )
             msg = QMessageBox(self.window() if self else None)
             msg.setWindowTitle(t("report.export_html_success_title", "HTML-Report exportiert"))
@@ -1492,36 +1494,47 @@ class ReportEditorTab(QWidget):
             message,
         )
 
-    def _select_html_export_theme(self) -> Optional[str]:
-        """Asks which visual design the standalone HTML report should use."""
+    def _select_html_export_options(self) -> Optional[tuple[str, str]]:
+        """Choose the HTML presentation profile without changing report content."""
         msg = QMessageBox(self.window() if self else None)
-        msg.setWindowTitle(t("report.html_theme_title", "Choose HTML Design"))
-        msg.setText(t("report.html_theme_message", "Which design should the HTML report use?"))
+        msg.setWindowTitle(t("report.html_profile_title", "Choose HTML Export Profile"))
+        msg.setText(t("report.html_profile_message", "How should the HTML report be presented?"))
         msg.setInformativeText(
-            t("report.html_theme_hint", "Light is especially suitable for clients and printouts.")
+            t(
+                "report.html_profile_hint",
+                "Interactive preserves the existing editable report; Professional Print adds semantic section structure for future print layouts.",
+            )
         )
         msg.setIcon(QMessageBox.Icon.Question)
-        dark_button = msg.addButton(
-            t("report.html_theme_dark", "Dark — SpectreHUD"), QMessageBox.ButtonRole.AcceptRole
+        interactive_dark = msg.addButton(
+            t("report.html_profile_interactive_dark", "Interactive — Dark"),
+            QMessageBox.ButtonRole.AcceptRole,
         )
-        light_button = msg.addButton(
-            t("report.html_theme_light", "Light — Client / Print"),
+        interactive_light = msg.addButton(
+            t("report.html_profile_interactive_light", "Interactive — Light"),
+            QMessageBox.ButtonRole.ActionRole,
+        )
+        professional_button = msg.addButton(
+            t("report.html_profile_professional", "Professional Print"),
             QMessageBox.ButtonRole.ActionRole,
         )
         cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
-        msg.setDefaultButton(dark_button)
+        msg.setDefaultButton(interactive_dark)
         # QMessageBox otherwise calculates its width from the text labels and
         # can elide the two longer theme choices on Windows.
         msg.setMinimumWidth(640)
-        dark_button.setMinimumWidth(190)
-        light_button.setMinimumWidth(190)
+        interactive_dark.setMinimumWidth(170)
+        interactive_light.setMinimumWidth(170)
+        professional_button.setMinimumWidth(170)
         cancel_button.setMinimumWidth(100)
         msg.exec()
 
-        if msg.clickedButton() is dark_button:
-            return "dark"
-        if msg.clickedButton() is light_button:
-            return "light"
+        if msg.clickedButton() is interactive_dark:
+            return "dark", "interactive"
+        if msg.clickedButton() is interactive_light:
+            return "light", "interactive"
+        if msg.clickedButton() is professional_button:
+            return "light", "professional_print"
         return None
 
     # ------------------------------------------------------------------ #

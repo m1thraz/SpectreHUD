@@ -51,6 +51,21 @@ def test_obsidian_report_translates_spacers_to_renderable_breaks(workspace):
     assert "<br>\n<br>" in content
 
 
+def test_obsidian_report_strips_internal_section_markers(workspace):
+    vault, project = workspace
+    markdown = (
+        "<!-- spectre:section:start:executive_summary -->\n\n"
+        "## Summary\n\nManual content\n\n"
+        "<!-- spectre:section:end:executive_summary -->"
+    )
+    result = ObsidianExporter(vault).export_report(
+        project_name="Forest", project_dir=project, markdown=markdown
+    )
+    content = result.note_path.read_text(encoding="utf-8")
+    assert "spectre:section" not in content
+    assert "Manual content" in content
+
+
 def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
     vault, project = workspace
     icon = project / "assets" / "icons" / "fa5s_key_32.png"

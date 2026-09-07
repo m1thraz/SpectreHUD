@@ -17,6 +17,7 @@ import re
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from core.loot.manager import CATEGORIES
+from core.reporting.section_markers import reconcile_section_markers
 
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")
 STRIP_MARKER_REGEX = re.compile(
@@ -85,14 +86,16 @@ def extract_report_markers(report_text: str) -> Dict[str, str]:
 
 
 def strip_report_markers(text: str) -> str:
-    """Strips ONLY SpectreHUD loot markers (<!-- spectre:loot:... -->) from text.
+    """Strip internal structural and loot markers from visible external output.
 
     Preserves Obsidian loot deduplication markers (<!-- spectrehud-entry:... -->)
     and user-authored HTML comments untouched.
     """
     if not text:
         return ""
-    return STRIP_MARKER_REGEX.sub("", text)
+    from core.reporting.section_markers import strip_section_markers
+
+    return strip_section_markers(STRIP_MARKER_REGEX.sub("", text))
 
 
 @dataclass(frozen=True)
@@ -496,6 +499,9 @@ def preserve_markers_in_preview_roundtrip(
                 if marker_str not in prefix[-150:]:
                     # Insert marker right before the anchor line
                     result_markdown = result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+
+    # Qt drops internal HTML comments, so restore structural ownership before layout markers.
+    result_markdown = reconcile_section_markers(original_markdown, result_markdown)
 
     # 2. Reconcile manual page breaks
     result_markdown = _reconcile_pagebreaks(original_markdown, result_markdown)

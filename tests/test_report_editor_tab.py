@@ -90,10 +90,9 @@ class TestReportEditorTab(unittest.TestCase):
             dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot")
         )
 
-    def test_html_export_theme_buttons_have_room_for_their_labels(self):
-        """The two long theme labels must not be elided in the export chooser."""
+    def test_html_export_profile_buttons_have_room_for_their_labels(self):
         with patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
-            self.assertIsNone(self.tab._select_html_export_theme())
+            self.assertIsNone(self.tab._select_html_export_options())
 
         dialogs = self.tab.window().findChildren(QMessageBox)
         self.assertEqual(len(dialogs), 1)
@@ -101,10 +100,14 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertGreaterEqual(dialog.minimumWidth(), 640)
         buttons = {button.text(): button for button in dialog.buttons()}
         self.assertGreaterEqual(
-            buttons[t("report.html_theme_dark", "Dark — SpectreHUD")].minimumWidth(), 190
+            buttons[t("report.html_profile_interactive_dark", "Interactive — Dark")].minimumWidth(), 170
         )
         self.assertGreaterEqual(
-            buttons[t("report.html_theme_light", "Light — Client / Print")].minimumWidth(), 190
+            buttons[t("report.html_profile_interactive_light", "Interactive — Light")].minimumWidth(), 170
+        )
+        self.assertGreaterEqual(
+            buttons[t("report.html_profile_professional", "Professional Print")].minimumWidth(),
+            170,
         )
 
     def test_view_mode_switching(self):
@@ -570,13 +573,15 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.editor.setPlainText("# Test HTML Content")
 
         # 1. Cancelled theme chooser
-        with patch.object(self.tab, "_select_html_export_theme", return_value=None):
+        with patch.object(self.tab, "_select_html_export_options", return_value=None):
             self.tab._on_export_html_clicked()
             coordinator.export_report_html.assert_not_called()
 
         # 2. Cancelled file dialog
         with (
-            patch.object(self.tab, "_select_html_export_theme", return_value="dark"),
+            patch.object(
+                self.tab, "_select_html_export_options", return_value=("dark", "interactive")
+            ),
             patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")),
         ):
             self.tab._on_export_html_clicked()
@@ -585,7 +590,11 @@ class TestReportEditorTab(unittest.TestCase):
         # 3. Successful HTML export
         out_html = self.temp_path / "report.html"
         with (
-            patch.object(self.tab, "_select_html_export_theme", return_value="light"),
+            patch.object(
+                self.tab,
+                "_select_html_export_options",
+                return_value=("light", "professional_print"),
+            ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
                 return_value=(str(out_html), "HTML (*.html)"),
@@ -600,6 +609,7 @@ class TestReportEditorTab(unittest.TestCase):
                 theme="light",
                 report_font=self.tab._report_font_key(),
                 language="de",
+                profile="professional_print",
             )
 
         # 4. Export error
@@ -607,7 +617,9 @@ class TestReportEditorTab(unittest.TestCase):
 
         coordinator.export_report_html.side_effect = ReportExportError("HTML write failed")
         with (
-            patch.object(self.tab, "_select_html_export_theme", return_value="dark"),
+            patch.object(
+                self.tab, "_select_html_export_options", return_value=("dark", "interactive")
+            ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
                 return_value=(str(out_html), "HTML (*.html)"),

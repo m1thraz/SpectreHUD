@@ -14,6 +14,7 @@ from core.config import ConfigManager
 from core.atomic_write import atomic_write_text
 from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError, ObsidianExporter
 from core.reporting import HtmlReportExporter
+from core.reporting.profiles import ReportExportProfile
 from core.i18n import t
 from core.project import ProjectManager
 from core.loot.manager import LootManager
@@ -73,6 +74,7 @@ class ExportCoordinator(QObject):
         theme: str,
         report_font: str,
         language: str = "en",
+        profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
     ) -> None:
         """Render the current editor document as a standalone HTML report."""
         project_dir = self.project_manager.get_project_dir(project_name)
@@ -85,6 +87,7 @@ class ExportCoordinator(QObject):
             theme=theme,
             report_font=report_font,
             language=language,
+            profile=profile,
         ):
             raise ReportExportError(f"Could not write HTML report: {target}")
 
