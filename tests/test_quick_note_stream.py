@@ -10,7 +10,11 @@ from core.quick_note_manager import QuickNoteManager
 from core.storage import InMemoryStorageBackend
 from ui.controllers.quick_note_controller import QuickNoteController
 from ui.quick_note_card import QuickNoteCard, opacity_for_age
-from ui.quick_note_focus_review import QuickNoteFocusReview, QuickNoteReviewSummary
+from ui.quick_note_focus_review import (
+    QuickNoteFocusReview,
+    QuickNoteReviewCycleNotice,
+    QuickNoteReviewSummary,
+)
 
 
 def _entry(entry_id: str, timestamp: str, **changes):
@@ -199,7 +203,9 @@ def test_focus_next_advances_without_counting_completion(qapp):
     _render(controller, parent)
 
     controller._review_next()
-    summary_parent = QWidget()
-    assert _render(controller, summary_parent) == []
-    assert summary_parent.findChild(QuickNoteReviewSummary) is not None
+    restarted_parent = QWidget()
+    restarted = _render(controller, restarted_parent)
+    assert len(restarted) == 1
+    assert restarted[0].entry["id"] == "one"
+    assert restarted_parent.findChild(QuickNoteReviewCycleNotice) is not None
     assert controller._review_completed_count == 0

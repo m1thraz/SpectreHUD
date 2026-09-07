@@ -159,3 +159,22 @@ class QuickNoteReviewSummary(QFrame):
         label.setObjectName("QuickNoteReviewSummaryText")
         layout.addWidget(label)
         layout.addStretch()
+
+
+class QuickNoteReviewCycleNotice(QFrame):
+    """Confirm a completed pass while the next pass starts with open notes."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setObjectName("QuickNoteReviewSummary")
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 6, 10, 6)
+        label = QLabel(
+            t(
+                "quick_note.review_cycle_complete",
+                "All open notes reviewed. Restarting with the first unfinished note.",
+            )
+        )
+        label.setObjectName("QuickNoteReviewSummaryText")
+        layout.addWidget(label)
+        layout.addStretch()

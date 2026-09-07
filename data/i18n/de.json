@@ -527,6 +527,7 @@
     "quick_note.review_delete": "Löschen",
     "quick_note.review_next": "Weiter",
     "quick_note.review_summary": "{count} heute abgearbeitet",
+    "quick_note.review_cycle_complete": "Alle offenen Notes wurden geprüft. Es geht mit der ersten unerledigten Note weiter.",
     "quick_note.clear": "Leeren",
     "cheatsheet.storage_error_msg": "Snippet-Änderung konnte nicht auf die Festplatte geschrieben werden:\n{error}\n\nDie laufenden Sitzungsdaten im Speicher bleiben geschützt.",
     "common.unknown_error": "Unbekannter Fehler",

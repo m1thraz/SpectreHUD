@@ -27,7 +27,11 @@ from core.i18n import t
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
 from ui.quick_note_bulk_bar import QuickNoteBulkBar
-from ui.quick_note_focus_review import QuickNoteFocusReview, QuickNoteReviewSummary
+from ui.quick_note_focus_review import (
+    QuickNoteFocusReview,
+    QuickNoteReviewCycleNotice,
+    QuickNoteReviewSummary,
+)
 from ui.note_selection_model import NoteSelectionModel
 from ui.styles.icons import icon
 
@@ -78,6 +82,7 @@ class QuickNoteController(QObject):
         self._review_seen_count = 0
         self._review_completed_count = 0
         self._review_total = 0
+        self._review_cycle_notice_pending = False
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
@@ -341,6 +346,7 @@ class QuickNoteController(QObject):
             self._review_seen_count = 0
             self._review_completed_count = 0
             self._review_total = 0
+            self._review_cycle_notice_pending = False
         if refresh:
             self.notes_updated.emit()
 
@@ -721,7 +727,16 @@ class QuickNoteController(QObject):
                 entry_id for entry_id in self._review_queue_ids if entry_id in entries_by_id
             ]
 
+        if not self._review_queue_ids and eligible and self._review_total:
+            self._review_queue_ids = [n.get("id") for n in eligible if n.get("id")]
+            self._review_seen_count = 0
+            self._review_total = len(self._review_queue_ids)
+            if self._review_cycle_notice_pending:
+                content_layout.addWidget(QuickNoteReviewCycleNotice(parent=parent_widget))
+                self._review_cycle_notice_pending = False
+
         if not self._review_queue_ids:
+            self._review_cycle_notice_pending = False
             summary = QuickNoteReviewSummary(self._review_completed_count, parent=parent_widget)
             content_layout.addWidget(summary)
             return []
@@ -752,6 +767,8 @@ class QuickNoteController(QObject):
         self._review_seen_count += 1
         if completed:
             self._review_completed_count += 1
+        if not self._review_queue_ids:
+            self._review_cycle_notice_pending = True
         self.notes_updated.emit()
 
     def _review_complete(self, entry_id: str) -> None:
@@ -787,4 +804,6 @@ class QuickNoteController(QObject):
             return
         self._review_queue_ids.pop(0)
         self._review_seen_count += 1
+        if not self._review_queue_ids:
+            self._review_cycle_notice_pending = True
         self.notes_updated.emit()

@@ -527,6 +527,7 @@
     "quick_note.review_delete": "Delete",
     "quick_note.review_next": "Next",
     "quick_note.review_summary": "{count} processed today",
+    "quick_note.review_cycle_complete": "All open notes reviewed. Restarting with the first unfinished note.",
     "quick_note.clear": "Clear",
     "cheatsheet.storage_error_msg": "Failed to write snippet change to disk:\n{error}\n\nSession data in memory remains safe.",
     "common.unknown_error": "Unknown error",
