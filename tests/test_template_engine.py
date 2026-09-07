@@ -86,8 +86,11 @@ class TestTemplateEngine(unittest.TestCase):
     def test_render_executive_summary_metrics(self):
         sec = TemplateSection(type="executive_summary")
         out = _render_executive_summary(sec, self.context, "de")
-        self.assertIn("🔴 1 Critical", out)
-        self.assertIn("🟠 1 High", out)
+        self.assertIn(
+            '<span class="severity-pill severity-critical">CRITICAL</span> 1', out
+        )
+        self.assertIn('<span class="severity-pill severity-high">HIGH</span> 1', out)
+        self.assertNotRegex(out, "[🔴🟠🟡🟢🔵]")
         self.assertIn("Domain Admin Credentials", out)
         self.assertIn("CRITICAL", out)
 

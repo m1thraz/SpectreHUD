@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional, Callable
 import re
 
 from core.loot.manager import CATEGORIES
-from core.reporting.charts import render_severity_badge
+from core.reporting.charts import render_severity_badge, render_severity_counts
 from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 from core.reporting.section_markers import (
     section_base_identity,
@@ -137,6 +137,7 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
     high = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "high")
     medium = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "medium")
     low = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "low")
+    severity_counts = render_severity_counts(critical, high, medium, low)
 
     finding_rows = []
     findings_count = 0
@@ -165,7 +166,7 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
             "|---|---------|----------|-------|--------|",
             *finding_rows,
             "",
-            f"**Gesamt:** 🔴 {critical} Critical · 🟠 {high} High · 🟡 {medium} Medium · 🟢 {low} Low",
+            f"**Gesamt:** {severity_counts}",
             "",
             "### Kernaussagen",
             "",
@@ -185,7 +186,7 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
             "|---|---------|----------|-------|--------|",
             *finding_rows,
             "",
-            f"**Total:** 🔴 {critical} Critical · 🟠 {high} High · 🟡 {medium} Medium · 🟢 {low} Low",
+            f"**Total:** {severity_counts}",
             "",
             "### Key Highlights",
             "",

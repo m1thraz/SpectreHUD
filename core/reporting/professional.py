@@ -215,8 +215,11 @@ def professional_section_has_meaningful_content(section_type: str, markdown: str
                 counts = [
                     int(value)
                     for value in re.findall(
-                        r"(\d+)\s+(?:Critical|High|Medium|Low)", line
+                        r"(?:</span>\s*(\d+)|(\d+)\s+(?:Critical|High|Medium|Low))",
+                        line,
                     )
+                    for value in value
+                    if value
                 ]
                 if counts and not any(counts):
                     continue
