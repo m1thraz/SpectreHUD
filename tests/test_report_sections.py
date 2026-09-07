@@ -179,6 +179,7 @@ def test_professional_html_exposes_meaningful_semantic_section_wrappers():
                 "title": "Open service",
                 "content": "TCP/443 is reachable.",
                 "severity": "low",
+                "recommendation": "Restrict the service to approved source networks.",
             }
         ]
     )
@@ -213,6 +214,7 @@ def test_both_profiles_render_generated_findings_semantically_but_not_legacy_blo
                 "severity": "high",
                 "target_ip": "10.10.10.42",
                 "timestamp": "2026-09-07 10:42:00",
+                "recommendation": "Reject invalid tokens and rotate signing keys.",
             },
             {
                 "id": "loot-command",
@@ -252,6 +254,8 @@ def test_both_profiles_render_generated_findings_semantically_but_not_legacy_blo
         assert '<article class="report-finding severity-medium">' in rendered
         assert '<div class="finding-meta">' in rendered
         assert '<section class="finding-description"><h4>Description</h4>' in rendered
+        assert '<section class="finding-recommendation"><h4>Recommendation</h4>' in rendered
+        assert "Reject invalid tokens and rotate signing keys." in rendered
         assert '<code class="language-bash">curl --request POST' in rendered
         assert "spectre:finding" not in rendered
         assert "spectre:loot" not in rendered
@@ -409,6 +413,152 @@ def test_professional_keeps_manual_notes_in_otherwise_empty_sections():
     assert "Manual finding note." in professional
     assert "Manual supporting material." in professional
     assert "Manual distribution note." in professional
+
+
+def test_professional_renumbers_only_visible_pentest_sections():
+    markdown = "\n\n".join(
+        [
+            wrap_section_markdown(
+                "## 1. Executive Summary\n\nSummary content.", "executive_summary"
+            ),
+            wrap_section_markdown(
+                "## 2. Scope & Methodology\n\n- **In Scope:**",
+                "scope_limitations",
+            ),
+            wrap_section_markdown(
+                "## 3. Attack Path\n\n1. Initial access", "attack_path"
+            ),
+            wrap_section_markdown(
+                "## 4. Technical Findings\n\nManual finding context.",
+                "finding_section",
+            ),
+            wrap_section_markdown(
+                "## 5. Remediation\n\n| Priority | Recommendation | Affects Finding # |\n"
+                "|---|---|---|\n| P2 | Rotate credentials | Finding #1 |",
+                "remediation_table",
+            ),
+        ]
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert "1. Executive Summary" in professional
+    assert "2. Attack Path" in professional
+    assert "3. Technical Findings" in professional
+    assert "4. Remediation" in professional
+    assert "2. Scope" not in professional
+    assert "5. Remediation" not in professional
+
+
+def test_professional_does_not_renumber_ctf_phase_narrative():
+    markdown = "\n\n".join(
+        [
+            wrap_section_markdown(
+                "## 1. Reconnaissance\n\nCaptured evidence.", "phase_section:recon"
+            ),
+            wrap_section_markdown(
+                "## 3. Privilege Escalation\n\nRoot proof.", "phase_section:privesc"
+            ),
+        ]
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert "1. Reconnaissance" in professional
+    assert "3. Privilege Escalation" in professional
+    assert "2. Privilege Escalation" not in professional
+
+
+def test_professional_numbering_closes_multiple_suppressed_gaps():
+    markdown = "\n\n".join(
+        [
+            wrap_section_markdown(
+                "## 1. Executive Summary\n\nSummary content.", "executive_summary"
+            ),
+            wrap_section_markdown(
+                "## 2. Scope\n\n- **In Scope:**", "scope_limitations"
+            ),
+            wrap_section_markdown(
+                "## 3. Attack Path\n\n*No documented attack path is available.*",
+                "attack_path",
+            ),
+            wrap_section_markdown(
+                "## 4. Technical Findings\n\nManual finding content.",
+                "finding_section",
+            ),
+            wrap_section_markdown(
+                "## 5. Remediation\n\n| Priority | Recommendation | Affects Finding # |\n"
+                "|---|---|---|\n| P2 | Rotate credentials | Finding #1 |",
+                "remediation_table",
+            ),
+        ]
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert "1. Executive Summary" in professional
+    assert "2. Technical Findings" in professional
+    assert "3. Remediation" in professional
+    assert "4. Technical Findings" not in professional
+    assert "5. Remediation" not in professional
+
+
+def test_executive_priority_actions_use_only_real_recommendations(tmp_path):
+    template = TemplateRepository(
+        user_templates_dir=tmp_path / "templates"
+    ).get_template("pentest_executive_en")
+    context = ReportContext(
+        loot_entries=[
+            {
+                "id": "critical",
+                "category": "privesc",
+                "type": "note",
+                "title": "Writable privileged service",
+                "content": "Evidence",
+                "severity": "critical",
+                "recommendation": "Remove write access from unprivileged users.",
+            },
+            {
+                "id": "high",
+                "category": "access",
+                "type": "note",
+                "title": "Authentication bypass",
+                "content": "Evidence",
+                "severity": "high",
+                "recommendation": "Reject unsigned authentication tokens.",
+            },
+            {
+                "id": "medium",
+                "category": "recon",
+                "type": "note",
+                "title": "Exposed service",
+                "content": "Evidence",
+                "severity": "medium",
+                "recommendation": "",
+            },
+        ]
+    )
+    markdown = TemplateRenderer().render(template, context)
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    action_plan = professional.split(
+        '<section class="report-section report-remediation">', 1
+    )[1].split("</section>", 1)[0]
+
+    assert "Writable privileged service" in professional
+    assert "Authentication bypass" in professional
+    assert "Exposed service" in professional
+    assert "Remove write access from unprivileged users." in action_plan
+    assert "Reject unsigned authentication tokens." in action_plan
+    assert "Exposed service" not in action_plan
+    assert action_plan.index("P1") < action_plan.index("P2")
 
 
 def test_professional_cover_precedes_body_and_is_profile_isolated():

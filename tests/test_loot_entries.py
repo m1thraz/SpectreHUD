@@ -62,6 +62,36 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(entries[0]["content"], "admin:P@ssword123")
         self.assertEqual(entries[0]["category"], "access")
 
+    def test_recommendation_is_optional_and_roundtrips_through_updates(self):
+        entry = self.loot_mgr.add_entry(
+            "note",
+            "Authentication bypass",
+            "Invalid tokens were accepted.",
+            recommendation="Reject malformed tokens and rotate signing keys.",
+        )
+
+        self.assertEqual(
+            entry["recommendation"],
+            "Reject malformed tokens and rotate signing keys.",
+        )
+        updated = self.loot_mgr.update_entry(
+            entry["id"], recommendation="Require short-lived signed tokens."
+        )
+        self.assertEqual(updated["recommendation"], "Require short-lived signed tokens.")
+
+        empty = self.loot_mgr.add_entry("note", "No recommendation", "Evidence")
+        self.assertEqual(empty["recommendation"], "")
+
+        reloaded = LootManager(storage_file=self.storage_file)
+        recommendations = {
+            item["title"]: item["recommendation"] for item in reloaded.get_all_entries()
+        }
+        self.assertEqual(
+            recommendations["Authentication bypass"],
+            "Require short-lived signed tokens.",
+        )
+        self.assertEqual(recommendations["No recommendation"], "")
+
     def test_add_rejects_entry_beyond_persisted_limit(self):
         """The 1001st live entry must not create state that a session save truncates."""
         self.loot_mgr.entries = [

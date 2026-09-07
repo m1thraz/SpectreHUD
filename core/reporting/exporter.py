@@ -19,6 +19,7 @@ from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
     build_professional_cover_data,
     normalize_professional_severity,
+    renumber_professional_heading,
     render_professional_cover,
     professional_section_has_meaningful_content,
     prune_professional_section_html,
@@ -77,13 +78,27 @@ class HtmlReportExporter:
             "appendix": "report-appendix",
         }
         html_segments = []
-        for segment in segment_report_markdown(embedded_markdown):
+        segments = segment_report_markdown(embedded_markdown)
+        uses_phase_narrative = any(
+            segment.is_structured and segment.section_type == "phase_section"
+            for segment in segments
+        )
+        visible_number = 0
+        for segment in segments:
             if segment.is_structured and not professional_section_has_meaningful_content(
                 segment.section_type, segment.markdown
             ):
                 continue
+            segment_markdown = segment.markdown
+            if segment.is_structured and not uses_phase_narrative:
+                renumbered, changed = renumber_professional_heading(
+                    segment_markdown, visible_number + 1
+                )
+                if changed:
+                    visible_number += 1
+                    segment_markdown = renumbered
             body = convert_markdown_with_findings(
-                strip_section_markers(segment.markdown), project_dir=None
+                strip_section_markers(segment_markdown), project_dir=None
             )
             if not segment.is_structured:
                 html_segments.append(body)

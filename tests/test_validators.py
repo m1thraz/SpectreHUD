@@ -62,6 +62,19 @@ class TestSemanticValidators(unittest.TestCase):
         self.assertEqual(validated[1]["title"], "Unbenannter Eintrag")
         self.assertEqual(validated[1]["type"], "note")
 
+    def test_validate_loot_recommendation_is_backward_compatible(self):
+        legacy = validate_loot_entry({"title": "Legacy", "content": "Evidence"})
+        enriched = validate_loot_entry(
+            {
+                "title": "Finding",
+                "content": "Evidence",
+                "recommendation": "First action\nSecond action",
+            }
+        )
+
+        self.assertEqual(legacy["recommendation"], "")
+        self.assertEqual(enriched["recommendation"], "First action\nSecond action")
+
     def test_validate_clipboard_list_with_mixed_malformed_items(self):
         """Tests that invalid clipboard entries (e.g. empty text, non-dict) are handled safely."""
         raw_history = [

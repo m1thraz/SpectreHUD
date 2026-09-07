@@ -22,6 +22,7 @@ semantic versioning.
 * Newly generated report findings now use structured metadata and description blocks across Interactive and Professional Print exports.
 * Professional Print omits empty phase sections while preserving phases that contain manual notes.
 * Reworked built-in report templates so pentest reports use assessment-oriented findings and attack-path sections while CTF reports retain their chronological workflow.
+* Added optional finding recommendations, recommendation-backed action plans, and gap-free Professional Print section numbering.
 
 ## [2.1.1] - 2026-09-06
 

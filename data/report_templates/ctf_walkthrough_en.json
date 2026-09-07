@@ -7,11 +7,11 @@
   "is_builtin": true,
   "sections": [
     { "type": "header_metadata", "title": "CTF Challenge Walkthrough" },
-    { "type": "phase_section", "category_id": "recon", "title": "1. Reconnaissance & Port Scanning" },
-    { "type": "phase_section", "category_id": "access", "title": "2. Initial Access & User Flag" },
-    { "type": "phase_section", "category_id": "privesc", "title": "3. Privilege Escalation & Root Flag" },
-    { "type": "phase_section", "category_id": "postex", "title": "4. Post-Exploitation & Proof" },
-    { "type": "phase_section", "category_id": "scripts", "title": "5. Custom Exploits & Scripts" },
+    { "type": "phase_section", "category_id": "recon", "title": "1. Reconnaissance & Port Scanning", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "access", "title": "2. Initial Access & User Flag", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "privesc", "title": "3. Privilege Escalation & Root Flag", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "postex", "title": "4. Post-Exploitation & Proof", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "scripts", "title": "5. Custom Exploits & Scripts", "options": { "include_recommendations": false } },
     { "type": "appendix", "title": "6. Appendix (Command History & Screenshots)" }
   ]
 }

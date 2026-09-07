@@ -266,22 +266,22 @@ class ObsidianExporter:
             if timestamp:
                 metadata.append(f"- Captured: `{timestamp}`")
             content = str(entry.get("content", "")).rstrip()
+            recommendation = str(entry.get("recommendation", "") or "").strip()
             fence = "```"
             while fence in content:
                 fence += "`"
-            blocks.append(
-                "\n".join(
-                    [
-                        f"<!-- spectrehud-entry:{entry_id} -->",
-                        f"### {title}",
-                        *metadata,
-                        "",
-                        fence,
-                        content,
-                        fence,
-                    ]
-                )
-            )
+            lines = [
+                f"<!-- spectrehud-entry:{entry_id} -->",
+                f"### {title}",
+                *metadata,
+                "",
+                fence,
+                content,
+                fence,
+            ]
+            if recommendation:
+                lines.extend(["", "#### Recommendation", "", recommendation])
+            blocks.append("\n".join(lines))
         return "\n\n".join(blocks)
 
     def append_loot(

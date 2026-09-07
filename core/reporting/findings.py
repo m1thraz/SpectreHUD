@@ -39,6 +39,7 @@ def strip_finding_markers(markdown: str) -> str:
 def _semantic_finding_html(body_html: str) -> str:
     heading = re.search(r"<h3>(.*?)</h3>", body_html, re.DOTALL)
     description = re.search(r"<h4>(Description|Beschreibung)</h4>", body_html)
+    recommendation = re.search(r"<h4>(Recommendation|Empfehlung)</h4>", body_html)
     if heading is None:
         return body_html
 
@@ -74,6 +75,11 @@ def _semantic_finding_html(body_html: str) -> str:
             f'<section class="finding-description"><h4>{description.group(1)}</h4>',
             1,
         )
+    if recommendation:
+        recommendation_open = (
+            "</section>" if description else ""
+        ) + f'<section class="finding-recommendation"><h4>{recommendation.group(1)}</h4>'
+        body_html = body_html.replace(recommendation.group(0), recommendation_open, 1)
     header_severity = (
         f'<div class="finding-severity">{severity_html}</div>' if severity_html else ""
     )
@@ -84,7 +90,7 @@ def _semantic_finding_html(body_html: str) -> str:
         f'<article class="report-finding{severity_class}">'
         '<header class="finding-header">'
         f"{heading.group(0)}{header_severity}</header>"
-        f"{metadata}{body_html}{'</section>' if description else ''}</article>"
+        f"{metadata}{body_html}{'</section>' if description or recommendation else ''}</article>"
     )
 
 

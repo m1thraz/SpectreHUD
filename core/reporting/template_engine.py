@@ -234,7 +234,11 @@ def _category_label(category_id: str) -> str:
 
 
 def _render_loot_entry_block(
-    entry: Dict[str, Any], lang: str = "de", *, include_phase: bool = False
+    entry: Dict[str, Any],
+    lang: str = "de",
+    *,
+    include_phase: bool = False,
+    include_recommendation: bool = True,
 ) -> List[str]:
     """Emit the stable loot-block shape shared by regeneration and additive sync.
 
@@ -248,6 +252,7 @@ def _render_loot_entry_block(
     title_fallback = "Unbenannter Eintrag" if lang == "de" else "Unnamed Entry"
     title = entry.get("title") or title_fallback
     content = (entry.get("content") or "").strip()
+    recommendation = (entry.get("recommendation") or "").strip()
 
     lines = []
     if entry_id:
@@ -285,6 +290,16 @@ def _render_loot_entry_block(
     elif content:
         lines.append(content)
 
+    if recommendation and include_recommendation:
+        lines.extend(
+            [
+                "",
+                "#### Empfehlung" if lang == "de" else "#### Recommendation",
+                "",
+                recommendation,
+            ]
+        )
+
     lines.append("")
     if entry_id:
         lines.append(finding_end_marker(entry_id))
@@ -311,7 +326,15 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
         lines.append("")
     else:
         for entry in reversed(entries):
-            lines.extend(_render_loot_entry_block(entry, lang=lang))
+            lines.extend(
+                _render_loot_entry_block(
+                    entry,
+                    lang=lang,
+                    include_recommendation=bool(
+                        section.options.get("include_recommendations", True)
+                    ),
+                )
+            )
 
     placeholder = SECTION_NOTES_PLACEHOLDER_DE if lang == "de" else SECTION_NOTES_PLACEHOLDER_EN
     lines.append(placeholder)
@@ -394,16 +417,25 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
     all_entries = context.loot_entries
     remed_rows = []
     num = 0
-    for entry in all_entries:
+    for source_index, entry in enumerate(all_entries):
         sev = str(entry.get("severity", "info")).lower()
         if sev in ("critical", "high", "medium", "low"):
             num += 1
-            t = str(entry.get("title", "Finding")).replace("|", "\\|").replace("\n", " ")
+            recommendation = str(entry.get("recommendation", "") or "").strip()
+            if not recommendation:
+                continue
+            action = " ".join(recommendation.splitlines()).replace("|", "\\|")
             priority = {"critical": "P1", "high": "P2", "medium": "P3", "low": "P4"}.get(sev, "P3")
-            remed_rows.append(f"| {priority} | {t} | Finding #{num} |")
+            priority_rank = int(priority[1:])
+            remed_rows.append(
+                (priority_rank, source_index, f"| {priority} | {action} | Finding #{num} |")
+            )
 
-    if not remed_rows:
-        remed_rows = ["| | | |"]
+    remed_rows.sort(key=lambda item: (item[0], item[1]))
+    rendered_rows = [row for _priority, _source_index, row in remed_rows]
+
+    if not rendered_rows:
+        rendered_rows = ["| | | |"]
 
     if lang == "de":
         lines = [
@@ -411,7 +443,7 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
             "",
             "| Priorität | Empfehlung | Betrifft Finding # |",
             "|---|---|---|",
-            *remed_rows,
+            *rendered_rows,
             "",
         ]
     else:
@@ -420,7 +452,7 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
             "",
             "| Priority | Recommendation | Affects Finding # |",
             "|---|---|---|",
-            *remed_rows,
+            *rendered_rows,
             "",
         ]
     return "\n".join(lines)

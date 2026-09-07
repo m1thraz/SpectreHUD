@@ -85,6 +85,39 @@ class TestLootReportSync(unittest.TestCase):
                 f"Hash should change when '{field}' changes",
             )
 
+    def test_hash_preserves_legacy_empty_value_and_tracks_recommendation(self):
+        legacy_hash = loot_content_hash(self.entry_a)
+        self.assertEqual(
+            loot_content_hash(dict(self.entry_a, recommendation="")), legacy_hash
+        )
+        with_recommendation = dict(
+            self.entry_a,
+            recommendation="Restrict the exposed service to the management network.",
+        )
+        self.assertNotEqual(loot_content_hash(with_recommendation), legacy_hash)
+        self.assertNotEqual(
+            loot_content_hash(dict(with_recommendation, recommendation="Disable the service.")),
+            loot_content_hash(with_recommendation),
+        )
+
+    def test_recommendation_change_is_stale_and_never_rewrites_report(self):
+        original_hash = loot_content_hash(self.entry_a)
+        report = (
+            f"<!-- spectre:loot:{self.entry_a['id']}:{original_hash} -->\n"
+            "### Hand-edited finding\n\nPreserve this report text."
+        )
+        updated_entry = dict(
+            self.entry_a, recommendation="Restrict the service to approved networks."
+        )
+
+        state = classify_loot_report_state(report, [updated_entry])
+        result = append_missing_loot_to_text(report, [updated_entry], language="en")
+
+        self.assertEqual([entry["id"] for entry in state.stale], [self.entry_a["id"]])
+        self.assertFalse(state.missing)
+        self.assertEqual(result.added_count, 0)
+        self.assertEqual(result.text, report)
+
     # ------------------------------------------------------------------ #
     # Ticket 29: Marker Parsing & Robustness
     # ------------------------------------------------------------------ #
@@ -384,6 +417,32 @@ Port 80, 22, 443 open
         self.assertIn("<!-- spectre:finding:start:loot_11111111 -->", reconciled)
         self.assertIn("<!-- spectre:finding:end:loot_11111111 -->", reconciled)
 
+    def test_new_missing_finding_includes_recommendation_without_rewriting_legacy(self):
+        legacy = (
+            "## 1. Reconnaissance & Enumeration\n\n"
+            "<!-- spectre:loot:legacy:deadbeef1234 -->\n"
+            "### Manually edited legacy finding\n\nKeep this byte-for-byte.\n"
+        )
+        recommended = dict(
+            self.entry_a,
+            id="recommended-new",
+            recommendation="Restrict TCP/443 to approved source networks.",
+        )
+
+        first = append_missing_loot_to_text(legacy, [recommended], language="en")
+        second = append_missing_loot_to_text(first.text, [recommended], language="en")
+
+        self.assertIn(
+            "<!-- spectre:loot:legacy:deadbeef1234 -->\n"
+            "### Manually edited legacy finding\n\nKeep this byte-for-byte.",
+            first.text,
+        )
+        self.assertIn("#### Recommendation", first.text)
+        self.assertIn("Restrict TCP/443", first.text)
+        self.assertEqual(first.added_count, 1)
+        self.assertEqual(second.added_count, 0)
+        self.assertEqual(second.text, first.text)
+
     def test_grouped_finding_section_adds_each_category_once_with_phase(self):
         template = ReportTemplate(
             id="grouped",
@@ -444,6 +503,33 @@ Port 80, 22, 443 open
         self.assertFalse(result.used_fallback)
         self.assertIn("### Nmap Port Scan", result.text)
         self.assertIn("**Phase:** Reconnaissance & Enumeration", result.text)
+
+    def test_ctf_add_missing_does_not_inject_recommendation(self):
+        template = ReportTemplate(
+            id="ctf",
+            name="CTF",
+            language="en",
+            category="ctf",
+            complexity="simple",
+            sections=[
+                TemplateSection(
+                    type="phase_section",
+                    category_id="recon",
+                    title="Recon",
+                    options={"include_recommendations": False},
+                )
+            ],
+        )
+        report = TemplateRenderer().render(template, ReportContext())
+        entry = dict(self.entry_a, recommendation="Enterprise remediation text")
+
+        result = append_missing_loot_to_text(
+            report, [entry], template=template, language="en"
+        )
+
+        self.assertIn("### Nmap Port Scan", result.text)
+        self.assertNotIn("#### Recommendation", result.text)
+        self.assertNotIn("Enterprise remediation text", result.text)
 
     def test_legacy_finding_bytes_remain_untouched_when_new_loot_is_added(self):
         legacy = (

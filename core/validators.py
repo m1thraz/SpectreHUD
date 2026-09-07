@@ -28,6 +28,7 @@ MAX_USER_SNIPPETS: int = 500
 
 MAX_TITLE_LENGTH: int = 256
 MAX_CONTENT_LENGTH: int = 128 * 1024  # 128 KB
+MAX_RECOMMENDATION_LENGTH: int = 128 * 1024
 MAX_CLIPBOARD_TEXT_LENGTH: int = 64 * 1024  # 64 KB (matches live recorder)
 MAX_TARGET_IP_LENGTH: int = 128
 MAX_TIMESTAMP_LENGTH: int = 64
@@ -118,6 +119,9 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     severity = raw_sev if raw_sev in VALID_SEVERITIES else "info"
     title = str(entry.get("title") or "Unbenannter Eintrag").strip()[:MAX_TITLE_LENGTH]
     content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
+    recommendation = str(entry.get("recommendation") or "").strip()[
+        :MAX_RECOMMENDATION_LENGTH
+    ]
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[
         :MAX_TIMESTAMP_LENGTH
@@ -134,6 +138,7 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "severity": severity,
         "title": title or "Unbenannter Eintrag",
         "content": content,
+        "recommendation": recommendation,
         "target_ip": target_ip,
         "timestamp": timestamp,
         "position": position,

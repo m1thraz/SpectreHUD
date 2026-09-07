@@ -84,8 +84,8 @@ class TestTemplateRepository(unittest.TestCase):
                 [(section.type, section.category_id) for section in en_sections],
             )
             self.assertEqual(
-                [section.options.get("categories") for section in de_sections],
-                [section.options.get("categories") for section in en_sections],
+                [section.options for section in de_sections],
+                [section.options for section in en_sections],
             )
 
     def test_pentest_and_ctf_templates_have_distinct_narratives(self):
@@ -128,6 +128,9 @@ class TestTemplateRepository(unittest.TestCase):
             self.assertIn("phase_section", section_types)
             self.assertNotIn("attack_path", section_types)
             self.assertNotIn("finding_section", section_types)
+            for section in builtins[template_id].sections:
+                if section.type == "phase_section":
+                    self.assertFalse(section.options["include_recommendations"])
 
     def test_all_builtin_templates_render_every_declared_section(self):
         renderer = TemplateRenderer()

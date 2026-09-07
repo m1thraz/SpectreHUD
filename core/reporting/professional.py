@@ -246,3 +246,15 @@ def prune_professional_section_html(section_type: str, body_html: str) -> str:
             body_html,
         )
     return body_html
+
+
+def renumber_professional_heading(markdown: str, number: int) -> tuple[str, bool]:
+    """Renumber only a section's leading numbered H2 for the filtered print view."""
+    renumbered, replacements = re.subn(
+        r"^(##\s+)\d+\.\s+",
+        rf"\g<1>{number}. ",
+        markdown,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    return renumbered, bool(replacements)

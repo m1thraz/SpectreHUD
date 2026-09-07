@@ -49,6 +49,26 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(data["target_ip"], "10.10.10.50")
         self.assertEqual(data["type"], "credentials")
         self.assertEqual(data["category"], "access")
+        self.assertEqual(data["recommendation"], "")
+        self.assertIsNone(dlg.txt_recommendation)
+        dlg.close()
+
+    def test_edit_loot_dialog_exposes_multiline_recommendation(self):
+        dlg = AddLootDialog(
+            entry_id="loot-1",
+            is_edit=True,
+            default_title="Finding",
+            default_content="Evidence",
+            default_recommendation="First action\nSecond action",
+        )
+
+        self.assertIsNotNone(dlg.txt_recommendation)
+        self.assertEqual(
+            dlg.txt_recommendation.toPlainText(), "First action\nSecond action"
+        )
+        self.assertEqual(
+            dlg.get_data()["recommendation"], "First action\nSecond action"
+        )
         dlg.close()
 
     def test_new_project_dialog_data(self):

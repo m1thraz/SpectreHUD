@@ -764,6 +764,7 @@ class TestControllersDomain(unittest.TestCase):
             mock_dlg.get_data.return_value = {
                 "title": "Edited Title",
                 "content": "Edited Content",
+                "recommendation": "Rotate the exposed credentials.",
                 "target_ip": "10.10.10.99",
                 "category": "access",
                 "type": "credentials",
@@ -774,6 +775,9 @@ class TestControllersDomain(unittest.TestCase):
             updated = self.loot_ctrl.get_entries()[0]
             self.assertEqual(updated["title"], "Edited Title")
             self.assertEqual(updated["type"], "credentials")
+            self.assertEqual(
+                updated["recommendation"], "Rotate the exposed credentials."
+            )
 
             # 2. Rejected
             mock_dlg.exec.return_value = False

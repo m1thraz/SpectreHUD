@@ -18,7 +18,13 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
         project_dir=project,
         report_markdown="# Report\n\n![Proof](loot/proof.png)",
         loot_entries=[
-            {"id": "loot-1", "type": "note", "title": "Finding", "content": "SMB signing disabled"}
+            {
+                "id": "loot-1",
+                "type": "note",
+                "title": "Finding",
+                "content": "SMB signing disabled",
+                "recommendation": "Require SMB signing on all managed hosts.",
+            }
         ],
     )
 
@@ -28,6 +34,7 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
     assert (package / "images" / "proof.png").read_bytes() == b"png"
     assert 'src="images/proof.png"' in result.note_path.read_text(encoding="utf-8")
     assert "SMB signing disabled" in (package / "loot.html").read_text(encoding="utf-8")
+    assert "Require SMB signing" in (package / "loot.html").read_text(encoding="utf-8")
 
 
 def test_cherrytree_report_icon_uses_generic_image_pipeline(package_workspace):

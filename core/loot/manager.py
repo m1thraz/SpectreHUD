@@ -13,6 +13,7 @@ from core.storage import (
 from core.validators import (
     MAX_CONTENT_LENGTH,
     MAX_LOOT_ENTRIES,
+    MAX_RECOMMENDATION_LENGTH,
     MAX_TARGET_IP_LENGTH,
     MAX_TITLE_LENGTH,
 )
@@ -202,6 +203,7 @@ class LootManager:
         target_ip: str = "",
         category: str = "misc",
         severity: str = "info",
+        recommendation: str = "",
         **kwargs,
     ) -> Dict[str, Any]:
         """Creates and stores a new loot entry with category and severity classification."""
@@ -217,6 +219,9 @@ class LootManager:
         sev_id = sev_clean if sev_clean in VALID_SEVERITIES else "info"
         clean_title = self._validate_user_text(title, "Loot title", MAX_TITLE_LENGTH)
         clean_content = self._validate_user_text(content, "Loot content", MAX_CONTENT_LENGTH)
+        clean_recommendation = self._validate_user_text(
+            recommendation, "Loot recommendation", MAX_RECOMMENDATION_LENGTH
+        )
         clean_target_ip = self._validate_user_text(target_ip, "Target IP", MAX_TARGET_IP_LENGTH)
 
         from core.validators import format_timestamp
@@ -229,6 +234,7 @@ class LootManager:
             "severity": sev_id,
             "title": clean_title or "Unbenannter Eintrag",
             "content": clean_content,
+            "recommendation": clean_recommendation,
             "target_ip": clean_target_ip,
             "timestamp": format_timestamp(time_format=time_format),
             "position": 0,
@@ -283,6 +289,12 @@ class LootManager:
                 if "content" in fields:
                     entry["content"] = self._validate_user_text(
                         fields["content"], "Loot content", MAX_CONTENT_LENGTH
+                    )
+                if "recommendation" in fields:
+                    entry["recommendation"] = self._validate_user_text(
+                        fields["recommendation"],
+                        "Loot recommendation",
+                        MAX_RECOMMENDATION_LENGTH,
                     )
                 if "target_ip" in fields:
                     entry["target_ip"] = self._validate_user_text(

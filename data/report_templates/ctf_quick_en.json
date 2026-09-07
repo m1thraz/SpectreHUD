@@ -7,8 +7,8 @@
   "is_builtin": true,
   "sections": [
     { "type": "header_metadata", "title": "CTF Quick Writeup" },
-    { "type": "phase_section", "category_id": "access", "title": "Initial Foothold" },
-    { "type": "phase_section", "category_id": "privesc", "title": "Root Escalation" },
-    { "type": "phase_section", "category_id": "misc", "title": "Flags, Proof & Notes" }
+    { "type": "phase_section", "category_id": "access", "title": "Initial Foothold", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "privesc", "title": "Root Escalation", "options": { "include_recommendations": false } },
+    { "type": "phase_section", "category_id": "misc", "title": "Flags, Proof & Notes", "options": { "include_recommendations": false } }
   ]
 }

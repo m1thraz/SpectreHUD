@@ -95,6 +95,7 @@ class LootController(QObject):
         target_ip: str = "",
         category: str = "misc",
         severity: str = "info",
+        recommendation: str = "",
     ) -> Dict[str, Any]:
         try:
             entry = self.loot_manager.add_entry(
@@ -104,6 +105,7 @@ class LootController(QObject):
                 target_ip=target_ip,
                 category=category,
                 severity=severity,
+                recommendation=recommendation,
             )
             self.loot_updated.emit()
             return entry
@@ -120,6 +122,7 @@ class LootController(QObject):
         category: str = "misc",
         entry_type: Optional[str] = None,
         severity: Optional[str] = None,
+        recommendation: Optional[str] = None,
     ) -> bool:
         try:
             fields: Dict[str, Any] = {
@@ -133,6 +136,8 @@ class LootController(QObject):
                 fields["type"] = entry_type
             if severity is not None:
                 fields["severity"] = severity
+            if recommendation is not None:
+                fields["recommendation"] = recommendation
             success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
@@ -238,18 +243,19 @@ class LootController(QObject):
             suffix += 1
         target = validate_workspace_boundary(target, project_dir)
 
-        contents = "\n".join(
-            [
-                f"Title: {entry.get('title', '')}",
-                f"Type: {entry.get('type', 'note')}",
-                f"Category: {category}",
-                f"Target: {entry.get('target_ip', '')}",
-                f"Captured: {entry.get('timestamp', '')}",
-                "",
-                str(entry.get("content", "")),
-                "",
-            ]
-        )
+        lines = [
+            f"Title: {entry.get('title', '')}",
+            f"Type: {entry.get('type', 'note')}",
+            f"Category: {category}",
+            f"Target: {entry.get('target_ip', '')}",
+            f"Captured: {entry.get('timestamp', '')}",
+            "",
+            str(entry.get("content", "")),
+        ]
+        recommendation = str(entry.get("recommendation", "") or "").strip()
+        if recommendation:
+            lines.extend(["", "Recommendation:", recommendation])
+        contents = "\n".join([*lines, ""])
         try:
             if not atomic_write_text(target, contents):
                 raise PersistenceError(f"Could not write loot export to {target}")
@@ -590,6 +596,7 @@ class LootController(QObject):
                     target_ip=data["target_ip"],
                     category=data.get("category", "misc"),
                     severity=data.get("severity", "info"),
+                    recommendation=data.get("recommendation", ""),
                 )
                 if on_accepted:
                     on_accepted(data)
@@ -630,6 +637,7 @@ class LootController(QObject):
                 target_ip=data["target_ip"],
                 category=data.get("category", "misc"),
                 severity=data.get("severity", "info"),
+                recommendation=data.get("recommendation", ""),
             )
             if on_accepted:
                 on_accepted(data)
@@ -652,6 +660,7 @@ class LootController(QObject):
             default_category=entry.get("category", "misc"),
             default_title=entry.get("title", ""),
             default_content=entry.get("content", ""),
+            default_recommendation=entry.get("recommendation", ""),
             default_severity=entry.get("severity", "info"),
             on_export_file=on_export_file,
             on_export_obsidian=on_export_obsidian,
@@ -666,6 +675,7 @@ class LootController(QObject):
                 category=data.get("category", "misc"),
                 entry_type=data.get("type"),
                 severity=data.get("severity"),
+                recommendation=data.get("recommendation", ""),
             )
             return True
         return False

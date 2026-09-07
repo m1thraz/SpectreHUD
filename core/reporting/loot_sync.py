@@ -48,8 +48,10 @@ FALLBACK_SECTION_TITLE = FALLBACK_SECTION_TITLE_DE
 def loot_content_hash(entry: Mapping[str, Any]) -> str:
     """Calculates a deterministic 12-hex-character SHA-256 hash for a loot entry.
 
-    Fields hashed: category, content, severity, target_ip, timestamp, title, type.
+    Fields hashed: category, content, severity, target_ip, timestamp, title, type,
+    and a non-empty recommendation.
     Note: position is intentionally omitted so board reordering does not mark a report stale.
+    Omitting an empty recommendation preserves hashes produced before that field existed.
     """
     payload = {
         "category": str(entry.get("category", "") or ""),
@@ -60,6 +62,9 @@ def loot_content_hash(entry: Mapping[str, Any]) -> str:
         "title": str(entry.get("title", "") or ""),
         "type": str(entry.get("type", "note") or "note"),
     }
+    recommendation = str(entry.get("recommendation", "") or "").strip()
+    if recommendation:
+        payload["recommendation"] = recommendation
     canonical_json = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()[:12]
 
@@ -223,11 +228,20 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
 
 
 def _render_loot_block_text(
-    entry: Mapping[str, Any], lang: str = "de", *, include_phase: bool = False
+    entry: Mapping[str, Any],
+    lang: str = "de",
+    *,
+    include_phase: bool = False,
+    include_recommendation: bool = True,
 ) -> str:
     from core.reporting.template_engine import _render_loot_entry_block
 
-    lines = _render_loot_entry_block(dict(entry), lang=lang, include_phase=include_phase)
+    lines = _render_loot_entry_block(
+        dict(entry),
+        lang=lang,
+        include_phase=include_phase,
+        include_recommendation=include_recommendation,
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -239,6 +253,23 @@ def _uses_grouped_findings(template: Optional[Any], category_id: str) -> bool:
         and category_id in _grouped_section_categories(section)
         for section in template.sections
     )
+
+
+def _includes_recommendation(template: Optional[Any], category_id: str) -> bool:
+    if not template or not hasattr(template, "sections"):
+        return True
+    for section in template.sections:
+        section_type = getattr(section, "type", None)
+        if (
+            section_type == "finding_section"
+            and category_id in _grouped_section_categories(section)
+        ):
+            return True
+        if section_type == "phase_section" and getattr(section, "category_id", None) == category_id:
+            return bool(
+                getattr(section, "options", {}).get("include_recommendations", True)
+            )
+    return str(getattr(template, "category", "")).lower() != "ctf"
 
 
 def _match_section_for_category(
@@ -404,8 +435,14 @@ def append_missing_loot_to_text(
 
         _sec_title, c_start, s_end = matched_section
         include_phase = _uses_grouped_findings(template, cat_id)
+        include_recommendation = _includes_recommendation(template, cat_id)
         rendered = "".join(
-            _render_loot_block_text(e, lang=language, include_phase=include_phase)
+            _render_loot_block_text(
+                e,
+                lang=language,
+                include_phase=include_phase,
+                include_recommendation=include_recommendation,
+            )
             for e in reversed(cat_entries)
         )
         key = (c_start, s_end)

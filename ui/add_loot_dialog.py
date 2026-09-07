@@ -35,6 +35,9 @@ class AddLootDialog(BaseHudDialog):
         default_content: str = "",
         initial_content: str = "",
         content: str = "",
+        default_recommendation: str = "",
+        initial_recommendation: str = "",
+        recommendation: str = "",
         entry_id: Optional[str] = None,
         is_edit: bool = False,
         on_export_file: Optional[Callable[[str], None]] = None,
@@ -52,7 +55,7 @@ class AddLootDialog(BaseHudDialog):
 
         super().__init__(title=dialog_title, parent=parent)
         self.setMinimumWidth(540)
-        self.resize(560, 460)
+        self.resize(560, 600 if self.is_edit else 460)
 
         self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
         self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
@@ -68,6 +71,12 @@ class AddLootDialog(BaseHudDialog):
         self.initial_title = default_title or initial_title or title or kwargs.get("name", "")
         self.initial_content = (
             default_content or initial_content or content or kwargs.get("text", "")
+        )
+        self.initial_recommendation = (
+            default_recommendation
+            or initial_recommendation
+            or recommendation
+            or kwargs.get("remediation", "")
         )
 
         # When opened non-modally (Quick Loot), set to True after first activation
@@ -179,6 +188,26 @@ class AddLootDialog(BaseHudDialog):
         self.txt_content.setFixedHeight(100)
         layout.addWidget(self.txt_content)
 
+        self.txt_recommendation = None
+        if self.is_edit:
+            lbl_recommendation = QLabel(
+                t("loot_dialog.lbl_recommendation", "Recommendation (optional):")
+            )
+            lbl_recommendation.setProperty("class", "FormLabel")
+            layout.addWidget(lbl_recommendation)
+
+            self.txt_recommendation = QPlainTextEdit()
+            self.txt_recommendation.setObjectName("CommandBox")
+            self.txt_recommendation.setPlainText(self.initial_recommendation)
+            self.txt_recommendation.setPlaceholderText(
+                t(
+                    "loot_dialog.ph_recommendation",
+                    "Describe the concrete action required to remediate this finding.",
+                )
+            )
+            self.txt_recommendation.setFixedHeight(100)
+            layout.addWidget(self.txt_recommendation)
+
         # 4. Target IP
         lbl_target = QLabel(t("loot_dialog.lbl_target", "Associated Target (optional):"))
         lbl_target.setProperty("class", "FormLabel")
@@ -251,6 +280,11 @@ class AddLootDialog(BaseHudDialog):
             "category": self.combo_category.currentData(),
             "title": self.txt_title.text().strip(),
             "content": self.txt_content.toPlainText().strip(),
+            "recommendation": (
+                self.txt_recommendation.toPlainText().strip()
+                if self.txt_recommendation is not None
+                else ""
+            ),
             "target_ip": self.txt_target.text().strip(),
         }
         if self.entry_id:

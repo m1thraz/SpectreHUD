@@ -364,7 +364,8 @@ tr:nth-child(even) {
     letter-spacing: 0.05em;
 }
 
-.finding-description h4 {
+.finding-description h4,
+.finding-recommendation h4 {
     margin-top: 12px;
 }
 
@@ -949,13 +950,18 @@ body[data-report-profile="professional_print"] .finding-meta-value {
     font-size: 9.5pt;
 }
 
-body[data-report-profile="professional_print"] .finding-description h4 {
+body[data-report-profile="professional_print"] .finding-description h4,
+body[data-report-profile="professional_print"] .finding-recommendation h4 {
     margin: 0 0 3mm;
     color: var(--report-muted) !important;
     font-size: 8pt;
     font-weight: 750;
     letter-spacing: 0.11em;
     text-transform: uppercase;
+}
+
+body[data-report-profile="professional_print"] .finding-recommendation {
+    margin-top: 6mm;
 }
 
 body[data-report-profile="professional_print"] .report-footer {

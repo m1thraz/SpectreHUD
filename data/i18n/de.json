@@ -172,6 +172,8 @@
     "loot_dialog.ph_name": "z.B. SSH Key user 'alice', MySQL Root Password, user.txt",
     "loot_dialog.lbl_content": "Inhalt / Passwort / Hash / Flag / Notiz:",
     "loot_dialog.ph_content": "z.B. admin:SuperSecretPass! oder THM{fl4g_h3r3}",
+    "loot_dialog.lbl_recommendation": "Empfehlung (optional):",
+    "loot_dialog.ph_recommendation": "Beschreibe die konkrete Maßnahme zur Behebung dieses Findings.",
     "loot_dialog.lbl_target": "Zugehöriges Target (optional):",
     "loot_dialog.ph_target": "10.10.10.x",
     "loot_dialog.err_title": "Bitte gib einen Titel für den Eintrag ein.",

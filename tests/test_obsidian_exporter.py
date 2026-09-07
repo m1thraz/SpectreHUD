@@ -135,6 +135,25 @@ def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspac
     assert second.skipped_entry_ids == ("loot-1",)
 
 
+def test_obsidian_loot_export_includes_real_recommendation(workspace):
+    vault, _project = workspace
+    exporter = ObsidianExporter(vault)
+    entry = {
+        "id": "loot-remediation",
+        "type": "note",
+        "title": "Authentication bypass",
+        "content": "Invalid tokens were accepted.",
+        "recommendation": "Reject invalid tokens and rotate signing keys.",
+    }
+
+    result = exporter.append_loot(project_name="Forest", entries=[entry])
+    content = result.note_path.read_text(encoding="utf-8")
+
+    assert "#### Recommendation" in content
+    assert "Reject invalid tokens and rotate signing keys." in content
+    assert "spectre:loot" not in content
+
+
 def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
     vault, project = workspace
     exporter = ObsidianExporter(vault)

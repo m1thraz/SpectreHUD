@@ -102,6 +102,24 @@ class TestTemplateEngine(unittest.TestCase):
         out_empty = _render_phase_section(sec_empty, self.context, "de")
         self.assertIn("*Keine Einträge in dieser Phase.*", out_empty)
 
+    def test_phase_section_can_suppress_recommendations_for_ctf_templates(self):
+        section = TemplateSection(
+            type="phase_section",
+            category_id="access",
+            options={"include_recommendations": False},
+        )
+        context = ReportContext(
+            loot_entries=[
+                dict(self.sample_loot[0], recommendation="Rotate these credentials.")
+            ]
+        )
+
+        rendered = _render_phase_section(section, context, "en")
+
+        self.assertIn("Domain Admin Credentials", rendered)
+        self.assertNotIn("#### Recommendation", rendered)
+        self.assertNotIn("Rotate these credentials.", rendered)
+
     def test_attack_path_uses_only_observed_categories_and_titles(self):
         section = TemplateSection(
             type="attack_path",
@@ -182,13 +200,88 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertNotIn("**Target:**", rendered)
         self.assertNotIn("**Observed:**", rendered)
         self.assertNotIn("#### Description", rendered)
+        self.assertNotIn("#### Recommendation", rendered)
+
+    def test_generated_finding_preserves_multiline_recommendation(self):
+        entry = dict(
+            self.sample_loot[0],
+            recommendation=(
+                "Rotate the exposed credentials.\n\n"
+                "```bash\npasswd administrator\n```"
+            ),
+        )
+
+        rendered = "\n".join(_render_loot_entry_block(entry, lang="en"))
+
+        self.assertIn("#### Description", rendered)
+        self.assertIn("#### Recommendation", rendered)
+        self.assertIn("Rotate the exposed credentials.", rendered)
+        self.assertIn("```bash\npasswd administrator\n```", rendered)
 
     def test_render_remediation_table(self):
         sec = TemplateSection(type="remediation_table")
-        out_de = _render_remediation_table(sec, self.context, "de")
+        context = ReportContext(
+            loot_entries=[
+                dict(
+                    self.sample_loot[1],
+                    severity="medium",
+                    recommendation="Restrict service exposure.",
+                ),
+                dict(
+                    self.sample_loot[2],
+                    recommendation="Remove the privileged writable path.",
+                ),
+                dict(self.sample_loot[0], recommendation=""),
+            ]
+        )
+        out_de = _render_remediation_table(sec, context, "de")
         self.assertIn("Empfehlungen (Remediation-Plan)", out_de)
-        self.assertIn("Domain Admin Credentials", out_de)
-        self.assertIn("P1", out_de)
+        self.assertIn("Remove the privileged writable path.", out_de)
+        self.assertIn("Restrict service exposure.", out_de)
+        self.assertNotIn("Domain Admin Credentials", out_de)
+        self.assertNotIn("Root Proof", out_de)
+        self.assertLess(out_de.index("| P2 |"), out_de.index("| P3 |"))
+        self.assertIn("Finding #2", out_de)
+
+    def test_remediation_table_without_real_actions_keeps_only_editing_scaffold(self):
+        out = _render_remediation_table(
+            TemplateSection(type="remediation_table"), self.context, "en"
+        )
+
+        self.assertIn("| | | |", out)
+        for entry in self.sample_loot:
+            self.assertNotIn(entry["title"], out)
+
+    def test_remediation_sort_is_stable_within_priority(self):
+        entries = [
+            dict(
+                self.sample_loot[0],
+                id="high-first",
+                severity="high",
+                recommendation="First high-priority action.",
+            ),
+            dict(
+                self.sample_loot[1],
+                id="critical",
+                severity="critical",
+                recommendation="Critical action.",
+            ),
+            dict(
+                self.sample_loot[2],
+                id="high-second",
+                severity="high",
+                recommendation="Second high-priority action.",
+            ),
+        ]
+
+        rendered = _render_remediation_table(
+            TemplateSection(type="remediation_table"),
+            ReportContext(loot_entries=entries),
+            "en",
+        )
+
+        self.assertLess(rendered.index("Critical action."), rendered.index("First high"))
+        self.assertLess(rendered.index("First high"), rendered.index("Second high"))
 
     def test_render_appendix(self):
         sec = TemplateSection(type="appendix")
