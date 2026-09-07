@@ -365,7 +365,7 @@
     "report.html_theme_light": "Light — Client / Print",
     "report.html_profile_title": "Choose HTML Export Profile",
     "report.html_profile_message": "How should the HTML report be presented?",
-    "report.html_profile_hint": "Interactive preserves the existing editable report; Professional Print adds semantic section structure for future print layouts.",
+    "report.html_profile_hint": "Interactive remains editable; Professional Print uses a controlled A4 layout. Disable browser headers and footers when printing.",
     "report.html_profile_interactive_dark": "Interactive — Dark",
     "report.html_profile_interactive_light": "Interactive — Light",
     "report.html_profile_professional": "Professional Print",

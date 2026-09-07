@@ -365,7 +365,7 @@
     "report.html_theme_light": "Light — Kunde / Druck",
     "report.html_profile_title": "HTML-Exportprofil wählen",
     "report.html_profile_message": "Wie soll der HTML-Report dargestellt werden?",
-    "report.html_profile_hint": "Interactive erhält den bisherigen editierbaren Report; Professional Print ergänzt semantische Sections für kommende Drucklayouts.",
+    "report.html_profile_hint": "Interactive bleibt editierbar; Professional Print nutzt ein kontrolliertes A4-Layout. Browser-Kopf- und Fußzeilen beim Drucken deaktivieren.",
     "report.html_profile_interactive_dark": "Interactive — Dunkel",
     "report.html_profile_interactive_light": "Interactive — Hell",
     "report.html_profile_professional": "Professional Print",

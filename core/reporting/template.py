@@ -10,6 +10,62 @@ from typing import Optional
 from core.reporting.styles import get_report_css
 
 
+def _css_string(value: str) -> str:
+    """Quote untrusted report metadata for use in a generated CSS string."""
+    escaped = []
+    for char in value.replace("\r", " ").replace("\n", " "):
+        if char in {'\\', '"', "<", ">", "&"} or ord(char) < 0x20:
+            escaped.append(f"\\{ord(char):x} ")
+        else:
+            escaped.append(char)
+    return f'"{"".join(escaped)}"'
+
+
+def _professional_page_css(
+    project_name: str,
+    classification: Optional[str],
+    language: str,
+) -> str:
+    is_de = language.lower().startswith("de")
+    report_label = "Penetrationstest-Bericht" if is_de else "Penetration Test Report"
+    page_label = "Seite " if is_de else "Page "
+    return f"""
+@media print {{
+    @page {{
+        size: A4;
+        margin: 22mm 18mm 20mm;
+        @top-left {{
+            content: {_css_string(project_name)};
+            color: #899198;
+            font: 7.25pt "Segoe UI", sans-serif;
+        }}
+        @top-right {{
+            content: {_css_string(report_label)};
+            color: #899198;
+            font: 7.25pt "Segoe UI", sans-serif;
+        }}
+        @bottom-left {{
+            content: {_css_string(classification or "")};
+            color: #899198;
+            font: 7.25pt "Segoe UI", sans-serif;
+        }}
+        @bottom-right {{
+            content: {_css_string(page_label)} counter(page);
+            color: #899198;
+            font: 7.25pt "Segoe UI", sans-serif;
+        }}
+    }}
+    @page :first {{
+        margin: 0;
+        @top-left {{ content: none; }}
+        @top-right {{ content: none; }}
+        @bottom-left {{ content: none; }}
+        @bottom-right {{ content: none; }}
+    }}
+}}
+"""
+
+
 def render_report_html(
     body_html: str,
     project_name: Optional[str] = None,
@@ -19,6 +75,7 @@ def render_report_html(
     report_font: str = "segoe_ui",
     language: str = "en",
     profile: str = "interactive",
+    classification: Optional[str] = None,
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
@@ -43,6 +100,7 @@ def render_report_html(
     is_professional = profile == "professional_print"
     if is_professional:
         btn_print = "Drucken / PDF exportieren" if is_de else "Print / Export PDF"
+        report_css += _professional_page_css(pname, classification, language)
     editable = "false" if is_professional else "true"
     print_guidance = (
         "Browser-Kopf- und Fußzeilen für ein sauberes PDF deaktivieren."
@@ -56,6 +114,15 @@ def render_report_html(
         ""
         if is_professional
         else f'<button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>'
+    )
+    footer = (
+        ""
+        if is_professional
+        else """
+        <footer class="report-footer">
+            <span>Generated with SpectreHUD Pentest &amp; CTF Companion</span>
+            <span>{timestamp}</span>
+        </footer>""".format(timestamp=now_str)
     )
 
     return f"""<!DOCTYPE html>
@@ -94,10 +161,7 @@ def render_report_html(
             {body_html}
         </main>
 
-        <footer class="report-footer">
-            <span>Generated with SpectreHUD Pentest &amp; CTF Companion</span>
-            <span>{now_str}</span>
-        </footer>
+        {footer}
     </div>
     <script data-report-editor>
         function downloadEditedHtml() {{

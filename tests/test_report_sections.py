@@ -701,3 +701,135 @@ def test_representative_builtin_reports_follow_distinct_narratives(tmp_path):
         html = output_path.read_text(encoding="utf-8")
         assert 'data-report-profile="professional_print"' in html
         assert "spectre:section" not in html
+
+
+def test_professional_print_shell_uses_paged_media_without_duplicate_branding():
+    markdown = wrap_section_markdown(
+        """# Security Assessment Report: Atlas
+
+| | |
+|---|---|
+| **Classification** | `Confidential` |""",
+        "header_metadata",
+    )
+    markdown += (
+        "\n\n---\n\n_Generated with SpectreHUD Pentest & CTF Companion "
+        "on 2026-09-07 at 16:44:00_"
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown,
+        project_name="Atlas",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown, project_name="Atlas")
+
+    assert '@top-left {\n            content: "Atlas";' in professional
+    assert '@top-right {\n            content: "Penetration Test Report";' in professional
+    assert '@bottom-left {\n            content: "Confidential";' in professional
+    assert 'content: "Page " counter(page);' in professional
+    assert "@page :first" in professional
+    assert '<div class="report-cover-brand">SpectreHUD</div>' in professional
+    assert "Generated with SpectreHUD" not in professional
+    assert "Generated with SpectreHUD Pentest &amp; CTF Companion" not in professional
+    assert '<footer class="report-footer">' not in professional
+    assert "Disable browser headers and footers" in professional
+
+    assert '<footer class="report-footer">' in interactive
+    assert "Generated with SpectreHUD Pentest &amp; CTF Companion" in interactive
+    assert '@top-left {\n            content: "Atlas";' not in interactive
+    assert "Disable browser headers and footers" not in interactive
+
+
+def test_professional_page_metadata_cannot_escape_generated_css():
+    professional = HtmlReportExporter.build_full_html(
+        "## Summary\n\nContent.",
+        project_name='Atlas</style><script>alert("x")</script>',
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert "</style><script>" not in professional
+    assert "Atlas\\3c /style\\3e \\3c script\\3e alert(" in professional
+
+
+def test_professional_finding_metadata_is_compact_and_drops_only_visible_seconds():
+    markdown = (
+        "<!-- spectre:finding:start:finding-1 -->\n"
+        "### Finding\n\n"
+        "**Severity:** HIGH  \n"
+        "**Target:** target.example.internal  \n"
+        "**Phase:** Initial Access  \n"
+        "**Observed:** `2026-09-07 16:44:37`\n\n"
+        "#### Description\n\n"
+        "Evidence.\n"
+        "<!-- spectre:finding:end:finding-1 -->"
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    assert (
+        '<span class="finding-meta-value"><code>2026-09-07 16:44</code></span>'
+        in professional
+    )
+    assert "2026-09-07 16:44:37" not in professional
+    assert "2026-09-07 16:44:37" in interactive
+    assert ".finding-meta-item:not(:last-child)::after" in professional
+    assert 'content: "·";' in professional
+    assert ".finding-meta-item:not(:last-child)::after" not in interactive
+
+
+def test_professional_tables_receive_stable_layout_roles():
+    executive = wrap_section_markdown(
+        """## 1. Executive Summary
+
+| # | Finding | Severity | Phase | Status |
+|---|---|---|---|---|
+| 1 | Authentication bypass | HIGH | access | Open |""",
+        "executive_summary",
+    )
+    remediation = wrap_section_markdown(
+        """## 2. Remediation
+
+| Priority | Recommendation | Affects Finding # |
+|---|---|---|
+| P2 | Reject unsigned tokens | Finding #1 |""",
+        "remediation_table",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        executive + "\n\n" + remediation,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert '<table class="findings-matrix">' in professional
+    assert '<table class="action-plan">' in professional
+    assert ".findings-matrix th:nth-child(2)" in professional
+    assert ".action-plan th:nth-child(2)" in professional
+    assert ".action-plan td:nth-child(2) { width: 72%; }" in professional
+    assert "display: table-header-group;" in professional
+    assert "table-layout: fixed;" in professional
+
+
+def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_breaks():
+    markdown = wrap_section_markdown(
+        "## Findings\n\n<!-- spectre:pagebreak -->\n\nManual finding context.",
+        "finding_section",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    assert 'class="spectre-page-break"' in professional
+    assert 'class="spectre-page-break"' in interactive
+    assert 'body[data-report-profile="professional_print"] .report-finding {' in professional
+    assert 'body[data-report-profile="professional_print"] .finding-recommendation h4 {' in professional
+    assert 'body[data-report-profile="professional_print"] .report-appendix {' in professional
+    assert 'body[data-report-profile="professional_print"] .report-appendix::before {' in professional
+    assert 'content: "APPENDIX";' in professional
+    assert 'font: 7.25pt "Segoe UI", sans-serif;' in professional
+    assert 'body[data-report-profile="professional_print"] .report-finding {' not in interactive

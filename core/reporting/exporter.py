@@ -19,10 +19,12 @@ from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
     build_professional_cover_data,
     normalize_professional_severity,
-    renumber_professional_heading,
-    render_professional_cover,
+    normalize_professional_timestamps,
     professional_section_has_meaningful_content,
     prune_professional_section_html,
+    renumber_professional_heading,
+    render_professional_cover,
+    strip_professional_generator_footer,
 )
 from core.reporting.findings import (
     convert_markdown_with_findings,
@@ -66,6 +68,7 @@ class HtmlReportExporter:
     def _professional_body_html(
         cls, markdown_content: str, project_dir: Optional[Path]
     ) -> str:
+        markdown_content = strip_professional_generator_footer(markdown_content)
         embedded_markdown = resolve_and_embed_images(markdown_content, project_dir)
         class_names = {
             "header_metadata": "report-header-metadata",
@@ -104,6 +107,12 @@ class HtmlReportExporter:
                 html_segments.append(body)
                 continue
             body = prune_professional_section_html(segment.section_type, body)
+            table_class = {
+                "executive_summary": "findings-matrix",
+                "remediation_table": "action-plan",
+            }.get(segment.section_type)
+            if table_class:
+                body = body.replace("<table>", f'<table class="{table_class}">', 1)
             phase_attr = (
                 f' data-phase="{segment.category_id}"' if segment.category_id else ""
             )
@@ -111,7 +120,8 @@ class HtmlReportExporter:
                 f'<section class="report-section {class_names[segment.section_type]}"'
                 f"{phase_attr}>{body}</section>"
             )
-        return normalize_professional_severity("\n".join(html_segments))
+        body_html = normalize_professional_severity("\n".join(html_segments))
+        return normalize_professional_timestamps(body_html)
 
     @classmethod
     def build_full_html(
@@ -133,6 +143,7 @@ class HtmlReportExporter:
             else convert_markdown_with_findings(markdown_content, project_dir=project_dir)
         )
         pname = project_name or (project_dir.name if project_dir else "Target")
+        cover_data = None
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
             cover_data = build_professional_cover_data(
                 markdown_content,
@@ -150,6 +161,7 @@ class HtmlReportExporter:
             report_font=report_font,
             language=language,
             profile=active_profile.value,
+            classification=cover_data.classification if cover_data else None,
         )
 
     @classmethod

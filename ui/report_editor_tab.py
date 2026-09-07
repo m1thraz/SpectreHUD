@@ -1502,7 +1502,7 @@ class ReportEditorTab(QWidget):
         msg.setInformativeText(
             t(
                 "report.html_profile_hint",
-                "Interactive preserves the existing editable report; Professional Print adds semantic section structure for future print layouts.",
+                "Interactive remains editable; Professional Print uses a controlled A4 layout. Disable browser headers and footers when printing.",
             )
         )
         msg.setIcon(QMessageBox.Icon.Question)

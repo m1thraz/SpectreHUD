@@ -23,6 +23,8 @@ semantic versioning.
 * Professional Print omits empty phase sections while preserving phases that contain manual notes.
 * Reworked built-in report templates so pentest reports use assessment-oriented findings and attack-path sections while CTF reports retain their chronological workflow.
 * Added optional finding recommendations, recommendation-backed action plans, and gap-free Professional Print section numbering.
+* Added controlled Professional Print pagination, running page furniture, and print-stable finding and table layouts.
+* Refined Professional Print cover branding, finding metadata, timestamps, action-plan proportions, and appendix treatment.
 
 ## [2.1.1] - 2026-09-06
 

@@ -708,12 +708,10 @@ body[data-report-profile="professional_print"] .report-cover-kicker {
 }
 
 body[data-report-profile="professional_print"] .report-cover-severity {
-    border: 1px solid currentColor;
-    border-radius: 2px;
-    padding: 4px 8px;
-    font-size: 9px;
-    font-weight: 750;
-    letter-spacing: 0.12em;
+    padding: 1px 0 2px;
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
 }
 
 body[data-report-profile="professional_print"] .report-cover-title-block {
@@ -741,7 +739,7 @@ body[data-report-profile="professional_print"] .report-cover-rule {
 body[data-report-profile="professional_print"] .report-cover-meta {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 9mm 14mm;
+    gap: 10mm 16mm;
     margin-top: auto;
     padding-top: 18mm;
     border-top: 1px solid var(--report-border);
@@ -755,25 +753,27 @@ body[data-report-profile="professional_print"] .report-cover-meta-item {
 }
 
 body[data-report-profile="professional_print"] .report-cover-meta-label {
-    color: var(--report-muted);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    color: #899198;
+    font-size: 7px;
+    font-weight: 650;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
 body[data-report-profile="professional_print"] .report-cover-meta-value {
     color: var(--report-text);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 11.5px;
+    font-weight: 650;
     overflow-wrap: anywhere;
 }
 
 body[data-report-profile="professional_print"] .report-cover-brand {
     margin-top: 14mm;
-    color: var(--report-muted);
-    font-size: 8px;
-    letter-spacing: 0.08em;
+    color: #a0a7ac;
+    font-size: 6.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
 }
 
 body[data-report-profile="professional_print"] .report-section {
@@ -809,12 +809,19 @@ body[data-report-profile="professional_print"] .report-section h3 {
 
 body[data-report-profile="professional_print"] .report-attack-path ol {
     margin: 0;
-    padding-left: 24px;
+    padding: 1mm 0 1mm 24px;
+    border-left: 1px solid var(--report-border);
 }
 
 body[data-report-profile="professional_print"] .report-attack-path li {
-    margin: 0 0 10px;
-    padding-left: 6px;
+    margin: 0 0 12px;
+    padding-left: 8px;
+}
+
+body[data-report-profile="professional_print"] .report-attack-path li::marker {
+    color: var(--report-muted);
+    font-size: 9pt;
+    font-weight: 650;
 }
 
 body[data-report-profile="professional_print"] p {
@@ -838,6 +845,30 @@ body[data-report-profile="professional_print"] table {
     border-bottom: 1px solid var(--report-border);
     color: var(--report-text);
     font-size: 9.5pt;
+    table-layout: fixed;
+}
+
+body[data-report-profile="professional_print"] .findings-matrix th:nth-child(1),
+body[data-report-profile="professional_print"] .findings-matrix td:nth-child(1) { width: 6%; }
+body[data-report-profile="professional_print"] .findings-matrix th:nth-child(2),
+body[data-report-profile="professional_print"] .findings-matrix td:nth-child(2) { width: 46%; }
+body[data-report-profile="professional_print"] .findings-matrix th:nth-child(3),
+body[data-report-profile="professional_print"] .findings-matrix td:nth-child(3) { width: 15%; }
+body[data-report-profile="professional_print"] .findings-matrix th:nth-child(4),
+body[data-report-profile="professional_print"] .findings-matrix td:nth-child(4) { width: 19%; }
+body[data-report-profile="professional_print"] .findings-matrix th:nth-child(5),
+body[data-report-profile="professional_print"] .findings-matrix td:nth-child(5) { width: 14%; }
+
+body[data-report-profile="professional_print"] .action-plan th:nth-child(1),
+body[data-report-profile="professional_print"] .action-plan td:nth-child(1) { width: 9%; }
+body[data-report-profile="professional_print"] .action-plan th:nth-child(2),
+body[data-report-profile="professional_print"] .action-plan td:nth-child(2) { width: 72%; }
+body[data-report-profile="professional_print"] .action-plan th:nth-child(3),
+body[data-report-profile="professional_print"] .action-plan td:nth-child(3) { width: 19%; }
+
+body[data-report-profile="professional_print"] .action-plan th:first-child,
+body[data-report-profile="professional_print"] .action-plan td:first-child {
+    white-space: nowrap;
 }
 
 body[data-report-profile="professional_print"] th,
@@ -851,10 +882,10 @@ body[data-report-profile="professional_print"] td {
 
 body[data-report-profile="professional_print"] th {
     background: var(--report-accent-soft);
-    color: var(--report-text);
-    font-size: 8.5pt;
-    font-weight: 700;
-    letter-spacing: 0.025em;
+    color: var(--report-muted);
+    font-size: 8pt;
+    font-weight: 650;
+    letter-spacing: 0.04em;
 }
 
 body[data-report-profile="professional_print"] tr:nth-child(even) {
@@ -892,7 +923,7 @@ body[data-report-profile="professional_print"] blockquote {
 body[data-report-profile="professional_print"] .severity-pill,
 body[data-report-profile="professional_print"] .report-cover-severity {
     background: transparent;
-    border-width: 0 0 2px;
+    border-width: 0 0 1px;
     border-radius: 0;
     padding: 1px 2px;
     font-size: 8.5px;
@@ -928,35 +959,48 @@ body[data-report-profile="professional_print"] .finding-header h3 {
 }
 
 body[data-report-profile="professional_print"] .finding-meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3mm 10mm;
-    margin-bottom: 6mm;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5mm 0;
+    margin-bottom: 5mm;
     color: var(--report-muted);
 }
 
 body[data-report-profile="professional_print"] .finding-meta-item {
-    flex-direction: column;
-    gap: 1mm;
+    min-width: 0;
+    flex-direction: row;
+    gap: 1.5mm;
+    align-items: baseline;
+}
+
+body[data-report-profile="professional_print"] .finding-meta-item:not(:last-child)::after {
+    content: "·";
+    margin: 0 3mm;
+    color: var(--report-border);
 }
 
 body[data-report-profile="professional_print"] .finding-meta-label {
-    font-size: 7.5pt;
-    letter-spacing: 0.08em;
+    flex: 0 0 auto;
+    color: #899198;
+    font-size: 7pt;
+    font-weight: 650;
+    letter-spacing: 0.06em;
 }
 
 body[data-report-profile="professional_print"] .finding-meta-value {
     color: var(--report-text);
-    font-size: 9.5pt;
+    min-width: 0;
+    font-size: 9pt;
+    overflow-wrap: anywhere;
 }
 
 body[data-report-profile="professional_print"] .finding-description h4,
 body[data-report-profile="professional_print"] .finding-recommendation h4 {
     margin: 0 0 3mm;
-    color: var(--report-muted) !important;
-    font-size: 8pt;
-    font-weight: 750;
-    letter-spacing: 0.11em;
+    color: #7d878e !important;
+    font-size: 7.25pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
@@ -965,10 +1009,21 @@ body[data-report-profile="professional_print"] .finding-recommendation {
 }
 
 body[data-report-profile="professional_print"] .report-footer {
-    background: #ffffff;
-    border-color: var(--report-border);
-    color: var(--report-muted);
-    padding: 12px 18mm;
+    display: none;
+}
+
+body[data-report-profile="professional_print"] .report-appendix::before {
+    content: "APPENDIX";
+    display: block;
+    margin-bottom: 4mm;
+    color: #899198;
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+}
+
+html[lang="de"] body[data-report-profile="professional_print"] .report-appendix::before {
+    content: "ANHANG";
 }
 
 @media print {
@@ -987,13 +1042,78 @@ body[data-report-profile="professional_print"] .report-footer {
     }
 
     body[data-report-profile="professional_print"] .report-cover {
-        min-height: 250mm;
+        width: 210mm;
+        min-height: 297mm;
+        padding: 22mm 18mm 14mm;
     }
 
+    body[data-report-profile="professional_print"] .report-section {
+        margin-top: 12mm;
+    }
+
+    body[data-report-profile="professional_print"] h1,
+    body[data-report-profile="professional_print"] h2,
+    body[data-report-profile="professional_print"] h3,
+    body[data-report-profile="professional_print"] h4,
     body[data-report-profile="professional_print"] .report-section > h2:first-child,
     body[data-report-profile="professional_print"] .report-section > h3:first-child {
         break-after: avoid;
         page-break-after: avoid;
+    }
+
+    body[data-report-profile="professional_print"] p,
+    body[data-report-profile="professional_print"] li {
+        orphans: 3;
+        widows: 3;
+    }
+
+    body[data-report-profile="professional_print"] .report-finding {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] .finding-header,
+    body[data-report-profile="professional_print"] .finding-meta {
+        break-after: avoid;
+        page-break-after: avoid;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] .finding-description h4,
+    body[data-report-profile="professional_print"] .finding-recommendation h4 {
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+
+    body[data-report-profile="professional_print"] pre {
+        overflow: visible;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] table {
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+
+    body[data-report-profile="professional_print"] thead {
+        display: table-header-group;
+    }
+
+    body[data-report-profile="professional_print"] tr,
+    body[data-report-profile="professional_print"] tbody tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] .report-appendix {
+        break-before: page;
+        page-break-before: always;
+        padding-top: 8mm;
     }
 
     body[data-report-profile="professional_print"] blockquote,

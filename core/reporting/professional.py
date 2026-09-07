@@ -10,6 +10,11 @@ from core.reporting.section_markers import segment_report_markdown
 
 _METADATA_ROW_RE = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$")
 _SEVERITY_EMOJI_RE = re.compile("[🔴🟠🟡🟢🔵]\ufe0f?\\s*")
+_GENERATED_FOOTER_RE = re.compile(
+    r"\n*---\s*\n+_(?:Generated with|Erstellt mit) "
+    r"SpectreHUD Pentest & CTF Companion\b[^_\n]*_\s*$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -17,6 +22,7 @@ class ProfessionalCoverData:
     project_name: str
     report_label: str
     severity: Optional[str]
+    classification: Optional[str]
     metadata: tuple[tuple[str, str], ...]
 
 
@@ -71,6 +77,7 @@ def build_professional_cover_data(
         "classification": "Klassifizierung" if is_de else "Classification",
         "version": "Report-Version" if is_de else "Report Version",
     }
+    classification = _first_metadata_value(values, "klassifizierung", "classification")
     raw_fields = (
         (
             labels["client"],
@@ -87,7 +94,7 @@ def build_professional_cover_data(
         ),
         (
             labels["classification"],
-            _first_metadata_value(values, "klassifizierung", "classification"),
+            classification,
         ),
         (
             labels["version"],
@@ -98,8 +105,14 @@ def build_professional_cover_data(
         project_name=project_name or "Target",
         report_label="PENETRATIONSTEST-BERICHT" if is_de else "PENETRATION TEST REPORT",
         severity=_highest_severity(body_html),
+        classification=classification or None,
         metadata=tuple((label, value) for label, value in raw_fields if value),
     )
+
+
+def strip_professional_generator_footer(markdown: str) -> str:
+    """Remove only TemplateRenderer's generated signature from the print projection."""
+    return _GENERATED_FOOTER_RE.sub("", markdown).rstrip()
 
 
 def render_professional_cover(data: ProfessionalCoverData) -> str:
@@ -127,7 +140,7 @@ def render_professional_cover(data: ProfessionalCoverData) -> str:
         '<div class="report-cover-rule"></div>'
         "</div>"
         f"{metadata_block}"
-        '<div class="report-cover-brand">Generated with SpectreHUD</div>'
+        '<div class="report-cover-brand">SpectreHUD</div>'
         "</section>"
     )
 
@@ -151,6 +164,16 @@ def normalize_professional_severity(body_html: str) -> str:
         clean_total,
         normalized,
         flags=re.DOTALL,
+    )
+
+
+def normalize_professional_timestamps(body_html: str) -> str:
+    """Drop seconds only from rendered finding metadata in the print projection."""
+    return re.sub(
+        r'(<span class="finding-meta-value">(?:<code>)?'
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}):\d{2}((?:</code>)?</span>)",
+        r"\1\2",
+        body_html,
     )
 
 
