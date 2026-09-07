@@ -10,6 +10,7 @@ from core.reporting.styles import (
     REPORT_BASE_CSS,
     REPORT_CSS,
     REPORT_LIGHT_CSS,
+    REPORT_PROFESSIONAL_CSS,
     REPORT_PRINT_CSS,
     get_report_css,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "REPORT_CSS",
     "REPORT_LIGHT_CSS",
     "REPORT_PRINT_CSS",
+    "REPORT_PROFESSIONAL_CSS",
     "encode_image_base64",
     "get_report_css",
 ]

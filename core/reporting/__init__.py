@@ -9,7 +9,7 @@ from core.reporting.assets import (
     MAX_EMBED_IMAGE_FILE_SIZE,
     encode_image_base64,
 )
-from core.reporting.styles import REPORT_CSS, REPORT_PRINT_CSS
+from core.reporting.styles import REPORT_CSS, REPORT_PRINT_CSS, REPORT_PROFESSIONAL_CSS
 from core.reporting.markdown import (
     sanitize_url,
     format_inline,
@@ -42,6 +42,7 @@ __all__ = [
     "MAX_EMBED_IMAGE_FILE_SIZE",
     "REPORT_CSS",
     "REPORT_PRINT_CSS",
+    "REPORT_PROFESSIONAL_CSS",
     "encode_image_base64",
     "sanitize_url",
     "format_inline",

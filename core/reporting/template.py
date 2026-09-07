@@ -24,7 +24,7 @@ def render_report_html(
     pname = project_name or "Target"
     now_str = timestamp or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     target_str = target_ip if target_ip and target_ip != "all" else "N/A"
-    report_css = get_report_css(theme, report_font)
+    report_css = get_report_css(theme, report_font, profile)
     safe_project_name = "".join(char for char in pname if char.isalnum() or char in "-_").strip(
         "-_"
     )
@@ -40,6 +40,23 @@ def render_report_html(
     date_label = "Datum:" if is_de else "Date:"
     btn_print = "🖨 Drucken / PDF Exportieren" if is_de else "🖨 Print / Export PDF"
     btn_save = "💾 Bearbeitete Version speichern" if is_de else "💾 Save Edited HTML"
+    is_professional = profile == "professional_print"
+    if is_professional:
+        btn_print = "Drucken / PDF exportieren" if is_de else "Print / Export PDF"
+    editable = "false" if is_professional else "true"
+    print_guidance = (
+        "Browser-Kopf- und Fußzeilen für ein sauberes PDF deaktivieren."
+        if is_de
+        else "Disable browser headers and footers for a clean PDF."
+    )
+    action_guidance = (
+        f'<span class="print-guidance">{print_guidance}</span>' if is_professional else ""
+    )
+    save_button = (
+        ""
+        if is_professional
+        else f'<button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>'
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="{html_lang}">
@@ -68,11 +85,12 @@ def render_report_html(
         </header>
 
         <div class="action-bar no-print">
+            {action_guidance}
             <button class="btn-action" onclick="window.print()">{btn_print}</button>
-            <button class="btn-action" onclick="downloadEditedHtml()">{btn_save}</button>
+            {save_button}
         </div>
 
-        <main class="report-body" contenteditable="true" spellcheck="false">
+        <main class="report-body" contenteditable="{editable}" spellcheck="false">
             {body_html}
         </main>
 

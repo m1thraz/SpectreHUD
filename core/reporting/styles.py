@@ -567,11 +567,350 @@ tr:nth-child(even) { background-color: #f6f8fa; }
 .spectre-page-break::after { background-color: #ffffff; color: #57606a; border-color: #d0d7de; }
 """
 
+REPORT_PROFESSIONAL_CSS = """
+/* Professional Print is deliberately isolated from the editable interactive report. */
+body[data-report-profile="professional_print"] {
+    --report-text: #20272d;
+    --report-muted: #66717a;
+    --report-border: #d7dde1;
+    --report-surface: #f5f7f8;
+    --report-accent: #315f66;
+    --report-accent-soft: #e7eff0;
+    --severity-critical: #9e2f35;
+    --severity-high: #a9552d;
+    --severity-medium: #8a6b18;
+    --severity-low: #3f704d;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 28px;
+    --space-section: 52px;
+    background: #e9edef;
+    color: var(--report-text);
+    font-size: 10.5pt;
+    line-height: 1.62;
+    padding: 24px;
+}
 
-def get_report_css(theme: str = "dark", report_font_key: str = "segoe_ui") -> str:
+body[data-report-profile="professional_print"] .report-wrapper {
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 0;
+    border-radius: 0;
+    box-shadow: 0 10px 30px rgba(32, 39, 45, 0.12);
+    overflow: visible;
+}
+
+body[data-report-profile="professional_print"] .report-header {
+    display: none;
+}
+
+body[data-report-profile="professional_print"] .action-bar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--report-border);
+    color: var(--report-muted);
+    padding: 10px 18mm;
+    align-items: center;
+}
+
+body[data-report-profile="professional_print"] .print-guidance {
+    margin-right: auto;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+}
+
+body[data-report-profile="professional_print"] .btn-action {
+    background: #ffffff;
+    border-color: var(--report-border);
+    border-radius: 2px;
+    color: var(--report-accent);
+}
+
+body[data-report-profile="professional_print"] .report-body {
+    padding: 0 18mm 18mm;
+    color: var(--report-text);
+}
+
+body[data-report-profile="professional_print"] .report-cover {
+    min-height: 255mm;
+    display: flex;
+    flex-direction: column;
+    padding: 22mm 0 14mm;
+    break-after: page;
+    page-break-after: always;
+}
+
+body[data-report-profile="professional_print"] .report-cover-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 28px;
+}
+
+body[data-report-profile="professional_print"] .report-cover-kicker {
+    color: var(--report-accent);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.18em;
+}
+
+body[data-report-profile="professional_print"] .report-cover-severity {
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+}
+
+body[data-report-profile="professional_print"] .report-cover-title-block {
+    margin-top: 62mm;
+    max-width: 145mm;
+}
+
+body[data-report-profile="professional_print"] .report-cover-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--report-text) !important;
+    font-size: 34pt;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+}
+
+body[data-report-profile="professional_print"] .report-cover-rule {
+    width: 36mm;
+    margin-top: 12mm;
+    border-top: 3px solid var(--report-accent);
+}
+
+body[data-report-profile="professional_print"] .report-cover-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9mm 14mm;
+    margin-top: auto;
+    padding-top: 18mm;
+    border-top: 1px solid var(--report-border);
+}
+
+body[data-report-profile="professional_print"] .report-cover-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+body[data-report-profile="professional_print"] .report-cover-meta-label {
+    color: var(--report-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+body[data-report-profile="professional_print"] .report-cover-meta-value {
+    color: var(--report-text);
+    font-size: 11px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+body[data-report-profile="professional_print"] .report-cover-brand {
+    margin-top: 14mm;
+    color: var(--report-muted);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+}
+
+body[data-report-profile="professional_print"] .report-section {
+    margin-top: var(--space-section);
+}
+
+body[data-report-profile="professional_print"] .report-header-metadata {
+    margin-top: 16mm;
+}
+
+body[data-report-profile="professional_print"] h1,
+body[data-report-profile="professional_print"] h2,
+body[data-report-profile="professional_print"] h3,
+body[data-report-profile="professional_print"] h4 {
+    color: var(--report-text) !important;
+    display: block;
+}
+
+body[data-report-profile="professional_print"] .report-section > h2:first-child {
+    margin: 0 0 var(--space-lg);
+    padding: 0 0 var(--space-sm);
+    border-bottom: 2px solid var(--report-accent);
+    font-size: 21pt;
+    font-weight: 620;
+    letter-spacing: -0.02em;
+}
+
+body[data-report-profile="professional_print"] .report-section h3 {
+    margin: 26px 0 10px;
+    font-size: 13pt;
+    font-weight: 650;
+}
+
+body[data-report-profile="professional_print"] p {
+    margin-bottom: 11px;
+    color: var(--report-text);
+}
+
+body[data-report-profile="professional_print"] hr {
+    margin: 28px 0;
+    border-color: var(--report-border);
+}
+
+body[data-report-profile="professional_print"] .table-container {
+    margin: 18px 0 24px;
+    overflow: visible;
+}
+
+body[data-report-profile="professional_print"] table {
+    border: 0;
+    border-top: 2px solid var(--report-accent);
+    border-bottom: 1px solid var(--report-border);
+    color: var(--report-text);
+    font-size: 9.5pt;
+}
+
+body[data-report-profile="professional_print"] th,
+body[data-report-profile="professional_print"] td {
+    padding: 8px 10px;
+    border: 0;
+    border-bottom: 1px solid var(--report-border);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+body[data-report-profile="professional_print"] th {
+    background: var(--report-accent-soft);
+    color: var(--report-text);
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+}
+
+body[data-report-profile="professional_print"] tr:nth-child(even) {
+    background: var(--report-surface);
+}
+
+body[data-report-profile="professional_print"] pre {
+    margin: 16px 0 22px;
+    padding: 13px 15px;
+    background: var(--report-surface);
+    border: 1px solid var(--report-border);
+    border-left: 3px solid var(--report-accent);
+    border-radius: 0;
+    color: var(--report-text);
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+body[data-report-profile="professional_print"] pre code,
+body[data-report-profile="professional_print"] code {
+    color: #304b50;
+}
+
+body[data-report-profile="professional_print"] blockquote {
+    margin: 18px 0;
+    padding: 10px 16px;
+    background: var(--report-surface);
+    border-left-color: var(--report-accent);
+    border-radius: 0;
+    color: var(--report-muted);
+}
+
+body[data-report-profile="professional_print"] .severity-pill,
+body[data-report-profile="professional_print"] .report-cover-severity {
+    background: transparent;
+    border-width: 0 0 2px;
+    border-radius: 0;
+    padding: 1px 2px;
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+}
+
+body[data-report-profile="professional_print"] .severity-critical { color: var(--severity-critical); }
+body[data-report-profile="professional_print"] .severity-high { color: var(--severity-high); }
+body[data-report-profile="professional_print"] .severity-medium { color: var(--severity-medium); }
+body[data-report-profile="professional_print"] .severity-low { color: var(--severity-low); }
+
+body[data-report-profile="professional_print"] .report-footer {
+    background: #ffffff;
+    border-color: var(--report-border);
+    color: var(--report-muted);
+    padding: 12px 18mm;
+}
+
+@media print {
+    body[data-report-profile="professional_print"] {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    body[data-report-profile="professional_print"] .report-wrapper {
+        width: 100% !important;
+        box-shadow: none !important;
+    }
+
+    body[data-report-profile="professional_print"] .report-body {
+        padding: 0 !important;
+    }
+
+    body[data-report-profile="professional_print"] .report-cover {
+        min-height: 250mm;
+    }
+
+    body[data-report-profile="professional_print"] .report-section > h2:first-child,
+    body[data-report-profile="professional_print"] .report-section > h3:first-child {
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+
+    body[data-report-profile="professional_print"] blockquote,
+    body[data-report-profile="professional_print"] figure {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+@media screen and (max-width: 760px) {
+    body[data-report-profile="professional_print"] {
+        padding: 0;
+    }
+
+    body[data-report-profile="professional_print"] .report-body,
+    body[data-report-profile="professional_print"] .action-bar {
+        padding-left: 7vw;
+        padding-right: 7vw;
+    }
+
+    body[data-report-profile="professional_print"] .report-cover-meta {
+        grid-template-columns: 1fr;
+    }
+}
+"""
+
+
+def get_report_css(
+    theme: str = "dark",
+    report_font_key: str = "segoe_ui",
+    profile: str = "interactive",
+) -> str:
     """Returns report CSS for the selected standalone export theme with print overrides."""
     base = REPORT_BASE_CSS.replace(
         "__REPORT_FONT_STACK__", get_report_font_stack(report_font_key)
     )
     theme_css = ("\n" + REPORT_LIGHT_CSS) if theme.lower() == "light" else ""
-    return f"{base}{theme_css}\n{REPORT_PRINT_CSS}"
+    professional_css = (
+        "\n" + REPORT_PROFESSIONAL_CSS if profile == "professional_print" else ""
+    )
+    return f"{base}{theme_css}\n{REPORT_PRINT_CSS}{professional_css}"

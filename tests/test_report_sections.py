@@ -181,3 +181,74 @@ def test_professional_html_exposes_every_known_section_wrapper():
         assert f'class="report-section {css_class}"' in html
     assert 'data-phase="recon"' in html
     assert "spectre:section" not in html
+
+
+def test_professional_cover_precedes_body_and_is_profile_isolated():
+    markdown = wrap_section_markdown(
+        """# Security Assessment Report: Atlas
+
+| | |
+|---|---|
+| **Client / Organization** | `Northwind` |
+| **Lead Tester** | `` |
+| **Scope / Target** | `10.10.10.42` |
+| **Report Date** | `2026-09-07` |
+| **Classification** | `Confidential` |""",
+        "header_metadata",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown,
+        project_name="Atlas",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown, project_name="Atlas")
+
+    cover_start = professional.index('<section class="report-cover"')
+    metadata_start = professional.index('<section class="report-section report-header-metadata">')
+    assert cover_start < metadata_start
+    assert "break-after: page" in professional
+    assert "--report-accent: #315f66" in professional
+    assert '<main class="report-body" contenteditable="false"' in professional
+    assert "Northwind" in professional
+    assert "10.10.10.42" in professional
+    assert "Confidential" in professional
+    assert "Lead Tester</span>" not in professional
+    assert '<section class="report-cover"' not in interactive
+    assert "Professional Print is deliberately isolated" not in interactive
+    assert '<main class="report-body" contenteditable="true"' in interactive
+
+
+def test_professional_severity_is_text_only_and_uses_existing_top_severity():
+    markdown = wrap_section_markdown(
+        """## Executive Summary
+
+### <span class="severity-pill severity-high">🟠 HIGH</span> Finding
+
+**Total:** 🔴 0 Critical · 🟠 1 High · 🟡 0 Medium · 🟢 0 Low""",
+        "executive_summary",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown,
+        project_name="Atlas",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown, project_name="Atlas")
+
+    assert '<span class="report-cover-severity severity-high">HIGH</span>' in professional
+    assert '<span class="severity-pill severity-high">HIGH</span>' in professional
+    assert not any(emoji in professional for emoji in ("🔴", "🟠", "🟡", "🟢", "🔵"))
+    assert "🟠 HIGH</span>" in interactive
+
+
+def test_professional_cover_omits_optional_metadata_when_unavailable():
+    markdown = wrap_section_markdown("## Executive Summary\n\nNo findings.", "executive_summary")
+    professional = HtmlReportExporter.build_full_html(
+        markdown,
+        project_name="Atlas",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert '<h1 class="report-cover-title">Atlas</h1>' in professional
+    assert '<div class="report-cover-meta">' not in professional

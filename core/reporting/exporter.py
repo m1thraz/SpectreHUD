@@ -16,6 +16,11 @@ from core.reporting.markdown import (
 )
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
+from core.reporting.professional import (
+    build_professional_cover_data,
+    normalize_professional_severity,
+    render_professional_cover,
+)
 from core.reporting.section_markers import segment_report_markdown, strip_section_markers
 
 logger = get_logger(__name__)
@@ -79,7 +84,7 @@ class HtmlReportExporter:
                 f'<section class="report-section {class_names[segment.section_type]}"'
                 f"{phase_attr}>{body}</section>"
             )
-        return "\n".join(html_segments)
+        return normalize_professional_severity("\n".join(html_segments))
 
     @classmethod
     def build_full_html(
@@ -101,6 +106,15 @@ class HtmlReportExporter:
             else cls.markdown_to_html(markdown_content, project_dir=project_dir)
         )
         pname = project_name or (project_dir.name if project_dir else "Target")
+        if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
+            cover_data = build_professional_cover_data(
+                markdown_content,
+                project_name=pname,
+                target_ip=target_ip,
+                language=language,
+                body_html=body_html,
+            )
+            body_html = render_professional_cover(cover_data) + body_html
         return render_report_html(
             body_html=body_html,
             project_name=pname,

@@ -13,6 +13,7 @@ semantic versioning.
 * Compact live-preview indicators for manual report page breaks.
 * Cross-export report spacers with small, medium, and large toolbar presets.
 * Interactive and Professional Print HTML export profiles backed by persistent semantic report-section markers.
+* Professional Print cover pages and a restrained, A4-oriented report design system.
 
 ### Changed
 
