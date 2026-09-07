@@ -19,6 +19,7 @@ from core.reporting.section_markers import (
     section_identity,
     wrap_section_markdown,
 )
+from core.reporting.findings import finding_end_marker, finding_start_marker
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -237,37 +238,43 @@ def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[st
     title = entry.get("title") or title_fallback
     content = (entry.get("content") or "").strip()
 
-    sev_badge = ""
-    if severity and severity != "info":
-        sev_badge = f"{render_severity_badge(severity)} "
-
     lines = []
+    if entry_id:
+        lines.append(finding_start_marker(entry_id))
     if marker:
         lines.append(marker)
-    lines.append(f"### {sev_badge}{title}")
-    meta = []
+    lines.append(f"### {title}")
+    lines.append("")
+    meta = [f"**Severity:** {render_severity_badge(severity, include_emoji=False)}"]
     if entry.get("target_ip"):
         meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
     if entry.get("timestamp"):
-        time_label = "**Zeit:**" if lang == "de" else "**Time:**"
+        time_label = "**Beobachtet:**" if lang == "de" else "**Observed:**"
         meta.append(f"{time_label} {_wrap_inline_code(str(entry.get('timestamp')))}")
     if meta:
-        lines.append(" | ".join(meta))
+        lines.append("  \n".join(meta))
     lines.append("")
 
-    if entry_type == "screenshot":
+    if content:
+        lines.append("#### Beschreibung" if lang == "de" else "#### Description")
+        lines.append("")
+
+    if content and entry_type == "screenshot":
         if content.startswith("![") and content.endswith(")"):
             lines.append(content)
         else:
             lines.append(f"![{title}]({content})")
-    elif entry_type in ("credentials", "hash", "flag"):
+    elif content and entry_type in ("credentials", "hash", "flag"):
         lines.extend(_wrap_code_fence(content))
-    elif entry_type == "directory":
+    elif content and entry_type == "directory":
         lines.append(_wrap_inline_code(content))
-    else:
+    elif content:
         lines.append(content)
 
     lines.append("")
+    if entry_id:
+        lines.append(finding_end_marker(entry_id))
+        lines.append("")
     return lines
 
 

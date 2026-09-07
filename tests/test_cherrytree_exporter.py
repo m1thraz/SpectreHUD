@@ -80,7 +80,9 @@ def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
     project, output = package_workspace
     md = (
         "<!-- spectre:section:start:executive_summary -->\n"
+        "<!-- spectre:finding:start:loot_99 -->\n"
         "<!-- spectre:loot:loot_99:deadbeef1234 -->\n# Report\n\nFinding text.\n"
+        "<!-- spectre:finding:end:loot_99 -->\n"
         "<!-- spectre:section:end:executive_summary -->"
     )
     result = CherryTreeExporter(output).export_package(
@@ -92,4 +94,5 @@ def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
     content = result.note_path.read_text(encoding="utf-8")
     assert "spectre:loot" not in content
     assert "spectre:section" not in content
+    assert "spectre:finding" not in content
     assert "Finding text." in content

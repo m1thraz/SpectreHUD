@@ -5,17 +5,21 @@ Visual Charts, Severity Badges, and Stats Widgets for SpectreHUD Reports.
 import html
 
 
-def render_severity_badge(severity: str) -> str:
+def render_severity_badge(severity: str, *, include_emoji: bool = True) -> str:
     """Renders a stylized HTML severity badge."""
     sev_clean = str(severity).strip().lower()
     mapping = {
-        "critical": ("🔴 CRITICAL", "severity-critical"),
-        "high": ("🟠 HIGH", "severity-high"),
-        "medium": ("🟡 MEDIUM", "severity-medium"),
-        "low": ("🟢 LOW", "severity-low"),
-        "info": ("🔵 INFO", "severity-low"),
+        "critical": ("🔴", "CRITICAL", "severity-critical"),
+        "high": ("🟠", "HIGH", "severity-high"),
+        "medium": ("🟡", "MEDIUM", "severity-medium"),
+        "low": ("🟢", "LOW", "severity-low"),
+        "info": ("🔵", "INFO", "severity-info"),
     }
-    label, css_class = mapping.get(sev_clean, (severity.upper(), "severity-medium"))
+    emoji, label, css_class = mapping.get(
+        sev_clean, ("", severity.upper(), "severity-medium")
+    )
+    if include_emoji and emoji:
+        label = f"{emoji} {label}"
     return f'<span class="severity-pill {css_class}">{html.escape(label)}</span>'
 
 

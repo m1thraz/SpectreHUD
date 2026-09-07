@@ -119,20 +119,22 @@ Details
         # Duplicate ID: last valid marker wins deterministically
         self.assertEqual(markers.get("loot_dup"), "222222222222")
 
-    def test_strip_report_markers_preserves_other_comments(self):
-        """Ticket 5 & 8: Strip ONLY spectre:loot: markers; keep obsidian and user comments."""
+    def test_strip_report_markers_preserves_external_and_user_comments(self):
         text = (
             "<!-- spectrehud-entry:keep_this -->\n"
+            "<!-- spectre:finding:start:loot_1 -->\n"
             "<!-- spectre:loot:loot_1:deadbeef1234 -->\n"
             "<!-- user: note -->\n"
             "### Title\n"
             "<!-- spectre:loot:loot_2:cafebabe5678 -->\n"
+            "<!-- spectre:finding:end:loot_1 -->\n"
             "Content\n"
         )
         stripped = strip_report_markers(text)
         self.assertIn("<!-- spectrehud-entry:keep_this -->", stripped)
         self.assertIn("<!-- user: note -->", stripped)
         self.assertNotIn("spectre:loot", stripped)
+        self.assertNotIn("spectre:finding", stripped)
         self.assertIn("### Title", stripped)
         self.assertIn("Content", stripped)
 
@@ -359,6 +361,40 @@ Port 80, 22, 443 open
         reconciled = preserve_markers_in_preview_roundtrip(original_md, qt_converted_md)
         self.assertIn(f"<!-- spectre:loot:loot_11111111:{hash_a} -->", reconciled)
         self.assertIn("### Nmap Port Scan", reconciled)
+
+    def test_new_finding_layout_is_idempotent_and_preview_safe(self):
+        report = "## 1. Reconnaissance & Enumeration\n\n*No entries captured for this phase.*\n"
+
+        first = append_missing_loot_to_text(report, [self.entry_a], language="en")
+        second = append_missing_loot_to_text(first.text, [self.entry_a], language="en")
+
+        self.assertEqual(first.added_count, 1)
+        self.assertEqual(second.added_count, 0)
+        self.assertEqual(second.text, first.text)
+        self.assertEqual(first.text.count("spectre:finding:start:loot_11111111"), 1)
+        converted = first.text.replace(
+            "<!-- spectre:finding:start:loot_11111111 -->\n", ""
+        ).replace("<!-- spectre:finding:end:loot_11111111 -->\n", "")
+        reconciled = preserve_markers_in_preview_roundtrip(first.text, converted)
+        self.assertIn("<!-- spectre:finding:start:loot_11111111 -->", reconciled)
+        self.assertIn("<!-- spectre:finding:end:loot_11111111 -->", reconciled)
+
+    def test_legacy_finding_bytes_remain_untouched_when_new_loot_is_added(self):
+        legacy = (
+            "## 1. Reconnaissance & Enumeration\n\n"
+            "<!-- spectre:loot:legacy_entry:deadbeef1234 -->\n"
+            "### Legacy hand-edited finding\n\nDo not reformat this text.\n"
+        )
+        new_entry = dict(self.entry_a, id="new_entry", title="New structured finding")
+
+        result = append_missing_loot_to_text(legacy, [new_entry], language="en")
+
+        self.assertIn(
+            "<!-- spectre:loot:legacy_entry:deadbeef1234 -->\n"
+            "### Legacy hand-edited finding\n\nDo not reformat this text.",
+            result.text,
+        )
+        self.assertIn("spectre:finding:start:new_entry", result.text)
 
 
 if __name__ == "__main__":

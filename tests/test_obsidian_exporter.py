@@ -55,7 +55,9 @@ def test_obsidian_report_strips_internal_section_markers(workspace):
     vault, project = workspace
     markdown = (
         "<!-- spectre:section:start:executive_summary -->\n\n"
+        "<!-- spectre:finding:start:loot_1 -->\n"
         "## Summary\n\nManual content\n\n"
+        "<!-- spectre:finding:end:loot_1 -->\n"
         "<!-- spectre:section:end:executive_summary -->"
     )
     result = ObsidianExporter(vault).export_report(
@@ -63,6 +65,7 @@ def test_obsidian_report_strips_internal_section_markers(workspace):
     )
     content = result.note_path.read_text(encoding="utf-8")
     assert "spectre:section" not in content
+    assert "spectre:finding" not in content
     assert "Manual content" in content
 
 

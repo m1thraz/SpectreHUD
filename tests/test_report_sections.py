@@ -165,7 +165,19 @@ def test_preview_roundtrip_restores_section_pairs_around_edited_content():
 
 
 def test_professional_html_exposes_every_known_section_wrapper():
-    markdown = TemplateRenderer().render(_all_sections_template(), ReportContext())
+    context = ReportContext(
+        loot_entries=[
+            {
+                "id": "loot-recon",
+                "category": "recon",
+                "type": "note",
+                "title": "Open service",
+                "content": "TCP/443 is reachable.",
+                "severity": "low",
+            }
+        ]
+    )
+    markdown = TemplateRenderer().render(_all_sections_template(), context)
     html = HtmlReportExporter.build_full_html(
         markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
@@ -181,6 +193,89 @@ def test_professional_html_exposes_every_known_section_wrapper():
         assert f'class="report-section {css_class}"' in html
     assert 'data-phase="recon"' in html
     assert "spectre:section" not in html
+
+
+def test_both_profiles_render_generated_findings_semantically_but_not_legacy_blocks():
+    context = ReportContext(
+        loot_entries=[
+            {
+                "id": "loot-access",
+                "category": "access",
+                "type": "note",
+                "title": "Authentication bypass",
+                "content": "The endpoint accepted an invalid token.",
+                "severity": "high",
+                "target_ip": "10.10.10.42",
+                "timestamp": "2026-09-07 10:42:00",
+            },
+            {
+                "id": "loot-command",
+                "category": "access",
+                "type": "note",
+                "title": "Long command evidence",
+                "content": "```bash\ncurl --request POST https://target.example/"
+                "very/long/path --header 'Authorization: Bearer token'\n```",
+                "severity": "medium",
+                "target_ip": "",
+                "timestamp": "",
+            },
+        ]
+    )
+    template = ReportTemplate(
+        id="finding",
+        name="Finding",
+        language="en",
+        category="pentest",
+        complexity="complex",
+        sections=[TemplateSection("phase_section", category_id="access")],
+    )
+    markdown = TemplateRenderer().render(template, context)
+
+    interactive = HtmlReportExporter.build_full_html(markdown)
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    legacy = HtmlReportExporter.build_full_html(
+        "## Initial Access\n\n### Legacy finding\n\nManual content",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    for rendered in (interactive, professional):
+        assert rendered.count('<article class="report-finding') == 2
+        assert '<article class="report-finding severity-high">' in rendered
+        assert '<article class="report-finding severity-medium">' in rendered
+        assert '<div class="finding-meta">' in rendered
+        assert '<section class="finding-description"><h4>Description</h4>' in rendered
+        assert '<code class="language-bash">curl --request POST' in rendered
+        assert "spectre:finding" not in rendered
+        assert "spectre:loot" not in rendered
+    assert '<article class="report-finding' not in legacy
+    assert "Legacy finding" in legacy
+
+
+def test_professional_omits_only_empty_phase_sections():
+    empty = wrap_section_markdown(
+        "## Empty Phase\n\n*No entries captured for this phase.*\n\n"
+        "_Notes & observations for this phase:_\n\n> ",
+        "phase_section:postex",
+    )
+    noted = wrap_section_markdown(
+        "## Manual Phase\n\n*No entries captured for this phase.*\n\n"
+        "_Notes & observations for this phase:_\n\n> Preserve this manual note.",
+        "phase_section:misc",
+    )
+    markdown = empty + "\n\n" + noted
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    assert 'data-phase="postex"' not in professional
+    assert "Empty Phase" not in professional
+    assert 'data-phase="misc"' in professional
+    assert "Preserve this manual note." in professional
+    assert "Empty Phase" in interactive
 
 
 def test_professional_cover_precedes_body_and_is_profile_isolated():

@@ -9,6 +9,7 @@ from core.reporting.template_engine import (
     _render_phase_section,
     _render_remediation_table,
     _render_appendix,
+    _render_loot_entry_block,
 )
 
 
@@ -98,6 +99,47 @@ class TestTemplateEngine(unittest.TestCase):
         sec_empty = TemplateSection(type="phase_section", category_id="postex")
         out_empty = _render_phase_section(sec_empty, self.context, "de")
         self.assertIn("*Keine Einträge in dieser Phase.*", out_empty)
+
+    def test_generated_finding_uses_only_available_metadata_and_preserves_content(self):
+        entry = dict(
+            self.sample_loot[0],
+            content="Credential evidence\n\n```bash\nid && sudo -l\n```",
+        )
+        rendered = "\n".join(_render_loot_entry_block(entry, lang="en"))
+
+        self.assertIn("<!-- spectre:finding:start:loot_1 -->", rendered)
+        self.assertRegex(
+            rendered,
+            r"spectre:loot:loot_1:[a-f0-9]{12} -->\n### Domain Admin Credentials",
+        )
+        self.assertIn(
+            '**Severity:** <span class="severity-pill severity-critical">CRITICAL</span>',
+            rendered,
+        )
+        self.assertIn("**Target:** `10.10.10.50`", rendered)
+        self.assertIn("**Observed:** `2026-08-28 10:00:00`", rendered)
+        self.assertIn("#### Description", rendered)
+        self.assertIn("Credential evidence\n\n```bash\nid && sudo -l\n```", rendered)
+        self.assertIn("<!-- spectre:finding:end:loot_1 -->", rendered)
+        self.assertNotIn("**Phase:**", rendered)
+        self.assertNotIn("Impact", rendered)
+        self.assertNotIn("Recommendation", rendered)
+
+    def test_generated_finding_omits_missing_optional_metadata(self):
+        entry = {
+            "id": "loot_minimal",
+            "type": "note",
+            "category": "misc",
+            "severity": "info",
+            "title": "Minimal finding",
+            "content": "",
+        }
+        rendered = "\n".join(_render_loot_entry_block(entry, lang="en"))
+
+        self.assertIn("**Severity:", rendered)
+        self.assertNotIn("**Target:**", rendered)
+        self.assertNotIn("**Observed:**", rendered)
+        self.assertNotIn("#### Description", rendered)
 
     def test_render_remediation_table(self):
         sec = TemplateSection(type="remediation_table")

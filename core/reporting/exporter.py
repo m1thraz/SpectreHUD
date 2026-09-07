@@ -21,6 +21,10 @@ from core.reporting.professional import (
     normalize_professional_severity,
     render_professional_cover,
 )
+from core.reporting.findings import (
+    convert_markdown_with_findings,
+    phase_section_has_meaningful_content,
+)
 from core.reporting.section_markers import segment_report_markdown, strip_section_markers
 
 logger = get_logger(__name__)
@@ -71,7 +75,12 @@ class HtmlReportExporter:
         }
         html_segments = []
         for segment in segment_report_markdown(embedded_markdown):
-            body = convert_markdown_to_html(
+            if (
+                segment.section_type == "phase_section"
+                and not phase_section_has_meaningful_content(segment.markdown)
+            ):
+                continue
+            body = convert_markdown_with_findings(
                 strip_section_markers(segment.markdown), project_dir=None
             )
             if not segment.is_structured:
@@ -103,7 +112,7 @@ class HtmlReportExporter:
         body_html = (
             cls._professional_body_html(markdown_content, project_dir)
             if active_profile is ReportExportProfile.PROFESSIONAL_PRINT
-            else cls.markdown_to_html(markdown_content, project_dir=project_dir)
+            else convert_markdown_with_findings(markdown_content, project_dir=project_dir)
         )
         pname = project_name or (project_dir.name if project_dir else "Target")
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:

@@ -19,6 +19,8 @@ semantic versioning.
 
 * Redesigned Quick Notes as a chronological, age-aware stream with simplified rows, contextual actions, completion undo, and an explicit bulk-selection mode.
 * Variable Bar and Report toolbar collapse now hide their complete surfaces and actions, leaving only the restore control visible.
+* Newly generated report findings now use structured metadata and description blocks across Interactive and Professional Print exports.
+* Professional Print omits empty phase sections while preserving phases that contain manual notes.
 
 ## [2.1.1] - 2026-09-06
 

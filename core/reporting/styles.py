@@ -317,6 +317,56 @@ tr:nth-child(even) {
 .severity-high { background-color: rgba(219, 109, 40, 0.2); color: #db6d28; border: 1px solid #db6d28; }
 .severity-medium { background-color: rgba(210, 153, 34, 0.2); color: #d29922; border: 1px solid #d29922; }
 .severity-low { background-color: rgba(63, 185, 80, 0.2); color: #3fb950; border: 1px solid #3fb950; }
+.severity-info { background-color: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid #58a6ff; }
+
+.report-finding {
+    margin: 18px 0 24px;
+    padding: 16px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-blue);
+    border-radius: 6px;
+}
+
+.finding-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.report-finding .finding-header h3 {
+    margin: 0;
+}
+
+.finding-severity {
+    flex: 0 0 auto;
+}
+
+.finding-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin: 0 0 14px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.finding-meta-item {
+    display: flex;
+    gap: 6px;
+}
+
+.finding-meta-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.finding-description h4 {
+    margin-top: 12px;
+}
 
 .spectre-spacer { display: block; break-inside: avoid; }
 .spectre-spacer.spacer-small { height: 0.5rem; }
@@ -842,6 +892,61 @@ body[data-report-profile="professional_print"] .severity-critical { color: var(-
 body[data-report-profile="professional_print"] .severity-high { color: var(--severity-high); }
 body[data-report-profile="professional_print"] .severity-medium { color: var(--severity-medium); }
 body[data-report-profile="professional_print"] .severity-low { color: var(--severity-low); }
+body[data-report-profile="professional_print"] .severity-info { color: var(--report-muted); }
+
+body[data-report-profile="professional_print"] .report-finding {
+    margin: 12mm 0 15mm;
+    padding: 0 0 0 5mm;
+    background: transparent;
+    border: 0;
+    border-left: 1.5px solid var(--report-accent);
+    border-radius: 0;
+}
+
+body[data-report-profile="professional_print"] .finding-header {
+    margin-bottom: 4mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid var(--report-border);
+}
+
+body[data-report-profile="professional_print"] .finding-header h3 {
+    margin: 0;
+    color: var(--report-text) !important;
+    font-size: 14pt;
+    line-height: 1.3;
+}
+
+body[data-report-profile="professional_print"] .finding-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3mm 10mm;
+    margin-bottom: 6mm;
+    color: var(--report-muted);
+}
+
+body[data-report-profile="professional_print"] .finding-meta-item {
+    flex-direction: column;
+    gap: 1mm;
+}
+
+body[data-report-profile="professional_print"] .finding-meta-label {
+    font-size: 7.5pt;
+    letter-spacing: 0.08em;
+}
+
+body[data-report-profile="professional_print"] .finding-meta-value {
+    color: var(--report-text);
+    font-size: 9.5pt;
+}
+
+body[data-report-profile="professional_print"] .finding-description h4 {
+    margin: 0 0 3mm;
+    color: var(--report-muted) !important;
+    font-size: 8pt;
+    font-weight: 750;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
 
 body[data-report-profile="professional_print"] .report-footer {
     background: #ffffff;

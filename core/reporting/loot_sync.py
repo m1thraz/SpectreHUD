@@ -94,8 +94,9 @@ def strip_report_markers(text: str) -> str:
     if not text:
         return ""
     from core.reporting.section_markers import strip_section_markers
+    from core.reporting.findings import strip_finding_markers
 
-    return strip_section_markers(STRIP_MARKER_REGEX.sub("", text))
+    return strip_finding_markers(strip_section_markers(STRIP_MARKER_REGEX.sub("", text)))
 
 
 @dataclass(frozen=True)
@@ -499,6 +500,10 @@ def preserve_markers_in_preview_roundtrip(
                 if marker_str not in prefix[-150:]:
                     # Insert marker right before the anchor line
                     result_markdown = result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+
+    from core.reporting.findings import reconcile_finding_markers
+
+    result_markdown = reconcile_finding_markers(original_markdown, result_markdown)
 
     # Qt drops internal HTML comments, so restore structural ownership before layout markers.
     result_markdown = reconcile_section_markers(original_markdown, result_markdown)
