@@ -1,18 +1,11 @@
 import unittest
-import sys
 import tempfile
 from pathlib import Path
 import pytest
-from PyQt6.QtWidgets import QApplication
 
 from core.container import ServiceContainer
 from ui.main_window import MainWindow
 from ui.clipboard_monitor import ClipboardMonitor
-
-app = QApplication.instance()
-if not app:
-    app = QApplication(sys.argv)
-
 
 class TestContainer(unittest.TestCase):
     """Unit tests verifying ServiceContainer and Dependency Injection."""

@@ -12,11 +12,7 @@ from unittest.mock import patch, MagicMock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QWidget, QMessageBox, QPushButton
-
-app = QApplication.instance()
-if app is None:
-    app = QApplication([])
+from PyQt6.QtWidgets import QWidget, QMessageBox, QPushButton
 
 from core.config import ConfigManager
 from core.project import ProjectManager
@@ -31,7 +27,6 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.event_bus = EventBus()
         self.config = ConfigManager(config_dir=self.temp_path)
@@ -60,7 +55,6 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def tearDown(self):
         self.event_bus.clear()
         self.window.deleteLater()
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_load_active_project_session_regular(self):

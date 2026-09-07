@@ -10,14 +10,12 @@ class TestLogger(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
     def tearDown(self):
         import gc
         from core.logger import close_log_handlers
 
         close_log_handlers()
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         os.environ.pop("SPECTRE_LOG_LEVEL", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + [
             "spectrehud",

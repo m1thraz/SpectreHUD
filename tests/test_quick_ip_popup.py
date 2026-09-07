@@ -11,10 +11,6 @@ from PyQt6.QtGui import QKeyEvent
 from ui.quick_ip_popup import QuickIpPopup
 from ui.variable_bar import VariableBar
 
-# Ensure QApplication exists for GUI tests
-app = QApplication.instance() or QApplication([])
-
-
 class TestQuickIpPopup(unittest.TestCase):
     def setUp(self):
         self.popup = QuickIpPopup(target_ip="10.10.10.10", attacker_ip="10.10.14.5")
@@ -82,13 +78,13 @@ class TestQuickIpPopup(unittest.TestCase):
 
     def test_show_at_cursor_focuses_target_field(self):
         self.popup.show_at_cursor()
-        app.processEvents()
+        QApplication.instance().processEvents()
         self.assertTrue(self.popup.isVisible())
         self.assertTrue(self.popup.txt_target.hasFocus())
 
     def test_focus_loss_dismissal(self):
         self.popup.show_at_cursor()
-        app.processEvents()
+        QApplication.instance().processEvents()
         self.assertTrue(self.popup.isVisible())
         self.assertTrue(self.popup._has_been_active)
 

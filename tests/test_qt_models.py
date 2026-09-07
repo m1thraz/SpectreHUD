@@ -1,16 +1,9 @@
 import unittest
-import sys
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
 
 from ui.models import LootTableModel, SnippetListModel, HistoryTableModel
 
 # Ensure a headless QApplication exists
-app = QApplication.instance()
-if not app:
-    app = QApplication(sys.argv)
-
-
 class TestQtModels(unittest.TestCase):
     """Unit tests verifying Qt Model-View implementations."""
 

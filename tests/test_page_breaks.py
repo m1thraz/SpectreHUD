@@ -4,7 +4,7 @@ preview roundtrip reconciliation, template integration, and editor actions.
 """
 
 import unittest
-from PyQt6.QtWidgets import QApplication, QPlainTextEdit
+from PyQt6.QtWidgets import QPlainTextEdit
 
 from core.reporting.styles import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGHT_CSS
 from core.reporting.loot_sync import (
@@ -28,10 +28,6 @@ from ui.report_editor_tab import (
     _markdown_with_preview_pagebreaks,
     _strip_preview_pagebreaks,
 )
-
-# Ensure QApplication exists for UI-related tests
-app = QApplication.instance() or QApplication([])
-
 
 class TestPageBreakConversion(unittest.TestCase):
     """Test markdown conversion of pagebreak markers."""

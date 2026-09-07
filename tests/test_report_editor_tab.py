@@ -1,13 +1,13 @@
 import os
-import sys
 import unittest
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QMessageBox, QDialog
+from PyQt6.QtWidgets import QMessageBox, QDialog
 from PyQt6.QtCore import QMimeData, QUrl
 from PyQt6.QtGui import QShortcut
 
@@ -20,17 +20,14 @@ from ui.report.dialogs import ReportGenerationDialog
 from ui.report.preview import ReportPreviewEdit
 from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode
 
-app = QApplication.instance() or QApplication(sys.argv)
 
+pytestmark = pytest.mark.integration
 
 class TestReportEditorTab(unittest.TestCase):
     """Tests ReportEditorTab ViewModes, editable live preview, commit, and safety guards."""
 
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
+        self.temp_path = Path(os.environ["SPECTRE_CONFIG_DIR"]).parent
 
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.project_mgr.create_project("TestBox", target_ip="10.10.10.42")
@@ -45,12 +42,8 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.show()
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
-        try:
-            self.temp_dir.cleanup()
-        except Exception:
-            pass
+        self.tab.close()
+        self.tab.deleteLater()
 
     def test_initial_view_mode_is_split(self):
         """Default view mode must be SPLIT with preview read-only."""

@@ -1,4 +1,3 @@
-import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -12,13 +11,11 @@ class TestClipboardHistory(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.storage_file = self.temp_path / "test_clip.json"
         self.watcher = ClipboardHistory(storage_file=self.storage_file)
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_add_and_deduplicate(self):

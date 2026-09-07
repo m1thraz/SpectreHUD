@@ -1,4 +1,3 @@
-import os
 import sys
 import unittest
 import pytest
@@ -31,8 +30,6 @@ class TestReportFileManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
 
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.loot_mgr = LootManager(storage_file=self.temp_path / "config" / "loot.json")
@@ -43,8 +40,6 @@ class TestReportFileManager(unittest.TestCase):
         import logging
         import gc
 
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + ["spectrehud", ""]:
             log_obj = logging.getLogger(name)
             for h in list(log_obj.handlers):
@@ -269,7 +264,8 @@ class TestReportFileManager(unittest.TestCase):
         from ui.coordinators.export_coordinator import ExportCoordinator
         from ui.report_editor_tab import ReportEditorTab
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
         self.project_mgr.create_project("BoxHtmlTest")
         tab = ReportEditorTab(
             report_file_manager=self.report_mgr,

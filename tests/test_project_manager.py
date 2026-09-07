@@ -1,4 +1,3 @@
-import os
 import shutil
 import unittest
 import tempfile
@@ -11,11 +10,9 @@ class TestProjectManager(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.base_dir = Path(self.temp_dir.name)
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.base_dir)
         self.pm = ProjectManager(base_dir=self.base_dir)
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         self.temp_dir.cleanup()
 
     def test_default_project_creation(self):

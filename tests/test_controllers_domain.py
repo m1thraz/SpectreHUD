@@ -11,11 +11,7 @@ from unittest.mock import patch, MagicMock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QPushButton
-
-app = QApplication.instance()
-if app is None:
-    app = QApplication([])
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QPushButton
 
 from core.snippets.manager import SnippetManager
 from core.loot.manager import LootManager
@@ -33,7 +29,6 @@ class TestControllersDomain(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.event_bus = EventBus()
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
@@ -59,7 +54,6 @@ class TestControllersDomain(unittest.TestCase):
 
     def tearDown(self):
         self.event_bus.clear()
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_project_controller_domain_and_menu_actions(self):

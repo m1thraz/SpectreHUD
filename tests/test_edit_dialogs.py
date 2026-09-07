@@ -3,7 +3,6 @@ Unit tests for EditHistoryDialog, EditNoteDialog, and double-click to edit on ca
 """
 
 import unittest
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QMouseEvent
 
@@ -12,9 +11,6 @@ from ui.note_edit_dialog import EditNoteDialog
 from ui.history_card import HistoryCard
 from ui.quick_note_card import QuickNoteCard
 from ui.loot_card import LootCard
-
-app = QApplication.instance() or QApplication([])
-
 
 class TestEditDialogsAndCards(unittest.TestCase):
     def test_history_edit_dialog(self):

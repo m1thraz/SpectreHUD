@@ -13,8 +13,6 @@ Covers:
 
 import json
 from pathlib import Path
-import pytest
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 
 from core.phase_context import PhaseContext
@@ -26,14 +24,6 @@ from core.project.session_service import ProjectSessionService
 from ui.phase_toast_hud import PhaseToastHUD
 from ui.history_card import HistoryCard
 from ui.clipboard_monitor import ClipboardMonitor
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def test_phase_context_set_and_clear():

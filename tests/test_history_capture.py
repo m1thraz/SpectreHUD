@@ -6,14 +6,10 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect, QWidget
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 from ui.history_card import HistoryCard
 from ui.coordinators.clipboard_coordinator import ClipboardCoordinator
-
-# Ensure QApplication exists for GUI tests
-app = QApplication.instance() or QApplication([])
-
 
 class TestHistoryCardPromoteButton(unittest.TestCase):
     def setUp(self):

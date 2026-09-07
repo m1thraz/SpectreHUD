@@ -22,7 +22,17 @@ class TestPackagingIntegration(unittest.TestCase):
     def test_wheel_build_and_contents(self):
         """Builds a real wheel and checks all package components exist in the wheel archive."""
         with tempfile.TemporaryDirectory() as td:
-            cmd = [sys.executable, "-m", "pip", "wheel", str(self.repo_root), "--no-deps", "-w", td]
+            cmd = [
+                sys.executable,
+                "-m",
+                "pip",
+                "wheel",
+                str(self.repo_root),
+                "--no-deps",
+                "--no-build-isolation",
+                "-w",
+                td,
+            ]
             res = subprocess.run(cmd, capture_output=True, text=True)
             self.assertEqual(res.returncode, 0, f"pip wheel failed: {res.stderr}\n{res.stdout}")
 

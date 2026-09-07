@@ -4,6 +4,9 @@ Unit tests for the Debian package (.deb) builder script.
 
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
+
 from scripts.build_deb import (
     generate_control_file,
     generate_launcher_wrapper,
@@ -14,6 +17,9 @@ from scripts.build_deb import (
     build_pyinstaller_bundle,
     get_project_version,
 )
+
+
+pytestmark = pytest.mark.release
 
 
 def test_linux_bundle_includes_dynamic_xorg_backends(tmp_path):

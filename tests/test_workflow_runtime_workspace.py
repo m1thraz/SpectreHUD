@@ -34,7 +34,8 @@ class TestWorkflowInvariants(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance()
+        assert cls.app is not None
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

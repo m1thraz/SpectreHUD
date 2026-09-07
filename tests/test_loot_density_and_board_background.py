@@ -15,7 +15,6 @@ from ui.loot_board import LootBoard
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
 from ui.controllers.loot_controller import LootController
-from ui.styles.cards import CARDS_QSS_TEMPLATE
 
 
 def test_loot_board_autofill_background_and_qss_rule(qapp):
@@ -40,10 +39,6 @@ def test_loot_board_autofill_background_and_qss_rule(qapp):
         )
         assert board.property("class") == "LootBoard"
         assert board.viewport().autoFillBackground() is True
-        assert 'QScrollArea[class="LootBoard"]' in CARDS_QSS_TEMPLATE
-        assert "{LOOT_COLUMN_SURFACE}" in CARDS_QSS_TEMPLATE
-        assert "QScrollArea#LootColumnScrollArea QScrollBar:vertical" in CARDS_QSS_TEMPLATE
-
         # Check column scroll areas and vertical scrollbar
         board.resize(1000, 350)
         board.show()

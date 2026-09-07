@@ -4,17 +4,12 @@ Tests for QuickNoteController and QuickNotePopup.
 
 import unittest
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QApplication
 
 from core.quick_note_manager import QuickNoteManager
 from core.storage import InMemoryStorageBackend
 from core.event_bus import EventBus
 from ui.controllers.quick_note_controller import QuickNoteController
 from ui.quick_note_popup import QuickNotePopup
-
-# Ensure QApplication exists for GUI tests
-app = QApplication.instance() or QApplication([])
-
 
 class TestQuickNoteController(unittest.TestCase):
     def setUp(self):

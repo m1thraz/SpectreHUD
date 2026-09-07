@@ -1,15 +1,11 @@
 import unittest
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication
 from ui.base_dialog import BaseHudDialog
 from ui.add_snippet_dialog import AddSnippetDialog
 from ui.add_loot_dialog import AddLootDialog
 from ui.project_dialog import NewProjectDialog
 from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
-
-app = QApplication.instance() or QApplication([])
-
 
 class TestHudDialogs(unittest.TestCase):
     def test_base_hud_dialog_attributes(self):

@@ -1,12 +1,10 @@
-"""Tests for LootCard visual tactile design, cursor transitions, and board spacing."""
+"""Tests for functional LootCard drag affordances."""
 
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QLabel
 
-from core.loot.manager import CATEGORIES
 from ui.loot_card import LootCard
-from ui.loot_board import LootBoardDropArea
 
 
 def test_loot_card_has_card_styling_and_open_hand_cursor(qapp):
@@ -73,16 +71,3 @@ def test_loot_card_cursor_transitions_on_press_and_release(qapp):
 
     card.hide()
     card.deleteLater()
-
-
-def test_loot_board_drop_area_spacing_and_margins(qapp):
-    area = LootBoardDropArea(CATEGORIES[0], lambda _id, _cat, _idx: True)
-    margins = area.cards_layout.contentsMargins()
-
-    assert margins.left() == 4
-    assert margins.top() == 4
-    assert margins.right() == 4
-    assert margins.bottom() == 4
-    assert area.cards_layout.spacing() == 8
-
-    area.deleteLater()

@@ -27,8 +27,7 @@ class TestAppSmoke(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance()
-        if cls.app is None:
-            cls.app = QApplication([])
+        assert cls.app is not None
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -36,7 +35,6 @@ class TestAppSmoke(unittest.TestCase):
 
         self.config_dir = self.base_path / "config"
         self.projects_dir = self.base_path / "projects"
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.config_dir)
 
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.snippet_mgr = SnippetManager(user_snippets_path=self.config_dir / "user_snippets.json")
@@ -46,7 +44,6 @@ class TestAppSmoke(unittest.TestCase):
         self.screen_mgr = ScreenshotManager()
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_full_app_lifecycle_smoke(self):

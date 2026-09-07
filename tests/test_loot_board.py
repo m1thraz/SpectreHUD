@@ -4,6 +4,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import pytest
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QMimeData, Qt
@@ -11,6 +13,9 @@ from PyQt6.QtWidgets import QAbstractScrollArea, QScrollArea, QSizePolicy
 
 from core.loot.manager import CATEGORIES
 from ui.loot_board import LOOT_ENTRY_MIME_TYPE, LootBoard, LootBoardDropArea
+
+
+pytestmark = pytest.mark.integration
 
 
 class _FakeDragEvent:

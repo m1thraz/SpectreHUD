@@ -1,6 +1,11 @@
 """Regression tests for the release-wheel verifier."""
 
+import pytest
+
 from scripts.verify_wheel import REQUIRED_FILES, get_project_version
+
+
+pytestmark = pytest.mark.release
 
 
 def test_reporting_template_engine_is_required_instead_of_removed_models_module():
@@ -44,4 +49,3 @@ def test_linux_desktop_assets_are_required_in_release_wheel():
     }
 
     assert expected.issubset(REQUIRED_FILES)
-

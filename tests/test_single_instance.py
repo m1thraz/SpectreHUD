@@ -197,8 +197,8 @@ if lock is not None:
         from core.single_instance import start_single_instance_server, notify_running_instance
         from PyQt6.QtWidgets import QApplication
 
-        # Ensure a QApplication instance exists for QLocalServer/QLocalSocket events
-        _app = QApplication.instance() or QApplication(["test"])
+        _app = QApplication.instance()
+        self.assertIsNotNone(_app)
 
         activated = []
 

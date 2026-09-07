@@ -1,4 +1,3 @@
-import os
 import sys
 import unittest
 import tempfile
@@ -20,14 +19,12 @@ class TestSnippetImporter(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
         (self.temp_path / "config").mkdir(parents=True, exist_ok=True)
 
         self.user_snippets_path = self.temp_path / "config" / "user_snippets.json"
         self.mgr = SnippetManager(user_snippets_path=self.user_snippets_path)
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_normalize_template_variables(self):

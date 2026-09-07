@@ -1,4 +1,3 @@
-from PyQt6.QtWidgets import QApplication
 
 from core.shortcuts import (
     VALID_CATEGORIES,
@@ -8,9 +7,6 @@ from core.shortcuts import (
     get_shortcuts,
 )
 from ui.shortcuts_dialog import ShortcutHelpDialog
-
-app = QApplication.instance() or QApplication([])
-
 
 class DummyConfigManager:
     """Mock ConfigManager for testing shortcut configuration loading."""

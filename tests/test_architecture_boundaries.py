@@ -14,6 +14,11 @@ LEGACY_CLIPBOARD_WATCHER = PROJECT_ROOT / "core" / "clipboard_watcher.py"
 
 
 CORE_ROOT = PROJECT_ROOT / "core"
+TESTS_ROOT = PROJECT_ROOT / "tests"
+QAPPLICATION_OWNERS = {
+    TESTS_ROOT / "conftest.py",
+    TESTS_ROOT / "qt_subprocess.py",
+}
 
 
 def _ui_imports(path: Path) -> list[tuple[int, str]]:
@@ -41,6 +46,34 @@ def test_core_layer_does_not_import_ui():
     assert violations == [], (
         "Core layer violated architecture boundaries by importing from ui:\n"
         + "\n".join(violations)
+    )
+
+
+def test_qapplication_is_only_constructed_by_central_test_infrastructure():
+    """Normal test modules must consume the shared lifecycle, never create a competing one."""
+    violations = []
+    for path in sorted(TESTS_ROOT.rglob("*.py")):
+        if path in QAPPLICATION_OWNERS:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "qapp":
+                violations.append(f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} defines qapp")
+                continue
+            if not isinstance(node, ast.Call):
+                continue
+            called_name = None
+            if isinstance(node.func, ast.Name):
+                called_name = node.func.id
+            elif isinstance(node.func, ast.Attribute):
+                called_name = node.func.attr
+            if called_name == "QApplication":
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} constructs QApplication"
+                )
+
+    assert violations == [], "Direct QApplication construction outside central fixtures:\n" + "\n".join(
+        violations
     )
 
 

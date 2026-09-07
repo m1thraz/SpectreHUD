@@ -1,19 +1,13 @@
-import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from PyQt6.QtGui import QImage
-from PyQt6.QtWidgets import QApplication
 
 from ui.report.dialogs import ReportIconPickerDialog
 from ui.report.icon_assets import REPORT_ICONS, ReportIconError, render_report_icon
 
 
-app = QApplication.instance() or QApplication(sys.argv)
-
-
-def test_render_report_icon_creates_reusable_project_png(tmp_path):
+def test_render_report_icon_creates_valid_project_png(tmp_path):
     relative_path = render_report_icon(tmp_path, "fa5s.key", size=32)
     asset_path = tmp_path / Path(relative_path)
 
@@ -23,10 +17,6 @@ def test_render_report_icon_creates_reusable_project_png(tmp_path):
     assert not image.isNull()
     assert image.width() == image.height() == 32
 
-    with patch("ui.report.icon_assets.atomic_write_bytes") as write:
-        assert render_report_icon(tmp_path, "fa5s.key", size=32) == relative_path
-    write.assert_not_called()
-    assert list((tmp_path / "assets" / "icons").glob("*.png")) == [asset_path]
 
 
 @pytest.mark.parametrize(

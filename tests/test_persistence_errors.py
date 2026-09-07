@@ -161,7 +161,8 @@ class TestPersistenceErrors(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication, QMessageBox
         from ui.controllers.loot_controller import LootController
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
         backend = FailingStorageBackend()
         loot_mgr = LootManager(storage=backend)
         proj_mgr = ProjectManager()
@@ -193,7 +194,8 @@ class TestPersistenceErrors(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication, QMessageBox
         from ui.controllers.history_controller import HistoryController
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
         backend = FailingStorageBackend()
         watcher = ClipboardHistory(storage=backend)
         loot_mgr = LootManager(storage=backend)
@@ -223,7 +225,8 @@ class TestPersistenceErrors(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication, QMessageBox
         from ui.controllers.cheatsheet_controller import CheatsheetController
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
         with tempfile.TemporaryDirectory() as tmpdir:
             blocked_file = Path(tmpdir) / "blocked_file"
             blocked_file.write_text("i am a file", encoding="utf-8")
@@ -244,7 +247,8 @@ class TestPersistenceErrors(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication, QMessageBox
         from main import global_exception_hook
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
         err = PersistenceError("Simulated disk write failure")
 
         with patch.dict(os.environ, {"SPECTREHUD_NO_GUI_CRASH_POPUP": ""}):

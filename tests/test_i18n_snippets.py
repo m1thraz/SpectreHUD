@@ -89,7 +89,8 @@ class TestI18nSnippets(unittest.TestCase):
         from PyQt6.QtWidgets import QApplication
         from tests.window_factory import create_main_window
 
-        app = QApplication.instance() or QApplication([])
+        app = QApplication.instance()
+        assert app is not None
 
         cfg_mgr = ConfigManager(config_dir=self.config_dir)
         cfg_mgr.set("language", "en")

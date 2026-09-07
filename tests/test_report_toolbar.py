@@ -1,15 +1,11 @@
 """Unit tests for the restructured report formatting toolbar."""
 
-import sys
 import unittest
 from unittest.mock import MagicMock
 
-from PyQt6.QtWidgets import QApplication, QPushButton, QFrame
+from PyQt6.QtWidgets import QPushButton, QFrame
 
 from ui.report.toolbar import build_format_toolbar
-
-app = QApplication.instance() or QApplication(sys.argv)
-
 
 class TestReportToolbar(unittest.TestCase):
     def setUp(self):

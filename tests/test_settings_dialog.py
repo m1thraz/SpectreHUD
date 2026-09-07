@@ -2,7 +2,6 @@ import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-from PyQt6.QtWidgets import QApplication
 from core.config import ConfigManager
 from ui.settings_dialog import (
     SettingsDialog,
@@ -11,9 +10,6 @@ from ui.settings_dialog import (
     GeneralSettingsPage,
     AppearanceSettingsPage,
 )
-
-app = QApplication.instance() or QApplication([])
-
 
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
@@ -229,4 +225,3 @@ class TestSettingsDialog(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

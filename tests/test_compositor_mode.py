@@ -1,15 +1,10 @@
-import sys
 import unittest
 from unittest.mock import patch
-from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 
 from core.platform.capabilities import detect_platform_capabilities
 from ui.glass_panel import GlassPanel
 from tests.window_factory import create_main_window
-
-app = QApplication.instance() or QApplication(sys.argv)
-
 
 class TestCompositorMode(unittest.TestCase):
     """Tests adaptive window layout and transparency depending on compositor presence."""

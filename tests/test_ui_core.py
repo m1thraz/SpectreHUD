@@ -23,16 +23,13 @@ class TestUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance()
-        if cls.app is None:
-            cls.app = QApplication([])
+        assert cls.app is not None
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.temp_path = Path(self.temp_dir.name)
 
         # Set environment variables as fallback safety shield
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
 
         self.config_dir = self.temp_path / "config"
         self.custom_snippets_path = self.temp_path / "config" / "user_snippets.json"
@@ -42,8 +39,6 @@ class TestUI(unittest.TestCase):
 
     def tearDown(self):
         # Reset environment safety shield
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         try:
             self.temp_dir.cleanup()
         except Exception:

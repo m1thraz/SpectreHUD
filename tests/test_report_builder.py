@@ -1,4 +1,3 @@
-import os
 import unittest
 import tempfile
 from pathlib import Path
@@ -11,7 +10,6 @@ class TestReportBuilder(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.loot_file = self.temp_path / "test_loot.json"
         self.clip_file = self.temp_path / "test_clip.json"
@@ -23,7 +21,6 @@ class TestReportBuilder(unittest.TestCase):
         )
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_empty_report(self):

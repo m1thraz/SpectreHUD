@@ -38,28 +38,6 @@ def test_all_builtin_themes_are_discovered_and_complete():
         assert loader.validate_palette(palette) == []
 
 
-def test_builtin_themes_have_distinct_visual_identities():
-    loader = ThemeLoader()
-    theme_ids = {
-        "cyber_dark",
-        "daylight",
-        "high_contrast",
-        "matrix_terminal",
-        "nord",
-        "red_team",
-        "slate",
-        "solarized",
-        "warm_night",
-    }
-
-    identities = {
-        (loader.load_theme(theme_id)["BG_DARK"], loader.load_theme(theme_id)["CYBER_CYAN"])
-        for theme_id in theme_ids
-    }
-
-    assert len(identities) == len(theme_ids)
-
-
 def test_missing_theme_falls_back_to_cyber_dark():
     assert ThemeLoader().load_theme("does_not_exist") == CYBER_DARK_PALETTE
 

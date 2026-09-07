@@ -14,9 +14,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("SPECTREHUD_NO_GUI_CRASH_POPUP", "1")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def qapp():
-    """Provide the single QApplication shared by pytest-style Qt tests."""
+    """Provide the only QApplication owned by the pytest process."""
     from PyQt6.QtWidgets import QApplication
 
     application = QApplication.instance() or QApplication([])

@@ -2,13 +2,9 @@
 
 import unittest
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QApplication
 
 from core.reporting.file_manager import ReportFileManager
 from ui.report_editor_tab import ReportEditorTab, ViewMode
-
-app = QApplication.instance() or QApplication([])
-
 
 class TestReportScrollSync(unittest.TestCase):
     def setUp(self):

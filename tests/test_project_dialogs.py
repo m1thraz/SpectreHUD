@@ -12,11 +12,6 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication
-
-app = QApplication.instance()
-if app is None:
-    app = QApplication([])
 
 from core.project import ProjectManager
 from ui.project_dialog import NewProjectDialog, ProjectUnlockDialog
@@ -26,13 +21,11 @@ class TestProjectDialogs(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path)
 
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.project_mgr.create_project("ExistingBox", target_ip="10.10.10.50")
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
         self.temp_dir.cleanup()
 
     def test_project_unlock_dialog(self):

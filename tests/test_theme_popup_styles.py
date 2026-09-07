@@ -8,7 +8,7 @@ import sys
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QPushButton, QScrollArea, QToolTip
+from PyQt6.QtWidgets import QPushButton, QScrollArea, QToolTip
 from PyQt6.QtGui import QPalette
 
 from core.config import ConfigManager
@@ -183,7 +183,9 @@ if __name__ == "__main__":
     if probe is None:
         raise SystemExit(f"unknown Qt probe: {probe_name!r}")
 
-    application = QApplication.instance() or QApplication([])
+    from tests.qt_subprocess import create_probe_application
+
+    application = create_probe_application()
     try:
         probe(application)
         application.processEvents()

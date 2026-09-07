@@ -25,7 +25,8 @@ class TestWorkflowRobustness(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance()
+        assert cls.app is not None
 
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -34,8 +35,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_dir = self.temp_path / "config"
         self.projects_dir = self.temp_path / "projects"
 
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.config_dir)
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.projects_dir)
 
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
@@ -47,8 +46,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         )
 
     def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
         self.temp_dir.cleanup()
 
     def test_workspace_change_rejects_unwritable_directory(self):

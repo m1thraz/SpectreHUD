@@ -11,6 +11,11 @@ import configparser
 import unittest
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = pytest.mark.release
+
 
 class TestLinuxDesktopIntegration(unittest.TestCase):
     """Verifies Linux desktop integration assets and application identity configuration."""

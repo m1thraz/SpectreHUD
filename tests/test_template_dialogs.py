@@ -1,5 +1,4 @@
 import os
-import sys
 import unittest
 import tempfile
 from pathlib import Path
@@ -7,15 +6,12 @@ from unittest.mock import patch
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
+from PyQt6.QtWidgets import QDialog, QMessageBox
 from core.reporting.template_engine import TemplateSection
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog, SectionEditDialog
 from ui.template_manager_dialog import TemplateManagerDialog
 from ui.styles import APP_THEME
-
-app = QApplication.instance() or QApplication(sys.argv)
-
 
 class TestTemplateDialogs(unittest.TestCase):
     """Unit tests for TemplateEditorDialog, SectionEditDialog, and TemplateManagerDialog."""

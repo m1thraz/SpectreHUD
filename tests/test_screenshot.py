@@ -1,7 +1,8 @@
 import os
 import unittest
-import tempfile
 from pathlib import Path
+
+import pytest
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -13,18 +14,17 @@ from core.screenshots.manager import ScreenshotManager
 from ui.loot_card import LootCard
 
 
+pytestmark = pytest.mark.integration
+
+
 class TestScreenshot(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance()
-        if cls.app is None:
-            cls.app = QApplication([])
+        assert cls.app is not None
 
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.temp_path = Path(self.temp_dir.name)
-        os.environ["SPECTRE_CONFIG_DIR"] = str(self.temp_path / "config")
-        os.environ["SPECTRE_PROJECTS_DIR"] = str(self.temp_path / "projects")
+        self.temp_path = Path(os.environ["SPECTRE_CONFIG_DIR"]).parent
 
         self.base_dir = self.temp_path / "projects"
         self.pm = ProjectManager(base_dir=self.base_dir)
@@ -34,11 +34,6 @@ class TestScreenshot(unittest.TestCase):
         self.loot_file = self.temp_path / "config" / "loot.json"
         self.loot_mgr = LootManager(storage_file=self.loot_file)
         self.sm = ScreenshotManager()
-
-    def tearDown(self):
-        os.environ.pop("SPECTRE_CONFIG_DIR", None)
-        os.environ.pop("SPECTRE_PROJECTS_DIR", None)
-        self.temp_dir.cleanup()
 
     def test_save_screenshot_and_loot_entry(self):
         # Create a mock 100x100 pixmap
