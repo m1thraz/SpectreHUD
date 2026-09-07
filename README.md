@@ -46,6 +46,7 @@ For the implementation details, see:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
+- [v2.1.2 release notes](docs/release_notes_v2.1.2.md)
 - [v2.1.1 release notes](docs/release_notes_v2.1.1.md)
 - [v2.1.0 release notes](docs/release_notes_v2.1.0.md)
 - [v2.0.9 release notes](docs/release_notes_v2.0.9.md)

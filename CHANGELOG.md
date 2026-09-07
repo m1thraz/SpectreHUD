@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-09-07
+
 ### Added
 
 * Optional one-note-at-a-time focus review for working through the Quick Notes backlog.
@@ -230,7 +232,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...HEAD
+[2.1.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.9...v2.1.0
 [2.0.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.8...v2.0.9
