@@ -14,7 +14,7 @@ semantic versioning.
 
 ### Changed
 
-* Renamed the report action to Export HTML/PDF and simplified its choices to Professional Print first and an editable classic web version, removing the Report Editor's dark export option.
+* Reordered report exports around HTML/PDF first and Markdown last, and simplified HTML choices to Professional Print first and an editable classic web version without a dark export option.
 * Replaced generated report severity emojis with export-safe text labels styled consistently across Markdown and HTML profiles.
 
 ## [2.1.2] - 2026-09-07

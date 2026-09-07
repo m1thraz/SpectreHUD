@@ -1271,10 +1271,10 @@ class ReportEditorTab(QWidget):
         layout.addSpacing(4)
 
         choices = (
-            ("markdown", t("report.export_copy", "Export Copy...")),
             ("html", t("report.export_html", "Export HTML/PDF")),
             ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
             ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
+            ("markdown", t("report.export_copy", "Export MD...")),
         )
 
         selected: list[Optional[str]] = [None]
@@ -1502,7 +1502,7 @@ class ReportEditorTab(QWidget):
         msg.setInformativeText(
             t(
                 "report.html_profile_hint",
-                "Interactive remains editable; Professional Print uses a controlled A4 layout. Disable browser headers and footers when printing.",
+                "Professional Print uses a controlled A4 layout; the classic web version remains editable. Generate the PDF from the exported HTML file.",
             )
         )
         msg.setIcon(QMessageBox.Icon.Question)

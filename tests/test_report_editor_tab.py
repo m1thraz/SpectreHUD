@@ -91,6 +91,8 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertEqual(len(dialogs), 1)
         dialog = dialogs[0]
         self.assertGreaterEqual(dialog.minimumWidth(), 640)
+        self.assertIn("HTML", dialog.informativeText())
+        self.assertNotIn("header", dialog.informativeText().lower())
         buttons = {button.text(): button for button in dialog.buttons()}
         self.assertNotIn("Interactive — Dark", buttons)
         professional = buttons[t("report.html_profile_professional", "Professional Print")]
@@ -785,7 +787,19 @@ class TestReportEditorTab(unittest.TestCase):
                 mock_dlg.exec.side_effect = fake_exec
                 choice = self.tab._select_export_type()
                 self.assertEqual(choice, "html")
-                self.assertIn("Export HTML/PDF", [btn.text() for btn in added_buttons])
+                labels = [btn.text() for btn in added_buttons]
+                self.assertEqual(
+                    labels[:4],
+                    [
+                        t("report.export_html", "Export HTML/PDF"),
+                        t("report.export_obsidian", "Export to Obsidian..."),
+                        t(
+                            "report.export_cherrytree",
+                            "Export CherryTree Package...",
+                        ),
+                        t("report.export_copy", "Export MD..."),
+                    ],
+                )
 
         # 2. Cancel selection
         with patch("ui.report_editor_tab.QDialog") as MockDialog:
