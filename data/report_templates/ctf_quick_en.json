@@ -8,6 +8,7 @@
   "sections": [
     { "type": "header_metadata", "title": "CTF Quick Writeup" },
     { "type": "phase_section", "category_id": "access", "title": "Initial Foothold" },
-    { "type": "phase_section", "category_id": "privesc", "title": "Root Escalation" }
+    { "type": "phase_section", "category_id": "privesc", "title": "Root Escalation" },
+    { "type": "phase_section", "category_id": "misc", "title": "Flags, Proof & Notes" }
   ]
 }

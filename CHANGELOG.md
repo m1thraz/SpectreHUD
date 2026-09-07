@@ -21,6 +21,7 @@ semantic versioning.
 * Variable Bar and Report toolbar collapse now hide their complete surfaces and actions, leaving only the restore control visible.
 * Newly generated report findings now use structured metadata and description blocks across Interactive and Professional Print exports.
 * Professional Print omits empty phase sections while preserving phases that contain manual notes.
+* Reworked built-in report templates so pentest reports use assessment-oriented findings and attack-path sections while CTF reports retain their chronological workflow.
 
 ## [2.1.1] - 2026-09-06
 

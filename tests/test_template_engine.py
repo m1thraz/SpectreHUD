@@ -5,7 +5,9 @@ from core.reporting.template_engine import (
     TemplateRenderer,
     LEGACY_DEFAULT_TEMPLATE,
     _render_header_metadata,
+    _render_attack_path,
     _render_executive_summary,
+    _render_finding_section,
     _render_phase_section,
     _render_remediation_table,
     _render_appendix,
@@ -99,6 +101,46 @@ class TestTemplateEngine(unittest.TestCase):
         sec_empty = TemplateSection(type="phase_section", category_id="postex")
         out_empty = _render_phase_section(sec_empty, self.context, "de")
         self.assertIn("*Keine Einträge in dieser Phase.*", out_empty)
+
+    def test_attack_path_uses_only_observed_categories_and_titles(self):
+        section = TemplateSection(
+            type="attack_path",
+            options={"categories": ["recon", "access", "postex"]},
+        )
+
+        rendered = _render_attack_path(section, self.context, "en")
+
+        self.assertIn("1. **Reconnaissance & Enumeration** — Open Ports", rendered)
+        self.assertIn("2. **Initial Access & Exploitation** — Domain Admin Credentials", rendered)
+        self.assertNotIn("Post-Exploitation", rendered)
+        self.assertNotIn("Business Impact", rendered)
+
+    def test_attack_path_localizes_empty_and_untitled_entries(self):
+        section = TemplateSection(type="attack_path", options={"categories": ["misc"]})
+        empty = _render_attack_path(section, self.context, "de")
+        context = ReportContext(loot_entries=[{"category": "misc", "title": ""}])
+        untitled = _render_attack_path(section, context, "de")
+
+        self.assertIn("*Kein dokumentierter Angriffspfad vorhanden.*", empty)
+        self.assertIn("Unbenannt", untitled)
+
+    def test_grouped_findings_preserve_category_identity_as_metadata(self):
+        section = TemplateSection(
+            type="finding_section",
+            title="4. Technical Findings",
+            options={"categories": ["recon", "access", "postex"]},
+        )
+
+        rendered = _render_finding_section(section, self.context, "en")
+
+        self.assertEqual(rendered.count("## 4. Technical Findings"), 1)
+        self.assertIn("### Open Ports", rendered)
+        self.assertIn("### Domain Admin Credentials", rendered)
+        self.assertIn("**Phase:** Reconnaissance & Enumeration", rendered)
+        self.assertIn("**Phase:** Initial Access & Exploitation", rendered)
+        self.assertNotIn("Post-Exploitation & Lateral Movement", rendered)
+        self.assertEqual(rendered.count("spectre:finding:start:"), 2)
+        self.assertEqual(rendered.count("spectre:loot:"), 2)
 
     def test_generated_finding_uses_only_available_metadata_and_preserves_content(self):
         entry = dict(

@@ -20,10 +20,11 @@ from core.reporting.professional import (
     build_professional_cover_data,
     normalize_professional_severity,
     render_professional_cover,
+    professional_section_has_meaningful_content,
+    prune_professional_section_html,
 )
 from core.reporting.findings import (
     convert_markdown_with_findings,
-    phase_section_has_meaningful_content,
 )
 from core.reporting.section_markers import segment_report_markdown, strip_section_markers
 
@@ -70,14 +71,15 @@ class HtmlReportExporter:
             "executive_summary": "report-executive",
             "scope_limitations": "report-scope",
             "phase_section": "report-phase",
+            "attack_path": "report-attack-path",
+            "finding_section": "report-findings",
             "remediation_table": "report-remediation",
             "appendix": "report-appendix",
         }
         html_segments = []
         for segment in segment_report_markdown(embedded_markdown):
-            if (
-                segment.section_type == "phase_section"
-                and not phase_section_has_meaningful_content(segment.markdown)
+            if segment.is_structured and not professional_section_has_meaningful_content(
+                segment.section_type, segment.markdown
             ):
                 continue
             body = convert_markdown_with_findings(
@@ -86,6 +88,7 @@ class HtmlReportExporter:
             if not segment.is_structured:
                 html_segments.append(body)
                 continue
+            body = prune_professional_section_html(segment.section_type, body)
             phase_attr = (
                 f' data-phase="{segment.category_id}"' if segment.category_id else ""
             )

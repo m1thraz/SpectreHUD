@@ -2,6 +2,7 @@
 
 from core.reporting.exporter import HtmlReportExporter
 from core.reporting.profiles import ReportExportProfile
+from core.reporting.template_repository import TemplateRepository
 from core.reporting.section_markers import (
     reconcile_section_markers,
     segment_report_markdown,
@@ -27,6 +28,8 @@ def _all_sections_template() -> ReportTemplate:
             TemplateSection("header_metadata"),
             TemplateSection("executive_summary"),
             TemplateSection("scope_limitations"),
+            TemplateSection("attack_path"),
+            TemplateSection("finding_section"),
             TemplateSection("phase_section", category_id="recon"),
             TemplateSection("remediation_table"),
             TemplateSection("appendix"),
@@ -43,6 +46,8 @@ def test_template_renderer_persists_ordered_section_identity():
         "header_metadata",
         "executive_summary",
         "scope_limitations",
+        "attack_path",
+        "finding_section",
         "phase_section:recon",
         "remediation_table",
         "appendix",
@@ -164,7 +169,7 @@ def test_preview_roundtrip_restores_section_pairs_around_edited_content():
     assert "section:end:phase_section:recon" in full_roundtrip
 
 
-def test_professional_html_exposes_every_known_section_wrapper():
+def test_professional_html_exposes_meaningful_semantic_section_wrappers():
     context = ReportContext(
         loot_entries=[
             {
@@ -183,14 +188,15 @@ def test_professional_html_exposes_every_known_section_wrapper():
     )
 
     for css_class in (
-        "report-header-metadata",
         "report-executive",
-        "report-scope",
+        "report-attack-path",
+        "report-findings",
         "report-phase",
         "report-remediation",
-        "report-appendix",
     ):
         assert f'class="report-section {css_class}"' in html
+    for css_class in ("report-header-metadata", "report-scope", "report-appendix"):
+        assert f'class="report-section {css_class}"' not in html
     assert 'data-phase="recon"' in html
     assert "spectre:section" not in html
 
@@ -278,6 +284,133 @@ def test_professional_omits_only_empty_phase_sections():
     assert "Empty Phase" in interactive
 
 
+def test_professional_omits_generated_empty_sections_but_interactive_keeps_them():
+    renderer = TemplateRenderer()
+    template = ReportTemplate(
+        id="empty",
+        name="Empty",
+        language="en",
+        category="pentest",
+        complexity="complex",
+        sections=[
+            TemplateSection("executive_summary", title="1. Executive Summary"),
+            TemplateSection("scope_limitations", title="2. Scope & Methodology"),
+            TemplateSection("attack_path", title="3. Attack Path"),
+            TemplateSection("finding_section", title="4. Technical Findings"),
+            TemplateSection("remediation_table", title="5. Remediation"),
+            TemplateSection("appendix", title="6. Appendix"),
+        ],
+    )
+    markdown = renderer.render(template, ReportContext())
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    for title in (
+        "1. Executive Summary",
+        "2. Scope &amp; Methodology",
+        "3. Attack Path",
+        "4. Technical Findings",
+        "5. Remediation",
+        "6. Appendix",
+    ):
+        assert title not in professional
+    assert "1. Executive Summary" in interactive
+    assert "2. Scope &amp; Methodology" in interactive
+    assert "No documented attack path is available" in interactive
+    assert "No technical findings are documented" in interactive
+    assert "No clipboard history recorded" in interactive
+
+
+def test_professional_prunes_empty_fields_without_hiding_manual_content():
+    executive = wrap_section_markdown(
+        """## 1. Executive Summary
+
+### Findings Matrix
+
+| # | Finding | Severity | Phase | Status |
+|---|---|---|---|---|
+| 1 | Authentication bypass | HIGH | access | Open |
+
+**Total:** 0 Critical · 1 High · 0 Medium · 0 Low
+
+### Key Highlights
+
+- **Initial Access Vector:**
+- **Business Impact & Risk:**""",
+        "executive_summary",
+    )
+    scope = wrap_section_markdown(
+        """## 2. Scope & Methodology
+
+- **In Scope:** Public login endpoint
+- **Out of Scope:**
+- **Methodology:**
+- **Limitations & Constraints:**""",
+        "scope_limitations",
+    )
+    appendix = wrap_section_markdown(
+        """## Appendix A: Terminal Command History
+
+#### 1. `10:42:00`
+```bash
+curl https://target.example
+```
+
+## Appendix B: Screenshots
+
+*No screenshots captured in this project.*""",
+        "appendix",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        executive + "\n\n" + scope + "\n\n" + appendix,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert 'class="report-section report-executive"' in professional
+    assert "Authentication bypass" in professional
+    assert "Key Highlights" not in professional
+    assert "Initial Access Vector" not in professional
+    assert 'class="report-section report-scope"' in professional
+    assert "Public login endpoint" in professional
+    assert "Out of Scope" not in professional
+    assert 'class="report-section report-appendix"' in professional
+    assert "curl https://target.example" in professional
+    assert "Appendix B: Screenshots" not in professional
+
+
+def test_professional_keeps_manual_notes_in_otherwise_empty_sections():
+    sections = [
+        wrap_section_markdown(
+            "## Scope & Methodology\n\nManual scoping note.", "scope_limitations"
+        ),
+        wrap_section_markdown(
+            "## Technical Findings\n\n_Notes & observations for this phase:_\n\n"
+            "> Manual finding note.",
+            "finding_section",
+        ),
+        wrap_section_markdown(
+            "## Appendix\n\nManual supporting material.", "appendix"
+        ),
+        wrap_section_markdown(
+            "# Security Assessment Report\n\nManual distribution note.",
+            "header_metadata",
+        ),
+    ]
+
+    professional = HtmlReportExporter.build_full_html(
+        "\n\n".join(sections), profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert "Manual scoping note." in professional
+    assert "Manual finding note." in professional
+    assert "Manual supporting material." in professional
+    assert "Manual distribution note." in professional
+
+
 def test_professional_cover_precedes_body_and_is_profile_isolated():
     markdown = wrap_section_markdown(
         """# Security Assessment Report: Atlas
@@ -299,9 +432,8 @@ def test_professional_cover_precedes_body_and_is_profile_isolated():
     )
     interactive = HtmlReportExporter.build_full_html(markdown, project_name="Atlas")
 
-    cover_start = professional.index('<section class="report-cover"')
-    metadata_start = professional.index('<section class="report-section report-header-metadata">')
-    assert cover_start < metadata_start
+    assert professional.index('<section class="report-cover"') >= 0
+    assert '<section class="report-section report-header-metadata">' not in professional
     assert "break-after: page" in professional
     assert "--report-accent: #315f66" in professional
     assert '<main class="report-body" contenteditable="false"' in professional
@@ -310,6 +442,7 @@ def test_professional_cover_precedes_body_and_is_profile_isolated():
     assert "Confidential" in professional
     assert "Lead Tester</span>" not in professional
     assert '<section class="report-cover"' not in interactive
+    assert "Security Assessment Report: Atlas" in interactive
     assert "Professional Print is deliberately isolated" not in interactive
     assert '<main class="report-body" contenteditable="true"' in interactive
 
@@ -347,3 +480,74 @@ def test_professional_cover_omits_optional_metadata_when_unavailable():
 
     assert '<h1 class="report-cover-title">Atlas</h1>' in professional
     assert '<div class="report-cover-meta">' not in professional
+
+
+def test_representative_builtin_reports_follow_distinct_narratives(tmp_path):
+    repository = TemplateRepository(user_templates_dir=tmp_path / "templates")
+    renderer = TemplateRenderer()
+    loot = [
+        {
+            "id": "recon-1",
+            "category": "recon",
+            "type": "note",
+            "title": "Exposed administration service",
+            "content": "TCP/8443 exposed an administration interface.",
+            "severity": "medium",
+        },
+        {
+            "id": "access-1",
+            "category": "access",
+            "type": "flag",
+            "title": "Authentication bypass",
+            "content": "user.txt",
+            "severity": "high",
+        },
+        {
+            "id": "privesc-1",
+            "category": "privesc",
+            "type": "flag",
+            "title": "Privilege escalation",
+            "content": "root.txt",
+            "severity": "critical",
+        },
+    ]
+    context = ReportContext(
+        loot_entries=loot,
+        project_name="Atlas",
+        target_ip="10.10.10.42",
+        metadata={"client": "Northwind", "classification": "Confidential"},
+    )
+
+    standard = renderer.render(repository.get_template("pentest_standard_en"), context)
+    walkthrough = renderer.render(repository.get_template("ctf_walkthrough_en"), context)
+    executive = renderer.render(repository.get_template("pentest_executive_en"), context)
+
+    assert "## 3. Attack Path / Assessment Narrative" in standard
+    assert standard.count("## 4. Technical Findings") == 1
+    assert "section:start:phase_section" not in standard
+    assert "## 1. Reconnaissance & Port Scanning" in walkthrough
+    assert "## 2. Initial Access & User Flag" in walkthrough
+    assert "user.txt" in walkthrough
+    assert "root.txt" in walkthrough
+    assert "section:start:attack_path" not in walkthrough
+    assert "1. Executive Summary & Findings Overview" in executive
+    assert "3. Priority Actions" in executive
+    assert "section:start:phase_section" not in executive
+    assert "section:start:finding_section" not in executive
+
+    for name, markdown, language in (
+        ("pentest-standard", standard, "en"),
+        ("ctf-walkthrough", walkthrough, "en"),
+        ("pentest-executive", executive, "en"),
+    ):
+        output_path = tmp_path / f"{name}.html"
+        assert HtmlReportExporter.export_to_file(
+            markdown,
+            output_path,
+            project_name="Atlas",
+            language=language,
+            profile=ReportExportProfile.PROFESSIONAL_PRINT,
+        )
+        html = output_path.read_text(encoding="utf-8")
+        assert 'data-report-profile="professional_print"' in html
+        assert "spectre:section" not in html

@@ -650,6 +650,8 @@
     "template_editor.sec_summary": "Executive Summary & Findings-Matrix",
     "template_editor.sec_scope": "Scope & Limitations",
     "template_editor.sec_phase": "Phasen-Sektion (Loot-Kategorie)",
+    "template_editor.sec_attack_path": "Angriffspfad / Assessment-Verlauf",
+    "template_editor.sec_findings": "Gruppierte technische Findings",
     "template_editor.sec_remediation": "Remediation & Maßnahmenplan",
     "template_editor.sec_appendix": "Anhang (Befehlsverlauf & Screenshots)",
     "template_manager.available_templates": "Verfügbare Report-Templates:",

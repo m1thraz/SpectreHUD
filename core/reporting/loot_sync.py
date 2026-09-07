@@ -180,12 +180,34 @@ def _find_h2_sections(
     return sections
 
 
+def _grouped_section_categories(section: Any) -> List[str]:
+    configured = getattr(section, "options", {}).get("categories", [])
+    valid_ids = {str(category.get("id")) for category in CATEGORIES}
+    if isinstance(configured, list):
+        categories = [str(category) for category in configured if str(category) in valid_ids]
+        if categories:
+            return categories
+    return [str(category.get("id")) for category in CATEGORIES]
+
+
 def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
     """Resolves category_id -> expected H2 section heading from the active template or defaults."""
     heading_map: Dict[str, str] = {}
     if template and hasattr(template, "sections"):
         for sec in template.sections:
-            if getattr(sec, "type", None) == "phase_section":
+            section_type = getattr(sec, "type", None)
+            if section_type == "finding_section":
+                language = str(getattr(template, "language", "en") or "en")
+                default_title = (
+                    "Technische Findings"
+                    if language.lower().startswith("de")
+                    else "Technical Findings"
+                )
+                for cat_id in _grouped_section_categories(sec):
+                    heading_map[str(cat_id)] = str(
+                        getattr(sec, "title", None) or default_title
+                    )
+            elif section_type == "phase_section":
                 cat_id = str(getattr(sec, "category_id", None) or "misc")
                 cat_obj = next((c for c in CATEGORIES if str(c.get("id")) == cat_id), None)
                 default_name = str(cat_obj.get("name")) if cat_obj else cat_id.capitalize()
@@ -200,11 +222,23 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
     return heading_map
 
 
-def _render_loot_block_text(entry: Mapping[str, Any], lang: str = "de") -> str:
+def _render_loot_block_text(
+    entry: Mapping[str, Any], lang: str = "de", *, include_phase: bool = False
+) -> str:
     from core.reporting.template_engine import _render_loot_entry_block
 
-    lines = _render_loot_entry_block(dict(entry), lang=lang)
+    lines = _render_loot_entry_block(dict(entry), lang=lang, include_phase=include_phase)
     return "\n".join(lines) + "\n"
+
+
+def _uses_grouped_findings(template: Optional[Any], category_id: str) -> bool:
+    if not template or not hasattr(template, "sections"):
+        return False
+    return any(
+        getattr(section, "type", None) == "finding_section"
+        and category_id in _grouped_section_categories(section)
+        for section in template.sections
+    )
 
 
 def _match_section_for_category(
@@ -249,8 +283,15 @@ def _compute_section_insertion(
     """Determines insertion position, replacement length, and insertion content for a section."""
     empty_notice_de = "*Keine Einträge in dieser Phase.*"
     empty_notice_en = "*No entries captured for this phase.*"
+    empty_finding_notice_de = "*Keine technischen Findings dokumentiert.*"
+    empty_finding_notice_en = "*No technical findings are documented.*"
     empty_notice_match = None
-    for enotice in (empty_notice_de, empty_notice_en):
+    for enotice in (
+        empty_notice_de,
+        empty_notice_en,
+        empty_finding_notice_de,
+        empty_finding_notice_en,
+    ):
         if enotice in sec_text:
             empty_notice_match = enotice
             break
@@ -347,6 +388,7 @@ def append_missing_loot_to_text(
         section_bounds.append((title, c_start, s_end))
 
     insertions: List[Tuple[int, int, str]] = []
+    matched_blocks: Dict[Tuple[int, int], Tuple[str, List[str]]] = {}
     fallback_entries: List[Dict[str, Any]] = []
     fallback_categories: List[str] = []
 
@@ -360,11 +402,23 @@ def append_missing_loot_to_text(
                 fallback_categories.append(cat_id)
             continue
 
-        sec_title, c_start, s_end = matched_section
-        sec_text = report_text[c_start:s_end]
+        _sec_title, c_start, s_end = matched_section
+        include_phase = _uses_grouped_findings(template, cat_id)
+        rendered = "".join(
+            _render_loot_block_text(e, lang=language, include_phase=include_phase)
+            for e in reversed(cat_entries)
+        )
+        key = (c_start, s_end)
+        if key not in matched_blocks:
+            matched_blocks[key] = (report_text[c_start:s_end], [])
+        matched_blocks[key][1].append(rendered)
 
-        rendered_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(cat_entries))
-        insertions.append(_compute_section_insertion(sec_text, c_start, s_end, rendered_blocks, report_text))
+    for (c_start, s_end), (sec_text, blocks) in matched_blocks.items():
+        insertions.append(
+            _compute_section_insertion(
+                sec_text, c_start, s_end, "".join(blocks), report_text
+            )
+        )
 
     # Bottom-up application keeps offsets calculated from the original text valid.
     insertions.sort(key=lambda x: x[0], reverse=True)

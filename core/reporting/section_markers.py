@@ -11,6 +11,8 @@ KNOWN_SECTION_TYPES = frozenset(
         "executive_summary",
         "scope_limitations",
         "phase_section",
+        "attack_path",
+        "finding_section",
         "remediation_table",
         "appendix",
     }

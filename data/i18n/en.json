@@ -650,6 +650,8 @@
     "template_editor.sec_summary": "Executive Summary & Findings Matrix",
     "template_editor.sec_scope": "Scope & Limitations",
     "template_editor.sec_phase": "Phase Section (Loot Category)",
+    "template_editor.sec_attack_path": "Attack Path / Assessment Narrative",
+    "template_editor.sec_findings": "Grouped Technical Findings",
     "template_editor.sec_remediation": "Remediation & Action Plan",
     "template_editor.sec_appendix": "Appendix (Command History & Screenshots)",
     "template_manager.available_templates": "Available Report Templates:",

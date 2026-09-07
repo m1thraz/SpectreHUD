@@ -52,7 +52,7 @@ def _semantic_finding_html(body_html: str) -> str:
     )
 
     meta_items = []
-    for label in ("Target", "Observed", "Beobachtet"):
+    for label in ("Target", "Phase", "Observed", "Beobachtet"):
         match = re.search(
             rf"<p><strong>{label}:</strong>\s*(.*?)</p>", body_html, re.DOTALL
         )
@@ -134,12 +134,16 @@ def phase_section_has_meaningful_content(markdown: str) -> bool:
     ignored = {
         "*Keine Einträge in dieser Phase.*",
         "*No entries captured for this phase.*",
+        "*Keine technischen Findings dokumentiert.*",
+        "*No technical findings are documented.*",
         "_Eigene Anmerkungen zu dieser Phase:_",
         "_Notes & observations for this phase:_",
         ">",
     }
     for index, line in enumerate(cleaned.splitlines()):
         stripped = line.strip()
+        if stripped.startswith(("<!-- spectre:pagebreak", "<!-- spectre:spacer:")):
+            continue
         if index == 0 and stripped.startswith("## "):
             continue
         if stripped and stripped not in ignored:

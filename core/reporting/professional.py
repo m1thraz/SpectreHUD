@@ -152,3 +152,97 @@ def normalize_professional_severity(body_html: str) -> str:
         normalized,
         flags=re.DOTALL,
     )
+
+
+def _content_lines(markdown: str) -> list[str]:
+    return [
+        line.strip()
+        for line in markdown.splitlines()
+        if line.strip()
+        and line.strip() != "---"
+        and not line.strip().startswith("<!-- spectre:pagebreak")
+        and not line.strip().startswith("<!-- spectre:spacer:")
+    ]
+
+
+def professional_section_has_meaningful_content(section_type: str, markdown: str) -> bool:
+    """Keep a section unless only its generated editing scaffold remains."""
+    lines = _content_lines(markdown)
+    if section_type == "header_metadata":
+        return any(not (line.startswith("# ") or line.startswith("|")) for line in lines)
+    if section_type in {"phase_section", "finding_section"}:
+        from core.reporting.findings import phase_section_has_meaningful_content
+
+        return phase_section_has_meaningful_content(markdown)
+    if section_type == "attack_path":
+        empty_notices = {
+            "*Kein dokumentierter Angriffspfad vorhanden.*",
+            "*No documented attack path is available.*",
+        }
+        return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+    if section_type == "executive_summary":
+        if any(re.match(r"^\|\s*\d+\s*\|", line) for line in lines):
+            return True
+        for line in lines:
+            if line.startswith(("## ", "### ", "|")):
+                continue
+            if re.match(r"^- \*\*.+:\*\*$", line):
+                continue
+            if re.match(r"^\*\*(?:Total|Gesamt):\*\*", line):
+                counts = [
+                    int(value)
+                    for value in re.findall(
+                        r"(\d+)\s+(?:Critical|High|Medium|Low)", line
+                    )
+                ]
+                if counts and not any(counts):
+                    continue
+            return True
+        return False
+    if section_type == "scope_limitations":
+        return any(
+            not line.startswith("## ") and not re.match(r"^- \*\*.+:\*\*$", line)
+            for line in lines
+        )
+    if section_type == "remediation_table":
+        for line in lines:
+            if line.startswith("## ") or re.match(r"^\|[\s\-:|]+\|$", line):
+                continue
+            if line.startswith(("| Priority |", "| Priorität |", "| |")):
+                continue
+            return True
+        return False
+    if section_type == "appendix":
+        empty_notices = {
+            "*Keine Clipboard-Historie aufgezeichnet.*",
+            "*No clipboard history recorded.*",
+            "*Keine Screenshots in diesem Projekt vorhanden.*",
+            "*No screenshots captured in this project.*",
+        }
+        return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+    return bool(lines)
+
+
+def prune_professional_section_html(section_type: str, body_html: str) -> str:
+    if section_type in {"executive_summary", "scope_limitations"}:
+        body_html = re.sub(r"<li><strong>[^<]+:</strong></li>", "", body_html)
+        body_html = re.sub(
+            r"<h3>(?:Key Highlights|Kernaussagen)</h3>\s*<ul>\s*</ul>",
+            "",
+            body_html,
+        )
+    if section_type == "appendix":
+        body_html = re.sub(
+            r"<h2>[^<]*(?:Terminal Command History|Befehlsverlauf)[^<]*</h2>\s*"
+            r"<p><em>(?:No clipboard history recorded\.|Keine Clipboard-Historie aufgezeichnet\.)</em></p>"
+            r"\s*(?:<hr>\s*)?",
+            "",
+            body_html,
+        )
+        body_html = re.sub(
+            r"(?:<hr>\s*)?<h2>[^<]*Screenshots</h2>\s*"
+            r"<p><em>(?:No screenshots captured in this project\.|Keine Screenshots in diesem Projekt vorhanden\.)</em></p>",
+            "",
+            body_html,
+        )
+    return body_html

@@ -16,7 +16,12 @@ from core.reporting.loot_sync import (
     preserve_markers_in_preview_roundtrip,
     strip_report_markers,
 )
-from core.reporting.template_engine import ReportTemplate, TemplateSection
+from core.reporting.template_engine import (
+    ReportContext,
+    ReportTemplate,
+    TemplateRenderer,
+    TemplateSection,
+)
 
 
 class TestLootReportSync(unittest.TestCase):
@@ -378,6 +383,67 @@ Port 80, 22, 443 open
         reconciled = preserve_markers_in_preview_roundtrip(first.text, converted)
         self.assertIn("<!-- spectre:finding:start:loot_11111111 -->", reconciled)
         self.assertIn("<!-- spectre:finding:end:loot_11111111 -->", reconciled)
+
+    def test_grouped_finding_section_adds_each_category_once_with_phase(self):
+        template = ReportTemplate(
+            id="grouped",
+            name="Grouped",
+            language="en",
+            category="pentest",
+            complexity="complex",
+            sections=[
+                TemplateSection(
+                    type="finding_section",
+                    title="4. Technical Findings",
+                    options={"categories": ["recon", "access"]},
+                )
+            ],
+        )
+        empty_report = TemplateRenderer().render(template, ReportContext())
+
+        first = append_missing_loot_to_text(
+            empty_report,
+            [self.entry_a, self.entry_b],
+            template=template,
+            language="en",
+        )
+        second = append_missing_loot_to_text(
+            first.text,
+            [self.entry_a, self.entry_b],
+            template=template,
+            language="en",
+        )
+
+        self.assertEqual(first.added_count, 2)
+        self.assertFalse(first.used_fallback)
+        self.assertEqual(first.text.count("## 4. Technical Findings"), 1)
+        self.assertEqual(first.text.count("spectre:loot:loot_11111111:"), 1)
+        self.assertEqual(first.text.count("spectre:loot:loot_22222222:"), 1)
+        self.assertIn("**Phase:** Reconnaissance & Enumeration", first.text)
+        self.assertIn("**Phase:** Initial Access & Exploitation", first.text)
+        self.assertNotIn("*No technical findings are documented.*", first.text)
+        self.assertEqual(second.added_count, 0)
+        self.assertEqual(second.text, first.text)
+
+    def test_grouped_finding_section_without_category_options_accepts_all(self):
+        template = ReportTemplate(
+            id="grouped-default",
+            name="Grouped Default",
+            language="en",
+            category="pentest",
+            complexity="complex",
+            sections=[TemplateSection(type="finding_section", title="Findings")],
+        )
+        empty_report = TemplateRenderer().render(template, ReportContext())
+
+        result = append_missing_loot_to_text(
+            empty_report, [self.entry_a], template=template, language="en"
+        )
+
+        self.assertEqual(result.added_count, 1)
+        self.assertFalse(result.used_fallback)
+        self.assertIn("### Nmap Port Scan", result.text)
+        self.assertIn("**Phase:** Reconnaissance & Enumeration", result.text)
 
     def test_legacy_finding_bytes_remain_untouched_when_new_loot_is_added(self):
         legacy = (

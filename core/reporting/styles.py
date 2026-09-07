@@ -806,6 +806,16 @@ body[data-report-profile="professional_print"] .report-section h3 {
     font-weight: 650;
 }
 
+body[data-report-profile="professional_print"] .report-attack-path ol {
+    margin: 0;
+    padding-left: 24px;
+}
+
+body[data-report-profile="professional_print"] .report-attack-path li {
+    margin: 0 0 10px;
+    padding-left: 6px;
+}
+
 body[data-report-profile="professional_print"] p {
     margin-bottom: 11px;
     color: var(--report-text);

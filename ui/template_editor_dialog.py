@@ -34,6 +34,8 @@ SECTION_TYPE_KEYS = {
     "executive_summary": ("template_editor.sec_summary", "Executive Summary & Findings-Matrix"),
     "scope_limitations": ("template_editor.sec_scope", "Scope & Limitations"),
     "phase_section": ("template_editor.sec_phase", "Phasen-Sektion (Loot-Kategorie)"),
+    "attack_path": ("template_editor.sec_attack_path", "Angriffspfad / Assessment-Verlauf"),
+    "finding_section": ("template_editor.sec_findings", "Gruppierte technische Findings"),
     "remediation_table": ("template_editor.sec_remediation", "Remediation & Maßnahmenplan"),
     "appendix": ("template_editor.sec_appendix", "Anhang (Befehlsverlauf & Screenshots)"),
 }
@@ -131,10 +133,16 @@ class SectionEditDialog(QDialog):
         title = self.txt_title.text().strip() or None
         cat_id = self.combo_category.currentData() if sec_type == "phase_section" else None
         page_break = self.chk_page_break.isChecked()
+        options = (
+            dict(self._initial_section.options)
+            if self._initial_section and sec_type == self._initial_section.type
+            else {}
+        )
         return TemplateSection(
             type=sec_type,
             title=title,
             category_id=cat_id,
+            options=options,
             page_break_before=page_break,
         )
 

@@ -5,7 +5,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from core.reporting.template_engine import ReportTemplate, TemplateSection
+from core.loot.manager import CATEGORIES
+from core.reporting.section_markers import KNOWN_SECTION_TYPES
+from core.reporting.template_engine import (
+    ReportContext,
+    ReportTemplate,
+    TemplateRenderer,
+    TemplateSection,
+)
 from core.reporting.template_repository import TemplateRepository
 
 
@@ -49,6 +56,88 @@ class TestTemplateRepository(unittest.TestCase):
             self.assertIn(template.category, ("ctf", "pentest"))
             self.assertIn(template.complexity, ("simple", "complex"))
             self.assertGreater(len(template.sections), 0)
+
+    def test_builtin_sections_and_categories_are_valid(self):
+        valid_categories = {str(category["id"]) for category in CATEGORIES}
+
+        for template in self.repo.get_builtin_templates():
+            for section in template.sections:
+                self.assertIn(section.type, KNOWN_SECTION_TYPES, template.id)
+                if section.category_id is not None:
+                    self.assertIn(section.category_id, valid_categories, template.id)
+                for category_id in section.options.get("categories", []):
+                    self.assertIn(category_id, valid_categories, template.id)
+
+    def test_builtin_language_pairs_share_the_same_structure(self):
+        builtins = {template.id: template for template in self.repo.get_builtin_templates()}
+
+        for family in (
+            "ctf_quick",
+            "ctf_walkthrough",
+            "pentest_standard",
+            "pentest_executive",
+        ):
+            de_sections = builtins[f"{family}_de"].sections
+            en_sections = builtins[f"{family}_en"].sections
+            self.assertEqual(
+                [(section.type, section.category_id) for section in de_sections],
+                [(section.type, section.category_id) for section in en_sections],
+            )
+            self.assertEqual(
+                [section.options.get("categories") for section in de_sections],
+                [section.options.get("categories") for section in en_sections],
+            )
+
+    def test_pentest_and_ctf_templates_have_distinct_narratives(self):
+        builtins = {template.id: template for template in self.repo.get_builtin_templates()}
+        standard_types = [
+            section.type for section in builtins["pentest_standard_en"].sections
+        ]
+        executive_types = [
+            section.type for section in builtins["pentest_executive_en"].sections
+        ]
+
+        self.assertEqual(
+            standard_types,
+            [
+                "header_metadata",
+                "executive_summary",
+                "scope_limitations",
+                "attack_path",
+                "finding_section",
+                "remediation_table",
+                "appendix",
+            ],
+        )
+        self.assertEqual(
+            executive_types,
+            [
+                "header_metadata",
+                "executive_summary",
+                "scope_limitations",
+                "remediation_table",
+            ],
+        )
+        for template_id in (
+            "ctf_quick_de",
+            "ctf_quick_en",
+            "ctf_walkthrough_de",
+            "ctf_walkthrough_en",
+        ):
+            section_types = [section.type for section in builtins[template_id].sections]
+            self.assertIn("phase_section", section_types)
+            self.assertNotIn("attack_path", section_types)
+            self.assertNotIn("finding_section", section_types)
+
+    def test_all_builtin_templates_render_every_declared_section(self):
+        renderer = TemplateRenderer()
+
+        for template in self.repo.get_builtin_templates():
+            rendered = renderer.render(template, ReportContext())
+            starts = rendered.count("<!-- spectre:section:start:")
+            ends = rendered.count("<!-- spectre:section:end:")
+            self.assertEqual(starts, len(template.sections), template.id)
+            self.assertEqual(ends, len(template.sections), template.id)
 
     def test_frozen_build_reads_bundled_report_templates(self):
         """The one-file EXE uses its unpacked report-template directory."""

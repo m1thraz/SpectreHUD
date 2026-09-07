@@ -61,6 +61,19 @@ class TestTemplateDialogs(unittest.TestCase):
         dlg2 = SectionEditDialog(section=configured_with_pb)
         self.assertTrue(dlg2.chk_page_break.isChecked())
 
+    def test_section_edit_dialog_preserves_grouping_options(self):
+        section = TemplateSection(
+            type="finding_section",
+            title="Technical Findings",
+            options={"categories": ["recon", "access"]},
+        )
+
+        dialog = SectionEditDialog(section=section)
+        configured = dialog.get_section()
+
+        self.assertEqual(configured.type, "finding_section")
+        self.assertEqual(configured.options, {"categories": ["recon", "access"]})
+
     def test_template_editor_section_badge(self):
         """Tests that sections with page_break_before show a badge in the list."""
         dlg = TemplateEditorDialog()

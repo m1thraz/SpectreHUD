@@ -224,7 +224,18 @@ def _render_scope_limitations(section: TemplateSection, context: ReportContext, 
     return "\n".join(lines)
 
 
-def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[str]:
+def _category_name(category_id: str) -> str:
+    category = next((item for item in CATEGORIES if item["id"] == category_id), None)
+    return str(category["name"] if category else category_id.capitalize())
+
+
+def _category_label(category_id: str) -> str:
+    return re.sub(r"^\d+\.\s*", "", _category_name(category_id))
+
+
+def _render_loot_entry_block(
+    entry: Dict[str, Any], lang: str = "de", *, include_phase: bool = False
+) -> List[str]:
     """Emit the stable loot-block shape shared by regeneration and additive sync.
 
     When an ID exists, its canonical loot marker must immediately precede the heading;
@@ -248,6 +259,9 @@ def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[st
     meta = [f"**Severity:** {render_severity_badge(severity, include_emoji=False)}"]
     if entry.get("target_ip"):
         meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
+    if include_phase and entry.get("category"):
+        phase_label = "**Phase:**"
+        meta.append(f"{phase_label} {_category_label(str(entry.get('category')))}")
     if entry.get("timestamp"):
         time_label = "**Beobachtet:**" if lang == "de" else "**Observed:**"
         meta.append(f"{time_label} {_wrap_inline_code(str(entry.get('timestamp')))}")
@@ -281,8 +295,7 @@ def _render_loot_entry_block(entry: Dict[str, Any], lang: str = "de") -> List[st
 def _render_phase_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
     """Emit one category oldest-first with the notes insertion anchor after its loot."""
     category_id = section.category_id or "misc"
-    cat_obj = next((c for c in CATEGORIES if c["id"] == category_id), None)
-    cat_name = cat_obj["name"] if cat_obj else category_id.capitalize()
+    cat_name = _category_name(category_id)
     sec_title = section.title or cat_name
 
     entries = [e for e in context.loot_entries if e.get("category") == category_id]
@@ -303,6 +316,73 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
     placeholder = SECTION_NOTES_PLACEHOLDER_DE if lang == "de" else SECTION_NOTES_PLACEHOLDER_EN
     lines.append(placeholder)
     lines.append("")
+    return "\n".join(lines)
+
+
+def _section_categories(section: TemplateSection) -> List[str]:
+    configured = section.options.get("categories", [])
+    valid_ids = {str(category["id"]) for category in CATEGORIES}
+    if not isinstance(configured, list):
+        return [str(category["id"]) for category in CATEGORIES]
+    categories = [str(category) for category in configured if str(category) in valid_ids]
+    return categories or [str(category["id"]) for category in CATEGORIES]
+
+
+def _render_attack_path(section: TemplateSection, context: ReportContext, lang: str) -> str:
+    title = section.title or (
+        "Angriffspfad / Assessment-Verlauf"
+        if lang == "de"
+        else "Attack Path / Assessment Narrative"
+    )
+    lines = [f"## {title}", ""]
+    unnamed = "Unbenannt" if lang == "de" else "Unnamed"
+    step = 0
+    for category_id in _section_categories(section):
+        entries = [
+            entry for entry in context.loot_entries if entry.get("category") == category_id
+        ]
+        if not entries:
+            continue
+        step += 1
+        titles = ", ".join(
+            str(entry.get("title") or unnamed) for entry in reversed(entries)
+        )
+        lines.append(f"{step}. **{_category_label(category_id)}** — {titles}")
+    if step == 0:
+        lines.append(
+            "*Kein dokumentierter Angriffspfad vorhanden.*"
+            if lang == "de"
+            else "*No documented attack path is available.*"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_finding_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
+    title = section.title or (
+        "Technische Findings" if lang == "de" else "Technical Findings"
+    )
+    categories = _section_categories(section)
+    lines = [f"## {title}", ""]
+    finding_count = 0
+    for category_id in categories:
+        entries = [
+            entry for entry in context.loot_entries if entry.get("category") == category_id
+        ]
+        for entry in reversed(entries):
+            finding_count += 1
+            lines.extend(_render_loot_entry_block(entry, lang=lang, include_phase=True))
+    if finding_count == 0:
+        lines.extend(
+            [
+                "*Keine technischen Findings dokumentiert.*"
+                if lang == "de"
+                else "*No technical findings are documented.*",
+                "",
+            ]
+        )
+    placeholder = SECTION_NOTES_PLACEHOLDER_DE if lang == "de" else SECTION_NOTES_PLACEHOLDER_EN
+    lines.extend([placeholder, ""])
     return "\n".join(lines)
 
 
@@ -436,6 +516,8 @@ class TemplateRenderer:
         "executive_summary": _render_executive_summary,
         "scope_limitations": _render_scope_limitations,
         "phase_section": _render_phase_section,
+        "attack_path": _render_attack_path,
+        "finding_section": _render_finding_section,
         "remediation_table": _render_remediation_table,
         "appendix": _render_appendix,
     }

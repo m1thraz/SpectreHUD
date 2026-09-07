@@ -8,6 +8,7 @@
   "sections": [
     { "type": "header_metadata", "title": "CTF Quick-Summary" },
     { "type": "phase_section", "category_id": "access", "title": "Initial Access" },
-    { "type": "phase_section", "category_id": "privesc", "title": "Privilege Escalation" }
+    { "type": "phase_section", "category_id": "privesc", "title": "Privilege Escalation" },
+    { "type": "phase_section", "category_id": "misc", "title": "Flags, Proof & Notizen" }
   ]
 }
