@@ -37,6 +37,7 @@ class SnippetCard(QFrame):
         self.snippet = snippet
         self.variables = variables
         self._rendered_command = ""
+        self._copy_reset_timers: Dict[QPushButton, QTimer] = {}
         self._init_ui()
         self.update_variables(variables)
 
@@ -217,7 +218,13 @@ class SnippetCard(QFrame):
         btn.style().unpolish(btn)
         btn.style().polish(btn)
 
-        QTimer.singleShot(1200, lambda: self._reset_copy_btn(btn))
+        timer = self._copy_reset_timers.get(btn)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(lambda target=btn: self._reset_copy_btn(target))
+            self._copy_reset_timers[btn] = timer
+        timer.start(1200)
         self.copied.emit(text_to_copy)
 
     def _reset_copy_btn(self, btn: Optional[QPushButton] = None) -> None:

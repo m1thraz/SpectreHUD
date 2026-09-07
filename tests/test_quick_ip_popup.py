@@ -66,6 +66,13 @@ class TestQuickIpPopup(unittest.TestCase):
 
         self.assertNotEqual(self.popup.btn_auto.text(), "Auto")
 
+    @patch("core.net_detector.NetDetector.detect_attacker_ip", return_value=None)
+    def test_auto_feedback_timer_is_owned_by_popup(self, _mock_detect):
+        self.popup.auto_detect_ip()
+
+        self.assertIs(self.popup._auto_reset_timer.parent(), self.popup)
+        self.assertTrue(self.popup._auto_reset_timer.isActive())
+
     def test_esc_key_closes_popup(self):
         self.popup.show()
         self.assertTrue(self.popup.isVisible())

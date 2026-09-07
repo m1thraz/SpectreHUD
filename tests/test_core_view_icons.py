@@ -40,6 +40,25 @@ def test_snippet_card_uses_icons_for_universal_actions(qapp):
     assert card.btn_fav.icon().cacheKey() != inactive_key
 
 
+def test_snippet_copy_feedback_timer_is_owned_by_card(qapp):
+    card = SnippetCard(
+        {
+            "id": "custom-1",
+            "title": "Custom",
+            "template": "whoami",
+            "category": "custom",
+            "is_custom": True,
+        },
+        {},
+    )
+
+    card._perform_clipboard_copy("whoami")
+
+    timer = card._copy_reset_timers[card.btn_copy]
+    assert timer.parent() is card
+    assert timer.isActive()
+
+
 def test_loot_card_uses_icons_for_card_actions(qapp):
     card = LootCard(
         {"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"}

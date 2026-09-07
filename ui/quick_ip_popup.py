@@ -41,6 +41,9 @@ class QuickIpPopup(QWidget):
     ):
         super().__init__(parent)
         self._has_been_active = False
+        self._auto_reset_timer = QTimer(self)
+        self._auto_reset_timer.setSingleShot(True)
+        self._auto_reset_timer.timeout.connect(self._reset_auto_button)
         self._init_window()
         self._init_ui()
         self.set_values(target_ip, attacker_ip)
@@ -149,10 +152,12 @@ class QuickIpPopup(QWidget):
         if detected:
             self.txt_attacker.setText(detected)
             self.btn_auto.setText("✓ " + detected)
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
         else:
             self.btn_auto.setText(t("varbar.no_ip", "Keine IP"))
-            QTimer.singleShot(2000, lambda: self.btn_auto.setText(t("varbar.auto", "Auto")))
+        self._auto_reset_timer.start(2000)
+
+    def _reset_auto_button(self) -> None:
+        self.btn_auto.setText(t("varbar.auto", "Auto"))
 
     def eventFilter(self, watched, event: QEvent) -> bool:
         """Intercepts Esc key in line edits to close popup immediately."""
@@ -250,4 +255,3 @@ class QuickIpPopup(QWidget):
         # painting before focus is set; no repeated timer so click-outside still dismisses
         self._force_focus_target()
         QTimer.singleShot(0, self._force_focus_target)
-
