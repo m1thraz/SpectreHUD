@@ -275,7 +275,7 @@ class HistoryController(QObject):
             show_empty_state_fn(
                 t(
                     "history.empty_state",
-                    "No clipboard history recorded yet. Enable REC (Ctrl+P) and copy commands in your terminal.",
+                    "No clipboard history recorded yet. Enable REC (Ctrl+Alt+R) and copy commands in your terminal.",
                 )
             )
             return []

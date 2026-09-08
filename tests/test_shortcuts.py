@@ -52,6 +52,9 @@ def test_core_shortcuts_config_reflection():
 
     assert shortcut_map["global_toggle"].sequence == "Ctrl+Alt+X"
     assert shortcut_map["global_quick_loot"].sequence == "Ctrl+Alt+L"
+    assert shortcut_map["global_recorder"].sequence == "Ctrl+Alt+R"
+    assert shortcut_map["global_recorder"].scope == "global"
+    assert "app_toggle_rec" not in shortcut_map
 
 
 def test_shortcuts_dialog_lifecycle():

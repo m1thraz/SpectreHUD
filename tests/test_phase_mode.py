@@ -185,6 +185,13 @@ def test_phase_toast_hud_properties(qapp):
     hud.show_phase(None)
     assert hud.badge.text() == "NONE"
 
+    hud.show_recording(True)
+    assert hud.badge.text() == "REC"
+    assert "Recording" in hud.lbl_phase_name.text()
+
+    hud.show_phase("access")
+    assert "PHASE" in hud.lbl_category.text()
+
     hud.close()
 
 

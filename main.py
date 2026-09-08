@@ -240,6 +240,9 @@ def main():
         hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
         hotkey_listener.quick_ip_requested.connect(window.app.trigger_quick_ip)
         hotkey_listener.quick_loot_requested.connect(window.app.trigger_quick_loot)
+        hotkey_listener.recorder_requested.connect(
+            lambda: window.app._toggle_pause_history(show_shortcut_feedback=True)
+        )
         hotkey_listener.phase_requested.connect(
             lambda order: window.app.activate_phase_by_order(order, source="hotkey")
         )
@@ -293,7 +296,7 @@ def main():
         tray_menu.addAction(act_snip)
 
         act_rec_toggle = QAction(
-            t("tray.rec_enable", "Clipboard-Logger aktivieren (Ctrl+P)"),
+            t("tray.rec_enable", "Clipboard-Logger aktivieren (Ctrl+Alt+R)"),
             tray_menu,
         )
         act_rec_toggle.triggered.connect(window.app._toggle_pause_history)
@@ -333,9 +336,9 @@ def main():
             status = "REC: ON" if is_active else "REC: Paused"
             tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
             rec_text = (
-                t("tray.rec_pause", "Clipboard-Logger pausieren (Ctrl+P)")
+                t("tray.rec_pause", "Clipboard-Logger pausieren (Ctrl+Alt+R)")
                 if is_active
-                else t("tray.rec_resume", "Clipboard-Logger fortsetzen (Ctrl+P)")
+                else t("tray.rec_resume", "Clipboard-Logger fortsetzen (Ctrl+Alt+R)")
             )
             act_rec_toggle.setText(rec_text)
 

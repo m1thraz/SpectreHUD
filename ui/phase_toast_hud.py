@@ -106,6 +106,7 @@ class PhaseToastHUD(QWidget):
         Updates HUD content to the given phase and displays it centered
         in the upper third of the monitor containing the mouse cursor.
         """
+        self.lbl_category.setText(t("phases.hud_category", "ACTIVE PENTEST PHASE"))
         if not phase_or_key:
             self.badge.setText("NONE")
             self.badge.setStyleSheet(
@@ -142,6 +143,18 @@ class PhaseToastHUD(QWidget):
             )
             self.lbl_phase_name.setText(f"{phase.order}. {phase.long}")
 
+        self._reposition_to_cursor_screen()
+        self.show()
+        self._timer.start(self.DISPLAY_DURATION_MS)
+
+    def show_recording(self, is_active: bool) -> None:
+        self.badge.setText("REC")
+        self.lbl_category.setText(t("recorder.hud_category", "CLIPBOARD RECORDER"))
+        self.lbl_phase_name.setText(
+            t("recorder.hud_active", "Recording enabled")
+            if is_active
+            else t("recorder.hud_paused", "Recording paused")
+        )
         self._reposition_to_cursor_screen()
         self.show()
         self._timer.start(self.DISPLAY_DURATION_MS)

@@ -264,7 +264,6 @@ class HotkeySettingsPage(QWidget):
             ("Esc", t("settings.shortcut_esc", "Hide HUD overlay")),
             ("Ctrl + F", t("settings.shortcut_ctrl_f", "Focus spotlight command search")),
             ("Ctrl + N", t("settings.shortcut_ctrl_n", "Add new command / snippet")),
-            ("Ctrl + P", t("settings.shortcut_ctrl_p", "Pause / resume clipboard recorder")),
             ("Ctrl + S", t("settings.shortcut_ctrl_s", "Capture region screenshot")),
             (
                 "Ctrl + 1 / 2 / 3 / 4",

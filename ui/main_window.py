@@ -238,7 +238,6 @@ class MainWindow(QMainWindow):
         QShortcut(
             QKeySequence("Ctrl+Shift+X"), self, activated=lambda: self.app.trigger_screenshot()
         )
-        QShortcut(QKeySequence("Ctrl+P"), self, activated=lambda: self.app._toggle_pause_history())
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.request_quit)
         QShortcut(QKeySequence("Ctrl+,"), self, activated=lambda: self.app.open_settings_dialog())
         QShortcut(QKeySequence("Tab"), self, activated=lambda: self.app.toggle_mode())

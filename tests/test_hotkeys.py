@@ -17,6 +17,7 @@ class TestHotkeys(unittest.TestCase):
         self.assertEqual(cfg.quick_note, "<ctrl>+<alt>+n")
         self.assertEqual(cfg.quick_ip, "<ctrl>+<alt>+i")
         self.assertEqual(cfg.quick_loot, "<ctrl>+<alt>+l")
+        self.assertEqual(cfg.recorder, "<ctrl>+<alt>+r")
         self.assertEqual(cfg.quit, "<ctrl>+<alt>+q")
 
     def test_normalize_hotkey_strings(self):
@@ -78,6 +79,7 @@ class TestHotkeys(unittest.TestCase):
         quick_note_called = []
         quick_ip_called = []
         quick_loot_called = []
+        recorder_called = []
         quit_called = []
 
         listener.toggle_requested.connect(lambda: toggle_called.append(True))
@@ -85,6 +87,7 @@ class TestHotkeys(unittest.TestCase):
         listener.quick_note_requested.connect(lambda: quick_note_called.append(True))
         listener.quick_ip_requested.connect(lambda: quick_ip_called.append(True))
         listener.quick_loot_requested.connect(lambda: quick_loot_called.append(True))
+        listener.recorder_requested.connect(lambda: recorder_called.append(True))
         listener.quit_requested.connect(lambda: quit_called.append(True))
 
         listener._fire_trigger()
@@ -92,6 +95,7 @@ class TestHotkeys(unittest.TestCase):
         listener._fire_quick_note_trigger()
         listener._fire_quick_ip_trigger()
         listener._fire_quick_loot_trigger()
+        listener._fire_recorder_trigger()
         listener._fire_quit_trigger()
 
         self.assertEqual(len(toggle_called), 1)
@@ -99,7 +103,35 @@ class TestHotkeys(unittest.TestCase):
         self.assertEqual(len(quick_note_called), 1)
         self.assertEqual(len(quick_ip_called), 1)
         self.assertEqual(len(quick_loot_called), 1)
+        self.assertEqual(len(recorder_called), 1)
         self.assertEqual(len(quit_called), 1)
+
+    def test_start_registers_global_recorder_hotkey(self):
+        from core.platform import PlatformCapabilities
+
+        capabilities = PlatformCapabilities(
+            system="windows",
+            global_hotkeys=True,
+            screen_capture=True,
+            wayland=False,
+            x11=False,
+        )
+        listener = HotkeyListener(capabilities=capabilities)
+        hook = MagicMock()
+        fake_keyboard = ModuleType("pynput.keyboard")
+        fake_keyboard.GlobalHotKeys = MagicMock(return_value=hook)
+        fake_pynput = ModuleType("pynput")
+        fake_pynput.keyboard = fake_keyboard
+
+        with patch.dict(sys.modules, {"pynput": fake_pynput, "pynput.keyboard": fake_keyboard}):
+            self.assertTrue(listener.start())
+
+        mapping = fake_keyboard.GlobalHotKeys.call_args.args[0]
+        self.assertIs(mapping["<ctrl>+<alt>+r"].__self__, listener)
+        self.assertIs(
+            mapping["<ctrl>+<alt>+r"].__func__, HotkeyListener._fire_recorder_trigger
+        )
+        listener.stop()
 
     def test_hotkey_listener_respects_wayland_capability_restriction(self):
         """Ticket 21 & 23: On Wayland, listener is marked unavailable and start returns False gracefully."""
@@ -149,4 +181,3 @@ class TestHotkeys(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

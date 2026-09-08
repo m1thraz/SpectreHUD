@@ -9,6 +9,7 @@ semantic versioning.
 ### Added
 
 * Compact semantic Report Navigator for jumping to marked sections and findings without leaving the existing editor.
+* Global `Ctrl+Alt+R` clipboard recorder toggle with monitor-local recording state feedback.
 
 ## [2.1.3] - 2026-09-08
 

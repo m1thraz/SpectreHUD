@@ -462,9 +462,10 @@ class AppController(QObject):
     def toggle_mode(self) -> None:
         self.navigation_coord.toggle_mode()
 
-    def _toggle_pause_history(self) -> None:
-        """Toggle clipboard history logging pause state (Ctrl+P / tray action)."""
-        self.clipboard_coord.toggle_pause()
+    def _toggle_pause_history(self, *, show_shortcut_feedback: bool = False) -> None:
+        is_active = self.clipboard_coord.toggle_pause()
+        if show_shortcut_feedback:
+            self.phase_hud.show_recording(is_active)
 
     def _on_pills_width_changed(self, width: int) -> None:
         if self.active_mode == "cheatsheet":

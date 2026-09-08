@@ -132,7 +132,7 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator.setToolTip(
             t(
                 "header.rec_tooltip_paused",
-                "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
+                "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+Alt+R zum Starten der Aufzeichnung.",
             )
         )
         self.btn_rec_indicator.clicked.connect(self.toggle_rec_requested.emit)
@@ -392,7 +392,7 @@ class HeaderPanel(QFrame):
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_active",
-                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+P zum Pausieren.",
+                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+Alt+R zum Pausieren.",
                 )
             )
         else:
@@ -402,7 +402,7 @@ class HeaderPanel(QFrame):
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_paused",
-                    "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+P zum Starten der Aufzeichnung.",
+                    "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+Alt+R zum Starten der Aufzeichnung.",
                 )
             )
         self.btn_rec_indicator.style().unpolish(self.btn_rec_indicator)

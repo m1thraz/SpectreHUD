@@ -431,6 +431,16 @@ class TestAppController(unittest.TestCase):
             self.controller._toggle_pause_history()
             mock_pause.assert_called_once()
 
+        with (
+            patch.object(
+                self.controller.clipboard_coord, "toggle_pause", return_value=True
+            ) as mock_pause,
+            patch.object(self.controller.phase_hud, "show_recording") as mock_feedback,
+        ):
+            self.controller._toggle_pause_history(show_shortcut_feedback=True)
+            mock_pause.assert_called_once()
+            mock_feedback.assert_called_once_with(True)
+
         # 2. Pills width changed
         self.controller.active_mode = "cheatsheet"
         with patch.object(self.controller.cheatsheet_ctrl, "update_pills_width") as mock_width:

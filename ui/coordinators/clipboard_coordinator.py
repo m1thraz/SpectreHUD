@@ -41,9 +41,9 @@ class ClipboardCoordinator(QObject):
 
         self.clipboard_monitor.set_target_provider(self.target_provider)
 
-    def toggle_pause(self) -> None:
-        """Toggles clipboard history recording pause/resume state."""
-        self.history_ctrl.toggle_pause()
+    def toggle_pause(self) -> bool:
+        """Toggle recording and return whether recording is now active."""
+        return not self.history_ctrl.toggle_pause()
 
     def on_clipboard_entry_added(self, entry: Dict[str, Any]) -> None:
         """Handles a newly captured clipboard history item."""
