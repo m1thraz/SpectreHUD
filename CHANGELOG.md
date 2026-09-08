@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-09-08
+
 ### Added
 
 * Protected Report Editor metadata view that hides Spectre markers by default and exposes them through an explicit toolbar toggle.
@@ -252,7 +254,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...HEAD
+[2.1.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.0.9...v2.1.0
