@@ -9,6 +9,7 @@ semantic versioning.
 ### Fixed
 
 * Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
+* Keep the test runner's simulated Windows process-group check portable on Linux CI hosts.
 
 ## [2.1.4] - 2026-09-08
 

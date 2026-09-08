@@ -3,7 +3,6 @@
 import json
 import os
 import signal
-import subprocess
 import sys
 
 import pytest
@@ -168,7 +167,7 @@ def test_failure_helpers_prefer_terminal_node_ids_and_classify_infrastructure():
 def test_process_group_configuration_is_cross_platform():
     assert run_tests._process_group_options("posix") == {"start_new_session": True}
     assert run_tests._process_group_options("nt") == {
-        "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
+        "creationflags": run_tests.CREATE_NEW_PROCESS_GROUP
     }
 
 

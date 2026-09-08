@@ -24,6 +24,9 @@ TESTS_DIR = PROJECT_ROOT / "tests"
 LOG_ROOT = Path(tempfile.gettempdir()) / "spectrehud-tests"
 FAILURE_TAIL_LINES = 50
 DEFAULT_MAX_RETAINED_RUNS = 20
+# Keep the simulated Windows branch testable on POSIX, where subprocess does
+# not expose Windows creation flags.
+CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
 WORKER_CRASH_PATTERNS = (
     re.compile(r"node down:\s*not properly terminated", re.IGNORECASE),
     re.compile(r"worker .+ crashed while running", re.IGNORECASE),
@@ -214,7 +217,7 @@ def prune_artifacts(max_runs: int = DEFAULT_MAX_RETAINED_RUNS) -> None:
 def _process_group_options(platform_name: str | None = None) -> dict[str, Any]:
     platform_name = os.name if platform_name is None else platform_name
     if platform_name == "nt":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+        return {"creationflags": CREATE_NEW_PROCESS_GROUP}
     return {"start_new_session": True}
 
 
