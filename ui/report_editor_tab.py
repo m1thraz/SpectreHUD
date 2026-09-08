@@ -58,6 +58,7 @@ from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
 from core.reporting.outline import extract_headings
+from core.reporting.navigation import build_report_navigation
 from core.reporting.draft_manager import (
     discard_draft,
     get_draft,
@@ -271,6 +272,20 @@ class ReportEditorTab(QWidget):
         self.outline_menu.aboutToShow.connect(self._populate_outline_menu)
         self.btn_outline.setMenu(self.outline_menu)
         toolbar.addWidget(self.btn_outline)
+
+        self.btn_navigator = QPushButton(t("report.navigator", "Report Navigator ▾"))
+        self.btn_navigator.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
+        navigator_tooltip = t(
+            "report.navigator_tip", "Navigate to report sections and findings"
+        )
+        self.btn_navigator.setToolTip(navigator_tooltip)
+        self.btn_navigator.setAccessibleName(navigator_tooltip)
+        self.btn_navigator.setIcon(self._toolbar_icon("fa5s.sitemap"))
+        self.btn_navigator.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.navigator_menu = QMenu(self.btn_navigator)
+        self.navigator_menu.aboutToShow.connect(self._populate_navigator_menu)
+        self.btn_navigator.setMenu(self.navigator_menu)
+        toolbar.addWidget(self.btn_navigator)
 
         self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
@@ -1705,7 +1720,7 @@ class ReportEditorTab(QWidget):
 
     def _jump_to_heading_line(self, line_number: int) -> None:
         """Positions cursor at the given 1-based line number and ensures it is visible."""
-        block = self.editor.document().findBlockByLineNumber(line_number - 1)
+        block = self.editor.document().findBlockByNumber(line_number - 1)
         if block.isValid():
             cursor = self.editor.textCursor()
             cursor.setPosition(block.position())
@@ -1713,6 +1728,41 @@ class ReportEditorTab(QWidget):
             self.editor.ensureCursorVisible()
             self.editor.setFocus()
             self._sync_scroll_editor_to_preview()
+
+    def _populate_navigator_menu(self) -> None:
+        self.navigator_menu.clear()
+        navigation = build_report_navigation(self.editor.toPlainText())
+        groups = (
+            (t("report.navigator_sections", "Sections"), navigation.sections),
+            (t("report.navigator_findings", "Findings"), navigation.findings),
+        )
+        has_entries = False
+        for label, entries in groups:
+            if not entries:
+                continue
+            has_entries = True
+            submenu = self.navigator_menu.addMenu(label)
+            for entry in entries:
+                action = submenu.addAction(entry.title)
+                action.triggered.connect(
+                    lambda _checked=False, kind=entry.kind, identity=entry.identity: (
+                        self._navigate_to_report_item(kind, identity)
+                    )
+                )
+        if not has_entries:
+            action = self.navigator_menu.addAction(
+                t("report.navigator_empty", "No semantic sections or findings")
+            )
+            action.setEnabled(False)
+
+    def _navigate_to_report_item(self, kind: str, identity: str) -> None:
+        if self._view_mode == ViewMode.PREVIEW:
+            self._set_view_mode(ViewMode.EDITOR)
+        navigation = build_report_navigation(self.editor.toPlainText())
+        entries = navigation.sections if kind == "section" else navigation.findings
+        target = next((entry for entry in entries if entry.identity == identity), None)
+        if target is not None:
+            self._jump_to_heading_line(target.line_number)
 
     # ------------------------------------------------------------------ #
     # Crash Recovery & Draft Snapshots

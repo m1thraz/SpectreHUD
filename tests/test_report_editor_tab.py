@@ -374,6 +374,7 @@ class TestReportEditorTab(unittest.TestCase):
         action_buttons = (
             self.tab.btn_change_view,
             self.tab.btn_outline,
+            self.tab.btn_navigator,
             self.tab.btn_append_loot,
             self.tab.btn_regenerate,
             self.tab.btn_export,
@@ -386,6 +387,62 @@ class TestReportEditorTab(unittest.TestCase):
             self.assertTrue(action.isCheckable())
             self.assertFalse(action.icon().isNull())
             self.assertNotRegex(action.text(), "[📝◫👁️]")
+
+    def test_semantic_navigator_rebuilds_from_current_editor_text(self):
+        first = """<!-- spectre:section:start:executive_summary -->
+
+## First Summary
+
+<!-- spectre:section:end:executive_summary -->"""
+        second = first.replace("First Summary", "Updated Summary")
+        self.tab.editor.setPlainText(first)
+
+        self.tab._populate_navigator_menu()
+        sections_menu = self.tab.navigator_menu.actions()[0].menu()
+        self.assertEqual(sections_menu.actions()[0].text(), "First Summary")
+
+        self.tab.editor.setPlainText(second)
+        self.tab._populate_navigator_menu()
+        sections_menu = self.tab.navigator_menu.actions()[0].menu()
+        self.assertEqual(sections_menu.actions()[0].text(), "Updated Summary")
+
+    def test_semantic_navigation_preserves_document_and_dirty_state(self):
+        markdown = """<!-- spectre:section:start:phase_section:recon -->
+
+## Recon
+
+<!-- spectre:finding:start:finding-1 -->
+<!-- spectre:loot:finding-1:abcd -->
+### Service Exposure
+
+Evidence
+<!-- spectre:finding:end:finding-1 -->
+
+<!-- spectre:section:end:phase_section:recon -->"""
+        self.tab.editor.setPlainText(markdown)
+        self.tab._set_dirty(False)
+
+        self.tab._navigate_to_report_item("finding", "finding-1")
+
+        self.assertEqual(self.tab.editor.textCursor().block().text(), "### Service Exposure")
+        self.assertEqual(self.tab.editor.toPlainText(), markdown)
+        self.assertFalse(self.tab.is_dirty())
+
+    def test_semantic_navigation_leaves_preview_for_source_editor(self):
+        markdown = """<!-- spectre:section:start:executive_summary -->
+
+## Summary
+
+Text
+
+<!-- spectre:section:end:executive_summary -->"""
+        self.tab.editor.setPlainText(markdown)
+        self.tab._set_view_mode(ViewMode.PREVIEW)
+
+        self.tab._navigate_to_report_item("section", "executive_summary")
+
+        self.assertEqual(self.tab._view_mode, ViewMode.EDITOR)
+        self.assertEqual(self.tab.editor.textCursor().block().text(), "## Summary")
 
     def test_report_color_toggle_only_switches_report_panes(self):
         button = self.tab.btn_report_theme
