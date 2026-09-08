@@ -1,9 +1,10 @@
 """Unit tests for the restructured report formatting toolbar."""
 
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QPushButton, QFrame
+from PyQt6.QtGui import QIcon
 
 from ui.report.toolbar import build_format_toolbar
 
@@ -42,6 +43,17 @@ class TestReportToolbar(unittest.TestCase):
         dividers = self.toolbar.findChildren(QFrame)
         divider_frames = [d for d in dividers if "ToolbarDivider" in (d.property("class") or "")]
         self.assertGreaterEqual(len(divider_frames), 2)
+
+    def test_default_icons_defer_to_active_theme_palette(self):
+        with patch("ui.report.toolbar.icon", return_value=QIcon()) as icon_factory:
+            toolbar = build_format_toolbar(None, self.callbacks)
+        try:
+            self.assertGreater(icon_factory.call_count, 0)
+            for call in icon_factory.call_args_list:
+                self.assertNotIn("color", call.kwargs)
+                self.assertNotIn("color_active", call.kwargs)
+        finally:
+            toolbar.deleteLater()
 
     def test_heading_dropdown_menu_invokes_callbacks(self):
         """Verifies the H ▾ button has a menu with H1-H6 actions calling callbacks."""

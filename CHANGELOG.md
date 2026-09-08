@@ -11,6 +11,10 @@ semantic versioning.
 * Compact semantic Report Navigator for jumping to marked sections and findings without leaving the existing editor.
 * Global `Ctrl+Alt+R` clipboard recorder toggle with monitor-local recording state feedback.
 
+### Changed
+
+* Report toolbar icons now inherit the active application theme instead of forcing the legacy Cyber Cyan accent.
+
 ## [2.1.3] - 2026-09-08
 
 ### Added

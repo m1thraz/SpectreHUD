@@ -1,13 +1,13 @@
 """Formatting-toolbar construction for the report editor."""
 
 from collections.abc import Callable
+from typing import Optional
 
 from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.i18n import t
 from ui.styles.icons import icon
-from ui.styles.palette import CYBER_CYAN, TEXT_PRIMARY
 
 
 REPORT_TOOLBAR_ICON_SIZE = QSize(13, 13)
@@ -18,11 +18,16 @@ def _apply_icon_button(
     button: QPushButton,
     icon_name: str,
     accessible_name: str,
-    color: str,
-    active_color: str,
+    color: Optional[str],
+    active_color: Optional[str],
 ) -> None:
     """Apply the shared report-toolbar icon treatment to an icon-only button."""
-    button.setIcon(icon(icon_name, color=color, color_active=active_color))
+    options = {}
+    if color is not None:
+        options["color"] = color
+    if active_color is not None:
+        options["color_active"] = active_color
+    button.setIcon(icon(icon_name, **options))
     button.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
     button.setAccessibleName(accessible_name)
 
@@ -44,8 +49,8 @@ def build_format_toolbar(
     parent: QWidget,
     callbacks: dict[str, Callable[[], None]],
     on_toggle_collapse: Callable[[bool], None] | None = None,
-    icon_color: str = CYBER_CYAN,
-    icon_active_color: str = TEXT_PRIMARY,
+    icon_color: Optional[str] = None,
+    icon_active_color: Optional[str] = None,
 ) -> QWidget:
     """
     Build the formatting toolbar split into clear functional zones on the left,

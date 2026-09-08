@@ -9,7 +9,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QMessageBox, QDialog
 from PyQt6.QtCore import QMimeData, Qt, QUrl
-from PyQt6.QtGui import QShortcut
+from PyQt6.QtGui import QIcon, QShortcut
 
 from core.project import ProjectManager
 from core.loot.manager import LootManager
@@ -387,6 +387,15 @@ class TestReportEditorTab(unittest.TestCase):
             self.assertTrue(action.isCheckable())
             self.assertFalse(action.icon().isNull())
             self.assertNotRegex(action.text(), "[📝◫👁️]")
+
+    def test_toolbar_icons_use_central_theme_unless_status_color_is_explicit(self):
+        with patch("ui.report_editor_tab.icon", return_value=QIcon()) as icon_factory:
+            self.tab._toolbar_icon("fa5s.list")
+            icon_factory.assert_called_once_with("fa5s.list")
+
+        with patch("ui.report_editor_tab.icon", return_value=QIcon()) as icon_factory:
+            self.tab._toolbar_icon("fa5s.sync-alt", color="#ff0000")
+            icon_factory.assert_called_once_with("fa5s.sync-alt", color="#ff0000")
 
     def test_semantic_navigator_rebuilds_from_current_editor_text(self):
         first = """<!-- spectre:section:start:executive_summary -->
