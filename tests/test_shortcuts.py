@@ -65,6 +65,8 @@ def test_shortcuts_dialog_lifecycle():
     assert "SHORTCUT" in dialog.lbl_dialog_title.text().upper()
     assert dialog.txt_search is not None
     assert len(dialog._sections) > 0
+    assert dialog._sections[0].rows[0].definition.category == "quick_capture"
+    assert dialog._sections[1].rows[0].definition.category == "phases"
 
     all_rows = [row for sec in dialog._sections for row in sec.rows]
     assert len(all_rows) > 0

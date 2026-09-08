@@ -14,6 +14,7 @@ semantic versioning.
 
 ### Changed
 
+* Prioritized Quick Capture & Controls ahead of phase switching in the shortcut overview.
 * Report toolbar icons now use the active theme's primary control accent instead of the legacy Cyber Cyan accent.
 * Removed the redundant heading-based Sections dropdown now that the semantic Report Navigator covers section and finding navigation.
 

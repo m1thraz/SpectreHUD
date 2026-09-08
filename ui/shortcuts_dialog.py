@@ -203,7 +203,7 @@ class ShortcutHelpDialog(BaseHudDialog):
             grouped.setdefault(sc.category, []).append(sc)
 
         # Build sections in standard order
-        category_order = ["phases", "quick_capture", "navigation", "general", "report_editor"]
+        category_order = ["quick_capture", "phases", "navigation", "general", "report_editor"]
         for cat_key in category_order:
             if cat_key not in grouped:
                 continue
