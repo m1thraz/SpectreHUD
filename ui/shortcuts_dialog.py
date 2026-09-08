@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QFrame,
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QShortcut, QFont, QKeySequence
+from PyQt6.QtGui import QShortcut, QKeySequence
 
 from core.shortcuts import ShortcutDefinition, get_shortcuts
 from core.i18n import t
@@ -39,20 +39,6 @@ class ShortcutRow(QFrame):
         super().__init__(parent)
         self.definition = definition
         self.setObjectName("ShortcutRow")
-        self.setStyleSheet(
-            """
-            QFrame#ShortcutRow {
-                background-color: rgba(22, 27, 34, 0.6);
-                border: 1px solid rgba(48, 54, 61, 0.6);
-                border-radius: 6px;
-                padding: 4px 8px;
-            }
-            QFrame#ShortcutRow:hover {
-                background-color: rgba(30, 38, 48, 0.85);
-                border: 1px solid rgba(0, 229, 255, 0.4);
-            }
-            """
-        )
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -65,28 +51,13 @@ class ShortcutRow(QFrame):
         self.lbl_key.setObjectName("ShortcutKeyBadge")
         self.lbl_key.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_key.setTextFormat(Qt.TextFormat.PlainText)
-        font = QFont("Consolas, Courier New, monospace", 10)
-        font.setBold(True)
-        self.lbl_key.setFont(font)
-        self.lbl_key.setStyleSheet(
-            """
-            QLabel#ShortcutKeyBadge {
-                background-color: rgba(13, 17, 23, 0.95);
-                color: #00e5ff;
-                border: 1px solid rgba(0, 229, 255, 0.45);
-                border-radius: 4px;
-                padding: 3px 8px;
-                min-width: 90px;
-            }
-            """
-        )
         layout.addWidget(self.lbl_key)
 
         # 2. Description Label
         self.desc_text = t(self.definition.label_key, self.definition.default_label)
         self.lbl_desc = QLabel(self.desc_text, self)
+        self.lbl_desc.setObjectName("ShortcutDescription")
         self.lbl_desc.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_desc.setStyleSheet("color: #f0f6fc; font-size: 12px;")
         layout.addWidget(self.lbl_desc, stretch=1)
 
         # 3. Scope Badge
@@ -97,21 +68,11 @@ class ShortcutRow(QFrame):
             else t("shortcuts.scope_in_app_badge", "IN-APP")
         )
         self.lbl_scope = QLabel(scope_text, self)
+        self.lbl_scope.setObjectName("ShortcutScopeBadge")
+        self.lbl_scope.setProperty("scope", "global" if is_global else "in_app")
         self.lbl_scope.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_scope.setTextFormat(Qt.TextFormat.PlainText)
         if is_global:
-            self.lbl_scope.setStyleSheet(
-                """
-                background-color: rgba(0, 229, 255, 0.12);
-                color: #00e5ff;
-                border: 1px solid rgba(0, 229, 255, 0.35);
-                border-radius: 4px;
-                padding: 2px 6px;
-                font-size: 9px;
-                font-weight: bold;
-                min-width: 48px;
-                """
-            )
             self.lbl_scope.setToolTip(
                 t(
                     "shortcuts.scope_global_tip",
@@ -119,18 +80,6 @@ class ShortcutRow(QFrame):
                 )
             )
         else:
-            self.lbl_scope.setStyleSheet(
-                """
-                background-color: rgba(188, 140, 255, 0.12);
-                color: #bc8cff;
-                border: 1px solid rgba(188, 140, 255, 0.35);
-                border-radius: 4px;
-                padding: 2px 6px;
-                font-size: 9px;
-                font-weight: bold;
-                min-width: 48px;
-                """
-            )
             self.lbl_scope.setToolTip(
                 t(
                     "shortcuts.scope_in_app_tip",
@@ -168,9 +117,7 @@ class ShortcutSection(QWidget):
 
         # Header label
         self.header_label = QLabel(title, self)
-        self.header_label.setStyleSheet(
-            "color: #8b949e; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; margin-top: 4px; margin-bottom: 2px;"
-        )
+        self.header_label.setObjectName("ShortcutSectionTitle")
         self._layout.addWidget(self.header_label)
 
     def add_row(self, row: ShortcutRow) -> None:
@@ -200,16 +147,6 @@ class ShortcutHelpDialog(BaseHudDialog):
         self.config_manager = config_manager
         self.resize(620, 520)
 
-        # Enforce dark cyber background on the dialog frame and container
-        self.hud_frame.setStyleSheet(
-            """
-            QFrame#DialogHudFrame {
-                background-color: #0d1117;
-                border: 1px solid rgba(0, 229, 255, 0.35);
-                border-radius: 12px;
-            }
-            """
-        )
         if hasattr(self, "content_container") and self.content_container:
             self.content_container.setAutoFillBackground(False)
             self.content_container.setStyleSheet(
@@ -229,27 +166,12 @@ class ShortcutHelpDialog(BaseHudDialog):
         search_row.setSpacing(8)
 
         self.txt_search = QLineEdit(self)
+        self.txt_search.setObjectName("ShortcutSearch")
         self.txt_search.setPlaceholderText(
             t(
                 "shortcuts.search_placeholder",
                 "Shortcuts oder Aktionen filtern (z. B. 'Phase', 'Loot', 'Ctrl+S')...",
             )
-        )
-        self.txt_search.setStyleSheet(
-            """
-            QLineEdit {
-                background-color: rgba(22, 27, 34, 0.9);
-                color: #f0f6fc;
-                border: 1px solid rgba(0, 229, 255, 0.35);
-                border-radius: 6px;
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #00e5ff;
-                background-color: rgba(26, 33, 44, 0.95);
-            }
-            """
         )
         self.txt_search.textChanged.connect(self._on_search_changed)
         search_row.addWidget(self.txt_search)
@@ -265,34 +187,6 @@ class ShortcutHelpDialog(BaseHudDialog):
         scroll.setAutoFillBackground(False)
         scroll.viewport().setAutoFillBackground(False)
         scroll.viewport().setObjectName("ShortcutsScrollViewport")
-        scroll.setStyleSheet(
-            """
-            QScrollArea#ShortcutsScrollArea,
-            QWidget#ShortcutsScrollViewport,
-            QWidget#ShortcutsContainer {
-                background: transparent;
-                background-color: transparent;
-                border: none;
-            }
-            QScrollBar:vertical {
-                background-color: #0d1117;
-                width: 6px;
-                margin: 0px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: rgba(0, 229, 255, 0.3);
-                min-height: 20px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #00e5ff;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-            """
-        )
 
         container = QWidget()
         container.setObjectName("ShortcutsContainer")
@@ -333,7 +227,7 @@ class ShortcutHelpDialog(BaseHudDialog):
             t("shortcuts.footer_hint", "Tipp: Drücke Esc oder Ctrl+/ zum Schließen"),
             self,
         )
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 10px; font-style: italic;")
+        lbl_hint.setObjectName("ShortcutFooterHint")
         lbl_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.body_layout.addWidget(lbl_hint)
 

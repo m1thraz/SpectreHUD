@@ -98,12 +98,26 @@ def test_shortcuts_dialog_background_styling():
     from PyQt6.QtWidgets import QScrollArea
 
     dialog = ShortcutHelpDialog()
-    assert "#0d1117" in dialog.hud_frame.styleSheet()
+    assert dialog.hud_frame.styleSheet() == ""
+    assert dialog.txt_search.styleSheet() == ""
     scroll = dialog.findChild(QScrollArea)
     assert scroll is not None
     assert not scroll.autoFillBackground()
     assert not scroll.viewport().autoFillBackground()
     dialog.close()
+
+
+def test_shortcuts_dialog_uses_active_theme_tokens():
+    from core.theme_loader import ThemeLoader
+    from ui.styles import build_app_theme
+
+    matrix = ThemeLoader().load_theme("matrix_terminal")
+    qss = build_app_theme(matrix)
+
+    assert "QFrame#ShortcutRow" in qss
+    assert matrix["CYBER_CYAN"] in qss
+    assert matrix["STATUS_PURPLE"] in qss
+    assert "#00e5ff" not in qss
 
 
 

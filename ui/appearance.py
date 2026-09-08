@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication, QToolTip
 from core.config import ConfigManager
 from core.theme_loader import ThemeLoader
 from ui.styles import build_app_theme
+from ui.styles.icons import set_icon_palette
 
 
 class _TooltipColorGuard(QObject):
@@ -72,6 +73,7 @@ def apply_application_style(
     """
     applied_theme = theme_id or config.get("theme", ThemeLoader.FALLBACK_THEME_ID)
     theme_palette = ThemeLoader().load_theme(applied_theme)
+    set_icon_palette(theme_palette)
     app.setStyleSheet(
         build_app_theme(
             theme_palette,

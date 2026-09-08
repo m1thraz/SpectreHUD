@@ -102,7 +102,7 @@ class HeaderPanel(QFrame):
 
         # Quick Note Button
         self.btn_quick_note = QPushButton(t("header.note", "Note"))
-        self.btn_quick_note.setProperty("class", "ScreenshotBtn")
+        self.btn_quick_note.setProperty("class", "ProjectSelectBtn")
         self.btn_quick_note.setIcon(icon("fa5s.pen"))
         self.btn_quick_note.setIconSize(QSize(13, 13))
         self.btn_quick_note.setToolTip(
@@ -113,7 +113,7 @@ class HeaderPanel(QFrame):
 
         # Screenshot Snip Button
         self.btn_screenshot = QPushButton(t("header.snip", "Snip"))
-        self.btn_screenshot.setProperty("class", "ScreenshotBtn")
+        self.btn_screenshot.setProperty("class", "ProjectSelectBtn")
         self.btn_screenshot.setIcon(icon("fa5s.crop-alt"))
         self.btn_screenshot.setIconSize(QSize(13, 13))
         self.btn_screenshot.setToolTip(
@@ -141,7 +141,7 @@ class HeaderPanel(QFrame):
         # Action Overflow Button (shown when space is constrained)
         self.btn_overflow = QPushButton()
         self.btn_overflow.setObjectName("HeaderOverflowBtn")
-        self.btn_overflow.setProperty("class", "ScreenshotBtn")
+        self.btn_overflow.setProperty("class", "ProjectSelectBtn")
         self.btn_overflow.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_overflow.setIcon(icon("fa5s.ellipsis-h"))
         self.btn_overflow.setIconSize(QSize(13, 13))
@@ -154,7 +154,7 @@ class HeaderPanel(QFrame):
 
         # Settings & Hotkeys Button
         self.btn_settings = QPushButton(t("header.opt", ""))
-        self.btn_settings.setProperty("class", "ScreenshotBtn")
+        self.btn_settings.setProperty("class", "ProjectSelectBtn")
         self.btn_settings.setIcon(icon("fa5s.cog"))
         self.btn_settings.setIconSize(QSize(14, 14))
         self.btn_settings.setToolTip(

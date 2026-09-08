@@ -1,12 +1,14 @@
 """Tests for the HUD header panel controls."""
 
 import os
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from ui.panels.header_panel import HeaderPanel
 from ui.styles import build_app_theme
 from ui.styles.palette import CYBER_DARK_PALETTE
+from ui.styles.icons import icon, set_icon_palette
 
 
 def test_close_button_emits_close_requested(qapp):
@@ -73,6 +75,9 @@ def test_project_button_class_and_theme(qapp):
 
 def test_header_icons_and_divider(qapp):
     header = HeaderPanel()
+    assert header.btn_quick_note.property("class") == "ProjectSelectBtn"
+    assert header.btn_screenshot.property("class") == "ProjectSelectBtn"
+    assert header.btn_settings.property("class") == "ProjectSelectBtn"
     # Check icons on action buttons
     assert not header.btn_quick_note.icon().isNull()
     assert not header.btn_screenshot.icon().isNull()
@@ -86,6 +91,21 @@ def test_header_icons_and_divider(qapp):
     assert "HeaderDivider" in qss
 
     header.deleteLater()
+
+
+def test_default_icons_use_active_theme_palette():
+    palette = {"CYBER_CYAN": "#123456", "TEXT_PRIMARY": "#abcdef"}
+    try:
+        set_icon_palette(palette)
+        with patch("ui.styles.icons.qta.icon") as factory:
+            icon("fa5s.pen")
+        factory.assert_called_once_with(
+            "fa5s.pen",
+            color="#123456",
+            color_active="#abcdef",
+        )
+    finally:
+        set_icon_palette(CYBER_DARK_PALETTE)
 
 
 def test_rec_indicator_icon_toggle(qapp):
@@ -107,7 +127,7 @@ def test_rec_indicator_icon_toggle(qapp):
 def test_header_action_overflow_progressive(qapp):
     header = HeaderPanel()
     assert hasattr(header, "btn_overflow")
-    assert header.btn_overflow.property("class") == "ScreenshotBtn"
+    assert header.btn_overflow.property("class") == "ProjectSelectBtn"
     assert not header.btn_overflow.icon().isNull()
 
     # 1. Very wide width: all 3 action buttons fit (visible_count == 3)
@@ -218,5 +238,3 @@ def test_overflow_rec_state_reflection(qapp):
     assert "Off" in rec_acts[0].text() or "Start" in rec_acts[0].text()
 
     header.deleteLater()
-
-

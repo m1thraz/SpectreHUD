@@ -3,6 +3,83 @@ Dialogs, Form Inputs, Dropdowns, Checkboxes, and Popups for SpectreHUD.
 """
 
 DIALOGS_QSS_TEMPLATE = """
+/* Shortcut Help Dialog */
+QFrame#ShortcutRow {
+    background-color: {SURFACE_A70};
+    border: 1px solid {BORDER_A60};
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+QFrame#ShortcutRow:hover {
+    background-color: {CARD_HOVER_A90};
+    border-color: {CYAN_A40};
+}
+
+QLabel#ShortcutKeyBadge {
+    background-color: {NAV_A95};
+    color: {CYBER_BLUE};
+    border: 1px solid {ACTIVE_BLUE_A50};
+    border-radius: 4px;
+    padding: 3px 8px;
+    min-width: 90px;
+    font-family: {code_font};
+    font-size: 10px;
+    font-weight: bold;
+}
+
+QLabel#ShortcutDescription {
+    color: {TEXT_PRIMARY};
+    font-size: 12px;
+}
+
+QLabel#ShortcutScopeBadge {
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: bold;
+    min-width: 48px;
+}
+
+QLabel#ShortcutScopeBadge[scope="global"] {
+    background-color: {CYAN_A15};
+    color: {CYBER_CYAN};
+    border: 1px solid {CYAN_A35};
+}
+
+QLabel#ShortcutScopeBadge[scope="in_app"] {
+    background-color: {PURPLE_A20};
+    color: {STATUS_PURPLE};
+    border: 1px solid {PURPLE_A40};
+}
+
+QLabel#ShortcutSectionTitle {
+    color: {TEXT_MUTED};
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+QLineEdit#ShortcutSearch {
+    border-color: {CYAN_A35};
+    padding: 6px 10px;
+}
+
+QScrollArea#ShortcutsScrollArea,
+QWidget#ShortcutsScrollViewport,
+QWidget#ShortcutsContainer {
+    background: transparent;
+    border: none;
+}
+
+QLabel#ShortcutFooterHint {
+    color: {TEXT_DIMMED};
+    font-size: 10px;
+    font-style: italic;
+}
+
 /* Spotlight Search Section */
 QFrame#SearchSection {
     background-color: transparent;
