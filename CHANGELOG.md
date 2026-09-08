@@ -8,6 +8,7 @@ semantic versioning.
 
 ### Added
 
+* Manual, non-blocking GitHub release checks in Settings with platform-package detection for Windows and Linux.
 * Compact semantic Report Navigator for jumping to marked sections and findings without leaving the existing editor.
 * Global `Ctrl+Alt+R` clipboard recorder toggle with monitor-local recording state feedback.
 

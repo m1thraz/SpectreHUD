@@ -16,8 +16,9 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFontDatabase, QStandardItemModel
+from PyQt6.QtCore import QObject, QRunnable, QThreadPool, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
+from core.cli import APP_VERSION
 from core.config import ConfigManager, clamp_transparency
 from core.platform import (
     PlatformCapabilities,
@@ -27,6 +28,7 @@ from core.platform import (
 )
 from core.i18n import t
 from core.theme_loader import ThemeLoader
+from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
 from core.fonts import (
     UI_FONT_OPTIONS,
@@ -88,6 +90,23 @@ def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     if content is not None:
         # QScrollArea.setWidget() enables auto-fill on the hosted widget.
         content.setAutoFillBackground(False)
+
+
+class _UpdateCheckSignals(QObject):
+    completed = pyqtSignal(object)
+    failed = pyqtSignal(str)
+
+
+class _UpdateCheckTask(QRunnable):
+    def __init__(self):
+        super().__init__()
+        self.signals = _UpdateCheckSignals()
+
+    def run(self) -> None:
+        try:
+            self.signals.completed.emit(check_for_updates())
+        except UpdateCheckError as exc:
+            self.signals.failed.emit(str(exc))
 
 
 class HotkeySettingsPage(QWidget):
@@ -651,6 +670,8 @@ class GeneralSettingsPage(QWidget):
     def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.config = config_manager
+        self._update_task: Optional[_UpdateCheckTask] = None
+        self._release_url = ""
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -691,6 +712,41 @@ class GeneralSettingsPage(QWidget):
         b_layout.addWidget(self.chk_auto_hide)
 
         layout.addWidget(card_behavior)
+
+        lbl_updates = QLabel(t("settings.lbl_updates_section", "Application Updates"))
+        lbl_updates.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_updates)
+
+        card_updates = QFrame()
+        card_updates.setProperty("class", "SettingsCard")
+        updates_layout = QVBoxLayout(card_updates)
+        updates_layout.setSpacing(8)
+
+        self.lbl_update_status = QLabel(
+            t("settings.update_current_version", "Installed version: {version}", version=APP_VERSION)
+        )
+        self.lbl_update_status.setWordWrap(True)
+        self.lbl_update_status.setProperty("class", "FormHint")
+        updates_layout.addWidget(self.lbl_update_status)
+
+        update_actions = QHBoxLayout()
+        self.btn_check_updates = QPushButton(
+            t("settings.check_updates", "Check for Updates")
+        )
+        self.btn_check_updates.setProperty("class", "SecondaryBtn")
+        self.btn_check_updates.clicked.connect(self._check_for_updates)
+        update_actions.addWidget(self.btn_check_updates)
+
+        self.btn_open_release = QPushButton(
+            t("settings.open_release", "Open Release Page")
+        )
+        self.btn_open_release.setProperty("class", "PrimaryBtn")
+        self.btn_open_release.clicked.connect(self._open_release_page)
+        self.btn_open_release.hide()
+        update_actions.addWidget(self.btn_open_release)
+        update_actions.addStretch()
+        updates_layout.addLayout(update_actions)
+        layout.addWidget(card_updates)
 
         # 2. Defaults Section
         lbl_defaults = QLabel(t("settings.lbl_defaults_section", "Default Parameters"))
@@ -797,6 +853,63 @@ class GeneralSettingsPage(QWidget):
         scroll.setWidget(content)
         _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
+
+    def _check_for_updates(self) -> None:
+        self.btn_check_updates.setEnabled(False)
+        self.btn_open_release.hide()
+        self.lbl_update_status.setText(t("settings.update_checking", "Checking GitHub..."))
+        task = _UpdateCheckTask()
+        task.signals.completed.connect(self._on_update_check_completed)
+        task.signals.failed.connect(self._on_update_check_failed)
+        self._update_task = task
+        QThreadPool.globalInstance().start(task)
+
+    def _on_update_check_completed(self, result: UpdateCheckResult) -> None:
+        self.btn_check_updates.setEnabled(True)
+        self._update_task = None
+        self._release_url = result.release_url
+        if result.update_available:
+            published = result.published_at[:10] if result.published_at else ""
+            asset_note = (
+                t("settings.update_package_available", "A package for this system is available.")
+                if result.asset_url
+                else t(
+                    "settings.update_package_unavailable",
+                    "See the release page for available packages.",
+                )
+            )
+            self.lbl_update_status.setText(
+                t(
+                    "settings.update_available",
+                    "Version {version} is available ({date}). {asset_note}",
+                    version=result.latest_version,
+                    date=published,
+                    asset_note=asset_note,
+                )
+            )
+            self.btn_open_release.show()
+            return
+        self.lbl_update_status.setText(
+            t(
+                "settings.update_current",
+                "SpectreHUD {version} is up to date.",
+                version=result.current_version,
+            )
+        )
+
+    def _on_update_check_failed(self, _error: str) -> None:
+        self.btn_check_updates.setEnabled(True)
+        self._update_task = None
+        self.lbl_update_status.setText(
+            t(
+                "settings.update_failed",
+                "Update check failed. Check your internet connection and try again.",
+            )
+        )
+
+    def _open_release_page(self) -> None:
+        if self._release_url:
+            QDesktopServices.openUrl(QUrl(self._release_url))
 
     def _on_browse_wordlist(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(

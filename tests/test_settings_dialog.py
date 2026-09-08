@@ -58,6 +58,13 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertNotIn("theme", settings)
         self.assertNotIn("loot_view_mode", settings)
 
+    def test_general_page_exposes_manual_update_check(self):
+        page = GeneralSettingsPage(self.config_manager)
+
+        self.assertEqual(page.btn_check_updates.text(), "Check for Updates")
+        self.assertFalse(page.btn_open_release.isVisible())
+        self.assertIn("2.1.3", page.lbl_update_status.text())
+
     def test_appearance_page_get_settings(self):
         page = AppearanceSettingsPage(self.config_manager)
         page.combo_ui_font.setCurrentIndex(page.combo_ui_font.findData("inter"))
