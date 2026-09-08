@@ -373,7 +373,6 @@ class TestReportEditorTab(unittest.TestCase):
     def test_action_toolbar_keeps_text_and_adds_qtawesome_icons(self):
         action_buttons = (
             self.tab.btn_change_view,
-            self.tab.btn_outline,
             self.tab.btn_navigator,
             self.tab.btn_append_loot,
             self.tab.btn_regenerate,
@@ -532,7 +531,6 @@ Text
                 "Ctrl+1",
                 "Ctrl+2",
                 "Ctrl+3",
-                "Ctrl+Shift+O",
                 "Ctrl+B",
                 "Ctrl+I",
                 "Ctrl+K",
@@ -544,6 +542,7 @@ Text
                 "Ctrl+Shift+I",
             }.issubset(shortcuts)
         )
+        self.assertNotIn("Ctrl+Shift+O", shortcuts)
 
     def test_regenerate_confirmation_aborts_on_user_no(self):
         """Destructive regenerate must prompt user with confirmation and abort when rejected."""

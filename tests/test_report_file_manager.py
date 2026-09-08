@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.project import ProjectManager
 from core.loot.manager import LootManager
 from core.reporting.file_manager import ReportFileManager
+from core.reporting.template_engine import ReportTemplate
 from core.validators import MAX_REPORT_FILE_SIZE
 
 
@@ -224,6 +225,29 @@ class TestReportFileManager(unittest.TestCase):
         result = self.report_mgr.append_missing_loot(self.loot_mgr, "NoopBox")
         self.assertEqual(result.added_count, 0)
         self.assertFalse(self.report_mgr.get_backup_path("NoopBox").exists())
+
+    def test_append_missing_loot_uses_active_template_language_for_fallback(self):
+        self.project_mgr.create_project("EnglishBox")
+        self.report_mgr.save("# English Assessment\n", "EnglishBox")
+        self.loot_mgr.add_entry(
+            "note", "Port Scan", "Found port 22 open", category="recon"
+        )
+        template = ReportTemplate(
+            id="english_custom",
+            name="English Custom",
+            language="en",
+            category="pentest",
+            complexity="simple",
+            sections=[],
+        )
+
+        result = self.report_mgr.append_missing_loot(
+            self.loot_mgr, "EnglishBox", template=template
+        )
+
+        self.assertTrue(result.used_fallback)
+        self.assertIn("## New Loot Entries", result.content)
+        self.assertNotIn("## Neu aus Loot ergänzt", result.content)
 
     def test_append_missing_loot_fails_closed_if_backup_fails(self):
         """Ticket 21: If backup fails, append_missing_loot raises ReportBackupError and leaves file intact."""

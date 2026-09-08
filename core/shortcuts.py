@@ -335,14 +335,6 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
             category="report_editor",
         ),
         ShortcutDefinition(
-            id="report_outline",
-            sequence="Ctrl+Shift+O",
-            label_key="shortcuts.report_outline",
-            default_label="Gliederungsmenü / Outline umschalten",
-            scope="in_app",
-            category="report_editor",
-        ),
-        ShortcutDefinition(
             id="report_find",
             sequence="Ctrl+F",
             label_key="shortcuts.report_find",

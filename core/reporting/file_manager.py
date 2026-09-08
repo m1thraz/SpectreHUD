@@ -192,6 +192,7 @@ class ReportFileManager:
             report_text=current_content,
             loot_entries=loot_entries,
             template=template,
+            language=getattr(template, "language", "de") if template else "de",
         )
 
         if result.added_count == 0:

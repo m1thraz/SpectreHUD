@@ -57,7 +57,6 @@ from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
-from core.reporting.outline import extract_headings
 from core.reporting.navigation import build_report_navigation
 from core.reporting.draft_manager import (
     discard_draft,
@@ -262,17 +261,6 @@ class ReportEditorTab(QWidget):
         self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
 
-        # Dynamic Outline / Jump to Section Dropdown
-        self.btn_outline = QPushButton(t("report.outline", "Sections ▾"))
-        self.btn_outline.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
-        self.btn_outline.setToolTip(t("report.outline_tip", "Jump to section (Ctrl+Shift+O)"))
-        self.btn_outline.setIcon(self._toolbar_icon("fa5s.list"))
-        self.btn_outline.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.outline_menu = QMenu(self.btn_outline)
-        self.outline_menu.aboutToShow.connect(self._populate_outline_menu)
-        self.btn_outline.setMenu(self.outline_menu)
-        toolbar.addWidget(self.btn_outline)
-
         self.btn_navigator = QPushButton(t("report.navigator", "Report Navigator ▾"))
         self.btn_navigator.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
         navigator_tooltip = t(
@@ -470,11 +458,6 @@ class ReportEditorTab(QWidget):
             QKeySequence("Ctrl+3"), self, activated=lambda: self._set_view_mode(ViewMode.PREVIEW)
         )
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-
-        sc_outline = QShortcut(
-            QKeySequence("Ctrl+Shift+O"), self, activated=self._show_outline_menu
-        )
-        sc_outline.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._shortcut_find = QShortcut(
             QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open
@@ -1266,7 +1249,7 @@ class ReportEditorTab(QWidget):
             self.lbl_status.setText(
                 t(
                     "report.append_loot_success_fallback",
-                    "{count} entries appended · {fallback_count} category(ies) under 'Neu aus Loot ergänzt'",
+                    "{count} entries appended · {fallback_count} category(ies) under 'New Loot Entries'",
                     count=result.added_count,
                     fallback_count=len(result.fallback_categories),
                 )
@@ -1690,33 +1673,8 @@ class ReportEditorTab(QWidget):
             self._syncing_scroll = False
 
     # ------------------------------------------------------------------ #
-    # Outline & Sprung-Navigation
+    # Semantische Sprung-Navigation
     # ------------------------------------------------------------------ #
-
-    def _show_outline_menu(self) -> None:
-        """Opens the outline menu, populating it if needed."""
-        self._populate_outline_menu()
-        self.btn_outline.showMenu()
-
-    def _populate_outline_menu(self) -> None:
-        """Populates the outline menu with current headings extracted from the editor."""
-        self.outline_menu.clear()
-        headings = extract_headings(self.editor.toPlainText())
-        if not headings:
-            disabled_action = self.outline_menu.addAction(
-                t("report.no_headings", "No headings in document")
-            )
-            disabled_action.setEnabled(False)
-            return
-
-        for heading in headings:
-            indent = "    " * (heading.level - 1)
-            prefix = "#" * heading.level
-            action_text = f"{indent}{prefix} {heading.title}"
-            action = self.outline_menu.addAction(action_text)
-            action.triggered.connect(
-                lambda _checked=False, line=heading.line_number: self._jump_to_heading_line(line)
-            )
 
     def _jump_to_heading_line(self, line_number: int) -> None:
         """Positions cursor at the given 1-based line number and ensures it is visible."""

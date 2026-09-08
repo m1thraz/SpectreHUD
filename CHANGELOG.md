@@ -14,9 +14,11 @@ semantic versioning.
 ### Changed
 
 * Report toolbar icons now use the active theme's primary control accent instead of the legacy Cyber Cyan accent.
+* Removed the redundant heading-based Sections dropdown now that the semantic Report Navigator covers section and finding navigation.
 
 ### Fixed
 
+* Use the active report template language when Add Missing Loot creates its fallback section.
 * Reset frameless-window resize cursors when leaving an edge for nested content instead of keeping a stale resize pointer.
 
 ## [2.1.3] - 2026-09-08
