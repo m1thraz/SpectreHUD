@@ -1,7 +1,7 @@
 """Tests for frameless window gestures."""
 
 import os
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -55,3 +55,44 @@ def test_event_filter_survives_deleted_window(qapp):
 
     sip.delete(window)
     assert not manager.eventFilter(watched, QEvent(QEvent.Type.MouseMove))
+
+
+def test_resize_edge_rejects_positions_outside_window(qapp):
+    window = GestureWindow()
+    manager = WindowFrameManager(window, Mock())
+
+    assert manager.get_resize_edge(QPoint(-1, 150)) == ""
+    assert manager.get_resize_edge(QPoint(200, -1)) == ""
+    assert manager.get_resize_edge(QPoint(400, 150)) == ""
+    assert manager.get_resize_edge(QPoint(200, 300)) == ""
+
+    window.deleteLater()
+
+
+def test_entering_child_resets_stale_resize_cursor(qapp):
+    window = GestureWindow()
+    window.show()
+    manager = WindowFrameManager(window, Mock())
+    window.setCursor(Qt.CursorShape.SizeHorCursor)
+    center = window.mapToGlobal(QPoint(200, 150))
+
+    with patch("ui.controllers.window_frame_manager.QCursor.pos", return_value=center):
+        manager.eventFilter(window.background, QEvent(QEvent.Type.Enter))
+
+    assert window.cursor().shape() == Qt.CursorShape.ArrowCursor
+    window.close()
+    window.deleteLater()
+
+
+def test_entering_edge_child_keeps_resize_cursor(qapp):
+    window = GestureWindow()
+    window.show()
+    manager = WindowFrameManager(window, Mock())
+    edge = window.mapToGlobal(QPoint(2, 150))
+
+    with patch("ui.controllers.window_frame_manager.QCursor.pos", return_value=edge):
+        manager.eventFilter(window.background, QEvent(QEvent.Type.Enter))
+
+    assert window.cursor().shape() == Qt.CursorShape.SizeHorCursor
+    window.close()
+    window.deleteLater()

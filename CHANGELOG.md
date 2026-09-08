@@ -15,6 +15,10 @@ semantic versioning.
 
 * Report toolbar icons now use the active theme's primary control accent instead of the legacy Cyber Cyan accent.
 
+### Fixed
+
+* Reset frameless-window resize cursors when leaving an edge for nested content instead of keeping a stale resize pointer.
+
 ## [2.1.3] - 2026-09-08
 
 ### Added

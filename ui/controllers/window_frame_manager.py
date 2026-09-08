@@ -1,7 +1,8 @@
 from typing import Optional, List
 from PyQt6.QtCore import QObject, QPoint, QRect, QEvent, Qt
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtGui import QCursor, QMouseEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QWidget,
     QLabel,
     QAbstractButton,
@@ -80,8 +81,13 @@ class WindowFrameManager(QObject):
         self._resize_start_geo = QRect()
         self._is_moving = False
         self._drag_pos = QPoint()
+        self._application_filter_installed = False
 
     def install_on(self, widgets: List[QWidget]) -> None:
+        app = QApplication.instance()
+        if app is not None and not self._application_filter_installed:
+            app.installEventFilter(self)
+            self._application_filter_installed = True
         for w in widgets:
             if w is not None:
                 w.installEventFilter(self)
@@ -90,6 +96,8 @@ class WindowFrameManager(QObject):
         """Determines if the mouse position is on an outer resize border/corner with generous grab zones."""
         w, h = self.window.width(), self.window.height()
         x, y = pos.x(), pos.y()
+        if x < 0 or y < 0 or x >= w or y >= h:
+            return ""
         margin = RESIZE_MARGIN
         corner = CORNER_MARGIN
 
@@ -125,6 +133,12 @@ class WindowFrameManager(QObject):
             self.window.setCursor(Qt.CursorShape.SizeVerCursor)
         else:
             self.window.unsetCursor()
+
+    def _refresh_hover_cursor(self) -> None:
+        if self._is_resizing:
+            return
+        local_pt = self.window.mapFromGlobal(QCursor.pos())
+        self.update_cursor_for_edge(self.get_resize_edge(local_pt))
 
     # -------------------------------------------------------------------------
     # Core Mouse Logic (Single Source of Truth)
@@ -219,12 +233,17 @@ class WindowFrameManager(QObject):
         try:
             if not self.window.isVisible():
                 return super().eventFilter(watched, event)
+            if not isinstance(watched, QWidget) or watched.window() is not self.window:
+                return super().eventFilter(watched, event)
 
             if event.type() == QEvent.Type.MouseMove and hasattr(event, "globalPosition"):
                 global_pt = event.globalPosition().toPoint()
                 local_pt = self.window.mapFromGlobal(global_pt)
                 if self._process_mouse_move(global_pt, local_pt):
                     return True
+
+            elif event.type() in (QEvent.Type.Enter, QEvent.Type.Leave):
+                self._refresh_hover_cursor()
 
             elif event.type() == QEvent.Type.MouseButtonPress and hasattr(event, "globalPosition"):
                 global_pt = event.globalPosition().toPoint()
