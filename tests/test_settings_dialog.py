@@ -63,7 +63,7 @@ class TestSettingsDialog(unittest.TestCase):
 
         self.assertEqual(page.btn_check_updates.text(), "Check for Updates")
         self.assertFalse(page.btn_open_release.isVisible())
-        self.assertIn("2.1.3", page.lbl_update_status.text())
+        self.assertIn("2.1.4", page.lbl_update_status.text())
 
     def test_appearance_page_get_settings(self):
         page = AppearanceSettingsPage(self.config_manager)
