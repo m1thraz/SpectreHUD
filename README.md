@@ -17,6 +17,8 @@ SpectreHUD is built to make **live pentest documentation as frictionless as poss
 ## Workflow
 
 ```text
+                 Live engagement
+
 Terminal / Browser / VM
           ↓
 Clipboard History
@@ -26,11 +28,17 @@ Quick Notes
 Loot / Findings
           ↓
 Report
-          ↓
-Classic Web / Professional HTML / PDF
+          │
+          ├── Classic Web / Professional HTML / PDF
+          │
+          └── Obsidian / CherryTree
+                        ↓
+                 refine however you want
 ```
 
-Not everything has to move through every stage. Capture quickly, promote only what matters, and refine it when needed.
+**Capture live in SpectreHUD, refine afterward wherever you prefer.**
+
+Spectre is designed to reduce friction during testing, not to lock the finished report into one editor. Keep working in Spectre, finalize in editable HTML, or move the collected material into Obsidian or CherryTree for further editing and long-term documentation.
 
 ## What it does
 
@@ -44,7 +52,8 @@ Not everything has to move through every stage. Capture quickly, promote only wh
 - **Add Missing Loot** to append newly captured findings without overwriting manual report edits
 - **Classic Web export** for full manual control over the final HTML
 - **Professional export** that restructures the report into a cleaner print-oriented format while remaining editable before PDF creation
-- **Obsidian, CherryTree, Markdown, and portable exports**
+- **Obsidian and CherryTree handoff** for continuing the report or preserving engagement knowledge in your preferred note-taking workflow
+- **Markdown and portable exports**
 - **Global hotkeys** (`Ctrl+Alt+H/X/N/I/Q`)
 - **Tray integration**
 - **English/German UI**
@@ -60,6 +69,7 @@ The core idea is not just to keep notes in one place, but to reduce interruption
 - **Promote raw observations into structured findings**
 - **Build the report during the engagement instead of afterward**
 - **Keep manual edits intact instead of regenerating everything**
+- **Capture live in Spectre, refine later in Obsidian, CherryTree, HTML, or Markdown**
 - **Finish in editable HTML before creating the final PDF**
 
 ## Engineering focus
