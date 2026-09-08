@@ -138,7 +138,13 @@ class WindowFrameManager(QObject):
         if self._is_resizing:
             return
         local_pt = self.window.mapFromGlobal(QCursor.pos())
-        self.update_cursor_for_edge(self.get_resize_edge(local_pt))
+        self.update_cursor_for_edge(self._resize_edge_at(local_pt))
+
+    def _resize_edge_at(self, local_pt: QPoint) -> str:
+        clicked_widget = self.window.childAt(local_pt)
+        if is_interactive_widget(clicked_widget, self.window):
+            return ""
+        return self.get_resize_edge(local_pt)
 
     # -------------------------------------------------------------------------
     # Core Mouse Logic (Single Source of Truth)
@@ -149,7 +155,7 @@ class WindowFrameManager(QObject):
         if button != Qt.MouseButton.LeftButton:
             return False
 
-        edge = self.get_resize_edge(local_pt)
+        edge = self._resize_edge_at(local_pt)
         if edge:
             self._is_resizing = True
             self._resize_edge = edge
@@ -193,7 +199,7 @@ class WindowFrameManager(QObject):
             self.window.move(global_pt - self._drag_pos)
             return True
 
-        edge = self.get_resize_edge(local_pt)
+        edge = self._resize_edge_at(local_pt)
         self.update_cursor_for_edge(edge)
         return False
 

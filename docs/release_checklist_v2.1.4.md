@@ -16,11 +16,13 @@ release are intentionally left to the repository owner after CI validation.
 
 ## Local release verification
 
-- [ ] Ruff passes.
-- [ ] Focused version, CLI, packaging-metadata, and update-check tests pass.
-- [ ] Release test suite passes.
-- [ ] Full local safety gate passes (`python scripts/run_tests.py`).
-- [ ] The v2.1.4 wheel passes repository verification and fresh-environment
+- [x] Ruff passes.
+- [x] Focused version, CLI, packaging-metadata, and update-check tests pass
+  (25 passed).
+- [x] Release test suite passes (16 passed in 16.69s).
+- [x] Full local safety gate passes (`995 passed, 4 skipped, 15 subtests` in
+  276.72s).
+- [x] The v2.1.4 wheel passes repository verification (201 files) and fresh-environment
   `--version` / `--help` smoke tests.
 - [ ] Manual smoke test confirms startup, Report Navigator, themed report toolbar,
   global recorder shortcut, update check, template dialogs, and clean shutdown.

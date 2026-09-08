@@ -6,6 +6,12 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Fixed
+
+* Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
+
+## [2.1.4] - 2026-09-08
+
 ### Added
 
 * Manual, non-blocking GitHub release checks in Settings with platform-package detection for Windows and Linux.
@@ -272,7 +278,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...HEAD
+[2.1.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...v2.1.1

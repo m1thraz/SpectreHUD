@@ -69,6 +69,23 @@ def test_resize_edge_rejects_positions_outside_window(qapp):
     window.deleteLater()
 
 
+def test_interactive_control_wins_over_overlapping_resize_zone(qapp):
+    window = GestureWindow()
+    edge_button = QPushButton("Tab", window)
+    edge_button.setGeometry(80, 4, 80, 28)
+    manager = WindowFrameManager(window, Mock())
+    button_point = edge_button.mapTo(window, QPoint(20, 4))
+
+    assert manager.get_resize_edge(button_point) == "top"
+    assert manager._resize_edge_at(button_point) == ""
+    assert not manager._process_mouse_press(
+        window.mapToGlobal(button_point), button_point, Qt.MouseButton.LeftButton
+    )
+    assert not manager._is_resizing
+
+    window.deleteLater()
+
+
 def test_entering_child_resets_stale_resize_cursor(qapp):
     window = GestureWindow()
     window.show()
