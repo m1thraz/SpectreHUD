@@ -23,16 +23,16 @@ release are intentionally left to the repository owner after CI validation.
   `953 passed, 4 skipped, 15 subtests passed` in 5:20.
 - [x] The v2.1.3 wheel contains 199 files, passes repository verification, and
   passes fresh-environment `--version` / `--help` smoke tests.
-- [ ] Manual smoke test confirms startup, Notes stream/focus review, report metadata
+- [x] Manual smoke test confirms startup, Notes stream/focus review, report metadata
   visibility, both HTML profiles, template dialogs, theme switching, and clean shutdown.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.1.3 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated v2.1.3 tag from the CI-verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable, Debian packages,
+- [x] Review, commit, and push the prepared v2.1.3 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated v2.1.3 tag from the CI-verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable, Debian packages,
   and wheel.
-- [ ] Download the published executable/deb and verify `--version`, startup, and UI.
-- [ ] Confirm the GitHub release description links to
+- [x] Download the published executable/deb and verify `--version`, startup, and UI.
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.1.3.md`.
