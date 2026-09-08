@@ -13,7 +13,7 @@ semantic versioning.
 
 ### Changed
 
-* Report toolbar icons now inherit the active application theme instead of forcing the legacy Cyber Cyan accent.
+* Report toolbar icons now use the active theme's primary control accent instead of the legacy Cyber Cyan accent.
 
 ## [2.1.3] - 2026-09-08
 

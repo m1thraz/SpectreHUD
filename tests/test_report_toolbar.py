@@ -44,7 +44,7 @@ class TestReportToolbar(unittest.TestCase):
         divider_frames = [d for d in dividers if "ToolbarDivider" in (d.property("class") or "")]
         self.assertGreaterEqual(len(divider_frames), 2)
 
-    def test_default_icons_defer_to_active_theme_palette(self):
+    def test_default_icons_can_defer_to_active_theme_palette(self):
         with patch("ui.report.toolbar.icon", return_value=QIcon()) as icon_factory:
             toolbar = build_format_toolbar(None, self.callbacks)
         try:
@@ -52,6 +52,22 @@ class TestReportToolbar(unittest.TestCase):
             for call in icon_factory.call_args_list:
                 self.assertNotIn("color", call.kwargs)
                 self.assertNotIn("color_active", call.kwargs)
+        finally:
+            toolbar.deleteLater()
+
+    def test_explicit_theme_text_colors_are_applied_to_all_icons(self):
+        with patch("ui.report.toolbar.icon", return_value=QIcon()) as icon_factory:
+            toolbar = build_format_toolbar(
+                None,
+                self.callbacks,
+                icon_color="#123456",
+                icon_active_color="#abcdef",
+            )
+        try:
+            self.assertGreater(icon_factory.call_count, 0)
+            for call in icon_factory.call_args_list:
+                self.assertEqual(call.kwargs["color"], "#123456")
+                self.assertEqual(call.kwargs["color_active"], "#abcdef")
         finally:
             toolbar.deleteLater()
 

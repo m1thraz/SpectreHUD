@@ -388,14 +388,22 @@ class TestReportEditorTab(unittest.TestCase):
             self.assertFalse(action.icon().isNull())
             self.assertNotRegex(action.text(), "[📝◫👁️]")
 
-    def test_toolbar_icons_use_central_theme_unless_status_color_is_explicit(self):
+    def test_toolbar_icons_use_primary_theme_accent(self):
         with patch("ui.report_editor_tab.icon", return_value=QIcon()) as icon_factory:
             self.tab._toolbar_icon("fa5s.list")
-            icon_factory.assert_called_once_with("fa5s.list")
+            icon_factory.assert_called_once_with(
+                "fa5s.list",
+                color=self.tab._toolbar_palette["CYBER_BLUE_LIGHT"],
+                color_active=self.tab._toolbar_palette["TEXT_PRIMARY"],
+            )
 
         with patch("ui.report_editor_tab.icon", return_value=QIcon()) as icon_factory:
             self.tab._toolbar_icon("fa5s.sync-alt", color="#ff0000")
-            icon_factory.assert_called_once_with("fa5s.sync-alt", color="#ff0000")
+            icon_factory.assert_called_once_with(
+                "fa5s.sync-alt",
+                color="#ff0000",
+                color_active=self.tab._toolbar_palette["TEXT_PRIMARY"],
+            )
 
     def test_semantic_navigator_rebuilds_from_current_editor_text(self):
         first = """<!-- spectre:section:start:executive_summary -->

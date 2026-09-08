@@ -229,6 +229,8 @@ class ReportEditorTab(QWidget):
                 "spacer_large": lambda: self._format_spacer("large"),
             },
             on_toggle_collapse=self._on_toolbar_collapse_toggled,
+            icon_color=self._toolbar_palette["CYBER_BLUE_LIGHT"],
+            icon_active_color=self._toolbar_palette["TEXT_PRIMARY"],
         )
         layout.addWidget(self.format_toolbar_widget)
 
@@ -367,7 +369,11 @@ class ReportEditorTab(QWidget):
 
     def _toolbar_icon(self, icon_name: str, color: Optional[str] = None):
         """Create a toolbar icon using the active app theme through the central wrapper."""
-        return icon(icon_name, color=color) if color is not None else icon(icon_name)
+        return icon(
+            icon_name,
+            color=color or self._toolbar_palette["CYBER_BLUE_LIGHT"],
+            color_active=self._toolbar_palette["TEXT_PRIMARY"],
+        )
 
     def _build_view_menu(self) -> None:
         """Populate the compact view selector."""
