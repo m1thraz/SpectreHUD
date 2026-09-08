@@ -10,59 +10,79 @@
 
 **A local companion that stays open through an entire CTF or pentest engagement, from the first recon command to the finished report.**
 
-During a CTF or authorized engagement, the working context is usually scattered across a terminal, a notes app, a screenshot tool, and a handful of cheatsheet tabs, and the report gets reconstructed from memory afterward. SpectreHUD keeps that context in one place instead: target variables, reusable commands, clipboard findings, screenshots, and loot all live in the active project, and the Markdown report builds up alongside the work rather than after it.
+SpectreHUD is built to make **live pentest documentation as frictionless as possible**. Instead of reconstructing a report afterward from terminals, notes, screenshots, and browser tabs, the documentation grows alongside the engagement.
 
 ![SpectreHUD main view](assets/spectrehud_main.png)
 
-## What it does
-
-- Per-project target variables and reusable command snippets
-- Instant Quick-Notes with 1-key phase tagging (`Ctrl+Alt+N`), dedicated inbox, and 1-click promotion to report loot
-- Loot, optional clipboard history with "Erfassen ▾" split-button, and region screenshots tied to the active project
-- Markdown report editor with source, split, and live-preview views
-- Structured report templates, editable standalone HTML, Markdown, Obsidian, and CherryTree exports
-- Harmonized global hotkeys (`Ctrl+Alt+H/X/N/I/Q`), tray integration, English/German UI, multiple built-in themes (including community favorites like Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night), and optional encrypted Pentest-Mode project state
+## Workflow
 
 ```text
 Terminal / Browser / VM
           ↓
-      SpectreHUD
+Clipboard History
           ↓
- Commands · Notes · Loot · Screenshots · Report
+Quick Notes
           ↓
- Obsidian / CherryTree / Portable export
+Loot / Findings
+          ↓
+Report
+          ↓
+Classic Web / Professional HTML / PDF
 ```
+
+Not everything has to move through every stage. Capture quickly, promote only what matters, and refine it when needed.
+
+## What it does
+
+- **Interactive cheatsheet** with reusable commands and live project variables
+- **Quick-IP popup** to copy or change the active target without returning to the main window
+- **Clipboard History** for capturing useful terminal and browser output
+- **Quick Notes** with phase tagging and 1-click promotion into Loot
+- **Quick Loot** for structured findings, targets, severity, recommendations, and captured evidence
+- **Project-scoped screenshots** tied directly to the active engagement
+- **Markdown report editor** with source, split, and editable live-preview modes
+- **Add Missing Loot** to append newly captured findings without overwriting manual report edits
+- **Classic Web export** for full manual control over the final HTML
+- **Professional export** that restructures the report into a cleaner print-oriented format while remaining editable before PDF creation
+- **Obsidian, CherryTree, Markdown, and portable exports**
+- **Global hotkeys** (`Ctrl+Alt+H/X/N/I/Q`)
+- **Tray integration**
+- **English/German UI**
+- **Built-in themes**, including Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night
+- **Optional encrypted Pentest Mode** project state
+
+## Why SpectreHUD
+
+The core idea is not just to keep notes in one place, but to reduce interruptions between testing and documentation:
+
+- **Capture without stopping the workflow**
+- **Keep targets and commands one shortcut away**
+- **Promote raw observations into structured findings**
+- **Build the report during the engagement instead of afterward**
+- **Keep manual edits intact instead of regenerating everything**
+- **Finish in editable HTML before creating the final PDF**
 
 ## Engineering focus
 
-SpectreHUD is intentionally a **single-user desktop application**. Its quality
-work focuses on data integrity and normal desktop failure modes: atomic writes,
-rollback during failed project changes, recovery from corrupted local state,
-and a single application instance. It is not a network service or a hostile
-local-file processor. Customer-facing exports are treated separately because
-captured target content may be opened later in a recipient's browser.
+SpectreHUD is intentionally a **single-user desktop application**.
 
-For the implementation details, see:
+Reliability work focuses on realistic desktop failure modes:
+
+- atomic writes
+- backup and recovery
+- rollback during failed project changes
+- corrupted-state recovery
+- single-instance operation
+
+It is not designed as a network service or as a hostile local-file processing environment. Customer-facing HTML exports are treated separately because captured target content may later be opened in a recipient's browser.
+
+More details:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
-- [v2.1.3 release notes](docs/release_notes_v2.1.3.md)
-- [v2.1.2 release notes](docs/release_notes_v2.1.2.md)
-- [v2.1.1 release notes](docs/release_notes_v2.1.1.md)
-- [v2.1.0 release notes](docs/release_notes_v2.1.0.md)
-- [v2.0.9 release notes](docs/release_notes_v2.0.9.md)
-- [v2.0.8 release notes](docs/release_notes_v2.0.8.md)
-- [v2.0.7 release notes](docs/release_notes_v2.0.7.md)
 - [Pentest Mode](docs/pentest_mode.md)
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
-
-## Contributing and security
-
-Focused contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
-opening a pull request. Report suspected vulnerabilities privately according to
-[SECURITY.md](SECURITY.md), and never place credentials or engagement data in a
-public issue.
 
 ## Platform Support & Verification Status
 
@@ -71,42 +91,47 @@ public issue.
 | **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
 | **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Quick-Notes & Phase Tagging** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Quick Notes & Phase Tagging** | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Quick-IP Popup & Net Detection** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Report Editor & Live Sync / Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts (`Esc`, `Ctrl+1..4`, etc.) |
-| **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor (Informative Tooltip) |
+| **Report Editor & Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts |
+| **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor |
 | **VPN / Local IP Discovery (`ip -j`)** | ✅ Yes | ✅ Yes (`ip -j`) | ✅ Yes (`ip -j`) |
-| **XDG Base Directory Spec Compliance** | N/A | ✅ Yes (`~/.config`, `~/.local/share`) | ✅ Yes (`~/.config`, `~/.local/share`) |
-| **Desktop Integration (`.desktop`, Hicolor Icons)** | N/A | ✅ Yes | ✅ Yes |
+| **XDG Base Directory Compliance** | N/A | ✅ Yes | ✅ Yes |
+| **Desktop Integration** | N/A | ✅ Yes | ✅ Yes |
 
 ## Installation
 
 ### Windows executable
 
-Download the current Windows build from the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases). No Python installation is required.
+Download the current Windows build from the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases).
+
+No Python installation is required.
 
 ### Linux
 
 Requirements: Python 3.10+ and standard Qt6/XCB desktop runtime dependencies.
 
-**System dependencies:**
+**Ubuntu / Debian / Kali Linux**
 
-* **Ubuntu / Debian / Kali Linux:**
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
-  ```
-* **Fedora / RHEL:**
-  ```bash
-  sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
-  ```
-* **Arch Linux:**
-  ```bash
-  sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
-  ```
+```bash
+sudo apt-get update
+sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
+```
 
-**Install & Run:**
+**Fedora / RHEL**
+
+```bash
+sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
+```
+
+**Arch Linux**
+
+```bash
+sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
+```
+
+**Install and run**
 
 ```bash
 git clone https://github.com/m1thraz/SpectreHUD.git
@@ -115,9 +140,9 @@ pip install .
 spectrehud
 ```
 
-*(Once published to PyPI, direct `pip install spectrehud` will also be available).*
+Once published to PyPI, direct `pip install spectrehud` will also be available.
 
-### From source & development
+### From source / development
 
 Requirements: Python 3.10+ on Windows or Linux.
 
@@ -128,10 +153,9 @@ pip install -e ".[dev]"
 python scripts/run_tests.py fast
 ```
 
-The cross-platform test runner also provides `full`, `release`, `all`, and
-`targeted` modes. Calling it without a mode runs the complete unfiltered suite.
+The cross-platform test runner also provides `full`, `release`, `all`, and `targeted` modes. Calling it without a mode runs the complete unfiltered suite.
 
-Build the distributable artifacts with:
+Build distributable artifacts with:
 
 ```bash
 pip wheel . --no-deps --no-build-isolation -w dist/
@@ -141,9 +165,17 @@ python scripts/build_exe.py
 
 ## Platform notes
 
-Windows is the primary production-verified platform. Linux support is implemented and CI-validated; real-desktop X11/Wayland acceptance is still being expanded across physical and virtualized desktop environments.
+Windows is the primary production-verified platform.
 
-On modern Wayland compositors, global background key logging and arbitrary display grabbing are restricted by the compositor security model; SpectreHUD gracefully degrades to in-app keyboard shortcuts and provides clear UI tooltips without blocking the application.
+Linux support is implemented and CI-validated; real-desktop X11/Wayland acceptance is still being expanded across physical and virtualized desktop environments.
+
+On modern Wayland compositors, global background key logging and arbitrary display grabbing are restricted by the compositor security model. SpectreHUD gracefully degrades to in-app keyboard shortcuts and provides clear UI guidance without blocking the application.
+
+## Contributing and security
+
+Focused contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+Report suspected vulnerabilities privately according to [SECURITY.md](SECURITY.md), and never place credentials or engagement data in a public issue.
 
 ## License
 
