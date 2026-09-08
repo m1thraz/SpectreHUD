@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 from core.reporting.template_engine import ReportTemplate, TemplateSection
 from core.loot.manager import CATEGORIES
 from core.i18n import t
+from ui.base_dialog import BaseHudDialog
 
 
 SECTION_TYPE_KEYS = {
@@ -51,13 +52,14 @@ def get_section_type_name(sec_type: str) -> str:
 SECTION_TYPE_NAMES = {k: v[1] for k, v in SECTION_TYPE_KEYS.items()}
 
 
-class SectionEditDialog(QDialog):
+class SectionEditDialog(BaseHudDialog):
     """Dialog to configure or add a single template section."""
 
     def __init__(self, section: Optional[TemplateSection] = None, parent: Optional[QWidget] = None):
-        super().__init__(parent)
+        title = t("template_editor.edit_section_title", "Sektion konfigurieren")
+        super().__init__(title, parent)
         self.setObjectName("TemplateSectionEditDialog")
-        self.setWindowTitle(t("template_editor.edit_section_title", "Sektion konfigurieren"))
+        self.set_dialog_title(title)
         self.resize(420, 260)
 
         self._initial_section = section
@@ -66,7 +68,7 @@ class SectionEditDialog(QDialog):
             self._load_section(section)
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        layout = self.body_layout
 
         form = QFormLayout()
         self.combo_type = QComboBox()
@@ -147,20 +149,20 @@ class SectionEditDialog(QDialog):
         )
 
 
-class TemplateEditorDialog(QDialog):
+class TemplateEditorDialog(BaseHudDialog):
     """Dialog to create or edit a ReportTemplate."""
 
     result_template: Optional[ReportTemplate] = None
 
     def __init__(self, template: Optional[ReportTemplate] = None, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self.setObjectName("TemplateEditorDialog")
         title = (
             t("template_editor.title_edit", "Template-Editor")
             if template
             else t("template_editor.title_new", "Neues Report-Template erstellen")
         )
-        self.setWindowTitle(title)
+        super().__init__(title, parent)
+        self.setObjectName("TemplateEditorDialog")
+        self.set_dialog_title(title)
         self.resize(600, 520)
 
         self._template = template
@@ -170,7 +172,7 @@ class TemplateEditorDialog(QDialog):
             self._load_template(template)
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        layout = self.body_layout
 
         form = QFormLayout()
 

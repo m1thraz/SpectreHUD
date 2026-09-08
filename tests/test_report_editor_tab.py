@@ -16,7 +16,7 @@ from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.reporting.file_manager import ReportFileManager
 from core.i18n import t
-from ui.report.dialogs import ReportGenerationDialog
+from ui.report.dialogs import ReportGenerationDialog, ReportRegenerationConfirmDialog
 from ui.report.preview import ReportPreviewEdit
 from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode
 
@@ -83,6 +83,7 @@ class TestReportEditorTab(unittest.TestCase):
             dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot")
         )
         self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertFalse(dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
         self.assertEqual(dialog.lbl_dialog_title.text(), dialog.windowTitle())
 
     def test_html_export_profile_buttons_have_room_for_their_labels(self):
@@ -550,10 +551,12 @@ Text
         self.tab.save()
 
         with patch.object(
-            QMessageBox, "warning", return_value=QMessageBox.StandardButton.No
-        ) as mock_warn:
+            ReportRegenerationConfirmDialog,
+            "exec",
+            return_value=QDialog.DialogCode.Rejected,
+        ) as confirm_exec:
             self.tab._on_regenerate_clicked()
-            mock_warn.assert_called_once()
+            confirm_exec.assert_called_once()
 
         self.assertEqual(
             self.tab.editor.toPlainText(),
@@ -567,7 +570,9 @@ Text
 
         with (
             patch.object(
-                QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes
+                ReportRegenerationConfirmDialog,
+                "exec",
+                return_value=QDialog.DialogCode.Accepted,
             ),
             patch("ui.report_editor_tab.ReportGenerationDialog") as MockGenDialog,
         ):

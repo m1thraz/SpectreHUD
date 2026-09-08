@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -271,6 +272,57 @@ class ReportGenerationDialog(BaseHudDialog):
             return
         self.selected_template = template
         self.accept()
+
+
+class ReportRegenerationConfirmDialog(BaseHudDialog):
+    """Frameless confirmation for the destructive full-report regeneration path."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        title = t("report.regenerate_confirm_title", "Overwrite Existing Report?")
+        super().__init__(title, parent)
+        self.setObjectName("ReportRegenerationConfirmDialog")
+        self.set_dialog_title(title)
+        self.setMinimumWidth(520)
+
+        warning_row = QHBoxLayout()
+        warning_icon = QLabel()
+        warning_icon.setPixmap(
+            self.style()
+            .standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+            .pixmap(QSize(32, 32))
+        )
+        warning_icon.setAlignment(Qt.AlignmentFlag.AlignTop)
+        warning_row.addWidget(warning_icon)
+
+        message = QLabel(
+            t(
+                "report.regenerate_confirm_message",
+                "Warning: Regenerating from scratch will completely overwrite the current "
+                "report structure and all manual notes!\n\n"
+                "A backup of the current state will be saved as report.md.bak, but manual "
+                "edits in this report will be replaced.\n\n"
+                "Tip: To keep your manual notes and only append new loot, use 'Add Missing "
+                "Loot' instead.\n\nDo you really want to regenerate and overwrite?",
+            )
+        )
+        message.setWordWrap(True)
+        message.setTextFormat(Qt.TextFormat.PlainText)
+        warning_row.addWidget(message, stretch=1)
+        self.body_layout.addLayout(warning_row)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel.setProperty("class", "SecondaryBtn")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        overwrite = QPushButton(
+            t("report.regenerate_overwrite_button", "Regenerate & Overwrite")
+        )
+        overwrite.setProperty("class", "DangerBtn")
+        overwrite.clicked.connect(self.accept)
+        buttons.addWidget(overwrite)
+        self.body_layout.addLayout(buttons)
 
 
 class LootImagePickerDialog(QDialog):

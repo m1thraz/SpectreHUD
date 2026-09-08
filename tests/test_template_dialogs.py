@@ -32,6 +32,8 @@ class TestTemplateDialogs(unittest.TestCase):
     def test_section_edit_dialog_creation(self):
         """Tests section configuration dialog."""
         dlg = SectionEditDialog()
+        self.assertIsInstance(dlg, BaseHudDialog)
+        self.assertTrue(dlg.windowFlags() & Qt.WindowType.FramelessWindowHint)
         # Default is header_metadata
         sec = dlg.get_section()
         self.assertEqual(sec.type, "header_metadata")
@@ -89,6 +91,9 @@ class TestTemplateDialogs(unittest.TestCase):
         """The editor uses the app theme instead of blocking user themes locally."""
         dlg = TemplateEditorDialog()
 
+        self.assertIsInstance(dlg, BaseHudDialog)
+        self.assertTrue(dlg.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertFalse(dlg.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
         self.assertEqual(dlg.objectName(), "TemplateEditorDialog")
         self.assertEqual(dlg.list_sections.objectName(), "TemplateSectionList")
         self.assertEqual(dlg.styleSheet(), "")
@@ -164,6 +169,7 @@ class TestTemplateDialogs(unittest.TestCase):
         dlg = TemplateManagerDialog(repository=self.repo)
         self.assertIsInstance(dlg, BaseHudDialog)
         self.assertTrue(dlg.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertFalse(dlg.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
         self.assertEqual(dlg.lbl_dialog_title.text(), dlg.windowTitle())
         self.assertEqual(dlg.objectName(), "TemplateManagerDialog")
         self.assertEqual(dlg.table.objectName(), "TemplateTable")

@@ -49,6 +49,7 @@ from ui.report.dialogs import (
     MarkdownTableDialog,
     ReportIconPickerDialog,
     ReportGenerationDialog,
+    ReportRegenerationConfirmDialog,
 )
 from ui.report.icon_assets import ReportIconError, render_report_icon
 from ui.report.find_replace import FindReplaceBar
@@ -1104,20 +1105,8 @@ class ReportEditorTab(QWidget):
         has_existing = self.report_file_manager.exists(self.current_project)
         current_content = self.editor.toPlainText().strip()
         if has_existing and current_content:
-            reply = QMessageBox.warning(
-                self.window() if self else None,
-                t("report.regenerate_confirm_title", "Overwrite Existing Report?"),
-                t(
-                    "report.regenerate_confirm_message",
-                    "Warning: Regenerating from scratch will completely overwrite the current report structure and all manual notes!\n\n"
-                    "A backup of the current state will be saved as report.md.bak, but manual edits in this report will be replaced.\n\n"
-                    "Tip: To keep your manual notes and only append new loot, use 'Add Missing Loot' instead.\n\n"
-                    "Do you really want to regenerate and overwrite?",
-                ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
+            confirmation = ReportRegenerationConfirmDialog(parent=self)
+            if confirmation.exec() != QDialog.DialogCode.Accepted:
                 return
 
         dialog = ReportGenerationDialog(

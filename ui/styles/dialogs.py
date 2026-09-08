@@ -121,13 +121,13 @@ QLineEdit.CompactVarInput:focus {
 
 /* Frameless HUD Dialog Shell */
 QFrame#DialogHudFrame {
-    background-color: {DARK_A98};
+    background-color: {BG_DARK};
     border: 1px solid {CYAN_A35};
     border-radius: 12px;
 }
 
 QFrame#DialogHeaderBar {
-    background-color: {SURFACE_A90};
+    background-color: {BG_SURFACE};
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     border-bottom: 1px solid {BORDER_A60};

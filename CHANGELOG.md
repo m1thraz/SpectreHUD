@@ -20,6 +20,7 @@ semantic versioning.
 
 ### Fixed
 
+* Unified report-generation, template-management, template-editor, section-editor, and regeneration-confirmation windows on the opaque frameless HUD dialog shell.
 * Use the active report template language when Add Missing Loot creates its fallback section.
 * Reset frameless-window resize cursors when leaving an edge for nested content instead of keeping a stale resize pointer.
 
