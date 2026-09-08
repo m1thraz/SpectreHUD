@@ -8,7 +8,7 @@ import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtWidgets import QMessageBox, QDialog
-from PyQt6.QtCore import QMimeData, QUrl
+from PyQt6.QtCore import QMimeData, Qt, QUrl
 from PyQt6.QtGui import QShortcut
 
 from core.project import ProjectManager
@@ -82,6 +82,8 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertEqual(
             dialog.windowTitle(), t("report.generate_title", "Generate Report from Loot")
         )
+        self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertEqual(dialog.lbl_dialog_title.text(), dialog.windowTitle())
 
     def test_html_export_profile_buttons_have_room_for_their_labels(self):
         with patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):

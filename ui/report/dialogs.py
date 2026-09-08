@@ -37,6 +37,7 @@ from ui.report.icon_assets import (
 )
 from ui.styles.icons import icon
 from ui.template_manager_dialog import TemplateManagerDialog
+from ui.base_dialog import BaseHudDialog
 
 
 class MarkdownTableDialog(QDialog):
@@ -164,7 +165,7 @@ class ReportIconPickerDialog(QDialog):
             self.accept()
 
 
-class ReportGenerationDialog(QDialog):
+class ReportGenerationDialog(BaseHudDialog):
     """Choose a report template immediately before generating from loot."""
 
     def __init__(
@@ -174,20 +175,18 @@ class ReportGenerationDialog(QDialog):
         has_existing_report: bool = False,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(parent)
+        title = t("report.generate_title", "Generate Report from Loot")
+        super().__init__(title, parent)
         self.template_repo = template_repo
         self.selected_template: Optional[ReportTemplate] = selected_template
-        self.setWindowTitle(t("report.generate_title", "Generate Report from Loot"))
+        self.set_dialog_title(title)
         self.setMinimumWidth(460)
         self._build_ui(has_existing_report)
         self._populate_templates()
 
     def _build_ui(self, has_existing_report: bool) -> None:
         self.setObjectName("ReportGenerationDialog")
-        self.setStyleSheet(
-            f"QDialog#ReportGenerationDialog {{ background-color: {BG_SURFACE}; color: {TEXT_PRIMARY}; }}"
-        )
-        layout = QVBoxLayout(self)
+        layout = self.body_layout
         description = QLabel(
             t(
                 "report.generate_description",

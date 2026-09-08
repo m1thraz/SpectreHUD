@@ -19,6 +19,7 @@ semantic versioning.
 
 ### Changed
 
+* Aligned the report-generation and template-manager windows with SpectreHUD's frameless dialog chrome instead of native light title bars.
 * Reordered report exports around HTML/PDF first and Markdown last, and simplified HTML choices to Professional Print first and an editable classic web version without a dark export option.
 * Made Professional Print HTML editable in the browser, including the existing edited-copy download workflow.
 * Replaced generated report severity emojis with export-safe text labels styled consistently across Markdown and HTML profiles.

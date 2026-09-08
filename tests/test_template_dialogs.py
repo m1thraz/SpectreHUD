@@ -6,12 +6,14 @@ from unittest.mock import patch
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QMessageBox
 from core.reporting.template_engine import TemplateSection
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog, SectionEditDialog
 from ui.template_manager_dialog import TemplateManagerDialog
 from ui.styles import APP_THEME
+from ui.base_dialog import BaseHudDialog
 
 class TestTemplateDialogs(unittest.TestCase):
     """Unit tests for TemplateEditorDialog, SectionEditDialog, and TemplateManagerDialog."""
@@ -160,6 +162,9 @@ class TestTemplateDialogs(unittest.TestCase):
 
     def test_template_manager_inherits_theme_table_styles(self):
         dlg = TemplateManagerDialog(repository=self.repo)
+        self.assertIsInstance(dlg, BaseHudDialog)
+        self.assertTrue(dlg.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertEqual(dlg.lbl_dialog_title.text(), dlg.windowTitle())
         self.assertEqual(dlg.objectName(), "TemplateManagerDialog")
         self.assertEqual(dlg.table.objectName(), "TemplateTable")
         self.assertEqual(dlg.styleSheet(), "")

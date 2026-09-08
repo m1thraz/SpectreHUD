@@ -9,7 +9,6 @@ from typing import Optional, List
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QTableWidget,
     QTableWidgetItem,
@@ -25,17 +24,19 @@ from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog
 from core.i18n import t
+from ui.base_dialog import BaseHudDialog
 
 
-class TemplateManagerDialog(QDialog):
+class TemplateManagerDialog(BaseHudDialog):
     """Management dialog for viewing, customizing, and selecting Report Templates."""
 
     def __init__(
         self, repository: Optional[TemplateRepository] = None, parent: Optional[QWidget] = None
     ):
-        super().__init__(parent)
+        title = t("template_manager.title", "Report-Templates verwalten")
+        super().__init__(title, parent)
         self.setObjectName("TemplateManagerDialog")
-        self.setWindowTitle(t("template_manager.title", "Report-Templates verwalten"))
+        self.set_dialog_title(title)
         self.resize(750, 420)
 
         self.repo = repository or TemplateRepository()
@@ -46,7 +47,7 @@ class TemplateManagerDialog(QDialog):
         self._load_templates()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        layout = self.body_layout
 
         lbl = QLabel(t("template_manager.available_templates", "Verfügbare Report-Templates:"))
         lbl.setStyleSheet("font-weight: bold;")
