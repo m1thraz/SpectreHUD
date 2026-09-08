@@ -89,6 +89,26 @@ def test_stream_row_completion_supports_undo_before_refresh(qapp):
     assert updates == [True]
 
 
+def test_stream_row_edit_uses_details_dialog_callback(qapp):
+    controller = _controller([_entry("one", "2026-09-06 10:00:00")])
+    parent = QWidget()
+    layout = QVBoxLayout(parent)
+    on_edit_note = MagicMock()
+
+    card = controller.render_content(
+        layout,
+        "",
+        None,
+        parent,
+        MagicMock(),
+        on_edit_note,
+    )[0]
+    card._trigger_edit()
+
+    on_edit_note.assert_called_once_with(card.entry)
+    assert not hasattr(card, "editor")
+
+
 def test_completion_timer_refreshes_stream_after_undo_window(qapp):
     controller = _controller([_entry("one", "2026-09-06 10:00:00")])
     parent = QWidget()

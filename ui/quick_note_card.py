@@ -86,7 +86,6 @@ class QuickNoteCard(QFrame):
     promote_requested = pyqtSignal(dict)
     send_to_report_requested = pyqtSignal(dict)
     deleted = pyqtSignal(str)
-    edited = pyqtSignal(str, str)
     status_changed = pyqtSignal(str, str)
     pin_toggled = pyqtSignal(str, bool)
     selection_changed = pyqtSignal(str, bool)
@@ -104,7 +103,6 @@ class QuickNoteCard(QFrame):
         super().__init__(parent)
         self.setObjectName("QuickNoteStreamCard")
         self.entry = dict(entry)
-        self.is_editing = False
         self._completion_timer = QTimer(self)
         self._completion_timer.setSingleShot(True)
         self._completion_timer.timeout.connect(
@@ -177,9 +175,6 @@ class QuickNoteCard(QFrame):
         self.undo_row.setVisible(False)
         content.addWidget(self.undo_row)
 
-        self.edit_container = self._create_editor()
-        self.edit_container.setVisible(False)
-        content.addWidget(self.edit_container)
         layout.addWidget(self.content_container, stretch=1)
 
         self.btn_copy = QPushButton()
@@ -189,34 +184,6 @@ class QuickNoteCard(QFrame):
         self.btn_copy.setToolTip(t("quick_note.copy_tip", "Copy quick note"))
         self.btn_copy.clicked.connect(self._copy_content)
         layout.addWidget(self.btn_copy, alignment=Qt.AlignmentFlag.AlignTop)
-
-    def _create_editor(self) -> QWidget:
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
-        self.editor = NoteEditor()
-        self.editor.setPlainText(self.entry.get("text", ""))
-        self.editor.setMaximumHeight(120)
-        self.editor.save_requested.connect(self._save_edit)
-        self.editor.cancel_requested.connect(self._cancel_edit)
-        layout.addWidget(self.editor)
-
-        actions = QHBoxLayout()
-        hint = QLabel(t("quick_note.edit_shortcut_hint", "Ctrl+Enter: Save | Esc: Cancel"))
-        hint.setObjectName("QuickNoteMeta")
-        actions.addWidget(hint)
-        actions.addStretch()
-        save = QPushButton(t("quick_note.save", "Save"))
-        save.setProperty("class", "PrimaryBtn")
-        save.clicked.connect(self._save_edit)
-        actions.addWidget(save)
-        cancel = QPushButton(t("quick_note.cancel", "Cancel"))
-        cancel.setProperty("class", "SecondaryBtn")
-        cancel.clicked.connect(self._cancel_edit)
-        actions.addWidget(cancel)
-        layout.addLayout(actions)
-        return container
 
     def _metadata_text(self) -> str:
         timestamp = str(self.entry.get("timestamp", "")).strip()
@@ -343,31 +310,8 @@ class QuickNoteCard(QFrame):
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         self._build_context_menu().exec(event.globalPos())
 
-    def _start_edit(self) -> None:
-        self.is_editing = True
-        self.lbl_content.setVisible(False)
-        self.lbl_meta.setVisible(False)
-        self.editor.setPlainText(self.entry.get("text", ""))
-        self.edit_container.setVisible(True)
-        self.editor.setFocus()
-
-    def _save_edit(self) -> None:
-        new_text = self.editor.toPlainText().strip()
-        if not new_text:
-            return
-        self.is_editing = False
-        self.entry["text"] = new_text
-        self.lbl_content.setText(new_text)
-        self.edit_container.setVisible(False)
-        self.lbl_content.setVisible(True)
-        self.lbl_meta.setVisible(True)
-        self.edited.emit(self.entry.get("id", ""), new_text)
-
     def _trigger_edit(self) -> None:
-        if self.receivers(self.edit_requested) > 0:
-            self.edit_requested.emit(self.entry)
-        else:
-            self._start_edit()
+        self.edit_requested.emit(self.entry)
 
     def eventFilter(self, watched, event) -> bool:
         if event.type() == QEvent.Type.MouseButtonDblClick:
@@ -382,13 +326,6 @@ class QuickNoteCard(QFrame):
             event.accept()
         else:
             super().mouseDoubleClickEvent(event)
-
-    def _cancel_edit(self) -> None:
-        self.is_editing = False
-        self.editor.setPlainText(self.entry.get("text", ""))
-        self.edit_container.setVisible(False)
-        self.lbl_content.setVisible(True)
-        self.lbl_meta.setVisible(True)
 
     def _copy_content(self) -> None:
         text = self.entry.get("text", "").strip()

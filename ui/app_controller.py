@@ -614,6 +614,7 @@ class AppController(QObject):
             self._on_content_copied,
             self.window,
             self.content.show_empty_state,
+            self._on_edit_note_requested,
         )
         return RenderResult(cards, self._format_entry_count(len(cards)))
 

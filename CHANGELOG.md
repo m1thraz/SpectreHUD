@@ -15,6 +15,7 @@ semantic versioning.
 * Cancel delayed Quick-IP and snippet-copy feedback when their widgets are closed, preventing stale Qt callbacks from touching deleted buttons.
 * Allow note text to be edited inline in Focus Review mode while retaining the details dialog for phase, target, and status changes.
 * Restart Focus Review at the first unfinished note after a completed pass and show a clear completion notice instead of an empty view.
+* Keep inline note editing exclusive to Focus Review while restoring the full edit dialog on double-click in the regular Notes stream.
 
 ### Changed
 

@@ -696,7 +696,6 @@ class QuickNoteController(QObject):
             lambda entry, p=parent_widget: self.send_to_report(entry, parent_widget=p)
         )
         card.deleted.connect(self.delete_note)
-        card.edited.connect(self.update_note_text)
         if on_edit_note is not None:
             card.edit_requested.connect(on_edit_note)
         card.status_changed.connect(self.set_note_status)
