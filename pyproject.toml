@@ -73,6 +73,7 @@ exclude = [
     ".wheel-venv",
     "build",
     "dist",
+    "tmp",
     ".git",
     "__pycache__",
 ]

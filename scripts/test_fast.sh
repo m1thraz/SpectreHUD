@@ -18,5 +18,4 @@ else
     python_cmd="python"
 fi
 
-"$python_cmd" -m pytest -m "not integration and not release" \
-    -n auto --dist=loadscope -x --tb=line -q
+"$python_cmd" "$repo_root/scripts/run_tests.py" fast

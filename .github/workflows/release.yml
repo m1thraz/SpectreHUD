@@ -54,7 +54,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m pytest -m "not release" -q
+          python scripts/run_tests.py full --no-parallel
 
       - name: Build Standalone Windows Executable
         run: |
@@ -99,7 +99,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python3 -m pytest -m "not release" -q
+          python3 scripts/run_tests.py full --no-parallel
 
       - name: Build Debian Package
         run: |

@@ -58,12 +58,14 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m pytest -m "not release"
+          python scripts/run_tests.py full --no-parallel
 
       - name: Run test suite with coverage
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
         env:
           QT_QPA_PLATFORM: offscreen
+        # Coverage must remain the parent process, so this instrumented lane
+        # intentionally invokes pytest directly with the same Full marker.
         run: |
           xvfb-run -a coverage run -m pytest -m "not release"
           coverage report -m
@@ -97,7 +99,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m pytest -m release
+          python scripts/run_tests.py release
 
       - name: Build and inspect wheel
         run: |

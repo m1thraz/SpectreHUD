@@ -27,6 +27,19 @@ tests use the offscreen platform in automation. Features involving global
 hotkeys, the tray, window geometry, screenshots, and native file dialogs still
 require a manual desktop smoke test.
 
+The test-runner command is identical after activating the environment. Without
+activation, invoke the environment interpreter explicitly:
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\python.exe scripts\run_tests.py fast
+```
+
+```bash
+# Linux
+.venv/bin/python scripts/run_tests.py fast
+```
+
 ## Where changes belong
 
 - `core/`: domain services, persistence, validation, reporting, and exporters.
@@ -60,24 +73,28 @@ larger task, run the complete suite once:
 
 ```bash
 # Targeted development loop
-pytest -q tests/test_changed_area.py
+python scripts/run_tests.py targeted tests/test_changed_area.py
 
 # Fast development check (parallel)
-./scripts/test_fast.sh
+python scripts/run_tests.py fast
 
 # Fast and integration tests; excludes distribution builds (parallel)
-./scripts/test_full.sh
+python scripts/run_tests.py full
 
 # Complete final gate, including release tests
-pytest -q
+python scripts/run_tests.py
 ```
 
 Tests marked `integration` cross a component, Qt-window, subprocess, or operating
 system boundary. Tests marked `release` build or inspect distribution artifacts.
-Markers classify execution cost; an unfiltered pytest run still executes every
-test. The default pytest output is compact, while failures retain short
-tracebacks and their exact test IDs. `python scripts/run_tests.py`
-intentionally remains an alias for the complete, unfiltered final gate.
+Markers classify execution cost; an unfiltered run still executes every test.
+The Python runner works on Windows and Linux, stores complete output under the
+system temporary directory, prints one summary line after success, and retains
+the actionable traceback plus log path after failure. Use `--verbose` to stream
+pytest output, `--keep-log` to retain successful logs, `--collect-only` to inspect
+selection, or `--no-parallel` for a serial control run. Calling
+`python scripts/run_tests.py` without a tier intentionally remains the complete,
+unfiltered final gate.
 
 The workflow-invariant modules, `test_smoke.py`, and Cheatsheet geometry are
 integration suites because their assertions depend on a composed `MainWindow`.
@@ -88,7 +105,7 @@ their isolated service/widget tests remain in the Fast Suite.
 For packaging, dependency, entry-point, or release-metadata changes, also run:
 
 ```bash
-python -m pytest -m release
+python scripts/run_tests.py release
 python -m pip wheel . --no-deps --no-build-isolation -w dist/
 python scripts/verify_wheel.py dist/
 ```
@@ -120,9 +137,11 @@ ruff format --line-length 100 core ui scripts main.py spectrehud_launcher.py cre
 - `E501` (Line length): Handled by `ruff format`; long URLs, templates, and Markdown tables are preserved for readability.
 
 CI validates Python 3.10–3.13 on Windows and Linux and performs coverage on
-Linux. Separate package gates install and smoke-test the built wheel on both
-platforms; the Windows gate additionally builds and exercises the standalone
-executable.
+Linux. Normal matrix and release-validation lanes use the same runner in serial
+mode; the instrumented coverage lane invokes pytest directly so `coverage` stays
+the parent process, while preserving the Full marker selection. Separate package
+gates install and smoke-test the built wheel on both platforms; the Windows gate
+additionally builds and exercises the standalone executable.
 
 ## Project-specific review points
 

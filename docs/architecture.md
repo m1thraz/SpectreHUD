@@ -288,12 +288,20 @@ for the two trust boundaries and their test rationale.
 ## 5. Testing & CI/CD Strategy
 
 - **Master Test Runner (`scripts/run_tests.py`)**:
-  - Delegates to the pytest collection under `tests/` and runs headlessly (`QT_QPA_PLATFORM=offscreen`).
+  - Provides the cross-platform `fast`, `full`, `release`, `all`, and `targeted`
+    contracts and runs pytest headlessly (`QT_QPA_PLATFORM=offscreen`).
+  - Writes full output and JUnit results below the system temporary directory.
+    Successful runs return one compact summary; failures retain the complete log
+    and show the failing node IDs plus the actionable output tail.
   - Test counts are intentionally not treated as release documentation: parametrization and regression additions change them. The current CI result is the release evidence.
-  - `scripts/test_fast.sh` and `scripts/test_full.sh` use `pytest-xdist` with
-    `--dist=loadscope` for local feedback while keeping tests from one module or
-    class on the same worker. Suspected order-dependent failures are reproduced
-    serially with `-n0`.
+  - Fast and Full use `pytest-xdist --dist=loadscope` while keeping tests from one
+    module or class on the same worker. `scripts/test_fast.sh` and
+    `scripts/test_full.sh` are compatibility entry points for those Python-runner
+    modes. Suspected order-dependent failures are reproduced with
+    `--no-parallel`.
+  - Windows and Linux CI lanes call the same runner with `--no-parallel` to
+    preserve their serial execution contract. The coverage lane invokes pytest
+    directly because `coverage run` must own the instrumented process.
   - `integration` marks cross-component Qt, subprocess and workflow boundaries;
     `release` marks wheel and distribution checks. The normal OS/Python matrix
     runs everything except `release`; the Windows package-validation job

@@ -125,8 +125,11 @@ Requirements: Python 3.10+ on Windows or Linux.
 git clone https://github.com/m1thraz/SpectreHUD.git
 cd SpectreHUD
 pip install -e ".[dev]"
-python scripts/run_tests.py
+python scripts/run_tests.py fast
 ```
+
+The cross-platform test runner also provides `full`, `release`, `all`, and
+`targeted` modes. Calling it without a mode runs the complete unfiltered suite.
 
 Build the distributable artifacts with:
 
