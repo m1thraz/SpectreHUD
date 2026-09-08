@@ -90,11 +90,32 @@ system boundary. Tests marked `release` build or inspect distribution artifacts.
 Markers classify execution cost; an unfiltered run still executes every test.
 The Python runner works on Windows and Linux, stores complete output under the
 system temporary directory, prints one summary line after success, and retains
-the actionable traceback plus log path after failure. Use `--verbose` to stream
-pytest output, `--keep-log` to retain successful logs, `--collect-only` to inspect
-selection, or `--no-parallel` for a serial control run. Calling
-`python scripts/run_tests.py` without a tier intentionally remains the complete,
-unfiltered final gate.
+the actionable traceback plus log path after failure. It reads stable counts and
+failing node IDs from a JUnit report and distinguishes test failures, collection
+errors, interrupts, pytest failures, and xdist worker crashes.
+
+Use `--verbose` to stream pytest output, `--keep-log` to retain successful logs,
+`--collect-only` to inspect selection, or `--no-parallel` for a serial control
+run. Retained log/JUnit pairs are limited to the newest 20 runs by default; use
+`--max-retained-runs N` to select another positive limit. The runner forwards
+SIGINT/SIGTERM to the pytest process group so xdist workers are stopped on both
+Windows and Linux.
+
+For focused reruns and agent consumption:
+
+```bash
+python scripts/run_tests.py targeted tests/test_changed_area.py
+python scripts/run_tests.py last-failed
+python scripts/run_tests.py fast --json
+```
+
+`last-failed` uses the node IDs recorded by the most recent failed runner call
+and clears them after a successful rerun. It succeeds without starting Pytest
+when no recorded failures exist. `--json` emits exactly one versioned JSON object;
+it cannot be combined with `--verbose`. Successful artifacts are deleted unless
+`--keep-log` is set, while failures always retain their complete log and any
+JUnit report. Calling `python scripts/run_tests.py` without a tier intentionally
+remains the complete, unfiltered final gate.
 
 The workflow-invariant modules, `test_smoke.py`, and Cheatsheet geometry are
 integration suites because their assertions depend on a composed `MainWindow`.

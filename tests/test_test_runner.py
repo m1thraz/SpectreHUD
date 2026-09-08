@@ -1,8 +1,19 @@
 """Tests for the cross-platform, quiet test-tier runner."""
 
+import json
+import os
+import signal
+import subprocess
 import sys
 
+import pytest
+
 from scripts import run_tests
+
+
+@pytest.fixture(autouse=True)
+def isolated_runner_logs(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_tests, "LOG_ROOT", tmp_path / "runner-logs")
 
 
 def _option_value(command: list[str], option: str) -> str:
@@ -61,6 +72,17 @@ def test_targeted_command_uses_only_supplied_node_ids(tmp_path):
     assert command[-2:] == list(targets)
     assert str(run_tests.TESTS_DIR) not in command
     assert command.count("-m") == 1
+
+
+def test_last_failed_uses_recorded_node_ids_without_the_whole_suite(tmp_path):
+    targets = ("tests/test_sample.py::test_one", "tests/test_other.py::test_two")
+    command = run_tests.build_pytest_command(
+        "last-failed", tmp_path / "results.xml", targets=targets
+    )
+
+    assert "--lf" not in command
+    assert command[-2:] == list(targets)
+    assert str(run_tests.TESTS_DIR) not in command
 
 
 def test_collect_only_omits_junit_and_quiet_mode(tmp_path):
@@ -138,6 +160,38 @@ def test_failure_helpers_prefer_terminal_node_ids_and_classify_infrastructure():
     assert run_tests.failure_kind(2, "", False) == "interrupted"
     assert run_tests.failure_kind(130, "", False) == "interrupted"
     assert run_tests.failure_kind(5, "", False) == "no-tests-collected"
+    assert run_tests.failure_kind(3, "maximum crashed workers reached", True) == (
+        "worker-crash"
+    )
+
+
+def test_process_group_configuration_is_cross_platform():
+    assert run_tests._process_group_options("posix") == {"start_new_session": True}
+    assert run_tests._process_group_options("nt") == {
+        "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
+    }
+
+
+def test_signal_forwarding_targets_posix_process_group(monkeypatch):
+    calls = []
+
+    class Process:
+        pid = 42
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(
+        run_tests.os,
+        "killpg",
+        lambda pid, signum: calls.append((pid, signum)),
+        raising=False,
+    )
+
+    run_tests.forward_signal(Process(), signal.SIGTERM, platform_name="posix")
+
+    assert calls == [(42, signal.SIGTERM)]
 
 
 def test_success_prints_summary_and_removes_artifacts(tmp_path, monkeypatch, capsys):
@@ -212,6 +266,111 @@ def test_success_without_junit_is_an_infrastructure_error(tmp_path, monkeypatch,
     assert "ERROR tier=targeted kind=missing-report exit=3" in capsys.readouterr().out
 
 
+def test_json_success_is_one_machine_readable_result(tmp_path, monkeypatch, capsys):
+    log_path = tmp_path / "run.log"
+    junit_path = tmp_path / "run.xml"
+    monkeypatch.setattr(run_tests, "create_artifact_paths", lambda _tier: (log_path, junit_path))
+
+    def fake_run(_command, *, environment, log_path, verbose):
+        log_path.write_text("one passed\n", encoding="utf-8")
+        junit_path.write_text(
+            '<testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1">'
+            '<testcase classname="tests.test_sample" name="test_pass" />'
+            "</testsuite>",
+            encoding="utf-8",
+        )
+        return 0
+
+    monkeypatch.setattr(run_tests, "run_process", fake_run)
+
+    assert (
+        run_tests.execute_tier(
+            "targeted", targets=("tests/test_sample.py",), json_output=True
+        )
+        == 0
+    )
+
+    result = json.loads(capsys.readouterr().out)
+    assert result["schema_version"] == 1
+    assert result["status"] == "passed"
+    assert result["kind"] == "success"
+    assert result["stats"]["passed"] == 1
+    assert result["artifacts"] == {"junit": None, "log": None}
+
+
+def test_json_failure_contains_node_ids_tail_and_retained_artifacts(
+    tmp_path, monkeypatch, capsys
+):
+    log_path = tmp_path / "run.log"
+    junit_path = tmp_path / "run.xml"
+    monkeypatch.setattr(run_tests, "create_artifact_paths", lambda _tier: (log_path, junit_path))
+
+    def fake_run(_command, *, environment, log_path, verbose):
+        log_path.write_text(
+            "FAILED tests/test_sample.py::test_failure - assert False\n", encoding="utf-8"
+        )
+        junit_path.write_text(
+            '<testsuite tests="1" failures="1" errors="0" skipped="0" time="0.1">'
+            '<testcase classname="tests.test_sample" name="test_failure" '
+            'file="tests/test_sample.py"><failure>traceback</failure></testcase>'
+            "</testsuite>",
+            encoding="utf-8",
+        )
+        return 1
+
+    monkeypatch.setattr(run_tests, "run_process", fake_run)
+
+    assert (
+        run_tests.execute_tier(
+            "targeted", targets=("tests/test_sample.py",), json_output=True
+        )
+        == 1
+    )
+
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "failed"
+    assert result["kind"] == "test-failure"
+    assert result["failed_tests"] == ["tests/test_sample.py::test_failure"]
+    assert "assert False" in result["detail"]
+    assert result["artifacts"] == {"junit": str(junit_path), "log": str(log_path)}
+    assert run_tests.load_last_failed() == ("tests/test_sample.py::test_failure",)
+
+
+def test_last_failed_without_cached_failures_is_success(tmp_path, monkeypatch, capsys):
+    assert run_tests.execute_tier("last-failed", json_output=True) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "passed"
+    assert result["kind"] == "no-last-failures"
+    assert result["exit_code"] == 0
+
+
+def test_last_failed_state_is_deduplicated_and_cleared_after_success(
+    tmp_path, monkeypatch, capsys
+):
+    node_id = "tests/test_sample.py::test_failure"
+    run_tests.save_last_failed((node_id, node_id))
+    assert run_tests.load_last_failed() == (node_id,)
+    log_path = tmp_path / "run.log"
+    junit_path = tmp_path / "run.xml"
+    monkeypatch.setattr(run_tests, "create_artifact_paths", lambda _tier: (log_path, junit_path))
+
+    def fake_run(command, *, environment, log_path, verbose):
+        assert command[-1] == node_id
+        log_path.write_text("one passed\n", encoding="utf-8")
+        junit_path.write_text(
+            '<testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1">'
+            '<testcase classname="tests.test_sample" name="test_failure" />'
+            "</testsuite>",
+            encoding="utf-8",
+        )
+        return 0
+
+    monkeypatch.setattr(run_tests, "run_process", fake_run)
+
+    assert run_tests.execute_tier("last-failed") == 0
+    assert run_tests.load_last_failed() == ()
+
+
 def test_artifact_paths_live_in_the_system_temp_directory(monkeypatch, tmp_path):
     monkeypatch.setattr(run_tests, "LOG_ROOT", tmp_path / "spectrehud-tests")
 
@@ -221,6 +380,33 @@ def test_artifact_paths_live_in_the_system_temp_directory(monkeypatch, tmp_path)
     assert junit_path.parent == log_path.parent
     assert log_path.suffix == ".log"
     assert junit_path.suffix == ".xml"
+
+
+def test_artifact_retention_keeps_newest_run_groups(tmp_path, monkeypatch):
+    log_root = tmp_path / "logs"
+    log_root.mkdir()
+    monkeypatch.setattr(run_tests, "LOG_ROOT", log_root)
+    for index in range(3):
+        for suffix in (".log", ".xml"):
+            path = log_root / f"fast-run-{index}{suffix}"
+            path.write_text("artifact", encoding="utf-8")
+            os.utime(path, (index + 1, index + 1))
+    unrelated = log_root / "README.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+
+    run_tests.prune_artifacts(max_runs=2)
+
+    assert not (log_root / "fast-run-0.log").exists()
+    assert not (log_root / "fast-run-0.xml").exists()
+    assert (log_root / "fast-run-1.log").exists()
+    assert (log_root / "fast-run-2.xml").exists()
+    assert unrelated.exists()
+
+
+@pytest.mark.parametrize("value", ["0", "-1"])
+def test_retention_count_must_be_positive(value):
+    with pytest.raises(run_tests.argparse.ArgumentTypeError, match="at least 1"):
+        run_tests.positive_int(value)
 
 
 def test_legacy_entry_point_selects_all(monkeypatch):
