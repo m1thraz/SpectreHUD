@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from core.project import ProjectManager
+from core.project import ProjectManager, ProjectStateCorruptedError
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.logger import get_logger
@@ -33,7 +33,11 @@ class ProjectSessionService:
         and populates the LootManager, ClipboardHistory, QuickNoteManager, and PhaseContext.
         """
         pname = project_name or self.project_manager.get_active_project()
-        state = self.project_manager.load_project_state(name=pname)
+        try:
+            state = self.project_manager.load_project_state(name=pname)
+        except ProjectStateCorruptedError:
+            logger.error("Refusing to replace the live session with corrupted state for '%s'.", pname)
+            raise
         if state:
             self.loot_manager.replace_entries(state.get("loot", []))
             self.clipboard_history.replace_history(state.get("clipboard_history", []))

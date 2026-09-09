@@ -8,7 +8,7 @@ from typing import Optional, Dict, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
-from core.project import ProjectManager
+from core.project import ProjectManager, ProjectStateCorruptedError
 from core.project.validator import WorkspaceError, validate_workspace_directory
 from core.config import ConfigManager
 from core.project.session_service import ProjectSessionService
@@ -44,12 +44,32 @@ class WorkspaceCoordinator(QObject):
         self.report_ctrl = report_ctrl
         self.event_bus = event_bus
 
-    def load_active_project_session(self, window: Optional[QWidget] = None) -> Dict[str, str]:
+    def load_active_project_session(
+        self, window: Optional[QWidget] = None
+    ) -> Optional[Dict[str, str]]:
         """Loads and returns the variable state for the currently active project."""
         active_proj = self.project_manager.get_active_project()
         if not self._unlock_project_if_needed(active_proj, window):
             return {}
-        return self.session_service.load_project_session(active_proj)
+        try:
+            return self.session_service.load_project_session(active_proj)
+        except ProjectStateCorruptedError as exc:
+            logger.error("Could not load corrupted project state for '%s': %s", active_proj, exc)
+            if window is None:
+                raise
+            QMessageBox.warning(
+                window,
+                t("project.state_corrupted_title", "Project state unreadable"),
+                t(
+                    "project.state_corrupted_msg",
+                    "The saved state for '{project}' is damaged or too large. SpectreHUD did not "
+                    "replace it or clear the current session. Restore project_state.json from a "
+                    "backup before continuing.\n\n{error}",
+                    project=active_proj,
+                    error=str(exc),
+                ),
+            )
+            return None
 
     def _unlock_project_if_needed(self, project_name: str, window: Optional[QWidget]) -> bool:
         """Prompt only when a Pentest-Mode project lacks its in-memory session key."""

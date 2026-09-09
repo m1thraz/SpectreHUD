@@ -15,7 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QWidget, QMessageBox, QPushButton
 
 from core.config import ConfigManager
-from core.project import ProjectManager
+from core.project import ProjectManager, ProjectStateCorruptedError
 from core.project.validator import WorkspaceError
 from core.project.session_service import ProjectSessionService
 from core.project.lock_service import ProjectSecurityMetaError
@@ -62,6 +62,17 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         state = self.coord.load_active_project_session(self.window)
         self.assertEqual(state, {"target_ip": "10.10.10.1"})
         self.session_service.load_project_session.assert_called_with("Box1")
+
+    def test_corrupt_project_state_warns_without_returning_default_state(self):
+        self.session_service.load_project_session.side_effect = ProjectStateCorruptedError(
+            "corrupted"
+        )
+
+        with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning") as warning:
+            state = self.coord.load_active_project_session(self.window)
+
+        self.assertIsNone(state)
+        warning.assert_called_once()
 
     def test_unlock_project_if_needed_flows(self):
         """_unlock_project_if_needed tests already unlocked, cancel, retry, success, and error."""

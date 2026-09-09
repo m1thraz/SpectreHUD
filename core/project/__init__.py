@@ -24,6 +24,7 @@ from core.project.repository import (
 )
 from core.project.manager import ProjectManager
 from core.project.lock_service import ProjectLockedError, ProjectSecurityMetaError
+from core.project.state_store import ProjectStateCorruptedError
 
 __all__ = [
     "ProjectManager",
@@ -35,6 +36,7 @@ __all__ = [
     "ProjectCreationError",
     "ProjectLockedError",
     "ProjectSecurityMetaError",
+    "ProjectStateCorruptedError",
     "WorkspaceError",
     "validate_project_name",
     "sanitize_project_name",

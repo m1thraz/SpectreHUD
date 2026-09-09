@@ -341,6 +341,13 @@ class TestAppController(unittest.TestCase):
             self.header.set_project_title.assert_called_with("TestBox")
             self.var_bar.set_variables.assert_called_with({"target_ip": "10.10.10.99"})
 
+        self.var_bar.set_variables.reset_mock()
+        with patch.object(
+            self.controller.workspace_coord, "load_active_project_session", return_value=None
+        ):
+            self.controller.load_active_project_state()
+            self.var_bar.set_variables.assert_not_called()
+
         with patch.object(self.controller.workspace_coord, "save_current_project_session", return_value=True) as mock_save:
             res = self.controller.save_current_project_state()
             self.assertTrue(res)

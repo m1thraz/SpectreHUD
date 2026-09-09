@@ -636,6 +636,8 @@
     "project.import_failed_msg": "The project folder could not be imported:\n{error}",
     "project.import_failed_title": "Import Failed",
     "project.pentest_meta_error_title": "Pentest Mode Error",
+    "project.state_corrupted_title": "Project state unreadable",
+    "project.state_corrupted_msg": "The saved state for '{project}' is damaged or too large. SpectreHUD did not replace it or clear the current session. Restore project_state.json from a backup before continuing.\n\n{error}",
     "project.unlock_failed_msg": "Incorrect password.",
     "project.unlock_failed_title": "Unlock Failed",
     "project_dialog.btn_unlock": "Unlock",

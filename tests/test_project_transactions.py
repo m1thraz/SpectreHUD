@@ -6,6 +6,7 @@ and Finding 4 (Protection against Silent Project Hijacking on Folder Import).
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from core.project import ProjectManager, ProjectExistsError, ProjectCreationError
 
@@ -28,6 +29,33 @@ class TestProjectTransactions(unittest.TestCase):
 
             # The project must NOT be registered in the registry
             self.assertNotIn("BrokenBox", pm.registry)
+
+    def test_allow_existing_rollback_removes_only_files_created_by_failed_call(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_dir = Path(tmpdir) / "projects"
+            config_dir = Path(tmpdir) / "config"
+            pm = ProjectManager(base_dir=base_dir, config_dir=config_dir)
+            existing = base_dir / "ExistingBox"
+            existing.mkdir()
+            sentinel = existing / "keep.txt"
+            sentinel.write_text("user data", encoding="utf-8")
+            existing_recon = existing / "recon"
+            existing_recon.mkdir()
+
+            with patch(
+                "core.project.repository.atomic_write_json",
+                side_effect=OSError("injected state write failure"),
+            ):
+                with self.assertRaises(ProjectCreationError):
+                    pm.create_project("ExistingBox", allow_existing=True)
+
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "user data")
+            self.assertTrue(existing_recon.is_dir())
+            self.assertFalse((existing / "notes.md").exists())
+            self.assertFalse((existing / "project_state.json").exists())
+            for subdirectory in ("access", "privesc", "postex", "scripts", "misc", "loot"):
+                self.assertFalse((existing / subdirectory).exists())
+            self.assertNotIn("ExistingBox", pm.registry)
 
     def test_import_project_prevents_silent_hijacking(self):
         with tempfile.TemporaryDirectory() as tmpdir:

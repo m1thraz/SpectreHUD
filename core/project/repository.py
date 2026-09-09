@@ -188,6 +188,16 @@ class ProjectRepository:
                 )
 
         dir_existed_initially = proj_dir.exists()
+        managed_paths = [
+            *(proj_dir / sub for sub in PROJECT_LOOT_SUBDIRECTORIES),
+            proj_dir / "notes.md",
+            proj_dir / "project_state.json",
+        ]
+        existing_managed_paths = {
+            path for path in managed_paths if path.exists() or path.is_symlink()
+        }
+        registry_had_entry = clean_name in self.registry
+        registry_entry_before = self.registry.get(clean_name)
 
         try:
             proj_dir.mkdir(parents=True, exist_ok=True)
@@ -235,18 +245,44 @@ class ProjectRepository:
                 f"Project creation failed for {clean_name}: {e}. Rolling back partial files.",
                 exc_info=True,
             )
+            for path in reversed(managed_paths):
+                if path in existing_managed_paths:
+                    continue
+                try:
+                    if path.is_symlink() or path.is_file():
+                        path.unlink(missing_ok=True)
+                    elif path.is_dir():
+                        path.rmdir()
+                except OSError as rollback_error:
+                    logger.warning(
+                        "Rollback could not remove newly created path %s: %s",
+                        path,
+                        rollback_error,
+                    )
             if not dir_existed_initially and proj_dir.exists():
-                import shutil
-
                 try:
-                    shutil.rmtree(proj_dir, ignore_errors=True)
-                except Exception as rb_err:
-                    logger.warning(f"Rollback cleanup failed for {proj_dir}: {rb_err}")
+                    proj_dir.rmdir()
+                except OSError as rollback_error:
+                    logger.warning(
+                        "Rollback could not remove new project directory %s: %s",
+                        proj_dir,
+                        rollback_error,
+                    )
 
-            if clean_name in self.registry:
-                try:
+            try:
+                if registry_had_entry:
+                    if self.registry.get(clean_name) != registry_entry_before:
+                        self._update_registry(
+                            additions={clean_name: str(registry_entry_before)}
+                        )
+                elif clean_name in self.registry:
                     self._update_registry(removals={clean_name})
-                except PersistenceError:
+            except PersistenceError:
+                if registry_had_entry:
+                    logger.exception(
+                        "Failed to restore rolled-back project '%s' in registry", clean_name
+                    )
+                else:
                     logger.exception(
                         "Failed to remove rolled-back project '%s' from registry", clean_name
                     )

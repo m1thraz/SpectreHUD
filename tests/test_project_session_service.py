@@ -1,11 +1,13 @@
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from core.project import ProjectManager
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
+from core.project import ProjectStateCorruptedError
 from core.project.session_service import ProjectSessionService
 
 
@@ -120,6 +122,30 @@ class TestProjectSessionService(unittest.TestCase):
 
         reloaded_state = self.project_manager.load_project_state("RoundTrip")
         self.assertEqual(reloaded_state["loot"], live_loot)
+
+    def test_corrupt_state_load_preserves_the_live_session(self):
+        project_dir = self.project_manager.create_project("CorruptBox")
+        self.loot_manager.add_entry("note", "Live", "keep me", category="recon")
+        live_loot = self.loot_manager.get_all_entries()
+        (project_dir / "project_state.json").write_text("{not json", encoding="utf-8")
+
+        with self.assertRaises(ProjectStateCorruptedError):
+            self.session_service.load_project_session("CorruptBox")
+
+        self.assertEqual(self.loot_manager.get_all_entries(), live_loot)
+
+    def test_invalid_state_encoding_and_oversized_state_are_rejected(self):
+        project_dir = self.project_manager.create_project("InvalidStateBox")
+        state_file = project_dir / "project_state.json"
+
+        state_file.write_bytes(b"\xff\xfe\x00")
+        with self.assertRaises(ProjectStateCorruptedError):
+            self.project_manager.load_project_state("InvalidStateBox")
+
+        state_file.write_text("{}", encoding="utf-8")
+        with patch("core.project.state_store.is_file_size_valid", return_value=False):
+            with self.assertRaises(ProjectStateCorruptedError):
+                self.project_manager.load_project_state("InvalidStateBox")
 
 
 if __name__ == "__main__":

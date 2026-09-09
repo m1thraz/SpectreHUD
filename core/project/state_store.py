@@ -28,6 +28,10 @@ from core.validators import MAX_PROJECT_STATE_FILE_SIZE, is_file_size_valid, val
 logger = get_logger("projects")
 
 
+class ProjectStateCorruptedError(Exception):
+    """The persisted project state exists but cannot be trusted or decoded."""
+
+
 class ProjectStateStore:
     """Reads and writes validated project state, including Pentest-Mode encryption."""
 
@@ -162,8 +166,9 @@ class ProjectStateStore:
                 )
         if state_file.exists():
             if not is_file_size_valid(state_file, MAX_PROJECT_STATE_FILE_SIZE):
-                logger.error("Project state file %s exceeds maximum size limit.", state_file)
-                return validate_project_state(None, fallback_name=project_name)
+                raise ProjectStateCorruptedError(
+                    f"Project state for '{project_name}' exceeds the maximum supported size."
+                )
             try:
                 if key is not None:
                     raw_data = json.loads(
@@ -174,7 +179,9 @@ class ProjectStateStore:
                         raw_data = json.load(file)
                 return validate_project_state(raw_data, fallback_name=project_name)
             except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as exc:
-                logger.error("Error loading project state for %s: %s", project_name, exc)
+                raise ProjectStateCorruptedError(
+                    f"Project state for '{project_name}' is unreadable or corrupted."
+                ) from exc
         return validate_project_state(None, fallback_name=project_name)
 
     def save(self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs) -> bool:
@@ -195,7 +202,7 @@ class ProjectStateStore:
                 return False
         try:
             final_state = self.load(project_name) or {}
-        except ProjectLockedError:
+        except (ProjectLockedError, ProjectStateCorruptedError):
             return False
         if state:
             final_state.update(state)

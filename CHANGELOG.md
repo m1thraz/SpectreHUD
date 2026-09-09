@@ -13,6 +13,8 @@ semantic versioning.
 
 ### Fixed
 
+* Warn instead of silently treating corrupted, unreadable, or oversized project state as an empty session.
+* Roll back only workspace files created by a failed `allow_existing` project setup while preserving pre-existing user content.
 * Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
 * Keep the test runner's simulated Windows process-group check portable on Linux CI hosts.
 * Assign new screenshot Loot to the active pentest phase instead of always falling back to Misc.

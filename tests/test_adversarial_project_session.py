@@ -200,19 +200,20 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.clip_watcher.add_entry("ls -la")
         self.assertEqual(len(self.clip_watcher.get_all_history()), 1)
 
-    def test_restart_recovers_from_corrupt_registry_and_project_state(self):
-        """A new process instance must recover safely from corrupted persisted JSON."""
+    def test_restart_recovers_registry_but_reports_corrupt_project_state(self):
+        """Registry recovery must not disguise an unreadable project state as an empty one."""
+        from core.project import ProjectStateCorruptedError
+
         self.project_mgr.create_project("BoxRestart")
         project_dir = self.project_mgr.get_project_dir("BoxRestart")
         (project_dir / "project_state.json").write_text("{not valid json", encoding="utf-8")
         self.project_mgr.registry_file.write_text("[not a registry]", encoding="utf-8")
 
         restarted_manager = ProjectManager(base_dir=self.projects_dir, config_dir=self.config_dir)
-        recovered_state = restarted_manager.load_project_state("BoxRestart")
 
         self.assertIn("BoxRestart", restarted_manager.list_projects())
-        self.assertEqual(recovered_state["name"], "BoxRestart")
-        self.assertEqual(recovered_state["loot"], [])
+        with self.assertRaises(ProjectStateCorruptedError):
+            restarted_manager.load_project_state("BoxRestart")
         persisted_registry = json.loads(restarted_manager.registry_file.read_text(encoding="utf-8"))
         self.assertIn("BoxRestart", persisted_registry)
 
