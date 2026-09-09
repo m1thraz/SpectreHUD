@@ -284,10 +284,16 @@ class QuickNoteCard(QFrame):
         loot_action = QAction(
             icon("fa5s.archive"), t("quick_note.send_loot", "Send to Loot"), menu
         )
+        loot_action.setToolTip(
+            t("quick_note.send_loot_tip", "Create structured Loot; the Quick Note is removed after a successful save")
+        )
         loot_action.triggered.connect(lambda: self.promote_requested.emit(self.entry))
         menu.addAction(loot_action)
         report_action = QAction(
             icon("fa5s.file-alt"), t("quick_note.send_report", "Send to Report"), menu
+        )
+        report_action.setToolTip(
+            t("quick_note.send_report_tip", "Append to the current report and mark this Quick Note as resolved")
         )
         report_action.triggered.connect(lambda: self.send_to_report_requested.emit(self.entry))
         menu.addAction(report_action)

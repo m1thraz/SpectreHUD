@@ -95,7 +95,13 @@ class NewProjectDialog(BaseHudDialog):
 
         # 4. Optional encrypted project state (Pentest Mode)
         self.chk_pentest_mode = QCheckBox(
-            t("project_dialog.chk_pentest_mode", "Pentest Mode (encrypt project_state.json)")
+            t("project_dialog.chk_pentest_mode", "Protect project state with a password")
+        )
+        self.chk_pentest_mode.setToolTip(
+            t(
+                "project_dialog.pentest_mode_tip",
+                "Encrypts local project state. Reports and exported files are not encrypted.",
+            )
         )
         self.chk_pentest_mode.toggled.connect(self._toggle_pentest_mode_fields)
         layout.addWidget(self.chk_pentest_mode)

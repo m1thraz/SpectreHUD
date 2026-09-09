@@ -87,9 +87,10 @@ class TestI18n(unittest.TestCase):
         """Verifies translations for newly localized dialogs, views, and empty states."""
         # 1. German
         self.i18n.set_locale("de")
-        self.assertIn("Keine Befehle gefunden", self.i18n.t("cheatsheet.empty_state"))
-        self.assertIn("Kein Session-Loot vorhanden", self.i18n.t("loot.empty_state"))
-        self.assertIn("Keine Clipboard-Historie vorhanden", self.i18n.t("history.empty_state"))
+        self.assertIn("Noch keine Befehle", self.i18n.t("cheatsheet.empty_state"))
+        self.assertIn("strukturierte Evidenz", self.i18n.t("loot.empty_state"))
+        self.assertIn("Noch keine Clipboard-Historie", self.i18n.t("history.empty_state"))
+        self.assertIn("aktuellen Suche", self.i18n.t("history.no_results"))
         self.assertIn("Datenschutz-Hinweis", self.i18n.t("privacy.warning"))
         self.assertEqual(self.i18n.t("project_dialog.lbl_name"), "Projekt- / Box-Name:")
         self.assertEqual(self.i18n.t("snippet_dialog.lbl_title"), "Titel / Name des Befehls:")
@@ -97,9 +98,10 @@ class TestI18n(unittest.TestCase):
 
         # 2. English
         self.i18n.set_locale("en")
-        self.assertIn("No commands found", self.i18n.t("cheatsheet.empty_state"))
-        self.assertIn("No session loot captured yet", self.i18n.t("loot.empty_state"))
-        self.assertIn("No clipboard history recorded yet", self.i18n.t("history.empty_state"))
+        self.assertIn("No commands are available yet", self.i18n.t("cheatsheet.empty_state"))
+        self.assertIn("structured evidence", self.i18n.t("loot.empty_state"))
+        self.assertIn("No clipboard history yet", self.i18n.t("history.empty_state"))
+        self.assertIn("current search", self.i18n.t("history.no_results"))
         self.assertIn("Privacy Notice", self.i18n.t("privacy.warning"))
         self.assertEqual(self.i18n.t("project_dialog.lbl_name"), "Project / Box Name:")
         self.assertEqual(self.i18n.t("snippet_dialog.lbl_title"), "Title / Command Name:")

@@ -59,24 +59,36 @@ class HeaderPanel(QFrame):
         self.btn_mode_cheatsheet = QPushButton(t("header.mode_cheatsheet", "Cheatsheet"))
         self.btn_mode_cheatsheet.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive")
+        self.btn_mode_cheatsheet.setToolTip(
+            t("header.cheatsheet_tip", "Browse reusable commands; current variables are filled when you copy")
+        )
         self.btn_mode_cheatsheet.clicked.connect(lambda: self.mode_changed.emit("cheatsheet"))
         layout.addWidget(self.btn_mode_cheatsheet)
 
         self.btn_mode_history = QPushButton(t("header.mode_history", "History"))
         self.btn_mode_history.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_history.setToolTip(
+            t("header.history_tip", "Review commands and output captured while clipboard REC is active")
+        )
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
         layout.addWidget(self.btn_mode_history)
 
         self.btn_mode_notes = QPushButton(t("header.mode_notes", "Notes"))
         self.btn_mode_notes.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_notes.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_notes.setToolTip(
+            t("header.notes_tip", "Open the Quick Notes capture and triage inbox")
+        )
         self.btn_mode_notes.clicked.connect(lambda: self.mode_changed.emit("notes"))
         layout.addWidget(self.btn_mode_notes)
 
         self.btn_mode_loot = QPushButton(t("header.mode_loot", "Loot"))
         self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_loot.setProperty("class", "ModeSwitchBtn")
+        self.btn_mode_loot.setToolTip(
+            t("header.loot_tip", "Manage structured evidence and findings used by reports")
+        )
         self.btn_mode_loot.clicked.connect(lambda: self.mode_changed.emit("loot"))
         layout.addWidget(self.btn_mode_loot)
 
@@ -86,7 +98,7 @@ class HeaderPanel(QFrame):
         self.btn_mode_report.setToolTip(
             t(
                 "header.report_tip",
-                "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
+                "Open the editable report for the active project (Ctrl+5)",
             )
         )
         self.btn_mode_report.clicked.connect(lambda: self.mode_changed.emit("report"))
@@ -106,7 +118,7 @@ class HeaderPanel(QFrame):
         self.btn_quick_note.setIcon(icon("fa5s.pen"))
         self.btn_quick_note.setIconSize(QSize(13, 13))
         self.btn_quick_note.setToolTip(
-            t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)")
+            t("header.note_tip", "Capture a thought in the Quick Notes inbox (Ctrl+Alt+N)")
         )
         self.btn_quick_note.clicked.connect(self.quick_note_requested.emit)
         layout.addWidget(self.btn_quick_note)
@@ -117,7 +129,7 @@ class HeaderPanel(QFrame):
         self.btn_screenshot.setIcon(icon("fa5s.crop-alt"))
         self.btn_screenshot.setIconSize(QSize(13, 13))
         self.btn_screenshot.setToolTip(
-            t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
+            t("header.snip_tip", "Capture a region screenshot directly as Loot (Ctrl+Alt+X)")
         )
         self.btn_screenshot.clicked.connect(self.screenshot_requested.emit)
         layout.addWidget(self.btn_screenshot)
@@ -428,17 +440,31 @@ class HeaderPanel(QFrame):
         self.btn_mode_notes.setText(t("header.mode_notes", "Notes"))
         self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
+        self.btn_mode_cheatsheet.setToolTip(
+            t("header.cheatsheet_tip", "Browse reusable commands; current variables are filled when you copy")
+        )
+        self.btn_mode_history.setToolTip(
+            t("header.history_tip", "Review commands and output captured while clipboard REC is active")
+        )
+        self.btn_mode_notes.setToolTip(
+            t("header.notes_tip", "Open the Quick Notes capture and triage inbox")
+        )
+        self.btn_mode_loot.setToolTip(
+            t("header.loot_tip", "Manage structured evidence and findings used by reports")
+        )
         self.btn_mode_report.setToolTip(
             t(
                 "header.report_tip",
-                "Editierbaren Markdown-Report des aktiven Projekts öffnen (Ctrl+4)",
+                "Open the editable report for the active project (Ctrl+5)",
             )
         )
         self.btn_quick_note.setText(t("header.note", "Note"))
-        self.btn_quick_note.setToolTip(t("header.note_tip", "Quick-Note erfassen (Ctrl+Alt+N)"))
+        self.btn_quick_note.setToolTip(
+            t("header.note_tip", "Capture a thought in the Quick Notes inbox (Ctrl+Alt+N)")
+        )
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(
-            t("header.snip_tip", "Bereichs-Screenshot aufnehmen (Strg+Super+X oder Ctrl+S)")
+            t("header.snip_tip", "Capture a region screenshot directly as Loot (Ctrl+Alt+X)")
         )
         self.btn_settings.setText(t("header.opt", ""))
         self.btn_settings.setToolTip(
@@ -453,10 +479,10 @@ class HeaderPanel(QFrame):
                 "SpectreHUD beenden – speichert zuerst das aktive Projekt (Ctrl+Q)",
             )
         )
-        self.btn_project.setToolTip(t("header.project_tip", "Aktives CTF-Projekt / Box wechseln"))
+        self.btn_project.setToolTip(t("header.project_tip", "Switch active project or engagement"))
         if self.btn_phase:
             self.btn_phase.setToolTip(
-                t("header.phase_tip", "Aktive Pentest-Phase auswählen (Ctrl+Alt+1..6)")
+                t("header.phase_tip", "Set the phase assigned to new captures (Ctrl+Alt+1..6)")
             )
             self.set_phase(getattr(self, "_current_phase_key", None))
         is_active = getattr(self, "_rec_active", False)

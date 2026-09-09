@@ -21,6 +21,10 @@ from ui.add_loot_dialog import AddLootDialog
 logger = get_logger("loot_controller")
 
 
+def _loot_type_name(loot_type: Dict[str, Any]) -> str:
+    return t(f"loot.type_{loot_type['id']}", str(loot_type["name"]))
+
+
 class LootController(QObject):
     """UI-independent controller managing loot entries, category grouping, filter pills, and domain actions."""
 
@@ -301,7 +305,7 @@ class LootController(QObject):
         actions: List[MenuAction] = [
             MenuAction(
                 id="type:all",
-                text=f"All ({counts.get('all', 0)})",
+                text=t("filter.all_loot", "All ({count})", count=counts.get("all", 0)),
                 checked=(self.current_loot_type == "all"),
                 callback=lambda: (
                     on_select_type("all") if on_select_type else self.select_loot_type("all")
@@ -315,7 +319,7 @@ class LootController(QObject):
             actions.append(
                 MenuAction(
                     id=f"type:{tid}",
-                    text=f"{loot_type['name']} ({count})",
+                    text=f"{_loot_type_name(loot_type)} ({count})",
                     checked=(self.current_loot_type == tid),
                     callback=lambda target_id=tid: (
                         on_select_type(target_id)
@@ -354,7 +358,9 @@ class LootController(QObject):
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
-        all_btn = QPushButton(f"All ({counts.get('all', 0)})")
+        all_btn = QPushButton(
+            t("filter.all_loot", "All ({count})", count=counts.get("all", 0))
+        )
         all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         all_btn.setProperty(
             "class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill"
@@ -366,7 +372,7 @@ class LootController(QObject):
         for loot_type in LOOT_TYPES:
             tid = loot_type["id"]
             count = counts.get(tid, 0)
-            btn = QPushButton(f"{loot_type['name']} ({count})")
+            btn = QPushButton(f"{_loot_type_name(loot_type)} ({count})")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setProperty(
                 "class", "FilterPillActive" if self.current_loot_type == tid else "FilterPill"
@@ -414,7 +420,7 @@ class LootController(QObject):
             btn_density.clicked.connect(on_toggle_density)
             pills_layout.addWidget(btn_density)
 
-        btn_export = QPushButton("Export (.md)")
+        btn_export = QPushButton(t("loot.export_file", "Export (.md)"))
         btn_export.setObjectName("LootExportButton")
         btn_export.setProperty("class", "MiniActionBtn")
         btn_export.setToolTip(export_tooltip)
@@ -422,7 +428,7 @@ class LootController(QObject):
         pills_layout.addWidget(btn_export)
 
         if on_export_obsidian is not None:
-            btn_obsidian = QPushButton("Obsidian")
+            btn_obsidian = QPushButton(t("loot.export_obsidian", "Obsidian"))
             btn_obsidian.setProperty("class", "MiniActionBtn")
             btn_obsidian.setToolTip(
                 t(
@@ -433,7 +439,7 @@ class LootController(QObject):
             btn_obsidian.clicked.connect(on_export_obsidian)
             pills_layout.addWidget(btn_obsidian)
 
-        btn_clear = QPushButton("Clear")
+        btn_clear = QPushButton(t("common.clear", "Clear"))
         btn_clear.setProperty("class", "MiniDangerBtn")
         btn_clear.setToolTip(t("loot.clear_tip", "Clear this project's session loot"))
         btn_clear.clicked.connect(on_clear)
@@ -458,10 +464,15 @@ class LootController(QObject):
         )
 
         if not loot_entries:
+            has_loot = bool(self.loot_manager.get_all_entries())
             show_empty_state_fn(
                 t(
-                    "loot.empty_state",
-                    "No session loot captured yet. Press Ctrl+N to add notes/credentials or Snip for screenshots.",
+                    "loot.no_results" if has_loot else "loot.empty_state",
+                    (
+                        "No Loot entries match the current search or type filter."
+                        if has_loot
+                        else "Loot stores structured evidence and findings used by report generation and Add Missing Loot. Press Ctrl+N here, use Quick Loot (Ctrl+Alt+L), or capture a Snip."
+                    ),
                 )
             )
             return []
@@ -511,6 +522,17 @@ class LootController(QObject):
             entry_type=self.current_loot_type,
             search_query=search_query,
         )
+        has_loot = bool(self.loot_manager.get_all_entries())
+        empty_message = ""
+        if not loot_entries:
+            empty_message = t(
+                "loot.board_no_results" if has_loot else "loot.board_empty_state",
+                (
+                    "No Loot entries match the current search or type filter."
+                    if has_loot
+                    else "Phase-tagged Loot is grouped into these workflow columns. Capture structured Loot with Ctrl+N here, Quick Loot (Ctrl+Alt+L), or Snip."
+                ),
+            )
         board = LootBoard(
             entries=loot_entries,
             project_dir=proj_dir,
@@ -522,6 +544,7 @@ class LootController(QObject):
             on_copied=on_copied,
             parent=parent_widget,
             density=density,
+            empty_message=empty_message,
         )
         content_layout.addWidget(board)
         return [board]

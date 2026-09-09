@@ -219,6 +219,7 @@ class LootBoard(QScrollArea):
         on_copied: Optional[Callable[[str], None]] = None,
         parent: Optional[QWidget] = None,
         density: str = "comfortable",
+        empty_message: str = "",
     ):
         super().__init__(parent)
         self.density = density
@@ -243,9 +244,14 @@ class LootBoard(QScrollArea):
             )
             for category in CATEGORIES
         }
-        for category in CATEGORIES:
+        for category_index, category in enumerate(CATEGORIES):
             column = LootBoardDropArea(category, on_move, self._board_content)
             column.setFixedWidth(270)
+            if not entries and category_index == 0 and empty_message:
+                empty_label = QLabel(empty_message, column.cards_container)
+                empty_label.setWordWrap(True)
+                empty_label.setProperty("class", "EmptyStateLabel")
+                column.cards_layout.addWidget(empty_label)
             for entry in entries_by_category[category["id"]]:
                 card = LootCard(
                     entry,

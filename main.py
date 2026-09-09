@@ -257,7 +257,9 @@ def main():
         tray_icon = QSystemTrayIcon(
             QIcon(create_tray_icon_pixmap(is_recording=False, app_icon=app_icon)), app
         )
-        tray_icon.setToolTip("SpectreHUD [REC: Paused] - CTF Cheatsheet & Loot Overlay")
+        tray_icon.setToolTip(
+            t("tray.tooltip_paused", "SpectreHUD [REC: Paused] — project capture workspace")
+        )
         tray_menu = QMenu()
 
         act_toggle = QAction(
@@ -333,8 +335,16 @@ def main():
             tray_icon.setIcon(
                 QIcon(create_tray_icon_pixmap(is_recording=is_active, app_icon=app_icon))
             )
-            status = "REC: ON" if is_active else "REC: Paused"
-            tray_icon.setToolTip(f"SpectreHUD [{status}] - CTF Cheatsheet & Loot Overlay")
+            tray_icon.setToolTip(
+                t(
+                    "tray.tooltip_active" if is_active else "tray.tooltip_paused",
+                    (
+                        "SpectreHUD [REC: ON] — project capture workspace"
+                        if is_active
+                        else "SpectreHUD [REC: Paused] — project capture workspace"
+                    ),
+                )
+            )
             rec_text = (
                 t("tray.rec_pause", "Clipboard-Logger pausieren (Ctrl+Alt+R)")
                 if is_active

@@ -460,8 +460,16 @@ class CheatsheetController(QObject):
         )
 
         if not all_matching:
+            has_snippets = bool(self.snippet_manager.get_all_snippets())
             show_empty_state_fn(
-                t("cheatsheet.empty_state", "No commands found. Press Ctrl+N to add a new command.")
+                t(
+                    "cheatsheet.no_results" if has_snippets else "cheatsheet.empty_state",
+                    (
+                        "No commands match the current search or category."
+                        if has_snippets
+                        else "No commands are available yet. Press Ctrl+N here to create your first reusable command."
+                    ),
+                )
             )
             return []
 

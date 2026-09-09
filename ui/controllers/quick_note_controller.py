@@ -548,6 +548,9 @@ class QuickNoteController(QObject):
         self.btn_select_mode.setProperty(
             "class", "FilterPillActive" if self.selection_mode else "FilterPill"
         )
+        self.btn_select_mode.setToolTip(
+            t("quick_note.select_mode_tip", "Select several notes for bulk status changes or deletion")
+        )
         self.btn_select_mode.clicked.connect(self.set_selection_mode)
         pills_layout.addWidget(self.btn_select_mode)
 
@@ -558,6 +561,9 @@ class QuickNoteController(QObject):
         self.btn_review_mode.setChecked(self.review_mode)
         self.btn_review_mode.setProperty(
             "class", "FilterPillActive" if self.review_mode else "FilterPill"
+        )
+        self.btn_review_mode.setToolTip(
+            t("quick_note.review_mode_tip", "Review open notes one at a time without list distractions")
         )
         self.btn_review_mode.clicked.connect(self.set_review_mode)
         pills_layout.addWidget(self.btn_review_mode)
@@ -640,10 +646,15 @@ class QuickNoteController(QObject):
             content_layout.addWidget(bulk_bar)
 
         if not notes:
+            has_notes = bool(self.quick_note_manager.get_all_entries())
             show_empty_state_fn(
                 t(
-                    "quick_note.empty_state",
-                    "No quick notes found. Use Ctrl+Alt+N or the Note button to capture thoughts.",
+                    "quick_note.no_results" if has_notes else "quick_note.empty_state",
+                    (
+                        "No notes match the current search or filter."
+                        if has_notes
+                        else "Quick Notes is your capture and triage inbox. Capture a thought with Ctrl+Alt+N, then send it to Loot or the Report when ready."
+                    ),
                 )
             )
             return []

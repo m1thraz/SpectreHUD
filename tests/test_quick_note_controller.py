@@ -137,6 +137,7 @@ class TestQuickNoteController(unittest.TestCase):
         )
         self.assertEqual(len(empty_cards), 0)
         empty_fn.assert_called_once()
+        self.assertIn("match", empty_fn.call_args.args[0].lower())
         container.close()
 
     def test_update_note_text(self):

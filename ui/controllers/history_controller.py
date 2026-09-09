@@ -177,10 +177,10 @@ class HistoryController(QObject):
         """Returns a list of MenuAction DTOs for filtering history."""
         history_all = self.clipboard_history.get_history()
         pills = [
-            ("all", f"All ({len(history_all)})"),
-            ("target_only", "Target IP Only"),
-            ("commands", "Commands"),
-            ("outputs", "Outputs"),
+            ("all", t("filter.all_history", "All ({count})", count=len(history_all))),
+            ("target_only", t("filter.target_only", "Target IP Only")),
+            ("commands", t("filter.commands_only", "Commands")),
+            ("outputs", t("filter.outputs_only", "Outputs")),
         ]
         actions: List[MenuAction] = []
         for pid, ptext in pills:
@@ -222,10 +222,10 @@ class HistoryController(QObject):
         self.filter_buttons.clear()
         history_all = self.clipboard_history.get_history()
         pills = [
-            ("all", f"All ({len(history_all)})"),
-            ("target_only", "Target IP Only"),
-            ("commands", "Commands"),
-            ("outputs", "Outputs"),
+            ("all", t("filter.all_history", "All ({count})", count=len(history_all))),
+            ("target_only", t("filter.target_only", "Target IP Only")),
+            ("commands", t("filter.commands_only", "Commands")),
+            ("outputs", t("filter.outputs_only", "Outputs")),
         ]
         for pid, ptext in pills:
             btn = QPushButton(ptext)
@@ -248,7 +248,7 @@ class HistoryController(QObject):
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
 
-        btn_clear = QPushButton("Clear")
+        btn_clear = QPushButton(t("common.clear", "Clear"))
         btn_clear.setIcon(icon("fa5s.trash"))
         btn_clear.setIconSize(QSize(12, 12))
         btn_clear.setProperty("class", "MiniDangerBtn")
@@ -272,10 +272,15 @@ class HistoryController(QObject):
         history_items = self.get_history(target_ip=target_ip, search_query=search_query)
 
         if not history_items:
+            has_history = bool(self.clipboard_history.get_history())
             show_empty_state_fn(
                 t(
-                    "history.empty_state",
-                    "No clipboard history recorded yet. Enable REC (Ctrl+Alt+R) and copy commands in your terminal.",
+                    "history.no_results" if has_history else "history.empty_state",
+                    (
+                        "No clipboard entries match the current search or filter."
+                        if has_history
+                        else "No clipboard history yet. Start REC (Ctrl+Alt+R); copied terminal commands and output will appear here."
+                    ),
                 )
             )
             return []

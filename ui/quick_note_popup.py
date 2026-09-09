@@ -22,12 +22,12 @@ from core.i18n import t
 
 
 PHASE_PILLS = [
-    ("recon", "1. Recon"),
-    ("access", "2. Access"),
-    ("privesc", "3. PrivEsc"),
-    ("postex", "4. PostEx"),
-    ("scripts", "5. Scripts"),
-    ("misc", "6. Misc"),
+    ("recon", "quick_note.phase_recon", "1. Recon"),
+    ("access", "quick_note.phase_access", "2. Access"),
+    ("privesc", "quick_note.phase_privesc", "3. PrivEsc"),
+    ("postex", "quick_note.phase_postex", "4. PostEx"),
+    ("scripts", "quick_note.phase_scripts", "5. Scripts"),
+    ("misc", "quick_note.phase_misc", "6. Misc"),
 ]
 
 KEY_TO_CATEGORY: Dict[Qt.Key, str] = {
@@ -94,7 +94,7 @@ class QuickNotePopup(QWidget):
 
         # Header Row: Title & Hint
         header_layout = QHBoxLayout()
-        lbl_title = QLabel("📌 QUICK NOTE")
+        lbl_title = QLabel(t("quick_note.popup_title", "QUICK NOTE"))
         lbl_title.setStyleSheet(
             "color: #00e5ff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
         )
@@ -102,7 +102,12 @@ class QuickNotePopup(QWidget):
 
         header_layout.addStretch()
 
-        lbl_hint = QLabel("Enter: Save | Esc: Cancel | 1-6: Phase")
+        lbl_hint = QLabel(
+            t(
+                "quick_note.popup_hint",
+                "Enter: Save · Shift+Enter: New line · Alt+1–6: Phase",
+            )
+        )
         lbl_hint.setStyleSheet("color: #8b949e; font-size: 10px;")
         header_layout.addWidget(lbl_hint)
         card_layout.addLayout(header_layout)
@@ -110,8 +115,8 @@ class QuickNotePopup(QWidget):
         # Phase Pills Row
         pills_layout = QHBoxLayout()
         pills_layout.setSpacing(4)
-        for cat_id, label in PHASE_PILLS:
-            btn = QPushButton(label)
+        for cat_id, label_key, fallback in PHASE_PILLS:
+            btn = QPushButton(t(label_key, fallback))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda checked=False, cid=cat_id: self.select_category(cid))
             self.pill_buttons[cat_id] = btn

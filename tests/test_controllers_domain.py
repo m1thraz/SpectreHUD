@@ -688,6 +688,21 @@ class TestControllersDomain(unittest.TestCase):
         # Should render 2 headers + 2 cards = 4 widgets
         self.assertEqual(len(cards), 4)
 
+        # Existing data with no matching result explains the active filter/search.
+        filtered_empty_states = []
+        filtered_cards = self.loot_ctrl.render_content(
+            content_layout=layout,
+            search_query="does-not-exist",
+            proj_dir=proj_dir,
+            on_delete_loot=lambda _: None,
+            on_edit_loot=lambda _: None,
+            on_export_loot=lambda _: None,
+            parent_widget=parent,
+            show_empty_state_fn=filtered_empty_states.append,
+        )
+        self.assertEqual(filtered_cards, [])
+        self.assertIn("match", filtered_empty_states[0].lower())
+
         # 3. Populated board content
         board_cards = self.loot_ctrl.render_board_content(
             content_layout=layout,

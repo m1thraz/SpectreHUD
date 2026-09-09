@@ -81,6 +81,9 @@ class QuickIpPopup(QWidget):
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         lbl_title = QLabel("⚡ QUICK-IP")
+        lbl_title.setToolTip(
+            t("quick_ip.purpose_tip", "View or update Target and LHOST without opening the main window")
+        )
         lbl_title.setStyleSheet(
             "color: #00e5ff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
         )
@@ -106,6 +109,9 @@ class QuickIpPopup(QWidget):
         self.txt_target = CopyableLineEdit("")
         self.txt_target.setProperty("class", "CompactVarInput")
         self.txt_target.setPlaceholderText("10.10.10.x")
+        self.txt_target.setToolTip(
+            t("varbar.target_tip", "Target used to fill variables in copied Cheatsheet commands")
+        )
         self.txt_target.textChanged.connect(self.target_changed.emit)
         self.txt_target.installEventFilter(self)
         row_target.addWidget(self.txt_target, stretch=1)
@@ -124,6 +130,9 @@ class QuickIpPopup(QWidget):
         self.txt_attacker = CopyableLineEdit("")
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
+        self.txt_attacker.setToolTip(
+            t("varbar.attacker_tip", "LHOST used to fill variables in copied Cheatsheet commands")
+        )
         self.txt_attacker.textChanged.connect(self.attacker_changed.emit)
         self.txt_attacker.installEventFilter(self)
         row_attacker.addWidget(self.txt_attacker, stretch=1)

@@ -74,6 +74,9 @@ class VariableBar(QFrame):
         self.txt_target.setProperty("class", "CompactVarInput")
         self.txt_target.setPlaceholderText("10.10.10.x")
         self.txt_target.setFixedWidth(138)
+        self.txt_target.setToolTip(
+            t("varbar.target_tip", "Target used to fill variables in copied Cheatsheet commands")
+        )
         self.txt_target.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_target)
         layout.addWidget(self.txt_target)
@@ -85,6 +88,9 @@ class VariableBar(QFrame):
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
         self.txt_attacker.setFixedWidth(138)
+        self.txt_attacker.setToolTip(
+            t("varbar.attacker_tip", "LHOST used to fill variables in copied Cheatsheet commands")
+        )
         self.txt_attacker.textChanged.connect(self._on_values_changed)
         layout.addWidget(self.lbl_attacker)
         layout.addWidget(self.txt_attacker)
@@ -103,7 +109,9 @@ class VariableBar(QFrame):
         self.btn_auth.setIcon(icon("fa5s.user"))
         self.btn_auth.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_auth.setProperty("class", "VarBadgeBtn")
-        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Domain & Hash verwalten"))
+        self.btn_auth.setToolTip(
+            t("varbar.auth_tip", "Set authentication variables used in copied Cheatsheet commands")
+        )
         self.btn_auth.clicked.connect(lambda: self.popover_auth.show_below(self.btn_auth))
         layout.addWidget(self.btn_auth)
 
@@ -112,7 +120,9 @@ class VariableBar(QFrame):
         self.btn_scope.setIcon(icon("fa5s.folder"))
         self.btn_scope.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_scope.setProperty("class", "VarBadgeBtn")
-        self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
+        self.btn_scope.setToolTip(
+            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+        )
         self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
         layout.addWidget(self.btn_scope)
 
@@ -218,8 +228,18 @@ class VariableBar(QFrame):
         self.txt_attacker.retranslate()
         self.btn_auto.setText(t("varbar.auto", "Auto"))
         self.btn_auto.setToolTip(t("varbar.auto_tip", "Auto-Erkennung für tun0 / VPN / lokale IP"))
-        self.btn_auth.setToolTip(t("varbar.auth_tip", "Benutzer, Passwort, Port, Domain & Hash verwalten"))
-        self.btn_scope.setToolTip(t("varbar.scope_tip", "Wordlist-Pfad und Ziel-URL verwalten"))
+        self.txt_target.setToolTip(
+            t("varbar.target_tip", "Target used to fill variables in copied Cheatsheet commands")
+        )
+        self.txt_attacker.setToolTip(
+            t("varbar.attacker_tip", "LHOST used to fill variables in copied Cheatsheet commands")
+        )
+        self.btn_auth.setToolTip(
+            t("varbar.auth_tip", "Set authentication variables used in copied Cheatsheet commands")
+        )
+        self.btn_scope.setToolTip(
+            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+        )
         self.btn_add.setText(t("varbar.add_btn", "Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
         self.popover_auth.retranslate()

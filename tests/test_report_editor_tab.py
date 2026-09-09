@@ -7,7 +7,7 @@ import pytest
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from PyQt6.QtWidgets import QMessageBox, QDialog
+from PyQt6.QtWidgets import QMessageBox, QDialog, QLabel
 from PyQt6.QtCore import QMimeData, Qt, QUrl
 from PyQt6.QtGui import QIcon, QShortcut
 
@@ -100,7 +100,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertNotIn("Interactive — Dark", buttons)
         professional = buttons[t("report.html_profile_professional", "Professional Print")]
         classic_web = buttons[
-            t("report.html_profile_classic_web", "Classic Webversion (editable)")
+            t("report.html_profile_classic_web", "Classic Web (editable)")
         ]
         self.assertIs(dialog.defaultButton(), professional)
         self.assertLess(dialog.buttons().index(professional), dialog.buttons().index(classic_web))
@@ -108,6 +108,27 @@ class TestReportEditorTab(unittest.TestCase):
             professional.minimumWidth(), 170
         )
         self.assertGreaterEqual(classic_web.minimumWidth(), 210)
+
+    def test_export_chooser_explains_each_handoff(self):
+        with patch.object(QDialog, "exec", return_value=QDialog.DialogCode.Rejected):
+            self.assertIsNone(self.tab._select_export_type())
+
+        dialogs = self.tab.findChildren(QDialog)
+        export_dialog = next(
+            dialog
+            for dialog in dialogs
+            if dialog.windowTitle() == t("report.export_dialog_title", "Export Report")
+        )
+        descriptions = {
+            label.property("exportType"): label.text()
+            for label in export_dialog.findChildren(QLabel)
+            if label.property("exportType")
+        }
+        self.assertEqual(set(descriptions), {"html", "obsidian", "cherrytree", "markdown"})
+        self.assertIn("PDF", descriptions["html"])
+        self.assertIn("vault", descriptions["obsidian"].lower())
+        self.assertIn("CherryTree", descriptions["cherrytree"])
+        self.assertIn("Markdown", descriptions["markdown"])
 
     def test_view_mode_switching(self):
         """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""

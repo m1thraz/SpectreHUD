@@ -1288,15 +1288,31 @@ class ReportEditorTab(QWidget):
         layout.addSpacing(4)
 
         choices = (
-            ("html", t("report.export_html", "Export HTML/PDF")),
-            ("obsidian", t("report.export_obsidian", "Export to Obsidian...")),
-            ("cherrytree", t("report.export_cherrytree", "Export CherryTree Package...")),
-            ("markdown", t("report.export_copy", "Export MD...")),
+            (
+                "html",
+                t("report.export_html", "Export HTML/PDF"),
+                t("report.export_html_desc", "Create an editable web report or a print-ready HTML file for PDF output."),
+            ),
+            (
+                "obsidian",
+                t("report.export_obsidian", "Export to Obsidian..."),
+                t("report.export_obsidian_desc", "Write the report and linked screenshots into the configured Obsidian vault."),
+            ),
+            (
+                "cherrytree",
+                t("report.export_cherrytree", "Export CherryTree Package..."),
+                t("report.export_cherrytree_desc", "Create a portable HTML package with attachments for import into CherryTree."),
+            ),
+            (
+                "markdown",
+                t("report.export_copy", "Export MD..."),
+                t("report.export_markdown_desc", "Save an exact Markdown copy of the current Report Editor document."),
+            ),
         )
 
         selected: list[Optional[str]] = [None]
 
-        for export_type, label in choices:
+        for export_type, label, description in choices:
             btn = QPushButton(label)
             btn.setMinimumHeight(32)
             btn.setProperty("class", "SecondaryBtn")
@@ -1308,6 +1324,11 @@ class ReportEditorTab(QWidget):
                 )
             )
             layout.addWidget(btn)
+            description_label = QLabel(description)
+            description_label.setWordWrap(True)
+            description_label.setProperty("class", "HintLabel")
+            description_label.setProperty("exportType", export_type)
+            layout.addWidget(description_label)
 
         layout.addSpacing(4)
         cancel_btn = QPushButton(t("dialog.cancel", "Cancel"))
@@ -1528,7 +1549,7 @@ class ReportEditorTab(QWidget):
             QMessageBox.ButtonRole.AcceptRole,
         )
         classic_web_button = msg.addButton(
-            t("report.html_profile_classic_web", "Classic Webversion (editable)"),
+            t("report.html_profile_classic_web", "Classic Web (editable)"),
             QMessageBox.ButtonRole.ActionRole,
         )
         cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
@@ -1538,6 +1559,12 @@ class ReportEditorTab(QWidget):
         msg.setMinimumWidth(640)
         professional_button.setMinimumWidth(170)
         classic_web_button.setMinimumWidth(210)
+        professional_button.setToolTip(
+            t("report.html_profile_professional_tip", "Print-ready A4 presentation for browser PDF generation")
+        )
+        classic_web_button.setToolTip(
+            t("report.html_profile_classic_web_tip", "Editable responsive web report for browser use")
+        )
         cancel_button.setMinimumWidth(100)
         msg.exec()
 
@@ -1698,7 +1725,10 @@ class ReportEditorTab(QWidget):
                 )
         if not has_entries:
             action = self.navigator_menu.addAction(
-                t("report.navigator_empty", "No semantic sections or findings")
+                t(
+                    "report.navigator_empty",
+                    "No navigable report sections yet. Generate or structure the report to populate this menu.",
+                )
             )
             action.setEnabled(False)
 

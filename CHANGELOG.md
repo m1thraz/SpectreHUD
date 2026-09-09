@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+* Clarified core capture and report workflows with context-aware empty states, concise action tooltips, and purpose-driven export descriptions in English and German.
+
 ### Fixed
 
 * Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
