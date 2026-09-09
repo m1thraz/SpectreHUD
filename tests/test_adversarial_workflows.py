@@ -58,7 +58,9 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         self.session_service.load_project_session("BoxRapidOne")
         self.clip_watcher.add_entry("first-project-command", persist=False)
-        self.assertTrue(self.session_service.save_project_session({}, "BoxRapidOne"))
+        self.assertTrue(
+            self.session_service.save_project_session({}, "BoxRapidOne").success
+        )
 
         for iteration in range(3):
             self.session_service.load_project_session("BoxRapidTwo")
@@ -67,7 +69,9 @@ class TestWorkflowRobustness(unittest.TestCase):
                 [entry["text"] for entry in self.clip_watcher.get_all_history()], expected_history
             )
             self.clip_watcher.add_entry("second-project-command", persist=False)
-            self.assertTrue(self.session_service.save_project_session({}, "BoxRapidTwo"))
+            self.assertTrue(
+                self.session_service.save_project_session({}, "BoxRapidTwo").success
+            )
 
             self.session_service.load_project_session("BoxRapidOne")
             self.assertEqual(
@@ -100,7 +104,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         manager._on_snip_completed(
             QPixmap.fromImage(image), parent_window, self.project_mgr, self.loot_mgr, target_ip=""
         )
-        self.assertTrue(self.session_service.save_project_session({}, "BoxShutdownScreenshot"))
+        self.assertTrue(
+            self.session_service.save_project_session({}, "BoxShutdownScreenshot").success
+        )
 
         state = self.project_mgr.load_project_state("BoxShutdownScreenshot")
         self.assertEqual(len(state["loot"]), 1)
@@ -222,11 +228,11 @@ class TestWorkflowRobustness(unittest.TestCase):
     # -------------------------------------------------------------------------
     # 12. P2: Session Save Failure Reports False and Propagates Error
     # -------------------------------------------------------------------------
-    def test_session_save_failure_returns_false(self):
+    def test_session_save_failure_returns_typed_result(self):
         """
         Adversarial P2: If project state cannot be saved (e.g. disk full, read-only),
-        save_project_state() and save_project_session() must return False, allowing
-        the UI to alert the user and avoid silent data loss during project switch.
+        State and session saves must return a failed PersistResult so callers can
+        alert the user and avoid silent data loss during project switch.
         """
         from unittest.mock import patch
 
@@ -238,12 +244,12 @@ class TestWorkflowRobustness(unittest.TestCase):
             patch("core.project.state_store.atomic_write_bytes", return_value=False),
         ):
             saved = self.project_mgr.save_project_state("BoxSaveErr", {"target_ip": "1.2.3.4"})
-            self.assertFalse(saved)
+            self.assertFalse(saved.success)
 
             session_saved = self.session_service.save_project_session(
                 {"target_ip": "1.2.3.4"}, "BoxSaveErr"
             )
-            self.assertFalse(session_saved)
+            self.assertFalse(session_saved.success)
 
     # -------------------------------------------------------------------------
     # 14. Project Name Sanitization Collision Defense

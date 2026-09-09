@@ -221,7 +221,7 @@ class TestAppController(unittest.TestCase):
     def test_toggle_loot_view_persistence_error(self):
         """_toggle_loot_view shows error dialog on persistence failure."""
         with patch.object(self.config, "set", side_effect=PersistenceError("disk read-only")):
-            with patch("ui.app_controller.QMessageBox.critical") as mock_crit:
+            with patch("ui.app_controller.show_error_dialog") as mock_crit:
                 self.controller._toggle_loot_view()
                 mock_crit.assert_called_once()
 

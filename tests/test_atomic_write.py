@@ -81,6 +81,14 @@ class TestAtomicWrite(unittest.TestCase):
         with target_file.open("r", encoding="utf-8") as state_file:
             self.assertEqual(json.load(state_file), previous_state)
 
+    def test_atomic_write_syncs_parent_directory_after_replace(self):
+        target_file = self.temp_path / "durable" / "project_state.json"
+
+        with patch("core.atomic_write._fsync_parent_directory") as sync_directory:
+            atomic_write_json(target_file, {"schema_version": 1})
+
+        sync_directory.assert_called_once_with(target_file.parent)
+
 
 if __name__ == "__main__":
     unittest.main()

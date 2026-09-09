@@ -21,6 +21,7 @@ from core.i18n import t
 from ui.history_card import HistoryCard
 from ui.clipboard_monitor import ClipboardMonitor
 from ui.styles.icons import icon
+from ui.message_boxes import show_error_dialog
 
 logger = get_logger("history_controller")
 
@@ -60,7 +61,7 @@ class HistoryController(QObject):
             app = QApplication.instance()
             if app:
                 target_widget = app.activeWindow()
-        QMessageBox.critical(
+        show_error_dialog(
             target_widget,
             t("dialog.storage_error", "Speicherfehler"),
             t(

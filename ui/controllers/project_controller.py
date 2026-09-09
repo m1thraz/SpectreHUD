@@ -8,6 +8,7 @@ from PyQt6.QtCore import QObject, QPoint, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QFileDialog, QMessageBox
 
 from core.project import ProjectManager, ProjectExistsError
+from core.project.persistence import PersistResult
 from core.project.validator import ProjectError
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
@@ -17,6 +18,7 @@ from core.i18n import t
 from core.platform.opener import open_path
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
+from ui.message_boxes import add_copy_button, show_error_dialog
 
 logger = get_logger("project_controller")
 
@@ -72,11 +74,11 @@ class ProjectController(QObject):
         self.project_created.emit(clean_name)
         return clean_name
 
-    def import_project_folder(self, folder_path: str) -> Optional[str]:
-        pname = self.project_manager.import_project_folder(folder_path)
-        if pname:
-            self.project_selected.emit(pname)
-        return pname
+    def import_project_folder(self, folder_path: str) -> PersistResult[str]:
+        result = self.project_manager.import_project_folder(folder_path)
+        if result.success and result.value:
+            self.project_selected.emit(result.value)
+        return result
 
     def archive_project(self, project_name: str, target_zip_path: Path) -> Dict[str, Any]:
         return self.project_manager.archive_project(project_name, target_zip_path)
@@ -243,6 +245,7 @@ class ProjectController(QObject):
                 t("project.archive_error_msg", "Fehler beim Erstellen des ZIP-Archivs:\n{error}", error=err)
             )
             msg.setIcon(QMessageBox.Icon.Critical)
+            add_copy_button(msg)
             msg.exec()
 
     def _on_import_project(
@@ -256,12 +259,26 @@ class ProjectController(QObject):
         )
         if folder:
             try:
-                pname = self.import_project_folder(folder)
-                if pname:
-                    on_switch_project(pname)
+                result = self.import_project_folder(folder)
+                if result.success and result.value:
+                    on_switch_project(result.value)
+                else:
+                    show_error_dialog(
+                        parent_widget,
+                        t("project.import_failed_title", "Import fehlgeschlagen"),
+                        t(
+                            "project.import_failed_msg",
+                            "Der Projektordner konnte nicht importiert werden:\n{error}",
+                            error=(
+                                result.failure_reason.value
+                                if result.failure_reason is not None
+                                else "unknown"
+                            ),
+                        ),
+                    )
             except (ProjectError, PersistenceError, StorageError, OSError) as e:
                 logger.error(f"Failed to import project folder '{folder}': {e}")
-                QMessageBox.critical(
+                show_error_dialog(
                     parent_widget,
                     t("project.import_failed_title", "Import fehlgeschlagen"),
                     t(
@@ -317,7 +334,7 @@ class ProjectController(QObject):
                     return False
                 except (ProjectError, PersistenceError, StorageError, OSError) as e:
                     logger.error(f"Failed to create project '{pname}': {e}")
-                    QMessageBox.critical(
+                    show_error_dialog(
                         parent_widget,
                         t("project.create_failed_title", "Projekt-Erstellung fehlgeschlagen"),
                         t(

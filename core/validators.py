@@ -282,6 +282,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     default_state = {
+        "schema_version": 1,
         "name": fallback_name[:MAX_PROJECT_NAME_LENGTH],
         "target_ip": "10.10.10.10",
         "attacker_ip": "10.10.14.5",
@@ -301,6 +302,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         return default_state
 
     return {
+        "schema_version": 1,
         "name": str(data.get("name") or fallback_name)[:MAX_PROJECT_NAME_LENGTH],
         "target_ip": str(data.get("target_ip") or "10.10.10.10")[:MAX_TARGET_IP_LENGTH],
         "attacker_ip": str(data.get("attacker_ip") or "10.10.14.5")[:MAX_TARGET_IP_LENGTH],

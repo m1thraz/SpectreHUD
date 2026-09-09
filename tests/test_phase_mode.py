@@ -140,7 +140,7 @@ def test_project_session_service_active_phase_persistence(tmp_path):
 
     # Save session
     saved = session_service.save_project_session({"target_ip": "10.10.10.50"})
-    assert saved is True
+    assert saved.success
 
     # Check project_state.json contains active_phase
     proj_dir = Path(proj_mgr.get_project_dir("test_box"))

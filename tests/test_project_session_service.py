@@ -1,14 +1,19 @@
+import json
 import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from core.project import ProjectManager
+from core.project import (
+    PersistFailureReason,
+    ProjectManager,
+    ProjectSchemaMismatchError,
+)
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectStateCorruptedError
-from core.project.session_service import ProjectSessionService
+from core.project.session_service import ProjectSessionService, ProjectSessionValidationError
 
 
 class TestProjectSessionService(unittest.TestCase):
@@ -114,11 +119,10 @@ class TestProjectSessionService(unittest.TestCase):
         self.loot_manager.add_entry("flag", "Second", "HTB{beta}", target_ip="10.10.10.10")
         live_loot = self.loot_manager.get_all_entries()
 
-        self.assertTrue(
-            self.session_service.save_project_session(
-                variables={"target_ip": "10.10.10.10"}, project_name="RoundTrip"
-            )
+        result = self.session_service.save_project_session(
+            variables={"target_ip": "10.10.10.10"}, project_name="RoundTrip"
         )
+        self.assertTrue(result.success)
 
         reloaded_state = self.project_manager.load_project_state("RoundTrip")
         self.assertEqual(reloaded_state["loot"], live_loot)
@@ -133,6 +137,88 @@ class TestProjectSessionService(unittest.TestCase):
             self.session_service.load_project_session("CorruptBox")
 
         self.assertEqual(self.loot_manager.get_all_entries(), live_loot)
+
+    def test_component_validation_failure_preserves_entire_live_session(self):
+        self.project_manager.create_project("AtomicLoad")
+        self.loot_manager.add_entry("note", "Live loot", "keep", category="recon")
+        self.clipboard_watcher.add_entry("live clipboard")
+        self.quick_note_manager.add_entry("live note", category="misc")
+        previous_loot = self.loot_manager.get_all_entries()
+        previous_history = self.clipboard_watcher.get_all_history()
+        previous_notes = self.quick_note_manager.get_all_entries()
+
+        with patch(
+            "core.project.session_service.validate_quick_notes_list",
+            side_effect=ValueError("injected quick-note validation failure"),
+        ):
+            with self.assertRaises(ProjectSessionValidationError) as error:
+                self.session_service.load_project_session("AtomicLoad")
+
+        self.assertIs(error.exception.failure_reason, PersistFailureReason.VALIDATION_FAILED)
+        self.assertEqual(self.loot_manager.get_all_entries(), previous_loot)
+        self.assertEqual(self.clipboard_watcher.get_all_history(), previous_history)
+        self.assertEqual(self.quick_note_manager.get_all_entries(), previous_notes)
+
+    def test_missing_project_state_schema_is_migrated_with_backup(self):
+        project_dir = self.project_manager.create_project("FutureSchema")
+        state_file = project_dir / "project_state.json"
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        state.pop("schema_version")
+        legacy_bytes = json.dumps(state).encode("utf-8")
+        state_file.write_bytes(legacy_bytes)
+
+        loaded = self.session_service.load_project_session("FutureSchema")
+
+        self.assertEqual(loaded["schema_version"], 1)
+        self.assertEqual(json.loads(state_file.read_text(encoding="utf-8"))["schema_version"], 1)
+        backup = project_dir / "project_state.json.pre-schema-v1.bak"
+        self.assertEqual(backup.read_bytes(), legacy_bytes)
+
+    def test_unknown_project_state_schema_is_explicit_and_preserves_runtime(self):
+        project_dir = self.project_manager.create_project("FutureSchema")
+        self.loot_manager.add_entry("note", "Live", "keep", category="recon")
+        previous_loot = self.loot_manager.get_all_entries()
+        state_file = project_dir / "project_state.json"
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        state["schema_version"] = 999
+        state_file.write_text(json.dumps(state), encoding="utf-8")
+
+        with self.assertRaises(ProjectSchemaMismatchError) as error:
+            self.session_service.load_project_session("FutureSchema")
+
+        self.assertIs(error.exception.failure_reason, PersistFailureReason.SCHEMA_MISMATCH)
+        self.assertEqual(self.loot_manager.get_all_entries(), previous_loot)
+
+    def test_runtime_apply_failure_rolls_back_all_components(self):
+        self.project_manager.create_project("ApplyRollback")
+        self.loot_manager.add_entry("note", "Live loot", "keep", category="recon")
+        self.clipboard_watcher.add_entry("live clipboard")
+        self.quick_note_manager.add_entry("live note", category="misc")
+        previous_loot = self.loot_manager.get_all_entries()
+        previous_history = self.clipboard_watcher.get_all_history()
+        previous_notes = self.quick_note_manager.get_all_entries()
+
+        original_replace = self.quick_note_manager.replace_entries
+        calls = 0
+
+        def fail_first_replace(entries):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RuntimeError("injected apply failure")
+            return original_replace(entries)
+
+        with patch.object(
+            self.quick_note_manager,
+            "replace_entries",
+            side_effect=fail_first_replace,
+        ):
+            with self.assertRaises(ProjectSessionValidationError):
+                self.session_service.load_project_session("ApplyRollback")
+
+        self.assertEqual(self.loot_manager.get_all_entries(), previous_loot)
+        self.assertEqual(self.clipboard_watcher.get_all_history(), previous_history)
+        self.assertEqual(self.quick_note_manager.get_all_entries(), previous_notes)
 
     def test_invalid_state_encoding_and_oversized_state_are_rejected(self):
         project_dir = self.project_manager.create_project("InvalidStateBox")

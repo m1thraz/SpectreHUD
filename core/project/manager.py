@@ -11,12 +11,14 @@ from core.event_bus import EventBus, EventType
 from core.project.validator import (
     validate_project_name,
     sanitize_project_name,
+    ProjectCreationError,
     ProjectNotFoundError,
 )
 from core.project.repository import (
     ProjectRepository,
 )
 from core.project.lock_service import ProjectLockService
+from core.project.persistence import PersistResult
 
 logger = get_logger("projects")
 
@@ -90,7 +92,14 @@ class ProjectManager:
                 "Default", target_ip="10.10.10.10", attacker_ip="10.10.14.5", allow_existing=True
             )
         else:
-            self.repository._update_registry(additions={"Default": str(default_dir.resolve())})
+            registry_result = self.repository._update_registry(
+                additions={"Default": str(default_dir.resolve())}
+            )
+            if not registry_result.success:
+                logger.warning(
+                    "Could not register the existing Default project: %s",
+                    registry_result.failure_reason,
+                )
         # Bootstrap: sync discovered projects into registry at startup
         self.repository.sync_registry()
 
@@ -141,7 +150,11 @@ class ProjectManager:
             lang=lang,
         )
         if pentest_password is not None:
-            self.repository.enable_pentest_mode(clean_name, pentest_password)
+            pentest_result = self.repository.enable_pentest_mode(clean_name, pentest_password)
+            if not pentest_result.success:
+                raise ProjectCreationError(
+                    f"Could not enable Pentest Mode: {pentest_result.failure_reason}"
+                )
         if self.event_bus:
             self.event_bus.publish(
                 EventType.PROJECT_CREATED,
@@ -154,14 +167,14 @@ class ProjectManager:
             )
         return proj_dir
 
-    def import_project_folder(self, folder_path: Union[Path, str]) -> Optional[str]:
+    def import_project_folder(self, folder_path: Union[Path, str]) -> PersistResult[str]:
         """Imports and registers an existing directory as a project workspace."""
-        clean_name = self.repository.import_project_workspace(folder_path)
-        if clean_name:
-            self.active_project = clean_name
+        result = self.repository.import_project_workspace(folder_path)
+        if result.success and result.value:
+            self.active_project = result.value
             if self.event_bus:
-                self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": clean_name})
-        return clean_name
+                self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": result.value})
+        return result
 
     def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:
         """Loads and semantically validates state data for a project."""
@@ -182,7 +195,7 @@ class ProjectManager:
 
     def save_project_state(
         self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs
-    ) -> bool:
+    ) -> PersistResult[None]:
         """Persists state data for a project."""
         pname = name or self.active_project
         return self.repository.save_project_state(pname, state=state, **kwargs)

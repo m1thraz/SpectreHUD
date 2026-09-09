@@ -33,6 +33,24 @@ def _replace_file_with_retry(
             time.sleep(retry_delay * (attempt + 1))
 
 
+def _fsync_parent_directory(path: Path) -> None:
+    """Persist the renamed directory entry, not only the file payload."""
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        directory_fd = os.open(path, flags)
+    except OSError:
+        if os.name == "nt":
+            return
+        raise
+    try:
+        os.fsync(directory_fd)
+    except OSError:
+        if os.name != "nt":
+            raise
+    finally:
+        os.close(directory_fd)
+
+
 def atomic_write_text(filepath: Union[str, Path], content: str, encoding: str = "utf-8") -> bool:
     """
     Atomically writes text to target filepath via a temporary file in the same directory,
@@ -49,6 +67,9 @@ def atomic_write_text(filepath: Union[str, Path], content: str, encoding: str = 
             os.fsync(f.fileno())
         _secure_chmod(temp_path, 0o600)
         _replace_file_with_retry(temp_path, path)
+        # A crash after rename but before syncing the directory can lose the new name
+        # on filesystems that persist file data and directory entries separately.
+        _fsync_parent_directory(path.parent)
         _secure_chmod(path, 0o600)
         return True
     except OSError as e:
@@ -72,6 +93,7 @@ def atomic_write_bytes(filepath: Union[str, Path], content: bytes) -> bool:
             os.fsync(f.fileno())
         _secure_chmod(temp_path, 0o600)
         _replace_file_with_retry(temp_path, path)
+        _fsync_parent_directory(path.parent)
         _secure_chmod(path, 0o600)
         return True
     except OSError as e:
@@ -100,6 +122,7 @@ def atomic_write_json(
             os.fsync(f.fileno())
         _secure_chmod(temp_path, 0o600)
         _replace_file_with_retry(temp_path, path)
+        _fsync_parent_directory(path.parent)
         _secure_chmod(path, 0o600)
         return True
     except (OSError, TypeError, ValueError) as e:

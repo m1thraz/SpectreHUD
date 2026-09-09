@@ -12,7 +12,12 @@ from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QImage, QPixmap, QColor
 
 from core.config import ConfigManager
-from core.project import ProjectManager, InvalidProjectNameError
+from core.project import (
+    InvalidProjectNameError,
+    PersistFailureReason,
+    PersistResult,
+    ProjectManager,
+)
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.screenshots.manager import ScreenshotManager
@@ -95,8 +100,14 @@ class TestWorkflowRobustness(unittest.TestCase):
                 self.project_mgr.activate_project(invalid_name)
             with self.assertRaises(InvalidProjectNameError):
                 self.project_mgr.load_project_state(invalid_name)
-            with self.assertRaises(InvalidProjectNameError):
-                self.project_mgr.save_project_state(invalid_name, {"target_ip": "9.9.9.9"})
+            result = self.project_mgr.save_project_state(
+                invalid_name, {"target_ip": "9.9.9.9"}
+            )
+            self.assertFalse(result.success)
+            self.assertEqual(
+                result.failure_reason,
+                PersistFailureReason.VALIDATION_FAILED,
+            )
 
         self.assertEqual(self.project_mgr.load_project_state("Default"), before)
 
@@ -174,6 +185,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         # Write poisoned schema
         poisoned_data = {
+            "schema_version": 1,
             "name": "BoxPoisoned",
             "target_ip": 1337,  # int instead of str
             "attacker_ip": None,  # None instead of str
@@ -234,7 +246,9 @@ class TestWorkflowRobustness(unittest.TestCase):
         workspace.write_text("workspace is unavailable", encoding="utf-8")
 
         self.assertFalse(
-            self.project_mgr.save_project_state("BoxWorkspaceLoss", {"target_ip": "10.10.10.10"})
+            self.project_mgr.save_project_state(
+                "BoxWorkspaceLoss", {"target_ip": "10.10.10.10"}
+            ).success
         )
 
     def test_project_switch_rolls_back_when_report_load_fails(self):
@@ -255,13 +269,15 @@ class TestWorkflowRobustness(unittest.TestCase):
         event_bus.subscribe(EventType.PROJECT_CHANGED, events.append)
         coordinator = WorkspaceCoordinator(
             project_manager=self.project_mgr,
-            session_service=MagicMock(save_project_session=MagicMock(return_value=True)),
+            session_service=MagicMock(
+                save_project_session=MagicMock(return_value=PersistResult.ok())
+            ),
             project_ctrl=project_ctrl,
             report_ctrl=report_ctrl,
             event_bus=event_bus,
         )
 
-        with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical"):
+        with patch("ui.coordinators.workspace_coordinator.show_error_dialog"):
             switched = coordinator.switch_to_project(
                 "BoxReportBroken", QWidget(), variables_provider=lambda: {}
             )

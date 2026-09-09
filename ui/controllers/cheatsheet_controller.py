@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QMenu,
-    QMessageBox,
 )
 
 from core.snippets.manager import SnippetManager
@@ -21,6 +20,7 @@ from ui.add_snippet_dialog import AddSnippetDialog
 from ui.menu_builder import build_qmenu
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_WARNING
+from ui.message_boxes import show_error_dialog
 
 logger = get_logger("cheatsheet_controller")
 
@@ -147,7 +147,7 @@ class CheatsheetController(QObject):
             app = QApplication.instance()
             if app:
                 target_widget = app.activeWindow()
-        QMessageBox.critical(
+        show_error_dialog(
             target_widget,
             t("dialog.storage_error", "Speicherfehler"),
             t(

@@ -8,7 +8,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from core.project import ProjectManager, ProjectExistsError, ProjectCreationError
+from core.project import (
+    PersistFailureReason,
+    ProjectManager,
+    ProjectCreationError,
+)
 
 
 class TestProjectTransactions(unittest.TestCase):
@@ -71,9 +75,9 @@ class TestProjectTransactions(unittest.TestCase):
             downloads_dir = Path(tmpdir) / "downloads" / "Box"
             downloads_dir.mkdir(parents=True)
 
-            # Attempting to import external Box must raise ProjectExistsError
-            with self.assertRaises(ProjectExistsError):
-                pm.import_project_folder(downloads_dir)
+            result = pm.import_project_folder(downloads_dir)
+            self.assertFalse(result.success)
+            self.assertEqual(result.failure_reason, PersistFailureReason.VALIDATION_FAILED)
 
             # Original project path must remain untouched in registry
             self.assertEqual(pm.registry["Box"], original_path)
@@ -90,6 +94,26 @@ class TestProjectTransactions(unittest.TestCase):
                 pm.activate_project("MissingBox")
 
             self.assertFalse((pm.base_dir / "MissingBox").exists())
+
+    def test_save_permission_error_returns_typed_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pm = ProjectManager(
+                base_dir=Path(tmpdir) / "projects",
+                config_dir=Path(tmpdir) / "config",
+            )
+            pm.create_project("ReadOnlyBox")
+
+            with patch(
+                "core.project.state_store.atomic_write_json",
+                side_effect=PermissionError("injected permission failure"),
+            ):
+                result = pm.save_project_state("ReadOnlyBox", {"target_ip": "1.2.3.4"})
+
+            self.assertFalse(result.success)
+            self.assertEqual(
+                result.failure_reason,
+                PersistFailureReason.PERMISSION_DENIED,
+            )
 
 
 if __name__ == "__main__":

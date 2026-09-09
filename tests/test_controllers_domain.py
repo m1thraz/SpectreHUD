@@ -17,7 +17,7 @@ from core.snippets.manager import SnippetManager
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
-from core.project import ProjectManager
+from core.project import PersistFailureReason, PersistResult, ProjectManager
 from core.event_bus import EventBus, EventType
 from ui.controllers.project_controller import ProjectController
 from ui.controllers.cheatsheet_controller import CheatsheetController
@@ -86,11 +86,16 @@ class TestControllersDomain(unittest.TestCase):
             res = self.project_ctrl.archive_project("BoxOmega", Path("/fake/zip"))
             self.assertTrue(res.get("success"))
 
-        with patch.object(self.project_mgr, "import_project_folder", return_value="BoxOmega"):
+        with patch.object(
+            self.project_mgr,
+            "import_project_folder",
+            return_value=PersistResult.ok("BoxOmega"),
+        ):
             selected_projects = []
             self.project_ctrl.project_selected.connect(lambda p: selected_projects.append(p))
             imp = self.project_ctrl.import_project_folder("/fake/dir")
-            self.assertEqual(imp, "BoxOmega")
+            self.assertTrue(imp.success)
+            self.assertEqual(imp.value, "BoxOmega")
             self.assertEqual(selected_projects, ["BoxOmega"])
 
     def test_project_controller_archive_project_flows(self):
@@ -154,15 +159,34 @@ class TestControllersDomain(unittest.TestCase):
         import_dir = self.temp_path / "ImportedBox"
         import_dir.mkdir()
         with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
-            with patch.object(self.project_ctrl, "import_project_folder", return_value="ImportedBox"):
+            with patch.object(
+                self.project_ctrl,
+                "import_project_folder",
+                return_value=PersistResult.ok("ImportedBox"),
+            ):
                 self.project_ctrl._on_import_project(parent, lambda p: switched.append(p))
                 self.assertEqual(switched, ["ImportedBox"])
+
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getExistingDirectory",
+            return_value=str(import_dir),
+        ):
+            with patch.object(
+                self.project_ctrl,
+                "import_project_folder",
+                return_value=PersistResult.failed(PersistFailureReason.PERMISSION_DENIED),
+            ):
+                with patch(
+                    "ui.controllers.project_controller.show_error_dialog"
+                ) as mock_crit:
+                    self.project_ctrl._on_import_project(parent, lambda p: None)
+                    self.assertIn("permission_denied", mock_crit.call_args.args[2])
 
         # 3. Error
         from core.project.validator import ProjectError
         with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
             with patch.object(self.project_ctrl, "import_project_folder", side_effect=ProjectError("Invalid project")):
-                with patch("ui.controllers.project_controller.QMessageBox.critical") as mock_crit:
+                with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
                     self.project_ctrl._on_import_project(parent, lambda p: None)
                     mock_crit.assert_called_once()
 
@@ -224,7 +248,7 @@ class TestControllersDomain(unittest.TestCase):
             mock_dlg.get_data.return_value = {"name": "BadBox"}
             MockDlg.return_value = mock_dlg
             with patch.object(self.project_ctrl, "create_project", side_effect=ProjectError("bad name")):
-                with patch("ui.controllers.project_controller.QMessageBox.critical") as mock_crit:
+                with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
                     res = self.project_ctrl.open_new_project_dialog(
                         parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
                     )
@@ -497,10 +521,10 @@ class TestControllersDomain(unittest.TestCase):
             self.assertEqual(Path(get_save_file_name.call_args.args[2]).name, "report-draft.md")
 
     def test_loot_controller_notify_persistence_error(self):
-        """_notify_persistence_error invokes QMessageBox.critical with parent or activeWindow."""
+        """Persistence failures use the shared copyable error dialog."""
         from core.storage import PersistenceError
 
-        with patch("ui.controllers.loot_controller.QMessageBox.critical") as mock_crit:
+        with patch("ui.controllers.loot_controller.show_error_dialog") as mock_crit:
             # 1. With parent_widget
             parent = QWidget()
             err = PersistenceError("disk fail")
@@ -509,7 +533,7 @@ class TestControllersDomain(unittest.TestCase):
             self.assertEqual(mock_crit.call_args[0][0], parent)
             self.assertIn("disk fail", mock_crit.call_args[0][2])
 
-        with patch("ui.controllers.loot_controller.QMessageBox.critical") as mock_crit:
+        with patch("ui.controllers.loot_controller.show_error_dialog") as mock_crit:
             # 2. Without parent_widget (falls back to activeWindow or None)
             self.loot_ctrl._notify_persistence_error("test_op", err, parent_widget=None)
             mock_crit.assert_called_once()

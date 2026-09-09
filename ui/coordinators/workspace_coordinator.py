@@ -8,7 +8,8 @@ from typing import Optional, Dict, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
-from core.project import ProjectManager, ProjectStateCorruptedError
+from core.project import ProjectManager, ProjectStateLoadError
+from core.project.persistence import PersistFailureReason
 from core.project.validator import WorkspaceError, validate_workspace_directory
 from core.config import ConfigManager
 from core.project.session_service import ProjectSessionService
@@ -19,6 +20,7 @@ from ui.controllers.project_controller import ProjectController
 from ui.project_dialog import ProjectUnlockDialog
 from core.project.lock_service import ProjectSecurityMetaError
 from ui.controllers.report_controller import ReportController
+from ui.message_boxes import show_error_dialog
 
 logger = get_logger(__name__)
 
@@ -53,21 +55,34 @@ class WorkspaceCoordinator(QObject):
             return {}
         try:
             return self.session_service.load_project_session(active_proj)
-        except ProjectStateCorruptedError as exc:
-            logger.error("Could not load corrupted project state for '%s': %s", active_proj, exc)
+        except ProjectStateLoadError as exc:
+            logger.error("Could not load project state for '%s': %s", active_proj, exc)
             if window is None:
                 raise
-            QMessageBox.warning(
+            schema_mismatch = exc.failure_reason is PersistFailureReason.SCHEMA_MISMATCH
+            show_error_dialog(
                 window,
-                t("project.state_corrupted_title", "Project state unreadable"),
                 t(
-                    "project.state_corrupted_msg",
-                    "The saved state for '{project}' is damaged or too large. SpectreHUD did not "
-                    "replace it or clear the current session. Restore project_state.json from a "
-                    "backup before continuing.\n\n{error}",
-                    project=active_proj,
-                    error=str(exc),
+                    "project.schema_mismatch_title"
+                    if schema_mismatch
+                    else "project.state_corrupted_title",
+                    "Unsupported project state" if schema_mismatch else "Project state unreadable",
                 ),
+                t(
+                    "project.schema_mismatch_msg"
+                    if schema_mismatch
+                    else "project.state_corrupted_msg",
+                    (
+                        "The project state for '{project}' uses an unsupported schema. SpectreHUD "
+                        "did not replace it or clear the current session."
+                        if schema_mismatch
+                        else "The saved state for '{project}' is damaged or too large. SpectreHUD "
+                        "did not replace it or clear the current session. Restore project_state.json "
+                        "from a backup before continuing."
+                    ),
+                    project=active_proj,
+                ),
+                details=str(exc),
             )
             return None
 
@@ -77,10 +92,10 @@ class WorkspaceCoordinator(QObject):
             needs_unlock = self.project_manager.is_pentest_mode(
                 project_name
             ) and not self.project_manager.is_project_unlocked(project_name)
-        except ProjectSecurityMetaError as exc:
+        except (ProjectSecurityMetaError, ProjectStateLoadError) as exc:
             logger.error("Invalid Pentest-Mode metadata for '%s': %s", project_name, exc)
             if window is not None:
-                QMessageBox.critical(
+                show_error_dialog(
                     window,
                     t("project.pentest_meta_error_title", "Pentest-Modus fehlerhaft"),
                     str(exc),
@@ -99,7 +114,7 @@ class WorkspaceCoordinator(QObject):
                 if self.project_manager.unlock_project(project_name, dialog.get_password()):
                     return True
             except ProjectSecurityMetaError as exc:
-                QMessageBox.critical(
+                show_error_dialog(
                     window,
                     t("project.pentest_meta_error_title", "Pentest-Modus fehlerhaft"),
                     str(exc),
@@ -113,7 +128,13 @@ class WorkspaceCoordinator(QObject):
 
     def save_current_project_session(self, variables: Dict[str, str]) -> bool:
         """Persists the variable state for the currently active project."""
-        return self.session_service.save_project_session(variables)
+        result = self.session_service.save_project_session(variables)
+        self._last_save_failure_reason = result.failure_reason
+        return result.success
+
+    @staticmethod
+    def _failure_reason_label(reason: Optional[PersistFailureReason]) -> str:
+        return reason.value.replace("_", " ") if reason else "unknown"
 
     def switch_to_project(
         self,
@@ -151,13 +172,15 @@ class WorkspaceCoordinator(QObject):
                     )
                 )
             else:
+                base_message = t(
+                    "workspace.switch_save_failed",
+                    "Der Zustand des aktuellen Projekts '{project}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
+                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
+                    project=current_proj,
+                )
                 msg.setText(
-                    t(
-                        "workspace.switch_save_failed",
-                        "Der Zustand des aktuellen Projekts '{project}' konnte nicht auf der Festplatte gespeichert werden.\n\n"
-                        "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
-                        project=current_proj,
-                    )
+                    f"{base_message}\n\n"
+                    f"({self._failure_reason_label(self._last_save_failure_reason)})"
                 )
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(
@@ -172,7 +195,7 @@ class WorkspaceCoordinator(QObject):
             self.project_manager.activate_project(project_name)
         except Exception as activate_err:
             logger.error(f"Failed to activate project '{project_name}': {activate_err}")
-            QMessageBox.critical(
+            show_error_dialog(
                 window,
                 t("general.error", "Error"),
                 t(
@@ -199,7 +222,7 @@ class WorkspaceCoordinator(QObject):
                 self.project_manager.activate_project(current_proj)
             except Exception:
                 logger.exception("Failed to restore the previous project after report load failure")
-            QMessageBox.critical(
+            show_error_dialog(
                 window,
                 t("general.error", "Error"),
                 f"Failed to load the report for project '{project_name}'. The previous project has been restored.\n\n{report_err}",
@@ -281,7 +304,7 @@ class WorkspaceCoordinator(QObject):
                 logger.exception(
                     "Failed to restore previous workspace session after switch failure."
                 )
-                QMessageBox.critical(
+                show_error_dialog(
                     window,
                     t("general.workspace_error", "Workspace Error"),
                     t(

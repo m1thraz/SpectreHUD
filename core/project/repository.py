@@ -9,6 +9,11 @@ from core.logger import get_logger
 from core.storage import PersistenceError
 from core.atomic_write import atomic_write_json, atomic_write_text
 from core.project.lock_service import ProjectLockService
+from core.project.persistence import (
+    PersistFailureReason,
+    PersistResult,
+    classify_persistence_error,
+)
 from core.project.validator import (
     validate_project_name,
     validate_workspace_boundary,
@@ -96,9 +101,9 @@ class ProjectRepository:
     def unlock_project(self, name: str, password: str) -> bool:
         return self.state_store.unlock(name, password)
 
-    def enable_pentest_mode(self, name: str, password: str) -> None:
+    def enable_pentest_mode(self, name: str, password: str) -> PersistResult[None]:
         """Encrypt an existing state file and retain its key for this session."""
-        self.state_store.enable_pentest_mode(name, password)
+        return self.state_store.enable_pentest_mode(name, password)
 
     def _load_registry(self) -> Dict[str, str]:
         """Loads registered project paths from projects_registry.json."""
@@ -108,9 +113,14 @@ class ProjectRepository:
         self,
         additions: Optional[Dict[str, str]] = None,
         removals: Optional[set[str]] = None,
-    ) -> None:
+    ) -> PersistResult[None]:
         """Atomically persist explicit changes to the active application's registry."""
-        self.project_registry.update(additions=additions, removals=removals)
+        try:
+            self.project_registry.update(additions=additions, removals=removals)
+            return PersistResult.ok()
+        except PersistenceError as exc:
+            cause = exc.__cause__ if isinstance(exc.__cause__, BaseException) else exc
+            return PersistResult.failed(classify_persistence_error(cause))
 
     def project_exists(self, name: str, base_dir: Optional[Path] = None) -> bool:
         """Returns whether a project with the strictly validated name exists."""
@@ -237,7 +247,12 @@ class ProjectRepository:
                     )
 
             # Register project location
-            self._update_registry(additions={clean_name: str(proj_dir)})
+            registry_result = self._update_registry(additions={clean_name: str(proj_dir)})
+            if not registry_result.success:
+                raise PersistenceError(
+                    f"Could not register project '{clean_name}': "
+                    f"{registry_result.failure_reason or PersistFailureReason.UNKNOWN}"
+                )
             return proj_dir
 
         except Exception as e:
@@ -272,11 +287,15 @@ class ProjectRepository:
             try:
                 if registry_had_entry:
                     if self.registry.get(clean_name) != registry_entry_before:
-                        self._update_registry(
+                        registry_result = self._update_registry(
                             additions={clean_name: str(registry_entry_before)}
                         )
+                        if not registry_result.success:
+                            raise PersistenceError("Could not restore the previous registry entry.")
                 elif clean_name in self.registry:
-                    self._update_registry(removals={clean_name})
+                    registry_result = self._update_registry(removals={clean_name})
+                    if not registry_result.success:
+                        raise PersistenceError("Could not remove the rolled-back registry entry.")
             except PersistenceError:
                 if registry_had_entry:
                     logger.exception(
@@ -289,14 +308,14 @@ class ProjectRepository:
 
             raise ProjectCreationError(f"Failed to create project '{clean_name}': {e}") from e
 
-    def import_project_workspace(self, folder_path: Union[Path, str]) -> Optional[str]:
+    def import_project_workspace(self, folder_path: Union[Path, str]) -> PersistResult[str]:
         """Imports and registers an existing directory as a project workspace."""
         target_path = Path(folder_path).resolve()
         if not target_path.exists() or not target_path.is_dir():
             logger.warning(
                 f"Cannot import non-existing or non-directory project folder: {folder_path}"
             )
-            return None
+            return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
 
         try:
             clean_name = validate_project_name(target_path.name)
@@ -304,14 +323,23 @@ class ProjectRepository:
             logger.warning(
                 f"Cannot import project with invalid directory name {target_path.name}: {e}"
             )
-            return None
+            return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
 
         if clean_name in self.registry and self.registry[clean_name] != str(target_path):
             existing_loc = Path(self.registry[clean_name])
             if existing_loc.exists() and existing_loc.is_dir():
-                raise ProjectExistsError(
-                    f"Cannot import project '{clean_name}': An existing project is already registered at '{existing_loc}'."
-                )
+                return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
+
+        managed_paths = [
+            *(target_path / sub for sub in PROJECT_LOOT_SUBDIRECTORIES),
+            target_path / "project_state.json",
+        ]
+        existing_managed_paths = {
+            path for path in managed_paths if path.exists() or path.is_symlink()
+        }
+        registry_had_entry = clean_name in self.registry
+        registry_entry_before = self.registry.get(clean_name)
+        operation_failure_reason: Optional[PersistFailureReason] = None
 
         try:
             for sub in PROJECT_LOOT_SUBDIRECTORIES:
@@ -334,14 +362,54 @@ class ProjectRepository:
                         f"Failed to atomically write project_state.json for imported project {clean_name}"
                     )
 
-            self._update_registry(additions={clean_name: str(target_path)})
+            registry_result = self._update_registry(additions={clean_name: str(target_path)})
+            if not registry_result.success:
+                operation_failure_reason = registry_result.failure_reason
+                raise PersistenceError(
+                    f"Could not register imported project: "
+                    f"{registry_result.failure_reason or PersistFailureReason.UNKNOWN}"
+                )
             logger.info(f"Successfully imported project '{clean_name}' from {target_path}")
-            return clean_name
+            return PersistResult.ok(clean_name)
         except Exception as e:
             logger.error(f"Failed to import project folder {folder_path}: {e}", exc_info=True)
-            if isinstance(e, (ProjectExistsError, ProjectCreationError, PersistenceError)):
-                raise
-            return None
+            rollback_performed = False
+            for path in reversed(managed_paths):
+                if path in existing_managed_paths:
+                    continue
+                try:
+                    if path.is_symlink() or path.is_file():
+                        path.unlink(missing_ok=True)
+                        rollback_performed = True
+                    elif path.is_dir():
+                        path.rmdir()
+                        rollback_performed = True
+                except OSError as rollback_error:
+                    logger.warning(
+                        "Import rollback could not remove newly created path %s: %s",
+                        path,
+                        rollback_error,
+                    )
+            try:
+                if registry_had_entry:
+                    if self.registry.get(clean_name) != registry_entry_before:
+                        restored = self._update_registry(
+                            additions={clean_name: str(registry_entry_before)}
+                        )
+                        rollback_performed = rollback_performed or restored.success
+                elif clean_name in self.registry:
+                    removed = self._update_registry(removals={clean_name})
+                    rollback_performed = rollback_performed or removed.success
+            except Exception:
+                logger.exception("Failed to restore registry after import rollback.")
+
+            cause = e.__cause__ if isinstance(e.__cause__, BaseException) else e
+            reason = operation_failure_reason or (
+                PersistFailureReason.VALIDATION_FAILED
+                if isinstance(e, (ProjectExistsError, ProjectCreationError))
+                else classify_persistence_error(cause)
+            )
+            return PersistResult.failed(reason, rollback_performed=rollback_performed)
 
     def load_project_state(self, name: str) -> Dict[str, Any]:
         """Load validated plain or encrypted state through the state store."""
@@ -349,7 +417,7 @@ class ProjectRepository:
 
     def save_project_state(
         self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs
-    ) -> bool:
+    ) -> PersistResult[None]:
         """Persist validated plain or encrypted state through the state store."""
         return self.state_store.save(name, state=state, **kwargs)
 

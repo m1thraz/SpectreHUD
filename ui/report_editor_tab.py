@@ -58,6 +58,7 @@ from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
+from ui.message_boxes import add_copy_button
 from core.reporting.navigation import build_report_navigation
 from core.reporting.draft_manager import (
     discard_draft,
@@ -1145,6 +1146,7 @@ class ReportEditorTab(QWidget):
                 )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
+            add_copy_button(msg)
             msg.exec()
         except ReportSaveError as e:
             logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
@@ -1158,6 +1160,7 @@ class ReportEditorTab(QWidget):
                 )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
+            add_copy_button(msg)
             msg.exec()
 
     def _on_append_loot_clicked(self) -> None:
@@ -1200,6 +1203,7 @@ class ReportEditorTab(QWidget):
                 )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
+            add_copy_button(msg)
             msg.exec()
             return
         except ReportSaveError as exc:
@@ -1214,6 +1218,7 @@ class ReportEditorTab(QWidget):
                 )
             )
             msg.setIcon(QMessageBox.Icon.Critical)
+            add_copy_button(msg)
             msg.exec()
             return
 

@@ -30,6 +30,7 @@ from core.i18n import t
 from core.theme_loader import ThemeLoader
 from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
+from ui.message_boxes import show_error_dialog
 from core.fonts import (
     UI_FONT_OPTIONS,
     CODE_FONT_OPTIONS,
@@ -1135,7 +1136,7 @@ class SettingsDialog(BaseHudDialog):
         try:
             self.config.update(settings_to_persist)
         except PersistenceError as e:
-            QMessageBox.critical(
+            show_error_dialog(
                 self,
                 t("settings.save_failed_title", "Speichern fehlgeschlagen"),
                 t(

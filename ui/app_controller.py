@@ -6,7 +6,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 
 from typing import Dict, Any, List, Optional
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QWidget, QPushButton
 
 from core.config import ConfigManager
 from core.snippets.manager import SnippetManager
@@ -23,6 +23,7 @@ from core.phase_context import PhaseContext
 from core.storage import PersistenceError
 
 from ui.phase_toast_hud import PhaseToastHUD
+from ui.message_boxes import show_error_dialog
 from ui.variable_bar import VariableBar
 from ui.clipboard_monitor import ClipboardMonitor
 from ui.panels.header_panel import HeaderPanel
@@ -735,7 +736,7 @@ class AppController(QObject):
             self.config.set("loot_view_mode", next_mode)
         except PersistenceError as exc:
             logger.error(f"Could not persist Loot view mode: {exc}")
-            QMessageBox.critical(
+            show_error_dialog(
                 self.window,
                 t("loot.view_switch_failed_title", "View switch failed"),
                 t(
@@ -756,7 +757,7 @@ class AppController(QObject):
             self.config.set("loot_density", next_density)
         except PersistenceError as exc:
             logger.error(f"Could not persist Loot density: {exc}")
-            QMessageBox.critical(
+            show_error_dialog(
                 self.window,
                 t("loot.density_switch_failed_title", "Density switch failed"),
                 t(

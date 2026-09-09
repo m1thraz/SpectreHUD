@@ -15,7 +15,13 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QWidget, QMessageBox, QPushButton
 
 from core.config import ConfigManager
-from core.project import ProjectManager, ProjectStateCorruptedError
+from core.project import (
+    PersistFailureReason,
+    PersistResult,
+    ProjectManager,
+    ProjectSchemaMismatchError,
+    ProjectStateCorruptedError,
+)
 from core.project.validator import WorkspaceError
 from core.project.session_service import ProjectSessionService
 from core.project.lock_service import ProjectSecurityMetaError
@@ -37,7 +43,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
         self.session_service = MagicMock(spec=ProjectSessionService)
         self.session_service.load_project_session.return_value = {"target_ip": "10.10.10.1"}
-        self.session_service.save_project_session.return_value = True
+        self.session_service.save_project_session.return_value = PersistResult.ok()
 
         self.project_ctrl = MagicMock()
         self.report_ctrl = MagicMock()
@@ -68,11 +74,23 @@ class TestWorkspaceCoordinator(unittest.TestCase):
             "corrupted"
         )
 
-        with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning") as warning:
+        with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as warning:
             state = self.coord.load_active_project_session(self.window)
 
         self.assertIsNone(state)
         warning.assert_called_once()
+
+    def test_schema_mismatch_uses_specific_copyable_error(self):
+        self.session_service.load_project_session.side_effect = ProjectSchemaMismatchError(
+            "future schema"
+        )
+
+        with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as error_dialog:
+            state = self.coord.load_active_project_session(self.window)
+
+        self.assertIsNone(state)
+        self.assertIn("schema", error_dialog.call_args.args[2].lower())
+        self.assertEqual(error_dialog.call_args.kwargs["details"], "future schema")
 
     def test_unlock_project_if_needed_flows(self):
         """_unlock_project_if_needed tests already unlocked, cancel, retry, success, and error."""
@@ -86,7 +104,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
         # 3. Security meta error -> critical messagebox
         with patch.object(self.project_mgr, "is_pentest_mode", side_effect=ProjectSecurityMetaError("corrupted")):
-            with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical") as mock_crit:
+            with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
                 res = self.coord._unlock_project_if_needed("Box1", self.window)
                 self.assertFalse(res)
                 mock_crit.assert_called_once()
@@ -136,7 +154,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
     def test_switch_to_project_save_failure_dialog(self):
         """switch_to_project prompts user when saving previous project state fails."""
-        self.session_service.save_project_session.return_value = False
+        self.session_service.save_project_session.return_value = PersistResult.failed(
+            PersistFailureReason.DISK_FULL
+        )
 
         # User cancels switch
         with patch("ui.coordinators.workspace_coordinator.QMessageBox.exec", return_value=QMessageBox.StandardButton.Cancel):
@@ -153,7 +173,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def test_switch_to_project_activation_error(self):
         """switch_to_project shows error dialog if project activation fails."""
         with patch.object(self.project_mgr, "activate_project", side_effect=Exception("not found")):
-            with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical") as mock_crit:
+            with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
                 res = self.coord.switch_to_project("NonExistent", self.window, lambda: {})
                 self.assertFalse(res)
                 mock_crit.assert_called_once()
@@ -161,7 +181,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def test_switch_to_project_report_load_failure_rollback(self):
         """switch_to_project rolls back to previous project if report loading fails."""
         self.report_ctrl.load_project.side_effect = Exception("corrupt report")
-        with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical") as mock_crit:
+        with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
             res = self.coord.switch_to_project("Box2", self.window, lambda: {})
             self.assertFalse(res)
             mock_crit.assert_called_once()
@@ -266,7 +286,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
     def test_switch_to_project_missing_folder_prompt(self):
         """switch_to_project displays folder missing warning when active project directory removed."""
-        self.session_service.save_project_session.return_value = False
+        self.session_service.save_project_session.return_value = PersistResult.failed(
+            PersistFailureReason.IO_ERROR
+        )
         with patch.object(self.project_mgr, "project_exists", return_value=False):
             with patch("ui.coordinators.workspace_coordinator.QMessageBox.exec", return_value=QMessageBox.StandardButton.Cancel):
                 res = self.coord.switch_to_project("Box2", self.window, lambda: {})
@@ -286,7 +308,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
 
         with patch.object(self.config, "set", side_effect=Exception("switch error")):
             with patch.object(self.project_mgr, "activate_project", side_effect=Exception("restore error")):
-                with patch("ui.coordinators.workspace_coordinator.QMessageBox.critical") as mock_crit:
+                with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
                     res = self.coord.apply_workspace_setting(
                         str(new_dir),
                         self.config,

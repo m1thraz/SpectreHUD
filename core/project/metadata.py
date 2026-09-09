@@ -106,6 +106,7 @@ def create_initial_state(
 
     ts = created_at or format_timestamp()
     return {
+        "schema_version": 1,
         "name": project_name,
         "target_ip": target_ip or "10.10.10.10",
         "attacker_ip": attacker_ip or "10.10.14.5",

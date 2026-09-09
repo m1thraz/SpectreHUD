@@ -17,6 +17,7 @@ from core.i18n import t
 from ui.loot_card import LootCard
 from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
+from ui.message_boxes import show_error_dialog
 
 logger = get_logger("loot_controller")
 
@@ -63,7 +64,7 @@ class LootController(QObject):
             app = QApplication.instance()
             if app:
                 target_widget = app.activeWindow()
-        QMessageBox.critical(
+        show_error_dialog(
             target_widget,
             t("dialog.storage_error", "Speicherfehler"),
             t(

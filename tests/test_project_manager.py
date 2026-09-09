@@ -46,7 +46,9 @@ class TestProjectManager(unittest.TestCase):
         imported_dir = self.base_dir / "ImportedBox"
         imported_dir.mkdir()
 
-        self.assertEqual(self.pm.import_project_folder(imported_dir), "ImportedBox")
+        result = self.pm.import_project_folder(imported_dir)
+        self.assertTrue(result.success)
+        self.assertEqual(result.value, "ImportedBox")
         for category in CATEGORIES:
             self.assertTrue((imported_dir / category["id"]).is_dir())
         self.assertTrue((imported_dir / "loot").is_dir())
@@ -73,7 +75,7 @@ class TestProjectManager(unittest.TestCase):
         self.pm.activate_project("Victim")
         shutil.rmtree(project_dir)
 
-        self.assertFalse(self.pm.save_project_state())
+        self.assertFalse(self.pm.save_project_state().success)
         self.assertFalse(project_dir.exists())
 
     def test_save_does_not_fork_externally_renamed_active_project(self):
@@ -83,7 +85,7 @@ class TestProjectManager(unittest.TestCase):
         renamed_dir = project_dir.with_name("BoxRenamed")
         project_dir.rename(renamed_dir)
 
-        self.assertFalse(self.pm.save_project_state())
+        self.assertFalse(self.pm.save_project_state().success)
         self.assertFalse(project_dir.exists())
         self.assertTrue(renamed_dir.exists())
 
@@ -179,8 +181,9 @@ class TestProjectManager(unittest.TestCase):
             ext_path.mkdir()
             (ext_path / "random_file.txt").write_text("hello", encoding="utf-8")
 
-            imported_name = self.pm.import_project_folder(ext_path)
-            self.assertEqual(imported_name, "ImportedBox")
+            result = self.pm.import_project_folder(ext_path)
+            self.assertTrue(result.success)
+            self.assertEqual(result.value, "ImportedBox")
             self.assertEqual(self.pm.get_active_project(), "ImportedBox")
             self.assertTrue((ext_path / "loot").exists())
             self.assertTrue((ext_path / "project_state.json").exists())

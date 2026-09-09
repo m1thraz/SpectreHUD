@@ -24,7 +24,12 @@ from core.project.repository import (
 )
 from core.project.manager import ProjectManager
 from core.project.lock_service import ProjectLockedError, ProjectSecurityMetaError
-from core.project.state_store import ProjectStateCorruptedError
+from core.project.state_store import (
+    ProjectSchemaMismatchError,
+    ProjectStateCorruptedError,
+    ProjectStateLoadError,
+)
+from core.project.persistence import PersistFailureReason, PersistResult
 
 __all__ = [
     "ProjectManager",
@@ -37,6 +42,10 @@ __all__ = [
     "ProjectLockedError",
     "ProjectSecurityMetaError",
     "ProjectStateCorruptedError",
+    "ProjectStateLoadError",
+    "ProjectSchemaMismatchError",
+    "PersistFailureReason",
+    "PersistResult",
     "WorkspaceError",
     "validate_project_name",
     "sanitize_project_name",

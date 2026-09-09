@@ -10,6 +10,8 @@ semantic versioning.
 
 * Clarified core capture and report workflows with context-aware empty states, concise action tooltips, and purpose-driven export descriptions in English and German.
 * Reduced Cheatsheet view latency with incremental card rendering and reuse of an unchanged rendered view when switching back from another workspace.
+* Consolidated project persistence writes around typed outcomes and atomic all-or-nothing session loading.
+* Added a localized copy action to error dialogs so complete diagnostic messages can be shared without manual transcription.
 
 ### Fixed
 
@@ -19,6 +21,8 @@ semantic versioning.
 * Keep the test runner's simulated Windows process-group check portable on Linux CI hosts.
 * Assign new screenshot Loot to the active pentest phase instead of always falling back to Misc.
 * Distinguish History's generated Markdown draft from the editable Report and default it to `report-draft.md`.
+* Reject unsupported project and Pentest-security schemas explicitly, and sync parent directories after atomic file replacement for stronger crash durability.
+* Migrate versionless legacy project and Pentest-security state to schema 1 with exact pre-migration backups instead of blocking otherwise valid existing projects.
 
 ## [2.1.4] - 2026-09-08
 
