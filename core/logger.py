@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Union
 from logging.handlers import RotatingFileHandler
-from core.platform.paths import config_dir as platform_config_dir
+from core.platform.paths import logs_dir as platform_logs_dir
 
 DEFAULT_MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB per log file
 DEFAULT_LOG_BACKUP_COUNT = 3  # 3 rotated backups (spectrehud.log.1, .2, .3)
@@ -33,39 +33,57 @@ def _resolve_default_log_level() -> int:
 
 
 _file_logging_configured = False
+_active_log_path: Optional[Path] = None
+
+
+def get_log_directory() -> Path:
+    """Return the configured diagnostics directory or the current platform default."""
+    return _active_log_path.parent if _active_log_path is not None else platform_logs_dir()
+
+
+def get_log_path() -> Path:
+    """Return the active or expected rotating log-file path."""
+    return _active_log_path or (get_log_directory() / "spectrehud.log")
+
+
+def is_file_logging_configured() -> bool:
+    return _file_logging_configured
 
 
 def configure_file_logging(
-    config_dir: Optional[Path] = None,
+    log_dir: Optional[Path] = None,
     max_bytes: int = DEFAULT_MAX_LOG_BYTES,
     backup_count: int = DEFAULT_LOG_BACKUP_COUNT,
-) -> None:
+) -> Optional[Path]:
     """Explicitly configures rotating file logging during application bootstrap."""
-    global _file_logging_configured
+    global _active_log_path, _file_logging_configured
     if _file_logging_configured:
-        return
+        return _active_log_path
 
     root_logger = logging.getLogger("spectrehud")
+    if root_logger.level == logging.NOTSET:
+        root_logger.setLevel(_resolve_default_log_level())
     formatter = logging.Formatter(
         fmt="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     try:
-        log_dir = (
-            Path(config_dir)
-            if config_dir
-            else platform_config_dir()
-        )
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / "spectrehud.log"
+        resolved_log_dir = Path(log_dir) if log_dir else platform_logs_dir()
+        resolved_log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = resolved_log_dir / "spectrehud.log"
         file_handler = RotatingFileHandler(
             str(log_file), maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
         )
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
         _file_logging_configured = True
+        _active_log_path = log_file.resolve()
+        root_logger.info("File logging active: %s", _active_log_path)
+        return _active_log_path
     except (OSError, PermissionError) as e:
+        _active_log_path = None
         sys.stderr.write(f"Warning: Could not configure file logging: {e}\n")
+        return None
 
 
 def setup_logger(
@@ -136,7 +154,7 @@ def flush_logs() -> None:
 
 def close_log_handlers() -> None:
     """Closes and removes all handlers (file and stream) to release file locks on Windows."""
-    global _file_logging_configured
+    global _active_log_path, _file_logging_configured
     root = logging.getLogger("spectrehud")
     for handler in list(root.handlers):
         try:
@@ -146,3 +164,4 @@ def close_log_handlers() -> None:
             pass
         root.removeHandler(handler)
     _file_logging_configured = False
+    _active_log_path = None

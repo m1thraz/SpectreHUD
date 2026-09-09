@@ -4,6 +4,7 @@ from core.platform.paths import (
     cache_dir,
     config_dir,
     data_dir,
+    logs_dir,
     projects_dir,
     user_themes_dir,
 )
@@ -35,6 +36,7 @@ def test_windows_uses_roaming_config_and_local_data(tmp_path):
 
     assert config_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Roaming" / "SpectreHUD"
     assert data_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD"
+    assert logs_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD" / "Logs"
     assert cache_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD" / "Cache"
 
 
@@ -44,12 +46,14 @@ def test_explicit_spectre_overrides_have_highest_priority(tmp_path):
         "SPECTRE_DATA_DIR": str(tmp_path / "data-override"),
         "SPECTRE_CACHE_DIR": str(tmp_path / "cache-override"),
         "SPECTRE_PROJECTS_DIR": str(tmp_path / "projects-override"),
+        "SPECTRE_LOG_DIR": str(tmp_path / "logs-override"),
     }
 
     assert config_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "config-override"
     assert data_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "data-override"
     assert cache_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "cache-override"
     assert projects_dir(environ=environment, home=tmp_path) == tmp_path / "projects-override"
+    assert logs_dir(environ=environment, home=tmp_path) == tmp_path / "logs-override"
     assert user_themes_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "config-override" / "themes"
 
 

@@ -3,7 +3,15 @@ import unittest
 import tempfile
 import logging
 from pathlib import Path
-from core.logger import get_logger, set_log_level, flush_logs
+from core.logger import (
+    configure_file_logging,
+    flush_logs,
+    get_log_directory,
+    get_log_path,
+    get_logger,
+    is_file_logging_configured,
+    set_log_level,
+)
 
 
 class TestLogger(unittest.TestCase):
@@ -17,6 +25,7 @@ class TestLogger(unittest.TestCase):
 
         close_log_handlers()
         os.environ.pop("SPECTRE_LOG_LEVEL", None)
+        os.environ.pop("SPECTRE_LOG_DIR", None)
         for name in list(logging.Logger.manager.loggerDict.keys()) + [
             "spectrehud",
             "test_rotator",
@@ -74,9 +83,9 @@ class TestLogger(unittest.TestCase):
 
     def test_rotating_file_handler_limits_log_file_size(self):
         """Tests that RotatingFileHandler properly rolls over files once max_bytes is reached."""
-        from core.logger import configure_file_logging
-
-        configure_file_logging(config_dir=self.temp_path, max_bytes=500, backup_count=2)
+        configured_path = configure_file_logging(
+            log_dir=self.temp_path, max_bytes=500, backup_count=2
+        )
         test_logger = get_logger("test_rotator")
 
         # Emit logs to trigger rotation (> 500 bytes)
@@ -89,6 +98,20 @@ class TestLogger(unittest.TestCase):
         log_dir = self.temp_path
         log_files = list(log_dir.glob("spectrehud.log*"))
         self.assertGreaterEqual(len(log_files), 1)
+        self.assertEqual(configured_path, (self.temp_path / "spectrehud.log").resolve())
+        self.assertEqual(get_log_directory(), self.temp_path.resolve())
+        self.assertEqual(get_log_path(), configured_path)
+        self.assertTrue(is_file_logging_configured())
+
+    def test_environment_override_controls_default_log_directory(self):
+        override = self.temp_path / "diagnostics"
+        os.environ["SPECTRE_LOG_DIR"] = str(override)
+
+        configured_path = configure_file_logging()
+
+        self.assertEqual(configured_path, (override / "spectrehud.log").resolve())
+        self.assertTrue(configured_path.exists())
+        self.assertIn("File logging active:", configured_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

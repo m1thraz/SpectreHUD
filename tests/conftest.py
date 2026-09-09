@@ -38,8 +38,10 @@ def isolate_spectrehud_user_data(tmp_path, monkeypatch):
     project workspace after another test cleans up its environment variables.
     """
     config_dir = tmp_path / "config"
+    log_dir = tmp_path / "logs"
     projects_dir = tmp_path / "projects"
     monkeypatch.setenv("SPECTRE_CONFIG_DIR", str(config_dir))
+    monkeypatch.setenv("SPECTRE_LOG_DIR", str(log_dir))
     monkeypatch.setenv("SPECTRE_PROJECTS_DIR", str(projects_dir))
     yield
 

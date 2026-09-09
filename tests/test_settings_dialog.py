@@ -65,6 +65,19 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertFalse(page.btn_open_release.isVisible())
         self.assertIn("2.1.4", page.lbl_update_status.text())
 
+    def test_general_page_exposes_diagnostics_log_location(self):
+        page = GeneralSettingsPage(self.config_manager)
+
+        self.assertEqual(page.btn_open_diagnostics.text(), "Open Diagnostics Folder")
+        self.assertEqual(page.btn_copy_log_path.text(), "Copy Log Path")
+        self.assertIn("spectrehud.log", page.lbl_log_path.text())
+
+        page.btn_copy_log_path.click()
+
+        from PyQt6.QtWidgets import QApplication
+
+        self.assertEqual(QApplication.clipboard().text(), page.lbl_log_path.text())
+
     def test_appearance_page_get_settings(self):
         page = AppearanceSettingsPage(self.config_manager)
         page.combo_ui_font.setCurrentIndex(page.combo_ui_font.findData("inter"))

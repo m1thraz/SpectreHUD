@@ -12,6 +12,7 @@ semantic versioning.
 * Reduced Cheatsheet view latency with incremental card rendering and reuse of an unchanged rendered view when switching back from another workspace.
 * Consolidated project persistence writes around typed outcomes and atomic all-or-nothing session loading.
 * Added a localized copy action to error dialogs so complete diagnostic messages can be shared without manual transcription.
+* Moved runtime logs to a discoverable machine-local Diagnostics folder, exposed its path in Settings and error details, and added an explicit `SPECTRE_LOG_DIR` override.
 
 ### Fixed
 

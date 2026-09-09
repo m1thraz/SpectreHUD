@@ -27,6 +27,7 @@ from core.platform import (
     projects_dir,
 )
 from core.i18n import t
+from core.logger import get_log_directory, get_log_path
 from core.theme_loader import ThemeLoader
 from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
@@ -749,6 +750,39 @@ class GeneralSettingsPage(QWidget):
         updates_layout.addLayout(update_actions)
         layout.addWidget(card_updates)
 
+        lbl_diagnostics = QLabel(t("settings.lbl_diagnostics_section", "Diagnostics"))
+        lbl_diagnostics.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_diagnostics)
+
+        card_diagnostics = QFrame()
+        card_diagnostics.setProperty("class", "SettingsCard")
+        diagnostics_layout = QVBoxLayout(card_diagnostics)
+        diagnostics_layout.setSpacing(8)
+
+        self.lbl_log_path = QLabel(str(get_log_path()))
+        self.lbl_log_path.setWordWrap(True)
+        self.lbl_log_path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.lbl_log_path.setProperty("class", "FormHint")
+        diagnostics_layout.addWidget(self.lbl_log_path)
+
+        diagnostics_actions = QHBoxLayout()
+        self.btn_open_diagnostics = QPushButton(
+            t("settings.open_diagnostics_folder", "Open Diagnostics Folder")
+        )
+        self.btn_open_diagnostics.setProperty("class", "SecondaryBtn")
+        self.btn_open_diagnostics.clicked.connect(self._open_diagnostics_folder)
+        diagnostics_actions.addWidget(self.btn_open_diagnostics)
+
+        self.btn_copy_log_path = QPushButton(
+            t("settings.copy_log_path", "Copy Log Path")
+        )
+        self.btn_copy_log_path.setProperty("class", "SecondaryBtn")
+        self.btn_copy_log_path.clicked.connect(self._copy_log_path)
+        diagnostics_actions.addWidget(self.btn_copy_log_path)
+        diagnostics_actions.addStretch()
+        diagnostics_layout.addLayout(diagnostics_actions)
+        layout.addWidget(card_diagnostics)
+
         # 2. Defaults Section
         lbl_defaults = QLabel(t("settings.lbl_defaults_section", "Default Parameters"))
         lbl_defaults.setProperty("class", "SettingsSectionTitle")
@@ -854,6 +888,38 @@ class GeneralSettingsPage(QWidget):
         scroll.setWidget(content)
         _configure_transparent_scroll_surfaces(scroll)
         outer_layout.addWidget(scroll)
+
+    def _open_diagnostics_folder(self) -> None:
+        diagnostics_dir = get_log_directory()
+        try:
+            diagnostics_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            show_error_dialog(
+                self,
+                t("settings.diagnostics_error_title", "Diagnostics folder unavailable"),
+                t(
+                    "settings.diagnostics_create_error",
+                    "The diagnostics folder could not be created.",
+                ),
+                details=str(exc),
+            )
+            return
+        if not open_path(diagnostics_dir):
+            show_error_dialog(
+                self,
+                t("settings.diagnostics_error_title", "Diagnostics folder unavailable"),
+                t(
+                    "settings.diagnostics_open_error",
+                    "The diagnostics folder could not be opened.",
+                ),
+            )
+
+    def _copy_log_path(self) -> None:
+        from PyQt6.QtWidgets import QApplication
+
+        clipboard = QApplication.clipboard()
+        if clipboard is not None:
+            clipboard.setText(str(get_log_path()))
 
     def _check_for_updates(self) -> None:
         self.btn_check_updates.setEnabled(False)

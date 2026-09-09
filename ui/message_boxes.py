@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton, QWidget
 
 from core.i18n import t
+from core.logger import get_log_path, is_file_logging_configured
 
 
 def _copy_text(message_box: QMessageBox) -> str:
@@ -55,6 +56,20 @@ def show_error_dialog(
         | Qt.TextInteractionFlag.TextSelectableByKeyboard
     )
     if details:
-        dialog.setDetailedText(details)
+        diagnostic_details = details
+    else:
+        diagnostic_details = ""
+    log_detail = t(
+        "dialog.log_file_detail"
+        if is_file_logging_configured()
+        else "dialog.log_file_unavailable_detail",
+        "Log file: {path}"
+        if is_file_logging_configured()
+        else "File logging is unavailable. Expected log file: {path}",
+        path=str(get_log_path()),
+    )
+    dialog.setDetailedText(
+        f"{diagnostic_details}\n\n{log_detail}" if diagnostic_details else log_detail
+    )
     add_copy_button(dialog)
     dialog.exec()

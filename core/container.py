@@ -119,7 +119,7 @@ class ServiceContainer:
         resolved_config_dir = Path(config_dir) if config_dir else get_default_config_dir()
         from core.logger import configure_file_logging
 
-        configure_file_logging(config_dir=resolved_config_dir)
+        configure_file_logging()
         storage = FileStorageBackend(base_dir=resolved_config_dir)
         event_bus = EventBus()
 

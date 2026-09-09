@@ -81,6 +81,20 @@ def data_dir(
     return _base_from_env(environment, "XDG_DATA_HOME", home_path / ".local" / "share") / APP_SLUG
 
 
+def logs_dir(
+    *,
+    system_name: Optional[str] = None,
+    environ: Optional[Mapping[str, str]] = None,
+    home: Optional[Path] = None,
+) -> Path:
+    """Return machine-local diagnostics storage, with an explicit support override."""
+    environment = os.environ if environ is None else environ
+    override = environment.get("SPECTRE_LOG_DIR", "").strip()
+    if override:
+        return Path(override)
+    return data_dir(system_name=system_name, environ=environment, home=home) / "Logs"
+
+
 def cache_dir(
     *,
     system_name: Optional[str] = None,
