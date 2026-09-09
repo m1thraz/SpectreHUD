@@ -201,6 +201,7 @@ class ScreenshotManager(QObject):
         project_manager,
         loot_manager,
         target_ip: str = "",
+        phase_id: Optional[str] = None,
         overlay_factory: Optional[Callable[..., Any]] = None,
     ) -> bool:
         """
@@ -243,7 +244,12 @@ class ScreenshotManager(QObject):
 
                 self._active_overlay.snip_completed.connect(
                     lambda cropped: self._on_snip_completed(
-                        cropped, parent_window, project_manager, loot_manager, target_ip
+                        cropped,
+                        parent_window,
+                        project_manager,
+                        loot_manager,
+                        target_ip,
+                        phase_id,
                     )
                 )
                 self._active_overlay.snip_cancelled.connect(
@@ -264,6 +270,7 @@ class ScreenshotManager(QObject):
         project_manager,
         loot_manager,
         target_ip: str,
+        phase_id: Optional[str] = None,
     ) -> None:
         """Saves cropped pixmap to project loot directory and creates Loot entry."""
         try:
@@ -299,6 +306,7 @@ class ScreenshotManager(QObject):
                 title=default_title,
                 content=markdown_content,
                 target_ip=target_ip,
+                category=phase_id or "misc",
             )
             loot_entry["file_path"] = str(filepath)
 

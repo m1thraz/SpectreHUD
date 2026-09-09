@@ -62,7 +62,23 @@ class TestScreenshotManager(unittest.TestCase):
         entries = self.loot_mgr.get_all_entries()
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0]["type"], "screenshot")
+        self.assertEqual(entries[0]["category"], "misc")
         self.assertIn("loot/", entries[0]["content"])
+
+    def test_snip_completed_inherits_active_phase(self):
+        img = QImage(50, 50, QImage.Format.Format_RGB32)
+        img.fill(QColor("green"))
+
+        self.screenshot_mgr._on_snip_completed(
+            cropped_pixmap=QPixmap.fromImage(img),
+            parent_window=QWidget(),
+            project_manager=self.project_mgr,
+            loot_manager=self.loot_mgr,
+            target_ip="10.10.10.55",
+            phase_id="privesc",
+        )
+
+        self.assertEqual(self.loot_mgr.get_all_entries()[0]["category"], "privesc")
 
     def test_screenshot_collision_resistance(self):
         """Tests that multiple rapid screenshots in the same second do not overwrite each other."""

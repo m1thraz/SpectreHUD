@@ -513,8 +513,8 @@ class AppController(QObject):
 
     def _build_history_pills(self) -> None:
         export_tooltip = t(
-            "report.export_copy_tip",
-            "Creates a new copy based on current session loot",
+            "history.generate_draft_tip",
+            "Generate a new Markdown draft from current Loot and Clipboard History; this does not export the Report Editor document.",
         )
         self.history_ctrl.build_filter_pills(
             self.search.get_pills_layout(),
@@ -838,7 +838,11 @@ class AppController(QObject):
             return
 
         self.screenshot_manager.start_capture(
-            self.window, self.project_manager, self.loot_manager, target_ip=self._target_provider()
+            self.window,
+            self.project_manager,
+            self.loot_manager,
+            target_ip=self._target_provider(),
+            phase_id=self.phase_context.active_phase_id,
         )
 
     def _on_screenshot_saved(self, loot_entry: Dict[str, Any]) -> None:

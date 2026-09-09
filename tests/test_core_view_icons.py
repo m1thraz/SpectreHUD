@@ -121,7 +121,7 @@ def test_contextual_core_view_actions_use_icon_plus_text(qapp):
     contextual = [
         button
         for button in pills_host.findChildren(QPushButton)
-        if button.text() in {"Report (.md)", "Clear"}
+        if button.text() in {"Generate Draft (.md)", "Clear"}
     ]
     assert len(contextual) == 2
     assert all(not button.icon().isNull() for button in contextual)

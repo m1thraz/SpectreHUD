@@ -487,11 +487,14 @@ class TestControllersDomain(unittest.TestCase):
 
     def test_history_controller_export_report_dialog_accepts_active_project(self):
         """HistoryController.export_report_dialog accepts parent, target_ip, and active_project."""
-        with patch("ui.controllers.history_controller.QFileDialog.getSaveFileName", return_value=("", "")):
+        with patch(
+            "ui.controllers.history_controller.QFileDialog.getSaveFileName", return_value=("", "")
+        ) as get_save_file_name:
             res = self.history_ctrl.export_report_dialog(
                 QWidget(), target_ip="10.10.10.55", active_project="default"
             )
             self.assertIsNone(res)
+            self.assertEqual(Path(get_save_file_name.call_args.args[2]).name, "report-draft.md")
 
     def test_loot_controller_notify_persistence_error(self):
         """_notify_persistence_error invokes QMessageBox.critical with parent or activeWindow."""

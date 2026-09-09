@@ -240,7 +240,7 @@ class HistoryController(QObject):
         pills_layout.addStretch()
 
         # Contextual History Action Buttons
-        btn_export = QPushButton("Report (.md)")
+        btn_export = QPushButton(t("history.generate_draft", "Generate Draft (.md)"))
         btn_export.setIcon(icon("fa5s.file-export"))
         btn_export.setIconSize(QSize(12, 12))
         btn_export.setProperty("class", "MiniActionBtn")
@@ -308,11 +308,11 @@ class HistoryController(QObject):
     ) -> Optional[str]:
         active_proj = active_project or self.project_manager.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
-        default_file = proj_dir / "report.md"
+        default_file = proj_dir / "report-draft.md"
 
         file_path, _ = QFileDialog.getSaveFileName(
             parent_widget,
-            t("history.export_report_title", "Pentest Report exportieren"),
+            t("history.generate_draft_title", "Generate Report Draft"),
             str(default_file),
             "Markdown Files (*.md);;All Files (*)",
         )

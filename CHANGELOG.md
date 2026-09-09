@@ -10,6 +10,8 @@ semantic versioning.
 
 * Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
 * Keep the test runner's simulated Windows process-group check portable on Linux CI hosts.
+* Assign new screenshot Loot to the active pentest phase instead of always falling back to Misc.
+* Distinguish History's generated Markdown draft from the editable Report and default it to `report-draft.md`.
 
 ## [2.1.4] - 2026-09-08
 

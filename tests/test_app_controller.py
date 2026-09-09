@@ -362,8 +362,15 @@ class TestAppController(unittest.TestCase):
     def test_screenshot_trigger_and_saved(self):
         """trigger_screenshot initiates capture, _on_screenshot_saved commits and switches mode."""
         # Available capture
+        self.controller.phase_context.set_active_phase("privesc")
         self.controller.trigger_screenshot()
-        self.screenshot_mgr.start_capture.assert_called_once()
+        self.screenshot_mgr.start_capture.assert_called_once_with(
+            self.window,
+            self.project_mgr,
+            self.loot_mgr,
+            target_ip="10.10.10.55",
+            phase_id="privesc",
+        )
 
         # Unavailable capture shows warning
         self.screenshot_mgr.is_capture_available.return_value = False
