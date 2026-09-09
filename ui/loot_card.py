@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
     QApplication,
     QSizePolicy,
     QGraphicsOpacityEffect,
-    QMessageBox,
     QMenu,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent, QPoint
@@ -20,6 +19,7 @@ from core.phases import get_phase
 from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
+from ui.message_boxes import show_error_dialog
 from core.platform.opener import open_path
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
@@ -467,7 +467,7 @@ class LootCard(QFrame):
         if open_path(img_path):
             return
         logger.error("Could not open loot image %s", img_path)
-        QMessageBox.warning(
+        show_error_dialog(
             self,
             t("loot.open_screenshot_error_title", "Screenshot unavailable"),
             t(

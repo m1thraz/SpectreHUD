@@ -24,6 +24,7 @@ from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog
 from core.i18n import t
+from ui.message_boxes import ask_confirmation
 from ui.base_dialog import BaseHudDialog
 
 
@@ -215,7 +216,7 @@ class TemplateManagerDialog(BaseHudDialog):
         if not tmpl or tmpl.is_builtin:
             return
 
-        reply = QMessageBox.question(
+        reply = ask_confirmation(
             self,
             t("template_manager.delete_title", "Template löschen"),
             t(
@@ -223,8 +224,8 @@ class TemplateManagerDialog(BaseHudDialog):
                 "Möchtest du das Template '{name}' wirklich löschen?",
                 name=tmpl.name,
             ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            default_button=QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.repo.delete_user_template(tmpl.id)

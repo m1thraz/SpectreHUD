@@ -201,7 +201,10 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.preview.setPlainText("Short")
 
         # User chooses "No" on warning dialog
-        with patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.No):
+        with patch(
+            "ui.report_editor_tab.show_warning_dialog",
+            return_value=QMessageBox.StandardButton.No,
+        ):
             self.tab._set_view_mode(ViewMode.SPLIT)
 
         # Content should be restored from baseline snapshot
@@ -638,7 +641,7 @@ Text
 
     def test_require_export_coordinator_missing_shows_warning(self):
         self.tab.export_coordinator = None
-        with patch.object(QMessageBox, "warning") as mock_warn:
+        with patch("ui.report_editor_tab.show_error_dialog") as mock_warn:
             self.assertIsNone(self.tab._require_export_coordinator())
             mock_warn.assert_called_once()
 
@@ -759,7 +762,7 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch.object(QMessageBox, "information") as mock_info,
+            patch("ui.report_editor_tab.show_information_dialog") as mock_info,
         ):
             self.tab._on_export_cherrytree_clicked()
             coordinator.export_report_to_cherrytree.assert_called_once()
@@ -772,7 +775,7 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch.object(QMessageBox, "information") as mock_info,
+            patch("ui.report_editor_tab.show_information_dialog") as mock_info,
         ):
             self.tab._on_export_cherrytree_clicked()
             mock_info.assert_called_once()
@@ -787,7 +790,7 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch.object(QMessageBox, "warning") as mock_warn,
+            patch("ui.report_editor_tab.show_error_dialog") as mock_warn,
         ):
             self.tab._on_export_cherrytree_clicked()
             mock_warn.assert_called_once()

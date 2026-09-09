@@ -21,7 +21,7 @@ from core.i18n import t
 from ui.history_card import HistoryCard
 from ui.clipboard_monitor import ClipboardMonitor
 from ui.styles.icons import icon
-from ui.message_boxes import show_error_dialog
+from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
 
 logger = get_logger("history_controller")
 
@@ -98,15 +98,15 @@ class HistoryController(QObject):
 
     def clear_history(self, parent_widget: Optional[QWidget] = None) -> bool:
         if parent_widget:
-            reply = QMessageBox.question(
+            reply = ask_confirmation(
                 parent_widget,
                 t("history.clear_title", "Clear History"),
                 t(
                     "history.clear_confirm",
                     "Are you sure you want to delete all recorded clipboard history for this project?",
                 ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                default_button=QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
@@ -325,7 +325,7 @@ class HistoryController(QObject):
         if file_path:
             out_path = Path(file_path)
             res = self.export_report_markdown(out_path, target_ip=target_ip)
-            QMessageBox.information(
+            show_information_dialog(
                 parent_widget, t("history.export_result_title", "Report Export"), res
             )
             return res

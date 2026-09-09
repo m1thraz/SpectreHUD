@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QScrollArea,
     QFileDialog,
-    QMessageBox,
     QSlider,
     QSpinBox,
 )
@@ -31,7 +30,7 @@ from core.logger import get_log_directory, get_log_path
 from core.theme_loader import ThemeLoader
 from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
-from ui.message_boxes import show_error_dialog
+from ui.message_boxes import show_error_dialog, show_warning_dialog
 from core.fonts import (
     UI_FONT_OPTIONS,
     CODE_FONT_OPTIONS,
@@ -634,7 +633,7 @@ class AppearanceSettingsPage(QWidget):
         try:
             self.theme_loader.USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            QMessageBox.warning(
+            show_error_dialog(
                 self,
                 t("settings.theme_folder_error_title", "Theme folder unavailable"),
                 t(
@@ -645,7 +644,7 @@ class AppearanceSettingsPage(QWidget):
             )
             return
         if not open_path(self.theme_loader.USER_THEMES_DIR):
-            QMessageBox.warning(
+            show_error_dialog(
                 self,
                 t("settings.theme_folder_error_title", "Theme folder unavailable"),
                 t(
@@ -1163,7 +1162,7 @@ class SettingsDialog(BaseHudDialog):
             try:
                 validate_workspace_directory(all_settings["workspace_dir"])
             except WorkspaceError as e:
-                QMessageBox.warning(
+                show_warning_dialog(
                     self,
                     t("settings.invalid_workspace_title", "Ungültiger Workspace-Pfad"),
                     t(
@@ -1183,7 +1182,7 @@ class SettingsDialog(BaseHudDialog):
                     all_settings.get("obsidian_export_folder", "CTF/SpectreHUD"),
                 )
             except ExternalExportError as exc:
-                QMessageBox.warning(
+                show_warning_dialog(
                     self,
                     t("settings.obsidian_invalid_title", "Invalid Obsidian settings"),
                     t(

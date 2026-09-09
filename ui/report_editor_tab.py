@@ -58,7 +58,12 @@ from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
-from ui.message_boxes import add_copy_button
+from ui.message_boxes import (
+    ask_confirmation,
+    show_error_dialog,
+    show_information_dialog,
+    show_warning_dialog,
+)
 from core.reporting.navigation import build_report_navigation
 from core.reporting.draft_manager import (
     discard_draft,
@@ -683,7 +688,7 @@ class ReportEditorTab(QWidget):
             relative_path = render_report_icon(project_dir, definition.icon_name)
         except (AttributeError, OSError, RuntimeError, ReportIconError) as exc:
             logger.warning("Could not create report icon asset: %s", exc)
-            QMessageBox.warning(
+            show_error_dialog(
                 self,
                 t("report.icon_error_title", "Icon could not be inserted"),
                 t(
@@ -954,7 +959,7 @@ class ReportEditorTab(QWidget):
 
         # Sanity check against severe conversion loss
         if old_len > 200 and new_len < old_len * 0.6:
-            reply = QMessageBox.warning(
+            reply = show_warning_dialog(
                 self.window() if self else None,
                 t("report.warn_large_diff_title", "Ungewöhnlich große Änderung"),
                 t(
@@ -962,8 +967,8 @@ class ReportEditorTab(QWidget):
                     "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt "
                     "(möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",
                 ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                default_button=QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 # Discard: reset preview to previous markdown
@@ -1046,13 +1051,11 @@ class ReportEditorTab(QWidget):
             if self._draft_timer.isActive():
                 self._draft_timer.stop()
         else:
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("dialog.error", "Error"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("dialog.error", "Error"),
                 t("report.save_error", "The report could not be saved. Details are in the log.")
             )
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.exec()
         return ok
 
     def _autosave(self) -> None:
@@ -1136,32 +1139,28 @@ class ReportEditorTab(QWidget):
             self._update_preview()
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("report.backup_failed_title", "Backup fehlgeschlagen"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("report.backup_failed_title", "Backup fehlgeschlagen"),
                 t(
                     "report.backup_failed_msg",
                     "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
                     "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen.",
-                )
+                ),
+                details=str(e),
             )
-            msg.setIcon(QMessageBox.Icon.Critical)
-            add_copy_button(msg)
-            msg.exec()
         except ReportSaveError as e:
             logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("report.save_failed_title", "Speichern fehlgeschlagen"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("report.save_failed_title", "Speichern fehlgeschlagen"),
                 t(
                     "report.save_failed_msg",
                     "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
                     "Der bisherige Report bleibt erhalten.",
-                )
+                ),
+                details=str(e),
             )
-            msg.setIcon(QMessageBox.Icon.Critical)
-            add_copy_button(msg)
-            msg.exec()
 
     def _on_append_loot_clicked(self) -> None:
         """Appends unreferenced loot entries to existing report sections without rewriting user text."""
@@ -1193,33 +1192,29 @@ class ReportEditorTab(QWidget):
             )
         except ReportBackupError as exc:
             logger.error("Append missing loot aborted due to backup error: %s", exc)
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("dialog.error", "Error"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("dialog.error", "Error"),
                 t(
                     "report.append_backup_failed_msg",
                     "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
                     "Zum Schutz deiner bestehenden Notizen wurde das Ergänzen abgebrochen.",
-                )
+                ),
+                details=str(exc),
             )
-            msg.setIcon(QMessageBox.Icon.Critical)
-            add_copy_button(msg)
-            msg.exec()
             return
         except ReportSaveError as exc:
             logger.error("Append missing loot: save failed: %s", exc)
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("dialog.error", "Error"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("dialog.error", "Error"),
                 t(
                     "report.append_save_failed_msg",
                     "Der ergänzte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
                     "Der bisherige Report bleibt erhalten.",
-                )
+                ),
+                details=str(exc),
             )
-            msg.setIcon(QMessageBox.Icon.Critical)
-            add_copy_button(msg)
-            msg.exec()
             return
 
         if result.added_count == 0:
@@ -1364,26 +1359,23 @@ class ReportEditorTab(QWidget):
             return
         try:
             coordinator.export_report_markdown(target, self.editor.toPlainText())
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("report.export_saved_title", "Exportiert"))
-            msg.setText(
+            show_information_dialog(
+                self.window() if self else None,
+                t("report.export_saved_title", "Exportiert"),
                 t("report.export_saved_msg", "Kopie gespeichert: {filename}", filename=target.name)
             )
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.exec()
         except ReportExportError as exc:
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("dialog.error", "Fehler"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("dialog.error", "Fehler"),
                 t(
                     "report.export_failed_msg",
                     "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
                     filename=target.name,
-                )
+                ),
+                details=str(exc),
             )
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.exec()
 
     def _on_export_html_clicked(self) -> None:
         export_options = self._select_html_export_options()
@@ -1421,21 +1413,19 @@ class ReportEditorTab(QWidget):
                 language=doc_lang,
                 profile=profile,
             )
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("report.export_html_success_title", "HTML-Report exportiert"))
-            msg.setText(
+            reply = ask_confirmation(
+                self.window() if self else None,
+                t("report.export_html_success_title", "HTML-Report exportiert"),
                 t(
                     "report.export_html_success_msg",
                     "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
                     filename=target.name,
-                )
+                ),
+                default_button=QMessageBox.StandardButton.Yes,
             )
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            if msg.exec() == QMessageBox.StandardButton.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 if not open_path(target):
-                    QMessageBox.warning(
+                    show_error_dialog(
                         self.window() if self else None,
                         t("report.open_html_error_title", "Report unavailable"),
                         t(
@@ -1446,17 +1436,16 @@ class ReportEditorTab(QWidget):
                     )
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
-            msg = QMessageBox(self.window() if self else None)
-            msg.setWindowTitle(t("dialog.error", "Fehler"))
-            msg.setText(
+            show_error_dialog(
+                self.window() if self else None,
+                t("dialog.error", "Fehler"),
                 t(
                     "report.export_failed_msg",
                     "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
                     filename=target.name,
-                )
+                ),
+                details=str(exc),
             )
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.exec()
 
     def _on_export_obsidian_clicked(self) -> None:
         """Delegate the current editor document to the shared export coordinator."""
@@ -1475,7 +1464,7 @@ class ReportEditorTab(QWidget):
         """Return the application export boundary or show a controlled error."""
         if self.export_coordinator is None:
             logger.error("Obsidian report export requested without a configured handler.")
-            QMessageBox.warning(
+            show_error_dialog(
                 self,
                 t("report.obsidian_export_failed_title", "Obsidian export failed"),
                 t(
@@ -1511,7 +1500,7 @@ class ReportEditorTab(QWidget):
             )
         except ReportExportError as exc:
             logger.error("CherryTree package export failed: %s", exc, exc_info=True)
-            QMessageBox.warning(
+            show_error_dialog(
                 self,
                 t("report.cherrytree_export_failed_title", "CherryTree export failed"),
                 t(
@@ -1531,7 +1520,7 @@ class ReportEditorTab(QWidget):
             message += "\n\n" + t(
                 "report.cherrytree_attachment_warning", "Some images could not be copied."
             )
-        QMessageBox.information(
+        show_information_dialog(
             self,
             t("report.cherrytree_exported_title", "CherryTree package complete"),
             message,

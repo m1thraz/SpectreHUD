@@ -151,7 +151,8 @@ if lock is not None:
             patch.object(main, "acquire_application_lock", return_value=None),
             patch.object(main, "notify_running_instance", return_value=True) as notify,
             patch.object(main, "_create_production_container") as create_container,
-            patch.object(main.QMessageBox, "information") as show_message,
+            patch.object(main, "show_information_dialog") as show_message,
+            patch.object(main.sys, "argv", ["spectrehud"]),
         ):
             main.main()
 
@@ -168,7 +169,8 @@ if lock is not None:
             patch.object(main, "acquire_application_lock", return_value=None),
             patch.object(main, "notify_running_instance", return_value=False) as notify,
             patch.object(main, "_create_production_container") as create_container,
-            patch.object(main.QMessageBox, "information") as show_message,
+            patch.object(main, "show_information_dialog") as show_message,
+            patch.object(main.sys, "argv", ["spectrehud"]),
         ):
             main.main()
 
@@ -186,7 +188,8 @@ if lock is not None:
                 main, "acquire_application_lock", side_effect=ApplicationLockError("access denied")
             ),
             patch.object(main, "_create_production_container") as create_container,
-            patch.object(main.QMessageBox, "critical") as show_message,
+            patch.object(main, "show_error_dialog") as show_message,
+            patch.object(main.sys, "argv", ["spectrehud"]),
         ):
             main.main()
 

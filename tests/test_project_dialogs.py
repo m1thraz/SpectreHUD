@@ -33,7 +33,7 @@ class TestProjectDialogs(unittest.TestCase):
         dlg = ProjectUnlockDialog("SecretBox")
 
         # 1. Empty password -> warning
-        with patch("ui.project_dialog.QMessageBox.warning") as mock_warn:
+        with patch("ui.project_dialog.show_warning_dialog") as mock_warn:
             dlg._on_unlock()
             mock_warn.assert_called_once()
             self.assertEqual(dlg.result(), 0)
@@ -48,7 +48,7 @@ class TestProjectDialogs(unittest.TestCase):
         """NewProjectDialog shows warning when project name is empty."""
         dlg = NewProjectDialog(project_manager=self.project_mgr)
         dlg.txt_name.setText("   ")
-        with patch("ui.project_dialog.QMessageBox.warning") as mock_warn:
+        with patch("ui.project_dialog.show_warning_dialog") as mock_warn:
             dlg._on_create()
             mock_warn.assert_called_once()
             self.assertEqual(dlg.result(), 0)
@@ -58,7 +58,7 @@ class TestProjectDialogs(unittest.TestCase):
         """NewProjectDialog shows warning when project already exists in workspace."""
         dlg = NewProjectDialog(project_manager=self.project_mgr)
         dlg.txt_name.setText("ExistingBox")
-        with patch("ui.project_dialog.QMessageBox.warning") as mock_warn:
+        with patch("ui.project_dialog.show_warning_dialog") as mock_warn:
             dlg._on_create()
             mock_warn.assert_called_once()
             self.assertEqual(dlg.result(), 0)
@@ -74,7 +74,7 @@ class TestProjectDialogs(unittest.TestCase):
         self.assertFalse(dlg.txt_pentest_password_confirm.isHidden())
 
         # 1. Missing password
-        with patch("ui.project_dialog.QMessageBox.warning") as mock_warn:
+        with patch("ui.project_dialog.show_warning_dialog") as mock_warn:
             dlg._on_create()
             mock_warn.assert_called_once()
             self.assertIn("Password Required", mock_warn.call_args[0][1])
@@ -82,7 +82,7 @@ class TestProjectDialogs(unittest.TestCase):
         # 2. Password mismatch
         dlg.txt_pentest_password.setText("passA")
         dlg.txt_pentest_password_confirm.setText("passB")
-        with patch("ui.project_dialog.QMessageBox.warning") as mock_warn:
+        with patch("ui.project_dialog.show_warning_dialog") as mock_warn:
             dlg._on_create()
             mock_warn.assert_called_once()
             self.assertIn("Do Not Match", mock_warn.call_args[0][1])

@@ -20,7 +20,7 @@ from ui.controllers.project_controller import ProjectController
 from ui.project_dialog import ProjectUnlockDialog
 from core.project.lock_service import ProjectSecurityMetaError
 from ui.controllers.report_controller import ReportController
-from ui.message_boxes import show_error_dialog
+from ui.message_boxes import ask_confirmation, show_error_dialog, show_warning_dialog
 
 logger = get_logger(__name__)
 
@@ -120,7 +120,7 @@ class WorkspaceCoordinator(QObject):
                     str(exc),
                 )
                 return False
-            QMessageBox.warning(
+            show_warning_dialog(
                 window,
                 t("project.unlock_failed_title", "Entsperren fehlgeschlagen"),
                 t("project.unlock_failed_msg", "Das Passwort ist nicht korrekt."),
@@ -159,17 +159,13 @@ class WorkspaceCoordinator(QObject):
                 f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'"
             )
             project_unavailable = not self.project_manager.project_exists(current_proj)
-            msg = QMessageBox(window)
-            msg.setWindowTitle(t("general.save_failed", "Speichern fehlgeschlagen"))
             if project_unavailable:
-                msg.setText(
-                    t(
-                        "workspace.switch_folder_missing",
-                        "Der Projektordner des aktiven Projekts '{project}' wurde außerhalb von SpectreHUD "
-                        "verschoben oder gelöscht. SpectreHUD hat ihn nicht neu erstellt.\n\n"
-                        "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
-                        project=current_proj,
-                    )
+                message = t(
+                    "workspace.switch_folder_missing",
+                    "Der Projektordner des aktiven Projekts '{project}' wurde außerhalb von SpectreHUD "
+                    "verschoben oder gelöscht. SpectreHUD hat ihn nicht neu erstellt.\n\n"
+                    "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
+                    project=current_proj,
                 )
             else:
                 base_message = t(
@@ -178,16 +174,18 @@ class WorkspaceCoordinator(QObject):
                     "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
                     project=current_proj,
                 )
-                msg.setText(
+                message = (
                     f"{base_message}\n\n"
                     f"({self._failure_reason_label(self._last_save_failure_reason)})"
                 )
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+            reply = ask_confirmation(
+                window,
+                t("general.save_failed", "Speichern fehlgeschlagen"),
+                message,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                default_button=QMessageBox.StandardButton.Cancel,
             )
-            msg.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            if msg.exec() != QMessageBox.StandardButton.Yes:
+            if reply != QMessageBox.StandardButton.Yes:
                 self.project_ctrl.update_project_combo()
                 return False
 
@@ -251,7 +249,7 @@ class WorkspaceCoordinator(QObject):
             new_workspace = validate_workspace_directory(workspace_dir)
         except WorkspaceError as exc:
             logger.error("Failed to switch to new workspace directory: %s", exc)
-            QMessageBox.warning(
+            show_error_dialog(
                 window,
                 t("general.workspace_error", "Workspace Error"),
                 f"Failed to set workspace directory:\n{exc}",
@@ -317,7 +315,7 @@ class WorkspaceCoordinator(QObject):
                     ),
                 )
                 return False
-            QMessageBox.warning(
+            show_error_dialog(
                 window,
                 t("general.workspace_error", "Workspace Error"),
                 t(

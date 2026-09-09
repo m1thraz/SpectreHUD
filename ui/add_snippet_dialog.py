@@ -7,10 +7,10 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QComboBox,
     QWidget,
-    QMessageBox,
 )
 from typing import List, Dict, Any, Optional
 from core.i18n import t
+from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 
 
@@ -136,14 +136,14 @@ class AddSnippetDialog(BaseHudDialog):
 
     def _on_save(self) -> None:
         if not self.txt_title.text().strip():
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.error", "Error"),
                 t("snippet_dialog.err_title", "Please enter a title for the command."),
             )
             return
         if not self.txt_template.toPlainText().strip():
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.error", "Error"),
                 t("snippet_dialog.err_template", "Please enter the template command."),

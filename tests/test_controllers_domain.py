@@ -134,7 +134,7 @@ class TestControllersDomain(unittest.TestCase):
             }):
                 with patch("ui.controllers.project_controller.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
                     with patch("ui.controllers.project_controller.open_path", return_value=False):
-                        with patch("ui.controllers.project_controller.QMessageBox.warning") as mock_warn:
+                        with patch("ui.controllers.project_controller.show_error_dialog") as mock_warn:
                             self.project_ctrl._on_archive_project(parent)
                             mock_warn.assert_called_once()
 
@@ -233,7 +233,7 @@ class TestControllersDomain(unittest.TestCase):
             mock_dlg.get_data.return_value = {"name": "ExistingBox"}
             MockDlg.return_value = mock_dlg
             with patch.object(self.project_ctrl, "create_project", side_effect=ProjectExistsError("exists")):
-                with patch("ui.controllers.project_controller.QMessageBox.warning") as mock_warn:
+                with patch("ui.controllers.project_controller.show_warning_dialog") as mock_warn:
                     res = self.project_ctrl.open_new_project_dialog(
                         parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
                     )
@@ -585,13 +585,19 @@ class TestControllersDomain(unittest.TestCase):
         self.loot_ctrl.add_entry("note", "Keep me?", "data")
 
         # 1. User says No
-        with patch("ui.controllers.loot_controller.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+        with patch(
+            "ui.controllers.loot_controller.ask_confirmation",
+            return_value=QMessageBox.StandardButton.No,
+        ):
             result = self.loot_ctrl.clear_loot(parent_widget=parent)
             self.assertFalse(result)
             self.assertEqual(len(self.loot_ctrl.get_entries()), 1)
 
         # 2. User says Yes
-        with patch("ui.controllers.loot_controller.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes):
+        with patch(
+            "ui.controllers.loot_controller.ask_confirmation",
+            return_value=QMessageBox.StandardButton.Yes,
+        ):
             result = self.loot_ctrl.clear_loot(parent_widget=parent)
             self.assertTrue(result)
             self.assertEqual(len(self.loot_ctrl.get_entries()), 0)
@@ -608,14 +614,14 @@ class TestControllersDomain(unittest.TestCase):
         entry = self.loot_ctrl.add_entry("note", "Reported Item", "some content", category="recon")
 
         # Success case
-        with patch("ui.controllers.loot_controller.QMessageBox.information") as mock_info:
+        with patch("ui.controllers.loot_controller.show_information_dialog") as mock_info:
             out_path = self.loot_ctrl.export_entry_to_file_with_feedback(entry["id"], parent_widget=parent)
             self.assertIsNotNone(out_path)
             self.assertTrue(out_path.is_file())
             mock_info.assert_called_once()
 
         # Failure case
-        with patch("ui.controllers.loot_controller.QMessageBox.warning") as mock_warn:
+        with patch("ui.controllers.loot_controller.show_error_dialog") as mock_warn:
             out_path = self.loot_ctrl.export_entry_to_file_with_feedback("non-existent-id", parent_widget=parent)
             self.assertIsNone(out_path)
             mock_warn.assert_called_once()

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from PyQt6.QtCore import QObject, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from PyQt6.QtWidgets import QWidget
 
 from core.config import ConfigManager
 from core.atomic_write import atomic_write_text
@@ -16,6 +16,7 @@ from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError
 from core.reporting import HtmlReportExporter
 from core.reporting.profiles import ReportExportProfile
 from core.i18n import t
+from ui.message_boxes import show_error_dialog, show_information_dialog
 from core.project import ProjectManager
 from core.loot.manager import LootManager
 from core.logger import get_logger
@@ -126,7 +127,7 @@ class ExportCoordinator(QObject):
         is_loot = scope == "loot"
         vault_path = str(self.config.get("obsidian_vault_path", "") or "").strip()
         if not vault_path:
-            QMessageBox.information(
+            show_information_dialog(
                 window,
                 t(f"{scope}.obsidian_not_configured_title", "Obsidian is not configured"),
                 t(
@@ -144,7 +145,7 @@ class ExportCoordinator(QObject):
             )
         except ExternalExportError as exc:
             logger.warning("Invalid Obsidian export configuration: %s", exc)
-            QMessageBox.warning(
+            show_error_dialog(
                 window,
                 t(f"{scope}.obsidian_export_failed_title", "Obsidian export failed"),
                 t(
@@ -183,7 +184,7 @@ class ExportCoordinator(QObject):
             )
         except (ExternalExportError, OSError, RuntimeError) as exc:
             logger.error("Obsidian report export failed: %s", exc, exc_info=True)
-            QMessageBox.warning(
+            show_error_dialog(
                 window,
                 t("report.obsidian_export_failed_title", "Obsidian export failed"),
                 t(
@@ -204,7 +205,7 @@ class ExportCoordinator(QObject):
                 "report.obsidian_attachment_warning",
                 "Some attachments could not be copied.",
             )
-        QMessageBox.information(
+        show_information_dialog(
             window,
             t("report.obsidian_exported_title", "Obsidian export complete"),
             message,
@@ -235,7 +236,7 @@ class ExportCoordinator(QObject):
             )
         except ExternalExportError as exc:
             logger.warning("Obsidian loot export failed: %s", exc)
-            QMessageBox.warning(
+            show_error_dialog(
                 window,
                 t("loot.obsidian_export_failed_title", "Obsidian export failed"),
                 t(
@@ -258,7 +259,7 @@ class ExportCoordinator(QObject):
                 "Loot appended to Obsidian:\n{path}",
                 path=str(result.note_path),
             )
-        QMessageBox.information(
+        show_information_dialog(
             window, t("loot.obsidian_exported_title", "Obsidian updated"), message
         )
         if self.config.get("obsidian_open_after_export", False):

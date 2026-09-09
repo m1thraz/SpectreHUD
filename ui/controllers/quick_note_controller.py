@@ -24,6 +24,7 @@ from core.loot.manager import VALID_CATEGORY_IDS
 from core.event_bus import EventBus, EventType
 from core.logger import get_logger
 from core.i18n import t
+from ui.message_boxes import ask_confirmation
 from ui.quick_note_popup import QuickNotePopup
 from ui.quick_note_card import QuickNoteCard
 from ui.quick_note_bulk_bar import QuickNoteBulkBar
@@ -397,12 +398,12 @@ class QuickNoteController(QObject):
                 "quick_note.bulk_delete_confirm",
                 f"Are you sure you want to delete {count} selected quick note(s)?",
             ).replace("{count}", str(count))
-            reply = QMessageBox.question(
+            reply = ask_confirmation(
                 parent_widget,
                 t("quick_note.bulk_delete_title", "Delete Notes"),
                 confirm_msg,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                default_button=QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
@@ -584,15 +585,15 @@ class QuickNoteController(QObject):
     def clear_all_notes(self, parent_widget: Optional[QWidget] = None) -> bool:
         """Deletes all quick notes in the current project after user confirmation."""
         if parent_widget:
-            reply = QMessageBox.question(
+            reply = ask_confirmation(
                 parent_widget,
                 t("quick_note.clear_title", "Clear Quick Notes"),
                 t(
                     "quick_note.clear_confirm",
                     "Are you sure you want to delete all quick notes in the inbox for this project?",
                 ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                default_button=QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False

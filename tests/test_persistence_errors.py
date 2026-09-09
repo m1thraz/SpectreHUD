@@ -244,7 +244,7 @@ class TestPersistenceErrors(unittest.TestCase):
         """Invariant: Global excepthook logs traceback and presents safe message without terminating."""
         import sys
         from unittest.mock import patch
-        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from PyQt6.QtWidgets import QApplication
         from main import global_exception_hook
 
         app = QApplication.instance()
@@ -252,7 +252,7 @@ class TestPersistenceErrors(unittest.TestCase):
         err = PersistenceError("Simulated disk write failure")
 
         with patch.dict(os.environ, {"SPECTREHUD_NO_GUI_CRASH_POPUP": ""}):
-            with patch.object(QMessageBox, "critical") as mock_box:
+            with patch("main.show_error_dialog") as mock_box:
                 try:
                     raise err
                 except PersistenceError:

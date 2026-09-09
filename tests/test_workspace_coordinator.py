@@ -134,7 +134,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
                         return attempts.pop(0)
 
                     with patch.object(self.project_mgr, "unlock_project", side_effect=fake_unlock):
-                        with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning") as mock_warn:
+                        with patch("ui.coordinators.workspace_coordinator.show_warning_dialog") as mock_warn:
                             res = self.coord._unlock_project_if_needed("Box1", self.window)
                             self.assertTrue(res)
                             mock_warn.assert_called_once()
@@ -214,7 +214,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def test_apply_workspace_setting_invalid_path(self):
         """apply_workspace_setting shows warning on invalid workspace path."""
         with patch("ui.coordinators.workspace_coordinator.validate_workspace_directory", side_effect=WorkspaceError("invalid")):
-            with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning") as mock_warn:
+            with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_warn:
                 res = self.coord.apply_workspace_setting(
                     "/invalid/path", self.config, self.window, lambda: None, lambda: None, lambda: None
                 )
@@ -262,7 +262,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         new_dir.mkdir()
 
         with patch.object(self.config, "set", side_effect=Exception("config save fail")):
-            with patch("ui.coordinators.workspace_coordinator.QMessageBox.warning") as mock_warn:
+            with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_warn:
                 res = self.coord.apply_workspace_setting(
                     str(new_dir),
                     self.config,

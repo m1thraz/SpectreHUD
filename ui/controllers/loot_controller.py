@@ -17,7 +17,7 @@ from core.i18n import t
 from ui.loot_card import LootCard
 from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
-from ui.message_boxes import show_error_dialog
+from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
 
 logger = get_logger("loot_controller")
 
@@ -192,15 +192,15 @@ class LootController(QObject):
 
     def clear_loot(self, parent_widget: Optional[QWidget] = None) -> bool:
         if parent_widget:
-            reply = QMessageBox.question(
+            reply = ask_confirmation(
                 parent_widget,
                 t("loot.clear_title", "Clear Loot"),
                 t(
                     "loot.clear_confirm",
                     "Are you sure you want to delete all session loot for this project?",
                 ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+                buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                default_button=QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return False
@@ -276,7 +276,7 @@ class LootController(QObject):
             output_path = self.export_entry_to_file(entry_id)
         except (PersistenceError, OSError, ValueError) as exc:
             logger.error("Loot file export failed for %s: %s", entry_id, exc, exc_info=True)
-            QMessageBox.warning(
+            show_error_dialog(
                 parent_widget,
                 t("loot.export_failed_title", "Export fehlgeschlagen"),
                 t(
@@ -287,7 +287,7 @@ class LootController(QObject):
             )
             return None
 
-        QMessageBox.information(
+        show_information_dialog(
             parent_widget,
             t("loot.export_success_title", "Loot-Datei exportiert"),
             t(

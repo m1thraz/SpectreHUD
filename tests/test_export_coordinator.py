@@ -40,7 +40,7 @@ def test_report_obsidian_export_uses_shared_coordinator_workflow(tmp_path):
 
     with (
         patch("ui.coordinators.export_coordinator.ObsidianExporter") as exporter_class,
-        patch("ui.coordinators.export_coordinator.QMessageBox.information") as information,
+        patch("ui.coordinators.export_coordinator.show_information_dialog") as information,
         patch(
             "ui.coordinators.export_coordinator.QDesktopServices.openUrl", return_value=True
         ) as open_url,
@@ -67,7 +67,7 @@ def test_report_obsidian_export_without_vault_stops_before_exporter(tmp_path):
 
     with (
         patch("ui.coordinators.export_coordinator.ObsidianExporter") as exporter_class,
-        patch("ui.coordinators.export_coordinator.QMessageBox.information") as information,
+        patch("ui.coordinators.export_coordinator.show_information_dialog") as information,
     ):
         coordinator.export_report_to_obsidian(None, "Forest", "# Report")
 

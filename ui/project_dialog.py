@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QWidget,
-    QMessageBox,
     QFileDialog,
     QCheckBox,
 )
@@ -13,6 +12,7 @@ from PyQt6.QtCore import Qt
 from typing import Dict, Any, Optional
 from core.project import get_default_projects_dir
 from core.i18n import t
+from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 
 
@@ -209,7 +209,7 @@ class NewProjectDialog(BaseHudDialog):
     def _on_create(self) -> None:
         name = self.txt_name.text().strip()
         if not name:
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.error", "Error"),
                 t("project_dialog.err_name", "Please enter a name for the project / box."),
@@ -219,7 +219,7 @@ class NewProjectDialog(BaseHudDialog):
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
         if self.project_manager and self.project_manager.project_exists(name, base_dir=base):
             clean = self.project_manager._sanitize_name(name)
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("project_dialog.err_exists_title", "Project Already Exists"),
                 t(
@@ -233,7 +233,7 @@ class NewProjectDialog(BaseHudDialog):
         if self.chk_pentest_mode.isChecked():
             password = self.txt_pentest_password.text()
             if not password:
-                QMessageBox.warning(
+                show_warning_dialog(
                     self,
                     t("project_dialog.err_missing_password_title", "Password Required"),
                     t(
@@ -243,7 +243,7 @@ class NewProjectDialog(BaseHudDialog):
                 )
                 return
             if password != self.txt_pentest_password_confirm.text():
-                QMessageBox.warning(
+                show_warning_dialog(
                     self,
                     t("project_dialog.err_mismatch_password_title", "Passwords Do Not Match"),
                     t("project_dialog.err_mismatch_password_msg", "Please confirm the same password."),
@@ -306,7 +306,7 @@ class ProjectUnlockDialog(BaseHudDialog):
 
     def _on_unlock(self) -> None:
         if not self.txt_password.text():
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("project_dialog.err_missing_password_title", "Password Required"),
                 t("project_dialog.err_enter_password_msg", "Please enter the project password."),

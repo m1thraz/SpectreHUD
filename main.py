@@ -18,7 +18,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt, QProcess, QTimer
 
@@ -36,6 +36,7 @@ from ui.main_window import MainWindow
 
 from ui.appearance import apply_application_style
 from ui.styles import get_app_icon
+from ui.message_boxes import show_error_dialog, show_information_dialog
 
 logger = get_logger("app")
 RESTART_EXIT_CODE = 100
@@ -63,7 +64,7 @@ def global_exception_hook(exctype, value, tb):
     app = QApplication.instance()
     if app and not os.environ.get("SPECTREHUD_NO_GUI_CRASH_POPUP"):
         active_win = app.activeWindow()
-        QMessageBox.critical(
+        show_error_dialog(
             active_win,
             t("main.crash_title", "Unerwarteter Fehler"),
             t(
@@ -71,6 +72,7 @@ def global_exception_hook(exctype, value, tb):
                 "Ein unerwarteter Fehler ist aufgetreten:\n{error}\n\nDie Details wurden im Log protokolliert. Ihre Sitzungsdaten im RAM bleiben erhalten.",
                 error=value,
             ),
+            details=tb_str,
         )
 
 
@@ -161,7 +163,7 @@ def main():
         application_lock = acquire_application_lock()
     except ApplicationLockError as exc:
         logger.error("Could not acquire SpectreHUD application lock: %s", exc, exc_info=True)
-        QMessageBox.critical(
+        show_error_dialog(
             None,
             t("main.lock_error_title", "SpectreHUD konnte nicht starten"),
             t(
@@ -169,6 +171,7 @@ def main():
                 "SpectreHUD konnte den Single-Instance-Lock nicht anlegen. "
                 "Bitte prüfe, ob das Konfigurationsverzeichnis verfügbar und beschreibbar ist.",
             ),
+            details=str(exc),
         )
         return
     _startup_mark(started_at, "application lock acquired")
@@ -179,7 +182,7 @@ def main():
             logger.info("SpectreHUD is already running; existing instance brought to front.")
             return
 
-        QMessageBox.information(
+        show_information_dialog(
             None,
             t("main.already_running_title", "SpectreHUD läuft bereits"),
             t(

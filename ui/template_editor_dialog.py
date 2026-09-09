@@ -20,13 +20,13 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QCheckBox,
     QLabel,
-    QMessageBox,
     QWidget,
 )
 
 from core.reporting.template_engine import ReportTemplate, TemplateSection
 from core.loot.manager import CATEGORIES
 from core.i18n import t
+from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 
 
@@ -347,7 +347,7 @@ class TemplateEditorDialog(BaseHudDialog):
         name = self.txt_name.text().strip()
 
         if not tid:
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.invalid_input", "Ungültige Eingabe"),
                 t("template_editor.err_no_id", "Bitte eine Template-ID eingeben."),
@@ -355,7 +355,7 @@ class TemplateEditorDialog(BaseHudDialog):
             return
 
         if not re.match(r"^[a-zA-Z0-9_-]+$", tid):
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.invalid_input", "Ungültige ID"),
                 t(
@@ -366,7 +366,7 @@ class TemplateEditorDialog(BaseHudDialog):
             return
 
         if not name:
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.invalid_input", "Ungültige Eingabe"),
                 t("template_editor.err_no_name", "Bitte einen Template-Namen eingeben."),
@@ -374,7 +374,7 @@ class TemplateEditorDialog(BaseHudDialog):
             return
 
         if self.list_sections.count() == 0:
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("dialog.warning", "Keine Sektionen"),
                 t(

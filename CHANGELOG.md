@@ -13,6 +13,7 @@ semantic versioning.
 * Consolidated project persistence writes around typed outcomes and atomic all-or-nothing session loading.
 * Added a localized copy action to error dialogs so complete diagnostic messages can be shared without manual transcription.
 * Moved runtime logs to a discoverable machine-local Diagnostics folder, exposed its path in Settings and error details, and added an explicit `SPECTRE_LOG_DIR` override.
+* Centralized standard error, warning, information, and confirmation dialogs so failures consistently expose copyable diagnostics and the active log location.
 
 ### Fixed
 

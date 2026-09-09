@@ -18,7 +18,7 @@ from core.i18n import t
 from core.platform.opener import open_path
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
-from ui.message_boxes import add_copy_button, show_error_dialog
+from ui.message_boxes import ask_confirmation, show_error_dialog, show_warning_dialog
 
 logger = get_logger("project_controller")
 
@@ -206,9 +206,9 @@ class ProjectController(QObject):
             size_mb = comp_bytes / (1024 * 1024)
             size_str = f"{size_mb:.2f} MB" if size_mb >= 0.1 else f"{comp_bytes / 1024:.1f} KB"
 
-            msg = QMessageBox(parent_widget)
-            msg.setWindowTitle(t("project.archive_success_title", "Archiv erstellt"))
-            msg.setText(
+            reply = ask_confirmation(
+                parent_widget,
+                t("project.archive_success_title", "Archiv erstellt"),
                 t(
                     "project.archive_success_msg",
                     "Die Box '{project}' wurde erfolgreich archiviert:\n\n"
@@ -220,15 +220,13 @@ class ProjectController(QObject):
                     zip=zip_path.name,
                     count=file_count,
                     size=size_str,
-                )
+                ),
+                default_button=QMessageBox.StandardButton.Yes,
             )
-            msg.setIcon(QMessageBox.Icon.Information)
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.Yes)
-            if msg.exec() == QMessageBox.StandardButton.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 folder_to_open = zip_path.parent
                 if not open_path(folder_to_open):
-                    QMessageBox.warning(
+                    show_error_dialog(
                         parent_widget,
                         t("project.open_folder_error_title", "Folder unavailable"),
                         t(
@@ -239,14 +237,16 @@ class ProjectController(QObject):
                     )
         else:
             err = result.get("error", t("common.unknown_error", "Unbekannter Fehler"))
-            msg = QMessageBox(parent_widget)
-            msg.setWindowTitle(t("project.archive_error_title", "Archivierung fehlgeschlagen"))
-            msg.setText(
-                t("project.archive_error_msg", "Fehler beim Erstellen des ZIP-Archivs:\n{error}", error=err)
+            show_error_dialog(
+                parent_widget,
+                t("project.archive_error_title", "Archivierung fehlgeschlagen"),
+                t(
+                    "project.archive_error_msg",
+                    "Fehler beim Erstellen des ZIP-Archivs:\n{error}",
+                    error=err,
+                ),
+                details=str(err),
             )
-            msg.setIcon(QMessageBox.Icon.Critical)
-            add_copy_button(msg)
-            msg.exec()
 
     def _on_import_project(
         self, parent_widget: QWidget, on_switch_project: Callable[[str], None]
@@ -326,7 +326,7 @@ class ProjectController(QObject):
                     on_project_created(clean_name)
                     return True
                 except ProjectExistsError as e:
-                    QMessageBox.warning(
+                    show_warning_dialog(
                         parent_widget,
                         t("project.exists_title", "Projekt existiert bereits"),
                         str(e),

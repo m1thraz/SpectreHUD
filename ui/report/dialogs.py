@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QListView,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QSpinBox,
     QStyle,
@@ -21,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import t
+from ui.message_boxes import show_warning_dialog
 from core.reporting.template_engine import ReportTemplate
 from core.reporting.template_repository import TemplateRepository
 from core.theme_palette import (
@@ -264,7 +264,7 @@ class ReportGenerationDialog(BaseHudDialog):
         template_id = self.combo_templates.currentData()
         template = self.template_repo.get_template(template_id) if template_id else None
         if template is None:
-            QMessageBox.warning(
+            show_warning_dialog(
                 self,
                 t("report.no_template_title", "No Template"),
                 t("report.no_template_message", "Please select a report template."),

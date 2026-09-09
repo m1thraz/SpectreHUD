@@ -105,7 +105,7 @@ class TestTemplateDialogs(unittest.TestCase):
         dlg.show()
 
         # Validation fails if ID/Name are missing
-        with patch.object(QMessageBox, "warning") as mock_warn:
+        with patch("ui.template_editor_dialog.show_warning_dialog") as mock_warn:
             dlg._on_save()
             self.assertTrue(mock_warn.called)
 
@@ -160,7 +160,10 @@ class TestTemplateDialogs(unittest.TestCase):
                 dlg.table.selectRow(row)
                 break
 
-        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+        with patch(
+            "ui.template_manager_dialog.ask_confirmation",
+            return_value=QMessageBox.StandardButton.Yes,
+        ):
             dlg._on_delete()
 
         self.assertIsNone(self.repo.get_template("dup_test_1"))

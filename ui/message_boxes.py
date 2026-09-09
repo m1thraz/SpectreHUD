@@ -38,6 +38,45 @@ def add_copy_button(message_box: QMessageBox) -> QPushButton:
     return button
 
 
+def _show_dialog(
+    parent: Optional[QWidget],
+    title: str,
+    message: str,
+    *,
+    icon: QMessageBox.Icon,
+    buttons: QMessageBox.StandardButton = QMessageBox.StandardButton.Ok,
+    default_button: Optional[QMessageBox.StandardButton] = None,
+    details: str = "",
+    copyable: bool = False,
+) -> QMessageBox.StandardButton:
+    dialog = QMessageBox(parent)
+    dialog.setWindowTitle(title)
+    dialog.setText(message)
+    dialog.setIcon(icon)
+    dialog.setStandardButtons(buttons)
+    if default_button is not None:
+        dialog.setDefaultButton(default_button)
+    dialog.setTextInteractionFlags(
+        Qt.TextInteractionFlag.TextSelectableByMouse
+        | Qt.TextInteractionFlag.TextSelectableByKeyboard
+    )
+    if copyable:
+        log_detail = t(
+            "dialog.log_file_detail"
+            if is_file_logging_configured()
+            else "dialog.log_file_unavailable_detail",
+            "Log file: {path}"
+            if is_file_logging_configured()
+            else "File logging is unavailable. Expected log file: {path}",
+            path=str(get_log_path()),
+        )
+        dialog.setDetailedText(f"{details}\n\n{log_detail}" if details else log_detail)
+        add_copy_button(dialog)
+    elif details:
+        dialog.setDetailedText(details)
+    return dialog.exec()
+
+
 def show_error_dialog(
     parent: Optional[QWidget],
     title: str,
@@ -46,30 +85,55 @@ def show_error_dialog(
     details: str = "",
 ) -> None:
     """Show a critical dialog whose complete diagnostic text can be copied."""
-    dialog = QMessageBox(parent)
-    dialog.setWindowTitle(title)
-    dialog.setText(message)
-    dialog.setIcon(QMessageBox.Icon.Critical)
-    dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
-    dialog.setTextInteractionFlags(
-        Qt.TextInteractionFlag.TextSelectableByMouse
-        | Qt.TextInteractionFlag.TextSelectableByKeyboard
+    _show_dialog(
+        parent,
+        title,
+        message,
+        icon=QMessageBox.Icon.Critical,
+        details=details,
+        copyable=True,
     )
-    if details:
-        diagnostic_details = details
-    else:
-        diagnostic_details = ""
-    log_detail = t(
-        "dialog.log_file_detail"
-        if is_file_logging_configured()
-        else "dialog.log_file_unavailable_detail",
-        "Log file: {path}"
-        if is_file_logging_configured()
-        else "File logging is unavailable. Expected log file: {path}",
-        path=str(get_log_path()),
+
+
+def show_warning_dialog(
+    parent: Optional[QWidget],
+    title: str,
+    message: str,
+    *,
+    buttons: QMessageBox.StandardButton = QMessageBox.StandardButton.Ok,
+    default_button: Optional[QMessageBox.StandardButton] = None,
+) -> QMessageBox.StandardButton:
+    return _show_dialog(
+        parent,
+        title,
+        message,
+        icon=QMessageBox.Icon.Warning,
+        buttons=buttons,
+        default_button=default_button,
     )
-    dialog.setDetailedText(
-        f"{diagnostic_details}\n\n{log_detail}" if diagnostic_details else log_detail
+
+
+def show_information_dialog(
+    parent: Optional[QWidget], title: str, message: str
+) -> QMessageBox.StandardButton:
+    return _show_dialog(parent, title, message, icon=QMessageBox.Icon.Information)
+
+
+def ask_confirmation(
+    parent: Optional[QWidget],
+    title: str,
+    message: str,
+    *,
+    buttons: QMessageBox.StandardButton = (
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+    ),
+    default_button: QMessageBox.StandardButton = QMessageBox.StandardButton.No,
+) -> QMessageBox.StandardButton:
+    return _show_dialog(
+        parent,
+        title,
+        message,
+        icon=QMessageBox.Icon.Question,
+        buttons=buttons,
+        default_button=default_button,
     )
-    add_copy_button(dialog)
-    dialog.exec()
