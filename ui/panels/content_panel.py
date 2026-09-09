@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
 from PyQt6.QtCore import Qt, QTimer, QSize
 from core.i18n import t
@@ -42,6 +42,8 @@ class ContentPanel(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("ContentPanel")
+        self._detached_content_host = QWidget(self)
+        self._detached_content_host.hide()
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -108,6 +110,35 @@ class ContentPanel(QWidget):
             child = self.content_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
+
+    def detach_cards(self) -> List[QWidget]:
+        """Detach the current view so it can be restored without rebuilding widgets."""
+        widgets: List[QWidget] = []
+        while self.content_layout.count():
+            child = self.content_layout.takeAt(0)
+            widget = child.widget()
+            if widget is not None:
+                widget.hide()
+                widget.setParent(self._detached_content_host)
+                widgets.append(widget)
+        return widgets
+
+    def restore_cards(self, widgets: List[QWidget]) -> None:
+        for widget in widgets:
+            widget.setParent(self.content_container)
+            self.content_layout.addWidget(widget)
+            widget.show()
+
+    def discard_detached_cards(self, widgets: List[QWidget]) -> None:
+        for widget in widgets:
+            widget.setParent(None)
+            widget.deleteLater()
+
+    def scroll_value(self) -> int:
+        return self.scroll_area.verticalScrollBar().value()
+
+    def restore_scroll_value(self, value: int) -> None:
+        QTimer.singleShot(0, lambda: self.scroll_area.verticalScrollBar().setValue(value))
 
     def refresh_content_geometry(self) -> None:
         """Recompute layout-derived scroll geometry after replacing view content."""

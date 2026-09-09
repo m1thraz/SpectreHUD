@@ -276,6 +276,7 @@
     "cheatsheet.more_categories": "Mehr ▾",
     "cheatsheet.more_categories_tip": "Weitere Kategorien anzeigen",
     "cheatsheet.expand_results": "▾ Weitere {remaining} Treffer anzeigen (Insgesamt {total})",
+    "cheatsheet.load_more_results": "Weitere {count} laden · {remaining} verbleibend",
     "loot.empty_state": "Loot enthält strukturierte Evidenz und Findings für Report-Generierung und 'Aus Loot ergänzen'. Drücke hier Ctrl+N, nutze Quick Loot (Ctrl+Alt+L) oder erfasse einen Snip.",
     "loot.no_results": "Keine Loot-Einträge entsprechen der aktuellen Suche oder dem Typfilter.",
     "loot.board_empty_state": "Phasenbezogener Loot wird in diesen Workflow-Spalten gruppiert. Erfasse strukturierten Loot hier mit Ctrl+N, Quick Loot (Ctrl+Alt+L) oder Snip.",

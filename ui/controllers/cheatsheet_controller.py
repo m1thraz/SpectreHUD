@@ -110,6 +110,8 @@ class CheatsheetController(QObject):
 
     category_changed = pyqtSignal(str)
     snippets_updated = pyqtSignal()
+    INITIAL_RENDER_BATCH_SIZE = 25
+    NEXT_RENDER_BATCH_SIZE = 25
 
     def __init__(
         self,
@@ -125,10 +127,14 @@ class CheatsheetController(QObject):
         self.btn_more: Optional[QPushButton] = None
         self._more_menu: Optional[QMenu] = None
         self._overflow_cat_ids: List[str] = []
-        self._search_expanded: bool = False
-        self._last_query: str = ""
         self._last_visible_count: int = -1
         self._last_available_width: int = -1
+        self._batch_active = False
+        self._loaded_result_count = 0
+        self._total_result_count = 0
+        self._load_more_callback: Optional[Callable[[], None]] = None
+        self._loading_more = False
+        self._active_variables: Dict[str, str] = {}
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -256,7 +262,6 @@ class CheatsheetController(QObject):
 
     def select_category(self, category_id: str) -> None:
         self.current_category_id = category_id
-        self._search_expanded = False
 
         # Update primary pill styles
         for cid, btn in self.filter_buttons.items():
@@ -449,15 +454,17 @@ class CheatsheetController(QObject):
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None],
         on_copied: Optional[Callable[[str], None]] = None,
+        on_batch_loaded: Optional[Callable[[], None]] = None,
     ) -> List[QWidget]:
-        # Reset expand state if search query changed
-        if search_query != self._last_query:
-            self._search_expanded = False
-            self._last_query = search_query
-
         all_matching = self.snippet_manager.get_snippets(
             category_id=self.current_category_id, search_query=search_query
         )
+        self._batch_active = True
+        self._loaded_result_count = 0
+        self._total_result_count = len(all_matching)
+        self._load_more_callback = None
+        self._loading_more = False
+        self._active_variables = dict(variables)
 
         if not all_matching:
             has_snippets = bool(self.snippet_manager.get_all_snippets())
@@ -473,62 +480,91 @@ class CheatsheetController(QObject):
             )
             return []
 
-        # When searching, cap at top 25 unless expanded
-        is_capped = (
-            bool(search_query.strip()) and not self._search_expanded and len(all_matching) > 25
-        )
-        snippets = all_matching[:25] if is_capped else all_matching
-
         rendered_cards: List[QWidget] = []
-        for s in snippets:
-            card = SnippetCard(s, variables=variables, parent=parent_widget)
-            card.snippet_deleted.connect(on_delete_snippet)
-            card.favorite_toggled.connect(self._on_favorite_toggled)
-            if on_copied is not None:
-                card.copied.connect(on_copied)
-            content_layout.addWidget(card)
-            rendered_cards.append(card)
+        load_more_button: Optional[QPushButton] = None
 
-        # If capped, render expander button
-        if is_capped:
-            remaining = len(all_matching) - len(snippets)
-            btn_expand = QPushButton(
-                t(
-                    "cheatsheet.expand_results",
-                    "▾ Show {remaining} more results (Total {total})",
-                    remaining=remaining,
-                    total=len(all_matching),
+        def render_next_batch(*, initial: bool = False) -> None:
+            nonlocal load_more_button
+            if self._loading_more:
+                return
+            self._loading_more = True
+            try:
+                if load_more_button is not None:
+                    content_layout.removeWidget(load_more_button)
+                    if load_more_button in rendered_cards:
+                        rendered_cards.remove(load_more_button)
+                    load_more_button.deleteLater()
+                    load_more_button = None
+
+                batch_size = (
+                    self.INITIAL_RENDER_BATCH_SIZE if initial else self.NEXT_RENDER_BATCH_SIZE
                 )
-            )
-            btn_expand.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_expand.setStyleSheet("""
-                QPushButton {
-                    background: rgba(0, 229, 255, 0.08);
-                    border: 1px dashed rgba(0, 229, 255, 0.35);
-                    border-radius: 6px;
-                    color: #00e5ff;
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 8px;
-                    margin: 8px 4px 12px 4px;
-                }
-                QPushButton:hover {
-                    background: rgba(0, 229, 255, 0.18);
-                    border: 1px solid #00e5ff;
-                }
-            """)
+                end = min(self._loaded_result_count + batch_size, len(all_matching))
+                for snippet in all_matching[self._loaded_result_count : end]:
+                    card = SnippetCard(
+                        snippet,
+                        variables=self._active_variables,
+                        parent=parent_widget,
+                    )
+                    card.snippet_deleted.connect(on_delete_snippet)
+                    card.favorite_toggled.connect(self._on_favorite_toggled)
+                    if on_copied is not None:
+                        card.copied.connect(on_copied)
+                    content_layout.addWidget(card)
+                    rendered_cards.append(card)
+                self._loaded_result_count = end
 
-            def _expand():
-                self._search_expanded = True
-                self.snippets_updated.emit()
+                if self._loaded_result_count < len(all_matching):
+                    remaining = len(all_matching) - self._loaded_result_count
+                    next_count = min(self.NEXT_RENDER_BATCH_SIZE, remaining)
+                    load_more_button = QPushButton(
+                        t(
+                            "cheatsheet.load_more_results",
+                            "Load {count} more · {remaining} remaining",
+                            count=next_count,
+                            remaining=remaining,
+                        )
+                    )
+                    load_more_button.setCursor(Qt.CursorShape.PointingHandCursor)
+                    load_more_button.setProperty("class", "SecondaryBtn")
+                    load_more_button.clicked.connect(lambda: render_next_batch())
+                    content_layout.addWidget(load_more_button)
+                    rendered_cards.append(load_more_button)
 
-            btn_expand.clicked.connect(_expand)
-            content_layout.addWidget(btn_expand)
-            rendered_cards.append(btn_expand)
+                if not initial and on_batch_loaded is not None:
+                    on_batch_loaded()
+            finally:
+                self._loading_more = False
+
+        self._load_more_callback = render_next_batch
+        render_next_batch(initial=True)
 
         return rendered_cards
 
+    @property
+    def has_active_batch(self) -> bool:
+        return self._batch_active
+
+    @property
+    def loaded_result_count(self) -> int:
+        return self._loaded_result_count
+
+    @property
+    def total_result_count(self) -> int:
+        return self._total_result_count
+
+    @property
+    def has_more_results(self) -> bool:
+        return self._loaded_result_count < self._total_result_count
+
+    def load_more(self) -> bool:
+        if self._load_more_callback is None or not self.has_more_results:
+            return False
+        self._load_more_callback()
+        return True
+
     def update_variables(self, cards: List[QWidget], variables: Dict[str, str]) -> None:
+        self._active_variables = dict(variables)
         for card in cards:
             if isinstance(card, SnippetCard):
                 card.update_variables(variables)

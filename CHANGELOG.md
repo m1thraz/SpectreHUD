@@ -9,6 +9,7 @@ semantic versioning.
 ### Changed
 
 * Clarified core capture and report workflows with context-aware empty states, concise action tooltips, and purpose-driven export descriptions in English and German.
+* Reduced Cheatsheet view latency with incremental card rendering and reuse of an unchanged rendered view when switching back from another workspace.
 
 ### Fixed
 

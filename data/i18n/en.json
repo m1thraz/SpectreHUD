@@ -276,6 +276,7 @@
     "cheatsheet.more_categories": "More ▾",
     "cheatsheet.more_categories_tip": "Show more categories",
     "cheatsheet.expand_results": "▾ Show {remaining} more results (Total {total})",
+    "cheatsheet.load_more_results": "Load {count} more · {remaining} remaining",
     "loot.empty_state": "Loot stores structured evidence and findings used by report generation and Add Missing Loot. Press Ctrl+N here, use Quick Loot (Ctrl+Alt+L), or capture a Snip.",
     "loot.no_results": "No Loot entries match the current search or type filter.",
     "loot.board_empty_state": "Phase-tagged Loot is grouped into these workflow columns. Capture structured Loot with Ctrl+N here, Quick Loot (Ctrl+Alt+L), or Snip.",

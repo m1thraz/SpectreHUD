@@ -93,6 +93,46 @@ def test_full_cheatsheet_has_no_large_empty_scroll_area(cheatsheet_window):
     _assert_last_card_matches_content_bottom(cheatsheet_window)
 
 
+def test_cheatsheet_renders_incrementally_and_reuses_cards_after_view_switch(
+    cheatsheet_window, qapp
+):
+    window = cheatsheet_window
+    controller = window.app.cheatsheet_ctrl
+    initial_cards = [card for card in window.cards if isinstance(card, SnippetCard)]
+
+    assert len(initial_cards) == controller.INITIAL_RENDER_BATCH_SIZE
+    assert controller.total_result_count > len(initial_cards)
+    assert controller.has_more_results is True
+
+    first_card = initial_cards[0]
+    assert controller.load_more() is True
+    qapp.processEvents()
+    loaded_cards = [card for card in window.cards if isinstance(card, SnippetCard)]
+    assert len(loaded_cards) == (
+        controller.INITIAL_RENDER_BATCH_SIZE + controller.NEXT_RENDER_BATCH_SIZE
+    )
+
+    window.app.switch_mode("history")
+    qapp.processEvents()
+    window.app.switch_mode("cheatsheet")
+    qapp.processEvents()
+
+    assert window.cards[0] is first_card
+    assert controller.loaded_result_count == len(loaded_cards)
+
+    window.app.switch_mode("history")
+    window.search_panel.search_bar.txt_search.setText("hashcat")
+    window.app.switch_mode("cheatsheet")
+    qapp.processEvents()
+
+    assert first_card not in window.cards
+    assert all(
+        "hashcat" in (card.snippet["title"] + card.snippet["template"]).lower()
+        for card in window.cards
+        if isinstance(card, SnippetCard)
+    )
+
+
 def test_search_reduces_scroll_range_without_stale_content_height(cheatsheet_window):
     scroll = cheatsheet_window.content_panel.scroll_area
     scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum())

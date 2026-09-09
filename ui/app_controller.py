@@ -112,6 +112,12 @@ class AppController(QObject):
             phase_context=self.phase_context,
         )
         self.cards: List[QWidget] = []
+        self._rendered_mode: Optional[str] = None
+        self._cheatsheet_render_signature: Optional[tuple[str, str, str]] = None
+        self._cheatsheet_cache_signature: Optional[tuple[str, str, str]] = None
+        self._cheatsheet_cache_widgets: List[QWidget] = []
+        self._cheatsheet_cache_cards: List[QWidget] = []
+        self._cheatsheet_cache_scroll = 0
 
         # Specialized Coordinators & Providers
         self._target_provider = lambda: (
@@ -258,6 +264,7 @@ class AppController(QObject):
         if self._disposed:
             return
         self._disposed = True
+        self._discard_cheatsheet_cache()
 
         if self._unsubscribe_active_phase is not None:
             self._unsubscribe_active_phase()
@@ -309,6 +316,9 @@ class AppController(QObject):
             )
         self.clipboard_monitor.logging_state_changed.connect(self.header.update_rec_indicator)
         self.footer.phase_menu_requested.connect(self._show_phase_menu)
+        self.content.scroll_area.verticalScrollBar().valueChanged.connect(
+            self._maybe_load_more_cheatsheet
+        )
         if hasattr(self.header, "phase_menu_requested"):
             self.header.phase_menu_requested.connect(self._show_phase_menu)
         self._unsubscribe_active_phase = self.event_bus.subscribe(
@@ -532,12 +542,15 @@ class AppController(QObject):
         )
 
     def refresh_content(self) -> None:
+        if self._rendered_mode == "cheatsheet" and self.active_mode != "cheatsheet":
+            self._stash_cheatsheet_view()
         result = self._renderer_for_mode().render()
         self.cards = result.cards
         self.footer.set_count(result.footer_text)
         if result.refresh_geometry:
             self.content.refresh_content_geometry()
             self.content.schedule_content_geometry_refresh()
+        self._rendered_mode = self.active_mode
         self.content_refreshed.emit()
 
     @staticmethod
@@ -558,6 +571,25 @@ class AppController(QObject):
         return RenderResult(cards, "Report Editor", refresh_geometry=False)
 
     def _render_cheatsheet(self) -> RenderResult:
+        signature = self._current_cheatsheet_signature()
+        if self._cheatsheet_cache_signature == signature and self._cheatsheet_cache_widgets:
+            cached_widgets = self._cheatsheet_cache_widgets
+            cached_cards = self._cheatsheet_cache_cards
+            cached_scroll = self._cheatsheet_cache_scroll
+            self._cheatsheet_cache_widgets = []
+            self._cheatsheet_cache_cards = []
+            self._cheatsheet_cache_signature = None
+            self._prepare_card_content()
+            self.content.restore_cards(cached_widgets)
+            self.content.restore_scroll_value(cached_scroll)
+            self.cheatsheet_ctrl.update_variables(cached_cards, self.var_bar.get_variables())
+            self._cheatsheet_render_signature = signature
+            return RenderResult(
+                cached_cards,
+                self._format_entry_count(self.cheatsheet_ctrl.total_result_count),
+            )
+
+        self._discard_cheatsheet_cache()
         cards = self.cheatsheet_ctrl.render_content(
             self._prepare_card_content(),
             self.search.get_query(),
@@ -566,8 +598,53 @@ class AppController(QObject):
             self.window,
             self.content.show_empty_state,
             self._on_content_copied,
+            self._on_cheatsheet_batch_loaded,
         )
-        return RenderResult(cards, self._format_entry_count(len(cards)))
+        self._cheatsheet_render_signature = signature
+        count = (
+            self.cheatsheet_ctrl.total_result_count
+            if self.cheatsheet_ctrl.has_active_batch
+            else len(cards)
+        )
+        return RenderResult(cards, self._format_entry_count(count))
+
+    def _current_cheatsheet_signature(self) -> tuple[str, str, str]:
+        return (
+            self.search.get_query(),
+            self.cheatsheet_ctrl.current_category_id,
+            self.snippet_manager.language,
+        )
+
+    def _stash_cheatsheet_view(self) -> None:
+        self._discard_cheatsheet_cache()
+        self._cheatsheet_cache_signature = self._cheatsheet_render_signature
+        self._cheatsheet_cache_scroll = self.content.scroll_value()
+        self._cheatsheet_cache_cards = self.cards
+        self._cheatsheet_cache_widgets = self.content.detach_cards()
+        self.cards = []
+
+    def _discard_cheatsheet_cache(self) -> None:
+        if self._cheatsheet_cache_widgets:
+            self.content.discard_detached_cards(self._cheatsheet_cache_widgets)
+        self._cheatsheet_cache_widgets = []
+        self._cheatsheet_cache_cards = []
+        self._cheatsheet_cache_signature = None
+
+    def _on_cheatsheet_batch_loaded(self) -> None:
+        self.footer.set_count(
+            self._format_entry_count(self.cheatsheet_ctrl.total_result_count)
+        )
+        self.content.refresh_content_geometry()
+        self.content.schedule_content_geometry_refresh()
+        self.content_refreshed.emit()
+
+    def _maybe_load_more_cheatsheet(self, value: int) -> None:
+        if self.active_mode != "cheatsheet" or not self.cheatsheet_ctrl.has_more_results:
+            return
+        scrollbar = self.content.scroll_area.verticalScrollBar()
+        threshold = max(120, scrollbar.pageStep() // 2)
+        if value >= scrollbar.maximum() - threshold:
+            self.cheatsheet_ctrl.load_more()
 
     def _render_loot(self) -> RenderResult:
         content_layout = self._prepare_card_content()
@@ -761,6 +838,7 @@ class AppController(QObject):
             self._on_loot_data_updated()
 
     def _on_data_updated(self) -> None:
+        self._discard_cheatsheet_cache()
         self.refresh_filter_pills()
         self.refresh_content()
 
@@ -886,6 +964,7 @@ class AppController(QObject):
 
     def retranslate_ui(self, locale_code: str = "") -> None:
         active_lang = locale_code or get_locale()
+        self._discard_cheatsheet_cache()
         if hasattr(self, "snippet_manager") and self.snippet_manager:
             self.snippet_manager.set_language(active_lang)
         self.header.retranslate()

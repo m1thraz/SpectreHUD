@@ -283,9 +283,15 @@ class TestUI(unittest.TestCase):
                 "Weitere" in expander_btn.text() or "more" in expander_btn.text().lower()
             )
 
-            # Click expander -> now all matching items are rendered
+            # Each activation adds one bounded batch instead of blocking on every result.
             expander_btn.click()
-            self.assertEqual(len(window.cards), matching_total)
+            loaded = min(
+                window.app.cheatsheet_ctrl.INITIAL_RENDER_BATCH_SIZE
+                + window.app.cheatsheet_ctrl.NEXT_RENDER_BATCH_SIZE,
+                matching_total,
+            )
+            expected_widgets = loaded + int(loaded < matching_total)
+            self.assertEqual(len(window.cards), expected_widgets)
 
         window.close()
 
