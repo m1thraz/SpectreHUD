@@ -1,50 +1,49 @@
-# Obsidian-Export
+# Obsidian Export
 
-SpectreHUD kann einen aktiven CTF-/Pentest-Report in einen bestehenden Obsidian-
-Vault exportieren. Die Integration ist bewusst ein **einseitiger Export**:
+SpectreHUD can export an active CTF/pentest report to an existing Obsidian
+vault. The integration is intentionally a **one-way export**:
 
 ```text
 SpectreHUD → Obsidian
 ```
 
-Sie überwacht den Vault nicht, liest keine Obsidian-Datenbank und versucht keine
-zweiwegige Synchronisierung oder Konfliktauflösung.
+It does not monitor the vault, read the Obsidian database, or attempt
+two-way synchronization or conflict resolution.
 
-## Einrichtung
+## Setup
 
-Unter **Settings → General & Behavior** einen vorhandenen Vault auswählen und
-optional den relativen Zielordner festlegen. Standard ist
-`CTF/SpectreHUD`. Der Vault selbst wird nie automatisch angelegt; nur der
-gewählte Export-Unterordner entsteht beim ersten Export.
+Select an existing vault under **Settings → General & Behavior** and
+optionally specify the relative destination folder. The default is
+`CTF/SpectreHUD`. The vault itself is never created automatically; only the
+selected export subfolder is created upon the first export.
 
-## Report-Export
+## Report Export
 
-Im Report-Editor **Export to Obsidian...** wählen. Der Export erzeugt eine
-Markdown-Notiz unter:
+Select **Export to Obsidian...** in the report editor. The export creates a
+Markdown note at:
 
 ```text
-<Vault>/CTF/SpectreHUD/<Projekt>/<Projekt>.md
+<Vault>/CTF/SpectreHUD/<Project>/<Project>.md
 ```
 
-Eine bereits vorhandene Notiz wird standardmäßig nicht überschrieben. Stattdessen
-entsteht eine nummerierte Kopie wie `<Projekt>_2.md`. Der Report erhält
-Frontmatter mit Projekt, vorhandener Target-/Attacker-IP, Zeitstempel und den
-Tags `ctf` und `spectrehud`. Passwörter und Credentials werden nie als
-Frontmatter übernommen.
+An existing note is not overwritten by default. Instead, a numbered copy
+such as `<Project>_2.md` is created. The report includes frontmatter
+containing the project name, target/attacker IP addresses, a timestamp,
+and the tags `ctf` and `spectrehud`. Passwords and credentials are never
+included in the frontmatter.
 
-Lokale Markdown-Bilder aus dem Projekt werden nach `attachments/` kopiert und
-ihre Referenzen entsprechend umgeschrieben. Fehlende oder unsichere Anhänge
-(beispielsweise Symlinks oder Pfade außerhalb des Projekts) werden übersprungen;
-der Report bleibt exportierbar und meldet eine Warnung.
+Local Markdown images from the project are copied to `attachments/`, and
+their references are updated accordingly. Missing or unsafe attachments
+(e.g., symlinks or paths outside the project) are skipped; the report
+remains exportable but triggers a warning.
 
-## Loot senden
+## Sending Loot
 
-Im Loot-Bereich hängt **Obsidian** die komplette aktuelle Session an die bereits
-exportierte Projektnotiz an. Die `O`-Schaltfläche einer Loot-Karte exportiert nur
-diesen Eintrag. SpectreHUD schreibt dafür eindeutige Eintragsmarker in die
-Markdown-Datei und überspringt identische Einträge bei einem erneuten Export.
-Manuell bearbeiteter Inhalt der Notiz wird nicht neu generiert oder überschrieben.
-
-Wenn die Option **Open exported note in Obsidian** aktiv ist, wird der
-Obsidian-URI erst nach dem erfolgreichen Dateiexport geöffnet. Ist Obsidian nicht
-installiert oder kann die URI nicht öffnen, bleibt der Export dennoch erfolgreich.
+In the loot section, the **Obsidian** option appends the entire current session
+to the previously exported project note. The `O` button on a loot card exports
+only that specific entry. SpectreHUD writes unique entry markers into the
+Markdown file for this purpose and skips identical entries during subsequent
+exports. Manually edited content within the note is not regenerated or
+overwritten. If the **Open exported note in Obsidian** option is enabled, the
+Obsidian URI is opened only after the file has been successfully exported. If Obsidian
+is not installed or cannot open the URI, the export remains successful nonetheless.

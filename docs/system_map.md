@@ -1,21 +1,19 @@
 # SpectreHUD System Map
 
-Diese Karte enthält nur Verträge und Fallen, die erst an den Grenzen mehrerer Komponenten sichtbar werden.
+This map covers only contracts and pitfalls that become apparent at the boundaries between multiple components.
 
-## Projektwechsel
-- Nicht offensichtlich: Report-Dirty-Entscheidung und Speichern der alten Session passieren vor der Aktivierung; der Zielreport wird danach vor dem atomaren Laden von Loot, History, Notes und Phase geladen, das erst im Erfolgs-Callback erfolgt.
-- Bekannte Falle: `activate_project()` verwirft bereits den alten In-Memory-Schlüssel und publiziert `PROJECT_CHANGED` mit Phase `activated`, bevor Unlock, Report-Laden und Session-Laden erfolgreich sind; erst der erfolgreiche Coordinator-Abschluss publiziert Phase `loaded`.
-- Bekannte Falle: Wird der Unlock des Zielprojekts abgebrochen, liefert der Coordinator derzeit `False`, ohne das zuvor aktivierte Projekt zurückzustellen; UI und Runtime können deshalb unterschiedliche Projekte annehmen.
-- Warum so gebaut: Die vier Session-Komponenten werden erst nach vollständiger Validierung gemeinsam ersetzt, während `report.md` wegen eigenem Dirty-/Save-Vertrag separat geschützt wird.
+## Project Switching
+- Non-obvious: The "report dirty" decision and saving of the old session occur prior to activation; the target report is loaded subsequently—before the atomic loading of loot, history, notes, and phase, which only takes place within the success callback.
+- Known pitfall: `activate_project()` discards the old in-memory key and publishes `PROJECT_CHANGED` with the phase `activated` before unlocking and loading the report/session succeed; only the successful completion of the coordinator process publishes the phase `loaded`.
+- Known pitfall: If the target project's unlock process is aborted, the coordinator currently returns `False` without reverting to the previously active project; consequently, the UI and runtime may assume different active projects.
+- Design rationale: The four session components are replaced collectively only after full validation, whereas `report.md` is protected separately due to its own "dirty/save" contract.
 
-## Pentest-Mode Ein-/Ausschalten
-- Nicht offensichtlich: Pentest-Mode wird nur beim Erstellen aktiviert: unverschlüsselte Security-Metadaten werden angelegt und dieselbe `project_state.json` anschließend verschlüsselt überschrieben; der abgeleitete Schlüssel lebt nur im Speicher und höchstens für ein Projekt.
-- Bekannte Falle: Die Dateiendung zeigt nicht, ob `project_state.json` verschlüsselt ist, und `pentest_mode: true` bedeutet nicht „entsperrt“; Projektwechsel und Shutdown verwerfen den In-Memory-Schlüssel.
-- Bekannte Falle: Für bestehende Projekte gibt es derzeit keinen Disable-Flow; das Ausschalten der Checkbox im Erstellungsdialog blendet nur die Passwortfelder aus und löscht deren Eingabe.
-- Warum so gebaut: `security_meta.json` bleibt lesbar, damit Modus, KDF-Parameter und Passwort-Verifier vor dem Entschlüsseln geprüft werden können, ohne eine zweite State-Quelle einzuführen.
-
-## Report-Export
-- Nicht offensichtlich: Alle Exporte konsumieren den aktuellen Markdown-Text des Source-Editors; Professional Print segmentiert ihn semantisch und bereinigt nur die Darstellung, während Classic Web generisch rendert — keiner der Pfade regeneriert oder speichert `report.md`.
-- Bekannte Falle: Änderungen in der editierbaren Live-Preview werden nur bei einem expliziten Preview-Commit zurückgeschrieben; die Exportaktionen führen diesen Commit derzeit nicht selbst aus und können deshalb den letzten Source-Stand exportieren.
-- Bekannte Falle: Markdown, Obsidian, CherryTree und sichtbares HTML entfernen interne Section-/Finding-/Loot-Marker; ein Export ist daher kein verlustfreier Ersatz für die synchronisierbare `report.md`.
-- Warum so gebaut: Interne Marker tragen Struktur- und Sync-Identität, sollen aber weder in Kundenartefakten sichtbar sein noch vom Exportpfad verändert werden.
+## Toggling Pentest Mode
+- Non-obvious: Pentest mode is activated only during creation: unencrypted security metadata is created, and the same `project_state.json` file is subsequently overwritten in encrypted form; the derived key exists only in memory and is valid for a single project at most.
+- Known pitfall: The file extension does not indicate whether `project_state.json` is encrypted, and `pentest_mode: true` does not equate to "unlocked"; project switching and shutdown operations discard the in-memory key.
+- Known pitfall: There is currently no workflow to disable this mode for existing projects; unchecking the box in the creation dialog merely hides the password fields and clears their input.
+- Design rationale: `security_meta.json` remains readable so that the mode, KDF parameters, and password verifier can be checked prior to decryption, avoiding the need to introduce a secondary source of state. ## Report Export
+- Not immediately obvious: All exports consume the current Markdown text from the source editor; "Professional Print" segments it semantically and cleans up the presentation, whereas "Classic Web" renders it generically—neither path regenerates or saves `report.md`.
+- Known pitfall: Changes made in the editable live preview are only written back upon an explicit preview commit; export actions do not currently perform this commit themselves and may therefore export the source in its previous state.
+- Known pitfall: Markdown, Obsidian, CherryTree, and visible HTML formats strip out internal section, finding, and loot markers; consequently, an export is not a lossless substitute for the synchronizable `report.md`.
+- Design rationale: Internal markers carry structural and synchronization identity but are intended to remain invisible in client-facing artifacts and must not be altered by the export process.

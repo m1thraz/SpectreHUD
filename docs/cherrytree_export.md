@@ -1,22 +1,22 @@
-# CherryTree-Export
+# CherryTree Export
 
-SpectreHUD exportiert für CherryTree ein portables HTML-Paket. Es schreibt
-**niemals** direkt in eine CherryTree-`.ctb`-Datei oder deren SQLite-Datenbank.
+SpectreHUD exports a portable HTML package for CherryTree. It **never**
+writes directly to a CherryTree `.ctb` file or its SQLite database.
 
-Im Report-Editor **CherryTree-Paket exportieren...** wählen und einen
-Zielordner auswählen. Daraus entsteht:
+In the report editor, select **Export CherryTree package...** and choose a
+destination folder. This creates the following structure:
 
 ```text
-<Zielordner>/<Projekt>/
+<destination_folder>/<project>/
 ├── report.html
 ├── loot.html
 └── images/
 ```
 
-`report.html` enthält den aktuellen Report, `loot.html` die aktuelle Session.
-Screenshots und andere sichere lokale Bilder werden nach `images/` kopiert und
-mit relativen Pfaden referenziert. Das Paket kann in CherryTree importiert oder
-unabhängig in einem Browser geöffnet werden.
+`report.html` contains the current report, while `loot.html` contains the current session.
+Screenshots and other local images are copied to the `images/` folder and
+referenced using relative paths. The package can be imported into CherryTree or
+opened independently in a web browser.
 
-Der Export ist ein Snapshot. Er überwacht keine späteren Änderungen und bietet
-keine Synchronisierung mit CherryTree.
+The export is a snapshot. It does not monitor subsequent changes and offers
+no synchronization with CherryTree.
