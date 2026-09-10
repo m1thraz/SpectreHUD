@@ -71,6 +71,51 @@ The core idea is not just to keep notes in one place, but to reduce interruption
 - **Keep manual edits intact instead of regenerating everything**
 - **Capture live in Spectre, refine later in Obsidian, CherryTree, HTML, or Markdown**
 - **Finish in editable HTML before creating the final PDF**
+## From capture to report
+
+Spectre keeps the documentation workflow connected from structured findings to the final deliverable.
+
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <strong>1. Capture & structure</strong>
+    </td>
+    <td width="33%" align="center">
+      <strong>2. Build & refine</strong>
+    </td>
+    <td width="33%" align="center">
+      <strong>3. Finalize</strong>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <a href="assets/loot.png">
+        <img src="assets/loot.png" alt="Loot organized by pentest phase" width="100%">
+      </a>
+    </td>
+    <td>
+      <a href="assets/report_editor.png">
+        <img src="assets/report_editor.png" alt="Report editor with generated findings" width="100%">
+      </a>
+    </td>
+    <td>
+      <a href="assets/professional_report.png">
+        <img src="assets/professional_report.png" alt="Professional print-oriented report output" width="100%">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      Notes and captured evidence become structured Loot.
+    </td>
+    <td align="center">
+      Generate the report and keep editing it as the engagement evolves.
+    </td>
+    <td align="center">
+      Let Spectre clean up the structure, make final edits, then print to PDF.
+    </td>
+  </tr>
+</table>
 
 ## Engineering focus
 
@@ -95,21 +140,6 @@ More details:
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
 
-## Platform Support & Verification Status
-
-| Feature / Area | Windows | Linux (X11) | Linux (Wayland) |
-|---|:---:|:---:|:---:|
-| **Platform Verification Tier** | 🛡️ **Tier 1 (Production)** | 🧪 **Implemented & CI-Validated** | 🧪 **Implemented & CI-Validated** |
-| **HUD Overlay & Cheatsheets** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Loot Manager & Findings** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Quick Notes & Phase Tagging** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Quick-IP Popup & Net Detection** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Report Editor & Loot Append** | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Global System Hotkeys** | ✅ Yes | ✅ Yes | ⚠️ In-App Qt Shortcuts |
-| **Integrated Snip Screenshot Tool** | ✅ Yes | ✅ Yes | ⚠️ Restricted by compositor |
-| **VPN / Local IP Discovery (`ip -j`)** | ✅ Yes | ✅ Yes (`ip -j`) | ✅ Yes (`ip -j`) |
-| **XDG Base Directory Compliance** | N/A | ✅ Yes | ✅ Yes |
-| **Desktop Integration** | N/A | ✅ Yes | ✅ Yes |
 
 ## Installation
 
