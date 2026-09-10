@@ -222,7 +222,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
             # Verify persisted state
             state = container.project_manager.load_project_state()
-            self.assertEqual(state.get("target_ip"), "192.168.1.77")
+            self.assertEqual(state.target_ip, "192.168.1.77")
 
     @pytest.mark.integration
     def test_quit_logs_geometry_persistence_error_without_blocking_shutdown(self):

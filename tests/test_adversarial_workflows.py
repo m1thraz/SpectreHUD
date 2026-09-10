@@ -109,8 +109,8 @@ class TestWorkflowRobustness(unittest.TestCase):
         )
 
         state = self.project_mgr.load_project_state("BoxShutdownScreenshot")
-        self.assertEqual(len(state["loot"]), 1)
-        self.assertEqual(state["loot"][0]["type"], "screenshot")
+        self.assertEqual(len(state.loot), 1)
+        self.assertEqual(state.loot[0]["type"], "screenshot")
 
     # -------------------------------------------------------------------------
     # 5. P4: Single Source of Truth & No Global State Leakage
@@ -243,7 +243,7 @@ class TestWorkflowRobustness(unittest.TestCase):
             patch("core.project.state_store.atomic_write_json", return_value=False),
             patch("core.project.state_store.atomic_write_bytes", return_value=False),
         ):
-            saved = self.project_mgr.save_project_state("BoxSaveErr", {"target_ip": "1.2.3.4"})
+            saved = self.project_mgr.save_project_state("BoxSaveErr", target_ip="1.2.3.4")
             self.assertFalse(saved.success)
 
             session_saved = self.session_service.save_project_session(

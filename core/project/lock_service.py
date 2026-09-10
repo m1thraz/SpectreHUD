@@ -2,6 +2,8 @@
 
 from typing import Optional
 
+from core.project.persistence import PersistFailureReason
+
 
 class ProjectLockedError(Exception):
     """Raised when encrypted state is accessed before its project is unlocked."""
@@ -9,6 +11,10 @@ class ProjectLockedError(Exception):
 
 class ProjectSecurityMetaError(Exception):
     """Raised when a project's unencrypted security metadata is invalid."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.failure_reason = PersistFailureReason.VALIDATION_FAILED
 
 
 class ProjectLockService:

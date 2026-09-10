@@ -8,6 +8,7 @@ from core.project import (
     PersistFailureReason,
     ProjectManager,
     ProjectSchemaMismatchError,
+    validate_and_parse_project_state,
 )
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
@@ -74,10 +75,10 @@ class TestProjectSessionService(unittest.TestCase):
         # Load session
         loaded_state = self.session_service.load_project_session("Box1")
 
-        self.assertEqual(loaded_state.get("target_ip"), "10.10.10.10")
-        self.assertEqual(loaded_state.get("port"), "2222")
-        self.assertEqual(loaded_state.get("username"), "admin")
-        self.assertEqual(loaded_state.get("password"), "SecretPassword123")
+        self.assertEqual(loaded_state.target_ip, "10.10.10.10")
+        self.assertEqual(loaded_state.port, "2222")
+        self.assertEqual(loaded_state.username, "admin")
+        self.assertEqual(loaded_state.password, "SecretPassword123")
         self.assertEqual(len(self.loot_manager.get_all_entries()), 1)
         self.assertEqual(self.loot_manager.get_all_entries()[0]["title"], "SSH Root")
         self.assertEqual(len(self.clipboard_watcher.get_all_history()), 1)
@@ -125,7 +126,15 @@ class TestProjectSessionService(unittest.TestCase):
         self.assertTrue(result.success)
 
         reloaded_state = self.project_manager.load_project_state("RoundTrip")
-        self.assertEqual(reloaded_state["loot"], live_loot)
+        self.assertEqual(reloaded_state.loot, live_loot)
+
+    def test_project_state_parser_rejects_invalid_fields(self):
+        with self.assertRaises(ProjectStateCorruptedError) as error:
+            validate_and_parse_project_state(
+                {"schema_version": 1, "name": "Broken", "loot": "not-a-list"}
+            )
+
+        self.assertIs(error.exception.failure_reason, PersistFailureReason.VALIDATION_FAILED)
 
     def test_corrupt_state_load_preserves_the_live_session(self):
         project_dir = self.project_manager.create_project("CorruptBox")
@@ -169,7 +178,7 @@ class TestProjectSessionService(unittest.TestCase):
 
         loaded = self.session_service.load_project_session("FutureSchema")
 
-        self.assertEqual(loaded["schema_version"], 1)
+        self.assertEqual(loaded.schema_version, 1)
         self.assertEqual(json.loads(state_file.read_text(encoding="utf-8"))["schema_version"], 1)
         backup = project_dir / "project_state.json.pre-schema-v1.bak"
         self.assertEqual(backup.read_bytes(), legacy_bytes)

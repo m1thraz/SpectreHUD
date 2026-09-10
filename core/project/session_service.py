@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional
 
-from core.project import ProjectManager, ProjectStateLoadError
+from core.project import ProjectManager, ProjectState, ProjectStateLoadError
 from core.project.persistence import PersistFailureReason, PersistResult
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
@@ -39,7 +39,7 @@ class ProjectSessionService:
         self.quick_note_manager = quick_note_manager
         self.phase_context = phase_context
 
-    def load_project_session(self, project_name: Optional[str] = None) -> Dict[str, Any]:
+    def load_project_session(self, project_name: Optional[str] = None) -> ProjectState:
         """
         Loads the persisted state for the given project (or active project)
         and populates the LootManager, ClipboardHistory, QuickNoteManager, and PhaseContext.
@@ -52,15 +52,15 @@ class ProjectSessionService:
             raise
 
         staged_loot = self._validate_list_component(
-            "loot", state.get("loot"), validate_loot_list
+            "loot", state.loot, validate_loot_list
         )
         staged_history = self._validate_list_component(
-            "clipboard_history", state.get("clipboard_history"), validate_clipboard_list
+            "clipboard_history", state.clipboard_history, validate_clipboard_list
         )
         staged_notes = self._validate_list_component(
-            "quick_notes", state.get("quick_notes"), validate_quick_notes_list
+            "quick_notes", state.quick_notes, validate_quick_notes_list
         )
-        staged_phase = self._validate_phase(state.get("active_phase"))
+        staged_phase = self._validate_phase(state.active_phase)
 
         previous_loot = self.loot_manager.get_all_entries()
         previous_history = self.clipboard_history.get_all_history()
@@ -152,19 +152,17 @@ class ProjectSessionService:
         Returns the typed persistence outcome.
         """
         pname = project_name or self.project_manager.get_active_project()
-        state = {
-            "target_ip": variables.get("target_ip", "10.10.10.10"),
-            "attacker_ip": variables.get("attacker_ip", "10.10.14.5"),
-            "port": variables.get("port", "4444"),
-            "username": variables.get("username", ""),
-            "password": variables.get("password", ""),
-            "loot": self.loot_manager.get_all_entries(),
-            "clipboard_history": self.clipboard_history.get_all_history(),
-            "quick_notes": (
+        return self.project_manager.save_project_state(
+            name=pname,
+            target_ip=variables.get("target_ip", "10.10.10.10"),
+            attacker_ip=variables.get("attacker_ip", "10.10.14.5"),
+            port=variables.get("port", "4444"),
+            username=variables.get("username", ""),
+            password=variables.get("password", ""),
+            loot=self.loot_manager.get_all_entries(),
+            clipboard_history=self.clipboard_history.get_all_history(),
+            quick_notes=(
                 self.quick_note_manager.get_all_entries() if self.quick_note_manager else []
             ),
-            "active_phase": (
-                self.phase_context.active_phase_id if self.phase_context else None
-            ),
-        }
-        return self.project_manager.save_project_state(name=pname, state=state)
+            active_phase=(self.phase_context.active_phase_id if self.phase_context else None),
+        )

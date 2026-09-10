@@ -17,6 +17,7 @@ from core.project import (
     PersistFailureReason,
     PersistResult,
     ProjectManager,
+    ProjectStateCorruptedError,
 )
 from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
@@ -92,7 +93,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
     def test_invalid_project_operations_do_not_mutate_default(self):
         """Mutating or loading with an invalid name must never silently target Default."""
-        self.project_mgr.save_project_state("Default", {"target_ip": "10.10.10.10"})
+        self.project_mgr.save_project_state("Default", target_ip="10.10.10.10")
         before = self.project_mgr.load_project_state("Default")
 
         for invalid_name in ("../../evil", "..\\evil", "   "):
@@ -100,9 +101,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                 self.project_mgr.activate_project(invalid_name)
             with self.assertRaises(InvalidProjectNameError):
                 self.project_mgr.load_project_state(invalid_name)
-            result = self.project_mgr.save_project_state(
-                invalid_name, {"target_ip": "9.9.9.9"}
-            )
+            result = self.project_mgr.save_project_state(invalid_name, target_ip="9.9.9.9")
             self.assertFalse(result.success)
             self.assertEqual(
                 result.failure_reason,
@@ -171,13 +170,11 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.assertEqual(rfm.load("BoxPentest"), original_report)
 
     # -------------------------------------------------------------------------
-    # 4. P3: Semantic Schema Recovery from Malformed JSON
+    # 4. P3: Semantic Schema Rejection for Malformed JSON
     # -------------------------------------------------------------------------
-    def test_malformed_project_state_is_recovered(self):
+    def test_malformed_project_state_is_rejected_without_runtime_mutation(self):
         """
-        Adversarial: When project_state.json contains syntactically valid but semantically
-        poisoned data (str instead of list, int instead of str, nulls, missing keys),
-        the session service and managers MUST self-heal into a valid schema without crashing.
+        Syntactically valid but semantically poisoned state must never replace live data.
         """
         self.project_mgr.create_project("BoxPoisoned")
         proj_dir = self.project_mgr.get_project_dir("BoxPoisoned")
@@ -196,21 +193,14 @@ class TestWorkflowRobustness(unittest.TestCase):
         with open(state_file, "w", encoding="utf-8") as f:
             json.dump(poisoned_data, f)
 
-        # Load session
-        loaded_state = self.session_service.load_project_session("BoxPoisoned")
+        self.loot_mgr.add_entry("credentials", "Live Cred", "keep:me")
+        previous_loot = self.loot_mgr.get_all_entries()
 
-        # Self-Healing Schema Invariants
-        self.assertIsInstance(loaded_state["loot"], list)
-        self.assertEqual(loaded_state["loot"], [])
-        self.assertIsInstance(loaded_state["clipboard_history"], list)
-        self.assertEqual(loaded_state["clipboard_history"], [])
-        self.assertEqual(loaded_state["target_ip"], "1337")
+        with self.assertRaises(ProjectStateCorruptedError) as error:
+            self.session_service.load_project_session("BoxPoisoned")
 
-        # Manager Operation Invariants: Managers must operate without TypeErrors
-        self.loot_mgr.add_entry("credentials", "Test Cred", "admin:admin")
-        self.assertEqual(len(self.loot_mgr.get_all_entries()), 1)
-        self.clip_watcher.add_entry("ls -la")
-        self.assertEqual(len(self.clip_watcher.get_all_history()), 1)
+        self.assertIs(error.exception.failure_reason, PersistFailureReason.VALIDATION_FAILED)
+        self.assertEqual(self.loot_mgr.get_all_entries(), previous_loot)
 
     def test_restart_recovers_registry_but_reports_corrupt_project_state(self):
         """Registry recovery must not disguise an unreadable project state as an empty one."""
@@ -247,7 +237,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         self.assertFalse(
             self.project_mgr.save_project_state(
-                "BoxWorkspaceLoss", {"target_ip": "10.10.10.10"}
+                "BoxWorkspaceLoss", target_ip="10.10.10.10"
             ).success
         )
 

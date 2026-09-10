@@ -16,7 +16,7 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 
 from core.phase_context import PhaseContext
-from core.event_bus import EventBus, EventType
+from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.hotkey_listener import HotkeyConfig, HotkeyListener
 from core.clipboard_history import ClipboardHistory
 from core.validators import validate_project_state
@@ -38,7 +38,7 @@ def test_phase_context_set_and_clear():
     assert ctx.set_active_phase("recon", source="hotkey") is True
     assert ctx.active_phase_id == "recon"
     assert len(events) == 1
-    assert events[-1] == {"phase_id": "recon", "source": "hotkey"}
+    assert events[-1] == ActivePhaseChangedPayload(phase_id="recon", source="hotkey")
 
     # Setting same phase again is no-op
     assert ctx.set_active_phase("recon") is False
@@ -59,7 +59,7 @@ def test_phase_context_set_and_clear():
     # Clear active phase
     assert ctx.clear_active_phase(source="menu") is True
     assert ctx.active_phase_id is None
-    assert events[-1] == {"phase_id": None, "source": "menu"}
+    assert events[-1] == ActivePhaseChangedPayload(phase_id=None, source="menu")
 
 
 def test_hotkey_phase_switching_and_signals(qapp):
@@ -126,7 +126,7 @@ def test_project_session_service_active_phase_persistence(tmp_path):
     dummy_loot = MagicMock()
     dummy_loot.get_all_entries.return_value = []
     dummy_clipboard = MagicMock()
-    dummy_clipboard.get_all_entries.return_value = []
+    dummy_clipboard.get_all_history.return_value = []
     dummy_notes = MagicMock()
     dummy_notes.get_all_entries.return_value = []
 
@@ -159,7 +159,9 @@ def test_project_session_service_active_phase_persistence(tmp_path):
     session_service.load_project_session("test_box")
     assert ctx.active_phase_id == "postex"
     # Event should have source="project_load"
-    assert events[-1] == {"phase_id": "postex", "source": "project_load"}
+    assert events[-1] == ActivePhaseChangedPayload(
+        phase_id="postex", source="project_load"
+    )
 
 
 def test_phase_toast_hud_properties(qapp):

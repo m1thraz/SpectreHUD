@@ -3,9 +3,10 @@
 import base64
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from core.atomic_write import atomic_write_bytes, atomic_write_json
 from core.crypto_service import (
@@ -59,6 +60,128 @@ class ProjectSchemaMismatchError(ProjectStateLoadError):
         super().__init__(message, PersistFailureReason.SCHEMA_MISMATCH)
 
 
+@dataclass(frozen=True)
+class ProjectState:
+    schema_version: int
+    name: str
+    target_ip: str
+    attacker_ip: str
+    port: str
+    username: str
+    password: str
+    wordlist: str
+    created_at: str
+    updated_at: str
+    loot: List[Dict[str, Any]]
+    clipboard_history: List[Dict[str, Any]]
+    quick_notes: List[Dict[str, Any]]
+    active_phase: Optional[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "name": self.name,
+            "target_ip": self.target_ip,
+            "attacker_ip": self.attacker_ip,
+            "port": self.port,
+            "username": self.username,
+            "password": self.password,
+            "wordlist": self.wordlist,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "loot": list(self.loot),
+            "clipboard_history": list(self.clipboard_history),
+            "quick_notes": list(self.quick_notes),
+            "active_phase": self.active_phase,
+        }
+
+
+@dataclass(frozen=True)
+class SecurityMeta:
+    schema_version: int
+    pentest_mode: bool
+    kdf_salt: Optional[str] = None
+    kdf_iterations: Optional[int] = None
+    verifier: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
+            "schema_version": self.schema_version,
+            "pentest_mode": self.pentest_mode,
+        }
+        if self.kdf_salt is not None:
+            data["kdf_salt"] = self.kdf_salt
+        if self.kdf_iterations is not None:
+            data["kdf_iterations"] = self.kdf_iterations
+        if self.verifier is not None:
+            data["verifier"] = self.verifier
+        return data
+
+
+def validate_and_parse_project_state(
+    raw: Dict[str, Any], fallback_name: str = "Default"
+) -> ProjectState:
+    if not isinstance(raw, dict):
+        raise ProjectStateCorruptedError("Project state must be a JSON object.")
+    if (
+        type(raw.get("schema_version")) is not int
+        or raw["schema_version"] != PROJECT_STATE_SCHEMA_VERSION
+    ):
+        raise ProjectSchemaMismatchError("Project state uses an unsupported schema version.")
+
+    text_fields = (
+        "name",
+        "target_ip",
+        "attacker_ip",
+        "port",
+        "username",
+        "password",
+        "wordlist",
+        "created_at",
+        "updated_at",
+    )
+    list_fields = ("loot", "clipboard_history", "quick_notes")
+    if any(field in raw and not isinstance(raw[field], str) for field in text_fields):
+        raise ProjectStateCorruptedError("Project state contains an invalid text field.")
+    if any(field in raw and not isinstance(raw[field], list) for field in list_fields):
+        raise ProjectStateCorruptedError("Project state contains an invalid collection field.")
+    if "active_phase" in raw and raw["active_phase"] is not None and not isinstance(
+        raw["active_phase"], str
+    ):
+        raise ProjectStateCorruptedError("Project state contains an invalid active phase.")
+
+    normalized = validate_project_state(raw, fallback_name=fallback_name)
+    for field in list_fields:
+        if len(normalized[field]) != len(raw.get(field, [])):
+            raise ProjectStateCorruptedError(
+                f"Project state contains an invalid entry in '{field}'."
+            )
+    return ProjectState(**normalized)
+
+
+def validate_and_parse_security_meta(raw: Dict[str, Any]) -> SecurityMeta:
+    if not isinstance(raw, dict):
+        raise ProjectSecurityMetaError("Security metadata must be a JSON object.")
+    if (
+        type(raw.get("schema_version")) is not int
+        or raw["schema_version"] != SECURITY_META_SCHEMA_VERSION
+    ):
+        raise ProjectSchemaMismatchError("Security metadata uses an unsupported schema version.")
+    if not isinstance(raw.get("pentest_mode"), bool):
+        raise ProjectSecurityMetaError("Security metadata has an invalid pentest_mode field.")
+
+    metadata = SecurityMeta(
+        schema_version=raw["schema_version"],
+        pentest_mode=raw["pentest_mode"],
+        kdf_salt=raw.get("kdf_salt"),
+        kdf_iterations=raw.get("kdf_iterations"),
+        verifier=raw.get("verifier"),
+    )
+    if metadata.pentest_mode:
+        ProjectStateStore.validate_security_meta(metadata)
+    return metadata
+
+
 class ProjectStateStore:
     """Reads and writes validated project state, including Pentest-Mode encryption."""
 
@@ -80,7 +203,7 @@ class ProjectStateStore:
             atomic_write_bytes(backup_path, path.read_bytes())
         return backup_path
 
-    def load_security_meta(self, project_dir: Path) -> Optional[Dict[str, Any]]:
+    def load_security_meta(self, project_dir: Path) -> Optional[SecurityMeta]:
         path = self.security_meta_path(project_dir)
         if not path.exists():
             return None
@@ -102,8 +225,7 @@ class ProjectStateStore:
                 raise ProjectSecurityMetaError(
                     "Security metadata has an invalid pentest_mode field."
                 )
-            if migrated_metadata["pentest_mode"]:
-                self.validate_security_meta(migrated_metadata)
+            validate_and_parse_security_meta(migrated_metadata)
             try:
                 self._backup_legacy_file(path)
                 atomic_write_json(path, migrated_metadata, indent=2, ensure_ascii=False)
@@ -117,28 +239,21 @@ class ProjectStateStore:
             raise ProjectSchemaMismatchError(
                 f"Security metadata for '{project_dir.name}' uses an unsupported schema version."
             )
-        if not isinstance(metadata.get("pentest_mode"), bool):
-            raise ProjectSecurityMetaError(
-                "Security metadata has an invalid pentest_mode field."
-            )
-        if metadata["pentest_mode"]:
-            self.validate_security_meta(metadata)
-        return metadata
+        return validate_and_parse_security_meta(metadata)
 
     @staticmethod
-    def validate_security_meta(metadata: Dict[str, Any]) -> None:
+    def validate_security_meta(metadata: SecurityMeta) -> None:
         if (
-            not isinstance(metadata, dict)
-            or metadata.get("schema_version") != SECURITY_META_SCHEMA_VERSION
-            or metadata.get("pentest_mode") is not True
+            metadata.schema_version != SECURITY_META_SCHEMA_VERSION
+            or metadata.pentest_mode is not True
         ):
             raise ProjectSecurityMetaError(
                 "Pentest-mode metadata must use the current schema and explicitly enable pentest_mode."
             )
         salt, iterations, verifier = (
-            metadata.get("kdf_salt"),
-            metadata.get("kdf_iterations"),
-            metadata.get("verifier"),
+            metadata.kdf_salt,
+            metadata.kdf_iterations,
+            metadata.verifier,
         )
         if (
             not isinstance(salt, str)
@@ -160,12 +275,15 @@ class ProjectStateStore:
             )
 
     def save_security_meta(
-        self, project_dir: Path, metadata: Dict[str, Any]
+        self, project_dir: Path, metadata: SecurityMeta
     ) -> PersistResult[None]:
         try:
             self.validate_security_meta(metadata)
             written = atomic_write_json(
-                self.security_meta_path(project_dir), metadata, indent=2, ensure_ascii=False
+                self.security_meta_path(project_dir),
+                metadata.to_dict(),
+                indent=2,
+                ensure_ascii=False,
             )
             return (
                 PersistResult.ok()
@@ -178,18 +296,18 @@ class ProjectStateStore:
             return PersistResult.failed(classify_persistence_error(exc))
 
     @staticmethod
-    def serialize(state: Dict[str, Any]) -> bytes:
-        return json.dumps(state, indent=2, ensure_ascii=False).encode("utf-8")
+    def serialize(state: ProjectState) -> bytes:
+        return json.dumps(state.to_dict(), indent=2, ensure_ascii=False).encode("utf-8")
 
     def write(
-        self, path: Path, state: Dict[str, Any], key: Optional[bytes]
+        self, path: Path, state: ProjectState, key: Optional[bytes]
     ) -> PersistResult[None]:
         try:
             serialized = self.serialize(state)
             written = (
                 atomic_write_bytes(path, encrypt_bytes(key, serialized))
                 if key is not None
-                else atomic_write_json(path, state, indent=2, ensure_ascii=False)
+                else atomic_write_json(path, state.to_dict(), indent=2, ensure_ascii=False)
             )
             return (
                 PersistResult.ok()
@@ -201,16 +319,19 @@ class ProjectStateStore:
 
     def is_pentest_mode(self, name: str) -> bool:
         metadata = self.load_security_meta(self.project_dir_provider(validate_project_name(name)))
-        return bool(metadata and metadata.get("pentest_mode"))
+        return bool(metadata and metadata.pentest_mode)
 
     def unlock(self, name: str, password: str) -> bool:
         project_name = validate_project_name(name)
         metadata = self.load_security_meta(self.project_dir_provider(project_name))
-        if not metadata or not metadata.get("pentest_mode"):
+        if not metadata or not metadata.pentest_mode:
             return True
-        salt = base64.b64decode(metadata["kdf_salt"].encode("ascii"), validate=True)
-        key = derive_key(password, salt, metadata["kdf_iterations"])
-        if not verify_password(key, metadata["verifier"]):
+        assert metadata.kdf_salt is not None
+        assert metadata.kdf_iterations is not None
+        assert metadata.verifier is not None
+        salt = base64.b64decode(metadata.kdf_salt.encode("ascii"), validate=True)
+        key = derive_key(password, salt, metadata.kdf_iterations)
+        if not verify_password(key, metadata.verifier):
             return False
         self.lock_service.set_session_key(project_name, key)
         return True
@@ -224,13 +345,13 @@ class ProjectStateStore:
             state = self.load(project_name)
             salt = os.urandom(16)
             key = derive_key(password, salt, KDF_ITERATIONS)
-            metadata = {
-                "schema_version": SECURITY_META_SCHEMA_VERSION,
-                "pentest_mode": True,
-                "kdf_salt": base64.b64encode(salt).decode("ascii"),
-                "kdf_iterations": KDF_ITERATIONS,
-                "verifier": create_verifier(key),
-            }
+            metadata = SecurityMeta(
+                schema_version=SECURITY_META_SCHEMA_VERSION,
+                pentest_mode=True,
+                kdf_salt=base64.b64encode(salt).decode("ascii"),
+                kdf_iterations=KDF_ITERATIONS,
+                verifier=create_verifier(key),
+            )
         except ProjectStateLoadError as exc:
             return PersistResult.failed(exc.failure_reason)
         except ProjectSecurityMetaError:
@@ -259,13 +380,13 @@ class ProjectStateStore:
             rollback_performed=rollback_performed,
         )
 
-    def load(self, name: str) -> Dict[str, Any]:
+    def load(self, name: str) -> ProjectState:
         project_name = validate_project_name(name)
         project_dir = self.project_dir_provider(project_name)
         state_file = project_dir / "project_state.json"
         metadata = self.load_security_meta(project_dir)
         key = None
-        if metadata and metadata.get("pentest_mode"):
+        if metadata and metadata.pentest_mode:
             key = self.lock_service.get_session_key(project_name)
             if key is None:
                 raise ProjectLockedError(
@@ -289,8 +410,9 @@ class ProjectStateStore:
                         f"Project state for '{project_name}' uses an unsupported schema version."
                     )
                 if "schema_version" not in raw_data:
-                    migrated_state = validate_project_state(
-                        raw_data, fallback_name=project_name
+                    migrated_state = validate_and_parse_project_state(
+                        validate_project_state(raw_data, fallback_name=project_name),
+                        fallback_name=project_name,
                     )
                     self._backup_legacy_file(state_file)
                     migration_result = self.write(state_file, migrated_state, key)
@@ -299,13 +421,13 @@ class ProjectStateStore:
                             f"Project state for '{project_name}' could not be migrated safely.",
                             migration_result.failure_reason or PersistFailureReason.UNKNOWN,
                         )
-                    raw_data = migrated_state
+                    raw_data = migrated_state.to_dict()
                     logger.info("Migrated legacy project state for '%s' to schema 1.", project_name)
                 elif raw_data.get("schema_version") != PROJECT_STATE_SCHEMA_VERSION:
                     raise ProjectSchemaMismatchError(
                         f"Project state for '{project_name}' uses an unsupported schema version."
                     )
-                return validate_project_state(raw_data, fallback_name=project_name)
+                return validate_and_parse_project_state(raw_data, fallback_name=project_name)
             except ProjectSchemaMismatchError:
                 raise
             except (
@@ -323,10 +445,13 @@ class ProjectStateStore:
                         else classify_persistence_error(exc)
                     ),
                 ) from exc
-        return validate_project_state(None, fallback_name=project_name)
+        return validate_and_parse_project_state(
+            validate_project_state(None, fallback_name=project_name),
+            fallback_name=project_name,
+        )
 
     def save(
-        self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs
+        self, name: str, state: Optional[ProjectState] = None, **kwargs: Any
     ) -> PersistResult[None]:
         try:
             project_name = validate_project_name(name)
@@ -347,24 +472,29 @@ class ProjectStateStore:
         except ProjectSecurityMetaError:
             return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
         key = None
-        if metadata and metadata.get("pentest_mode"):
+        if metadata and metadata.pentest_mode:
             key = self.lock_service.get_session_key(project_name)
             if key is None:
                 return PersistResult.failed(PersistFailureReason.PROJECT_LOCKED)
         try:
-            final_state = self.load(project_name) or {}
+            final_state = self.load(project_name)
         except ProjectLockedError:
             return PersistResult.failed(PersistFailureReason.PROJECT_LOCKED)
         except ProjectStateLoadError as exc:
             return PersistResult.failed(exc.failure_reason)
-        if state:
-            final_state.update(state)
-        final_state.update(kwargs)
-        final_state["name"] = project_name
-        final_state["schema_version"] = PROJECT_STATE_SCHEMA_VERSION
-        final_state["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if state is not None:
+            final_state = state
+        final_data = final_state.to_dict()
+        final_data.update(kwargs)
+        final_data["name"] = project_name
+        final_data["schema_version"] = PROJECT_STATE_SCHEMA_VERSION
+        final_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
-            valid_state = validate_project_state(final_state, fallback_name=project_name)
+            valid_state = validate_and_parse_project_state(
+                final_data, fallback_name=project_name
+            )
+        except ProjectStateLoadError as exc:
+            return PersistResult.failed(exc.failure_reason)
         except (OSError, TypeError, ValueError) as exc:
             logger.error(
                 "Error saving project state for %s: %s",

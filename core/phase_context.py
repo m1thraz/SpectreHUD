@@ -7,7 +7,7 @@ Pure Python, Zero-Qt, headless.
 
 from typing import Optional
 from core.phases import VALID_PHASE_KEYS, try_normalize_phase_key
-from core.event_bus import EventBus, EventType
+from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 
 
 class PhaseContext:
@@ -49,7 +49,7 @@ class PhaseContext:
         if notify and self._event_bus:
             self._event_bus.publish(
                 EventType.ACTIVE_PHASE_CHANGED,
-                {"phase_id": self._active_phase_id, "source": source},
+                ActivePhaseChangedPayload(phase_id=self._active_phase_id, source=source),
             )
         return True
 
@@ -61,6 +61,6 @@ class PhaseContext:
         if notify and self._event_bus:
             self._event_bus.publish(
                 EventType.ACTIVE_PHASE_CHANGED,
-                {"phase_id": None, "source": source},
+                ActivePhaseChangedPayload(phase_id=None, source=source),
             )
         return True

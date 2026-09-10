@@ -23,7 +23,7 @@ from core.project.validator import (
 )
 from core.project.metadata import create_initial_notes, create_initial_state
 from core.project.registry import ProjectRegistry
-from core.project.state_store import ProjectStateStore
+from core.project.state_store import ProjectState, ProjectStateStore
 from core.platform.paths import config_dir as platform_config_dir, projects_dir
 from core.platform.opener import open_path
 
@@ -411,12 +411,12 @@ class ProjectRepository:
             )
             return PersistResult.failed(reason, rollback_performed=rollback_performed)
 
-    def load_project_state(self, name: str) -> Dict[str, Any]:
+    def load_project_state(self, name: str) -> ProjectState:
         """Load validated plain or encrypted state through the state store."""
         return self.state_store.load(name)
 
     def save_project_state(
-        self, name: str, state: Optional[Dict[str, Any]] = None, **kwargs
+        self, name: str, state: Optional[ProjectState] = None, **kwargs: Any
     ) -> PersistResult[None]:
         """Persist validated plain or encrypted state through the state store."""
         return self.state_store.save(name, state=state, **kwargs)

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from core.config import ConfigManager
-from core.event_bus import EventType
+from core.event_bus import EventType, HotkeySettingsChangedPayload
 from core.storage import InMemoryStorageBackend
 from ui.app_controller import AppController
 from ui.coordinators.settings_coordinator import SettingsCoordinator
@@ -57,11 +57,11 @@ def test_runtime_settings_are_routed_to_existing_owners(tmp_path):
     coordinator.footer.set_always_on_top.assert_called_once_with(True)
     coordinator.event_bus.publish.assert_called_once_with(
         EventType.HOTKEY_SETTINGS_CHANGED,
-        {
-            "hotkey": "<ctrl>+h",
-            "snip_hotkey": "<ctrl>+s",
-            "quit_hotkey": "<ctrl>+q",
-        },
+        HotkeySettingsChangedPayload(
+            hotkey="<ctrl>+h",
+            snip_hotkey="<ctrl>+s",
+            quit_hotkey="<ctrl>+q",
+        ),
     )
     coordinator.workspace_coord.apply_workspace_setting.assert_called_once_with(
         workspace_dir=str(tmp_path),

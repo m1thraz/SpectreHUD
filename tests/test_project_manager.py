@@ -1,7 +1,9 @@
 import shutil
 import unittest
 import tempfile
+from dataclasses import replace
 from pathlib import Path
+from core.event_bus import EventType, ProjectChangedPayload
 from core.project import ProjectManager, InvalidProjectNameError
 from core.loot.manager import CATEGORIES
 
@@ -34,9 +36,9 @@ class TestProjectManager(unittest.TestCase):
         self.assertIn("PickleRick", self.pm.list_projects())
 
         state = self.pm.load_project_state("PickleRick")
-        self.assertEqual(state["name"], "PickleRick")
-        self.assertEqual(state["target_ip"], "10.10.10.80")
-        self.assertEqual(state["attacker_ip"], "10.10.14.99")
+        self.assertEqual(state.name, "PickleRick")
+        self.assertEqual(state.target_ip, "10.10.10.80")
+        self.assertEqual(state.attacker_ip, "10.10.14.99")
 
         notes = (proj_dir / "notes.md").read_text(encoding="utf-8")
         self.assertIn("PickleRick", notes)
@@ -56,18 +58,19 @@ class TestProjectManager(unittest.TestCase):
     def test_save_and_load_state(self):
         self.pm.create_project("Blue", target_ip="10.10.10.40")
         state = self.pm.load_project_state("Blue")
-        state["loot"].append(
-            {"type": "credentials", "title": "Admin Pass", "content": "admin:P@ss"}
+        state = replace(
+            state,
+            loot=[{"type": "credentials", "title": "Admin Pass", "content": "admin:P@ss"}],
+            clipboard_history=[{"text": "nmap -p 445 10.10.10.40"}],
         )
-        state["clipboard_history"].append({"text": "nmap -p 445 10.10.10.40"})
 
         self.pm.save_project_state("Blue", state)
 
         # Reload
         reloaded = self.pm.load_project_state("Blue")
-        self.assertEqual(len(reloaded["loot"]), 1)
-        self.assertEqual(reloaded["loot"][0]["title"], "Admin Pass")
-        self.assertEqual(len(reloaded["clipboard_history"]), 1)
+        self.assertEqual(len(reloaded.loot), 1)
+        self.assertEqual(reloaded.loot[0]["title"], "Admin Pass")
+        self.assertEqual(len(reloaded.clipboard_history), 1)
 
     def test_save_does_not_recreate_deleted_active_project(self):
         """A deleted active project is an integrity failure, never a create request."""
@@ -96,6 +99,26 @@ class TestProjectManager(unittest.TestCase):
 
         self.pm.activate_project("Default")
         self.assertEqual(self.pm.get_active_project(), "Default")
+
+    def test_project_changed_publishers_use_typed_activation_payload(self):
+        events = []
+        self.pm.event_bus.subscribe(EventType.PROJECT_CHANGED, events.append)
+        self.pm.create_project("TypedBox")
+
+        self.pm.activate_project("TypedBox")
+        imported = self.base_dir / "ImportedTypedBox"
+        imported.mkdir()
+        self.pm.import_project_folder(imported)
+
+        self.assertEqual(len(events), 2)
+        self.assertTrue(all(isinstance(event, ProjectChangedPayload) for event in events))
+        self.assertEqual(
+            events,
+            [
+                ProjectChangedPayload(project_name="TypedBox", phase="activated"),
+                ProjectChangedPayload(project_name="ImportedTypedBox", phase="activated"),
+            ],
+        )
 
     def test_activate_project_strict(self):
         """Finding 14: activate_project() must strictly raise ProjectNotFoundError for non-existent projects."""

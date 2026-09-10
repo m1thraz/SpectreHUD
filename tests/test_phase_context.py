@@ -1,7 +1,7 @@
 """Pure Core Logic unit tests for PhaseContext (Tier 0, Zero-Qt)."""
 
 from core.phase_context import PhaseContext
-from core.event_bus import EventBus, EventType
+from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.phases import PHASES
 
 
@@ -72,11 +72,11 @@ def test_phase_context_publishes_event_bus():
     ctx = PhaseContext(event_bus=bus)
     ctx.set_active_phase("recon", source="hotkey")
     assert len(events) == 1
-    assert events[0] == {"phase_id": "recon", "source": "hotkey"}
+    assert events[0] == ActivePhaseChangedPayload(phase_id="recon", source="hotkey")
 
     ctx.clear_active_phase(source="ui")
     assert len(events) == 2
-    assert events[1] == {"phase_id": None, "source": "ui"}
+    assert events[1] == ActivePhaseChangedPayload(phase_id=None, source="ui")
 
     # notify=False suppresses publication
     ctx.set_active_phase("postex", notify=False)

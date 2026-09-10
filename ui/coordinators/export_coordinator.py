@@ -179,7 +179,7 @@ class ExportCoordinator(QObject):
                 project_name=project_name,
                 project_dir=project_dir,
                 markdown=markdown,
-                project_state=project_state,
+                project_state=project_state.to_dict(),
                 overwrite="copy",
             )
         except (ExternalExportError, OSError, RuntimeError) as exc:

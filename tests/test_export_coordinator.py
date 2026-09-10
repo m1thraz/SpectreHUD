@@ -5,12 +5,28 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from ui.coordinators.export_coordinator import ExportCoordinator
+from core.project import ProjectState
 
 
 def _coordinator(config_values, project_dir: Path) -> tuple[ExportCoordinator, MagicMock]:
     project_manager = MagicMock()
     project_manager.get_project_dir.return_value = project_dir
-    project_manager.load_project_state.return_value = {"target_ip": "10.10.10.10"}
+    project_manager.load_project_state.return_value = ProjectState(
+        schema_version=1,
+        name="Forest",
+        target_ip="10.10.10.10",
+        attacker_ip="10.10.14.5",
+        port="4444",
+        username="",
+        password="",
+        wordlist="/usr/share/wordlists/dirb/common.txt",
+        created_at="2026-09-10 12:00:00",
+        updated_at="2026-09-10 12:00:00",
+        loot=[],
+        clipboard_history=[],
+        quick_notes=[],
+        active_phase=None,
+    )
     config = MagicMock()
     config.get.side_effect = lambda key, default=None: config_values.get(key, default)
     coordinator = ExportCoordinator(
@@ -54,7 +70,7 @@ def test_report_obsidian_export_uses_shared_coordinator_workflow(tmp_path):
         project_name="Forest",
         project_dir=tmp_path / "project",
         markdown="# Current editor text",
-        project_state={"target_ip": "10.10.10.10"},
+        project_state=project_manager.load_project_state.return_value.to_dict(),
         overwrite="copy",
     )
     project_manager.load_project_state.assert_called_once_with("Forest")

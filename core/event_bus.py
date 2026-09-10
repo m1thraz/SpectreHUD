@@ -5,12 +5,38 @@ Allows decoupled publish/subscribe event routing across core managers,
 domain controllers, and UI panels without direct object dependencies.
 """
 
-from typing import Dict, List, Callable, Any, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Literal, Optional
 from enum import Enum
 import threading
 from core.logger import get_logger
 
 logger = get_logger("event_bus")
+
+
+@dataclass(frozen=True)
+class ProjectChangedPayload:
+    project_name: str
+    phase: Literal["activated", "loaded"]
+
+
+@dataclass(frozen=True)
+class ActivePhaseChangedPayload:
+    # None deliberately clears the active phase; it is not an omitted value.
+    phase_id: Optional[str]
+    # Only the hotkey source triggers the on-screen phase HUD.
+    source: str
+
+
+@dataclass(frozen=True)
+class HotkeySettingsChangedPayload:
+    hotkey: str
+    snip_hotkey: str
+    quit_hotkey: str
+    # None means this setting was not part of the change; every attribute still exists.
+    quick_note_hotkey: Optional[str] = None
+    quick_ip_hotkey: Optional[str] = None
+    quick_loot_hotkey: Optional[str] = None
 
 
 class EventType(str, Enum):

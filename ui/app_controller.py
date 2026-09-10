@@ -18,7 +18,7 @@ from core.screenshots.transaction_service import ScreenshotTransactionService
 from core.project.session_service import ProjectSessionService
 from core.i18n import get_i18n, get_locale, t
 from core.logger import get_logger
-from core.event_bus import EventBus, EventType
+from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.phase_context import PhaseContext
 from core.storage import PersistenceError
 
@@ -342,10 +342,10 @@ class AppController(QObject):
                     self.phase_hud.show_phase(phase.key)
                 return
 
-    def _on_active_phase_changed(self, payload: Dict[str, Any]) -> None:
+    def _on_active_phase_changed(self, payload: ActivePhaseChangedPayload) -> None:
         """Handles phase change event from event bus."""
-        phase_id = payload.get("phase_id")
-        source = payload.get("source", "")
+        phase_id = payload.phase_id
+        source = payload.source
         self.footer.set_phase(phase_id)
         if hasattr(self.header, "set_phase"):
             self.header.set_phase(phase_id)
@@ -876,7 +876,7 @@ class AppController(QObject):
         self.header.set_project_title(active_proj)
         state = self.workspace_coord.load_active_project_session(self.window)
         if state is not None and self.var_bar:
-            self.var_bar.set_variables(state)
+            self.var_bar.set_variables(state.to_dict())
         self._update_notes_badge()
 
     def save_current_project_state(self) -> bool:

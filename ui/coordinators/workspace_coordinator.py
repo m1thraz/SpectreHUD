@@ -8,12 +8,12 @@ from typing import Optional, Dict, Callable
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
-from core.project import ProjectManager, ProjectStateLoadError
+from core.project import ProjectManager, ProjectState, ProjectStateLoadError
 from core.project.persistence import PersistFailureReason
 from core.project.validator import WorkspaceError, validate_workspace_directory
 from core.config import ConfigManager
 from core.project.session_service import ProjectSessionService
-from core.event_bus import EventBus, EventType
+from core.event_bus import EventBus, EventType, ProjectChangedPayload
 from core.i18n import t
 from core.logger import get_logger
 from ui.controllers.project_controller import ProjectController
@@ -48,11 +48,11 @@ class WorkspaceCoordinator(QObject):
 
     def load_active_project_session(
         self, window: Optional[QWidget] = None
-    ) -> Optional[Dict[str, str]]:
+    ) -> Optional[ProjectState]:
         """Loads and returns the variable state for the currently active project."""
         active_proj = self.project_manager.get_active_project()
         if not self._unlock_project_if_needed(active_proj, window):
-            return {}
+            return None
         try:
             return self.session_service.load_project_session(active_proj)
         except ProjectStateLoadError as exc:
@@ -232,7 +232,10 @@ class WorkspaceCoordinator(QObject):
             on_success_callback(project_name)
 
         self.project_changed.emit(project_name)
-        self.event_bus.publish(EventType.PROJECT_CHANGED, {"project_name": project_name})
+        self.event_bus.publish(
+            EventType.PROJECT_CHANGED,
+            ProjectChangedPayload(project_name=project_name, phase="loaded"),
+        )
         return True
 
     def apply_workspace_setting(

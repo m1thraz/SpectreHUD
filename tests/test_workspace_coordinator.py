@@ -25,7 +25,7 @@ from core.project import (
 from core.project.validator import WorkspaceError
 from core.project.session_service import ProjectSessionService
 from core.project.lock_service import ProjectSecurityMetaError
-from core.event_bus import EventBus, EventType
+from core.event_bus import EventBus, EventType, ProjectChangedPayload
 from ui.coordinators.workspace_coordinator import WorkspaceCoordinator
 
 
@@ -42,7 +42,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         self.project_mgr.active_project = "Box1"
 
         self.session_service = MagicMock(spec=ProjectSessionService)
-        self.session_service.load_project_session.return_value = {"target_ip": "10.10.10.1"}
+        self.session_service.load_project_session.return_value = (
+            self.project_mgr.load_project_state("Box1")
+        )
         self.session_service.save_project_session.return_value = PersistResult.ok()
 
         self.project_ctrl = MagicMock()
@@ -66,7 +68,7 @@ class TestWorkspaceCoordinator(unittest.TestCase):
     def test_load_active_project_session_regular(self):
         """load_active_project_session loads session when no unlock is needed."""
         state = self.coord.load_active_project_session(self.window)
-        self.assertEqual(state, {"target_ip": "10.10.10.1"})
+        self.assertEqual(state.target_ip, "10.10.10.1")
         self.session_service.load_project_session.assert_called_with("Box1")
 
     def test_corrupt_project_state_warns_without_returning_default_state(self):
@@ -209,7 +211,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         self.assertEqual(callbacks, ["Box2"])
         self.assertEqual(signal_projects, ["Box2"])
         self.assertEqual(len(events), 1)
-        self.assertEqual(events[0]["project_name"], "Box2")
+        self.assertEqual(
+            events[0], ProjectChangedPayload(project_name="Box2", phase="loaded")
+        )
 
     def test_apply_workspace_setting_invalid_path(self):
         """apply_workspace_setting shows warning on invalid workspace path."""

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
 
 from core.logger import get_logger
-from core.event_bus import EventBus, EventType
+from core.event_bus import EventBus, EventType, ProjectChangedPayload
 from core.project.validator import (
     validate_project_name,
     sanitize_project_name,
@@ -19,6 +19,7 @@ from core.project.repository import (
 )
 from core.project.lock_service import ProjectLockService
 from core.project.persistence import PersistResult
+from core.project.state_store import ProjectState
 
 logger = get_logger("projects")
 
@@ -173,10 +174,13 @@ class ProjectManager:
         if result.success and result.value:
             self.active_project = result.value
             if self.event_bus:
-                self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": result.value})
+                self.event_bus.publish(
+                    EventType.PROJECT_CHANGED,
+                    ProjectChangedPayload(project_name=result.value, phase="activated"),
+                )
         return result
 
-    def load_project_state(self, name: Optional[str] = None) -> Dict[str, Any]:
+    def load_project_state(self, name: Optional[str] = None) -> ProjectState:
         """Loads and semantically validates state data for a project."""
         pname = name or self.active_project
         return self.repository.load_project_state(pname)
@@ -194,7 +198,7 @@ class ProjectManager:
         self.lock_service.clear()
 
     def save_project_state(
-        self, name: Optional[str] = None, state: Optional[Dict[str, Any]] = None, **kwargs
+        self, name: Optional[str] = None, state: Optional[ProjectState] = None, **kwargs: Any
     ) -> PersistResult[None]:
         """Persists state data for a project."""
         pname = name or self.active_project
@@ -214,7 +218,10 @@ class ProjectManager:
         self.active_project = clean_name
         self.lock_service.retain_only(clean_name)
         if self.event_bus:
-            self.event_bus.publish(EventType.PROJECT_CHANGED, {"name": clean_name})
+            self.event_bus.publish(
+                EventType.PROJECT_CHANGED,
+                ProjectChangedPayload(project_name=clean_name, phase="activated"),
+            )
         return clean_name
 
     def open_project_folder(self, name: Optional[str] = None) -> bool:

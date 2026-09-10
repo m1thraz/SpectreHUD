@@ -7,6 +7,7 @@ content refresh across all modes, dialog triggers, and project state management.
 import os
 import unittest
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -336,10 +337,18 @@ class TestAppController(unittest.TestCase):
 
     def test_project_state_load_and_save(self):
         """load_active_project_state and save_current_project_state coordinate session."""
-        with patch.object(self.controller.workspace_coord, "load_active_project_session", return_value={"target_ip": "10.10.10.99"}):
+        loaded_state = replace(
+            self.project_mgr.load_project_state("TestBox"),
+            target_ip="10.10.10.99",
+        )
+        with patch.object(
+            self.controller.workspace_coord,
+            "load_active_project_session",
+            return_value=loaded_state,
+        ):
             self.controller.load_active_project_state()
             self.header.set_project_title.assert_called_with("TestBox")
-            self.var_bar.set_variables.assert_called_with({"target_ip": "10.10.10.99"})
+            self.var_bar.set_variables.assert_called_with(loaded_state.to_dict())
 
         self.var_bar.set_variables.reset_mock()
         with patch.object(

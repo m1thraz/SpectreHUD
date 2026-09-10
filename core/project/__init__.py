@@ -25,9 +25,13 @@ from core.project.repository import (
 from core.project.manager import ProjectManager
 from core.project.lock_service import ProjectLockedError, ProjectSecurityMetaError
 from core.project.state_store import (
+    ProjectState,
+    SecurityMeta,
     ProjectSchemaMismatchError,
     ProjectStateCorruptedError,
     ProjectStateLoadError,
+    validate_and_parse_project_state,
+    validate_and_parse_security_meta,
 )
 from core.project.persistence import PersistFailureReason, PersistResult
 
@@ -41,9 +45,13 @@ __all__ = [
     "ProjectCreationError",
     "ProjectLockedError",
     "ProjectSecurityMetaError",
+    "ProjectState",
+    "SecurityMeta",
     "ProjectStateCorruptedError",
     "ProjectStateLoadError",
     "ProjectSchemaMismatchError",
+    "validate_and_parse_project_state",
+    "validate_and_parse_security_meta",
     "PersistFailureReason",
     "PersistResult",
     "WorkspaceError",

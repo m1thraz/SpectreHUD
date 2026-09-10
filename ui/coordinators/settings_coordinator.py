@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 
 from core.clipboard_history import ClipboardHistory
 from core.config import ConfigManager
-from core.event_bus import EventBus, EventType
+from core.event_bus import EventBus, EventType, HotkeySettingsChangedPayload
 from core.loot.manager import LootManager
 from core.theme_loader import ThemeLoader
 from ui.appearance import apply_application_style
@@ -95,25 +95,22 @@ class SettingsCoordinator:
             )
         ):
             self.update_footer_status()
-            payload = {
-                "hotkey": new_settings.get(
+            payload = HotkeySettingsChangedPayload(
+                hotkey=new_settings.get(
                     "hotkey", self.config.get("hotkey", "<ctrl>+<alt>+h")
                 ),
-                "snip_hotkey": new_settings.get(
+                snip_hotkey=new_settings.get(
                     "snip_hotkey",
                     self.config.get("snip_hotkey", "<ctrl>+<alt>+x"),
                 ),
-                "quit_hotkey": new_settings.get(
+                quit_hotkey=new_settings.get(
                     "quit_hotkey",
                     self.config.get("quit_hotkey", "<ctrl>+<alt>+q"),
                 ),
-            }
-            if "quick_note_hotkey" in new_settings:
-                payload["quick_note_hotkey"] = new_settings["quick_note_hotkey"]
-            if "quick_ip_hotkey" in new_settings:
-                payload["quick_ip_hotkey"] = new_settings["quick_ip_hotkey"]
-            if "quick_loot_hotkey" in new_settings:
-                payload["quick_loot_hotkey"] = new_settings["quick_loot_hotkey"]
+                quick_note_hotkey=new_settings.get("quick_note_hotkey"),
+                quick_ip_hotkey=new_settings.get("quick_ip_hotkey"),
+                quick_loot_hotkey=new_settings.get("quick_loot_hotkey"),
+            )
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, payload)
         if new_settings.get("workspace_dir"):
             self.workspace_coord.apply_workspace_setting(

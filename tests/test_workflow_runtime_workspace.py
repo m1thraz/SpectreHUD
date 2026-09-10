@@ -209,13 +209,11 @@ class TestWorkflowInvariants(unittest.TestCase):
         new_manager.create_project("BoxNewSession", target_ip="10.10.10.20")
         new_manager.save_project_state(
             "BoxNewSession",
-            {
-                "target_ip": "10.10.10.20",
-                "loot": [
-                    {"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}
-                ],
-                "clipboard_history": [{"id": "clip_new", "text": "id", "target_ip": "10.10.10.20"}],
-            },
+            target_ip="10.10.10.20",
+            loot=[
+                {"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}
+            ],
+            clipboard_history=[{"id": "clip_new", "text": "id", "target_ip": "10.10.10.20"}],
         )
 
         with patch.object(

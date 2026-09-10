@@ -220,7 +220,7 @@ def main():
 
         # Global Hotkey Listener
         from core.hotkey_listener import HotkeyConfig
-        from core.event_bus import EventType
+        from core.event_bus import EventType, HotkeySettingsChangedPayload
 
         hotkey_toggle = container.config_manager.get("hotkey", "<ctrl>+<alt>+h")
         hotkey_snip = container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
@@ -357,28 +357,23 @@ def main():
 
         container.clipboard_monitor.logging_state_changed.connect(update_tray_state)
 
-        def on_hotkeys_changed(data: dict):
-            new_toggle = data.get(
-                "hotkey", container.config_manager.get("hotkey", "<ctrl>+<alt>+h")
-            )
-            new_snip = data.get(
-                "snip_hotkey", container.config_manager.get("snip_hotkey", "<ctrl>+<alt>+x")
-            )
-            new_note = data.get(
-                "quick_note_hotkey",
-                container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n"),
-            )
-            new_ip = data.get(
-                "quick_ip_hotkey",
-                container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i"),
-            )
-            new_loot = data.get(
-                "quick_loot_hotkey",
-                container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l"),
-            )
-            new_quit = data.get(
-                "quit_hotkey", container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
-            )
+        def on_hotkeys_changed(data: HotkeySettingsChangedPayload):
+            new_toggle = data.hotkey
+            new_snip = data.snip_hotkey
+            new_note = data.quick_note_hotkey
+            if new_note is None:
+                new_note = container.config_manager.get(
+                    "quick_note_hotkey", "<ctrl>+<alt>+n"
+                )
+            new_ip = data.quick_ip_hotkey
+            if new_ip is None:
+                new_ip = container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
+            new_loot = data.quick_loot_hotkey
+            if new_loot is None:
+                new_loot = container.config_manager.get(
+                    "quick_loot_hotkey", "<ctrl>+<alt>+l"
+                )
+            new_quit = data.quit_hotkey
             new_cfg = HotkeyConfig(
                 toggle=new_toggle,
                 screenshot=new_snip,

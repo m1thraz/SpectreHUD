@@ -107,7 +107,7 @@ class TestProjectTransactions(unittest.TestCase):
                 "core.project.state_store.atomic_write_json",
                 side_effect=PermissionError("injected permission failure"),
             ):
-                result = pm.save_project_state("ReadOnlyBox", {"target_ip": "1.2.3.4"})
+                result = pm.save_project_state("ReadOnlyBox", target_ip="1.2.3.4")
 
             self.assertFalse(result.success)
             self.assertEqual(
