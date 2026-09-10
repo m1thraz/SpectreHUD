@@ -24,17 +24,17 @@ release are intentionally left to the repository owner after CI validation.
   69.81s).
 - [x] The v2.1.5 wheel passes repository verification (203 files) and
   fresh-environment `--version` / `--help` smoke tests.
-- [ ] Manual smoke test confirms startup, project load/save and legacy migration,
+- [x] Manual smoke test confirms startup, project load/save and legacy migration,
   diagnostics actions, copyable error dialogs, Cheatsheet switching, screenshot
   phase assignment, and clean shutdown.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.1.5 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated v2.1.5 tag from the CI-verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable, Debian packages,
+- [x] Review, commit, and push the prepared v2.1.5 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated v2.1.5 tag from the CI-verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable, Debian packages,
   and wheel.
-- [ ] Download the published executable/deb and verify `--version`, startup, and UI.
-- [ ] Confirm the GitHub release description links to
+- [x] Download the published executable/deb and verify `--version`, startup, and UI.
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.1.5.md`.
