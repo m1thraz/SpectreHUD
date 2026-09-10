@@ -1,5 +1,7 @@
 # Agent Instructions
 
+Read `docs/system_map.md` before changing project switching, Pentest Mode, or report export because it contains only non-obvious cross-component contracts.
+
 ## Testing
 
 Use the smallest test scope that can validate the change.
