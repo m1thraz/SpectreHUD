@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.5] - 2026-09-09
+
 ### Changed
 
 * Clarified core capture and report workflows with context-aware empty states, concise action tooltips, and purpose-driven export descriptions in English and German.
@@ -294,7 +296,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...HEAD
+[2.1.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...v2.1.2
