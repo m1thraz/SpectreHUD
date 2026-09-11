@@ -6,6 +6,18 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Security
+
+* Pinned all GitHub Actions across workflows to immutable 40-character commit SHAs with version comments and automated test enforcement.
+
+### Changed
+
+* Fall back to serial test execution in `scripts/run_tests.py` when `pytest-xdist` is not installed in the active environment.
+
+### Removed
+
+* Removed redundant Checkmarx scan workflow in favor of consolidated native GitHub CodeQL analysis.
+
 ## [2.1.5] - 2026-09-09
 
 ### Changed

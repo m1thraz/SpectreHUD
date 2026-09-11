@@ -74,12 +74,35 @@ def test_release_workflow_actions_are_pinned_to_commit_shas():
     uses_lines = [line.strip() for line in lines if line.strip().startswith("uses:")]
     assert len(uses_lines) >= 10, "Expected at least 10 action invocations in release.yml"
 
-    sha_pattern = re.compile(r"^uses:\s+([a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+)@([a-f0-9]{40})(\s+#\s+.+)?$")
+    sha_pattern = re.compile(r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$")
     for line in uses_lines:
         match = sha_pattern.match(line)
         assert match is not None, f"Action is not pinned to a 40-character commit SHA: {line}"
         # Ensure a human-readable tag/version comment is attached
         assert match.group(3) is not None, f"Action commit SHA lacks version comment: {line}"
+
+
+def test_all_workflow_actions_are_pinned_to_commit_shas():
+    """All external GitHub Actions across all workflows must be pinned to immutable 40-character commit SHAs."""
+    import re
+
+    workflows_dir = Path(__file__).parent.parent / ".github" / "workflows"
+    workflow_files = sorted(list(workflows_dir.glob("*.yml")) + list(workflows_dir.glob("*.yaml")))
+    assert len(workflow_files) >= 3, f"Expected at least 3 workflow files, found {len(workflow_files)}"
+
+    sha_pattern = re.compile(r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$")
+    total_actions = 0
+    for wf in workflow_files:
+        lines = wf.read_text(encoding="utf-8").splitlines()
+        uses_lines = [line.strip() for line in lines if line.strip().startswith("uses:")]
+        assert uses_lines, f"Workflow {wf.name} has no action invocations"
+        for line in uses_lines:
+            total_actions += 1
+            match = sha_pattern.match(line)
+            assert match is not None, f"Action in {wf.name} is not pinned to a 40-character commit SHA: {line}"
+            assert match.group(3) is not None, f"Action in {wf.name} commit SHA lacks version comment: {line}"
+
+    assert total_actions >= 20, f"Expected at least 20 action invocations across workflows, found {total_actions}"
 
 
 def test_release_workflow_includes_supply_chain_artifacts():
