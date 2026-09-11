@@ -314,9 +314,11 @@ class TestReportFileManager(unittest.TestCase):
             patch.object(
                 QFileDialog, "getSaveFileName", return_value=(str(out_html), "HTML (*.html)")
             ),
-            patch.object(tab, "_select_export_type", return_value="html"),
+            patch.object(tab.export_actions, "select_export_type", return_value="html"),
             patch.object(
-                tab, "_select_html_export_options", return_value=("light", "interactive")
+                tab.export_actions,
+                "select_html_export_options",
+                return_value=("light", "interactive"),
             ),
             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
         ):
