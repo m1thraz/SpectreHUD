@@ -16,22 +16,6 @@ from ui.report.dialogs import ReportExportTypeDialog, select_html_export_options
 logger = get_logger(__name__)
 
 
-def _get_symbol(name: str, fallback: Any) -> Any:
-    """Resolve symbol preserving test patches from both report_editor_tab and local module."""
-    from unittest.mock import Mock
-
-    if isinstance(fallback, Mock):
-        return fallback
-
-    import sys
-
-    mod = sys.modules.get("ui.report_editor_tab")
-    if mod is not None and hasattr(mod, name):
-        val = getattr(mod, name)
-        if isinstance(val, Mock):
-            return val
-    return fallback
-
 
 class ReportExportActions:
     """Encapsulates report export workflows, file pickers, coordinator delegation, and outcome UI."""
@@ -116,8 +100,7 @@ class ReportExportActions:
         coordinator = self.export_coordinator
         if coordinator is None:
             logger.error("Obsidian report export requested without a configured handler.")
-            show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-            show_err_fn(
+            show_error_dialog(
                 self.parent_widget,
                 t("report.obsidian_export_failed_title", "Obsidian export failed"),
                 t(
@@ -136,8 +119,7 @@ class ReportExportActions:
         """Exports an exact Markdown copy to a chosen file path."""
         rfm = self.report_file_manager
         default_path = rfm.get_report_path(self.current_project) if rfm else Path("report.md")
-        file_dialog_cls = _get_symbol("QFileDialog", QFileDialog)
-        file_path, _ = file_dialog_cls.getSaveFileName(
+        file_path, _ = QFileDialog.getSaveFileName(
             self.parent_widget,
             t("report.export_copy_dialog_title", "Report-Kopie exportieren"),
             str(default_path),
@@ -155,7 +137,7 @@ class ReportExportActions:
             return
         try:
             result = coordinator.export_report_markdown(target, self.editor.toPlainText())
-            self._dispatch_present_export_result(
+            self.present_export_result(
                 result,
                 title=t("report.export_saved_title", "Exportiert"),
                 success_message=t(
@@ -164,8 +146,7 @@ class ReportExportActions:
             )
         except ReportExportError as exc:
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
-            show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-            show_err_fn(
+            show_error_dialog(
                 self.parent_widget.window() if self.parent_widget else None,
                 t("dialog.error", "Fehler"),
                 t(
@@ -189,8 +170,7 @@ class ReportExportActions:
             if rfm
             else Path("report.html")
         )
-        file_dialog_cls = _get_symbol("QFileDialog", QFileDialog)
-        file_path, _ = file_dialog_cls.getSaveFileName(
+        file_path, _ = QFileDialog.getSaveFileName(
             self.parent_widget,
             t("report.export_html_dialog_title", "HTML-Report exportieren"),
             str(default_path),
@@ -218,15 +198,14 @@ class ReportExportActions:
                 language=doc_lang,
                 profile=profile,
             )
-            self._dispatch_present_export_result(
+            self.present_export_result(
                 result,
                 title=t("report.export_html_success_title", "HTML-Report exportiert"),
                 ask_open_file=target,
             )
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
-            show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-            show_err_fn(
+            show_error_dialog(
                 self.parent_widget.window() if self.parent_widget else None,
                 t("dialog.error", "Fehler"),
                 t(
@@ -259,8 +238,7 @@ class ReportExportActions:
             return
         project_dir = rfm.project_manager.get_project_dir(self.current_project)
         default_directory = project_dir / "exports"
-        file_dialog_cls = _get_symbol("QFileDialog", QFileDialog)
-        destination = file_dialog_cls.getExistingDirectory(
+        destination = QFileDialog.getExistingDirectory(
             self.parent_widget,
             t("report.cherrytree_directory_title", "Choose CherryTree export directory"),
             str(default_directory if default_directory.exists() else project_dir),
@@ -277,14 +255,13 @@ class ReportExportActions:
                 markdown=self.editor.toPlainText(),
                 report_font=self.report_font_key(),
             )
-            self._dispatch_present_export_result(
+            self.present_export_result(
                 result,
                 title=t("report.cherrytree_exported_title", "CherryTree package complete"),
             )
         except ReportExportError as exc:
             logger.error("CherryTree package export failed: %s", exc, exc_info=True)
-            show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-            show_err_fn(
+            show_error_dialog(
                 self.parent_widget,
                 t("report.cherrytree_export_failed_title", "CherryTree export failed"),
                 t(
@@ -297,15 +274,6 @@ class ReportExportActions:
     # ------------------------------------------------------------------ #
     # Result Presentation
     # ------------------------------------------------------------------ #
-
-    def _dispatch_present_export_result(self, *args: Any, **kwargs: Any) -> None:
-        from unittest.mock import Mock
-
-        parent_method = getattr(self.parent_widget, "_present_export_result", None)
-        if isinstance(parent_method, Mock):
-            parent_method(*args, **kwargs)
-            return
-        self.present_export_result(*args, **kwargs)
 
     def present_export_result(
         self,
@@ -321,16 +289,12 @@ class ReportExportActions:
             return
 
         window = self.parent_widget.window() if self.parent_widget else None
-        show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-        show_info_fn = _get_symbol("show_information_dialog", show_information_dialog)
-        ask_confirm_fn = _get_symbol("ask_confirmation", ask_confirmation)
-        open_path_fn = _get_symbol("open_path", open_path)
 
         if status is ExportStatus.FAILED:
             err = getattr(result, "error", None)
             err_msg = getattr(err, "message", None) if err else "Export failed"
             details = getattr(err, "details", None) if err else None
-            show_err_fn(window, title, str(err_msg), details=details)
+            show_error_dialog(window, title, str(err_msg), details=details)
             return
 
         msg = success_message
@@ -376,7 +340,7 @@ class ReportExportActions:
             )
 
         if ask_open_file:
-            reply = ask_confirm_fn(
+            reply = ask_confirmation(
                 window,
                 title,
                 t(
@@ -387,8 +351,8 @@ class ReportExportActions:
                 default_button=QMessageBox.StandardButton.Yes,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                if not open_path_fn(ask_open_file):
-                    show_err_fn(
+                if not open_path(ask_open_file):
+                    show_error_dialog(
                         window,
                         t("report.open_html_error_title", "Report unavailable"),
                         t(
@@ -398,4 +362,4 @@ class ReportExportActions:
                         ),
                     )
         else:
-            show_info_fn(window, title, msg)
+            show_information_dialog(window, title, msg)

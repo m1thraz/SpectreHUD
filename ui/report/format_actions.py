@@ -39,22 +39,6 @@ from ui.report.icon_assets import ReportIconError, render_report_icon
 logger = get_logger(__name__)
 
 
-def _get_symbol(name: str, fallback: Any) -> Any:
-    """Resolve symbol preserving test patches from both report_editor_tab and local module."""
-    from unittest.mock import Mock
-
-    if isinstance(fallback, Mock):
-        return fallback
-
-    import sys
-
-    mod = sys.modules.get("ui.report_editor_tab")
-    if mod is not None and hasattr(mod, name):
-        val = getattr(mod, name)
-        if isinstance(val, Mock):
-            return val
-    return fallback
-
 
 class ReportFormatActions:
     """Encapsulates all cursor formatting, structure creation, and media insertion operations."""
@@ -120,8 +104,7 @@ class ReportFormatActions:
         insert_link(self.editor)
 
     def format_table(self) -> None:
-        dialog_cls = _get_symbol("MarkdownTableDialog", MarkdownTableDialog)
-        dialog = dialog_cls(self.parent_widget)
+        dialog = MarkdownTableDialog(self.parent_widget)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
 
@@ -144,7 +127,7 @@ class ReportFormatActions:
         )
 
         if not screenshot_entries:
-            self._call_browse_and_insert_image()
+            self.browse_and_insert_image()
             return
 
         menu = QMenu(self.parent_widget)
@@ -184,38 +167,11 @@ class ReportFormatActions:
             return
 
         if selected_action == action_browse:
-            self._call_browse_and_insert_image()
+            self.browse_and_insert_image()
         elif selected_action == action_all_loot:
-            self._call_open_loot_image_picker(screenshot_entries)
+            self.open_loot_image_picker(screenshot_entries)
         elif selected_action in entry_actions:
-            self._call_insert_loot_entry_image(entry_actions[selected_action])
-
-    def _call_browse_and_insert_image(self) -> None:
-        from unittest.mock import Mock
-
-        parent_method = getattr(self.parent_widget, "_browse_and_insert_image", None)
-        if isinstance(parent_method, Mock):
-            parent_method()
-            return
-        self.browse_and_insert_image()
-
-    def _call_open_loot_image_picker(self, screenshot_entries: List[dict]) -> None:
-        from unittest.mock import Mock
-
-        parent_method = getattr(self.parent_widget, "_open_loot_image_picker", None)
-        if isinstance(parent_method, Mock):
-            parent_method(screenshot_entries)
-            return
-        self.open_loot_image_picker(screenshot_entries)
-
-    def _call_insert_loot_entry_image(self, entry: dict) -> None:
-        from unittest.mock import Mock
-
-        parent_method = getattr(self.parent_widget, "_insert_loot_entry_image", None)
-        if isinstance(parent_method, Mock):
-            parent_method(entry)
-            return
-        self.insert_loot_entry_image(entry)
+            self.insert_loot_entry_image(entry_actions[selected_action])
 
     def insert_loot_entry_image(self, entry: dict) -> None:
         """Inserts a markdown image from a loot screenshot entry."""
@@ -240,8 +196,7 @@ class ReportFormatActions:
             except Exception:
                 pass
 
-        dialog_cls = _get_symbol("LootImagePickerDialog", LootImagePickerDialog)
-        dialog = dialog_cls(
+        dialog = LootImagePickerDialog(
             screenshot_entries, project_dir=project_dir, parent=self.parent_widget
         )
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
@@ -264,8 +219,7 @@ class ReportFormatActions:
             except Exception as e:
                 logger.debug(f"Failed to resolve project dir for image dialog: {e}")
 
-        file_dialog_cls = _get_symbol("QFileDialog", QFileDialog)
-        file_path, _ = file_dialog_cls.getOpenFileName(
+        file_path, _ = QFileDialog.getOpenFileName(
             self.parent_widget,
             t("report.select_image_title", "Select Image"),
             start_dir,
@@ -298,8 +252,7 @@ class ReportFormatActions:
 
     def format_icon(self) -> None:
         """Render a curated QtAwesome icon to a project PNG and insert it as Markdown."""
-        dialog_cls = _get_symbol("ReportIconPickerDialog", ReportIconPickerDialog)
-        dialog = dialog_cls(self.parent_widget)
+        dialog = ReportIconPickerDialog(self.parent_widget)
         if dialog.exec() != QDialog.DialogCode.Accepted or dialog.selected_icon is None:
             return
 
@@ -310,12 +263,10 @@ class ReportFormatActions:
             pname = rfm.resolve_project_name(self.current_project)
             project_dir = rfm.project_manager.get_project_dir(pname)
             definition = dialog.selected_icon
-            render_icon_fn = _get_symbol("render_report_icon", render_report_icon)
-            relative_path = render_icon_fn(project_dir, definition.icon_name)
+            relative_path = render_report_icon(project_dir, definition.icon_name)
         except (AttributeError, OSError, RuntimeError, ReportIconError) as exc:
             logger.warning("Could not create report icon asset: %s", exc)
-            show_err_fn = _get_symbol("show_error_dialog", show_error_dialog)
-            show_err_fn(
+            show_error_dialog(
                 self.parent_widget,
                 t("report.icon_error_title", "Icon could not be inserted"),
                 t(
