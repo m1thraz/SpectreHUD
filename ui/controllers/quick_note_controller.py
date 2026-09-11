@@ -34,6 +34,7 @@ from ui.quick_note_focus_review import (
     QuickNoteReviewSummary,
 )
 from ui.note_selection_model import NoteSelectionModel
+from ui.note_review_session import QuickNoteReviewSession
 from ui.styles.icons import icon
 
 logger = get_logger("quick_note_controller")
@@ -79,15 +80,51 @@ class QuickNoteController(QObject):
         self.review_mode = False
         self._pending_completions: Dict[str, str] = {}
         self._suppressed_event_ids: Set[str] = set()
-        self._review_queue_ids: List[str] = []
-        self._review_seen_count = 0
-        self._review_completed_count = 0
-        self._review_total = 0
-        self._review_cycle_notice_pending = False
+        self._review_session = QuickNoteReviewSession()
         self._popup: Optional[QuickNotePopup] = None
 
         if self.event_bus:
             self.event_bus.subscribe(EventType.QUICK_NOTES_UPDATED, self._on_notes_updated)
+
+    @property
+    def _review_queue_ids(self) -> List[str]:
+        return self._review_session.queue_ids
+
+    @_review_queue_ids.setter
+    def _review_queue_ids(self, value: List[str]) -> None:
+        self._review_session.queue_ids = value
+
+    @property
+    def _review_seen_count(self) -> int:
+        return self._review_session.seen_count
+
+    @_review_seen_count.setter
+    def _review_seen_count(self, value: int) -> None:
+        self._review_session.seen_count = value
+
+    @property
+    def _review_completed_count(self) -> int:
+        return self._review_session.completed_count
+
+    @_review_completed_count.setter
+    def _review_completed_count(self, value: int) -> None:
+        self._review_session.completed_count = value
+
+    @property
+    def _review_total(self) -> int:
+        return self._review_session.total
+
+    @_review_total.setter
+    def _review_total(self, value: int) -> None:
+        self._review_session.total = value
+
+    @property
+    def _review_cycle_notice_pending(self) -> bool:
+        return self._review_session.cycle_notice_pending
+
+    @_review_cycle_notice_pending.setter
+    def _review_cycle_notice_pending(self, value: bool) -> None:
+        self._review_session.cycle_notice_pending = value
 
     @property
     def selected_note_ids(self) -> Set[str]:
@@ -133,6 +170,25 @@ class QuickNoteController(QObject):
     def current_category(self, cat: str) -> None:
         self.last_category = cat if cat in VALID_CATEGORY_IDS else "misc"
 
+    def _resolve_category(self, category: Optional[str]) -> str:
+        if category is not None:
+            chosen = category
+        elif self._phase_provider:
+            chosen = self._phase_provider() or self.last_category
+        else:
+            chosen = self.last_category
+        return chosen if chosen in VALID_CATEGORY_IDS else "misc"
+
+    def _resolve_target(self, target_ip: Optional[str]) -> str:
+        if target_ip is not None:
+            return target_ip
+        if self.target_provider:
+            try:
+                return self.target_provider() or ""
+            except Exception as e:
+                logger.debug(f"Failed to resolve target from provider: {e}")
+        return ""
+
     def add_entry(
         self,
         text: str,
@@ -143,28 +199,14 @@ class QuickNoteController(QObject):
         source: Optional[Dict[str, str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Directly adds a quick note entry."""
-        if category is None:
-            active_phase = self._phase_provider() if self._phase_provider else None
-            chosen_cat = (
-                active_phase
-                if active_phase and active_phase in VALID_CATEGORY_IDS
-                else self.last_category
-            )
-        else:
-            chosen_cat = category
-
-        clean_cat = chosen_cat if chosen_cat in VALID_CATEGORY_IDS else "misc"
+        clean_cat = self._resolve_category(category)
         self.last_category = clean_cat
-        resolved_target = (
-            target_ip
-            if target_ip is not None
-            else (self.target_provider() if self.target_provider else "")
-        )
+        resolved_target = self._resolve_target(target_ip)
         try:
             entry = self.quick_note_manager.add_entry(
                 text=text,
                 category=clean_cat,
-                target_ip=resolved_target or "",
+                target_ip=resolved_target,
                 status=status,
                 pinned=pinned,
                 source=source,
@@ -343,11 +385,7 @@ class QuickNoteController(QObject):
         if self.review_mode:
             self.selection_mode = False
             self.clear_selection()
-            self._review_queue_ids = []
-            self._review_seen_count = 0
-            self._review_completed_count = 0
-            self._review_total = 0
-            self._review_cycle_notice_pending = False
+            self._review_session.reset()
         if refresh:
             self.notes_updated.emit()
 
@@ -421,6 +459,33 @@ class QuickNoteController(QObject):
     # Filter & Search
     # ------------------------------------------------------------------ #
 
+    def _update_filter_button_styles(self) -> None:
+        for fid, btn in self.filter_buttons.items():
+            is_active = (
+                (fid == self.current_status_filter)
+                if fid in ("all", "inbox", "followup", "resolved", "pinned")
+                else (fid == self.current_category_filter)
+            )
+            btn.setProperty("class", "FilterPillActive" if is_active else "FilterPill")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+    def _update_phase_button_style(self) -> None:
+        if not self.btn_phase:
+            return
+        cat_display = (
+            self.current_category_filter.capitalize()
+            if self.current_category_filter != "all"
+            else t("quick_note.all_phases", "All Phases")
+        )
+        self.btn_phase.setText(f"{cat_display} ▾")
+        is_cat_active = self.current_category_filter != "all"
+        self.btn_phase.setProperty(
+            "class", "FilterPillActive" if is_cat_active else "FilterPill"
+        )
+        self.btn_phase.style().unpolish(self.btn_phase)
+        self.btn_phase.style().polish(self.btn_phase)
+
     def select_filter(self, filter_id: str) -> None:
         """Selects active status or category filter and updates pill styles."""
         if filter_id in ("all", "inbox", "followup", "resolved", "pinned"):
@@ -433,66 +498,49 @@ class QuickNoteController(QObject):
             self.current_category_filter = filter_id
 
         if self.review_mode:
-            self._review_queue_ids = []
-            self._review_seen_count = 0
-            self._review_completed_count = 0
-            self._review_total = 0
+            self._review_session.reset()
 
-        for fid, btn in self.filter_buttons.items():
-            is_active = (
-                (fid == self.current_status_filter)
-                if fid in ("all", "inbox", "followup", "resolved", "pinned")
-                else (fid == self.current_category_filter)
-            )
-            btn.setProperty("class", "FilterPillActive" if is_active else "FilterPill")
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+        self._update_filter_button_styles()
+        self._update_phase_button_style()
 
-        if self.btn_phase:
-            cat_display = (
-                self.current_category_filter.capitalize()
-                if self.current_category_filter != "all"
-                else t("quick_note.all_phases", "All Phases")
-            )
-            self.btn_phase.setText(f"{cat_display} ▾")
-            is_cat_active = self.current_category_filter != "all"
-            self.btn_phase.setProperty(
-                "class", "FilterPillActive" if is_cat_active else "FilterPill"
-            )
-            self.btn_phase.style().unpolish(self.btn_phase)
-            self.btn_phase.style().polish(self.btn_phase)
+    @staticmethod
+    def _count_status_metrics(all_notes: List[Dict[str, Any]]) -> Dict[str, int]:
+        counts = {"open": 0, "inbox": 0, "followup": 0, "resolved": 0, "pinned": 0}
+        for n in all_notes:
+            st = n.get("status", "inbox")
+            if st != "resolved":
+                counts["open"] += 1
+            if st == "inbox":
+                counts["inbox"] += 1
+            elif st == "followup":
+                counts["followup"] += 1
+            elif st == "resolved":
+                counts["resolved"] += 1
+            if n.get("pinned"):
+                counts["pinned"] += 1
+        return counts
 
-    def build_filter_pills(
+    def _build_status_filter_pills(
         self,
         pills_layout: QHBoxLayout,
         on_select_filter: Callable[[str], None],
-        on_clear: Callable[[], None],
+        all_notes: List[Dict[str, Any]],
     ) -> None:
-        """Builds status triage pills, phase filter dropdown, and Clear action button."""
-        self.filter_buttons.clear()
-        all_notes = self.quick_note_manager.get_all_entries()
-
-        open_cnt = sum(1 for n in all_notes if n.get("status", "inbox") != "resolved")
-        inbox_cnt = sum(1 for n in all_notes if n.get("status", "inbox") == "inbox")
-        follow_cnt = sum(1 for n in all_notes if n.get("status") == "followup")
-        resolved_cnt = sum(1 for n in all_notes if n.get("status") == "resolved")
-        pinned_cnt = sum(1 for n in all_notes if bool(n.get("pinned", False)))
-
-        # 1. Status Pills
+        counts = self._count_status_metrics(all_notes)
         status_pills = [
-            ("all", f"{t('quick_note.filter_all', 'Open')} ({open_cnt})", None),
-            ("inbox", f"{t('quick_note.status_inbox', 'Inbox')} ({inbox_cnt})", None),
+            ("all", f"{t('quick_note.filter_all', 'Open')} ({counts['open']})", None),
+            ("inbox", f"{t('quick_note.status_inbox', 'Inbox')} ({counts['inbox']})", None),
             (
                 "followup",
-                f"{t('quick_note.status_followup', 'Follow-up')} ({follow_cnt})",
+                f"{t('quick_note.status_followup', 'Follow-up')} ({counts['followup']})",
                 None,
             ),
             (
                 "resolved",
-                f"{t('quick_note.status_resolved', 'Resolved')} ({resolved_cnt})",
+                f"{t('quick_note.status_resolved', 'Resolved')} ({counts['resolved']})",
                 None,
             ),
-            ("pinned", f"{t('quick_note.pinned', 'Pinned')} ({pinned_cnt})", "fa5s.thumbtack"),
+            ("pinned", f"{t('quick_note.pinned', 'Pinned')} ({counts['pinned']})", "fa5s.thumbtack"),
         ]
 
         for pid, ptext, icon_name in status_pills:
@@ -509,7 +557,12 @@ class QuickNoteController(QObject):
             self.filter_buttons[pid] = btn
             pills_layout.addWidget(btn)
 
-        # 2. Phase Category Dropdown Menu
+    def _build_phase_filter_dropdown(
+        self,
+        pills_layout: QHBoxLayout,
+        on_select_filter: Callable[[str], None],
+        all_notes: List[Dict[str, Any]],
+    ) -> None:
         cat_display = (
             self.current_category_filter.capitalize()
             if self.current_category_filter != "all"
@@ -533,7 +586,6 @@ class QuickNoteController(QObject):
             act = QAction(f"{cat.capitalize()} ({count})", phase_menu)
             act.triggered.connect(lambda checked=False, c=cat: on_select_filter(f"cat:{c}"))
             phase_menu.addAction(act)
-            # Retain programmatic reference in filter_buttons for category testing/compat
             dummy_btn = QPushButton(f"{cat.capitalize()} ({count})")
             dummy_btn.setVisible(False)
             self.filter_buttons[cat] = dummy_btn
@@ -541,6 +593,11 @@ class QuickNoteController(QObject):
         self.btn_phase.setMenu(phase_menu)
         pills_layout.addWidget(self.btn_phase)
 
+    def _build_action_pills(
+        self,
+        pills_layout: QHBoxLayout,
+        on_clear: Callable[[], None],
+    ) -> None:
         self.btn_select_mode = QPushButton(t("quick_note.select_mode", "Select"))
         self.btn_select_mode.setIcon(icon("fa5s.check-square"))
         self.btn_select_mode.setIconSize(QSize(11, 11))
@@ -571,7 +628,6 @@ class QuickNoteController(QObject):
 
         pills_layout.addStretch()
 
-        # 3. Clear All Button
         btn_clear = QPushButton(t("quick_note.clear", "Clear"))
         btn_clear.setIcon(icon("fa5s.trash"))
         btn_clear.setIconSize(QSize(11, 11))
@@ -581,6 +637,20 @@ class QuickNoteController(QObject):
         )
         btn_clear.clicked.connect(on_clear)
         pills_layout.addWidget(btn_clear)
+
+    def build_filter_pills(
+        self,
+        pills_layout: QHBoxLayout,
+        on_select_filter: Callable[[str], None],
+        on_clear: Callable[[], None],
+    ) -> None:
+        """Builds status triage pills, phase filter dropdown, and Clear action button."""
+        self.filter_buttons.clear()
+        all_notes = self.quick_note_manager.get_all_entries()
+
+        self._build_status_filter_pills(pills_layout, on_select_filter, all_notes)
+        self._build_phase_filter_dropdown(pills_layout, on_select_filter, all_notes)
+        self._build_action_pills(pills_layout, on_clear)
 
     def clear_all_notes(self, parent_widget: Optional[QWidget] = None) -> bool:
         """Deletes all quick notes in the current project after user confirmation."""
@@ -729,34 +799,20 @@ class QuickNoteController(QObject):
         parent_widget: QWidget,
     ) -> List[QWidget]:
         eligible = [n for n in reversed(notes) if n.get("status", "inbox") != "resolved"]
-        entries_by_id = {n.get("id"): n for n in eligible}
-        if not self._review_queue_ids and self._review_total == 0:
-            self._review_queue_ids = [n.get("id") for n in eligible if n.get("id")]
-            self._review_total = len(self._review_queue_ids)
-        else:
-            self._review_queue_ids = [
-                entry_id for entry_id in self._review_queue_ids if entry_id in entries_by_id
-            ]
+        active_entry, show_cycle_notice = self._review_session.prepare_step(eligible)
 
-        if not self._review_queue_ids and eligible and self._review_total:
-            self._review_queue_ids = [n.get("id") for n in eligible if n.get("id")]
-            self._review_seen_count = 0
-            self._review_total = len(self._review_queue_ids)
-            if self._review_cycle_notice_pending:
-                content_layout.addWidget(QuickNoteReviewCycleNotice(parent=parent_widget))
-                self._review_cycle_notice_pending = False
+        if show_cycle_notice:
+            content_layout.addWidget(QuickNoteReviewCycleNotice(parent=parent_widget))
 
-        if not self._review_queue_ids:
-            self._review_cycle_notice_pending = False
+        if not active_entry:
             summary = QuickNoteReviewSummary(self._review_completed_count, parent=parent_widget)
             content_layout.addWidget(summary)
             return []
 
-        entry = entries_by_id[self._review_queue_ids[0]]
         review = QuickNoteFocusReview(
-            entry,
-            position=min(self._review_seen_count + 1, self._review_total),
-            total=self._review_total,
+            active_entry,
+            position=self._review_session.current_position,
+            total=self._review_session.total,
             parent=parent_widget,
         )
         review.promote_requested.connect(
@@ -773,13 +829,7 @@ class QuickNoteController(QObject):
         return [review]
 
     def _advance_review(self, entry_id: str, *, completed: bool) -> None:
-        if entry_id in self._review_queue_ids:
-            self._review_queue_ids.remove(entry_id)
-        self._review_seen_count += 1
-        if completed:
-            self._review_completed_count += 1
-        if not self._review_queue_ids:
-            self._review_cycle_notice_pending = True
+        self._review_session.advance(entry_id, completed=completed)
         self.notes_updated.emit()
 
     def _review_complete(self, entry_id: str) -> None:
@@ -811,10 +861,5 @@ class QuickNoteController(QObject):
             self._advance_review(entry_id, completed=True)
 
     def _review_next(self) -> None:
-        if not self._review_queue_ids:
-            return
-        self._review_queue_ids.pop(0)
-        self._review_seen_count += 1
-        if not self._review_queue_ids:
-            self._review_cycle_notice_pending = True
+        self._review_session.skip_next()
         self.notes_updated.emit()

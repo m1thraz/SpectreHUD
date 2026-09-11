@@ -5,7 +5,7 @@ Markdown Parsing and HTML Conversion Engine for SpectreHUD Reports.
 import html
 import re
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union, Iterable
 
 from core.reporting.assets import encode_image_base64, ImageEmbeddingBudget
 from core.reporting.loot_sync import (
@@ -237,6 +237,228 @@ def _render_html_table(table_rows: List[List[str]]) -> List[str]:
     return lines
 
 
+class _MarkdownHtmlParser:
+    """Line-oriented state machine converting SpectreHUD markdown subset into HTML.
+
+    Preserves code block precedence, delayed inline escaping, and export-safety invariants.
+    """
+
+    def __init__(self) -> None:
+        self.html_lines: List[str] = []
+        self.in_code_block: bool = False
+        self.code_block_lang: str = ""
+        self.code_block_lines: List[str] = []
+        self.in_list: bool = False
+        self.list_type: str = "ul"
+        self.in_table: bool = False
+        self.table_rows: List[List[str]] = []
+        self.in_blockquote: bool = False
+        self.blockquote_lines: List[str] = []
+
+    def flush_list(self) -> None:
+        if self.in_list:
+            self.html_lines.append(f"</{self.list_type}>")
+            self.in_list = False
+
+    def flush_table(self) -> None:
+        if self.in_table and self.table_rows:
+            self.html_lines.extend(_render_html_table(self.table_rows))
+            self.in_table = False
+            self.table_rows = []
+
+    def flush_blockquote(self) -> None:
+        if self.in_blockquote and self.blockquote_lines:
+            inner_text = "<br>".join([format_inline(bl) for bl in self.blockquote_lines])
+            self.html_lines.append(f"<blockquote>{inner_text}</blockquote>")
+            self.in_blockquote = False
+            self.blockquote_lines = []
+
+    def flush_open_containers(self) -> None:
+        self.flush_list()
+        self.flush_table()
+        self.flush_blockquote()
+
+    def _handle_code_block_fence(self, stripped: str) -> None:
+        if self.in_code_block:
+            raw_code = "\n".join(self.code_block_lines)
+            escaped_code = html.escape(raw_code)
+            safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", self.code_block_lang)
+            safe_lang = html.escape(safe_lang, quote=True)
+            lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
+            self.html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
+            self.in_code_block = False
+            self.code_block_lines = []
+            self.code_block_lang = ""
+        else:
+            self.flush_open_containers()
+            self.in_code_block = True
+            self.code_block_lang = stripped.lstrip("`").strip()
+            self.code_block_lines = []
+
+    def _handle_pagebreak_or_spacer(self, stripped: str) -> bool:
+        if PAGEBREAK_REGEX.fullmatch(stripped):
+            self.flush_open_containers()
+            self.html_lines.append(PAGEBREAK_HTML)
+            return True
+
+        spacer_match = SPACER_REGEX.fullmatch(stripped)
+        if spacer_match:
+            self.flush_open_containers()
+            size = spacer_match.group(1).lower()
+            self.html_lines.append(
+                f'<div class="spectre-spacer spacer-{size}" aria-hidden="true"></div>'
+            )
+            return True
+        return False
+
+    def _handle_blockquote(self, stripped: str) -> bool:
+        if stripped.startswith(">"):
+            self.flush_list()
+            self.flush_table()
+            self.in_blockquote = True
+            self.blockquote_lines.append(stripped.lstrip(">").strip())
+            return True
+        if self.in_blockquote:
+            self.flush_blockquote()
+        return False
+
+    def _handle_table_row(self, stripped: str) -> bool:
+        if stripped.startswith("|") and stripped.endswith("|"):
+            self.flush_list()
+            self.flush_blockquote()
+            if re.match(r"^\|[\s\-:|]+\|$", stripped):
+                return True
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            if not self.in_table:
+                self.in_table = True
+                self.table_rows = [cells]
+            else:
+                self.table_rows.append(cells)
+            return True
+        if self.in_table:
+            self.flush_table()
+        return False
+
+    def _handle_list_item(self, stripped: str) -> bool:
+        unordered_match = re.match(r"^[-*]\s+(.*)$", stripped)
+        ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
+
+        if unordered_match or ordered_match:
+            self.flush_blockquote()
+            self.flush_table()
+            target_type = "ul" if unordered_match else "ol"
+            item_text = (
+                unordered_match.group(1) if unordered_match else ordered_match.group(1)  # type: ignore[union-attr]
+            )
+
+            if not self.in_list or self.list_type != target_type:
+                self.flush_list()
+                self.html_lines.append(f"<{target_type}>")
+                self.in_list = True
+                self.list_type = target_type
+            self.html_lines.append(f"<li>{format_inline(item_text)}</li>")
+            return True
+        if self.in_list:
+            self.flush_list()
+        return False
+
+    def _handle_heading(self, stripped: str) -> bool:
+        for prefix, tag in (
+            ("#### ", "h4"),
+            ("### ", "h3"),
+            ("## ", "h2"),
+            ("# ", "h1"),
+        ):
+            if stripped.startswith(prefix):
+                self.html_lines.append(
+                    f"<{tag}>{format_inline(stripped[len(prefix):])}</{tag}>"
+                )
+                return True
+        return False
+
+    def _handle_image(self, stripped: str) -> bool:
+        img_match = re.match(r"^!\[(.*?)\]\((.*?)\)$", stripped)
+        if img_match:
+            alt = html.escape(img_match.group(1), quote=True)
+            raw_src = img_match.group(2)
+            src = sanitize_url(raw_src, is_image=True)
+            self.html_lines.append(
+                f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
+            )
+            return True
+        return False
+
+    def _handle_horizontal_rule(self, stripped: str) -> bool:
+        if stripped in ("---", "***", "___"):
+            self.html_lines.append("<hr>")
+            return True
+        return False
+
+    def process_line(self, line: str) -> None:
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            self._handle_code_block_fence(stripped)
+            return
+
+        if self.in_code_block:
+            self.code_block_lines.append(line)
+            return
+
+        if self._handle_pagebreak_or_spacer(stripped):
+            return
+
+        if self._handle_blockquote(stripped):
+            return
+
+        if self._handle_table_row(stripped):
+            return
+
+        if self._handle_list_item(stripped):
+            return
+
+        if not stripped:
+            return
+
+        if self._handle_horizontal_rule(stripped):
+            return
+
+        if self._handle_heading(stripped):
+            return
+
+        if self._handle_image(stripped):
+            return
+
+        self.html_lines.append(f"<p>{format_inline(stripped)}</p>")
+
+    def finalize(self) -> str:
+        self.flush_open_containers()
+        if self.in_code_block and self.code_block_lines:
+            raw_code = "\n".join(self.code_block_lines)
+            escaped_code = html.escape(raw_code)
+            safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", self.code_block_lang)
+            safe_lang = html.escape(safe_lang, quote=True)
+            lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
+            self.html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
+        return "\n".join(self.html_lines)
+
+    def parse(self, content: Union[str, Iterable[str]]) -> str:
+        self.html_lines = []
+        self.in_code_block = False
+        self.code_block_lang = ""
+        self.code_block_lines = []
+        self.in_list = False
+        self.list_type = "ul"
+        self.in_table = False
+        self.table_rows = []
+        self.in_blockquote = False
+        self.blockquote_lines = []
+        line_list = content.splitlines() if isinstance(content, str) else content
+        for line in line_list:
+            self.process_line(line)
+        return self.finalize()
+
+
 def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
     """Convert the line-oriented report subset after loot-marker stripping and image resolution.
 
@@ -245,174 +467,4 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
     """
     clean_md = strip_report_markers(md_text)
     processed_md = resolve_and_embed_images(clean_md, project_dir)
-
-    lines = processed_md.splitlines()
-    html_lines: List[str] = []
-    in_code_block = False
-    code_block_lang = ""
-    code_block_lines: List[str] = []
-    in_list = False
-    list_type = "ul"
-    in_table = False
-    table_rows: List[List[str]] = []
-    in_blockquote = False
-    blockquote_lines: List[str] = []
-
-    def _flush_list():
-        nonlocal in_list
-        if in_list:
-            html_lines.append(f"</{list_type}>")
-            in_list = False
-
-    def _flush_table():
-        nonlocal in_table, table_rows
-        if in_table and table_rows:
-            html_lines.extend(_render_html_table(table_rows))
-            in_table = False
-            table_rows = []
-
-    def _flush_blockquote():
-        nonlocal in_blockquote, blockquote_lines
-        if in_blockquote and blockquote_lines:
-            inner_text = "<br>".join([format_inline(bl) for bl in blockquote_lines])
-            html_lines.append(f"<blockquote>{inner_text}</blockquote>")
-            in_blockquote = False
-            blockquote_lines = []
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped.startswith("```"):
-            if in_code_block:
-                raw_code = "\n".join(code_block_lines)
-                escaped_code = html.escape(raw_code)
-                safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", code_block_lang)
-                safe_lang = html.escape(safe_lang, quote=True)
-                lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
-                html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
-                in_code_block = False
-                code_block_lines = []
-                code_block_lang = ""
-            else:
-                _flush_list()
-                _flush_table()
-                _flush_blockquote()
-                in_code_block = True
-                code_block_lang = stripped.lstrip("`").strip()
-                code_block_lines = []
-            continue
-
-        if in_code_block:
-            code_block_lines.append(line)
-            continue
-
-        if PAGEBREAK_REGEX.fullmatch(stripped):
-            _flush_list()
-            _flush_table()
-            _flush_blockquote()
-            html_lines.append(PAGEBREAK_HTML)
-            continue
-
-        spacer_match = SPACER_REGEX.fullmatch(stripped)
-        if spacer_match:
-            _flush_list()
-            _flush_table()
-            _flush_blockquote()
-            size = spacer_match.group(1).lower()
-            html_lines.append(
-                f'<div class="spectre-spacer spacer-{size}" aria-hidden="true"></div>'
-            )
-            continue
-
-        if stripped.startswith(">"):
-            _flush_list()
-            _flush_table()
-            in_blockquote = True
-            blockquote_lines.append(stripped.lstrip(">").strip())
-            continue
-        elif in_blockquote:
-            _flush_blockquote()
-
-        if stripped.startswith("|") and stripped.endswith("|"):
-            _flush_list()
-            _flush_blockquote()
-            if re.match(r"^\|[\s\-:|]+\|$", stripped):
-                continue
-            cells = [c.strip() for c in stripped.strip("|").split("|")]
-            if not in_table:
-                in_table = True
-                table_rows = [cells]
-            else:
-                table_rows.append(cells)
-            continue
-        elif in_table:
-            _flush_table()
-
-        unordered_match = re.match(r"^[-*]\s+(.*)$", stripped)
-        ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
-
-        if unordered_match:
-            _flush_blockquote()
-            _flush_table()
-            if not in_list or list_type != "ul":
-                _flush_list()
-                html_lines.append("<ul>")
-                in_list = True
-                list_type = "ul"
-            html_lines.append(f"<li>{format_inline(unordered_match.group(1))}</li>")
-            continue
-        elif ordered_match:
-            _flush_blockquote()
-            _flush_table()
-            if not in_list or list_type != "ol":
-                _flush_list()
-                html_lines.append("<ol>")
-                in_list = True
-                list_type = "ol"
-            html_lines.append(f"<li>{format_inline(ordered_match.group(1))}</li>")
-            continue
-        elif in_list:
-            _flush_list()
-
-        if not stripped:
-            continue
-
-        if stripped in ("---", "***", "___"):
-            html_lines.append("<hr>")
-            continue
-
-        if stripped.startswith("#### "):
-            html_lines.append(f"<h4>{format_inline(stripped[5:])}</h4>")
-            continue
-        elif stripped.startswith("### "):
-            html_lines.append(f"<h3>{format_inline(stripped[4:])}</h3>")
-            continue
-        elif stripped.startswith("## "):
-            html_lines.append(f"<h2>{format_inline(stripped[3:])}</h2>")
-            continue
-        elif stripped.startswith("# "):
-            html_lines.append(f"<h1>{format_inline(stripped[2:])}</h1>")
-            continue
-
-        img_match = re.match(r"^!\[(.*?)\]\((.*?)\)$", stripped)
-        if img_match:
-            alt = html.escape(img_match.group(1), quote=True)
-            raw_src = img_match.group(2)
-            src = sanitize_url(raw_src, is_image=True)
-            html_lines.append(
-                f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
-            )
-            continue
-
-        html_lines.append(f"<p>{format_inline(stripped)}</p>")
-
-    _flush_list()
-    _flush_table()
-    _flush_blockquote()
-
-    if in_code_block and code_block_lines:
-        raw_code = "\n".join(code_block_lines)
-        escaped_code = html.escape(raw_code)
-        html_lines.append(f"<pre><code>{escaped_code}</code></pre>")
-
-    return "\n".join(html_lines)
+    return _MarkdownHtmlParser().parse(processed_md.splitlines())

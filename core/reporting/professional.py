@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import html
 import re
-from typing import Optional
+from typing import Callable, Dict, List, Optional
 
 from core.reporting.section_markers import segment_report_markdown
 
@@ -188,64 +188,93 @@ def _content_lines(markdown: str) -> list[str]:
     ]
 
 
+def _has_header_metadata_content(lines: List[str]) -> bool:
+    return any(not (line.startswith("# ") or line.startswith("|")) for line in lines)
+
+
+def _has_phase_section_content(markdown: str) -> bool:
+    from core.reporting.findings import phase_section_has_meaningful_content
+
+    return phase_section_has_meaningful_content(markdown)
+
+
+def _has_attack_path_content(lines: List[str]) -> bool:
+    empty_notices = {
+        "*Kein dokumentierter Angriffspfad vorhanden.*",
+        "*No documented attack path is available.*",
+    }
+    return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+
+
+def _has_executive_summary_content(lines: List[str]) -> bool:
+    if any(re.match(r"^\|\s*\d+\s*\|", line) for line in lines):
+        return True
+    for line in lines:
+        if line.startswith(("## ", "### ", "|")):
+            continue
+        if re.match(r"^- \*\*.+:\*\*$", line):
+            continue
+        if re.match(r"^\*\*(?:Total|Gesamt):\*\*", line):
+            counts = [
+                int(value)
+                for value in re.findall(
+                    r"(?:</span>\s*(\d+)|(\d+)\s+(?:Critical|High|Medium|Low))",
+                    line,
+                )
+                for value in value
+                if value
+            ]
+            if counts and not any(counts):
+                continue
+        return True
+    return False
+
+
+def _has_scope_limitations_content(lines: List[str]) -> bool:
+    return any(
+        not line.startswith("## ") and not re.match(r"^- \*\*.+:\*\*$", line)
+        for line in lines
+    )
+
+
+def _has_remediation_table_content(lines: List[str]) -> bool:
+    for line in lines:
+        if line.startswith("## ") or re.match(r"^\|[\s\-:|]+\|$", line):
+            continue
+        if line.startswith(("| Priority |", "| Priorität |", "| |")):
+            continue
+        return True
+    return False
+
+
+def _has_appendix_content(lines: List[str]) -> bool:
+    empty_notices = {
+        "*Keine Clipboard-Historie aufgezeichnet.*",
+        "*No clipboard history recorded.*",
+        "*Keine Screenshots in diesem Projekt vorhanden.*",
+        "*No screenshots captured in this project.*",
+    }
+    return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+
+
+_SECTION_CONTENT_PREDICATES: Dict[str, Callable[[List[str], str], bool]] = {
+    "header_metadata": lambda lines, _: _has_header_metadata_content(lines),
+    "phase_section": lambda _, md: _has_phase_section_content(md),
+    "finding_section": lambda _, md: _has_phase_section_content(md),
+    "attack_path": lambda lines, _: _has_attack_path_content(lines),
+    "executive_summary": lambda lines, _: _has_executive_summary_content(lines),
+    "scope_limitations": lambda lines, _: _has_scope_limitations_content(lines),
+    "remediation_table": lambda lines, _: _has_remediation_table_content(lines),
+    "appendix": lambda lines, _: _has_appendix_content(lines),
+}
+
+
 def professional_section_has_meaningful_content(section_type: str, markdown: str) -> bool:
     """Keep a section unless only its generated editing scaffold remains."""
     lines = _content_lines(markdown)
-    if section_type == "header_metadata":
-        return any(not (line.startswith("# ") or line.startswith("|")) for line in lines)
-    if section_type in {"phase_section", "finding_section"}:
-        from core.reporting.findings import phase_section_has_meaningful_content
-
-        return phase_section_has_meaningful_content(markdown)
-    if section_type == "attack_path":
-        empty_notices = {
-            "*Kein dokumentierter Angriffspfad vorhanden.*",
-            "*No documented attack path is available.*",
-        }
-        return any(not line.startswith("## ") and line not in empty_notices for line in lines)
-    if section_type == "executive_summary":
-        if any(re.match(r"^\|\s*\d+\s*\|", line) for line in lines):
-            return True
-        for line in lines:
-            if line.startswith(("## ", "### ", "|")):
-                continue
-            if re.match(r"^- \*\*.+:\*\*$", line):
-                continue
-            if re.match(r"^\*\*(?:Total|Gesamt):\*\*", line):
-                counts = [
-                    int(value)
-                    for value in re.findall(
-                        r"(?:</span>\s*(\d+)|(\d+)\s+(?:Critical|High|Medium|Low))",
-                        line,
-                    )
-                    for value in value
-                    if value
-                ]
-                if counts and not any(counts):
-                    continue
-            return True
-        return False
-    if section_type == "scope_limitations":
-        return any(
-            not line.startswith("## ") and not re.match(r"^- \*\*.+:\*\*$", line)
-            for line in lines
-        )
-    if section_type == "remediation_table":
-        for line in lines:
-            if line.startswith("## ") or re.match(r"^\|[\s\-:|]+\|$", line):
-                continue
-            if line.startswith(("| Priority |", "| Priorität |", "| |")):
-                continue
-            return True
-        return False
-    if section_type == "appendix":
-        empty_notices = {
-            "*Keine Clipboard-Historie aufgezeichnet.*",
-            "*No clipboard history recorded.*",
-            "*Keine Screenshots in diesem Projekt vorhanden.*",
-            "*No screenshots captured in this project.*",
-        }
-        return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+    predicate = _SECTION_CONTENT_PREDICATES.get(section_type)
+    if predicate is not None:
+        return predicate(lines, markdown)
     return bool(lines)
 
 
