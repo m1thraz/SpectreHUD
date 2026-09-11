@@ -36,7 +36,7 @@ class UpdateCheckResult:
 
 
 def _version_tuple(version: str) -> tuple[int, int, int]:
-    match = _VERSION_PATTERN.fullmatch(str(version).strip())
+    match = _VERSION_PATTERN.fullmatch(version.strip())
     if match is None:
         raise UpdateCheckError(f"Unsupported release version: {version!r}")
     return (int(match.group("major")), int(match.group("minor")), int(match.group("patch")))

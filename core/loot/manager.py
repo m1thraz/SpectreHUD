@@ -214,7 +214,7 @@ class LootManager:
 
         normalized_type = TYPE_ALIASES.get(entry_type.lower(), entry_type) if entry_type else "note"
         cat_id = category if category in VALID_CATEGORY_IDS else "misc"
-        sev_clean = str(severity).lower().strip() if severity else "info"
+        sev_clean = severity.lower().strip() if severity else "info"
         sev_id = sev_clean if sev_clean in VALID_SEVERITIES else "info"
         clean_title = self._validate_user_text(title, "Loot title", MAX_TITLE_LENGTH)
         clean_content = self._validate_user_text(content, "Loot content", MAX_CONTENT_LENGTH)
@@ -336,7 +336,7 @@ class LootManager:
             ),
             key=lambda item: item.get("position", 0),
         )
-        insertion_index = max(0, min(int(target_index), len(target_entries)))
+        insertion_index = max(0, min(target_index, len(target_entries)))
         target_entries.insert(insertion_index, moving_entry)
         for position, entry in enumerate(target_entries):
             entry["position"] = position
