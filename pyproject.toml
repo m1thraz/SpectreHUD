@@ -31,6 +31,7 @@ dev = [
     "wheel>=0.41.0",
     "pyinstaller>=6.0.0",
     "ruff>=0.1.0",
+    "mypy>=1.10.0",
 ]
 
 [project.urls]
@@ -112,4 +113,48 @@ DEP002 = [
     "coverage",
     "wheel",
     "ruff",
+    "mypy",
+]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "."
+explicit_package_bases = true
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_configs = true
+files = ["core", "ui", "main.py"]
+
+exclude = [
+    "^build/",
+    "^dist/",
+    "^\\.venv/",
+    "^tmp/",
+    "^\\.test-.*",
+]
+
+# Strict checking for headless core contracts, domain models, and services
+[[tool.mypy.overrides]]
+module = "core.*"
+check_untyped_defs = true
+
+# PyQt6 stubs in ui/ contain known C++ wrapper overrides and missing event nullability
+[[tool.mypy.overrides]]
+module = "ui.*"
+disable_error_code = [
+    "override",
+    "call-overload",
+    "union-attr",
+    "attr-defined",
+    "arg-type",
+    "assignment",
+    "index",
+    "misc",
+    "no-redef",
+    "truthy-function",
+    "return-value",
+    "method-assign",
+    "func-returns-value",
+    "call-arg",
+    "has-type",
 ]

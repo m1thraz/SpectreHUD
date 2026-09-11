@@ -35,7 +35,7 @@ CATEGORIES = [
     for p in PHASES
 ]
 
-VALID_CATEGORY_IDS: Set[str] = {c["id"] for c in CATEGORIES}
+VALID_CATEGORY_IDS: Set[str] = {p.key for p in PHASES}
 
 
 class LootValidationError(ValueError):

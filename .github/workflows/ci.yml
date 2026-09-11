@@ -52,6 +52,7 @@ jobs:
       - name: Lint and syntax check
         run: |
           ruff check .
+          mypy
 
       - name: Run test suite
         if: ${{ !(runner.os == 'Linux' && matrix.python-version == '3.11') }}

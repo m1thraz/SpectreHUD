@@ -63,7 +63,8 @@ def global_exception_hook(exctype, value, tb):
 
     app = QApplication.instance()
     if app and not os.environ.get("SPECTREHUD_NO_GUI_CRASH_POPUP"):
-        active_win = app.activeWindow()
+        active_win = QApplication.activeWindow()
+
         show_error_dialog(
             active_win,
             t("main.crash_title", "Unerwarteter Fehler"),

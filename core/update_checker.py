@@ -39,7 +39,8 @@ def _version_tuple(version: str) -> tuple[int, int, int]:
     match = _VERSION_PATTERN.fullmatch(str(version).strip())
     if match is None:
         raise UpdateCheckError(f"Unsupported release version: {version!r}")
-    return tuple(int(match.group(part)) for part in ("major", "minor", "patch"))
+    return (int(match.group("major")), int(match.group("minor")), int(match.group("patch")))
+
 
 
 def _preferred_asset_url(release: Mapping[str, Any], platform_name: str) -> Optional[str]:
