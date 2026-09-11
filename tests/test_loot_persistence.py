@@ -148,7 +148,10 @@ class TestLootManager(unittest.TestCase):
         )
 
         export_path = self.temp_path / "loot_export.md"
-        result = self.loot_mgr.export_loot(export_path, target_ip="10.10.10.30")
+        from core.reporting import ReportBuilder
+
+        builder = ReportBuilder(loot_manager=self.loot_mgr)
+        result = builder.export(export_path, target_ip="10.10.10.30")
 
         self.assertTrue(export_path.exists())
         content = export_path.read_text(encoding="utf-8")

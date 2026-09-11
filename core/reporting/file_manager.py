@@ -45,10 +45,13 @@ class ReportFileManager:
     def __init__(self, project_manager):
         self.project_manager = project_manager
 
-    def _resolve_project_name(self, project_name: Optional[str]) -> str:
+    def resolve_project_name(self, project_name: Optional[str]) -> str:
         if project_name:
             return project_name
         return self.project_manager.get_active_project()
+
+    def _resolve_project_name(self, project_name: Optional[str]) -> str:
+        return self.resolve_project_name(project_name)
 
     def get_report_path(self, project_name: Optional[str] = None) -> Path:
         pname = self._resolve_project_name(project_name)

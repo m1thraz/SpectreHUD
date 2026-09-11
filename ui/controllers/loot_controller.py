@@ -639,7 +639,7 @@ class LootController(QObject):
             if hasattr(dlg, "txt_title"):
                 dlg.txt_title.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
             # Enable click-outside-to-close now that initial focus is set
-            dlg._dismiss_on_deactivate = True
+            dlg.dismiss_on_deactivate = True
             return True
 
 

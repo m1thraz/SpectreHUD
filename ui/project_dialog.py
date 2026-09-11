@@ -175,7 +175,7 @@ class NewProjectDialog(BaseHudDialog):
         raw_name = self.txt_name.text().strip()
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
         clean_name = (
-            self.project_manager._sanitize_name(raw_name)
+            self.project_manager.sanitize_name(raw_name)
             if self.project_manager
             else raw_name.replace(" ", "_")
         )
@@ -218,7 +218,7 @@ class NewProjectDialog(BaseHudDialog):
 
         base = Path(self.txt_dir.text().strip() or str(self.base_projects_dir))
         if self.project_manager and self.project_manager.project_exists(name, base_dir=base):
-            clean = self.project_manager._sanitize_name(name)
+            clean = self.project_manager.sanitize_name(name)
             show_warning_dialog(
                 self,
                 t("project_dialog.err_exists_title", "Project Already Exists"),

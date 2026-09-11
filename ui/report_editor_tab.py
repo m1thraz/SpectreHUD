@@ -617,7 +617,7 @@ class ReportEditorTab(QWidget):
         project_dir = None
         if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
             try:
-                pname = self.report_file_manager._resolve_project_name(self.current_project)
+                pname = self.report_file_manager.resolve_project_name(self.current_project)
                 project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
             except Exception:
                 pass
@@ -632,7 +632,7 @@ class ReportEditorTab(QWidget):
         project_dir = None
         if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
             try:
-                pname = self.report_file_manager._resolve_project_name(self.current_project)
+                pname = self.report_file_manager.resolve_project_name(self.current_project)
                 project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
                 screenshots_dir = project_dir / "screenshots"
                 if screenshots_dir.is_dir():
@@ -682,7 +682,7 @@ class ReportEditorTab(QWidget):
             return
 
         try:
-            pname = self.report_file_manager._resolve_project_name(self.current_project)
+            pname = self.report_file_manager.resolve_project_name(self.current_project)
             project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
             definition = dialog.selected_icon
             relative_path = render_report_icon(project_dir, definition.icon_name)

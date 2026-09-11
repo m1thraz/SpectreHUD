@@ -50,6 +50,13 @@ class NavigationCoordinator(QObject):
     def active_mode(self) -> str:
         return self._state_machine.active_mode
 
+    @active_mode.setter
+    def active_mode(self, mode: str) -> None:
+        self.set_active_mode(mode)
+
+    def set_active_mode(self, mode: str) -> None:
+        self._state_machine.set_active_mode(mode)
+
     def switch_mode(self, mode: str) -> bool:
         """Switches between 'cheatsheet', 'history', 'notes', 'loot', and 'report' modes."""
         if self._state_machine.active_mode == "report" and mode != "report":

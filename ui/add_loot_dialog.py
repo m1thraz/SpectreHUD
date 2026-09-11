@@ -86,6 +86,14 @@ class AddLootDialog(BaseHudDialog):
 
         self._init_form()
 
+    @property
+    def dismiss_on_deactivate(self) -> bool:
+        return self._dismiss_on_deactivate
+
+    @dismiss_on_deactivate.setter
+    def dismiss_on_deactivate(self, val: bool) -> None:
+        self._dismiss_on_deactivate = val
+
     def changeEvent(self, event) -> None:
         """In non-modal mode: close when the window loses focus after having been active."""
         if (

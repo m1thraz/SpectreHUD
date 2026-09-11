@@ -70,7 +70,7 @@ class ProjectController(QObject):
         )
         if pentest_password and self.config is not None:
             self.config.set("bleed_through", 0)
-        clean_name = self.project_manager._sanitize_name(name)
+        clean_name = self.project_manager.sanitize_name(name)
         self.project_created.emit(clean_name)
         return clean_name
 

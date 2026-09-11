@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
     def _setup_shortcuts(self) -> None:
         QShortcut(QKeySequence("Esc"), self, activated=self.hide)
         QShortcut(QKeySequence("Ctrl+F"), self, activated=self.search_panel.set_focus)
-        QShortcut(QKeySequence("Ctrl+N"), self, activated=lambda: self.app._on_add_button_clicked())
+        QShortcut(QKeySequence("Ctrl+N"), self, activated=lambda: self.app.on_add_button_clicked())
         QShortcut(QKeySequence("Ctrl+Alt+S"), self, activated=lambda: self.app.trigger_screenshot())
         QShortcut(
             QKeySequence("Ctrl+Shift+X"), self, activated=lambda: self.app.trigger_screenshot()
@@ -396,8 +396,8 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         try:
-            if hasattr(self, "app") and hasattr(self.app, "_shortcuts_dialog") and self.app._shortcuts_dialog:
-                self.app._shortcuts_dialog.close()
+            if hasattr(self, "app") and hasattr(self.app, "shortcuts_dialog") and self.app.shortcuts_dialog:
+                self.app.shortcuts_dialog.close()
         except Exception:
             pass
         try:

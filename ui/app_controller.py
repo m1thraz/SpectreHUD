@@ -255,9 +255,7 @@ class AppController(QObject):
 
     @active_mode.setter
     def active_mode(self, mode: str) -> None:
-        if hasattr(self.navigation_coord, "_state_machine"):
-            self.navigation_coord._state_machine._active_mode = mode
-        self.navigation_coord._active_mode = mode
+        self.navigation_coord.active_mode = mode
 
     def dispose(self) -> None:
         """Detach process-lifetime subscriptions before deferred Qt deletion."""
@@ -798,7 +796,7 @@ class AppController(QObject):
         if self.active_mode == "cheatsheet":
             self.cheatsheet_ctrl.update_variables(self.cards, vars_dict)
 
-    def _on_add_button_clicked(self) -> None:
+    def on_add_button_clicked(self) -> None:
         target_ip = self._target_provider()
         if self.active_mode == "cheatsheet":
             if self.cheatsheet_ctrl.open_add_dialog(self.window):
@@ -808,6 +806,8 @@ class AppController(QObject):
                 self._on_loot_data_updated()
         elif self.active_mode in ("notes", "history"):
             self.quick_note_ctrl.show_popup()
+
+    _on_add_button_clicked = on_add_button_clicked
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         def export_obsidian(entry_id: str) -> None:

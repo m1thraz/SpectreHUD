@@ -489,9 +489,8 @@ class TestControllersDomain(unittest.TestCase):
         self.loot_ctrl.add_entry("credentials", "DB User", "db:secret", target_ip="10.10.10.55", category="access")
         out_file = self.temp_path / "controller_loot_export.md"
 
-        with patch.object(self.loot_mgr, "export_loot") as mock_deprecated:
-            self.loot_ctrl.export_loot(out_file, target_ip="10.10.10.55")
-            mock_deprecated.assert_not_called()
+        self.assertFalse(hasattr(self.loot_mgr, "export_loot"))
+        self.loot_ctrl.export_loot(out_file, target_ip="10.10.10.55")
 
         self.assertTrue(out_file.exists())
         content = out_file.read_text(encoding="utf-8")

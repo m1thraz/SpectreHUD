@@ -308,6 +308,9 @@ def _render_loot_entry_block(
     return lines
 
 
+render_loot_entry_block = _render_loot_entry_block
+
+
 def _render_phase_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
     """Emit one category oldest-first with the notes insertion anchor after its loot."""
     category_id = section.category_id or "misc"

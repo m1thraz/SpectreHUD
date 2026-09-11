@@ -251,3 +251,88 @@ def test_external_modules_do_not_import_core_subpackage_internals():
         + "\n".join(violations)
     )
 
+def test_core_packages_have_no_dependency_cycles():
+    """Core domain packages must form a clean Directed Acyclic Graph (DAG) with zero cycles."""
+    from collections import defaultdict
+
+    packages = ["loot", "snippets", "screenshots", "platform", "project", "reporting", "exporters"]
+    package_deps = defaultdict(set)
+
+    for pkg in packages:
+        pkg_dir = PROJECT_ROOT / "core" / pkg
+        if not pkg_dir.exists():
+            continue
+        for py_file in pkg_dir.rglob("*.py"):
+            tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+            for node in ast.walk(tree):
+                mod = None
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    mod = node.module
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        mod = alias.name
+                if mod and mod.startswith("core."):
+                    parts = mod.split(".")
+                    if len(parts) >= 2:
+                        target_pkg = parts[1]
+                        if target_pkg in packages and target_pkg != pkg:
+                            package_deps[pkg].add(target_pkg)
+
+    cycles = []
+    visited = set()
+    stack = []
+
+    def dfs(node):
+        visited.add(node)
+        stack.append(node)
+        for neighbor in sorted(package_deps.get(node, [])):
+            if neighbor in stack:
+                idx = stack.index(neighbor)
+                cycles.append(" -> ".join(stack[idx:] + [neighbor]))
+            elif neighbor not in visited:
+                dfs(neighbor)
+        stack.pop()
+
+    for p in sorted(packages):
+        if p not in visited:
+            dfs(p)
+
+    assert cycles == [], f"Detected dependency cycle(s) between core packages: {cycles}"
+
+
+def test_ui_does_not_access_private_core_attributes():
+    """UI layer must not pierce encapsulation by accessing private attributes on core managers/services."""
+    core_manager_names = {
+        "project_manager",
+        "report_file_manager",
+        "screenshot_manager",
+        "snippet_manager",
+        "loot_manager",
+        "loot_mgr",
+    }
+    violations = []
+
+    for py_file in (PROJECT_ROOT / "ui").rglob("*.py"):
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr.startswith("_") and not node.attr.startswith("__"):
+                val_name = None
+                if isinstance(node.value, ast.Name):
+                    val_name = node.value.id
+                elif (
+                    isinstance(node.value, ast.Attribute)
+                    and isinstance(node.value.value, ast.Name)
+                    and node.value.value.id == "self"
+                ):
+                    val_name = node.value.attr
+
+                if val_name and val_name in core_manager_names:
+                    violations.append(
+                        f"{py_file.relative_to(PROJECT_ROOT)}:{node.lineno} accesses {val_name}.{node.attr}"
+                    )
+
+    assert violations == [], (
+        "UI code accesses private attributes on core domain services:\n"
+        + "\n".join(violations)
+    )
+

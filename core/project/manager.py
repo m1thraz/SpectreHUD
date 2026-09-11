@@ -79,8 +79,11 @@ class ProjectManager:
     def _load_registry(self) -> Dict[str, str]:
         return self.repository._load_registry()
 
-    def _sanitize_name(self, name: str, fallback: str = "Default") -> str:
+    def sanitize_name(self, name: str, fallback: str = "Default") -> str:
         return sanitize_project_name(name, fallback=fallback)
+
+    def _sanitize_name(self, name: str, fallback: str = "Default") -> str:
+        return self.sanitize_name(name, fallback=fallback)
 
     def validate_project_name(self, name: str) -> str:
         return validate_project_name(name)

@@ -26,6 +26,10 @@ class NavigationStateMachine:
     def active_mode(self) -> str:
         return self._active_mode
 
+    def set_active_mode(self, mode: str) -> None:
+        if mode in VALID_MODES:
+            self._active_mode = mode
+
     @property
     def history(self) -> List[str]:
         return list(self._history)

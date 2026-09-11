@@ -1,5 +1,4 @@
 import uuid
-import warnings
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Set
 
@@ -412,18 +411,3 @@ class LootManager:
         from core.loot.filter import count_loot_by_category
 
         return count_loot_by_category(self.entries, CATEGORIES, target_ip=target_ip)
-
-    def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        """DEPRECATED: Use core.reporting.builder.ReportBuilder instead.
-
-        Delegates to ReportBuilder for unified reporting.
-        """
-        warnings.warn(
-            "LootManager.export_loot() is deprecated; use core.reporting.builder.ReportBuilder instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from core.reporting import ReportBuilder
-
-        builder = ReportBuilder(loot_manager=self)
-        return builder.export(output_path, target_ip=target_ip)

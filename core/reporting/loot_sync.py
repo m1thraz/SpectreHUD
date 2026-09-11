@@ -234,9 +234,9 @@ def _render_loot_block_text(
     include_phase: bool = False,
     include_recommendation: bool = True,
 ) -> str:
-    from core.reporting.template_engine import _render_loot_entry_block
+    from core.reporting.template_engine import render_loot_entry_block
 
-    lines = _render_loot_entry_block(
+    lines = render_loot_entry_block(
         dict(entry),
         lang=lang,
         include_phase=include_phase,
