@@ -35,12 +35,20 @@ from core.project.state_store import (
 )
 from core.project.persistence import PersistFailureReason, PersistResult
 from core.project.session_service import ProjectSessionService, ProjectSessionValidationError
+from core.project.workspace_service import (
+    WorkspaceApplicationService,
+    WorkspaceSwitchFailureReason,
+    WorkspaceSwitchResult,
+)
 
 __all__ = [
     "ProjectManager",
     "ProjectRepository",
     "ProjectSessionService",
     "ProjectSessionValidationError",
+    "WorkspaceApplicationService",
+    "WorkspaceSwitchFailureReason",
+    "WorkspaceSwitchResult",
     "ProjectError",
     "ProjectExistsError",
     "InvalidProjectNameError",

@@ -21,6 +21,7 @@ from core.project import (
     ProjectManager,
     ProjectSchemaMismatchError,
     ProjectStateCorruptedError,
+    WorkspaceSwitchFailureReason,
 )
 from core.project import WorkspaceError
 from core.project import ProjectSessionService
@@ -299,11 +300,34 @@ class TestWorkspaceCoordinator(unittest.TestCase):
                 self.assertFalse(res)
 
     def test_switch_to_project_target_unlock_failed(self):
-        """switch_to_project resets combo and aborts if target project unlock fails."""
-        with patch.object(self.coord, "_unlock_project_if_needed", return_value=False):
-            res = self.coord.switch_to_project("Box2", self.window, lambda: {})
-            self.assertFalse(res)
-            self.project_ctrl.update_project_combo.assert_called()
+        """switch_to_project resets combo, rolls back, and aborts if target project unlock fails."""
+        with patch.object(self.project_mgr, "is_pentest_mode", return_value=True):
+            with patch.object(self.project_mgr, "is_project_unlocked", return_value=False):
+                with patch.object(self.coord, "_unlock_project_if_needed", return_value=False):
+                    res = self.coord.switch_to_project("Box2", self.window, lambda: {})
+                    self.assertFalse(res)
+                    self.assertTrue(res.rollback_performed)
+                    self.assertEqual(self.project_mgr.active_project, "Box1")
+                    self.project_ctrl.update_project_combo.assert_called()
+
+    def test_switch_to_project_target_unlock_cancelled_rolls_back(self):
+        """Cancelling the unlock dialog rolls back active project to previous project without error dialog."""
+        with patch.object(self.project_mgr, "is_pentest_mode", return_value=True):
+            with patch.object(self.project_mgr, "is_project_unlocked", return_value=False):
+                with patch("ui.coordinators.workspace_coordinator.ProjectUnlockDialog") as MockDlg:
+                    mock_dlg = MagicMock()
+                    mock_dlg.exec.return_value = 0
+                    MockDlg.return_value = mock_dlg
+
+                    with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_err:
+                        res = self.coord.switch_to_project("Box2", self.window, lambda: {})
+
+                    self.assertFalse(res)
+                    self.assertEqual(res.failure_reason, WorkspaceSwitchFailureReason.UNLOCK_CANCELLED)
+                    self.assertTrue(res.rollback_performed)
+                    self.assertEqual(self.project_mgr.active_project, "Box1")
+                    self.project_ctrl.update_project_combo.assert_called()
+                    mock_err.assert_not_called()
 
     def test_apply_workspace_setting_restore_failure_critical(self):
         """apply_workspace_setting shows critical error when both switch and restore fail."""

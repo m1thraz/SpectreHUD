@@ -11,9 +11,14 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 from core.project import ProjectManager, ProjectState, ProjectStateLoadError
 from core.project import PersistFailureReason
 from core.project import WorkspaceError, validate_workspace_directory
+from core.project import (
+    WorkspaceApplicationService,
+    WorkspaceSwitchFailureReason,
+    WorkspaceSwitchResult,
+)
 from core.config import ConfigManager
 from core.project import ProjectSessionService
-from core.event_bus import EventBus, EventType, ProjectChangedPayload
+from core.event_bus import EventBus
 from core.i18n import t
 from core.logger import get_logger
 from ui.controllers.project_controller import ProjectController
@@ -38,6 +43,7 @@ class WorkspaceCoordinator(QObject):
         report_ctrl: ReportController,
         event_bus: EventBus,
         parent: Optional[QObject] = None,
+        workspace_service: Optional[WorkspaceApplicationService] = None,
     ):
         super().__init__(parent)
         self.project_manager = project_manager
@@ -45,6 +51,13 @@ class WorkspaceCoordinator(QObject):
         self.project_ctrl = project_ctrl
         self.report_ctrl = report_ctrl
         self.event_bus = event_bus
+        self.workspace_service = workspace_service or WorkspaceApplicationService(
+            project_manager=self.project_manager,
+            session_service=self.session_service,
+            report_loader=self.report_ctrl.load_project,
+            event_bus=self.event_bus,
+        )
+        self._last_unlock_cancelled = False
 
     def load_active_project_session(
         self, window: Optional[QWidget] = None
@@ -109,6 +122,7 @@ class WorkspaceCoordinator(QObject):
         while True:
             dialog = ProjectUnlockDialog(project_name, parent=window)
             if not dialog.exec():
+                self._last_unlock_cancelled = True
                 return False
             try:
                 if self.project_manager.unlock_project(project_name, dialog.get_password()):
@@ -142,21 +156,54 @@ class WorkspaceCoordinator(QObject):
         window: QWidget,
         variables_provider: Callable[[], Dict[str, str]],
         on_success_callback: Optional[Callable[[str], None]] = None,
-    ) -> bool:
+    ) -> WorkspaceSwitchResult:
         """
-        Validates dirty reports, persists previous project state, and switches to a new project.
+        Coordinates dirty checks and user prompts, delegating atomic switching
+        and rollback to WorkspaceApplicationService.
         """
-        if project_name == self.project_manager.get_active_project():
-            return False
+        current_proj = self.project_manager.get_active_project()
+        if project_name == current_proj:
+            return WorkspaceSwitchResult(
+                success=False,
+                previous_project=current_proj,
+                active_project=current_proj,
+                failure_reason=WorkspaceSwitchFailureReason.SAME_PROJECT,
+            )
 
         if not self.report_ctrl.confirm_discard_if_dirty():
-            return False
+            return WorkspaceSwitchResult(
+                success=False,
+                previous_project=current_proj,
+                active_project=current_proj,
+                failure_reason=None,
+            )
 
-        current_proj = self.project_manager.get_active_project()
         variables = variables_provider() if variables_provider else {}
-        if not self.save_current_project_session(variables):
+
+        def unlock_callback(pname: str) -> str:
+            self._last_unlock_cancelled = False
+            unlocked = self._unlock_project_if_needed(pname, window)
+            if unlocked:
+                return "success"
+            if getattr(self, "_last_unlock_cancelled", False):
+                return "cancelled"
+            return "failed"
+
+        result = self.workspace_service.switch_to_project(
+            project_name,
+            variables=variables,
+            force_discard=False,
+            unlock_callback=unlock_callback,
+        )
+
+        if (
+            not result.success
+            and result.failure_reason is WorkspaceSwitchFailureReason.PRE_SWITCH_SAVE_FAILED
+        ):
             logger.error(
-                f"Failed to persist state for project '{current_proj}' before switching to '{project_name}'"
+                "Failed to persist state for project '%s' before switching to '%s'",
+                current_proj,
+                project_name,
             )
             project_unavailable = not self.project_manager.project_exists(current_proj)
             if project_unavailable:
@@ -174,9 +221,10 @@ class WorkspaceCoordinator(QObject):
                     "Möchtest du den Projektwechsel trotzdem fortsetzen und ungespeicherte Änderungen verwerfen?",
                     project=current_proj,
                 )
+                save_reason = getattr(self, "_last_save_failure_reason", None)
                 message = (
                     f"{base_message}\n\n"
-                    f"({self._failure_reason_label(self._last_save_failure_reason)})"
+                    f"({self._failure_reason_label(save_reason)})"
                 )
             reply = ask_confirmation(
                 window,
@@ -185,58 +233,65 @@ class WorkspaceCoordinator(QObject):
                 buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
                 default_button=QMessageBox.StandardButton.Cancel,
             )
-            if reply != QMessageBox.StandardButton.Yes:
-                self.project_ctrl.update_project_combo()
-                return False
+            if reply == QMessageBox.StandardButton.Yes:
+                result = self.workspace_service.switch_to_project(
+                    project_name,
+                    variables=variables,
+                    force_discard=True,
+                    unlock_callback=unlock_callback,
+                )
 
-        try:
-            self.project_manager.activate_project(project_name)
-        except Exception as activate_err:
-            logger.error(f"Failed to activate project '{project_name}': {activate_err}")
-            show_error_dialog(
-                window,
-                t("general.error", "Error"),
-                t(
-                    "project.not_found_msg",
-                    f"Project '{project_name}' does not exist and cannot be activated.\n\n{activate_err}",
-                ),
-            )
+        if not result.success:
+            self._present_switch_failure(result, project_name, window)
             self.project_ctrl.update_project_combo()
-            return False
-
-        # The target is verified before the active project's key is cleared.
-        if not self._unlock_project_if_needed(project_name, window):
-            self.project_ctrl.update_project_combo()
-            return False
-
-        try:
-            self.report_ctrl.load_project(project_name)
-        except Exception as report_err:
-            logger.error(
-                f"Failed to load report for project '{project_name}', rolling back project switch: {report_err}",
-                exc_info=True,
-            )
-            try:
-                self.project_manager.activate_project(current_proj)
-            except Exception:
-                logger.exception("Failed to restore the previous project after report load failure")
-            show_error_dialog(
-                window,
-                t("general.error", "Error"),
-                f"Failed to load the report for project '{project_name}'. The previous project has been restored.\n\n{report_err}",
-            )
-            self.project_ctrl.update_project_combo()
-            return False
+            return result
 
         if on_success_callback:
             on_success_callback(project_name)
 
         self.project_changed.emit(project_name)
-        self.event_bus.publish(
-            EventType.PROJECT_CHANGED,
-            ProjectChangedPayload(project_name=project_name, phase="loaded"),
-        )
-        return True
+        return result
+
+    def _present_switch_failure(
+        self,
+        result: WorkspaceSwitchResult,
+        target_project: str,
+        window: Optional[QWidget],
+    ) -> None:
+        if window is None or result.failure_reason is WorkspaceSwitchFailureReason.UNLOCK_CANCELLED:
+            return
+
+        if result.failure_reason in (
+            WorkspaceSwitchFailureReason.TARGET_NOT_FOUND,
+            WorkspaceSwitchFailureReason.ACTIVATION_FAILED,
+        ):
+            show_error_dialog(
+                window,
+                t("general.error", "Error"),
+                t(
+                    "project.not_found_msg",
+                    f"Project '{target_project}' does not exist and cannot be activated.\n\n{result.error_message or ''}",
+                ),
+            )
+        elif result.failure_reason is WorkspaceSwitchFailureReason.REPORT_LOAD_FAILED:
+            show_error_dialog(
+                window,
+                t("general.error", "Error"),
+                f"Failed to load the report for project '{target_project}'. The previous project has been restored.\n\n{result.error_message or ''}",
+            )
+        elif result.failure_reason is WorkspaceSwitchFailureReason.SESSION_LOAD_FAILED:
+            show_error_dialog(
+                window,
+                t("general.error", "Error"),
+                f"Failed to load session for project '{target_project}'. The previous project has been restored.\n\n{result.error_message or ''}",
+            )
+        elif result.failure_reason is WorkspaceSwitchFailureReason.UNLOCK_FAILED:
+            if result.error_message:
+                show_error_dialog(
+                    window,
+                    t("project.pentest_meta_error_title", "Pentest-Modus fehlerhaft"),
+                    result.error_message,
+                )
 
     def apply_workspace_setting(
         self,

@@ -3,9 +3,8 @@
 This map covers only contracts and pitfalls that become apparent at the boundaries between multiple components.
 
 ## Project Switching
-- Non-obvious: The "report dirty" decision and saving of the old session occur prior to activation; the target report is loaded subsequently—before the atomic loading of loot, history, notes, and phase, which only takes place within the success callback.
-- Known pitfall: `activate_project()` discards the old in-memory key and publishes `PROJECT_CHANGED` with the phase `activated` before unlocking and loading the report/session succeed; only the successful completion of the coordinator process publishes the phase `loaded`.
-- Known pitfall: If the target project's unlock process is aborted, the coordinator currently returns `False` without reverting to the previously active project; consequently, the UI and runtime may assume different active projects.
+- Non-obvious: The interactive "report dirty" decision and saving of the old session occur prior to activation so the user can abort without side-effects; target activation, unlocking, report loading, and session state loading are orchestrated as an atomic transaction by `WorkspaceApplicationService` with automatic rollback on failure.
+- Known pitfall: `activate_project()` discards the old in-memory key and publishes `PROJECT_CHANGED` with the phase `activated` before unlocking and loading succeed; if the operation is aborted or fails, `WorkspaceApplicationService` rolls back to the previous project and restores its key, but listeners that react eagerly to `phase="activated"` see the transient target activation before the rollback event. Components should primarily await `phase="loaded"`.
 - Design rationale: The four session components are replaced collectively only after full validation, whereas `report.md` is protected separately due to its own "dirty/save" contract.
 
 ## Toggling Pentest Mode

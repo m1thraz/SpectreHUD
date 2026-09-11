@@ -387,6 +387,7 @@ KNOWN_PURE_CORE_TEST_FILES = {
     "test_update_checker.py",
     "test_validators.py",
     "test_verify_wheel.py",
+    "test_workspace_service.py",
 }
 
 
