@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QListView,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QStyle,
@@ -496,3 +497,135 @@ class LootImagePickerDialog(QDialog):
     def _on_double_clicked(self, item: QListWidgetItem) -> None:
         if self.selected_entry:
             self.accept()
+
+
+class ReportExportTypeDialog(QDialog):
+    """Dialog for choosing report export format (HTML/PDF, Obsidian, CherryTree, Markdown)."""
+
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setWindowTitle(t("report.export_dialog_title", "Export Report"))
+        self.setMinimumWidth(320)
+        self.selected_type: Optional[str] = None
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 16)
+
+        lbl = QLabel(
+            t("report.export_dialog_message", "Choose an export format for the current report.")
+        )
+        lbl.setWordWrap(True)
+        layout.addWidget(lbl)
+        layout.addSpacing(4)
+
+        choices = (
+            (
+                "html",
+                t("report.export_html", "Export HTML/PDF"),
+                t(
+                    "report.export_html_desc",
+                    "Create an editable web report or a print-ready HTML file for PDF output.",
+                ),
+            ),
+            (
+                "obsidian",
+                t("report.export_obsidian", "Export to Obsidian..."),
+                t(
+                    "report.export_obsidian_desc",
+                    "Write the report and linked screenshots into the configured Obsidian vault.",
+                ),
+            ),
+            (
+                "cherrytree",
+                t("report.export_cherrytree", "Export CherryTree Package..."),
+                t(
+                    "report.export_cherrytree_desc",
+                    "Create a portable HTML package with attachments for import into CherryTree.",
+                ),
+            ),
+            (
+                "markdown",
+                t("report.export_copy", "Export MD..."),
+                t(
+                    "report.export_markdown_desc",
+                    "Save an exact Markdown copy of the current Report Editor document.",
+                ),
+            ),
+        )
+
+        for export_type, label, description in choices:
+            btn = QPushButton(label)
+            btn.setMinimumHeight(32)
+            btn.setProperty("class", "SecondaryBtn")
+
+            def _make_handler(et: str):
+                def _handle(_checked: bool = False) -> None:
+                    self.selected_type = et
+                    self.accept()
+
+                return _handle
+
+            btn.clicked.connect(_make_handler(export_type))
+            layout.addWidget(btn)
+
+            description_label = QLabel(description)
+            description_label.setWordWrap(True)
+            description_label.setProperty("class", "HintLabel")
+            description_label.setProperty("exportType", export_type)
+            layout.addWidget(description_label)
+
+        layout.addSpacing(4)
+        cancel_btn = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel_btn.setMinimumHeight(32)
+        cancel_btn.clicked.connect(self.reject)
+        layout.addWidget(cancel_btn)
+
+    @classmethod
+    def select_export_type(cls, parent: Optional[QWidget] = None) -> Optional[str]:
+        dlg = cls(parent)
+        dlg.exec()
+        return dlg.selected_type
+
+
+def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[tuple[str, str]]:
+    """Choose the HTML presentation profile without changing report content."""
+    msg = QMessageBox(parent)
+    msg.setWindowTitle(t("report.html_profile_title", "Choose HTML Export Profile"))
+    msg.setText(t("report.html_profile_message", "How should the HTML report be presented?"))
+    msg.setInformativeText(
+        t(
+            "report.html_profile_hint",
+            "Both exports remain editable in the browser; Professional Print uses a controlled A4 layout. Generate the PDF from the exported HTML file.",
+        )
+    )
+    msg.setIcon(QMessageBox.Icon.Question)
+    professional_button = msg.addButton(
+        t("report.html_profile_professional", "Professional Print"),
+        QMessageBox.ButtonRole.AcceptRole,
+    )
+    classic_web_button = msg.addButton(
+        t("report.html_profile_classic_web", "Classic Web (editable)"),
+        QMessageBox.ButtonRole.ActionRole,
+    )
+    cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
+    msg.setDefaultButton(professional_button)
+    msg.setMinimumWidth(640)
+    professional_button.setMinimumWidth(170)
+    classic_web_button.setMinimumWidth(210)
+    professional_button.setToolTip(
+        t("report.html_profile_professional_tip", "Print-ready A4 presentation for browser PDF generation")
+    )
+    classic_web_button.setToolTip(
+        t("report.html_profile_classic_web_tip", "Editable responsive web report for browser use")
+    )
+    cancel_button.setMinimumWidth(100)
+    msg.exec()
+
+    if msg.clickedButton() is professional_button:
+        return "light", "professional_print"
+    if msg.clickedButton() is classic_web_button:
+        return "light", "interactive"
+    return None

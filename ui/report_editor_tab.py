@@ -28,28 +28,31 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLabel,
     QMessageBox,
-    QFileDialog,
+    QFileDialog,  # noqa: F401
     QDialog,
     QMenu,
 )
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
-from core.reporting import ExportStatus, ReportFileManager, ReportTemplate, TemplateRepository
+from core.reporting import ReportFileManager, ReportTemplate, TemplateRepository
 from core.config import ConfigManager
-from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportError
+from ui.coordinators.export_coordinator import ExportCoordinator
 from core.logger import get_logger
 from core.i18n import t
 from core.fonts import get_report_font_stack
-from core.platform import open_path
+from core.platform import open_path  # noqa: F401
 from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
-    LootImagePickerDialog,
-    MarkdownTableDialog,
-    ReportIconPickerDialog,
+    LootImagePickerDialog,  # noqa: F401
+    MarkdownTableDialog,  # noqa: F401
     ReportGenerationDialog,
+    ReportIconPickerDialog,  # noqa: F401
     ReportRegenerationConfirmDialog,
+    select_html_export_options,
 )
-from ui.report.icon_assets import ReportIconError, render_report_icon
+from ui.report.export_actions import ReportExportActions
+from ui.report.format_actions import ReportFormatActions
+from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
 from ui.glass_panel import GlassPanel
 from ui.report.preview import ReportDocument, ReportPreviewEdit
@@ -57,9 +60,9 @@ from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
 from ui.styles.icons import icon
 from ui.message_boxes import (
-    ask_confirmation,
-    show_error_dialog,
-    show_information_dialog,
+    ask_confirmation,  # noqa: F401
+    show_error_dialog,  # noqa: F401
+    show_information_dialog,  # noqa: F401
     show_warning_dialog,
 )
 from core.reporting import build_report_navigation
@@ -168,6 +171,26 @@ class ReportEditorTab(QWidget):
         self._preview_markdown_snapshot: Optional[str] = None
 
         self._syncing_scroll = False
+
+        self.format_actions = ReportFormatActions(
+            editor=lambda: self.editor,
+            parent_widget=self,
+            loot_manager_provider=lambda: self.loot_manager,
+            report_file_manager_provider=lambda: self.report_file_manager,
+            current_project_provider=lambda: self.current_project,
+            format_toolbar_provider=lambda: getattr(self, "format_toolbar_widget", None),
+        )
+        self.export_actions = ReportExportActions(
+            parent_widget=self,
+            editor=lambda: self.editor,
+            report_file_manager_provider=lambda: self.report_file_manager,
+            export_coordinator_provider=lambda: self.export_coordinator,
+            current_project_provider=lambda: self.current_project,
+            active_template_provider=lambda: self.active_template,
+            report_font_key_provider=lambda: self._report_font_key(),
+            select_export_type_override=lambda: self._select_export_type(),
+            select_html_options_override=lambda: self._select_html_export_options(),
+        )
 
         self._preview_timer = QTimer(self)
         self._preview_timer.setSingleShot(True)
@@ -487,220 +510,53 @@ class ReportEditorTab(QWidget):
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     def _format_heading(self, level: int) -> None:
-        from ui.markdown_toolbar_actions import set_heading
-
-        set_heading(self.editor, level)
+        self.format_actions.format_heading(level)
 
     def _format_wrap(self, prefix: str, suffix: str) -> None:
-        from ui.markdown_toolbar_actions import wrap_selection
-
-        wrap_selection(self.editor, prefix, suffix)
+        self.format_actions.format_wrap(prefix, suffix)
 
     def _format_align(self, alignment: str) -> None:
-        from ui.markdown_toolbar_actions import align_text
-
-        align_text(self.editor, alignment)
+        self.format_actions.format_align(alignment)
 
     def _format_quote(self) -> None:
-        from ui.markdown_toolbar_actions import insert_blockquote
-
-        insert_blockquote(self.editor)
+        self.format_actions.format_quote()
 
     def _format_horizontal_rule(self) -> None:
-        from ui.markdown_toolbar_actions import insert_horizontal_rule
-
-        insert_horizontal_rule(self.editor)
+        self.format_actions.format_horizontal_rule()
 
     def _format_code_block(self) -> None:
-        from ui.markdown_toolbar_actions import insert_fenced_code
-
-        insert_fenced_code(self.editor)
+        self.format_actions.format_code_block()
 
     def _format_list(self, numbered: bool) -> None:
-        from ui.markdown_toolbar_actions import prefix_lines
-
-        prefix_lines(self.editor, numbered)
+        self.format_actions.format_list(numbered)
 
     def _format_link(self) -> None:
-        from ui.markdown_toolbar_actions import insert_link
-
-        insert_link(self.editor)
+        self.format_actions.format_link()
 
     def _format_table(self) -> None:
-        dialog = MarkdownTableDialog(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            from ui.markdown_toolbar_actions import insert_table
-
-            insert_table(self.editor, dialog.rows.value(), dialog.columns.value())
+        self.format_actions.format_table()
 
     def _format_page_break(self) -> None:
-        from ui.markdown_toolbar_actions import insert_page_break
-
-        insert_page_break(self.editor)
+        self.format_actions.format_page_break()
 
     def _format_spacer(self, size: str) -> None:
-        from ui.markdown_toolbar_actions import insert_spacer
-
-        insert_spacer(self.editor, size)
+        self.format_actions.format_spacer(size)
 
     def _format_image(self) -> None:
-        """Offers screenshot insertion from Loot or local filesystem browse."""
-        screenshot_entries = (
-            self.loot_manager.get_entries(entry_type="screenshot")
-            if self.loot_manager
-            else []
-        )
-
-        if not screenshot_entries:
-            self._browse_and_insert_image()
-            return
-
-        menu = QMenu(self)
-        action_browse = menu.addAction(t("report.image_browse", "📁 Choose from Computer..."))
-        menu.addSeparator()
-
-        menu.addSection(t("report.image_from_loot", "📸 Screenshots from Loot:"))
-        entry_actions = {}
-        for entry in screenshot_entries[:6]:
-            title = entry.get("title", "Screenshot")
-            ts = entry.get("timestamp", "")
-            label = f"{title}  ({ts})" if ts else title
-            act = menu.addAction(label)
-            entry_actions[act] = entry
-
-        action_all_loot = None
-        if len(screenshot_entries) > 6:
-            menu.addSeparator()
-            action_all_loot = menu.addAction(
-                t("report.image_all_loot", "🔍 Browse all Screenshots...")
-            )
-
-        button = None
-        if hasattr(self, "format_toolbar_widget"):
-            button = self.format_toolbar_widget.findChild(QPushButton, "btn_insert_image")
-
-        pos = (
-            button.mapToGlobal(button.rect().bottomLeft())
-            if button
-            else self.mapToGlobal(self.rect().center())
-        )
-        selected_action = menu.exec(pos)
-
-        if not selected_action:
-            return
-
-        if selected_action == action_browse:
-            self._browse_and_insert_image()
-        elif selected_action == action_all_loot:
-            self._open_loot_image_picker(screenshot_entries)
-        elif selected_action in entry_actions:
-            self._insert_loot_entry_image(entry_actions[selected_action])
+        self.format_actions.format_image()
 
     def _insert_loot_entry_image(self, entry: dict) -> None:
-        """Inserts a markdown image from a loot screenshot entry."""
-        title = entry.get("title", "Screenshot")
-        content = (entry.get("content") or "").strip()
-
-        if content.startswith("![") and content.endswith(")"):
-            cursor = self.editor.textCursor()
-            cursor.insertText(content)
-            self.editor.setFocus()
-        else:
-            from ui.markdown_toolbar_actions import insert_image
-
-            insert_image(self.editor, content, alt_text=title)
+        self.format_actions.insert_loot_entry_image(entry)
 
     def _open_loot_image_picker(self, screenshot_entries: list[dict]) -> None:
-        """Opens a searchable dialog to select from all loot screenshots."""
-        project_dir = None
-        if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
-            try:
-                pname = self.report_file_manager.resolve_project_name(self.current_project)
-                project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
-            except Exception:
-                pass
-
-        dialog = LootImagePickerDialog(screenshot_entries, project_dir=project_dir, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
-            self._insert_loot_entry_image(dialog.selected_entry)
+        self.format_actions.open_loot_image_picker(screenshot_entries)
 
     def _browse_and_insert_image(self) -> None:
-        """Prompts the user for an image file from the disk and inserts its relative markdown link."""
-        start_dir = ""
-        project_dir = None
-        if self.report_file_manager and getattr(self.report_file_manager, "project_manager", None):
-            try:
-                pname = self.report_file_manager.resolve_project_name(self.current_project)
-                project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
-                screenshots_dir = project_dir / "screenshots"
-                if screenshots_dir.is_dir():
-                    start_dir = str(screenshots_dir)
-                elif project_dir.is_dir():
-                    start_dir = str(project_dir)
-            except Exception as e:
-                logger.debug(f"Failed to resolve project dir for image dialog: {e}")
-
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            t("report.select_image_title", "Select Image"),
-            start_dir,
-            t(
-                "report.select_image_filter",
-                "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;All Files (*.*)",
-            ),
-        )
-        if not file_path:
-            return
-
-        rel_path = file_path
-        if self.report_file_manager:
-            try:
-                rel_path = self.report_file_manager.import_image(file_path, self.current_project)
-            except Exception as e:
-                logger.warning(f"Could not copy image to project directory: {e}")
-                if project_dir:
-                    try:
-                        rel_path = (
-                            Path(file_path).resolve().relative_to(project_dir.resolve()).as_posix()
-                        )
-                    except ValueError:
-                        rel_path = file_path.replace("\\", "/")
-                else:
-                    rel_path = file_path.replace("\\", "/")
-
-        alt_text = Path(file_path).stem
-        from ui.markdown_toolbar_actions import insert_image
-
-        insert_image(self.editor, rel_path, alt_text=alt_text)
+        self.format_actions.browse_and_insert_image()
 
     def _format_icon(self) -> None:
-        """Render a curated QtAwesome icon to a project PNG and insert it as Markdown."""
-        dialog = ReportIconPickerDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.selected_icon is None:
-            return
+        self.format_actions.format_icon()
 
-        try:
-            pname = self.report_file_manager.resolve_project_name(self.current_project)
-            project_dir = self.report_file_manager.project_manager.get_project_dir(pname)
-            definition = dialog.selected_icon
-            relative_path = render_report_icon(project_dir, definition.icon_name)
-        except (AttributeError, OSError, RuntimeError, ReportIconError) as exc:
-            logger.warning("Could not create report icon asset: %s", exc)
-            show_error_dialog(
-                self,
-                t("report.icon_error_title", "Icon could not be inserted"),
-                t(
-                    "report.icon_error_message",
-                    "The report icon could not be created:\n{error}",
-                    error=str(exc),
-                ),
-            )
-            return
-
-        from ui.markdown_toolbar_actions import insert_image
-
-        alt_text = t(definition.label_key, definition.key.replace("_", " ").title())
-        insert_image(self.editor, relative_path, alt_text=alt_text)
 
     def _report_font_key(self) -> str:
         return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"
@@ -1258,71 +1114,70 @@ class ReportEditorTab(QWidget):
 
     def _on_export_clicked(self) -> None:
         """Opens the single export chooser and delegates to the selected workflow."""
-        export_type = self._select_export_type()
-        if export_type == "markdown":
-            self._on_export_copy_clicked()
-        elif export_type == "html":
-            self._on_export_html_clicked()
-        elif export_type == "obsidian":
-            self._on_export_obsidian_clicked()
-        elif export_type == "cherrytree":
-            self._on_export_cherrytree_clicked()
+        self.export_actions.on_export_clicked()
 
     def _select_export_type(self) -> Optional[str]:
         """Returns the selected export workflow without duplicating export logic."""
         dialog = QDialog(self)
         dialog.setWindowTitle(t("report.export_dialog_title", "Export Report"))
-        dialog.setMinimumWidth(320)
+        dialog.setMinimumWidth(360)
 
         layout = QVBoxLayout(dialog)
-        layout.setSpacing(8)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
-        lbl = QLabel(
-            t("report.export_dialog_message", "Choose an export format for the current report.")
-        )
-        lbl.setWordWrap(True)
-        layout.addWidget(lbl)
-        layout.addSpacing(4)
+        selected_type = None
 
-        choices = (
+        choices = [
             (
                 "html",
                 t("report.export_html", "Export HTML/PDF"),
-                t("report.export_html_desc", "Create an editable web report or a print-ready HTML file for PDF output."),
+                t(
+                    "report.export_html_desc",
+                    "Export self-contained HTML (opens in browser) or prepare print-ready PDF.",
+                ),
             ),
             (
                 "obsidian",
                 t("report.export_obsidian", "Export to Obsidian..."),
-                t("report.export_obsidian_desc", "Write the report and linked screenshots into the configured Obsidian vault."),
+                t(
+                    "report.export_obsidian_desc",
+                    "Export markdown and images to an Obsidian vault folder.",
+                ),
             ),
             (
                 "cherrytree",
                 t("report.export_cherrytree", "Export CherryTree Package..."),
-                t("report.export_cherrytree_desc", "Create a portable HTML package with attachments for import into CherryTree."),
+                t(
+                    "report.export_cherrytree_desc",
+                    "Export HTML report with bundled images as a CherryTree-ready package.",
+                ),
             ),
             (
                 "markdown",
                 t("report.export_copy", "Export MD..."),
-                t("report.export_markdown_desc", "Save an exact Markdown copy of the current Report Editor document."),
+                t(
+                    "report.export_markdown_desc",
+                    "Save an exact Markdown copy of the current Report Editor document.",
+                ),
             ),
-        )
-
-        selected: list[Optional[str]] = [None]
+        ]
 
         for export_type, label, description in choices:
             btn = QPushButton(label)
             btn.setMinimumHeight(32)
             btn.setProperty("class", "SecondaryBtn")
-            def _make_handler(et: str):
+
+            def _make_handler(et: str = export_type):
                 def _handle(_checked: bool = False) -> None:
-                    selected[0] = et
+                    nonlocal selected_type
+                    selected_type = et
                     dialog.accept()
 
                 return _handle
 
             btn.clicked.connect(_make_handler(export_type))
             layout.addWidget(btn)
+
             description_label = QLabel(description)
             description_label.setWordWrap(True)
             description_label.setProperty("class", "HintLabel")
@@ -1336,168 +1191,22 @@ class ReportEditorTab(QWidget):
         layout.addWidget(cancel_btn)
 
         dialog.exec()
-        return selected[0]
+        return selected_type
 
     def _on_export_copy_clicked(self) -> None:
-        default_path = self.report_file_manager.get_report_path(self.current_project)
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            t("report.export_copy_dialog_title", "Report-Kopie exportieren"),
-            str(default_path),
-            "Markdown (*.md)",
-        )
-        if not file_path:
-            return
-
-        target = Path(file_path)
-        if target.suffix.lower() != ".md":
-            target = target.with_suffix(".md")
-
-        coordinator = self._require_export_coordinator()
-        if coordinator is None:
-            return
-        try:
-            result = coordinator.export_report_markdown(target, self.editor.toPlainText())
-            self._present_export_result(
-                result,
-                title=t("report.export_saved_title", "Exportiert"),
-                success_message=t(
-                    "report.export_saved_msg", "Kopie gespeichert: {filename}", filename=target.name
-                ),
-            )
-        except ReportExportError as exc:
-            logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
-            show_error_dialog(
-                self.window() if self else None,
-                t("dialog.error", "Fehler"),
-                t(
-                    "report.export_failed_msg",
-                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
-                    filename=target.name,
-                ),
-                details=str(exc),
-            )
+        self.export_actions.on_export_copy_clicked()
 
     def _on_export_html_clicked(self) -> None:
-        export_options = self._select_html_export_options()
-        if export_options is None:
-            return
-        theme, profile = export_options
-
-        default_path = self.report_file_manager.get_report_path(self.current_project).with_suffix(
-            ".html"
-        )
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            t("report.export_html_dialog_title", "HTML-Report exportieren"),
-            str(default_path),
-            "HTML (*.html)",
-        )
-        if not file_path:
-            return
-
-        target = Path(file_path)
-        if target.suffix.lower() != ".html":
-            target = target.with_suffix(".html")
-
-        coordinator = self._require_export_coordinator()
-        if coordinator is None:
-            return
-        try:
-            doc_lang = self.active_template.language if self.active_template else "en"
-            result = coordinator.export_report_html(
-                target=target,
-                project_name=self.current_project,
-                markdown=self.editor.toPlainText(),
-                theme=theme,
-                report_font=self._report_font_key(),
-                language=doc_lang,
-                profile=profile,
-            )
-            self._present_export_result(
-                result,
-                title=t("report.export_html_success_title", "HTML-Report exportiert"),
-                ask_open_file=target,
-            )
-        except ReportExportError as exc:
-            logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
-            show_error_dialog(
-                self.window() if self else None,
-                t("dialog.error", "Fehler"),
-                t(
-                    "report.export_failed_msg",
-                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
-                    filename=target.name,
-                ),
-                details=str(exc),
-            )
+        self.export_actions.on_export_html_clicked()
 
     def _on_export_obsidian_clicked(self) -> None:
-        """Delegate the current editor document to the shared export coordinator."""
-        if not self.current_project:
-            return
-        coordinator = self._require_export_coordinator()
-        if coordinator is None:
-            return
-        coordinator.export_report_to_obsidian(
-            self,
-            self.current_project,
-            self.editor.toPlainText(),
-        )
+        self.export_actions.on_export_obsidian_clicked()
 
     def _require_export_coordinator(self) -> Optional[ExportCoordinator]:
-        """Return the application export boundary or show a controlled error."""
-        if self.export_coordinator is None:
-            logger.error("Obsidian report export requested without a configured handler.")
-            show_error_dialog(
-                self,
-                t("report.obsidian_export_failed_title", "Obsidian export failed"),
-                t(
-                    "report.obsidian_export_unavailable",
-                    "The Obsidian export service is unavailable.",
-                ),
-            )
-            return None
-        return self.export_coordinator
+        return self.export_actions.require_export_coordinator()
 
     def _on_export_cherrytree_clicked(self) -> None:
-        """Creates a portable HTML package; no CherryTree database is touched."""
-        if not self.current_project:
-            return
-        project_dir = self.report_file_manager.project_manager.get_project_dir(self.current_project)
-        default_directory = project_dir / "exports"
-        destination = QFileDialog.getExistingDirectory(
-            self,
-            t("report.cherrytree_directory_title", "Choose CherryTree export directory"),
-            str(default_directory if default_directory.exists() else project_dir),
-        )
-        if not destination:
-            return
-        coordinator = self._require_export_coordinator()
-        if coordinator is None:
-            return
-        try:
-            result = coordinator.export_report_to_cherrytree(
-                destination=Path(destination),
-                project_name=self.current_project,
-                markdown=self.editor.toPlainText(),
-                report_font=self._report_font_key(),
-            )
-            self._present_export_result(
-                result,
-                title=t("report.cherrytree_exported_title", "CherryTree package complete"),
-            )
-        except ReportExportError as exc:
-            logger.error("CherryTree package export failed: %s", exc, exc_info=True)
-            show_error_dialog(
-                self,
-                t("report.cherrytree_export_failed_title", "CherryTree export failed"),
-                t(
-                    "report.cherrytree_export_failed",
-                    "The CherryTree package could not be created:\n{error}",
-                    error=str(exc),
-                ),
-            )
+        self.export_actions.on_export_cherrytree_clicked()
 
     def _present_export_result(
         self,
@@ -1507,126 +1216,16 @@ class ReportEditorTab(QWidget):
         success_message: Optional[str] = None,
         ask_open_file: Optional[Path] = None,
     ) -> None:
-        """Presents an ExportResult or legacy export outcome in a unified way."""
-        status = getattr(result, "status", None)
-        if status is ExportStatus.CANCELLED:
-            return
-
-        if status is ExportStatus.FAILED:
-            err = getattr(result, "error", None)
-            err_msg = getattr(err, "message", None) if err else "Export failed"
-            details = getattr(err, "details", None) if err else None
-            show_error_dialog(self.window() if self else None, title, str(err_msg), details=details)
-            return
-
-        msg = success_message
-        if not msg:
-            artifacts = getattr(result, "artifacts", ())
-            note_path = getattr(result, "note_path", None)
-            if artifacts:
-                first = artifacts[0].path
-                if any(getattr(a, "format", "") == "image" for a in artifacts):
-                    msg = t(
-                        "report.cherrytree_exported",
-                        "CherryTree HTML package created:\n{path}",
-                        path=str(first.parent),
-                    )
-                else:
-                    msg = t(
-                        "report.export_saved_msg",
-                        "Kopie gespeichert: {filename}",
-                        filename=first.name,
-                    )
-            elif note_path:
-                p = Path(note_path)
-                if p.suffix.lower() in (".html", ".ctd", ".ctb"):
-                    msg = t(
-                        "report.cherrytree_exported",
-                        "CherryTree HTML package created:\n{path}",
-                        path=str(p.parent),
-                    )
-                else:
-                    msg = t(
-                        "report.export_saved_msg",
-                        "Kopie gespeichert: {filename}",
-                        filename=p.name,
-                    )
-            else:
-                msg = t("report.export_saved_title", "Exportiert")
-
-        warnings = getattr(result, "warnings", ())
-        if warnings:
-            msg += "\n\n" + t(
-                "report.cherrytree_attachment_warning",
-                "Some images could not be copied.",
-            )
-
-        if ask_open_file:
-            reply = ask_confirmation(
-                self.window() if self else None,
-                title,
-                t(
-                    "report.export_html_success_msg",
-                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
-                    filename=ask_open_file.name,
-                ),
-                default_button=QMessageBox.StandardButton.Yes,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                if not open_path(ask_open_file):
-                    show_error_dialog(
-                        self.window() if self else None,
-                        t("report.open_html_error_title", "Report unavailable"),
-                        t(
-                            "report.open_html_error_message",
-                            "The exported HTML report could not be opened:\n{path}",
-                            path=str(ask_open_file),
-                        ),
-                    )
-        else:
-            show_information_dialog(self.window() if self else None, title, msg)
+        self.export_actions.present_export_result(
+            result,
+            title=title,
+            success_message=success_message,
+            ask_open_file=ask_open_file,
+        )
 
     def _select_html_export_options(self) -> Optional[tuple[str, str]]:
-        """Choose the HTML presentation profile without changing report content."""
-        msg = QMessageBox(self.window() if self else None)
-        msg.setWindowTitle(t("report.html_profile_title", "Choose HTML Export Profile"))
-        msg.setText(t("report.html_profile_message", "How should the HTML report be presented?"))
-        msg.setInformativeText(
-            t(
-                "report.html_profile_hint",
-                "Both exports remain editable in the browser; Professional Print uses a controlled A4 layout. Generate the PDF from the exported HTML file.",
-            )
-        )
-        msg.setIcon(QMessageBox.Icon.Question)
-        professional_button = msg.addButton(
-            t("report.html_profile_professional", "Professional Print"),
-            QMessageBox.ButtonRole.AcceptRole,
-        )
-        classic_web_button = msg.addButton(
-            t("report.html_profile_classic_web", "Classic Web (editable)"),
-            QMessageBox.ButtonRole.ActionRole,
-        )
-        cancel_button = msg.addButton(QMessageBox.StandardButton.Cancel)
-        msg.setDefaultButton(professional_button)
-        # QMessageBox otherwise calculates its width from the text labels and
-        # can elide the two longer theme choices on Windows.
-        msg.setMinimumWidth(640)
-        professional_button.setMinimumWidth(170)
-        classic_web_button.setMinimumWidth(210)
-        professional_button.setToolTip(
-            t("report.html_profile_professional_tip", "Print-ready A4 presentation for browser PDF generation")
-        )
-        classic_web_button.setToolTip(
-            t("report.html_profile_classic_web_tip", "Editable responsive web report for browser use")
-        )
-        cancel_button.setMinimumWidth(100)
-        msg.exec()
+        return select_html_export_options(self.window() if self else None)
 
-        if msg.clickedButton() is professional_button:
-            return "light", "professional_print"
-        if msg.clickedButton() is classic_web_button:
-            return "light", "interactive"
-        return None
 
     # ------------------------------------------------------------------ #
     # Vorschau & Status
