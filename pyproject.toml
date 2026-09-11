@@ -63,6 +63,10 @@ timeout = 60
 markers = [
     "integration: cross-component, real Qt window, subprocess, or OS-boundary tests",
     "release: distribution, wheel, installer, and release-artifact tests",
+    "ui: tests requiring PyQt6 widgets, windows, or GUI event loops",
+    "unit: fast, isolated unit tests for pure domain and business logic",
+    "architecture: import boundary, dependency cycle, and layer isolation tests",
+    "slow: tests with long-running timeouts or intensive processing",
 ]
 
 [tool.ruff]

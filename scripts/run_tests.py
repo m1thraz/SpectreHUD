@@ -44,6 +44,12 @@ class TierConfig:
 
 
 TIER_CONFIGS = {
+    "core": TierConfig(
+        marker="not ui and not integration and not release",
+        parallel=True,
+        fail_fast=True,
+        traceback="line",
+    ),
     "fast": TierConfig(
         marker="not integration and not release",
         parallel=True,

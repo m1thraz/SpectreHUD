@@ -20,6 +20,18 @@ def _option_value(command: list[str], option: str) -> str:
     return command[option_index + 1]
 
 
+def test_core_command_preserves_marker_loadscope_and_fail_fast(tmp_path):
+    command = run_tests.build_pytest_command("core", tmp_path / "results.xml")
+
+    assert command[:3] == [sys.executable, "-m", "pytest"]
+    assert _option_value(command, "-m") == "not ui and not integration and not release"
+    assert ("-n", "auto") == tuple(command[command.index("-n") : command.index("-n") + 2])
+    assert "--dist=loadscope" in command
+    assert "-x" in command
+    assert "--tb=line" in command
+    assert command[-1] == str(run_tests.TESTS_DIR)
+
+
 def test_fast_command_preserves_marker_loadscope_and_fail_fast(tmp_path):
     command = run_tests.build_pytest_command("fast", tmp_path / "results.xml")
 

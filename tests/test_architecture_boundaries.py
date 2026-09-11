@@ -336,3 +336,85 @@ def test_ui_does_not_access_private_core_attributes():
         + "\n".join(violations)
     )
 
+
+KNOWN_PURE_CORE_TEST_FILES = {
+    "test_atomic_write.py",
+    "test_box_archiver.py",
+    "test_cherrytree_exporter.py",
+    "test_cli.py",
+    "test_clipboard_history.py",
+    "test_core.py",
+    "test_display_geometry.py",
+    "test_event_bus.py",
+    "test_export_result.py",
+    "test_fuzzy_matcher.py",
+    "test_hotkeys.py",
+    "test_html_report_exporter.py",
+    "test_i18n.py",
+    "test_linux_filesystem_adversarial.py",
+    "test_logger.py",
+    "test_loot_entries.py",
+    "test_loot_filter.py",
+    "test_loot_migrator.py",
+    "test_loot_persistence.py",
+    "test_loot_report_sync.py",
+    "test_navigation_state.py",
+    "test_obsidian_exporter.py",
+    "test_packaging_metadata.py",
+    "test_pentest_mode.py",
+    "test_phase_context.py",
+    "test_phases.py",
+    "test_platform_capabilities.py",
+    "test_platform_network.py",
+    "test_platform_opener.py",
+    "test_platform_paths.py",
+    "test_project_manager.py",
+    "test_project_session_service.py",
+    "test_project_transactions.py",
+    "test_quick_note_manager.py",
+    "test_report_builder.py",
+    "test_report_draft_manager.py",
+    "test_report_navigation.py",
+    "test_report_note_formatter.py",
+    "test_report_outline.py",
+    "test_report_sections.py",
+    "test_snippet_filter.py",
+    "test_snippet_importer.py",
+    "test_storage.py",
+    "test_template_engine.py",
+    "test_template_params.py",
+    "test_template_repository.py",
+    "test_update_checker.py",
+    "test_validators.py",
+    "test_verify_wheel.py",
+}
+
+
+def test_pure_core_test_files_do_not_import_ui_or_pyqt():
+    """Pure core unit test files must never import ui or PyQt6, ensuring headless execution."""
+    violations = []
+    for filename in sorted(KNOWN_PURE_CORE_TEST_FILES):
+        path = TESTS_ROOT / filename
+        if not path.exists():
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            imported_mod = None
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name.startswith(("ui", "PyQt6")):
+                        imported_mod = alias.name
+            elif isinstance(node, ast.ImportFrom):
+                if node.module and node.module.startswith(("ui", "PyQt6")):
+                    imported_mod = node.module
+            if imported_mod:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} imports {imported_mod}"
+                )
+
+    assert violations == [], (
+        "Pure core test files violated headless boundary by importing ui or PyQt6:\n"
+        + "\n".join(violations)
+    )
+
+

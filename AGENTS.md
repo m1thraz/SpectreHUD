@@ -6,12 +6,18 @@ Read `docs/system_map.md` before changing project switching, Pentest Mode, or re
 
 Use the smallest test scope that can validate the change.
 
-### Tier 0 — Pure Core (~2.5–3.0s total, <0.5s test logic)
+### Tier 0 — Pure Core (<0.5s test logic, headless without Qt)
 
-For isolated pure-Python `core/` logic, run only directly relevant headless tests.
+For isolated pure-Python `core/` logic, run only directly relevant headless tests. Pure core tests run without initializing `QApplication`.
 
+Targeted:
 ```bash
 python -m pytest tests/test_<module>.py -q
+```
+
+All pure core tests:
+```bash
+python scripts/run_tests.py core
 ```
 
 ### Tier 1 — Architecture (~2.0–2.5s)
@@ -26,6 +32,7 @@ Guards:
 
 * `core/**` must not import `ui/**`.
 * `core.platform` must not eagerly load PyQt6.
+* Pure core test files must not import `ui/**` or `PyQt6`.
 
 ### Tier 2 — Affected Tests (~3–15s)
 
@@ -119,7 +126,7 @@ Always lint before handover unless only docs/assets changed.
 
 ### Core Isolation
 
-`core/` must remain pure Python and headless. Never introduce PyQt6, `QApplication`, or UI-widget imports.
+`core/` must remain pure Python and headless. Never introduce PyQt6, `QApplication`, or UI-widget imports. Pure core test files must also remain headless without importing `ui` or `PyQt6`.
 
 ### Parallel Tests
 
