@@ -32,6 +32,7 @@ dev = [
     "pyinstaller>=6.0.0",
     "ruff>=0.1.0",
     "mypy>=1.10.0",
+    "import-linter>=2.0",
 ]
 
 [project.urls]
@@ -114,6 +115,7 @@ DEP002 = [
     "wheel",
     "ruff",
     "mypy",
+    "import-linter",
 ]
 
 [tool.mypy]

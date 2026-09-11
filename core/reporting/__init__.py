@@ -70,11 +70,17 @@ from core.reporting.draft_manager import (
     save_draft,
 )
 from core.reporting.loot_sync import (
+    FALLBACK_SECTION_TITLE,
+    LootReportState,
     PAGEBREAK_HTML,
     PAGEBREAK_MARKER,
     PAGEBREAK_REGEX,
     SPACER_REGEX,
+    append_missing_loot_to_text,
+    classify_loot_report_state,
+    extract_report_markers,
     format_spacer_marker,
+    loot_content_hash,
     preserve_markers_in_preview_roundtrip,
     strip_report_markers,
 )
@@ -130,13 +136,20 @@ __all__ = [
     "get_draft_path",
     "has_recoverable_draft",
     "save_draft",
+    "FALLBACK_SECTION_TITLE",
+    "LootReportState",
     "PAGEBREAK_HTML",
     "PAGEBREAK_MARKER",
     "PAGEBREAK_REGEX",
     "SPACER_REGEX",
+    "append_missing_loot_to_text",
+    "classify_loot_report_state",
+    "extract_report_markers",
     "format_spacer_marker",
+    "loot_content_hash",
     "preserve_markers_in_preview_roundtrip",
     "strip_report_markers",
     "HeadingItem",
     "extract_headings",
 ]
+

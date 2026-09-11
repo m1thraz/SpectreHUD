@@ -101,3 +101,8 @@ results.txt
 *.tmp
 *.tmp_*
 
+# Import Linter / Grimp caches
+.grimp_cache/
+.import_linter_cache/
+
+

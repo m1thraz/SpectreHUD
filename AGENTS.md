@@ -26,15 +26,18 @@ Run after import, layering, dependency, or platform-abstraction changes:
 
 ```bash
 python -m pytest tests/test_architecture_boundaries.py -q
+lint-imports --no-cache
 mypy
 ```
 
 Guards:
 
 * `core/**` must not import `ui/**`.
+* Subpackage internals must only be imported via their package root `__init__.py` from outside.
 * `core.platform` must not eagerly load PyQt6.
 * Pure core test files must not import `ui/**` or `PyQt6`.
 * Static type checks (`mypy`) must pass without errors.
+
 
 ### Tier 2 — Affected Tests (~3–15s)
 

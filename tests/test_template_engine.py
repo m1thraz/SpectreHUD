@@ -1,18 +1,21 @@
 import unittest
-from core.reporting.template_engine import (
-    TemplateSection,
+from core.reporting import (
+    LEGACY_DEFAULT_TEMPLATE,
     ReportContext,
     TemplateRenderer,
-    LEGACY_DEFAULT_TEMPLATE,
-    _render_header_metadata,
+    TemplateSection,
+)
+from core.reporting.template_engine import (
+    _render_appendix,
     _render_attack_path,
     _render_executive_summary,
     _render_finding_section,
+    _render_header_metadata,
+    _render_loot_entry_block,
     _render_phase_section,
     _render_remediation_table,
-    _render_appendix,
-    _render_loot_entry_block,
 )
+
 
 
 class TestTemplateEngine(unittest.TestCase):

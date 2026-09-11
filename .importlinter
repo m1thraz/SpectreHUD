@@ -10,3 +10,61 @@ source_modules =
     core
 forbidden_modules =
     ui
+
+[importlinter:contract:2]
+name = Protect core.loot internals
+type = protected
+protected_modules =
+    core.loot.*
+allowed_importers =
+    core.loot
+
+[importlinter:contract:3]
+name = Protect core.reporting internals
+type = protected
+protected_modules =
+    core.reporting.*
+allowed_importers =
+    core.reporting
+
+[importlinter:contract:4]
+name = Protect core.snippets internals
+type = protected
+protected_modules =
+    core.snippets.*
+allowed_importers =
+    core.snippets
+
+[importlinter:contract:5]
+name = Protect core.screenshots internals
+type = protected
+protected_modules =
+    core.screenshots.*
+allowed_importers =
+    core.screenshots
+
+[importlinter:contract:6]
+name = Protect core.platform internals
+type = protected
+protected_modules =
+    core.platform.*
+allowed_importers =
+    core.platform
+
+[importlinter:contract:7]
+name = Protect core.project internals
+type = protected
+protected_modules =
+    core.project.*
+allowed_importers =
+    core.project
+
+[importlinter:contract:8]
+name = Protect core.exporters internals
+type = protected
+protected_modules =
+    core.exporters.*
+allowed_importers =
+    core.exporters
+
+

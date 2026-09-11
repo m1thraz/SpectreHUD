@@ -221,7 +221,9 @@ def test_external_modules_do_not_import_core_subpackage_internals():
         "platform",
         "project",
         "reporting",
+        "exporters",
     }
+
     violations = []
 
     for search_root in (PROJECT_ROOT / "ui", PROJECT_ROOT / "core"):

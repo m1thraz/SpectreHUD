@@ -6,9 +6,13 @@ report status classification, byte-preserving insertion, and export stripping.
 import unittest
 from typing import Any, Dict
 
-from core.reporting.loot_sync import (
+from core.reporting import (
     FALLBACK_SECTION_TITLE,
     LootReportState,
+    ReportContext,
+    ReportTemplate,
+    TemplateRenderer,
+    TemplateSection,
     append_missing_loot_to_text,
     classify_loot_report_state,
     extract_report_markers,
@@ -16,12 +20,7 @@ from core.reporting.loot_sync import (
     preserve_markers_in_preview_roundtrip,
     strip_report_markers,
 )
-from core.reporting.template_engine import (
-    ReportContext,
-    ReportTemplate,
-    TemplateRenderer,
-    TemplateSection,
-)
+
 
 
 class TestLootReportSync(unittest.TestCase):
