@@ -426,3 +426,48 @@ def test_legacy_entry_point_selects_all(monkeypatch):
 
     assert run_tests.run_all_tests() == 0
     assert called == [("all",)]
+
+
+def test_execute_tier_falls_back_to_serial_when_xdist_is_missing(monkeypatch, tmp_path, capsys):
+    log_path = tmp_path / "run.log"
+    junit_path = tmp_path / "run.xml"
+    monkeypatch.setattr(run_tests, "create_artifact_paths", lambda _tier: (log_path, junit_path))
+    monkeypatch.setattr(run_tests, "is_xdist_available", lambda: False)
+    built_commands = []
+
+    def fake_build_pytest_command(tier, junit_path, **kwargs):
+        built_commands.append((tier, kwargs))
+        return [sys.executable, "-m", "pytest"]
+
+    def fake_run_process(command, *, log_path, **kwargs):
+        log_path.write_text("1 test collected\n", encoding="utf-8")
+        junit_path.write_text(
+            '<testsuite tests="1" failures="0" errors="0" skipped="0" time="0.1">'
+            '<testcase classname="tests.test_sample" name="test_pass" />'
+            "</testsuite>",
+            encoding="utf-8",
+        )
+        return 0
+
+    monkeypatch.setattr(run_tests, "build_pytest_command", fake_build_pytest_command)
+    monkeypatch.setattr(run_tests, "run_process", fake_run_process)
+
+    exit_code = run_tests.execute_tier("core", no_parallel=False)
+
+    assert exit_code == 0
+    assert len(built_commands) == 1
+    assert built_commands[0][1]["no_parallel"] is True
+    captured = capsys.readouterr()
+    assert "pytest-xdist not found; falling back to serial execution" in captured.out
+
+
+def test_failure_kind_detects_missing_xdist():
+    log_text = (
+        "ERROR: usage: python -m pytest\n"
+        "pytest: error: unrecognized arguments: -n --dist=loadscope"
+    )
+    assert run_tests.failure_kind(4, log_text, False) == "missing-xdist"
+
+
+def test_is_xdist_available_returns_bool():
+    assert isinstance(run_tests.is_xdist_available(), bool)

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from datetime import datetime
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -124,6 +125,11 @@ def build_test_environment(source: Mapping[str, str] | None = None) -> dict[str,
     environment.setdefault("PYTHONUTF8", "1")
     environment.setdefault("PYTHONIOENCODING", "utf-8")
     return environment
+
+
+def is_xdist_available() -> bool:
+    """Check whether pytest-xdist is importable in the current interpreter."""
+    return importlib.util.find_spec("xdist") is not None
 
 
 def build_pytest_command(
@@ -376,6 +382,8 @@ def failure_kind(exit_code: int, log_text: str, report_exists: bool) -> str:
         return "worker-crash"
     if exit_code == 3:
         return "pytest-internal"
+    if "unrecognized arguments: -n" in log_text or "--dist=loadscope" in log_text:
+        return "missing-xdist"
     if exit_code == 4:
         return "pytest-usage"
     if exit_code == 5:
@@ -476,12 +484,17 @@ def execute_tier(
                 print("PASS tier=last-failed selected=0 kind=no-last-failures duration=0.00s")
             return 0
     log_path, junit_path = create_artifact_paths(tier)
+    effective_no_parallel = no_parallel
+    if not effective_no_parallel and TIER_CONFIGS[tier].parallel and not is_xdist_available():
+        effective_no_parallel = True
+        if not json_output:
+            print("note: pytest-xdist not found; falling back to serial execution (install with: pip install -e \".[dev]\")")
     command = build_pytest_command(
         tier,
         junit_path,
         targets=targets,
         collect_only=collect_only,
-        no_parallel=no_parallel,
+        no_parallel=effective_no_parallel,
     )
     started = time.monotonic()
     try:
@@ -598,6 +611,8 @@ def execute_tier(
     else:
         label = "FAIL" if kind == "test-failure" else "ERROR"
         print(f"{label} tier={tier} kind={kind} exit={exit_code} duration={elapsed:.2f}s")
+        if kind == "missing-xdist":
+            print("hint: pytest-xdist is not installed. Run tests serially with --no-parallel or install with: pip install -e \".[dev]\"")
         if failed_tests:
             print("failed:")
             for test_id in failed_tests:
@@ -637,7 +652,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-parallel",
         action="store_true",
-        help="disable xdist for fast and full tiers",
+        help="disable xdist (parallel execution)",
     )
     parser.add_argument(
         "--max-retained-runs",
