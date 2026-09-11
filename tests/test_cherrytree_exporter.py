@@ -29,12 +29,20 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
     )
 
     package = output / "Forest"
+    assert result.is_success is True
     assert result.note_path == package / "report.html"
     assert (package / "loot.html").exists()
     assert (package / "images" / "proof.png").read_bytes() == b"png"
     assert 'src="images/proof.png"' in result.note_path.read_text(encoding="utf-8")
     assert "SMB signing disabled" in (package / "loot.html").read_text(encoding="utf-8")
     assert "Require SMB signing" in (package / "loot.html").read_text(encoding="utf-8")
+    assert len(result.artifacts) == 3
+    assert result.artifacts[0].path == package / "report.html"
+    assert result.artifacts[0].format == "html"
+    assert result.artifacts[1].path == package / "loot.html"
+    assert result.artifacts[1].format == "html"
+    assert result.artifacts[2].path == package / "images" / "proof.png"
+    assert result.artifacts[2].format == "image"
 
 
 def test_cherrytree_report_icon_uses_generic_image_pipeline(package_workspace):

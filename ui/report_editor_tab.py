@@ -17,7 +17,7 @@ sie ohne Qt testbar bleibt.
 from enum import Enum
 from pathlib import Path
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -34,10 +34,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
-from core.reporting import ReportFileManager
+from core.reporting import ExportStatus, ReportFileManager, ReportTemplate, TemplateRepository
 from core.config import ConfigManager
-from core.reporting import ReportTemplate
-from core.reporting import TemplateRepository
 from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportError
 from core.logger import get_logger
 from core.i18n import t
@@ -1358,11 +1356,13 @@ class ReportEditorTab(QWidget):
         if coordinator is None:
             return
         try:
-            coordinator.export_report_markdown(target, self.editor.toPlainText())
-            show_information_dialog(
-                self.window() if self else None,
-                t("report.export_saved_title", "Exportiert"),
-                t("report.export_saved_msg", "Kopie gespeichert: {filename}", filename=target.name)
+            result = coordinator.export_report_markdown(target, self.editor.toPlainText())
+            self._present_export_result(
+                result,
+                title=t("report.export_saved_title", "Exportiert"),
+                success_message=t(
+                    "report.export_saved_msg", "Kopie gespeichert: {filename}", filename=target.name
+                ),
             )
         except ReportExportError as exc:
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
@@ -1404,7 +1404,7 @@ class ReportEditorTab(QWidget):
             return
         try:
             doc_lang = self.active_template.language if self.active_template else "en"
-            coordinator.export_report_html(
+            result = coordinator.export_report_html(
                 target=target,
                 project_name=self.current_project,
                 markdown=self.editor.toPlainText(),
@@ -1413,27 +1413,11 @@ class ReportEditorTab(QWidget):
                 language=doc_lang,
                 profile=profile,
             )
-            reply = ask_confirmation(
-                self.window() if self else None,
-                t("report.export_html_success_title", "HTML-Report exportiert"),
-                t(
-                    "report.export_html_success_msg",
-                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
-                    filename=target.name,
-                ),
-                default_button=QMessageBox.StandardButton.Yes,
+            self._present_export_result(
+                result,
+                title=t("report.export_html_success_title", "HTML-Report exportiert"),
+                ask_open_file=target,
             )
-            if reply == QMessageBox.StandardButton.Yes:
-                if not open_path(target):
-                    show_error_dialog(
-                        self.window() if self else None,
-                        t("report.open_html_error_title", "Report unavailable"),
-                        t(
-                            "report.open_html_error_message",
-                            "The exported HTML report could not be opened:\n{path}",
-                            path=str(target),
-                        ),
-                    )
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
             show_error_dialog(
@@ -1498,6 +1482,10 @@ class ReportEditorTab(QWidget):
                 markdown=self.editor.toPlainText(),
                 report_font=self._report_font_key(),
             )
+            self._present_export_result(
+                result,
+                title=t("report.cherrytree_exported_title", "CherryTree package complete"),
+            )
         except ReportExportError as exc:
             logger.error("CherryTree package export failed: %s", exc, exc_info=True)
             show_error_dialog(
@@ -1509,22 +1497,93 @@ class ReportEditorTab(QWidget):
                     error=str(exc),
                 ),
             )
+
+    def _present_export_result(
+        self,
+        result: Any,
+        *,
+        title: str,
+        success_message: Optional[str] = None,
+        ask_open_file: Optional[Path] = None,
+    ) -> None:
+        """Presents an ExportResult or legacy export outcome in a unified way."""
+        status = getattr(result, "status", None)
+        if status is ExportStatus.CANCELLED:
             return
 
-        message = t(
-            "report.cherrytree_exported",
-            "CherryTree HTML package created:\n{path}",
-            path=str(result.note_path.parent),
-        )
-        if result.warnings:
-            message += "\n\n" + t(
-                "report.cherrytree_attachment_warning", "Some images could not be copied."
+        if status is ExportStatus.FAILED:
+            err = getattr(result, "error", None)
+            err_msg = getattr(err, "message", None) if err else "Export failed"
+            details = getattr(err, "details", None) if err else None
+            show_error_dialog(self.window() if self else None, title, str(err_msg), details=details)
+            return
+
+        msg = success_message
+        if not msg:
+            artifacts = getattr(result, "artifacts", ())
+            note_path = getattr(result, "note_path", None)
+            if artifacts:
+                first = artifacts[0].path
+                if any(getattr(a, "format", "") == "image" for a in artifacts):
+                    msg = t(
+                        "report.cherrytree_exported",
+                        "CherryTree HTML package created:\n{path}",
+                        path=str(first.parent),
+                    )
+                else:
+                    msg = t(
+                        "report.export_saved_msg",
+                        "Kopie gespeichert: {filename}",
+                        filename=first.name,
+                    )
+            elif note_path:
+                p = Path(note_path)
+                if p.suffix.lower() in (".html", ".ctd", ".ctb"):
+                    msg = t(
+                        "report.cherrytree_exported",
+                        "CherryTree HTML package created:\n{path}",
+                        path=str(p.parent),
+                    )
+                else:
+                    msg = t(
+                        "report.export_saved_msg",
+                        "Kopie gespeichert: {filename}",
+                        filename=p.name,
+                    )
+            else:
+                msg = t("report.export_saved_title", "Exportiert")
+
+        warnings = getattr(result, "warnings", ())
+        if warnings:
+            msg += "\n\n" + t(
+                "report.cherrytree_attachment_warning",
+                "Some images could not be copied.",
             )
-        show_information_dialog(
-            self,
-            t("report.cherrytree_exported_title", "CherryTree package complete"),
-            message,
-        )
+
+        if ask_open_file:
+            reply = ask_confirmation(
+                self.window() if self else None,
+                title,
+                t(
+                    "report.export_html_success_msg",
+                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
+                    filename=ask_open_file.name,
+                ),
+                default_button=QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                if not open_path(ask_open_file):
+                    show_error_dialog(
+                        self.window() if self else None,
+                        t("report.open_html_error_title", "Report unavailable"),
+                        t(
+                            "report.open_html_error_message",
+                            "The exported HTML report could not be opened:\n{path}",
+                            path=str(ask_open_file),
+                        ),
+                    )
+        else:
+            show_information_dialog(self.window() if self else None, title, msg)
 
     def _select_html_export_options(self) -> Optional[tuple[str, str]]:
         """Choose the HTML presentation profile without changing report content."""

@@ -8,6 +8,12 @@ from typing import Optional
 from core.logger import get_logger
 from core.atomic_write import atomic_write_text
 from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE, encode_image_base64
+from core.reporting.export_result import (
+    ExportArtifact,
+    ExportError,
+    ExportErrorCode,
+    ExportResult,
+)
 from core.reporting.markdown import (
     sanitize_url,
     format_inline,
@@ -176,7 +182,7 @@ class HtmlReportExporter:
         report_font: str = "segoe_ui",
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
-    ) -> bool:
+    ) -> ExportResult:
         """Renders HTML from Markdown and writes it atomically to output_path."""
         out = Path(output_path)
         if out.suffix.lower() != ".html":
@@ -193,7 +199,26 @@ class HtmlReportExporter:
             profile=profile,
         )
         try:
-            return atomic_write_text(out, full_html, encoding="utf-8")
+            success = atomic_write_text(out, full_html, encoding="utf-8")
+            if not success:
+                return ExportResult.failure(
+                    ExportError(
+                        code=ExportErrorCode.DESTINATION_ERROR,
+                        message=f"Failed to write HTML report to {out}",
+                    )
+                )
+            bytes_written = out.stat().st_size if out.exists() else len(full_html.encode("utf-8"))
+            return ExportResult.success(
+                artifacts=(
+                    ExportArtifact(path=out, format="html", bytes_written=bytes_written),
+                )
+            )
         except OSError as e:
             logger.error(f"Failed to write HTML report to {out}: {e}", exc_info=True)
-            return False
+            return ExportResult.failure(
+                ExportError(
+                    code=ExportErrorCode.DESTINATION_ERROR,
+                    message=f"Failed to write HTML report to {out}: {e}",
+                    details=str(e),
+                )
+            )

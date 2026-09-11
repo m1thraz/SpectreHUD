@@ -12,11 +12,19 @@ from PyQt6.QtWidgets import QWidget
 
 from core.config import ConfigManager
 from core.atomic_write import atomic_write_text
-from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError, ObsidianExporter
+from core.exporters import (
+    CherryTreeExporter,
+    ExportArtifact,
+    ExportResult,
+    ExportStatus,
+    ExternalExportError,
+    ObsidianExporter,
+)
 from core.reporting import HtmlReportExporter
 from core.reporting import ReportExportProfile
 from core.i18n import t
-from ui.message_boxes import show_error_dialog, show_information_dialog
+from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
+from core.platform import open_path
 from core.project import ProjectManager
 from core.loot import LootManager
 from core.logger import get_logger
@@ -58,13 +66,23 @@ class ExportCoordinator(QObject):
         active_proj = self.project_manager.get_active_project()
         self.history_ctrl.export_report_dialog(window, target_ip, active_proj)
 
-    def export_report_markdown(self, target: Path, markdown: str) -> None:
+    def export_report_markdown(self, target: Path, markdown: str) -> ExportResult:
         """Write an explicit Markdown copy of the current editor document."""
         from core.reporting import strip_report_markers
 
+        target = Path(target)
         clean_markdown = strip_report_markers(markdown)
         if not atomic_write_text(target, clean_markdown):
             raise ReportExportError(f"Could not write Markdown report: {target}")
+
+        bytes_written = (
+            target.stat().st_size if target.exists() else len(clean_markdown.encode("utf-8"))
+        )
+        return ExportResult.success(
+            artifacts=(
+                ExportArtifact(path=target, format="markdown", bytes_written=bytes_written),
+            )
+        )
 
     def export_report_html(
         self,
@@ -76,10 +94,11 @@ class ExportCoordinator(QObject):
         report_font: str,
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
-    ) -> None:
+    ) -> ExportResult:
         """Render the current editor document as a standalone HTML report."""
         project_dir = self.project_manager.get_project_dir(project_name)
-        if not HtmlReportExporter.export_to_file(
+        target = Path(target)
+        res = HtmlReportExporter.export_to_file(
             markdown_content=markdown,
             output_path=target,
             project_dir=project_dir,
@@ -89,8 +108,23 @@ class ExportCoordinator(QObject):
             report_font=report_font,
             language=language,
             profile=profile,
-        ):
-            raise ReportExportError(f"Could not write HTML report: {target}")
+        )
+        if not res:
+            err_msg = (
+                res.error.message
+                if isinstance(res, ExportResult) and res.error
+                else f"Could not write HTML report: {target}"
+            )
+            raise ReportExportError(err_msg)
+
+        if isinstance(res, ExportResult):
+            return res
+        bytes_written = target.stat().st_size if target.exists() else 0
+        return ExportResult.success(
+            artifacts=(
+                ExportArtifact(path=target, format="html", bytes_written=bytes_written),
+            )
+        )
 
     def export_report_to_cherrytree(
         self,
@@ -273,3 +307,84 @@ class ExportCoordinator(QObject):
         )
         if entry is not None:
             self.append_loot_entries_to_obsidian(window, [entry])
+
+    def present_export_result(
+        self,
+        window: Optional[QWidget],
+        result: ExportResult,
+        *,
+        title: str,
+        success_message: Optional[str] = None,
+        ask_open_file: Optional[Path] = None,
+    ) -> None:
+        """Present any ExportResult to the user in a consistent, UI-standard way."""
+        status = getattr(result, "status", None)
+        if status is ExportStatus.CANCELLED:
+            return
+
+        if status is ExportStatus.FAILED:
+            err = getattr(result, "error", None)
+            err_msg = (
+                getattr(err, "message", None)
+                if err
+                else "Export failed"
+            )
+            details = getattr(err, "details", None) if err else None
+            show_error_dialog(window, title, str(err_msg), details=details)
+            return
+
+        msg = success_message
+        if not msg:
+            if result.artifacts:
+                first = result.artifacts[0].path
+                if any(a.format == "image" for a in result.artifacts):
+                    msg = t(
+                        "report.cherrytree_exported",
+                        "CherryTree HTML package created:\n{path}",
+                        path=str(first.parent),
+                    )
+                else:
+                    msg = t(
+                        "report.export_saved_msg",
+                        "Kopie gespeichert: {filename}",
+                        filename=first.name,
+                    )
+            else:
+                msg = t("report.export_saved_title", "Exportiert")
+
+        if result.warnings:
+            msg += "\n\n" + t(
+                "report.cherrytree_attachment_warning",
+                "Some images could not be copied.",
+            )
+
+        if ask_open_file:
+            from PyQt6.QtWidgets import QMessageBox
+
+            reply = ask_confirmation(
+                window,
+                title,
+                t(
+                    "report.export_html_success_msg",
+                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
+                    filename=ask_open_file.name,
+                ),
+                default_button=QMessageBox.StandardButton.Yes,
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                if not open_path(ask_open_file):
+                    show_error_dialog(
+                        window,
+                        t("report.open_html_error_title", "Report unavailable"),
+                        t(
+                            "report.open_html_error_message",
+                            "The exported HTML report could not be opened:\n{path}",
+                            path=str(ask_open_file),
+                        ),
+                    )
+        else:
+            show_information_dialog(window, title, msg)
+
+        if result.obsidian_uri and self.config.get("obsidian_open_after_export", False):
+            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
+                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)

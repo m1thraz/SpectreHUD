@@ -5,6 +5,13 @@ Provides modular HTML report generation, CSS styling, markdown conversion, and c
 """
 
 from core.reporting.exporter import HtmlReportExporter
+from core.reporting.export_result import (
+    ExportArtifact,
+    ExportError,
+    ExportErrorCode,
+    ExportResult,
+    ExportStatus,
+)
 from core.reporting.assets import (
     MAX_EMBED_IMAGE_FILE_SIZE,
     ImageEmbeddingBudget,
@@ -74,6 +81,11 @@ from core.reporting.loot_sync import (
 from core.reporting.outline import HeadingItem, extract_headings
 
 __all__ = [
+    "ExportArtifact",
+    "ExportError",
+    "ExportErrorCode",
+    "ExportResult",
+    "ExportStatus",
     "HtmlReportExporter",
     "MAX_EMBED_IMAGE_FILE_SIZE",
     "ImageEmbeddingBudget",

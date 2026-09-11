@@ -15,7 +15,7 @@ from typing import Any, Iterable, Mapping, Optional
 from urllib.parse import urlencode
 
 from core.atomic_write import atomic_write_bytes, atomic_write_text
-from core.exporters.base import ExportResult, ExternalExportError
+from core.exporters.base import ExportArtifact, ExportResult, ExternalExportError
 from core.project import sanitize_filename_component, validate_project_name
 from core.reporting import MAX_EMBED_IMAGE_FILE_SIZE
 from core.reporting import SPACER_REGEX, strip_report_markers
@@ -245,8 +245,23 @@ class ObsidianExporter:
             atomic_write_text(note_path, content)
         except OSError as exc:
             raise ExternalExportError(f"Could not write Obsidian report: {note_path}") from exc
-        return ExportResult(
-            note_path, attachments, warnings, obsidian_uri=self.build_open_uri(note_path)
+
+        note_size = (
+            note_path.stat().st_size if note_path.exists() else len(content.encode("utf-8"))
+        )
+        artifacts = [
+            ExportArtifact(path=note_path, format="markdown", bytes_written=note_size),
+        ]
+        for att in attachments:
+            att_size = att.stat().st_size if att.exists() else 0
+            artifacts.append(
+                ExportArtifact(path=att, format="attachment", bytes_written=att_size)
+            )
+
+        return ExportResult.success(
+            artifacts=tuple(artifacts),
+            warnings=warnings,
+            metadata={"obsidian_uri": self.build_open_uri(note_path)},
         )
 
     @staticmethod
@@ -332,6 +347,11 @@ class ObsidianExporter:
                 atomic_write_text(target, existing.rstrip() + separator + rendered + "\n")
             except OSError as exc:
                 raise ExternalExportError("Could not append loot to the Obsidian note.") from exc
-        return ExportResult(
-            target, skipped_entry_ids=skipped, obsidian_uri=self.build_open_uri(target)
+        target_size = target.stat().st_size if target.exists() else 0
+        return ExportResult.success(
+            artifacts=(
+                ExportArtifact(path=target, format="markdown", bytes_written=target_size),
+            ),
+            skipped_entry_ids=skipped,
+            metadata={"obsidian_uri": self.build_open_uri(target)},
         )

@@ -30,7 +30,11 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
         },
     )
 
+    assert result.is_success is True
     assert result.note_path == vault / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
+    assert len(result.artifacts) == 2
+    assert result.artifacts[0].format == "markdown"
+    assert result.artifacts[1].format == "attachment"
     content = result.note_path.read_text(encoding="utf-8")
     assert 'target: "10.10.10.161"' in content
     assert "password" not in content

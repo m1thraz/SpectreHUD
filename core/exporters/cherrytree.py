@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from core.atomic_write import atomic_write_bytes, atomic_write_text
-from core.exporters.base import ExportResult, ExternalExportError
+from core.exporters.base import ExportArtifact, ExportResult, ExternalExportError
 from core.exporters.obsidian import ObsidianExporter
 from core.project import sanitize_filename_component, validate_project_name
 from core.reporting import get_report_css
@@ -157,4 +157,25 @@ img.inline-img {{ max-width: 100%; height: auto; }}
             atomic_write_text(loot_path, loot_html)
         except OSError as exc:
             raise ExternalExportError("Could not write the CherryTree HTML package.") from exc
-        return ExportResult(report_path, copied, warnings)
+
+        report_size = (
+            report_path.stat().st_size if report_path.exists() else len(report_html.encode("utf-8"))
+        )
+        loot_size = (
+            loot_path.stat().st_size if loot_path.exists() else len(loot_html.encode("utf-8"))
+        )
+        artifacts = (
+            ExportArtifact(path=report_path, format="html", bytes_written=report_size),
+            ExportArtifact(path=loot_path, format="html", bytes_written=loot_size),
+            *(
+                ExportArtifact(
+                    path=p, format="image", bytes_written=p.stat().st_size if p.exists() else 0
+                )
+                for p in copied
+            ),
+        )
+        return ExportResult.success(
+            artifacts=artifacts,
+            warnings=warnings,
+            metadata={"package_dir": package_dir},
+        )

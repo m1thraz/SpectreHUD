@@ -171,3 +171,46 @@ def test_export_coordinator_export_loot_delegates_to_history_ctrl():
     coordinator.history_ctrl.export_report_dialog.assert_called_once_with(
         mock_window, "10.10.10.10", "Forest"
     )
+
+
+def test_present_export_result_cancelled_does_nothing():
+    coordinator, _ = _coordinator({}, Path("/tmp/project"))
+    from core.reporting import ExportResult
+
+    res = ExportResult.cancelled()
+    with (
+        patch("ui.coordinators.export_coordinator.show_information_dialog") as mock_info,
+        patch("ui.coordinators.export_coordinator.show_error_dialog") as mock_err,
+    ):
+        coordinator.present_export_result(None, res, title="Export")
+        mock_info.assert_not_called()
+        mock_err.assert_not_called()
+
+
+def test_present_export_result_failure_shows_error_dialog():
+    coordinator, _ = _coordinator({}, Path("/tmp/project"))
+    from core.reporting import ExportError, ExportErrorCode, ExportResult
+
+    res = ExportResult.failure(
+        ExportError(code=ExportErrorCode.DESTINATION_ERROR, message="Permission denied")
+    )
+    with patch("ui.coordinators.export_coordinator.show_error_dialog") as mock_err:
+        coordinator.present_export_result(None, res, title="Export Failed")
+        mock_err.assert_called_once_with(None, "Export Failed", "Permission denied", details=None)
+
+
+def test_present_export_result_success_shows_info_dialog_with_warnings(tmp_path):
+    coordinator, _ = _coordinator({}, tmp_path)
+    from core.reporting import ExportArtifact, ExportResult
+
+    art = ExportArtifact(path=tmp_path / "report.html", format="html", bytes_written=100)
+    res = ExportResult.success(artifacts=[art], warnings=["Uncopied image"])
+
+    with patch("ui.coordinators.export_coordinator.show_information_dialog") as mock_info:
+        coordinator.present_export_result(None, res, title="Done")
+        mock_info.assert_called_once()
+        args = mock_info.call_args[0]
+        assert args[1] == "Done"
+        assert "report.html" in args[2]
+        assert "Some images could not be copied" in args[2]
+
