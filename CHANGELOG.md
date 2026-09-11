@@ -13,6 +13,7 @@ semantic versioning.
 ### Changed
 
 * Fall back to serial test execution in `scripts/run_tests.py` when `pytest-xdist` is not installed in the active environment.
+* Enforced bit-deterministic wheel builds across CI and release workflows via `--no-build-isolation` against pinned `setuptools` and `wheel` build backend constraints.
 
 ### Removed
 

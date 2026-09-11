@@ -145,6 +145,8 @@ def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds
         "cryptography==",
         "qtawesome==",
         "pyinstaller==",
+        "setuptools==",
+        "wheel==",
     ]
     for pkg in expected_pinned_packages:
         assert pkg in constraints_content, f"constraints-release.txt missing exact pin for {pkg}"
@@ -161,6 +163,10 @@ def test_workflows_install_against_release_constraints():
 
     # In ci.yml, the packaging validation jobs must also use constraints-release.txt
     assert "-c constraints-release.txt" in ci_workflow
+
+    # Wheel builds must enforce pinned build backend via --no-build-isolation
+    assert "--no-build-isolation" in release_workflow, "release.yml must build wheel with --no-build-isolation"
+    assert "--no-build-isolation" in ci_workflow, "ci.yml must build wheel with --no-build-isolation"
 
 
 def test_coverage_gate_configuration():

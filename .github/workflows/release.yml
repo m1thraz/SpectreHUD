@@ -136,11 +136,11 @@ jobs:
       - name: Install Build Tools
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install -c constraints-release.txt build
+          python3 -m pip install -c constraints-release.txt setuptools wheel
 
       - name: Build Wheel Artifact
         run: |
-          python3 -m build --wheel
+          python3 -m pip wheel . --no-deps --no-build-isolation -w dist/
           python3 scripts/verify_wheel.py dist/
 
       - name: Install and Smoke-test Wheel in Virtual Environment

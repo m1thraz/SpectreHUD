@@ -92,7 +92,7 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -c constraints-release.txt build -e ".[dev]"
+          python -m pip install -c constraints-release.txt setuptools wheel build -e ".[dev]"
 
       - name: Compile Python sources
         run: |
@@ -106,7 +106,7 @@ jobs:
 
       - name: Build and inspect wheel
         run: |
-          python -m build --wheel
+          python -m pip wheel . --no-deps --no-build-isolation -w dist/
           python scripts/verify_wheel.py dist/
 
       - name: Install and smoke-test wheel in fresh environment
@@ -155,11 +155,11 @@ jobs:
       - name: Install build tooling
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -c constraints-release.txt build
+          python -m pip install -c constraints-release.txt setuptools wheel
 
       - name: Build and inspect wheel
         run: |
-          python -m build --wheel
+          python -m pip wheel . --no-deps --no-build-isolation -w dist/
           python scripts/verify_wheel.py dist/
 
       - name: Install and smoke-test wheel outside checkout

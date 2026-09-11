@@ -18,13 +18,14 @@ QtPy==2.4.3
 six==1.17.0
 
 # --- Release Packaging & Standalone Bundling Tools ---
+setuptools==84.0.0
+wheel==0.45.1
+build==1.2.2
 pyinstaller==6.22.2
 pyinstaller-hooks-contrib==2026.7
 altgraph==0.17.5
 pefile==2024.8.26
 pywin32-ctypes==0.2.3; sys_platform == 'win32'
-build==1.2.2
-wheel==0.45.1
 packaging==26.3
 
 # --- Test Suite & Verification Tooling (Release Gate) ---
