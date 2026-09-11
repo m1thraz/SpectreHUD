@@ -75,7 +75,7 @@ def _show_dialog(
         add_copy_button(dialog)
     elif details:
         dialog.setDetailedText(details)
-    return QMessageBox.StandardButton(dialog.exec())
+    return dialog.exec()  # type: ignore[return-value]
 
 
 def show_error_dialog(
