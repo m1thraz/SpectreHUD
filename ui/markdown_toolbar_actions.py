@@ -260,7 +260,7 @@ def insert_page_break(editor: QPlainTextEdit) -> None:
 
 def insert_spacer(editor: QPlainTextEdit, size: str) -> None:
     """Insert a canonical cross-export spacing marker."""
-    from core.reporting.loot_sync import format_spacer_marker
+    from core.reporting import format_spacer_marker
 
     marker = format_spacer_marker(size)
     cursor = editor.textCursor()

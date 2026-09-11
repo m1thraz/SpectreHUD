@@ -23,13 +23,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.reporting.template_engine import ReportTemplate, TemplateSection
-from core.loot.manager import CATEGORIES
+from core.reporting import ReportTemplate, TemplateSection
+from core.loot import CATEGORIES
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
-
-
 SECTION_TYPE_KEYS = {
     "header_metadata": ("template_editor.sec_header", "Header & Metadaten"),
     "executive_summary": ("template_editor.sec_summary", "Executive Summary & Findings-Matrix"),

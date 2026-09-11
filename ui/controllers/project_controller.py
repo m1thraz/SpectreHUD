@@ -8,14 +8,14 @@ from PyQt6.QtCore import QObject, QPoint, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QFileDialog, QMessageBox
 
 from core.project import ProjectManager, ProjectExistsError
-from core.project.persistence import PersistResult
-from core.project.validator import ProjectError
+from core.project import PersistResult
+from core.project import ProjectError
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus
 from core.i18n import t
-from core.platform.opener import open_path
+from core.platform import open_path
 from ui.menu_builder import build_qmenu
 from ui.project_dialog import NewProjectDialog
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_warning_dialog

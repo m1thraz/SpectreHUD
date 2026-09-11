@@ -21,8 +21,8 @@ from PyQt6.QtWidgets import (
 
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
-from core.reporting.template_engine import ReportTemplate
-from core.reporting.template_repository import TemplateRepository
+from core.reporting import ReportTemplate
+from core.reporting import TemplateRepository
 from core.theme_palette import (
     ACCENT_NAV_ACTIVE,
     BG_SURFACE,

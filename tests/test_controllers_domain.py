@@ -13,8 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QPushButton
 
-from core.snippets.manager import SnippetManager
-from core.loot.manager import LootManager
+from core.snippets import SnippetManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
 from core.project import PersistFailureReason, PersistResult, ProjectManager
@@ -183,7 +183,7 @@ class TestControllersDomain(unittest.TestCase):
                     self.assertIn("permission_denied", mock_crit.call_args.args[2])
 
         # 3. Error
-        from core.project.validator import ProjectError
+        from core.project import ProjectError
         with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
             with patch.object(self.project_ctrl, "import_project_folder", side_effect=ProjectError("Invalid project")):
                 with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
@@ -226,7 +226,7 @@ class TestControllersDomain(unittest.TestCase):
             self.assertEqual(created, ["DialogCreatedBox"])
 
         # 3. ProjectExistsError warning
-        from core.project.validator import ProjectExistsError
+        from core.project import ProjectExistsError
         with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = 1
@@ -241,7 +241,7 @@ class TestControllersDomain(unittest.TestCase):
                     mock_warn.assert_called_once()
 
         # 4. ProjectError critical
-        from core.project.validator import ProjectError
+        from core.project import ProjectError
         with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = 1
@@ -541,7 +541,7 @@ class TestControllersDomain(unittest.TestCase):
     def test_loot_controller_error_branches(self):
         """Domain operations handle persistence and validation errors gracefully."""
         from core.storage import StorageError, PersistenceError
-        from core.loot.manager import LootValidationError
+        from core.loot import LootValidationError
 
         # add_entry error
         with patch.object(self.loot_mgr, "add_entry", side_effect=StorageError("cannot add")):

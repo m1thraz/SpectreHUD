@@ -19,11 +19,11 @@ from core.project import (
     ProjectManager,
     ProjectStateCorruptedError,
 )
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshots.manager import ScreenshotManager
-from core.project.session_service import ProjectSessionService
-from core.reporting.file_manager import ReportFileManager, ReportBackupError
+from core.screenshots import ScreenshotManager
+from core.project import ProjectSessionService
+from core.reporting import ReportFileManager, ReportBackupError
 
 
 class TestWorkflowRobustness(unittest.TestCase):

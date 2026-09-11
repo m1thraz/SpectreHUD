@@ -12,12 +12,12 @@ import tempfile
 from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 from core.event_bus import EventBus
 from core.config import ConfigManager, get_default_config_dir
-from core.snippets.manager import SnippetManager
-from core.loot.manager import LootManager
+from core.snippets import SnippetManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectManager
-from core.screenshots.manager import ScreenshotManager
+from core.screenshots import ScreenshotManager
 from core.phase_context import PhaseContext
 from core.logger import get_logger
 

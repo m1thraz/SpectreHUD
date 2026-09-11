@@ -1,6 +1,6 @@
 """Tests for pure Quick-Note to report Markdown formatting."""
 
-from core.reporting.note_formatter import append_report_note, format_report_note
+from core.reporting import append_report_note, format_report_note
 
 
 def test_format_report_note_includes_available_metadata():

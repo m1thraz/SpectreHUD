@@ -209,3 +209,45 @@ def test_app_controller_receives_resolved_application_services():
 
     assert "container" not in parameter_names
     assert constructed.isdisjoint(forbidden_calls)
+
+
+def test_external_modules_do_not_import_core_subpackage_internals():
+    """External code (UI and other core modules) must consume core packages via their public package API,
+    never directly importing internal submodules."""
+    public_core_packages = {
+        "loot",
+        "snippets",
+        "screenshots",
+        "platform",
+        "project",
+        "reporting",
+    }
+    violations = []
+
+    for search_root in (PROJECT_ROOT / "ui", PROJECT_ROOT / "core"):
+        for path in search_root.rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                target_module = None
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    target_module = node.module
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        for pkg in public_core_packages:
+                            if alias.name.startswith(f"core.{pkg}."):
+                                target_module = alias.name
+                                break
+                if target_module:
+                    for pkg in public_core_packages:
+                        if target_module.startswith(f"core.{pkg}."):
+                            if path.is_relative_to(PROJECT_ROOT / "core" / pkg):
+                                continue
+                            violations.append(
+                                f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} imports {target_module}"
+                            )
+
+    assert violations == [], (
+        "Found internal core subpackage imports from external modules:\n"
+        + "\n".join(violations)
+    )
+

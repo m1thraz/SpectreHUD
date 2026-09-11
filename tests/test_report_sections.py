@@ -1,20 +1,20 @@
 """Contract tests for persistent report sections and semantic HTML export."""
 
-from core.reporting.exporter import HtmlReportExporter
-from core.reporting.profiles import ReportExportProfile
-from core.reporting.template_repository import TemplateRepository
-from core.reporting.section_markers import (
+from core.reporting import HtmlReportExporter
+from core.reporting import ReportExportProfile
+from core.reporting import TemplateRepository
+from core.reporting import (
     reconcile_section_markers,
     segment_report_markdown,
     wrap_section_markdown,
 )
-from core.reporting.template_engine import (
+from core.reporting import (
     ReportContext,
     ReportTemplate,
     TemplateRenderer,
     TemplateSection,
 )
-from core.reporting.loot_sync import preserve_markers_in_preview_roundtrip
+from core.reporting import preserve_markers_in_preview_roundtrip
 
 
 def _all_sections_template() -> ReportTemplate:

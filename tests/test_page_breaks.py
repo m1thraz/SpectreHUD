@@ -6,22 +6,22 @@ preview roundtrip reconciliation, template integration, and editor actions.
 import unittest
 from PyQt6.QtWidgets import QPlainTextEdit
 
-from core.reporting.styles import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGHT_CSS
-from core.reporting.loot_sync import (
+from core.reporting import REPORT_PRINT_CSS, REPORT_BASE_CSS, REPORT_LIGHT_CSS
+from core.reporting import (
     PAGEBREAK_MARKER,
     PAGEBREAK_HTML,
     SPACER_REGEX,
     format_spacer_marker,
     preserve_markers_in_preview_roundtrip,
 )
-from core.reporting.markdown import convert_markdown_to_html
-from core.reporting.template_engine import (
+from core.reporting import convert_markdown_to_html
+from core.reporting import (
     TemplateSection,
     ReportTemplate,
     ReportContext,
     TemplateRenderer,
 )
-from core.reporting.template_repository import template_to_dict, dict_to_template
+from core.reporting import template_to_dict, dict_to_template
 from ui.markdown_toolbar_actions import insert_page_break, insert_spacer
 from ui.report_editor_tab import (
     PREVIEW_PAGEBREAK_LABEL,

@@ -10,10 +10,10 @@ from PyQt6.QtWidgets import QApplication
 
 from core.config import ConfigManager
 from core.project import ProjectManager, InvalidProjectNameError
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.screenshots.manager import ScreenshotManager
-from core.project.session_service import ProjectSessionService
+from core.screenshots import ScreenshotManager
+from core.project import ProjectSessionService
 
 
 class TestWorkflowRobustness(unittest.TestCase):
@@ -53,7 +53,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         Adversarial: Changing workspace directory to an unwritable / invalid path must fail-closed.
         """
         from unittest.mock import patch
-        from core.project.validator import validate_workspace_directory, WorkspaceError
+        from core.project import validate_workspace_directory, WorkspaceError
 
         # Empty path
         with self.assertRaises(WorkspaceError):
@@ -109,7 +109,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         """
         from unittest.mock import MagicMock
         from PyQt6.QtGui import QPixmap, QImage
-        from core.screenshots.manager import ScreenshotManager
+        from core.screenshots import ScreenshotManager
 
         snip_mgr = ScreenshotManager()
         self.project_mgr.create_project("BoxRollback")
@@ -145,7 +145,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         in-memory state without triggering storage write operations.
         """
         from unittest.mock import MagicMock
-        from core.project.session_service import ProjectSessionService
+        from core.project import ProjectSessionService
 
         mock_storage = MagicMock()
         self.loot_mgr.storage = mock_storage

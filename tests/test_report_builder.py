@@ -1,9 +1,9 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.reporting.builder import ReportBuilder
+from core.reporting import ReportBuilder
 
 
 class TestReportBuilder(unittest.TestCase):
@@ -144,7 +144,7 @@ class TestReportBuilder(unittest.TestCase):
 
     def test_build_with_custom_template(self):
         """Custom template passed to build() is respected."""
-        from core.reporting.template_engine import ReportTemplate, TemplateSection
+        from core.reporting import ReportTemplate, TemplateSection
 
         custom_tmpl = ReportTemplate(
             id="custom_test",

@@ -1,7 +1,7 @@
 """Tests for core/reporting/outline.py (Tier 0 pure logic)."""
 
 import unittest
-from core.reporting.outline import HeadingItem, extract_headings
+from core.reporting import HeadingItem, extract_headings
 
 
 class TestReportOutline(unittest.TestCase):

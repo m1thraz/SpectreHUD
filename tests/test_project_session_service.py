@@ -10,11 +10,11 @@ from core.project import (
     ProjectSchemaMismatchError,
     validate_and_parse_project_state,
 )
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectStateCorruptedError
-from core.project.session_service import ProjectSessionService, ProjectSessionValidationError
+from core.project import ProjectSessionService, ProjectSessionValidationError
 
 
 class TestProjectSessionService(unittest.TestCase):

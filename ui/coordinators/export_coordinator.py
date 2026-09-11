@@ -14,11 +14,11 @@ from core.config import ConfigManager
 from core.atomic_write import atomic_write_text
 from core.exporters import CherryTreeExporter, ExportResult, ExternalExportError, ObsidianExporter
 from core.reporting import HtmlReportExporter
-from core.reporting.profiles import ReportExportProfile
+from core.reporting import ReportExportProfile
 from core.i18n import t
 from ui.message_boxes import show_error_dialog, show_information_dialog
 from core.project import ProjectManager
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.logger import get_logger
 from ui.controllers.history_controller import HistoryController
 
@@ -60,7 +60,7 @@ class ExportCoordinator(QObject):
 
     def export_report_markdown(self, target: Path, markdown: str) -> None:
         """Write an explicit Markdown copy of the current editor document."""
-        from core.reporting.loot_sync import strip_report_markers
+        from core.reporting import strip_report_markers
 
         clean_markdown = strip_report_markers(markdown)
         if not atomic_write_text(target, clean_markdown):

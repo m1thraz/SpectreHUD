@@ -34,15 +34,15 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
-from core.reporting.file_manager import ReportFileManager
+from core.reporting import ReportFileManager
 from core.config import ConfigManager
-from core.reporting.template_engine import ReportTemplate
-from core.reporting.template_repository import TemplateRepository
+from core.reporting import ReportTemplate
+from core.reporting import TemplateRepository
 from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportError
 from core.logger import get_logger
 from core.i18n import t
 from core.fonts import get_report_font_stack
-from core.platform.opener import open_path
+from core.platform import open_path
 from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
     LootImagePickerDialog,
@@ -64,8 +64,8 @@ from ui.message_boxes import (
     show_information_dialog,
     show_warning_dialog,
 )
-from core.reporting.navigation import build_report_navigation
-from core.reporting.draft_manager import (
+from core.reporting import build_report_navigation
+from core.reporting import (
     discard_draft,
     get_draft,
     has_recoverable_draft,
@@ -96,7 +96,7 @@ PREVIEW_PAGEBREAK_LINE_RE = re.compile(
 
 def _markdown_with_preview_pagebreaks(markdown: str) -> str:
     """Expose page-break comments to Qt while preserving fenced code examples."""
-    from core.reporting.loot_sync import PAGEBREAK_REGEX, SPACER_REGEX
+    from core.reporting import PAGEBREAK_REGEX, SPACER_REGEX
 
     lines = markdown.splitlines()
     in_fence = False
@@ -948,7 +948,7 @@ class ReportEditorTab(QWidget):
 
     def _commit_preview_to_markdown(self) -> None:
         """Commits rich-text edits from the preview document back to the markdown editor."""
-        from core.reporting.loot_sync import preserve_markers_in_preview_roundtrip
+        from core.reporting import preserve_markers_in_preview_roundtrip
 
         raw_markdown = _strip_preview_pagebreaks(self.preview_document.toMarkdown())
         new_markdown = preserve_markers_in_preview_roundtrip(
@@ -1123,7 +1123,7 @@ class ReportEditorTab(QWidget):
             return
         self.active_template = dialog.selected_template
 
-        from core.reporting.file_manager import ReportBackupError, ReportSaveError
+        from core.reporting import ReportBackupError, ReportSaveError
 
         try:
             new_content = self.report_file_manager.regenerate(
@@ -1179,7 +1179,7 @@ class ReportEditorTab(QWidget):
                 )
                 return
 
-        from core.reporting.file_manager import ReportBackupError, ReportSaveError
+        from core.reporting import ReportBackupError, ReportSaveError
 
         cursor = self.editor.textCursor()
         saved_pos = cursor.position()

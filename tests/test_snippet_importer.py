@@ -6,8 +6,8 @@ from pathlib import Path
 # Ensure project root is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.snippets.manager import SnippetManager
-from core.snippets.importer import (
+from core.snippets import SnippetManager
+from core.snippets import (
     normalize_template_variables,
     parse_snippets_json,
     parse_snippets_markdown,

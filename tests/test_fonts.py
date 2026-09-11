@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 
 from core.config import ConfigManager
-from core.reporting.template import render_report_html
+from core.reporting import render_report_html
 from core.storage import InMemoryStorageBackend
 from ui.coordinators.settings_coordinator import SettingsCoordinator
 from ui.styles import build_app_theme

@@ -9,8 +9,8 @@ from core.phases import (
     get_phase,
     normalize_phase_key,
 )
-from core.loot.manager import CATEGORIES, VALID_CATEGORY_IDS
-from core.loot.migrator import LootMigrator
+from core.loot import CATEGORIES, VALID_CATEGORY_IDS
+from core.loot import LootMigrator
 from core.validators import validate_quick_note_entry
 
 

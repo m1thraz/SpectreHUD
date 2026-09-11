@@ -6,6 +6,7 @@ from pathlib import Path
 from core.logger import (
     configure_file_logging,
     flush_logs,
+    get_log_diagnostics,
     get_log_directory,
     get_log_path,
     get_logger,
@@ -102,6 +103,9 @@ class TestLogger(unittest.TestCase):
         self.assertEqual(get_log_directory(), self.temp_path.resolve())
         self.assertEqual(get_log_path(), configured_path)
         self.assertTrue(is_file_logging_configured())
+        diag = get_log_diagnostics()
+        self.assertEqual(diag.path, configured_path)
+        self.assertTrue(diag.is_active)
 
     def test_environment_override_controls_default_log_directory(self):
         override = self.temp_path / "diagnostics"

@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from core.net_detector import NetDetector
-from core.platform.network import detect_linux_ipv4_address, select_preferred_ipv4
+from core.platform import detect_linux_ipv4_address, select_preferred_ipv4
 
 
 def _interface(name: str, *addresses: str) -> dict:

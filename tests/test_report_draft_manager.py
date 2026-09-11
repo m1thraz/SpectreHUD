@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.reporting.draft_manager import (
+from core.reporting import (
     discard_draft,
     get_draft,
     get_draft_path,

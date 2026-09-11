@@ -12,9 +12,9 @@ from PyQt6.QtCore import QMimeData, Qt, QUrl
 from PyQt6.QtGui import QIcon, QShortcut
 
 from core.project import ProjectManager
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.reporting.file_manager import ReportFileManager
+from core.reporting import ReportFileManager
 from core.i18n import t
 from ui.report.dialogs import ReportGenerationDialog, ReportRegenerationConfirmDialog
 from ui.report.preview import ReportPreviewEdit
@@ -518,7 +518,7 @@ Text
         self.assertTrue(self.tab.editor.document().firstBlock().isVisible())
 
     def test_live_preview_shows_compact_pagebreak_indicator(self):
-        from core.reporting.loot_sync import PAGEBREAK_MARKER
+        from core.reporting import PAGEBREAK_MARKER
         from ui.report_editor_tab import PREVIEW_PAGEBREAK_LABEL
 
         self.tab.editor.setPlainText(f"Before\n\n{PAGEBREAK_MARKER}\n\nAfter")
@@ -852,7 +852,7 @@ Text
         self.assertIn("MySQL Root", self.tab.editor.toPlainText())
 
         # 3. ReportBackupError handling
-        from core.reporting.file_manager import ReportBackupError, ReportSaveError
+        from core.reporting import ReportBackupError, ReportSaveError
 
         with (
             patch.object(
@@ -955,7 +955,7 @@ Text
 
     def test_load_project_draft_recovery_restore(self):
         """Test loading project with existing uncommitted draft offers restoration and restores."""
-        from core.reporting.draft_manager import save_draft
+        from core.reporting import save_draft
 
         proj_dir = self.project_mgr.get_project_dir("TestBox")
         save_draft(proj_dir, "# Restored Draft Content")
@@ -977,7 +977,7 @@ Text
 
     def test_load_project_draft_recovery_discard(self):
         """Test loading project with draft discards it when user rejects."""
-        from core.reporting.draft_manager import has_recoverable_draft, save_draft
+        from core.reporting import has_recoverable_draft, save_draft
 
         proj_dir = self.project_mgr.get_project_dir("TestBox")
         save_draft(proj_dir, "# Draft To Discard")

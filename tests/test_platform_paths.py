@@ -1,6 +1,6 @@
 """Platform path resolution without dependence on the developer's home."""
 
-from core.platform.paths import (
+from core.platform import (
     cache_dir,
     config_dir,
     data_dir,

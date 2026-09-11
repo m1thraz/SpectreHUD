@@ -2,7 +2,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from core.reporting import HtmlReportExporter
-from core.reporting.assets import ImageEmbeddingBudget
+from core.reporting import ImageEmbeddingBudget
 
 
 class TestHtmlReportExporter(unittest.TestCase):

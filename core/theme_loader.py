@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Mapping, Optional, Set
 
 from core.logger import get_logger
 from core.theme_palette import CYBER_DARK_PALETTE
-from core.platform.paths import user_themes_dir
+from core.platform import user_themes_dir
 
 logger = get_logger(__name__)
 

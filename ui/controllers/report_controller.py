@@ -3,11 +3,11 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from core.project import ProjectManager
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.reporting.file_manager import ReportFileManager
+from core.reporting import ReportFileManager
 from core.config import ConfigManager
-from core.reporting.note_formatter import append_report_note
+from core.reporting import append_report_note
 
 if TYPE_CHECKING:
     from ui.coordinators.export_coordinator import ExportCoordinator

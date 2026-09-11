@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.clipboard_history import ClipboardHistory
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.project import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.logger import get_logger
@@ -165,7 +165,7 @@ class HistoryController(QObject):
         return self.clipboard_monitor is None or self.clipboard_monitor.is_paused
 
     def export_report_markdown(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        from core.reporting.builder import ReportBuilder
+        from core.reporting import ReportBuilder
 
         builder = ReportBuilder(
             loot_manager=self.loot_manager, clipboard_watcher=self.clipboard_history

@@ -6,8 +6,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from PyQt6.QtWidgets import QMessageBox
 
-from core.reporting.file_manager import ReportFileManager
-from core.reporting.draft_manager import get_draft_path, save_draft
+from core.reporting import ReportFileManager
+from core.reporting import get_draft_path, save_draft
 from ui.report_editor_tab import ReportEditorTab
 
 class TestReportRecoveryUI(unittest.TestCase):

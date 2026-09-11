@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from core.platform.opener import open_path
+from core.platform import open_path
 
 
 def test_open_path_opens_existing_file_with_local_qt_url(tmp_path):

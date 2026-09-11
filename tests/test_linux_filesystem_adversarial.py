@@ -22,12 +22,12 @@ from core.atomic_write import (
     atomic_write_text,
     _secure_chmod,
 )
-from core.project.manager import ProjectManager
-from core.project.validator import (
+from core.project import ProjectManager
+from core.project import (
     WorkspaceError,
     validate_workspace_directory,
 )
-from core.reporting.file_manager import (
+from core.reporting import (
     ReportBackupError,
     ReportFileManager,
     ReportSaveError,

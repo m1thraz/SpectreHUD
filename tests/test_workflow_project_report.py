@@ -12,12 +12,12 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 from unittest.mock import patch
 
 from core.config import ConfigManager
-from core.snippets.manager import SnippetManager
-from core.loot.manager import LootManager
+from core.snippets import SnippetManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
-from core.screenshots.manager import ScreenshotManager
-from core.reporting.file_manager import ReportFileManager
+from core.screenshots import ScreenshotManager
+from core.reporting import ReportFileManager
 from tests.window_factory import create_main_window
 
 pytestmark = pytest.mark.integration

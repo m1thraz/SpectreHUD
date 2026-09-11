@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from typing import Dict, Any, Optional, Callable
-from core.loot.manager import LOOT_TYPES, CATEGORIES
+from core.loot import LOOT_TYPES, CATEGORIES
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog

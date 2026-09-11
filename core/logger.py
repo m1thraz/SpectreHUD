@@ -10,8 +10,9 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional, Union
+from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
-from core.platform.paths import logs_dir as platform_logs_dir
+from core.platform import logs_dir as platform_logs_dir
 
 DEFAULT_MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB per log file
 DEFAULT_LOG_BACKUP_COUNT = 3  # 3 rotated backups (spectrehud.log.1, .2, .3)
@@ -48,6 +49,19 @@ def get_log_path() -> Path:
 
 def is_file_logging_configured() -> bool:
     return _file_logging_configured
+
+
+@dataclass(frozen=True)
+class LogDiagnostics:
+    """Public summary of logging state for user diagnostics and error dialogs."""
+
+    path: Path
+    is_active: bool
+
+
+def get_log_diagnostics() -> LogDiagnostics:
+    """Return diagnostic information about file logging without leaking internal configuration state."""
+    return LogDiagnostics(path=get_log_path(), is_active=_file_logging_configured)
 
 
 def configure_file_logging(

@@ -16,9 +16,9 @@ from urllib.parse import urlencode
 
 from core.atomic_write import atomic_write_bytes, atomic_write_text
 from core.exporters.base import ExportResult, ExternalExportError
-from core.project.validator import sanitize_filename_component, validate_project_name
-from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE
-from core.reporting.loot_sync import SPACER_REGEX, strip_report_markers
+from core.project import sanitize_filename_component, validate_project_name
+from core.reporting import MAX_EMBED_IMAGE_FILE_SIZE
+from core.reporting import SPACER_REGEX, strip_report_markers
 
 
 _IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+[^)]*)?\)")

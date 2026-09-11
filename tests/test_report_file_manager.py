@@ -9,9 +9,9 @@ from typing import Optional, List, Dict, Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.project import ProjectManager
-from core.loot.manager import LootManager
-from core.reporting.file_manager import ReportFileManager
-from core.reporting.template_engine import ReportTemplate
+from core.loot import LootManager
+from core.reporting import ReportFileManager
+from core.reporting import ReportTemplate
 from core.validators import MAX_REPORT_FILE_SIZE
 
 
@@ -129,7 +129,7 @@ class TestReportFileManager(unittest.TestCase):
     def test_regenerate_fails_closed_if_backup_fails(self):
         """Invariant: If backup fails, regenerate MUST raise ReportBackupError and NOT overwrite report.md."""
         from unittest.mock import patch
-        from core.reporting.file_manager import ReportBackupError
+        from core.reporting import ReportBackupError
 
         self.project_mgr.create_project("ProtectedBox")
         original_text = "# Critical Handcrafted Report"
@@ -146,7 +146,7 @@ class TestReportFileManager(unittest.TestCase):
     def test_regenerate_fails_closed_if_save_fails(self):
         """Invariant: If save fails after build, regenerate MUST raise ReportSaveError and not return false-success."""
         from unittest.mock import patch
-        from core.reporting.file_manager import ReportSaveError
+        from core.reporting import ReportSaveError
 
         self.project_mgr.create_project("SaveFailBox")
 
@@ -157,7 +157,7 @@ class TestReportFileManager(unittest.TestCase):
 
     def test_report_builder_atomic_export(self):
         """Tests that ReportBuilder.export writes report atomically to output_path."""
-        from core.reporting.builder import ReportBuilder
+        from core.reporting import ReportBuilder
 
         builder = ReportBuilder(loot_manager=self.loot_mgr, clipboard_watcher=self.clip_watcher)
         export_file = self.temp_path / "custom_export.md"
@@ -252,7 +252,7 @@ class TestReportFileManager(unittest.TestCase):
     def test_append_missing_loot_fails_closed_if_backup_fails(self):
         """Ticket 21: If backup fails, append_missing_loot raises ReportBackupError and leaves file intact."""
         from unittest.mock import patch
-        from core.reporting.file_manager import ReportBackupError
+        from core.reporting import ReportBackupError
 
         self.project_mgr.create_project("BackupFailBox")
         original_text = "# Original Protected Text"
@@ -269,7 +269,7 @@ class TestReportFileManager(unittest.TestCase):
     def test_append_missing_loot_fails_closed_if_save_fails(self):
         """Ticket 22: If saving fails, append_missing_loot raises ReportSaveError."""
         from unittest.mock import patch
-        from core.reporting.file_manager import ReportSaveError
+        from core.reporting import ReportSaveError
 
         self.project_mgr.create_project("SaveFailBox")
         original_text = "# Original Text"

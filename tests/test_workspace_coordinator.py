@@ -22,9 +22,9 @@ from core.project import (
     ProjectSchemaMismatchError,
     ProjectStateCorruptedError,
 )
-from core.project.validator import WorkspaceError
-from core.project.session_service import ProjectSessionService
-from core.project.lock_service import ProjectSecurityMetaError
+from core.project import WorkspaceError
+from core.project import ProjectSessionService
+from core.project import ProjectSecurityMetaError
 from core.event_bus import EventBus, EventType, ProjectChangedPayload
 from ui.coordinators.workspace_coordinator import WorkspaceCoordinator
 

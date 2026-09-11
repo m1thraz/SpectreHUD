@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Optional, Any
 
 from core.storage import StorageBackend, PersistenceError
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
 from core.config import ConfigManager
-from core.snippets.manager import SnippetManager
+from core.snippets import SnippetManager
 from core.project import ProjectManager
 
 

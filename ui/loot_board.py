@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import t
-from core.loot.manager import CATEGORIES
+from core.loot import CATEGORIES
 from ui.loot_card import LootCard
 
 

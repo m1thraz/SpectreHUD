@@ -20,7 +20,7 @@ from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.hotkey_listener import HotkeyConfig, HotkeyListener
 from core.clipboard_history import ClipboardHistory
 from core.validators import validate_project_state
-from core.project.session_service import ProjectSessionService
+from core.project import ProjectSessionService
 from ui.phase_toast_hud import PhaseToastHUD
 from ui.history_card import HistoryCard
 from ui.clipboard_monitor import ClipboardMonitor
@@ -226,7 +226,7 @@ def test_quick_note_controller_phase_inheritance(qapp, tmp_path):
 
 def test_loot_controller_phase_inheritance(qapp, tmp_path):
     from unittest.mock import MagicMock, patch
-    from core.loot.manager import LootManager
+    from core.loot import LootManager
     from core.project import ProjectManager
     from ui.controllers.loot_controller import LootController
 

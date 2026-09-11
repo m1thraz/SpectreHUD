@@ -16,8 +16,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
 from core.config import ConfigManager
-from core.snippets.manager import SnippetManager
-from core.loot.manager import LootManager
+from core.snippets import SnippetManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.project import ProjectManager
 from core.event_bus import EventBus, EventType

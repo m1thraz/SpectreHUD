@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from core.reporting.file_manager import ReportFileManager
+from core.reporting import ReportFileManager
 from ui.report_editor_tab import ReportEditorTab
 
 class TestReportNavigatorReplacement(unittest.TestCase):

@@ -11,7 +11,7 @@ from collections import Counter
 from typing import Dict, Any, List, Optional, Callable
 import re
 
-from core.loot.manager import CATEGORIES
+from core.loot import CATEGORIES
 from core.reporting.charts import render_severity_badge, render_severity_counts
 from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 from core.reporting.section_markers import (

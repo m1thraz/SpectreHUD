@@ -4,7 +4,7 @@ import platform
 import re
 from typing import Optional
 from core.logger import get_logger
-from core.platform.network import detect_linux_ipv4_address
+from core.platform import detect_linux_ipv4_address
 
 logger = get_logger("net_detector")
 

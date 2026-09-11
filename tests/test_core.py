@@ -1,8 +1,8 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.snippets.interpolator import TemplateEngine
-from core.snippets.manager import SnippetManager
+from core.snippets import TemplateEngine
+from core.snippets import SnippetManager
 
 
 class TestCoreModules(unittest.TestCase):

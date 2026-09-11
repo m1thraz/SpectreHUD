@@ -423,7 +423,7 @@ class LootManager:
             DeprecationWarning,
             stacklevel=2,
         )
-        from core.reporting.builder import ReportBuilder
+        from core.reporting import ReportBuilder
 
         builder = ReportBuilder(loot_manager=self)
         return builder.export(output_path, target_ip=target_ip)

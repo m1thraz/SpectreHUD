@@ -20,8 +20,8 @@ from PyQt6.QtWidgets import (
     QInputDialog,
 )
 
-from core.reporting.template_engine import ReportTemplate
-from core.reporting.template_repository import TemplateRepository
+from core.reporting import ReportTemplate
+from core.reporting import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog
 from core.i18n import t
 from ui.message_boxes import ask_confirmation

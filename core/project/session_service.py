@@ -1,8 +1,9 @@
 from typing import Any, Callable, Dict, List, Optional
 
-from core.project import ProjectManager, ProjectState, ProjectStateLoadError
+from core.project.manager import ProjectManager
+from core.project.state_store import ProjectState, ProjectStateLoadError
 from core.project.persistence import PersistFailureReason, PersistResult
-from core.loot.manager import LootManager
+from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.logger import get_logger
 from core.phases import VALID_PHASE_KEYS, try_normalize_phase_key

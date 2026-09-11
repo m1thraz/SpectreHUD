@@ -15,10 +15,10 @@ from typing import Any, Iterable, Mapping
 from core.atomic_write import atomic_write_bytes, atomic_write_text
 from core.exporters.base import ExportResult, ExternalExportError
 from core.exporters.obsidian import ObsidianExporter
-from core.project.validator import sanitize_filename_component, validate_project_name
-from core.reporting.styles import get_report_css
-from core.reporting.markdown import convert_markdown_to_html
-from core.reporting.loot_sync import strip_report_markers
+from core.project import sanitize_filename_component, validate_project_name
+from core.reporting import get_report_css
+from core.reporting import convert_markdown_to_html
+from core.reporting import strip_report_markers
 
 
 _IMAGE_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+[^)]*)?\)")

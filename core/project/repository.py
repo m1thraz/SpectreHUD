@@ -24,8 +24,8 @@ from core.project.validator import (
 from core.project.metadata import create_initial_notes, create_initial_state
 from core.project.registry import ProjectRegistry
 from core.project.state_store import ProjectState, ProjectStateStore
-from core.platform.paths import config_dir as platform_config_dir, projects_dir
-from core.platform.opener import open_path
+from core.platform import config_dir as platform_config_dir, projects_dir
+from core.platform import open_path
 
 logger = get_logger("projects")
 

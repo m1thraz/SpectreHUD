@@ -1,5 +1,5 @@
-from core.reporting.navigation import build_report_navigation
-from core.reporting.section_markers import wrap_section_markdown
+from core.reporting import build_report_navigation
+from core.reporting import wrap_section_markdown
 
 
 def test_navigation_preserves_section_order_titles_and_marker_identity():

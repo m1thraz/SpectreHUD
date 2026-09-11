@@ -24,15 +24,20 @@ def test_error_copy_button_copies_title_message_and_details(qapp):
     )
 
 
+from pathlib import Path
+from core.logger import LogDiagnostics
+
+
 def test_error_dialog_includes_expected_log_path_when_file_logging_is_unavailable(qapp):
     captured_details = []
+    diagnostics = LogDiagnostics(
+        path=Path("C:/Diagnostics/spectrehud.log"),
+        is_active=False,
+    )
     with (
         patch.object(QMessageBox, "exec"),
         patch(
-            "ui.message_boxes.is_file_logging_configured", return_value=False
-        ),
-        patch(
-            "ui.message_boxes.get_log_path", return_value="C:/Diagnostics/spectrehud.log"
+            "ui.message_boxes.get_log_diagnostics", return_value=diagnostics
         ),
         patch.object(
             QMessageBox,
@@ -44,4 +49,4 @@ def test_error_dialog_includes_expected_log_path_when_file_logging_is_unavailabl
 
     details = captured_details[0]
     assert "Traceback" in details
-    assert "C:/Diagnostics/spectrehud.log" in details
+    assert str(diagnostics.path) in details

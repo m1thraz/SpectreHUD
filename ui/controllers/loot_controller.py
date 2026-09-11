@@ -5,11 +5,11 @@ from PyQt6.QtCore import QObject, Qt, pyqtSignal, QPoint
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 
-from core.loot.manager import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
+from core.loot import LootManager, LootValidationError, LOOT_TYPES, CATEGORIES
 from core.project import ProjectManager
 from core.storage import PersistenceError, StorageError
 from core.atomic_write import atomic_write_text
-from core.project.validator import sanitize_filename_component, validate_workspace_boundary
+from core.project import sanitize_filename_component, validate_workspace_boundary
 from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus
@@ -208,7 +208,7 @@ class LootController(QObject):
         return True
 
     def export_loot(self, output_path: Path, target_ip: Optional[str] = None) -> str:
-        from core.reporting.builder import ReportBuilder
+        from core.reporting import ReportBuilder
 
         builder = ReportBuilder(loot_manager=self.loot_manager)
         return builder.export(output_path, target_ip=target_ip)

@@ -9,16 +9,16 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QPushButton, QMessageBox
 
 from core.project import ProjectManager, ProjectState, ProjectStateLoadError
-from core.project.persistence import PersistFailureReason
-from core.project.validator import WorkspaceError, validate_workspace_directory
+from core.project import PersistFailureReason
+from core.project import WorkspaceError, validate_workspace_directory
 from core.config import ConfigManager
-from core.project.session_service import ProjectSessionService
+from core.project import ProjectSessionService
 from core.event_bus import EventBus, EventType, ProjectChangedPayload
 from core.i18n import t
 from core.logger import get_logger
 from ui.controllers.project_controller import ProjectController
 from ui.project_dialog import ProjectUnlockDialog
-from core.project.lock_service import ProjectSecurityMetaError
+from core.project import ProjectSecurityMetaError
 from ui.controllers.report_controller import ReportController
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_warning_dialog
 

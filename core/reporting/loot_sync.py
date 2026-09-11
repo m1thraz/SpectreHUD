@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
-from core.loot.manager import CATEGORIES
+from core.loot import CATEGORIES
 from core.reporting.section_markers import reconcile_section_markers
 
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")

@@ -6,7 +6,7 @@ from core.storage import (
     FileStorageBackend,
     PersistenceError,
 )
-from core.platform.paths import config_dir as platform_config_dir, projects_dir
+from core.platform import config_dir as platform_config_dir, projects_dir
 
 logger = get_logger("config")
 

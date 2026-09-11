@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 from core.event_bus import EventType, ProjectChangedPayload
 from core.project import ProjectManager, InvalidProjectNameError
-from core.loot.manager import CATEGORIES
+from core.loot import CATEGORIES
 
 
 class TestProjectManager(unittest.TestCase):

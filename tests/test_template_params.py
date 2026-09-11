@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.snippets.interpolator import SMART_PRESETS, TemplateEngine
+from core.snippets import SMART_PRESETS, TemplateEngine
 
 
 class TestTemplateParams(unittest.TestCase):

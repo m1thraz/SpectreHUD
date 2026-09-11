@@ -5,15 +5,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from core.loot.manager import CATEGORIES
-from core.reporting.section_markers import KNOWN_SECTION_TYPES
-from core.reporting.template_engine import (
+from core.loot import CATEGORIES
+from core.reporting import KNOWN_SECTION_TYPES
+from core.reporting import (
     ReportContext,
     ReportTemplate,
     TemplateRenderer,
     TemplateSection,
 )
-from core.reporting.template_repository import TemplateRepository
+from core.reporting import TemplateRepository
 
 
 class TestTemplateRepository(unittest.TestCase):

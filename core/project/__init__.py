@@ -34,10 +34,13 @@ from core.project.state_store import (
     validate_and_parse_security_meta,
 )
 from core.project.persistence import PersistFailureReason, PersistResult
+from core.project.session_service import ProjectSessionService, ProjectSessionValidationError
 
 __all__ = [
     "ProjectManager",
     "ProjectRepository",
+    "ProjectSessionService",
+    "ProjectSessionValidationError",
     "ProjectError",
     "ProjectExistsError",
     "InvalidProjectNameError",

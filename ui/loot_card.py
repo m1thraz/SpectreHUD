@@ -14,13 +14,13 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent, QPoint
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QContextMenuEvent, QCursor
 from typing import Dict, Any, Optional
-from core.loot.manager import LOOT_TYPES
+from core.loot import LOOT_TYPES
 from core.phases import get_phase
 from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
 from ui.message_boxes import show_error_dialog
-from core.platform.opener import open_path
+from core.platform import open_path
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
 from ui.elided_label import ElidedLabel, configure_badge_label

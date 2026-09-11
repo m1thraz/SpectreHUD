@@ -1157,7 +1157,7 @@ class SettingsDialog(BaseHudDialog):
         all_settings.update(self.page_appearance.get_settings())
 
         if "workspace_dir" in all_settings and all_settings["workspace_dir"]:
-            from core.project.validator import validate_workspace_directory, WorkspaceError
+            from core.project import validate_workspace_directory, WorkspaceError
 
             try:
                 validate_workspace_directory(all_settings["workspace_dir"])

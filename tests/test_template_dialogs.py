@@ -8,8 +8,8 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QMessageBox
-from core.reporting.template_engine import TemplateSection
-from core.reporting.template_repository import TemplateRepository
+from core.reporting import TemplateSection
+from core.reporting import TemplateRepository
 from ui.template_editor_dialog import TemplateEditorDialog, SectionEditDialog
 from ui.template_manager_dialog import TemplateManagerDialog
 from ui.styles import APP_THEME

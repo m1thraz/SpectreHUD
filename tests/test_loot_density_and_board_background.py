@@ -224,7 +224,7 @@ def test_add_loot_dialog_export_buttons_in_edit_mode(qapp):
 
 
 def test_loot_controller_density_toggle_and_board_propagation(qapp):
-    from core.loot.manager import LootManager
+    from core.loot import LootManager
     from core.project import ProjectManager
     from core.storage import FileStorageBackend
 
