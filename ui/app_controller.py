@@ -113,11 +113,6 @@ class AppController(QObject):
         )
         self.cards: List[QWidget] = []
         self._rendered_mode: Optional[str] = None
-        self._cheatsheet_render_signature: Optional[tuple[str, str, str]] = None
-        self._cheatsheet_cache_signature: Optional[tuple[str, str, str]] = None
-        self._cheatsheet_cache_widgets: List[QWidget] = []
-        self._cheatsheet_cache_cards: List[QWidget] = []
-        self._cheatsheet_cache_scroll = 0
         self._quick_ip_popup: Optional[Any] = None
 
         # Specialized Coordinators & Providers
@@ -584,18 +579,15 @@ class AppController(QObject):
 
     def _render_cheatsheet(self) -> RenderResult:
         signature = self._current_cheatsheet_signature()
-        if self._cheatsheet_cache_signature == signature and self._cheatsheet_cache_widgets:
-            cached_widgets = self._cheatsheet_cache_widgets
-            cached_cards = self._cheatsheet_cache_cards
-            cached_scroll = self._cheatsheet_cache_scroll
-            self._cheatsheet_cache_widgets = []
-            self._cheatsheet_cache_cards = []
-            self._cheatsheet_cache_signature = None
+        if self.cheatsheet_ctrl.can_restore_cache(signature):
+            cached_widgets, cached_cards, cached_scroll = (
+                self.cheatsheet_ctrl.pop_cached_view()
+            )
             self._prepare_card_content()
             self.content.restore_cards(cached_widgets)
             self.content.restore_scroll_value(cached_scroll)
             self.cheatsheet_ctrl.update_variables(cached_cards, self.var_bar.get_variables())
-            self._cheatsheet_render_signature = signature
+            self.cheatsheet_ctrl.set_render_signature(signature)
             return RenderResult(
                 cached_cards,
                 self._format_entry_count(self.cheatsheet_ctrl.total_result_count),
@@ -612,7 +604,7 @@ class AppController(QObject):
             self._on_content_copied,
             self._on_cheatsheet_batch_loaded,
         )
-        self._cheatsheet_render_signature = signature
+        self.cheatsheet_ctrl.set_render_signature(signature)
         count = (
             self.cheatsheet_ctrl.total_result_count
             if self.cheatsheet_ctrl.has_active_batch
@@ -628,19 +620,16 @@ class AppController(QObject):
         )
 
     def _stash_cheatsheet_view(self) -> None:
-        self._discard_cheatsheet_cache()
-        self._cheatsheet_cache_signature = self._cheatsheet_render_signature
-        self._cheatsheet_cache_scroll = self.content.scroll_value()
-        self._cheatsheet_cache_cards = self.cards
-        self._cheatsheet_cache_widgets = self.content.detach_cards()
+        self.cheatsheet_ctrl.stash_view(
+            cards=self.cards,
+            detached_widgets=self.content.detach_cards(),
+            scroll_val=self.content.scroll_value(),
+            discard_fn=self.content.discard_detached_cards,
+        )
         self.cards = []
 
     def _discard_cheatsheet_cache(self) -> None:
-        if self._cheatsheet_cache_widgets:
-            self.content.discard_detached_cards(self._cheatsheet_cache_widgets)
-        self._cheatsheet_cache_widgets = []
-        self._cheatsheet_cache_cards = []
-        self._cheatsheet_cache_signature = None
+        self.cheatsheet_ctrl.discard_cache(self.content.discard_detached_cards)
 
     def _on_cheatsheet_batch_loaded(self) -> None:
         self.footer.set_count(
@@ -651,12 +640,13 @@ class AppController(QObject):
         self.content_refreshed.emit()
 
     def _maybe_load_more_cheatsheet(self, value: int) -> None:
-        if self.active_mode != "cheatsheet" or not self.cheatsheet_ctrl.has_more_results:
+        if self.active_mode != "cheatsheet":
             return
         scrollbar = self.content.scroll_area.verticalScrollBar()
-        threshold = max(120, scrollbar.pageStep() // 2)
-        if value >= scrollbar.maximum() - threshold:
-            self.cheatsheet_ctrl.load_more()
+        self.cheatsheet_ctrl.check_scroll_load_more(value, scrollbar)
+
+    def _export_single_loot_to_obsidian(self, entry_id: str) -> None:
+        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
 
     def _render_loot(self) -> RenderResult:
         content_layout = self._prepare_card_content()
@@ -664,8 +654,6 @@ class AppController(QObject):
         project_dir = self.project_manager.get_project_dir(
             self.project_manager.get_active_project()
         )
-        def export_obsidian(entry_id: str) -> None:
-            self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
         density = self.config.get("loot_density", "comfortable")
         if self.config.get("loot_view_mode", "list") == "board":
             cards = self.loot_ctrl.render_board_content(
@@ -677,7 +665,7 @@ class AppController(QObject):
                 self._on_export_loot_entry,
                 self._on_move_loot_category,
                 self.window,
-                on_export_obsidian=export_obsidian,
+                on_export_obsidian=self._export_single_loot_to_obsidian,
                 on_copied=self._on_content_copied,
                 density=density,
             )
@@ -691,7 +679,7 @@ class AppController(QObject):
                 self._on_export_loot_entry,
                 self.window,
                 self.content.show_empty_state,
-                on_export_obsidian=export_obsidian,
+                on_export_obsidian=self._export_single_loot_to_obsidian,
                 on_copied=self._on_content_copied,
                 density=density,
             )

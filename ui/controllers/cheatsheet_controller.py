@@ -135,6 +135,11 @@ class CheatsheetController(QObject):
         self._load_more_callback: Optional[Callable[[], None]] = None
         self._loading_more = False
         self._active_variables: Dict[str, str] = {}
+        self._cache_signature: Optional[tuple[str, str, str]] = None
+        self._render_signature: Optional[tuple[str, str, str]] = None
+        self._cache_widgets: List[QWidget] = []
+        self._cache_cards: List[QWidget] = []
+        self._cache_scroll: int = 0
 
     def _notify_persistence_error(
         self, operation: str, error: Exception, parent_widget: Optional[QWidget] = None
@@ -583,4 +588,59 @@ class CheatsheetController(QObject):
                 tags=data.get("tags", []),
             )
             return True
+        return False
+
+    # ------------------------------------------------------------------ #
+    # Cache & View Stash Management
+    # ------------------------------------------------------------------ #
+
+    def set_render_signature(self, signature: tuple[str, str, str]) -> None:
+        """Updates the active render signature."""
+        self._render_signature = signature
+
+    def can_restore_cache(self, signature: tuple[str, str, str]) -> bool:
+        """Checks whether cached widgets exist and match the requested render signature."""
+        return bool(self._cache_signature == signature and self._cache_widgets)
+
+    def stash_view(
+        self,
+        cards: List[QWidget],
+        detached_widgets: List[QWidget],
+        scroll_val: int,
+        discard_fn: Optional[Callable[[List[QWidget]], None]] = None,
+    ) -> None:
+        """Stashes current cards and detached widgets for quick restoration."""
+        self.discard_cache(discard_fn)
+        self._cache_signature = self._render_signature
+        self._cache_scroll = scroll_val
+        self._cache_cards = list(cards)
+        self._cache_widgets = list(detached_widgets)
+
+    def discard_cache(
+        self, discard_fn: Optional[Callable[[List[QWidget]], None]] = None
+    ) -> None:
+        """Discards stashed widgets safely, invoking discard_fn on detached widgets if provided."""
+        if self._cache_widgets and discard_fn is not None:
+            discard_fn(self._cache_widgets)
+        self._cache_widgets = []
+        self._cache_cards = []
+        self._cache_signature = None
+
+    def pop_cached_view(self) -> tuple[List[QWidget], List[QWidget], int]:
+        """Pops and returns (cached_widgets, cached_cards, cached_scroll), clearing the cache."""
+        widgets = self._cache_widgets
+        cards = self._cache_cards
+        scroll = self._cache_scroll
+        self._cache_widgets = []
+        self._cache_cards = []
+        self._cache_signature = None
+        return widgets, cards, scroll
+
+    def check_scroll_load_more(self, current_val: int, scrollbar: Any) -> bool:
+        """Checks if scroll position near bottom warrants loading the next batch."""
+        if not self.has_more_results:
+            return False
+        threshold = max(120, scrollbar.pageStep() // 2)
+        if current_val >= scrollbar.maximum() - threshold:
+            return self.load_more()
         return False

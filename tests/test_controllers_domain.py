@@ -306,6 +306,58 @@ class TestControllersDomain(unittest.TestCase):
         snippets_after = self.cheatsheet_ctrl.get_snippets(category_id="custom_snippets")
         self.assertFalse(any(s.get("id") == sid for s in snippets_after))
 
+    def test_cheatsheet_controller_cache_management(self):
+        """CheatsheetController manages view stashing, restoring, popping, and cache discarding."""
+        sig = ("nmap", "network_scanning", "en")
+        self.assertFalse(self.cheatsheet_ctrl.can_restore_cache(sig))
+
+        w1 = QWidget()
+        w2 = QWidget()
+        self.cheatsheet_ctrl.set_render_signature(sig)
+        self.cheatsheet_ctrl.stash_view(cards=[w1], detached_widgets=[w2], scroll_val=42)
+
+        self.assertTrue(self.cheatsheet_ctrl.can_restore_cache(sig))
+        self.assertFalse(self.cheatsheet_ctrl.can_restore_cache(("different", "all", "en")))
+
+        # Pop cached view
+        widgets, cards, scroll = self.cheatsheet_ctrl.pop_cached_view()
+        self.assertEqual(widgets, [w2])
+        self.assertEqual(cards, [w1])
+        self.assertEqual(scroll, 42)
+        self.assertFalse(self.cheatsheet_ctrl.can_restore_cache(sig))
+
+        # Stash and discard with discard callback
+        discarded = []
+        self.cheatsheet_ctrl.stash_view(cards=[w1], detached_widgets=[w2], scroll_val=10)
+        self.cheatsheet_ctrl.discard_cache(discard_fn=lambda w: discarded.extend(w))
+        self.assertEqual(discarded, [w2])
+        self.assertFalse(self.cheatsheet_ctrl.can_restore_cache(sig))
+
+        # Check scroll load more
+        mock_scrollbar = MagicMock()
+        mock_scrollbar.pageStep.return_value = 100
+        mock_scrollbar.maximum.return_value = 500
+
+        # No more results -> returns False
+        self.cheatsheet_ctrl._total_result_count = 10
+        self.cheatsheet_ctrl._loaded_result_count = 10
+        self.assertFalse(self.cheatsheet_ctrl.check_scroll_load_more(480, mock_scrollbar))
+
+        # Has more results, below threshold -> False
+        self.cheatsheet_ctrl._total_result_count = 20
+        self.assertFalse(self.cheatsheet_ctrl.check_scroll_load_more(200, mock_scrollbar))
+
+        # Has more results, above threshold -> calls load_more
+        load_called = False
+
+        def mock_load():
+            nonlocal load_called
+            load_called = True
+
+        self.cheatsheet_ctrl._load_more_callback = mock_load
+        self.assertTrue(self.cheatsheet_ctrl.check_scroll_load_more(480, mock_scrollbar))
+        self.assertTrue(load_called)
+
     def test_loot_controller_domain(self):
         """LootController manages loot entries, filter actions, and publishes events."""
         loot_events = []

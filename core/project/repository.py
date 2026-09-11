@@ -174,6 +174,186 @@ class ProjectRepository:
 
         return proj_dir
 
+    def _validate_create_candidate(
+        self, clean_name: str, base_dir: Optional[Path], allow_existing: bool
+    ) -> Path:
+        target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
+        candidate = target_base / clean_name
+        proj_dir = validate_workspace_boundary(candidate, target_base)
+
+        if not allow_existing and clean_name != "Default":
+            if clean_name in self.list_projects() or proj_dir.exists():
+                raise ProjectExistsError(
+                    f"A project with sanitized name '{clean_name}' already exists at {proj_dir}."
+                )
+        return proj_dir
+
+    def _validate_import_candidate(
+        self, folder_path: Union[Path, str]
+    ) -> Optional[tuple[Path, str]]:
+        target_path = Path(folder_path).resolve()
+        if not target_path.exists() or not target_path.is_dir():
+            logger.warning(
+                f"Cannot import non-existing or non-directory project folder: {folder_path}"
+            )
+            return None
+
+        try:
+            clean_name = validate_project_name(target_path.name)
+        except InvalidProjectNameError as e:
+            logger.warning(
+                f"Cannot import project with invalid directory name {target_path.name}: {e}"
+            )
+            return None
+
+        if clean_name in self.registry and self.registry[clean_name] != str(target_path):
+            existing_loc = Path(self.registry[clean_name])
+            if existing_loc.exists() and existing_loc.is_dir():
+                return None
+        return target_path, clean_name
+
+    def _ensure_project_subdirectories(self, proj_dir: Path, *, is_import: bool = False) -> None:
+        proj_dir.mkdir(parents=True, exist_ok=True)
+        prefix = "Imported project contains " if is_import else "Project directory contains "
+        for sub in PROJECT_LOOT_SUBDIRECTORIES:
+            sub_p = proj_dir / sub
+            if sub_p.is_symlink():
+                raise ProjectCreationError(f"{prefix}symlinked subdirectory: {sub}")
+            if sub_p.exists() and not sub_p.is_dir():
+                if is_import:
+                    raise ProjectCreationError(
+                        f"Imported project contains non-directory file named '{sub}'"
+                    )
+                raise OSError(
+                    f"Cannot create subfolder '{sub}' because a non-directory file exists with that name."
+                )
+            sub_p.mkdir(exist_ok=True)
+
+    def _ensure_initial_project_files(
+        self,
+        proj_dir: Path,
+        clean_name: str,
+        target_ip: str,
+        attacker_ip: str,
+        port: str,
+        lang: str,
+    ) -> None:
+        notes_file = proj_dir / "notes.md"
+        if not notes_file.exists():
+            notes_content = create_initial_notes(
+                project_name=clean_name,
+                target_ip=target_ip,
+                attacker_ip=attacker_ip,
+                lang=lang,
+            )
+            if not atomic_write_text(notes_file, notes_content):
+                raise OSError(f"Failed to atomically create notes.md for {clean_name}")
+
+        state_file = proj_dir / "project_state.json"
+        if not state_file.exists():
+            initial_state = create_initial_state(
+                project_name=clean_name,
+                target_ip=target_ip,
+                attacker_ip=attacker_ip,
+                port=port,
+            )
+            if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
+                raise OSError(
+                    f"Failed to atomically write initial project_state.json for {clean_name}"
+                )
+
+    def _rollback_workspace_paths(
+        self,
+        managed_paths: list[Path],
+        existing_managed_paths: set[Path],
+        proj_dir: Path,
+        dir_existed_initially: bool,
+    ) -> bool:
+        rollback_performed = False
+        for path in reversed(managed_paths):
+            if path in existing_managed_paths:
+                continue
+            try:
+                if path.is_symlink() or path.is_file():
+                    path.unlink(missing_ok=True)
+                    rollback_performed = True
+                elif path.is_dir():
+                    path.rmdir()
+                    rollback_performed = True
+            except OSError as rollback_error:
+                logger.warning(
+                    "Rollback could not remove newly created path %s: %s",
+                    path,
+                    rollback_error,
+                )
+        if not dir_existed_initially and proj_dir.exists():
+            try:
+                proj_dir.rmdir()
+                rollback_performed = True
+            except OSError as rollback_error:
+                logger.warning(
+                    "Rollback could not remove new project directory %s: %s",
+                    proj_dir,
+                    rollback_error,
+                )
+        return rollback_performed
+
+    def _rollback_registry_entry(
+        self,
+        clean_name: str,
+        registry_had_entry: bool,
+        registry_entry_before: Optional[str],
+    ) -> bool:
+        try:
+            if registry_had_entry:
+                if self.registry.get(clean_name) != registry_entry_before:
+                    registry_result = self._update_registry(
+                        additions={clean_name: str(registry_entry_before)}
+                    )
+                    return registry_result.success
+            elif clean_name in self.registry:
+                registry_result = self._update_registry(removals={clean_name})
+                return registry_result.success
+        except Exception:
+            logger.exception("Failed to restore registry during rollback.")
+        return False
+
+    def _ensure_imported_state_file(self, target_path: Path, clean_name: str) -> None:
+        state_file = target_path / "project_state.json"
+        if not state_file.exists():
+            initial_state = create_initial_state(project_name=clean_name)
+            if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
+                raise OSError(
+                    f"Failed to atomically write project_state.json for imported project {clean_name}"
+                )
+
+    def _handle_workspace_failure(
+        self,
+        error: Exception,
+        managed_paths: List[Path],
+        existing_managed_paths: set[Path],
+        target_dir: Path,
+        dir_existed_initially: bool,
+        clean_name: str,
+        registry_had_entry: bool,
+        registry_entry_before: Optional[str],
+        operation_failure_reason: Optional[PersistFailureReason],
+    ) -> PersistResult[Any]:
+        rb_paths = self._rollback_workspace_paths(
+            managed_paths, existing_managed_paths, target_dir, dir_existed_initially
+        )
+        rb_reg = self._rollback_registry_entry(
+            clean_name, registry_had_entry, registry_entry_before
+        )
+        rollback_performed = rb_paths or rb_reg
+        cause = error.__cause__ if isinstance(error.__cause__, BaseException) else error
+        reason = operation_failure_reason or (
+            PersistFailureReason.VALIDATION_FAILED
+            if isinstance(error, (ProjectExistsError, ProjectCreationError))
+            else classify_persistence_error(cause)
+        )
+        return PersistResult.failed(reason, rollback_performed=rollback_performed)
+
     def create_project_workspace(
         self,
         clean_name: str,
@@ -184,24 +364,14 @@ class ProjectRepository:
         allow_existing: bool = False,
         lang: str = "de",
     ) -> Path:
-        """
-        Creates an isolated project directory structure transactionally.
-        """
-        target_base = Path(base_dir).resolve() if base_dir else self.base_dir.resolve()
-        candidate = target_base / clean_name
-        proj_dir = validate_workspace_boundary(candidate, target_base)
-
-        if not allow_existing and clean_name != "Default":
-            if clean_name in self.list_projects() or proj_dir.exists():
-                raise ProjectExistsError(
-                    f"A project with sanitized name '{clean_name}' already exists at {proj_dir}."
-                )
-
+        """Creates an isolated project directory structure transactionally."""
+        proj_dir = self._validate_create_candidate(clean_name, base_dir, allow_existing)
         dir_existed_initially = proj_dir.exists()
+
         managed_paths = [
             *(proj_dir / sub for sub in PROJECT_LOOT_SUBDIRECTORIES),
-            proj_dir / "notes.md",
             proj_dir / "project_state.json",
+            proj_dir / "notes.md",
         ]
         existing_managed_paths = {
             path for path in managed_paths if path.exists() or path.is_symlink()
@@ -210,125 +380,34 @@ class ProjectRepository:
         registry_entry_before = self.registry.get(clean_name)
 
         try:
-            proj_dir.mkdir(parents=True, exist_ok=True)
-            for sub in PROJECT_LOOT_SUBDIRECTORIES:
-                sub_p = proj_dir / sub
-                if sub_p.is_symlink():
-                    raise ProjectCreationError(
-                        f"Project directory contains symlinked subdirectory: {sub}"
-                    )
-                if sub_p.exists() and not sub_p.is_dir():
-                    raise OSError(
-                        f"Cannot create subfolder '{sub}' because a non-directory file exists with that name."
-                    )
-                sub_p.mkdir(exist_ok=True)
-
-            # Create notes.md if not exists
-            notes_file = proj_dir / "notes.md"
-            if not notes_file.exists():
-                notes_content = create_initial_notes(
-                    project_name=clean_name,
-                    target_ip=target_ip,
-                    attacker_ip=attacker_ip,
-                    lang=lang,
-                )
-                if not atomic_write_text(notes_file, notes_content):
-                    raise OSError(f"Failed to atomically create notes.md for {clean_name}")
-
-            # Create project_state.json if not exists
-            state_file = proj_dir / "project_state.json"
-            if not state_file.exists():
-                initial_state = create_initial_state(
-                    project_name=clean_name, target_ip=target_ip, attacker_ip=attacker_ip, port=port
-                )
-                if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                    raise OSError(
-                        f"Failed to atomically write initial project_state.json for {clean_name}"
-                    )
-
-            # Register project location
+            self._ensure_project_subdirectories(proj_dir, is_import=False)
+            self._ensure_initial_project_files(
+                proj_dir, clean_name, target_ip, attacker_ip, port, lang
+            )
             registry_result = self._update_registry(additions={clean_name: str(proj_dir)})
             if not registry_result.success:
                 raise PersistenceError(
-                    f"Could not register project '{clean_name}': "
-                    f"{registry_result.failure_reason or PersistFailureReason.UNKNOWN}"
+                    f"Could not register project '{clean_name}': {registry_result.failure_reason or PersistFailureReason.UNKNOWN}"
                 )
+            logger.info(f"Project '{clean_name}' successfully created at {proj_dir}")
             return proj_dir
-
         except Exception as e:
             logger.error(
                 f"Project creation failed for {clean_name}: {e}. Rolling back partial files.",
                 exc_info=True,
             )
-            for path in reversed(managed_paths):
-                if path in existing_managed_paths:
-                    continue
-                try:
-                    if path.is_symlink() or path.is_file():
-                        path.unlink(missing_ok=True)
-                    elif path.is_dir():
-                        path.rmdir()
-                except OSError as rollback_error:
-                    logger.warning(
-                        "Rollback could not remove newly created path %s: %s",
-                        path,
-                        rollback_error,
-                    )
-            if not dir_existed_initially and proj_dir.exists():
-                try:
-                    proj_dir.rmdir()
-                except OSError as rollback_error:
-                    logger.warning(
-                        "Rollback could not remove new project directory %s: %s",
-                        proj_dir,
-                        rollback_error,
-                    )
-
-            try:
-                if registry_had_entry:
-                    if self.registry.get(clean_name) != registry_entry_before:
-                        registry_result = self._update_registry(
-                            additions={clean_name: str(registry_entry_before)}
-                        )
-                        if not registry_result.success:
-                            raise PersistenceError("Could not restore the previous registry entry.")
-                elif clean_name in self.registry:
-                    registry_result = self._update_registry(removals={clean_name})
-                    if not registry_result.success:
-                        raise PersistenceError("Could not remove the rolled-back registry entry.")
-            except PersistenceError:
-                if registry_had_entry:
-                    logger.exception(
-                        "Failed to restore rolled-back project '%s' in registry", clean_name
-                    )
-                else:
-                    logger.exception(
-                        "Failed to remove rolled-back project '%s' from registry", clean_name
-                    )
-
+            self._rollback_workspace_paths(
+                managed_paths, existing_managed_paths, proj_dir, dir_existed_initially
+            )
+            self._rollback_registry_entry(clean_name, registry_had_entry, registry_entry_before)
             raise ProjectCreationError(f"Failed to create project '{clean_name}': {e}") from e
 
     def import_project_workspace(self, folder_path: Union[Path, str]) -> PersistResult[str]:
         """Imports and registers an existing directory as a project workspace."""
-        target_path = Path(folder_path).resolve()
-        if not target_path.exists() or not target_path.is_dir():
-            logger.warning(
-                f"Cannot import non-existing or non-directory project folder: {folder_path}"
-            )
+        candidate = self._validate_import_candidate(folder_path)
+        if candidate is None:
             return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
-
-        try:
-            clean_name = validate_project_name(target_path.name)
-        except InvalidProjectNameError as e:
-            logger.warning(
-                f"Cannot import project with invalid directory name {target_path.name}: {e}"
-            )
-            return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
-
-        if clean_name in self.registry and self.registry[clean_name] != str(target_path):
-            existing_loc = Path(self.registry[clean_name])
-            if existing_loc.exists() and existing_loc.is_dir():
-                return PersistResult.failed(PersistFailureReason.VALIDATION_FAILED)
+        target_path, clean_name = candidate
 
         managed_paths = [
             *(target_path / sub for sub in PROJECT_LOOT_SUBDIRECTORIES),
@@ -342,26 +421,8 @@ class ProjectRepository:
         operation_failure_reason: Optional[PersistFailureReason] = None
 
         try:
-            for sub in PROJECT_LOOT_SUBDIRECTORIES:
-                sub_p = target_path / sub
-                if sub_p.is_symlink():
-                    raise ProjectCreationError(
-                        f"Imported project contains symlinked subdirectory: {sub}"
-                    )
-                if sub_p.exists() and not sub_p.is_dir():
-                    raise ProjectCreationError(
-                        f"Imported project contains non-directory file named '{sub}'"
-                    )
-                sub_p.mkdir(exist_ok=True)
-
-            state_file = target_path / "project_state.json"
-            if not state_file.exists():
-                initial_state = create_initial_state(project_name=clean_name)
-                if not atomic_write_json(state_file, initial_state, indent=2, ensure_ascii=False):
-                    raise OSError(
-                        f"Failed to atomically write project_state.json for imported project {clean_name}"
-                    )
-
+            self._ensure_project_subdirectories(target_path, is_import=True)
+            self._ensure_imported_state_file(target_path, clean_name)
             registry_result = self._update_registry(additions={clean_name: str(target_path)})
             if not registry_result.success:
                 operation_failure_reason = registry_result.failure_reason
@@ -373,43 +434,17 @@ class ProjectRepository:
             return PersistResult.ok(clean_name)
         except Exception as e:
             logger.error(f"Failed to import project folder {folder_path}: {e}", exc_info=True)
-            rollback_performed = False
-            for path in reversed(managed_paths):
-                if path in existing_managed_paths:
-                    continue
-                try:
-                    if path.is_symlink() or path.is_file():
-                        path.unlink(missing_ok=True)
-                        rollback_performed = True
-                    elif path.is_dir():
-                        path.rmdir()
-                        rollback_performed = True
-                except OSError as rollback_error:
-                    logger.warning(
-                        "Import rollback could not remove newly created path %s: %s",
-                        path,
-                        rollback_error,
-                    )
-            try:
-                if registry_had_entry:
-                    if self.registry.get(clean_name) != registry_entry_before:
-                        restored = self._update_registry(
-                            additions={clean_name: str(registry_entry_before)}
-                        )
-                        rollback_performed = rollback_performed or restored.success
-                elif clean_name in self.registry:
-                    removed = self._update_registry(removals={clean_name})
-                    rollback_performed = rollback_performed or removed.success
-            except Exception:
-                logger.exception("Failed to restore registry after import rollback.")
-
-            cause = e.__cause__ if isinstance(e.__cause__, BaseException) else e
-            reason = operation_failure_reason or (
-                PersistFailureReason.VALIDATION_FAILED
-                if isinstance(e, (ProjectExistsError, ProjectCreationError))
-                else classify_persistence_error(cause)
+            return self._handle_workspace_failure(
+                e,
+                managed_paths,
+                existing_managed_paths,
+                target_path,
+                True,
+                clean_name,
+                registry_had_entry,
+                registry_entry_before,
+                operation_failure_reason,
             )
-            return PersistResult.failed(reason, rollback_performed=rollback_performed)
 
     def load_project_state(self, name: str) -> ProjectState:
         """Load validated plain or encrypted state through the state store."""
