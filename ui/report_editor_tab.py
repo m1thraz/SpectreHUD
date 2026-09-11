@@ -1314,13 +1314,14 @@ class ReportEditorTab(QWidget):
             btn = QPushButton(label)
             btn.setMinimumHeight(32)
             btn.setProperty("class", "SecondaryBtn")
-            # capture export_type via default arg to avoid late-binding closure issue
-            btn.clicked.connect(
-                lambda _checked=False, et=export_type: (
-                    selected.__setitem__(0, et),
-                    dialog.accept(),
-                )
-            )
+            def _make_handler(et: str):
+                def _handle(_checked: bool = False) -> None:
+                    selected[0] = et
+                    dialog.accept()
+
+                return _handle
+
+            btn.clicked.connect(_make_handler(export_type))
             layout.addWidget(btn)
             description_label = QLabel(description)
             description_label.setWordWrap(True)

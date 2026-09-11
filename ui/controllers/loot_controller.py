@@ -146,7 +146,7 @@ class LootController(QObject):
             success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
-            return success
+            return bool(success)
         except (PersistenceError, StorageError, LootValidationError, OSError) as e:
             self._notify_persistence_error("update_entry", e)
             return False
@@ -479,7 +479,7 @@ class LootController(QObject):
             return []
 
         rendered_cards: List[QWidget] = []
-        for category in sorted(CATEGORIES, key=lambda c: c["order"]):
+        for category in sorted(CATEGORIES, key=lambda c: int(c.get("order", 0))):
             cat_entries = [e for e in loot_entries if e.get("category") == category["id"]]
             if not cat_entries:
                 continue

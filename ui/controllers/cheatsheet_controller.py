@@ -367,7 +367,7 @@ class CheatsheetController(QObject):
 
         # Render primary pills on the bar
         for c in primary_cats:
-            cat_id = c.get("id")
+            cat_id = str(c.get("id", ""))
             full_name = c.get("name", "").strip().lstrip("\ufe0f \t")
             pill_text = _category_short_name(cat_id, full_name[:12])
 

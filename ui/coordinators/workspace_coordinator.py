@@ -178,7 +178,7 @@ class WorkspaceCoordinator(QObject):
                 failure_reason=None,
             )
 
-        variables = variables_provider() if variables_provider else {}
+        variables = variables_provider() if variables_provider is not None else {}
 
         def unlock_callback(pname: str) -> str:
             self._last_unlock_cancelled = False

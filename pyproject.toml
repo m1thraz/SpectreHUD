@@ -85,7 +85,7 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "B", "C4"]
 ignore = [
     # E402: Module level import not at top of file
     # Required for headless Qt env (QT_QPA_PLATFORM) and CLI dispatch before PyQt6 imports.
@@ -94,10 +94,14 @@ ignore = [
     "E501",
     # E203: Whitespace before ':' in slices
     "E203",
+    # B008: Function call in argument defaults (standard PyQt QModelIndex() defaults)
+    "B008",
+    # B905: zip() without an explicit strict= parameter
+    "B905",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["F841"]
+"tests/*" = ["F841", "B017"]
 
 [tool.deptry]
 extend_exclude = [".wheel-venv"]
@@ -116,6 +120,23 @@ DEP002 = [
     "ruff",
     "mypy",
     "import-linter",
+]
+
+[tool.coverage.run]
+source = ["core", "ui"]
+omit = [
+    "tests/*",
+    "scripts/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
 ]
 
 [tool.mypy]
@@ -150,13 +171,8 @@ disable_error_code = [
     "attr-defined",
     "arg-type",
     "assignment",
-    "index",
     "misc",
     "no-redef",
-    "truthy-function",
-    "return-value",
     "method-assign",
-    "func-returns-value",
-    "call-arg",
-    "has-type",
 ]
+

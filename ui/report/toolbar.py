@@ -184,7 +184,7 @@ def build_format_toolbar(
         tooltip = t(key, fallback)
         btn.setToolTip(tooltip)
         _apply_icon_button(btn, icon_name, tooltip, icon_color, icon_active_color)
-        if callback_key in callbacks and callbacks[callback_key]:
+        if callback_key in callbacks and callbacks[callback_key] is not None:
             btn.clicked.connect(callbacks[callback_key])
         tools_layout.addWidget(btn)
 

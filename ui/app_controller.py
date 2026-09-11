@@ -118,6 +118,7 @@ class AppController(QObject):
         self._cheatsheet_cache_widgets: List[QWidget] = []
         self._cheatsheet_cache_cards: List[QWidget] = []
         self._cheatsheet_cache_scroll = 0
+        self._quick_ip_popup: Optional[Any] = None
 
         # Specialized Coordinators & Providers
         self._target_provider = lambda: (
@@ -306,7 +307,7 @@ class AppController(QObject):
         # Clipboard callbacks may originate outside the GUI thread.  Always
         # cross the Qt boundary before the coordinator touches UI state.
         self.clipboard_monitor.entry_added.connect(
-            self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection
+            self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection  # type: ignore[call-arg]
         )
         if self.quick_note_manager and hasattr(self.quick_note_manager, "entry_added"):
             self.quick_note_manager.entry_added.connect(

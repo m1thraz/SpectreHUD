@@ -71,7 +71,7 @@ jobs:
         # intentionally invokes pytest directly with the same Full marker.
         run: |
           xvfb-run -a coverage run -m pytest -m "not release"
-          coverage report -m
+          coverage report -m --fail-under=80
 
   package:
     name: Package validation (Windows, Python 3.11)

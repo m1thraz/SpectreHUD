@@ -4,7 +4,7 @@ Quick Note Popup for SpectreHUD.
 Minimal frameless popup for rapid note capturing with single-key pentest phase tagging.
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -30,7 +30,7 @@ PHASE_PILLS = [
     ("misc", "quick_note.phase_misc", "6. Misc"),
 ]
 
-KEY_TO_CATEGORY: Dict[Qt.Key, str] = {
+KEY_TO_CATEGORY: Dict[Any, str] = {
     Qt.Key.Key_1: "recon",
     Qt.Key.Key_2: "access",
     Qt.Key.Key_3: "privesc",

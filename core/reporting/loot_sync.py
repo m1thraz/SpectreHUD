@@ -414,7 +414,7 @@ def append_missing_loot_to_text(
     sections = _find_h2_sections(report_text)
 
     section_bounds: List[Tuple[str, int, int]] = []
-    for idx, (title, s_start, c_start) in enumerate(sections):
+    for idx, (title, _s_start, c_start) in enumerate(sections):
         s_end = sections[idx + 1][1] if idx + 1 < len(sections) else len(report_text)
         section_bounds.append((title, c_start, s_end))
 

@@ -160,7 +160,7 @@ class AddLootDialog(BaseHudDialog):
         cat_col.addWidget(lbl_cat)
 
         self.combo_category = QComboBox()
-        for i, c in enumerate(sorted(CATEGORIES, key=lambda x: x["order"])):
+        for i, c in enumerate(sorted(CATEGORIES, key=lambda x: int(x.get("order", 0)))):
             self.combo_category.addItem(c["name"], c["id"])
             if c["id"] == self.initial_category:
                 self.combo_category.setCurrentIndex(i)

@@ -70,7 +70,7 @@ class BoxArchiver:
             with zipfile.ZipFile(
                 tmp_zip, mode="w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
             ) as zf:
-                for root, dirs, files in os.walk(proj_path):
+                for root, _dirs, files in os.walk(proj_path):
                     root_path = Path(root).resolve()
                     if not root_path.is_relative_to(proj_path):
                         continue

@@ -13,15 +13,15 @@ from ui.styles import build_app_theme
 def test_kanban_cards_keep_badges_values_and_surface_contrast(qapp, tmp_path, theme):
     values = ["/home/test/Desktop/SpectreHUD-main.rar", "ab12" * 64 + "\nuser:secret"]
     entries = [
-        dict(
-            id=str(i),
-            type=kind,
-            category="recon",
-            title="Evidence",
-            content=value,
-            target_ip="192.168.56.1",
-            timestamp="2026-09-05 12:00",
-        )
+        {
+            "id": str(i),
+            "type": kind,
+            "category": "recon",
+            "title": "Evidence",
+            "content": value,
+            "target_ip": "192.168.56.1",
+            "timestamp": "2026-09-05 12:00",
+        }
         for i, (kind, value) in enumerate(zip(("directory", "note"), values))
     ]
     panel = ContentPanel()

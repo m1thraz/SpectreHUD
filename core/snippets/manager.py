@@ -108,9 +108,9 @@ class SnippetManager:
                 with open(self.favorites_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
-                        self.favorite_ids = set(
+                        self.favorite_ids = {
                             str(item) for item in data if isinstance(item, (str, int))
-                        )
+                        }
             except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted favorites JSON at {self.favorites_path}: {e}")
             except (OSError, UnicodeDecodeError) as e:
@@ -122,7 +122,7 @@ class SnippetManager:
 
         try:
             atomic_write_json(
-                self.favorites_path, sorted(list(self.favorite_ids)), indent=2, ensure_ascii=False
+                self.favorites_path, sorted(self.favorite_ids), indent=2, ensure_ascii=False
             )
         except Exception as e:
             logger.error(f"Error saving favorites to {self.favorites_path}: {e}", exc_info=True)
@@ -367,7 +367,7 @@ class SnippetManager:
             try:
                 atomic_write_json(
                     self.favorites_path,
-                    sorted(list(self.favorite_ids)),
+                    sorted(self.favorite_ids),
                     indent=2,
                     ensure_ascii=False,
                 )

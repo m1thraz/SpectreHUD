@@ -268,7 +268,7 @@ class LootBoard(QScrollArea):
                 if on_copied is not None:
                     card.copied.connect(on_copied)
                 column.add_card(card)
-            self.columns[category["id"]] = column
+            self.columns[str(category["id"])] = column
             layout.addWidget(column)
 
         layout.addStretch()

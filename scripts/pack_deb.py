@@ -160,7 +160,7 @@ def create_data_tar(project_dir: Path) -> bytes:
         tar.addfile(ti)
 
     def add_tree(tar, src_dir: Path, arc_prefix: str):
-        for root, dirs, files in os.walk(src_dir):
+        for root, _dirs, files in os.walk(src_dir):
             rel_root = Path(root).relative_to(src_dir)
             target_dir = f"{arc_prefix}/{rel_root.as_posix()}" if str(rel_root) != "." else arc_prefix
             if "__pycache__" in target_dir:

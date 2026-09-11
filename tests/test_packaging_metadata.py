@@ -1,6 +1,12 @@
 """Tests for release-critical package metadata."""
 
 from pathlib import Path
+import sys
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib  # type: ignore[no-redef]
 
 import pytest
 
@@ -34,27 +40,28 @@ def test_windows_spec_includes_runtime_data_directories():
 
 def test_release_workflow_has_least_privilege_permissions():
     """release.yml must enforce least-privilege permissions at top level and isolate write rights."""
-    import yaml
+    import re
 
     workflow_path = Path(__file__).parent.parent / ".github" / "workflows" / "release.yml"
-    data = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    content = workflow_path.read_text(encoding="utf-8")
 
-    # Top-level permissions must be read-only
-    assert data.get("permissions") == {"contents": "read"}
+    # Top-level permissions must be read-only (before jobs:)
+    header, _, jobs_section = content.partition("jobs:")
+    assert re.search(r"^permissions:\s*\r?\n\s+contents:\s*read", header, re.MULTILINE), (
+        "Top-level permissions in release.yml must be 'contents: read'"
+    )
+    assert "contents: write" not in header, "Top-level permissions must not include write rights"
 
     # Write permissions must be restricted to publish-release
-    publish_job = data["jobs"]["publish-release"]
-    assert publish_job.get("permissions") == {
-        "contents": "write",
-        "id-token": "write",
-        "attestations": "write",
-    }
+    assert "publish-release:" in jobs_section
+    publish_part = jobs_section.split("publish-release:")[1].split("steps:")[0]
+    for req_perm in ("contents: write", "id-token: write", "attestations: write"):
+        assert req_perm in publish_part, f"publish-release must have {req_perm}"
 
     # Build jobs must NOT have write permissions
     for job_name in ("verify-version", "build-windows-exe", "build-linux-deb", "build-wheel"):
-        job = data["jobs"][job_name]
-        job_perms = job.get("permissions", {})
-        assert job_perms.get("contents") != "write"
+        job_part = jobs_section.split(f"{job_name}:")[1].split("steps:")[0]
+        assert "contents: write" not in job_part, f"{job_name} must not have write permissions"
 
 
 def test_release_workflow_actions_are_pinned_to_commit_shas():
@@ -131,5 +138,40 @@ def test_workflows_install_against_release_constraints():
 
     # In ci.yml, the packaging validation jobs must also use constraints-release.txt
     assert "-c constraints-release.txt" in ci_workflow
+
+
+def test_coverage_gate_configuration():
+    """Coverage must be enforced as a gate in pyproject.toml and ci.yml."""
+    repo_root = Path(__file__).parent.parent
+    pyproject_path = repo_root / "pyproject.toml"
+    ci_path = repo_root / ".github" / "workflows" / "ci.yml"
+
+    pyproject_data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    coverage_report = pyproject_data.get("tool", {}).get("coverage", {}).get("report", {})
+    assert coverage_report.get("fail_under", 0) >= 80, "Coverage fail_under must be at least 80%"
+
+    ci_content = ci_path.read_text(encoding="utf-8")
+    assert "--fail-under=80" in ci_content, "CI workflow must enforce --fail-under=80"
+
+
+def test_ruff_and_mypy_quality_gates():
+    """Ruff must select B and C4 rules and Mypy UI layer must not disable standard typing checks."""
+    repo_root = Path(__file__).parent.parent
+    pyproject_data = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+
+    # Ruff rules
+    ruff_select = pyproject_data.get("tool", {}).get("ruff", {}).get("lint", {}).get("select", [])
+    assert "B" in ruff_select, "Ruff must select B (flake8-bugbear)"
+    assert "C4" in ruff_select, "Ruff must select C4 (flake8-comprehensions)"
+
+    # Mypy ui.* overrides
+    overrides = pyproject_data.get("tool", {}).get("mypy", {}).get("overrides", [])
+    ui_override = next((o for o in overrides if o.get("module") == "ui.*"), None)
+    assert ui_override is not None, "Mypy overrides for ui.* must exist"
+    disabled = ui_override.get("disable_error_code", [])
+
+    prohibited_disabled = ["call-arg", "func-returns-value", "has-type", "truthy-function", "return-value", "index"]
+    for code in prohibited_disabled:
+        assert code not in disabled, f"Mypy ui.* must not disable {code}"
 
 
