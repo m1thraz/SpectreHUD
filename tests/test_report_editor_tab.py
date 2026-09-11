@@ -16,7 +16,11 @@ from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.reporting import ReportFileManager
 from core.i18n import t
-from ui.report.dialogs import ReportGenerationDialog, ReportRegenerationConfirmDialog
+from ui.report.dialogs import (
+    ReportExportTypeDialog,
+    ReportGenerationDialog,
+    ReportRegenerationConfirmDialog,
+)
 from ui.report.preview import ReportPreviewEdit
 from ui.report_editor_tab import AUTOSAVE_INTERVAL_MS, ReportEditorTab, ViewMode
 
@@ -60,7 +64,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.export_coordinator = coordinator
         self.tab.editor.setPlainText("# Current report\nEvidence")
 
-        self.tab._on_export_obsidian_clicked()
+        self.tab.export_actions.on_export_obsidian_clicked()
 
         coordinator.export_report_to_obsidian.assert_called_once_with(
             self.tab,
@@ -88,7 +92,7 @@ class TestReportEditorTab(unittest.TestCase):
 
     def test_html_export_profile_buttons_have_room_for_their_labels(self):
         with patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
-            self.assertIsNone(self.tab._select_html_export_options())
+            self.assertIsNone(self.tab.export_actions.select_html_export_options())
 
         dialogs = self.tab.window().findChildren(QMessageBox)
         self.assertEqual(len(dialogs), 1)
@@ -111,7 +115,7 @@ class TestReportEditorTab(unittest.TestCase):
 
     def test_export_chooser_explains_each_handoff(self):
         with patch.object(QDialog, "exec", return_value=QDialog.DialogCode.Rejected):
-            self.assertIsNone(self.tab._select_export_type())
+            self.assertIsNone(self.tab.export_actions.select_export_type())
 
         dialogs = self.tab.findChildren(QDialog)
         export_dialog = next(
@@ -330,7 +334,7 @@ class TestReportEditorTab(unittest.TestCase):
         cursor.movePosition(cursor.MoveOperation.End)
         self.tab.editor.setTextCursor(cursor)
 
-        self.tab._insert_loot_entry_image(entry)
+        self.tab.format_actions.insert_loot_entry_image(entry)
         self.assertIn("![Root Proof](loot/proof.png)", self.tab.editor.toPlainText())
 
     def test_insert_report_icon_is_undoable_and_survives_preview_roundtrip(self):
@@ -338,10 +342,10 @@ class TestReportEditorTab(unittest.TestCase):
         from ui.report.icon_assets import REPORT_ICONS
 
         definition = next(item for item in REPORT_ICONS if item.key == "credential")
-        with patch("ui.report_editor_tab.ReportIconPickerDialog") as picker:
+        with patch("ui.report.format_actions.ReportIconPickerDialog") as picker:
             picker.return_value.exec.return_value = QDialog.DialogCode.Accepted
             picker.return_value.selected_icon = definition
-            self.tab._format_icon()
+            self.tab.format_actions.format_icon()
 
         markdown_link = "![Credential](assets/icons/fa5s_user-secret_32.png)"
         self.assertIn(markdown_link, self.tab.editor.toPlainText())
@@ -641,8 +645,8 @@ Text
 
     def test_require_export_coordinator_missing_shows_warning(self):
         self.tab.export_coordinator = None
-        with patch("ui.report_editor_tab.show_error_dialog") as mock_warn:
-            self.assertIsNone(self.tab._require_export_coordinator())
+        with patch("ui.report.export_actions.show_error_dialog") as mock_warn:
+            self.assertIsNone(self.tab.export_actions.require_export_coordinator())
             mock_warn.assert_called_once()
 
     def test_export_copy_flow_success_and_cancel(self):
@@ -652,7 +656,7 @@ Text
 
         # 1. Cancelled file dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
-            self.tab._on_export_copy_clicked()
+            self.tab.export_actions.on_export_copy_clicked()
             coordinator.export_report_markdown.assert_not_called()
 
         # 2. Successful export
@@ -664,7 +668,7 @@ Text
             ),
             patch.object(QMessageBox, "exec"),
         ):
-            self.tab._on_export_copy_clicked()
+            self.tab.export_actions.on_export_copy_clicked()
             coordinator.export_report_markdown.assert_called_once_with(out_path, "# Test Copy Content")
 
         # 3. Export failure
@@ -678,7 +682,7 @@ Text
             ),
             patch.object(QMessageBox, "exec"),
         ):
-            self.tab._on_export_copy_clicked()
+            self.tab.export_actions.on_export_copy_clicked()
 
     def test_export_html_flow_success_and_cancel(self):
         coordinator = MagicMock()
@@ -686,26 +690,26 @@ Text
         self.tab.editor.setPlainText("# Test HTML Content")
 
         # 1. Cancelled theme chooser
-        with patch.object(self.tab, "_select_html_export_options", return_value=None):
-            self.tab._on_export_html_clicked()
+        with patch.object(self.tab.export_actions, "select_html_export_options", return_value=None):
+            self.tab.export_actions.on_export_html_clicked()
             coordinator.export_report_html.assert_not_called()
 
         # 2. Cancelled file dialog
         with (
             patch.object(
-                self.tab, "_select_html_export_options", return_value=("light", "interactive")
+                self.tab.export_actions, "select_html_export_options", return_value=("light", "interactive")
             ),
             patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")),
         ):
-            self.tab._on_export_html_clicked()
+            self.tab.export_actions.on_export_html_clicked()
             coordinator.export_report_html.assert_not_called()
 
         # 3. Successful HTML export
         out_html = self.temp_path / "report.html"
         with (
             patch.object(
-                self.tab,
-                "_select_html_export_options",
+                self.tab.export_actions,
+                "select_html_export_options",
                 return_value=("light", "professional_print"),
             ),
             patch(
@@ -714,7 +718,7 @@ Text
             ),
             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
         ):
-            self.tab._on_export_html_clicked()
+            self.tab.export_actions.on_export_html_clicked()
             coordinator.export_report_html.assert_called_once_with(
                 target=out_html,
                 project_name="TestBox",
@@ -731,7 +735,7 @@ Text
         coordinator.export_report_html.side_effect = ReportExportError("HTML write failed")
         with (
             patch.object(
-                self.tab, "_select_html_export_options", return_value=("light", "interactive")
+                self.tab.export_actions, "select_html_export_options", return_value=("light", "interactive")
             ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
@@ -739,7 +743,7 @@ Text
             ),
             patch.object(QMessageBox, "exec"),
         ):
-            self.tab._on_export_html_clicked()
+            self.tab.export_actions.on_export_html_clicked()
 
     def test_export_cherrytree_flow_success_and_error(self):
         coordinator = MagicMock()
@@ -748,7 +752,7 @@ Text
 
         # 1. Cancelled directory dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getExistingDirectory", return_value=""):
-            self.tab._on_export_cherrytree_clicked()
+            self.tab.export_actions.on_export_cherrytree_clicked()
             coordinator.export_report_to_cherrytree.assert_not_called()
 
         # 2. Successful export without warnings
@@ -762,9 +766,9 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch("ui.report_editor_tab.show_information_dialog") as mock_info,
+            patch("ui.report.export_actions.show_information_dialog") as mock_info,
         ):
-            self.tab._on_export_cherrytree_clicked()
+            self.tab.export_actions.on_export_cherrytree_clicked()
             coordinator.export_report_to_cherrytree.assert_called_once()
             mock_info.assert_called_once()
 
@@ -775,9 +779,9 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch("ui.report_editor_tab.show_information_dialog") as mock_info,
+            patch("ui.report.export_actions.show_information_dialog") as mock_info,
         ):
-            self.tab._on_export_cherrytree_clicked()
+            self.tab.export_actions.on_export_cherrytree_clicked()
             mock_info.assert_called_once()
             self.assertIn("Some images could not be copied", mock_info.call_args[0][2])
 
@@ -790,29 +794,29 @@ Text
                 "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
                 return_value=str(self.temp_path),
             ),
-            patch("ui.report_editor_tab.show_error_dialog") as mock_warn,
+            patch("ui.report.export_actions.show_error_dialog") as mock_warn,
         ):
-            self.tab._on_export_cherrytree_clicked()
+            self.tab.export_actions.on_export_cherrytree_clicked()
             mock_warn.assert_called_once()
 
     def test_browse_and_insert_image(self):
         # 1. Cancelled
         with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
             self.tab.editor.clear()
-            self.tab._browse_and_insert_image()
+            self.tab.format_actions.browse_and_insert_image()
             self.assertEqual(self.tab.editor.toPlainText(), "")
 
         # 2. Selected image file
         img_file = self.temp_path / "poc.png"
         img_file.write_bytes(b"dummy image")
         with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=(str(img_file), "")):
-            self.tab._browse_and_insert_image()
+            self.tab.format_actions.browse_and_insert_image()
             self.assertIn("![poc]", self.tab.editor.toPlainText())
 
     def test_format_image_routing(self):
-        # When no screenshots in loot, delegates to _browse_and_insert_image
-        with patch.object(self.tab, "_browse_and_insert_image") as mock_browse:
-            self.tab._format_image()
+        # When no screenshots in loot, delegates to browse_and_insert_image
+        with patch.object(self.tab.format_actions, "browse_and_insert_image") as mock_browse:
+            self.tab.format_actions.format_image()
             mock_browse.assert_called_once()
 
         # When screenshots exist in loot, menu is shown
@@ -820,17 +824,17 @@ Text
             "screenshot", "Admin Panel", "loot/admin.png", target_ip="10.10.10.42"
         )
         with patch("PyQt6.QtWidgets.QMenu.exec", return_value=None):
-            self.tab._format_image()
+            self.tab.format_actions.format_image()
 
     def test_insert_loot_entry_image(self):
         # 1. Plain relative path
         self.tab.editor.clear()
-        self.tab._insert_loot_entry_image({"title": "SQLi POC", "content": "screenshots/sqli.png"})
+        self.tab.format_actions.insert_loot_entry_image({"title": "SQLi POC", "content": "screenshots/sqli.png"})
         self.assertIn("![SQLi POC](screenshots/sqli.png)", self.tab.editor.toPlainText())
 
         # 2. Pre-formatted markdown image
         self.tab.editor.clear()
-        self.tab._insert_loot_entry_image({"title": "RCE", "content": "![RCE](loot/rce.png)"})
+        self.tab.format_actions.insert_loot_entry_image({"title": "RCE", "content": "![RCE](loot/rce.png)"})
         self.assertIn("![RCE](loot/rce.png)", self.tab.editor.toPlainText())
 
     def test_append_loot_flow_success_and_errors(self):
@@ -876,71 +880,54 @@ Text
             self.tab._on_append_loot_clicked()
 
     def test_select_export_type_dialog_choices(self):
-        """Test _select_export_type returns selected choice or None on cancel."""
+        """Test select_export_type returns selected choice or None on cancel."""
         from PyQt6.QtWidgets import QPushButton
 
-        # 1. HTML selection: simulate clicking HTML button
-        with patch("ui.report_editor_tab.QDialog") as MockDialog:
-            mock_dlg = MagicMock()
-            MockDialog.return_value = mock_dlg
+        # 1. HTML selection: simulate clicking HTML button on dialog
+        dialog = ReportExportTypeDialog(self.tab)
+        for btn in dialog.findChildren(QPushButton):
+            if "HTML" in btn.text():
+                btn.click()
+                break
+        self.assertEqual(dialog.selected_type, "html")
 
-            added_buttons = []
+        # Verify button options on dialog
+        labels = [btn.text() for btn in dialog.findChildren(QPushButton)]
+        self.assertEqual(
+            labels[:4],
+            [
+                t("report.export_html", "Export HTML/PDF"),
+                t("report.export_obsidian", "Export to Obsidian..."),
+                t(
+                    "report.export_cherrytree",
+                    "Export CherryTree Package...",
+                ),
+                t("report.export_copy", "Export MD..."),
+            ],
+        )
 
-            def fake_add_widget(w):
-                if isinstance(w, QPushButton):
-                    added_buttons.append(w)
+        # 2. Test export_actions delegation
+        with patch.object(ReportExportTypeDialog, "select_export_type", return_value="html"):
+            self.assertEqual(self.tab.export_actions.select_export_type(), "html")
 
-            with patch("ui.report_editor_tab.QVBoxLayout") as MockLayout:
-                mock_lay = MagicMock()
-                mock_lay.addWidget.side_effect = fake_add_widget
-                MockLayout.return_value = mock_lay
-
-                def fake_exec():
-                    for btn in added_buttons:
-                        if "HTML" in btn.text():
-                            btn.click()
-                            return
-
-                mock_dlg.exec.side_effect = fake_exec
-                choice = self.tab._select_export_type()
-                self.assertEqual(choice, "html")
-                labels = [btn.text() for btn in added_buttons]
-                self.assertEqual(
-                    labels[:4],
-                    [
-                        t("report.export_html", "Export HTML/PDF"),
-                        t("report.export_obsidian", "Export to Obsidian..."),
-                        t(
-                            "report.export_cherrytree",
-                            "Export CherryTree Package...",
-                        ),
-                        t("report.export_copy", "Export MD..."),
-                    ],
-                )
-
-        # 2. Cancel selection
-        with patch("ui.report_editor_tab.QDialog") as MockDialog:
-            with patch("ui.report_editor_tab.QVBoxLayout"):
-                mock_dlg = MagicMock()
-                MockDialog.return_value = mock_dlg
-                choice = self.tab._select_export_type()
-                self.assertIsNone(choice)
+        with patch.object(ReportExportTypeDialog, "select_export_type", return_value=None):
+            self.assertIsNone(self.tab.export_actions.select_export_type())
 
     def test_open_loot_image_picker_accepted(self):
-        """Test _open_loot_image_picker inserts selected screenshot when dialog accepted."""
-        with patch("ui.report_editor_tab.LootImagePickerDialog") as MockPicker:
+        """Test open_loot_image_picker inserts selected screenshot when dialog accepted."""
+        with patch("ui.report.format_actions.LootImagePickerDialog") as MockPicker:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = QDialog.DialogCode.Accepted
             mock_dlg.selected_entry = {"title": "Loot Screen", "content": "screenshots/loot.png"}
             MockPicker.return_value = mock_dlg
 
             self.tab.editor.clear()
-            self.tab._open_loot_image_picker([])
+            self.tab.format_actions.open_loot_image_picker([])
             self.assertIn("![Loot Screen](screenshots/loot.png)", self.tab.editor.toPlainText())
 
     def test_format_table_dialog_accepted(self):
-        """Test _format_table inserts markdown table when dialog accepted."""
-        with patch("ui.report_editor_tab.MarkdownTableDialog") as MockTableDialog:
+        """Test format_table inserts markdown table when dialog accepted."""
+        with patch("ui.report.format_actions.MarkdownTableDialog") as MockTableDialog:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = QDialog.DialogCode.Accepted
             mock_dlg.rows.value.return_value = 2
@@ -948,7 +935,7 @@ Text
             MockTableDialog.return_value = mock_dlg
 
             self.tab.editor.clear()
-            self.tab._format_table()
+            self.tab.format_actions.format_table()
             text = self.tab.editor.toPlainText()
             self.assertIn("|---|---|", text)
             self.assertTrue("Spalte" in text or "Header" in text)

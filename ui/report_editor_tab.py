@@ -15,9 +15,8 @@ sie ohne Qt testbar bleibt.
 """
 
 from enum import Enum
-from pathlib import Path
 import re
-from typing import Any, Optional
+from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -48,7 +47,6 @@ from ui.report.dialogs import (
     ReportGenerationDialog,
     ReportIconPickerDialog,  # noqa: F401
     ReportRegenerationConfirmDialog,
-    select_html_export_options,
 )
 from ui.report.export_actions import ReportExportActions
 from ui.report.format_actions import ReportFormatActions
@@ -188,8 +186,6 @@ class ReportEditorTab(QWidget):
             current_project_provider=lambda: self.current_project,
             active_template_provider=lambda: self.active_template,
             report_font_key_provider=lambda: self._report_font_key(),
-            select_export_type_override=lambda: self._select_export_type(),
-            select_html_options_override=lambda: self._select_html_export_options(),
         )
 
         self._preview_timer = QTimer(self)
@@ -228,32 +224,32 @@ class ReportEditorTab(QWidget):
         self.format_toolbar_widget = build_format_toolbar(
             self,
             {
-                "heading_1": lambda: self._format_heading(1),
-                "heading_2": lambda: self._format_heading(2),
-                "heading_3": lambda: self._format_heading(3),
-                "heading_4": lambda: self._format_heading(4),
-                "heading_5": lambda: self._format_heading(5),
-                "heading_6": lambda: self._format_heading(6),
-                "bold": lambda: self._format_wrap("**", "**"),
-                "italic": lambda: self._format_wrap("*", "*"),
-                "strikethrough": lambda: self._format_wrap("~~", "~~"),
-                "code": lambda: self._format_wrap("`", "`"),
-                "code_block": self._format_code_block,
-                "align_left": lambda: self._format_align("left"),
-                "align_center": lambda: self._format_align("center"),
-                "align_right": lambda: self._format_align("right"),
-                "list": lambda: self._format_list(False),
-                "numbered_list": lambda: self._format_list(True),
-                "quote": self._format_quote,
-                "horizontal_rule": self._format_horizontal_rule,
-                "image": self._format_image,
-                "icon": self._format_icon,
-                "link": self._format_link,
-                "table": self._format_table,
-                "page_break": self._format_page_break,
-                "spacer_small": lambda: self._format_spacer("small"),
-                "spacer_medium": lambda: self._format_spacer("medium"),
-                "spacer_large": lambda: self._format_spacer("large"),
+                "heading_1": lambda: self.format_actions.format_heading(1),
+                "heading_2": lambda: self.format_actions.format_heading(2),
+                "heading_3": lambda: self.format_actions.format_heading(3),
+                "heading_4": lambda: self.format_actions.format_heading(4),
+                "heading_5": lambda: self.format_actions.format_heading(5),
+                "heading_6": lambda: self.format_actions.format_heading(6),
+                "bold": lambda: self.format_actions.format_wrap("**", "**"),
+                "italic": lambda: self.format_actions.format_wrap("*", "*"),
+                "strikethrough": lambda: self.format_actions.format_wrap("~~", "~~"),
+                "code": lambda: self.format_actions.format_wrap("`", "`"),
+                "code_block": self.format_actions.format_code_block,
+                "align_left": lambda: self.format_actions.format_align("left"),
+                "align_center": lambda: self.format_actions.format_align("center"),
+                "align_right": lambda: self.format_actions.format_align("right"),
+                "list": lambda: self.format_actions.format_list(False),
+                "numbered_list": lambda: self.format_actions.format_list(True),
+                "quote": self.format_actions.format_quote,
+                "horizontal_rule": self.format_actions.format_horizontal_rule,
+                "image": self.format_actions.format_image,
+                "icon": self.format_actions.format_icon,
+                "link": self.format_actions.format_link,
+                "table": self.format_actions.format_table,
+                "page_break": self.format_actions.format_page_break,
+                "spacer_small": lambda: self.format_actions.format_spacer("small"),
+                "spacer_medium": lambda: self.format_actions.format_spacer("medium"),
+                "spacer_large": lambda: self.format_actions.format_spacer("large"),
             },
             on_toggle_collapse=self._on_toolbar_collapse_toggled,
             icon_color=self._toolbar_palette["CYBER_BLUE_LIGHT"],
@@ -335,7 +331,7 @@ class ReportEditorTab(QWidget):
         )
         self.btn_export.setIcon(self._toolbar_icon("fa5s.file-export"))
         self.btn_export.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_export.clicked.connect(self._on_export_clicked)
+        self.btn_export.clicked.connect(self.export_actions.on_export_clicked)
         toolbar.addWidget(self.btn_export)
 
         self.btn_report_metadata = QPushButton()
@@ -496,66 +492,18 @@ class ReportEditorTab(QWidget):
         )
         self._shortcut_find_close.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         for sequence, callback in (
-            ("Ctrl+B", lambda: self._format_wrap("**", "**")),
-            ("Ctrl+I", lambda: self._format_wrap("*", "*")),
-            ("Ctrl+K", lambda: self._format_wrap("`", "`")),
-            ("Ctrl+Shift+X", lambda: self._format_wrap("~~", "~~")),
-            ("Ctrl+Shift+L", lambda: self._format_align("left")),
-            ("Ctrl+Shift+E", lambda: self._format_align("center")),
-            ("Ctrl+Shift+R", lambda: self._format_align("right")),
-            ("Ctrl+Shift+Q", self._format_quote),
-            ("Ctrl+Shift+I", self._format_image),
+            ("Ctrl+B", lambda: self.format_actions.format_wrap("**", "**")),
+            ("Ctrl+I", lambda: self.format_actions.format_wrap("*", "*")),
+            ("Ctrl+K", lambda: self.format_actions.format_wrap("`", "`")),
+            ("Ctrl+Shift+X", lambda: self.format_actions.format_wrap("~~", "~~")),
+            ("Ctrl+Shift+L", lambda: self.format_actions.format_align("left")),
+            ("Ctrl+Shift+E", lambda: self.format_actions.format_align("center")),
+            ("Ctrl+Shift+R", lambda: self.format_actions.format_align("right")),
+            ("Ctrl+Shift+Q", self.format_actions.format_quote),
+            ("Ctrl+Shift+I", self.format_actions.format_image),
         ):
             shortcut = QShortcut(QKeySequence(sequence), self.editor, activated=callback)
             shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-
-    def _format_heading(self, level: int) -> None:
-        self.format_actions.format_heading(level)
-
-    def _format_wrap(self, prefix: str, suffix: str) -> None:
-        self.format_actions.format_wrap(prefix, suffix)
-
-    def _format_align(self, alignment: str) -> None:
-        self.format_actions.format_align(alignment)
-
-    def _format_quote(self) -> None:
-        self.format_actions.format_quote()
-
-    def _format_horizontal_rule(self) -> None:
-        self.format_actions.format_horizontal_rule()
-
-    def _format_code_block(self) -> None:
-        self.format_actions.format_code_block()
-
-    def _format_list(self, numbered: bool) -> None:
-        self.format_actions.format_list(numbered)
-
-    def _format_link(self) -> None:
-        self.format_actions.format_link()
-
-    def _format_table(self) -> None:
-        self.format_actions.format_table()
-
-    def _format_page_break(self) -> None:
-        self.format_actions.format_page_break()
-
-    def _format_spacer(self, size: str) -> None:
-        self.format_actions.format_spacer(size)
-
-    def _format_image(self) -> None:
-        self.format_actions.format_image()
-
-    def _insert_loot_entry_image(self, entry: dict) -> None:
-        self.format_actions.insert_loot_entry_image(entry)
-
-    def _open_loot_image_picker(self, screenshot_entries: list[dict]) -> None:
-        self.format_actions.open_loot_image_picker(screenshot_entries)
-
-    def _browse_and_insert_image(self) -> None:
-        self.format_actions.browse_and_insert_image()
-
-    def _format_icon(self) -> None:
-        self.format_actions.format_icon()
 
 
     def _report_font_key(self) -> str:
@@ -1112,119 +1060,7 @@ class ReportEditorTab(QWidget):
         if self.active_template is None and templates:
             self.active_template = templates[0]
 
-    def _on_export_clicked(self) -> None:
-        """Opens the single export chooser and delegates to the selected workflow."""
-        self.export_actions.on_export_clicked()
 
-    def _select_export_type(self) -> Optional[str]:
-        """Returns the selected export workflow without duplicating export logic."""
-        dialog = QDialog(self)
-        dialog.setWindowTitle(t("report.export_dialog_title", "Export Report"))
-        dialog.setMinimumWidth(360)
-
-        layout = QVBoxLayout(dialog)
-        layout.setSpacing(10)
-
-        selected_type = None
-
-        choices = [
-            (
-                "html",
-                t("report.export_html", "Export HTML/PDF"),
-                t(
-                    "report.export_html_desc",
-                    "Export self-contained HTML (opens in browser) or prepare print-ready PDF.",
-                ),
-            ),
-            (
-                "obsidian",
-                t("report.export_obsidian", "Export to Obsidian..."),
-                t(
-                    "report.export_obsidian_desc",
-                    "Export markdown and images to an Obsidian vault folder.",
-                ),
-            ),
-            (
-                "cherrytree",
-                t("report.export_cherrytree", "Export CherryTree Package..."),
-                t(
-                    "report.export_cherrytree_desc",
-                    "Export HTML report with bundled images as a CherryTree-ready package.",
-                ),
-            ),
-            (
-                "markdown",
-                t("report.export_copy", "Export MD..."),
-                t(
-                    "report.export_markdown_desc",
-                    "Save an exact Markdown copy of the current Report Editor document.",
-                ),
-            ),
-        ]
-
-        for export_type, label, description in choices:
-            btn = QPushButton(label)
-            btn.setMinimumHeight(32)
-            btn.setProperty("class", "SecondaryBtn")
-
-            def _make_handler(et: str = export_type):
-                def _handle(_checked: bool = False) -> None:
-                    nonlocal selected_type
-                    selected_type = et
-                    dialog.accept()
-
-                return _handle
-
-            btn.clicked.connect(_make_handler(export_type))
-            layout.addWidget(btn)
-
-            description_label = QLabel(description)
-            description_label.setWordWrap(True)
-            description_label.setProperty("class", "HintLabel")
-            description_label.setProperty("exportType", export_type)
-            layout.addWidget(description_label)
-
-        layout.addSpacing(4)
-        cancel_btn = QPushButton(t("dialog.cancel", "Cancel"))
-        cancel_btn.setMinimumHeight(32)
-        cancel_btn.clicked.connect(dialog.reject)
-        layout.addWidget(cancel_btn)
-
-        dialog.exec()
-        return selected_type
-
-    def _on_export_copy_clicked(self) -> None:
-        self.export_actions.on_export_copy_clicked()
-
-    def _on_export_html_clicked(self) -> None:
-        self.export_actions.on_export_html_clicked()
-
-    def _on_export_obsidian_clicked(self) -> None:
-        self.export_actions.on_export_obsidian_clicked()
-
-    def _require_export_coordinator(self) -> Optional[ExportCoordinator]:
-        return self.export_actions.require_export_coordinator()
-
-    def _on_export_cherrytree_clicked(self) -> None:
-        self.export_actions.on_export_cherrytree_clicked()
-
-    def _present_export_result(
-        self,
-        result: Any,
-        *,
-        title: str,
-        success_message: Optional[str] = None,
-        ask_open_file: Optional[Path] = None,
-    ) -> None:
-        self.export_actions.present_export_result(
-            result,
-            title=title,
-            success_message=success_message,
-            ask_open_file=ask_open_file,
-        )
-
-    def _select_html_export_options(self) -> Optional[tuple[str, str]]:
-        return select_html_export_options(self.window() if self else None)
 
 
     # ------------------------------------------------------------------ #
