@@ -86,3 +86,50 @@ def test_release_workflow_includes_supply_chain_artifacts():
     assert "SHA256SUMS" in content
     assert "actions/attest-build-provenance@" in content
 
+
+def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds():
+    """pyproject.toml must keep open bounds while constraints-release.txt provides exact version pins."""
+    import tomllib
+
+    repo_root = Path(__file__).parent.parent
+    pyproject_path = repo_root / "pyproject.toml"
+    constraints_path = repo_root / "constraints-release.txt"
+
+    assert constraints_path.exists(), "constraints-release.txt must exist for reproducible release builds"
+
+    # 1. pyproject.toml maintains open bounds
+    pyproject_data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    runtime_deps = pyproject_data["project"]["dependencies"]
+    for dep in runtime_deps:
+        assert ">=" in dep, f"pyproject.toml dependency should maintain open lower bound: {dep}"
+        assert "==" not in dep, f"pyproject.toml should not pin exact version: {dep}"
+
+    # 2. constraints-release.txt provides exact pins for all runtime dependencies
+    constraints_content = constraints_path.read_text(encoding="utf-8")
+    expected_pinned_packages = [
+        "PyQt6==",
+        "PyQt6-Qt6==",
+        "PyQt6-sip==",
+        "pynput==",
+        "pyperclip==",
+        "cryptography==",
+        "qtawesome==",
+        "pyinstaller==",
+    ]
+    for pkg in expected_pinned_packages:
+        assert pkg in constraints_content, f"constraints-release.txt missing exact pin for {pkg}"
+
+
+def test_workflows_install_against_release_constraints():
+    """Release workflow and packaging CI jobs must install dependencies against constraints-release.txt."""
+    repo_root = Path(__file__).parent.parent
+    release_workflow = (repo_root / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    ci_workflow = (repo_root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    # In release.yml, build jobs must use -c constraints-release.txt
+    assert "-c constraints-release.txt" in release_workflow
+
+    # In ci.yml, the packaging validation jobs must also use constraints-release.txt
+    assert "-c constraints-release.txt" in ci_workflow
+
+

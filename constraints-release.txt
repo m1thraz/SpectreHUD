@@ -1,0 +1,42 @@
+# Pinned constraints for reproducible SpectreHUD release builds (.exe, .deb, wheels).
+# pyproject.toml maintains open bounds (e.g. >=) for package consumer flexibility,
+# while release pipelines and packaging builds use this constraint file.
+
+# --- Direct Runtime Dependencies ---
+PyQt6==6.11.0
+PyQt6-Qt6==6.11.2
+PyQt6-sip==13.12.0
+pynput==1.8.2
+pyperclip==1.11.0
+cryptography==50.0.1
+qtawesome==1.4.2
+
+# --- Transitive Runtime Dependencies ---
+cffi==2.1.1
+pycparser==3.0
+QtPy==2.4.3
+six==1.17.0
+
+# --- Release Packaging & Standalone Bundling Tools ---
+pyinstaller==6.22.2
+pyinstaller-hooks-contrib==2026.7
+altgraph==0.17.5
+pefile==2024.8.26
+pywin32-ctypes==0.2.3; sys_platform == 'win32'
+build==1.2.2
+wheel==0.45.1
+packaging==26.3
+
+# --- Test Suite & Verification Tooling (Release Gate) ---
+pytest==9.1.1
+pytest-timeout==2.4.0
+pytest-xdist==3.8.0
+pytest-cov==7.1.0
+coverage==7.16.0
+execnet==2.1.2
+iniconfig==2.3.0
+pluggy==1.6.0
+ruff==0.16.6
+mypy==2.3.1
+import-linter==2.15
+grimp==3.17

@@ -109,10 +109,15 @@ def build_standalone_exe() -> bool:
         print(f"[+] PyInstaller version: {PyInstaller.__version__}")
     except ImportError:
         print("[*] PyInstaller not found. Installing pyinstaller...")
-        res = subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller>=6.0.0"])
+        constraints_file = project_dir / "constraints-release.txt"
+        install_cmd = [sys.executable, "-m", "pip", "install", "pyinstaller>=6.0.0"]
+        if constraints_file.exists():
+            install_cmd.extend(["-c", str(constraints_file)])
+        res = subprocess.run(install_cmd)
         if res.returncode != 0:
             print("[-] Failed to install PyInstaller.")
             return False
+
 
     # Run PyInstaller build
     cmd = [
