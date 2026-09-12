@@ -13,6 +13,8 @@ from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.section_inspector import ReportSectionInspector
+from ui.report.summary_inspector import ReportSummaryInspector
+from ui.report.remediation_inspector import ReportRemediationInspector
 
 __all__ = [
     "ClipboardHistoryPickerDialog",
@@ -23,7 +25,9 @@ __all__ = [
     "ReportFormatActions",
     "ReportFindingInspector",
     "ReportMetadataInspector",
+    "ReportRemediationInspector",
     "ReportSectionInspector",
+    "ReportSummaryInspector",
     "ReportWorkspaceNavigator",
     "select_html_export_options",
 ]

@@ -13,7 +13,7 @@ import html
 import re
 from typing import Any, Dict, List, Optional
 
-from core.phases import normalize_phase_key
+from core.phases import get_phase, normalize_phase_key
 from core.reporting.charts import render_severity_badge, render_severity_counts
 from core.reporting.findings import (
     FINDING_END_RE,
@@ -573,6 +573,247 @@ class ReportAppendix:
         return "\n".join(lines).strip()
 
 
+PHASE_NAMES_DE: Dict[str, str] = {
+    "recon": "Aufklärung & Enumeration",
+    "access": "Initialer Zugriff & Exploitation",
+    "privesc": "Rechteausweitung (PrivEsc)",
+    "postex": "Post-Exploitation & Lateral Movement",
+    "scripts": "Eigene Skripte & PoCs",
+    "misc": "Sonstiges",
+}
+
+
+@dataclass
+class ReportExecutiveSummary:
+    """Structured representation of the Executive Summary narrative section."""
+
+    title: str = "Executive Summary"
+    intro_text: str = ""
+    initial_access: str = ""
+    privilege_escalation: str = ""
+    business_impact: str = ""
+    remediation_summary: str = ""
+
+    @classmethod
+    def from_markdown(cls, markdown: str, language: str = "de") -> "ReportExecutiveSummary":
+        if not markdown:
+            return cls(title="Executive Summary")
+
+        title = "Executive Summary"
+        h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
+        if h2:
+            title = h2.group(1).strip()
+
+        # Intro text: between H2 and first H3 (Findings Matrix / Highlights)
+        intro_text = ""
+        first_h3 = re.search(r"^###\s+", markdown, re.MULTILINE)
+        if first_h3:
+            h2_end = h2.end() if h2 else 0
+            intro_raw = markdown[h2_end:first_h3.start()].strip()
+            intro_text = intro_raw
+        elif h2:
+            intro_text = markdown[h2.end():].strip()
+
+        # Helper to extract bullet value
+        def _extract_bullet(patterns: List[str]) -> str:
+            for pat in patterns:
+                m = re.search(
+                    rf"^[ \t]*[-*]\s+\*\*{pat}:\*\*\s*(.*?)$",
+                    markdown,
+                    re.MULTILINE | re.IGNORECASE,
+                )
+                if m:
+                    return m.group(1).strip()
+            return ""
+
+        initial_access = _extract_bullet([
+            "Initial Access Vector",
+            "Initial Access / Schwachstelle",
+            "Initial Access",
+            "Initialer Zugriff",
+        ])
+        privilege_escalation = _extract_bullet([
+            "Privilege Escalation",
+            "Rechteausweitung",
+            "PrivEsc",
+        ])
+        business_impact = _extract_bullet([
+            "Business Impact & Risk",
+            "Business Impact / Risiko",
+            "Business Impact",
+            "Geschäftsauswirkung",
+            "Risiko",
+        ])
+        remediation_summary = _extract_bullet([
+            "Recommended Remediation",
+            "Empfohlene Remediation",
+            "Empfohlene Maßnahmen",
+            "Remediation",
+        ])
+
+        return cls(
+            title=title,
+            intro_text=intro_text,
+            initial_access=initial_access,
+            privilege_escalation=privilege_escalation,
+            business_impact=business_impact,
+            remediation_summary=remediation_summary,
+        )
+
+    def to_markdown(self, findings: List[ReportFindingItem], language: str = "de") -> str:
+        lines: List[str] = []
+        sec_title = self.title or "Executive Summary"
+        lines.append(f"## {sec_title}")
+        lines.append("")
+
+        if self.intro_text.strip():
+            lines.append(self.intro_text.strip())
+            lines.append("")
+
+        matrix_title = "### Findings-Übersicht" if language == "de" else "### Findings Matrix"
+        lines.append(matrix_title)
+        lines.append("")
+        lines.append("| # | Finding | Severity | Phase | Status |")
+        lines.append("|---|---------|----------|-------|--------|")
+
+        sev_counts: Counter[str] = Counter()
+        for idx, f in enumerate(findings, start=1):
+            sev = f.severity.lower()
+            sev_counts[sev] += 1
+            t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
+            p_obj = get_phase(f.phase)
+            ph_name = PHASE_NAMES_DE.get(p_obj.key, p_obj.long) if language == "de" else p_obj.long
+            ph = ph_name.replace("|", "\\|").replace("\n", " ")
+            st = "Offen" if f.status == "open" else ("Open" if language != "de" else "Offen")
+            lines.append(f"| {idx} | {t} | {f.severity.upper()} | {ph} | {st} |")
+
+        if not findings:
+            lines.append("| | | | | |")
+
+        lines.append("")
+        total_str = render_severity_counts(
+            sev_counts["critical"],
+            sev_counts["high"],
+            sev_counts["medium"],
+            sev_counts["low"],
+        )
+        lines.append(f"**{'Gesamt' if language == 'de' else 'Total'}:** {total_str}")
+        lines.append("")
+
+        # Highlights section
+        hl_title = "### Kernaussagen" if language == "de" else "### Key Highlights"
+        lines.append(hl_title)
+        lines.append("")
+        if language == "de":
+            lines.append(f"- **Initial Access / Schwachstelle:** {self.initial_access}".rstrip())
+            lines.append(f"- **Privilege Escalation:** {self.privilege_escalation}".rstrip())
+            lines.append(f"- **Business Impact / Risiko:** {self.business_impact}".rstrip())
+            lines.append(f"- **Empfohlene Remediation:** {self.remediation_summary}".rstrip())
+        else:
+            lines.append(f"- **Initial Access Vector:** {self.initial_access}".rstrip())
+            lines.append(f"- **Privilege Escalation:** {self.privilege_escalation}".rstrip())
+            lines.append(f"- **Business Impact & Risk:** {self.business_impact}".rstrip())
+            lines.append(f"- **Recommended Remediation:** {self.remediation_summary}".rstrip())
+
+        return "\n".join(lines).strip()
+
+
+SEVERITY_ORDER: Dict[str, int] = {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 3,
+    "info": 4,
+}
+
+STATUS_LABELS_DE: Dict[str, str] = {
+    "open": "Offen",
+    "in_progress": "In Arbeit",
+    "resolved": "Behoben",
+    "closed": "Behoben",
+    "accepted_risk": "Akzeptiert",
+}
+
+STATUS_LABELS_EN: Dict[str, str] = {
+    "open": "Open",
+    "in_progress": "In Progress",
+    "resolved": "Resolved",
+    "closed": "Resolved",
+    "accepted_risk": "Accepted Risk",
+}
+
+
+@dataclass
+class ReportRemediationPlan:
+    """Structured representation of the Remediation & Action Plan section."""
+
+    title: str = "Remediation & Action Plan"
+    strategic_guidance: str = ""
+
+    @classmethod
+    def from_markdown(cls, markdown: str, language: str = "de") -> "ReportRemediationPlan":
+        default_title = "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        if not markdown:
+            return cls(title=default_title)
+
+        title = default_title
+        h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
+        if h2:
+            title = h2.group(1).strip()
+
+        strategic_guidance = ""
+        table_start = re.search(r"^[ \t]*\|", markdown, re.MULTILINE)
+        if table_start:
+            start_pos = h2.end() if h2 else 0
+            strategic_guidance = markdown[start_pos:table_start.start()].strip()
+        elif h2:
+            strategic_guidance = markdown[h2.end():].strip()
+
+        return cls(title=title, strategic_guidance=strategic_guidance)
+
+    def to_markdown(self, findings: List[ReportFindingItem], language: str = "de") -> str:
+        default_title = "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        sec_title = self.title or default_title
+        lines: List[str] = [f"## {sec_title}", ""]
+
+        if self.strategic_guidance.strip():
+            lines.append(self.strategic_guidance.strip())
+            lines.append("")
+
+        if language == "de":
+            lines.extend([
+                "| Priorität | Schwachstelle | Empfohlene Maßnahme | Status |",
+                "|-----------|---------------|----------------------|--------|",
+            ])
+        else:
+            lines.extend([
+                "| Priority | Vulnerability | Recommended Action | Status |",
+                "|----------|---------------|--------------------|--------|",
+            ])
+
+        sorted_findings = sorted(
+            findings,
+            key=lambda f: SEVERITY_ORDER.get((f.severity or "medium").strip().lower(), 99),
+        )
+
+        for f in sorted_findings:
+            sev = (f.severity or "medium").strip().upper()
+            t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
+            rec = (f.recommendation or "–").replace("|", "\\|").replace("\n", " ")
+            st_key = (f.status or "open").strip().lower()
+            if language == "de":
+                st = STATUS_LABELS_DE.get(st_key, f.status.capitalize() if f.status else "Offen")
+            else:
+                st = STATUS_LABELS_EN.get(st_key, f.status.capitalize() if f.status else "Open")
+            lines.append(f"| {sev} | {t} | {rec} | {st} |")
+
+        if not sorted_findings:
+            lines.append("| | | | |")
+
+        lines.append("")
+        return "\n".join(lines)
+
+
 @dataclass
 class ReportWorkspaceDocument:
     metadata: ReportMetadata = field(default_factory=ReportMetadata)
@@ -749,94 +990,71 @@ class ReportWorkspaceDocument:
             unstructured_blocks=unstructured,
         )
 
+    def get_executive_summary(self) -> ReportExecutiveSummary:
+        narr = next(
+            (n for n in self.narratives if n.identity == "executive_summary" or n.section_type == "executive_summary"),
+            None,
+        )
+        content = narr.content if narr else ""
+        summary = ReportExecutiveSummary.from_markdown(content, language=self.language)
+        if narr and narr.title:
+            summary.title = narr.title
+        return summary
+
+    def set_executive_summary(self, summary: ReportExecutiveSummary) -> None:
+        md = summary.to_markdown(self.findings, language=self.language)
+        for n in self.narratives:
+            if n.identity == "executive_summary" or n.section_type == "executive_summary":
+                n.title = summary.title
+                n.content = md
+                return
+        self.narratives.insert(
+            0,
+            ReportNarrativeSection(
+                identity="executive_summary",
+                section_type="executive_summary",
+                title=summary.title,
+                content=md,
+            ),
+        )
+
+    def get_remediation_plan(self) -> ReportRemediationPlan:
+        narrative = next(
+            (n for n in self.narratives if n.identity == "remediation_table" or n.section_type == "remediation_table"),
+            None,
+        )
+        content = narrative.content if narrative else ""
+        return ReportRemediationPlan.from_markdown(content, language=self.language)
+
+    def set_remediation_plan(self, plan: ReportRemediationPlan) -> None:
+        md = plan.to_markdown(self.findings, language=self.language)
+        for n in self.narratives:
+            if n.identity == "remediation_table" or n.section_type == "remediation_table":
+                n.title = plan.title
+                n.content = md
+                return
+        self.narratives.append(
+            ReportNarrativeSection(
+                identity="remediation_table",
+                section_type="remediation_table",
+                title=plan.title,
+                content=md,
+            ),
+        )
+
     def _render_executive_summary_content(self, narrative: ReportNarrativeSection) -> str:
-        """Regenerates findings matrix inside executive summary while preserving highlights."""
-        lines = []
-        sec_title = narrative.title or ("Executive Summary" if self.language == "de" else "Executive Summary")
-        lines.append(f"## {sec_title}")
-        lines.append("")
-
-        matrix_title = "### Findings-Übersicht" if self.language == "de" else "### Findings Matrix"
-        lines.append(matrix_title)
-        lines.append("")
-        lines.append("| # | Finding | Severity | Phase | Status |")
-        lines.append("|---|---------|----------|-------|--------|")
-
-        sev_counts: Counter[str] = Counter()
-        for idx, f in enumerate(self.findings, start=1):
-            sev_counts[f.severity.lower()] += 1
-            t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
-            ph = (f.phase or "misc").replace("|", "\\|").replace("\n", " ")
-            st = "Offen" if f.status == "open" else ("Open" if self.language != "de" else "Offen")
-            lines.append(f"| {idx} | {t} | {f.severity.upper()} | {ph} | {st} |")
-
-        if not self.findings:
-            lines.append("| | | | | |")
-
-        lines.append("")
-        total_str = render_severity_counts(
-            sev_counts["critical"],
-            sev_counts["high"],
-            sev_counts["medium"],
-            sev_counts["low"],
-        )
-        lines.append(f"**{'Gesamt' if self.language == 'de' else 'Total'}:** {total_str}")
-        lines.append("")
-
-        # Extract highlights from existing narrative content if present
-        highlights_match = re.search(
-            r"(### (?:Kernaussagen|Key Highlights).*)$",
-            narrative.content,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if highlights_match:
-            lines.append(highlights_match.group(1).strip())
-        else:
-            if self.language == "de":
-                lines.extend([
-                    "### Kernaussagen",
-                    "",
-                    "- **Initial Access / Schwachstelle:**",
-                    "- **Privilege Escalation:**",
-                    "- **Business Impact / Risiko:**",
-                    "- **Empfohlene Remediation:**",
-                ])
-            else:
-                lines.extend([
-                    "### Key Highlights",
-                    "",
-                    "- **Initial Access Vector:**",
-                    "- **Privilege Escalation:**",
-                    "- **Business Impact & Risk:**",
-                    "- **Recommended Remediation:**",
-                ])
-        return "\n".join(lines)
+        """Regenerates findings matrix inside executive summary while preserving highlights and intro."""
+        summary = ReportExecutiveSummary.from_markdown(narrative.content, language=self.language)
+        if narrative.title:
+            summary.title = narrative.title
+        return summary.to_markdown(self.findings, language=self.language)
 
     def _render_remediation_table_content(self, narrative: ReportNarrativeSection) -> str:
         """Regenerates remediation table rows from current findings."""
-        sec_title = narrative.title or ("Remediation & Maßnahmenplan" if self.language == "de" else "Remediation & Action Plan")
-        lines = [f"## {sec_title}", ""]
-        if self.language == "de":
-            lines.extend([
-                "| Priorität | Schwachstelle | Empfohlene Maßnahme | Status |",
-                "|-----------|---------------|----------------------|--------|",
-            ])
-        else:
-            lines.extend([
-                "| Priority | Vulnerability | Recommended Action | Status |",
-                "|----------|---------------|--------------------|--------|",
-            ])
-
-        for f in self.findings:
-            rec = (f.recommendation or "–").replace("|", "\\|").replace("\n", " ")
-            st = "Offen" if f.status == "open" else ("Open" if self.language != "de" else "Offen")
-            t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
-            lines.append(f"| {render_severity_badge(f.severity, include_emoji=False)} | {t} | {rec} | {st} |")
-
-        if not self.findings:
-            lines.append("| | | | |")
-        lines.append("")
-        return "\n".join(lines)
+        plan = ReportRemediationPlan.from_markdown(narrative.content, language=self.language)
+        if narrative.title:
+            plan.title = narrative.title
+        return plan.to_markdown(self.findings, language=self.language)
 
     def to_markdown(self, regenerate_matrices: bool = True) -> str:
         parts: List[str] = []

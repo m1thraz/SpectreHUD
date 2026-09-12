@@ -89,9 +89,11 @@ from core.reporting.outline import HeadingItem, extract_headings
 from core.reporting.workspace_model import (
     ReportAppendix,
     ReportEvidenceItem,
+    ReportExecutiveSummary,
     ReportFindingItem,
     ReportMetadata,
     ReportNarrativeSection,
+    ReportRemediationPlan,
     ReportWorkspaceDocument,
 )
 
@@ -163,9 +165,10 @@ __all__ = [
     "extract_headings",
     "ReportAppendix",
     "ReportEvidenceItem",
+    "ReportExecutiveSummary",
     "ReportFindingItem",
     "ReportMetadata",
     "ReportNarrativeSection",
+    "ReportRemediationPlan",
     "ReportWorkspaceDocument",
 ]
-

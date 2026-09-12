@@ -5,8 +5,10 @@ from core.reporting import (
     ReportContext,
     ReportMetadata,
     ReportEvidenceItem,
+    ReportExecutiveSummary,
     ReportFindingItem,
     ReportNarrativeSection,
+    ReportRemediationPlan,
     ReportWorkspaceDocument,
     TemplateRenderer,
     TemplateRepository,
@@ -383,5 +385,107 @@ def test_finding_phase_normalization_and_grouping():
     )
     parsed = ReportFindingItem.from_markdown(md_finding, "find-99")
     assert parsed.phase == "recon"
+
+
+def test_executive_summary_parsing_and_serialization():
+    """Verify parsing and serialization of structured Executive Summary with highlights."""
+    raw_md = (
+        "## 1. Executive Summary\n\n"
+        "Im Rahmen des Penetrationstests wurden signifikante Schwachstellen identifiziert.\n\n"
+        "### Findings Matrix\n\n"
+        "| # | Finding | Severity | Phase | Status |\n"
+        "|---|---------|----------|-------|--------|\n"
+        "| 1 | FTP Anonymous Access | MEDIUM | recon | Offen |\n\n"
+        "**Total:** <span class=\"severity-pill severity-medium\">MEDIUM</span> 1\n\n"
+        "### Key Highlights\n\n"
+        "- **Initial Access Vector:** Anonymous FTP upload\n"
+        "- **Privilege Escalation:** Sudo NOPASSWD less\n"
+        "- **Business Impact & Risk:** Full server compromise\n"
+        "- **Recommended Remediation:** Disable anonymous FTP\n"
+    )
+
+    summary = ReportExecutiveSummary.from_markdown(raw_md, language="de")
+    assert summary.title == "1. Executive Summary"
+    assert "signifikante Schwachstellen" in summary.intro_text
+    assert summary.initial_access == "Anonymous FTP upload"
+    assert summary.privilege_escalation == "Sudo NOPASSWD less"
+    assert summary.business_impact == "Full server compromise"
+    assert summary.remediation_summary == "Disable anonymous FTP"
+
+    findings = [
+        ReportFindingItem(id="f1", title="FTP Anonymous Access", severity="medium", phase="recon"),
+        ReportFindingItem(id="f2", title="Root Shell", severity="critical", phase="privesc"),
+    ]
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+    doc.set_executive_summary(summary)
+
+    narr = next(n for n in doc.narratives if n.identity == "executive_summary")
+    assert "Aufklärung & Enumeration" in narr.content
+    assert "Rechteausweitung (PrivEsc)" in narr.content
+    assert "Anonymous FTP upload" in narr.content
+    assert "Sudo NOPASSWD less" in narr.content
+
+
+def test_remediation_plan_parsing_and_serialization():
+    """Verify parsing and serialization of structured Remediation Plan without HTML spans."""
+    raw_md = (
+        "## 5. Remediation & Action Plan\n\n"
+        "Folgende strategische Maßnahmen sollten priorisiert umgesetzt werden.\n\n"
+        "| Priority | Vulnerability | Recommended Action | Status |\n"
+        "|----------|---------------|--------------------|--------|\n"
+        "| <span class=\"severity-pill severity-medium\">MEDIUM</span> | FTP Anonymous Access | Disable anonymous access | Offen |\n"
+    )
+
+    plan = ReportRemediationPlan.from_markdown(raw_md, language="de")
+    assert plan.title == "5. Remediation & Action Plan"
+    assert "Folgende strategische Maßnahmen" in plan.strategic_guidance
+
+    findings = [
+        ReportFindingItem(
+            id="f1",
+            title="FTP Anonymous Access",
+            severity="medium",
+            recommendation="Disable anonymous access",
+            status="open",
+        ),
+        ReportFindingItem(
+            id="f2",
+            title="Sudo NOPASSWD /usr/bin/less",
+            severity="critical",
+            recommendation="Remove sudoers rule",
+            status="resolved",
+        ),
+        ReportFindingItem(
+            id="f3",
+            title="Outdated Kernel",
+            severity="high",
+            recommendation="Upgrade linux kernel",
+            status="in_progress",
+        ),
+    ]
+
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+    doc.set_remediation_plan(plan)
+
+    narr = next(n for n in doc.narratives if n.identity == "remediation_table")
+    content = narr.content
+
+    # Priority sorting: CRITICAL must appear before HIGH, and HIGH before MEDIUM
+    pos_crit = content.find("CRITICAL")
+    pos_high = content.find("HIGH")
+    pos_med = content.find("MEDIUM")
+    assert pos_crit != -1 and pos_high != -1 and pos_med != -1
+    assert pos_crit < pos_high < pos_med
+
+    # Clean markdown, no raw HTML spans
+    assert "<span" not in content
+    assert "severity-pill" not in content
+
+    # Localized status
+    assert "Behoben" in content
+    assert "In Arbeit" in content
+    assert "Offen" in content
+
+
 
 

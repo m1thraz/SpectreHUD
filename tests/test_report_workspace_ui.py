@@ -18,9 +18,11 @@ from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
     ReportEvidenceItem,
+    ReportExecutiveSummary,
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
+    ReportRemediationPlan,
     ReportWorkspaceDocument,
 )
 from ui.report.dialogs import (
@@ -30,6 +32,8 @@ from ui.report.dialogs import (
 from ui.report.finding_inspector import ReportEvidenceCard, ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.section_inspector import ReportSectionInspector
+from ui.report.summary_inspector import ReportSummaryInspector
+from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report_editor_tab import ReportEditorTab, ViewMode
 
@@ -441,3 +445,236 @@ class TestReportWorkspaceUI(unittest.TestCase):
             self.assertEqual(t("report.finding_desc"), "Beschreibung & Proof of Concept")
         finally:
             i18n.set_locale(saved_locale)
+
+    def test_summary_inspector_ui_and_interactions(self):
+        inspector = ReportSummaryInspector()
+
+        f1 = ReportFindingItem(
+            id="f-1",
+            title="Sudo NOPASSWD /usr/bin/less",
+            severity="CRITICAL",
+            phase="privesc",
+            status="Open",
+        )
+        f2 = ReportFindingItem(
+            id="f-2",
+            title="FTP Anonymous Access",
+            severity="HIGH",
+            phase="recon",
+            status="Resolved",
+        )
+        doc = ReportWorkspaceDocument(
+            metadata=ReportMetadata(),
+            findings=[f1, f2],
+        )
+        summary = ReportExecutiveSummary(
+            intro_text="Executive summary intro text.",
+            initial_access="Phishing vector",
+            privilege_escalation="Sudo misconfiguration",
+            business_impact="Full domain compromise",
+            remediation_summary="Patch sudoers and restrict FTP",
+        )
+        doc.set_executive_summary(summary)
+
+        inspector.load_summary(doc)
+
+        # Check posture and scorecard pills
+        self.assertIn("CRITICAL", inspector.lbl_posture_val.text())
+        self.assertIn("1", inspector.pill_crit.text())
+        self.assertIn("1", inspector.pill_high.text())
+        self.assertIn("0", inspector.pill_med.text())
+        self.assertIn("2 Total", inspector.lbl_status_val.text())
+        self.assertIn("1 Open", inspector.lbl_status_val.text())
+        self.assertIn("1 Remediated", inspector.lbl_status_val.text())
+
+        # Check table contents
+        self.assertEqual(inspector.tbl_matrix.rowCount(), 2)
+        item_title = inspector.tbl_matrix.item(0, 2)
+        self.assertIsNotNone(item_title)
+        self.assertEqual(item_title.text(), "Sudo NOPASSWD /usr/bin/less")
+
+        # Check text inputs
+        self.assertEqual(inspector.txt_intro.toPlainText(), "Executive summary intro text.")
+        self.assertEqual(inspector.txt_initial_access.toPlainText(), "Phishing vector")
+        self.assertEqual(inspector.txt_privesc.toPlainText(), "Sudo misconfiguration")
+        self.assertEqual(inspector.txt_business_impact.toPlainText(), "Full domain compromise")
+        self.assertEqual(inspector.txt_remediation.toPlainText(), "Patch sudoers and restrict FTP")
+
+        # Check signals
+        selected_finding_ids = []
+        inspector.finding_selected.connect(selected_finding_ids.append)
+        inspector.tbl_matrix.cellDoubleClicked.emit(0, 2)
+        self.assertEqual(selected_finding_ids, ["f-1"])
+
+        changes = []
+        inspector.summary_changed.connect(changes.append)
+        inspector.txt_initial_access.setPlainText("Updated vector")
+        inspector._debounce_timer.stop()
+        inspector._emit_changed()
+        self.assertTrue(len(changes) > 0)
+        self.assertEqual(changes[-1].initial_access, "Updated vector")
+
+        inspector.close()
+        inspector.deleteLater()
+
+    def test_report_editor_tab_summary_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        f1 = ReportFindingItem(
+            id="f-test-1",
+            title="Test Finding 1",
+            severity="HIGH",
+            phase="privesc",
+            status="Open",
+        )
+        tab._workspace_doc.findings.append(f1)
+        tab._sync_workspace_doc_to_editor()
+
+        # Navigate to executive summary section
+        tab._on_navigate_requested("section", "executive_summary")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.summary_inspector_glass)
+        self.assertEqual(tab.summary_inspector.tbl_matrix.rowCount(), 1)
+
+        # Click navigation from summary matrix to finding
+        tab.summary_inspector.finding_selected.emit("f-test-1")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertEqual(tab.finding_inspector._finding.id, "f-test-1")
+
+        tab.close()
+        tab.deleteLater()
+
+    def test_remediation_inspector_ui_and_interactions(self):
+        inspector = ReportRemediationInspector()
+
+        f1 = ReportFindingItem(
+            id="f-med",
+            title="FTP Anonymous Access",
+            severity="medium",
+            phase="recon",
+            status="open",
+            recommendation="Disable anonymous access",
+        )
+        f2 = ReportFindingItem(
+            id="f-crit",
+            title="Sudo NOPASSWD /usr/bin/less",
+            severity="critical",
+            phase="privesc",
+            status="open",
+            recommendation="Remove sudoers rule",
+        )
+        f3 = ReportFindingItem(
+            id="f-high",
+            title="Outdated Web Server",
+            severity="high",
+            phase="access",
+            status="resolved",
+            recommendation="Update nginx package",
+        )
+
+        plan = ReportRemediationPlan(
+            title="Remediation & Maßnahmenplan",
+            strategic_guidance="Prioritize external perimeter patches.",
+        )
+        doc = ReportWorkspaceDocument(
+            metadata=ReportMetadata(),
+            findings=[f1, f2, f3],
+        )
+        doc.set_remediation_plan(plan)
+
+        inspector.load_remediation(doc)
+
+        # Check title and guidance
+        self.assertEqual(inspector.lbl_title.text(), "Remediation & Maßnahmenplan")
+        self.assertEqual(inspector.txt_guidance.toPlainText(), "Prioritize external perimeter patches.")
+
+        # Check progress badge (1 of 3 resolved = 33%)
+        self.assertIn("1 / 3 Resolved", inspector.lbl_progress_badge.text())
+
+        # Check priority sorting: Critical is row 0, High is row 1, Medium is row 2
+        self.assertEqual(inspector.tbl_actions.rowCount(), 3)
+        item_sev_row0 = inspector.tbl_actions.item(0, 0)
+        self.assertEqual(item_sev_row0.text(), "CRITICAL")
+        self.assertEqual(item_sev_row0.data(Qt.ItemDataRole.UserRole), "f-crit")
+
+        item_sev_row1 = inspector.tbl_actions.item(1, 0)
+        self.assertEqual(item_sev_row1.text(), "HIGH")
+        self.assertEqual(item_sev_row1.data(Qt.ItemDataRole.UserRole), "f-high")
+
+        item_sev_row2 = inspector.tbl_actions.item(2, 0)
+        self.assertEqual(item_sev_row2.text(), "MEDIUM")
+        self.assertEqual(item_sev_row2.data(Qt.ItemDataRole.UserRole), "f-med")
+
+        # Check filter buttons
+        inspector.btn_filter_open.click()
+        self.assertEqual(inspector.tbl_actions.rowCount(), 2)
+
+        inspector.btn_filter_resolved.click()
+        self.assertEqual(inspector.tbl_actions.rowCount(), 1)
+        self.assertEqual(inspector.tbl_actions.item(0, 0).text(), "HIGH")
+
+        inspector.btn_filter_all.click()
+        self.assertEqual(inspector.tbl_actions.rowCount(), 3)
+
+        # Test in-place editing of recommendation
+        action_events = []
+        inspector.finding_action_changed.connect(lambda fid, rec, st: action_events.append((fid, rec, st)))
+
+        edit_action = inspector.tbl_actions.cellWidget(0, 2)
+        self.assertIsNotNone(edit_action)
+        self.assertEqual(edit_action.text(), "Remove sudoers rule")
+        edit_action.setText("Remove sudoers rule immediately")
+        edit_action.editingFinished.emit()
+
+        self.assertEqual(len(action_events), 1)
+        self.assertEqual(action_events[0], ("f-crit", "Remove sudoers rule immediately", "open"))
+
+        # Test status combo change
+        cmb_status = inspector.tbl_actions.cellWidget(0, 3)
+        self.assertIsNotNone(cmb_status)
+        resolved_idx = cmb_status.findData("resolved")
+        self.assertGreaterEqual(resolved_idx, 0)
+        cmb_status.setCurrentIndex(resolved_idx)
+
+        self.assertEqual(len(action_events), 2)
+        self.assertEqual(action_events[1], ("f-crit", "Remove sudoers rule immediately", "resolved"))
+        self.assertIn("2 / 3 Resolved", inspector.lbl_progress_badge.text())
+
+        # Test double-click jumps to finding
+        selected_findings = []
+        inspector.finding_selected.connect(selected_findings.append)
+        inspector.tbl_actions.cellDoubleClicked.emit(0, 0)
+        self.assertEqual(selected_findings, ["f-crit"])
+
+        inspector.close()
+        inspector.deleteLater()
+
+    def test_report_editor_tab_remediation_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        f1 = ReportFindingItem(
+            id="f-action-test",
+            title="Action Test Finding",
+            severity="HIGH",
+            phase="privesc",
+            status="open",
+            recommendation="Test action",
+        )
+        tab._workspace_doc.findings.append(f1)
+        tab._sync_workspace_doc_to_editor()
+
+        # Navigate to remediation table section
+        tab._on_navigate_requested("section", "remediation_table")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.remediation_inspector_glass)
+        self.assertEqual(tab.remediation_inspector.tbl_actions.rowCount(), 1)
+
+        # Click navigation from remediation table to finding details
+        tab.remediation_inspector.finding_selected.emit("f-action-test")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertEqual(tab.finding_inspector._finding.id, "f-action-test")
+
+        tab.close()
+        tab.deleteLater()
+
+

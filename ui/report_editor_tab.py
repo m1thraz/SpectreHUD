@@ -37,9 +37,11 @@ from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCh
 
 from core.reporting import (
     ReportEvidenceItem,
+    ReportExecutiveSummary,
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
+    ReportRemediationPlan,
     ReportTemplate,
     ReportWorkspaceDocument,
     TemplateRepository,
@@ -66,6 +68,8 @@ from ui.report.format_actions import ReportFormatActions
 from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.section_inspector import ReportSectionInspector
+from ui.report.summary_inspector import ReportSummaryInspector
+from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
@@ -508,6 +512,25 @@ class ReportEditorTab(QWidget):
         self.section_inspector.section_changed.connect(self._on_section_changed)
         self.section_inspector_glass = self._wrap_glass_surface(self.section_inspector)
         self.center_stack.addWidget(self.section_inspector_glass)
+
+        # Page 4: Summary Inspector
+        self.summary_inspector = ReportSummaryInspector(self)
+        self.summary_inspector.summary_changed.connect(self._on_summary_changed)
+        self.summary_inspector.finding_selected.connect(
+            lambda fid: self._on_navigate_requested("finding", fid)
+        )
+        self.summary_inspector_glass = self._wrap_glass_surface(self.summary_inspector)
+        self.center_stack.addWidget(self.summary_inspector_glass)
+
+        # Page 5: Remediation & Action Plan Inspector
+        self.remediation_inspector = ReportRemediationInspector(self)
+        self.remediation_inspector.finding_action_changed.connect(self._on_finding_action_changed)
+        self.remediation_inspector.plan_changed.connect(self._on_remediation_plan_changed)
+        self.remediation_inspector.finding_selected.connect(
+            lambda fid: self._on_navigate_requested("finding", fid)
+        )
+        self.remediation_inspector_glass = self._wrap_glass_surface(self.remediation_inspector)
+        self.center_stack.addWidget(self.remediation_inspector_glass)
 
         self.splitter.addWidget(self.center_stack)
 
@@ -1516,23 +1539,30 @@ class ReportEditorTab(QWidget):
                 self.center_stack.setCurrentWidget(self.editor_glass)
         elif view_type in ("section", "narratives_root"):
             sec_id = item_id or "executive_summary"
-            narr = next(
-                (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
-                None,
-            )
-            title = narr.title if narr else sec_id
-            content = narr.content if narr else ""
-            icon_map = {
-                "executive_summary": "fa5s.align-left",
-                "scope_limitations": "fa5s.bullseye",
-                "attack_path": "fa5s.route",
-                "remediation_table": "fa5s.tasks",
-                "appendix": "fa5s.paperclip",
-            }
-            sec_icon = icon_map.get(sec_id, "fa5s.edit")
-            self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
-            self.center_stack.setCurrentWidget(self.section_inspector_glass)
-            self._last_active_inspector = self.section_inspector_glass
+            if sec_id == "executive_summary":
+                self.summary_inspector.load_summary(self._workspace_doc)
+                self.center_stack.setCurrentWidget(self.summary_inspector_glass)
+                self._last_active_inspector = self.summary_inspector_glass
+            elif sec_id == "remediation_table":
+                self.remediation_inspector.load_remediation(self._workspace_doc)
+                self.center_stack.setCurrentWidget(self.remediation_inspector_glass)
+                self._last_active_inspector = self.remediation_inspector_glass
+            else:
+                narr = next(
+                    (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
+                    None,
+                )
+                title = narr.title if narr else sec_id
+                content = narr.content if narr else ""
+                icon_map = {
+                    "scope_limitations": "fa5s.bullseye",
+                    "attack_path": "fa5s.route",
+                    "appendix": "fa5s.paperclip",
+                }
+                sec_icon = icon_map.get(sec_id, "fa5s.edit")
+                self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
+                self.center_stack.setCurrentWidget(self.section_inspector_glass)
+                self._last_active_inspector = self.section_inspector_glass
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "raw_markdown":
@@ -1617,6 +1647,10 @@ class ReportEditorTab(QWidget):
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         self._workspace_doc.update_finding(updated)
         self._sync_workspace_doc_to_editor()
+        if hasattr(self, "summary_inspector_glass") and self.center_stack.currentWidget() == self.summary_inspector_glass:
+            self.summary_inspector.load_summary(self._workspace_doc)
+        if hasattr(self, "remediation_inspector_glass") and self.center_stack.currentWidget() == self.remediation_inspector_glass:
+            self.remediation_inspector.load_remediation(self._workspace_doc)
 
     def _on_finding_deleted(self, finding_id: str) -> None:
         if self._workspace_doc is None:
@@ -1670,6 +1704,29 @@ class ReportEditorTab(QWidget):
         )
         if narr:
             narr.content = content
+        self._sync_workspace_doc_to_editor()
+
+    def _on_summary_changed(self, updated: ReportExecutiveSummary) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        self._workspace_doc.set_executive_summary(updated)
+        self._sync_workspace_doc_to_editor()
+
+    def _on_finding_action_changed(self, finding_id: str, new_rec: str, new_status: str) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        target = self._workspace_doc.get_finding(finding_id)
+        if target:
+            target.recommendation = new_rec
+            target.status = new_status
+            self._sync_workspace_doc_to_editor()
+            if hasattr(self, "summary_inspector_glass") and self.center_stack.currentWidget() == self.summary_inspector_glass:
+                self.summary_inspector.load_summary(self._workspace_doc)
+
+    def _on_remediation_plan_changed(self, updated: ReportRemediationPlan) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        self._workspace_doc.set_remediation_plan(updated)
         self._sync_workspace_doc_to_editor()
 
     # ------------------------------------------------------------------ #
