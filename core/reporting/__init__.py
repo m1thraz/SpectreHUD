@@ -85,6 +85,14 @@ from core.reporting.loot_sync import (
     strip_report_markers,
 )
 from core.reporting.outline import HeadingItem, extract_headings
+from core.reporting.workspace_model import (
+    ReportAppendix,
+    ReportEvidenceItem,
+    ReportFindingItem,
+    ReportMetadata,
+    ReportNarrativeSection,
+    ReportWorkspaceDocument,
+)
 
 __all__ = [
     "ExportArtifact",
@@ -151,5 +159,11 @@ __all__ = [
     "strip_report_markers",
     "HeadingItem",
     "extract_headings",
+    "ReportAppendix",
+    "ReportEvidenceItem",
+    "ReportFindingItem",
+    "ReportMetadata",
+    "ReportNarrativeSection",
+    "ReportWorkspaceDocument",
 ]
 
