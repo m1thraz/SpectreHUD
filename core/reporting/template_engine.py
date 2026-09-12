@@ -97,7 +97,7 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
         lines = [
             f"# {title}",
             "",
-            "| | |",
+            "| Eigenschaft | Wert |",
             "|---|---|",
             f"| **Auftraggeber / Client** | `{context.metadata.get('client', '')}` |",
             f"| **Tester** | `{context.metadata.get('tester', '')}` |",
@@ -112,7 +112,7 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
         lines = [
             f"# {title}",
             "",
-            "| | |",
+            "| Property | Value |",
             "|---|---|",
             f"| **Client / Organization** | `{context.metadata.get('client', '')}` |",
             f"| **Lead Tester** | `{context.metadata.get('tester', '')}` |",
