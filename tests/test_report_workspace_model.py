@@ -298,3 +298,54 @@ def test_compatibility_across_all_builtin_templates():
         re_exported = doc.to_markdown()
         assert re_exported, f"Template {tmpl.id} re-exported empty markdown"
         assert "<!-- spectre:section:start:header_metadata -->" in re_exported
+
+
+def test_finding_evidence_attach_detach_update():
+    f = ReportFindingItem(
+        id="f1",
+        title="Test Finding",
+        description="Initial description without evidence.",
+    )
+    assert len(f.evidence_items) == 0
+
+    # 1. Attach screenshot evidence
+    ev_sc = ReportEvidenceItem(
+        id="ev1",
+        type="screenshot",
+        caption="Nmap Scan",
+        content="screenshots/nmap.png",
+    )
+    f.attach_evidence(ev_sc, insert_into_description=True)
+    assert len(f.evidence_items) == 1
+    assert "![Nmap Scan](screenshots/nmap.png)" in f.description
+
+    # 2. Attach terminal evidence
+    ev_term = ReportEvidenceItem(
+        id="ev2",
+        type="terminal",
+        caption="Terminal PoC",
+        content="curl -v http://target/api",
+    )
+    f.attach_evidence(ev_term, insert_into_description=True)
+    assert len(f.evidence_items) == 2
+    assert "```bash\ncurl -v http://target/api\n```" in f.description
+
+    # 3. Update caption
+    assert f.update_evidence("ev1", caption="Nmap Port Scan Result") is True
+    assert f.evidence_items[0].caption == "Nmap Port Scan Result"
+    assert "![Nmap Port Scan Result](screenshots/nmap.png)" in f.description
+
+    # 4. Detach screenshot evidence
+    removed = f.detach_evidence("ev1", remove_from_description=True)
+    assert removed is not None
+    assert removed.id == "ev1"
+    assert len(f.evidence_items) == 1
+    assert "screenshots/nmap.png" not in f.description
+    assert "```bash\ncurl -v http://target/api\n```" in f.description
+
+    # 5. Detach terminal evidence
+    removed2 = f.detach_evidence("ev2", remove_from_description=True)
+    assert removed2 is not None
+    assert len(f.evidence_items) == 0
+    assert "curl -v" not in f.description
+

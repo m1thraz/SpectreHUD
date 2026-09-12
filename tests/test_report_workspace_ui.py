@@ -14,12 +14,17 @@ from core.clipboard_history import ClipboardHistory
 from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
+    ReportEvidenceItem,
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
     ReportWorkspaceDocument,
 )
-from ui.report.finding_inspector import ReportFindingInspector
+from ui.report.dialogs import (
+    ClipboardHistoryPickerDialog,
+    LootEntryPickerDialog,
+)
+from ui.report.finding_inspector import ReportEvidenceCard, ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
@@ -179,3 +184,121 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         tab.close()
         tab.deleteLater()
+
+    def test_finding_inspector_evidence_drawer_and_cards(self):
+        insp = ReportFindingInspector()
+        insp.set_project_target_ip("10.10.10.42")
+        insp.btn_apply_target.click()
+        self.assertEqual(insp.txt_target.text(), "10.10.10.42")
+
+        finding = ReportFindingItem(
+            id="f-100",
+            title="Evidence Test Finding",
+            description="Initial text.",
+        )
+        insp.load_finding(finding)
+        self.assertEqual(insp.lbl_evidence_count.text(), "(0)")
+
+        # Attach a screenshot evidence item
+        sc_item = ReportEvidenceItem(
+            id="ev-sc-1",
+            type="screenshot",
+            caption="Proof Screenshot",
+            content="screenshots/proof.png",
+        )
+        insp.attach_evidence_item(sc_item, insert_into_description=True)
+        self.assertEqual(insp.lbl_evidence_count.text(), "(1)")
+        self.assertIn("![Proof Screenshot](screenshots/proof.png)", insp.txt_desc.toPlainText())
+
+        # Check evidence card exists
+        card = insp.evidence_container.findChild(ReportEvidenceCard)
+        self.assertIsNotNone(card)
+        self.assertEqual(card.txt_caption.text(), "Proof Screenshot")
+
+        # Edit caption via card
+        card.txt_caption.setText("Updated Proof")
+        self.assertEqual(insp._finding.evidence_items[0].caption, "Updated Proof")
+        self.assertIn("![Updated Proof](screenshots/proof.png)", insp.txt_desc.toPlainText())
+
+        # Attach terminal code
+        insp._on_add_code_clicked()
+        self.assertEqual(insp.lbl_evidence_count.text(), "(2)")
+        self.assertIn("```", insp.txt_desc.toPlainText())
+
+        # Delete evidence card
+        card._on_caption_edited("Updated Proof")
+        insp._on_delete_evidence("ev-sc-1")
+        self.assertEqual(insp.lbl_evidence_count.text(), "(1)")
+        self.assertNotIn("screenshots/proof.png", insp.txt_desc.toPlainText())
+
+        insp.deleteLater()
+
+    def test_loot_entry_picker_dialog(self):
+        entries = [
+            {
+                "id": "loot-1",
+                "type": "credential",
+                "category": "creds",
+                "title": "Admin Password",
+                "content": "admin:SuperSecret123",
+                "target_ip": "10.10.10.5",
+                "severity": "high",
+                "timestamp": "2026-09-12 12:00",
+            },
+            {
+                "id": "loot-2",
+                "type": "flag",
+                "category": "flag",
+                "title": "Root Flag",
+                "content": "HTB{root_flag_here}",
+                "target_ip": "10.10.10.5",
+                "severity": "info",
+                "timestamp": "2026-09-12 12:30",
+            },
+        ]
+        dialog = LootEntryPickerDialog(entries)
+        dialog.show()
+
+        self.assertEqual(dialog.list_widget.count(), 2)
+        self.assertIsNotNone(dialog.selected_entry)
+        self.assertEqual(dialog.selected_entry["id"], "loot-1")
+        self.assertIn("admin:SuperSecret123", dialog.txt_preview.toPlainText())
+
+        # Filter by category
+        dialog.cmb_category.setCurrentIndex(dialog.cmb_category.findData("flag"))
+        self.assertEqual(dialog.list_widget.count(), 1)
+        self.assertEqual(dialog.selected_entry["id"], "loot-2")
+
+        dialog.accept()
+        dialog.deleteLater()
+
+    def test_clipboard_history_picker_dialog(self):
+        history = [
+            {
+                "id": "clip-1",
+                "text": "nmap -sC -sV -p- 10.10.10.5\nStarting Nmap 7.94...",
+                "target_ip": "10.10.10.5",
+                "timestamp": "2026-09-12 10:00",
+            },
+            {
+                "id": "clip-2",
+                "text": "cat /etc/passwd\nroot:x:0:0:root:/root:/bin/bash",
+                "target_ip": "10.10.10.5",
+                "timestamp": "2026-09-12 10:30",
+            },
+        ]
+        dialog = ClipboardHistoryPickerDialog(history)
+        dialog.show()
+
+        self.assertEqual(dialog.list_widget.count(), 2)
+        self.assertIsNotNone(dialog.selected_entry)
+        self.assertEqual(dialog.selected_entry["id"], "clip-1")
+        self.assertIn("Starting Nmap", dialog.txt_preview.toPlainText())
+
+        # Filter by search
+        dialog.search_edit.setText("passwd")
+        self.assertEqual(dialog.list_widget.count(), 1)
+        self.assertEqual(dialog.selected_entry["id"], "clip-2")
+
+        dialog.accept()
+        dialog.deleteLater()

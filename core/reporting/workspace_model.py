@@ -229,7 +229,7 @@ class ReportEvidenceItem:
             caption = self.caption or "Screenshot"
             return f"![{caption}]({self.content})"
         if self.type in ("terminal", "credential", "code"):
-            lang = "bash" if self.type == "terminal" else ""
+            lang = "bash" if self.type == "terminal" else ("text" if self.type == "credential" else "")
             return f"```{lang}\n{self.content}\n```"
         return self.content
 
@@ -357,10 +357,16 @@ class ReportFindingItem:
             ev_idx += 1
 
         for code_match in _CODE_BLOCK_RE.finditer(description):
+            lang = (code_match.group(1) or "").strip().lower()
+            ev_type = (
+                "terminal"
+                if lang in ("bash", "sh", "terminal", "console")
+                else ("credential" if lang in ("credential", "credentials", "loot", "creds") else "code")
+            )
             evidence_items.append(
                 ReportEvidenceItem(
                     id=f"{entry_id}-code-{ev_idx}",
-                    type="terminal" if code_match.group(1) in ("bash", "sh", "terminal") else "code",
+                    type=ev_type,
                     content=code_match.group(2),
                     source_loot_id=entry_id,
                 )
@@ -381,6 +387,80 @@ class ReportFindingItem:
             references=references,
             loot_marker=loot_marker,
         )
+
+    def attach_evidence(
+        self,
+        item: ReportEvidenceItem,
+        insert_into_description: bool = True,
+    ) -> None:
+        """Attaches an evidence item and optionally appends its Markdown to the description."""
+        existing_idx = next((i for i, ev in enumerate(self.evidence_items) if ev.id == item.id), -1)
+        if existing_idx >= 0:
+            self.evidence_items[existing_idx] = item
+        else:
+            self.evidence_items.append(item)
+
+        if insert_into_description:
+            md = item.to_markdown()
+            clean_content = item.content.strip()
+            if clean_content and clean_content not in self.description:
+                if self.description and not self.description.endswith("\n\n"):
+                    if not self.description.endswith("\n"):
+                        self.description += "\n\n"
+                    else:
+                        self.description += "\n"
+                self.description += f"{md}\n"
+
+    def detach_evidence(
+        self,
+        evidence_id: str,
+        remove_from_description: bool = True,
+    ) -> Optional[ReportEvidenceItem]:
+        """Removes an evidence item and optionally strips its Markdown from the description."""
+        found_idx = next((i for i, ev in enumerate(self.evidence_items) if ev.id == evidence_id), -1)
+        if found_idx == -1:
+            return None
+        removed = self.evidence_items.pop(found_idx)
+        if remove_from_description and removed.content:
+            if removed.type == "screenshot":
+                pattern = rf"!\[.*?\]\({re.escape(removed.content)}\)\r?\n?"
+                self.description = re.sub(pattern, "", self.description).strip()
+            else:
+                block_pattern = rf"```[a-zA-Z0-9_-]*\r?\n{re.escape(removed.content)}\r?\n```\r?\n?"
+                self.description = re.sub(block_pattern, "", self.description).strip()
+        return removed
+
+    def update_evidence(
+        self,
+        evidence_id: str,
+        caption: Optional[str] = None,
+        content: Optional[str] = None,
+    ) -> bool:
+        """Updates caption or content for an evidence item, synchronizing Markdown in description."""
+        found = next((ev for ev in self.evidence_items if ev.id == evidence_id), None)
+        if not found:
+            return False
+
+        old_caption = found.caption
+        old_content = found.content
+
+        if caption is not None:
+            found.caption = caption
+        if content is not None:
+            found.content = content
+
+        if found.type == "screenshot":
+            old_tag = f"![{old_caption}]({old_content})"
+            new_tag = f"![{found.caption}]({found.content})"
+            if old_tag in self.description:
+                self.description = self.description.replace(old_tag, new_tag)
+            elif old_content in self.description:
+                pattern = rf"!\[.*?\]\({re.escape(old_content)}\)"
+                self.description = re.sub(pattern, new_tag, self.description)
+        elif old_content and old_content in self.description:
+            self.description = self.description.replace(old_content, found.content)
+
+        return True
 
     def to_markdown(self, language: str = "de", include_phase: bool = False) -> str:
         lines = [finding_start_marker(self.id)]

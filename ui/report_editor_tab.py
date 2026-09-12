@@ -15,6 +15,7 @@ sie ohne Qt testbar bleibt.
 """
 
 from enum import Enum
+from pathlib import Path
 import re
 from typing import Optional
 
@@ -35,6 +36,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
 from core.reporting import (
+    ReportEvidenceItem,
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
@@ -50,6 +52,8 @@ from core.fonts import get_report_font_stack
 from core.platform import open_path  # noqa: F401
 from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
+    ClipboardHistoryPickerDialog,
+    LootEntryPickerDialog,
     LootImagePickerDialog,  # noqa: F401
     MarkdownTableDialog,  # noqa: F401
     ReportGenerationDialog,
@@ -472,6 +476,10 @@ class ReportEditorTab(QWidget):
         self.finding_inspector.finding_changed.connect(self._on_finding_changed)
         self.finding_inspector.finding_deleted.connect(self._on_finding_deleted)
         self.finding_inspector.finding_duplicated.connect(self._on_finding_duplicated)
+        self.finding_inspector.request_loot_screenshot.connect(self._on_attach_loot_screenshot)
+        self.finding_inspector.request_image_file.connect(self._on_attach_image_file)
+        self.finding_inspector.request_clipboard_history.connect(self._on_attach_clipboard_history)
+        self.finding_inspector.request_loot_entry.connect(self._on_attach_loot_entry)
         self.finding_inspector_glass = self._wrap_glass_surface(self.finding_inspector)
         self.center_stack.addWidget(self.finding_inspector_glass)
 
@@ -1395,11 +1403,13 @@ class ReportEditorTab(QWidget):
         elif view_type == "finding" and item_id:
             finding = self._workspace_doc.get_finding(item_id)
             if finding:
+                self.finding_inspector.set_project_target_ip(self._get_target_ip())
                 self.finding_inspector.load_finding(finding)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
         elif view_type == "findings_overview":
             if self._workspace_doc.findings:
                 first = self._workspace_doc.findings[0]
+                self.finding_inspector.set_project_target_ip(self._get_target_ip())
                 self.finding_inspector.load_finding(first)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
             else:
@@ -1517,3 +1527,169 @@ class ReportEditorTab(QWidget):
         if narr:
             narr.content = content
         self._sync_workspace_doc_to_editor()
+
+    # ------------------------------------------------------------------ #
+    # Evidence & Loot Attachment Handlers
+    # ------------------------------------------------------------------ #
+
+    def _on_attach_loot_screenshot(self) -> None:
+        """Opens LootImagePickerDialog and attaches selected screenshot to the active finding."""
+        if not self.loot_manager:
+            return
+        screenshot_entries = [
+            e
+            for e in self.loot_manager.get_all_entries()
+            if (e.get("type") in ("screenshot", "image") or "![image]" in (e.get("content") or ""))
+        ]
+        if not screenshot_entries:
+            show_warning_dialog(
+                self,
+                t("report.no_screenshots_title", "Keine Screenshots gefunden"),
+                t("report.no_screenshots_msg", "Im aktiven Projekt wurden noch keine Screenshots in Loot erfasst."),
+            )
+            return
+
+        project_dir = None
+        rfm = self.report_file_manager
+        if rfm and getattr(rfm, "project_manager", None):
+            try:
+                pname = rfm.resolve_project_name(self.current_project)
+                project_dir = rfm.project_manager.get_project_dir(pname)
+            except Exception:
+                pass
+
+        dialog = LootImagePickerDialog(screenshot_entries, project_dir=project_dir, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
+            entry = dialog.selected_entry
+            title = entry.get("title", "Screenshot")
+            content = (entry.get("content") or "").strip()
+            rel_path = content
+            m = re.search(r"\((.*?)\)", content)
+            if m:
+                rel_path = m.group(1)
+
+            import uuid
+
+            ev_item = ReportEvidenceItem(
+                id=f"ev-{uuid.uuid4().hex[:6]}",
+                type="screenshot",
+                caption=title,
+                content=rel_path,
+                source_loot_id=entry.get("id"),
+            )
+            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
+
+    def _on_attach_image_file(self) -> None:
+        """Prompts for image from disk, imports into project screenshots, and attaches as evidence."""
+        start_dir = ""
+        project_dir = None
+        rfm = self.report_file_manager
+        if rfm and getattr(rfm, "project_manager", None):
+            try:
+                pname = rfm.resolve_project_name(self.current_project)
+                project_dir = rfm.project_manager.get_project_dir(pname)
+                screenshots_dir = project_dir / "screenshots"
+                if screenshots_dir.is_dir():
+                    start_dir = str(screenshots_dir)
+                elif project_dir.is_dir():
+                    start_dir = str(project_dir)
+            except Exception as e:
+                logger.debug("Failed to resolve project dir for image dialog: %s", e)
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            t("report.select_image_title", "Select Image"),
+            start_dir,
+            t(
+                "report.select_image_filter",
+                "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;All Files (*.*)",
+            ),
+        )
+        if not file_path:
+            return
+
+        rel_path = file_path
+        if rfm:
+            try:
+                rel_path = rfm.import_image(file_path, self.current_project)
+            except Exception as e:
+                logger.warning("Could not copy image to project directory: %s", e)
+                if project_dir:
+                    try:
+                        rel_path = Path(file_path).resolve().relative_to(project_dir.resolve()).as_posix()
+                    except ValueError:
+                        rel_path = file_path.replace("\\", "/")
+                else:
+                    rel_path = file_path.replace("\\", "/")
+
+        import uuid
+
+        alt_text = Path(file_path).stem
+        ev_item = ReportEvidenceItem(
+            id=f"ev-{uuid.uuid4().hex[:6]}",
+            type="screenshot",
+            caption=alt_text,
+            content=rel_path,
+        )
+        self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
+
+    def _on_attach_clipboard_history(self) -> None:
+        """Opens ClipboardHistoryPickerDialog and attaches terminal/PoC snippet to the active finding."""
+        if not self.clipboard_history:
+            return
+        history = self.clipboard_history.get_all_history()
+        if not history:
+            show_warning_dialog(
+                self,
+                t("report.no_clipboard_title", "Keine Clipboard-Einträge"),
+                t("report.no_clipboard_msg", "In der Clipboard-Historie wurden noch keine Einträge erfasst."),
+            )
+            return
+
+        dialog = ClipboardHistoryPickerDialog(history, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
+            text = dialog.selected_entry.get("text", "").strip()
+            first_line = text.splitlines()[0] if text else "Terminal Output"
+            if len(first_line) > 40:
+                first_line = first_line[:37] + "..."
+            import uuid
+
+            ev_item = ReportEvidenceItem(
+                id=f"ev-{uuid.uuid4().hex[:6]}",
+                type="terminal",
+                caption=first_line,
+                content=text,
+                source_loot_id=dialog.selected_entry.get("id"),
+            )
+            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
+
+    def _on_attach_loot_entry(self) -> None:
+        """Opens LootEntryPickerDialog and attaches credential/loot snippet to the active finding."""
+        if not self.loot_manager:
+            return
+        entries = self.loot_manager.get_all_entries()
+        if not entries:
+            show_warning_dialog(
+                self,
+                t("report.no_loot_title", "Keine Loot-Einträge"),
+                t("report.no_loot_msg", "Im aktiven Projekt wurden noch keine Einträge in Loot gespeichert."),
+            )
+            return
+
+        dialog = LootEntryPickerDialog(entries, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
+            entry = dialog.selected_entry
+            title = entry.get("title", "Loot")
+            content = (entry.get("content") or "").strip()
+            e_type = entry.get("type", "note")
+            ev_type = "credential" if e_type in ("credential", "credentials", "hash", "flag") else "code"
+            import uuid
+
+            ev_item = ReportEvidenceItem(
+                id=f"ev-{uuid.uuid4().hex[:6]}",
+                type=ev_type,
+                caption=title,
+                content=content,
+                source_loot_id=entry.get("id"),
+            )
+            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)

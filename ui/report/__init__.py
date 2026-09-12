@@ -1,6 +1,9 @@
 """UI building blocks used by the report editor."""
 
 from ui.report.dialogs import (
+    ClipboardHistoryPickerDialog,
+    LootEntryPickerDialog,
+    LootImagePickerDialog,
     ReportExportTypeDialog,
     select_html_export_options,
 )
@@ -12,6 +15,9 @@ from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.section_inspector import ReportSectionInspector
 
 __all__ = [
+    "ClipboardHistoryPickerDialog",
+    "LootEntryPickerDialog",
+    "LootImagePickerDialog",
     "ReportExportActions",
     "ReportExportTypeDialog",
     "ReportFormatActions",
