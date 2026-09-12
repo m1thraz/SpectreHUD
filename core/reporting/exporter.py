@@ -140,6 +140,7 @@ class HtmlReportExporter:
         report_font: str = "segoe_ui",
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
+        category: Optional[str] = None,
     ) -> str:
         """Generates the full, styled HTML document ready for export."""
         active_profile = ReportExportProfile(profile)
@@ -157,6 +158,7 @@ class HtmlReportExporter:
                 target_ip=target_ip,
                 language=language,
                 body_html=body_html,
+                category=category,
             )
             body_html = render_professional_cover(cover_data) + body_html
         return render_report_html(
@@ -168,6 +170,7 @@ class HtmlReportExporter:
             language=language,
             profile=active_profile.value,
             classification=cover_data.classification if cover_data else None,
+            report_label=cover_data.header_label if cover_data else None,
         )
 
     @classmethod
@@ -182,6 +185,7 @@ class HtmlReportExporter:
         report_font: str = "segoe_ui",
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
+        category: Optional[str] = None,
     ) -> ExportResult:
         """Renders HTML from Markdown and writes it atomically to output_path."""
         out = Path(output_path)
@@ -197,6 +201,7 @@ class HtmlReportExporter:
             report_font=report_font,
             language=language,
             profile=profile,
+            category=category,
         )
         try:
             success = atomic_write_text(out, full_html, encoding="utf-8")

@@ -1027,6 +1027,11 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
 }
 
 @media print {
+    body[data-report-profile="professional_print"] * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     body[data-report-profile="professional_print"] {
         background: #ffffff !important;
         padding: 0 !important;
@@ -1118,6 +1123,14 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
 
     body[data-report-profile="professional_print"] blockquote,
     body[data-report-profile="professional_print"] figure {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] img {
+        max-width: 100%;
+        max-height: 220mm;
+        object-fit: contain;
         break-inside: avoid;
         page-break-inside: avoid;
     }

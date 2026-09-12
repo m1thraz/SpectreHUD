@@ -835,3 +835,122 @@ def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_br
     assert 'content: "APPENDIX";' in professional
     assert 'font: 7.25pt "Segoe UI", sans-serif;' in professional
     assert 'body[data-report-profile="professional_print"] .report-finding {' not in interactive
+
+
+def test_professional_cover_and_header_category_awareness():
+    # 1. Standard Pentest (default)
+    pentest_md = wrap_section_markdown(
+        "# Security Assessment Report\n\n| | |\n|---|---|\n| **Client / Organization** | `Acme` |\n",
+        "header_metadata",
+    ) + "\n\n" + wrap_section_markdown("## 1. Technical Findings\n\nFinding text", "finding_section")
+
+    html_pentest = HtmlReportExporter.build_full_html(
+        pentest_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+    assert '<span class="report-cover-kicker">PENETRATION TEST REPORT</span>' in html_pentest
+    assert 'content: "Penetration Test Report";' in html_pentest
+
+    # German Pentest
+    html_pentest_de = HtmlReportExporter.build_full_html(
+        pentest_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
+    )
+    assert '<span class="report-cover-kicker">PENETRATIONSTEST-BERICHT</span>' in html_pentest_de
+    assert 'content: "Penetrationstest-Bericht";' in html_pentest_de
+
+    # 2. CTF explicit category
+    html_ctf = HtmlReportExporter.build_full_html(
+        pentest_md,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+        language="en",
+        category="ctf",
+    )
+    assert '<span class="report-cover-kicker">CTF WRITEUP</span>' in html_ctf
+    assert 'content: "CTF Writeup";' in html_ctf
+
+    # 3. CTF auto-detected from title
+    ctf_walkthrough_md = wrap_section_markdown(
+        "# CTF Walkthrough Report\n\n| | |\n|---|---|\n| **Client / Organization** | `HTB` |\n",
+        "header_metadata",
+    ) + "\n\n" + wrap_section_markdown("## Initial Foothold\n\nFoothold notes", "phase_section:access")
+
+    html_ctf_auto = HtmlReportExporter.build_full_html(
+        ctf_walkthrough_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+    assert '<span class="report-cover-kicker">CTF WALKTHROUGH</span>' in html_ctf_auto
+    assert 'content: "CTF Walkthrough";' in html_ctf_auto
+
+    # German CTF Walkthrough
+    html_ctf_de = HtmlReportExporter.build_full_html(
+        ctf_walkthrough_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
+    )
+    assert '<span class="report-cover-kicker">CTF WALKTHROUGH</span>' in html_ctf_de
+    assert 'content: "CTF Walkthrough";' in html_ctf_de
+
+    # 4. Security Audit category
+    html_audit = HtmlReportExporter.build_full_html(
+        pentest_md,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+        language="en",
+        category="audit",
+    )
+    assert '<span class="report-cover-kicker">SECURITY AUDIT REPORT</span>' in html_audit
+    assert 'content: "Security Audit Report";' in html_audit
+
+
+def test_professional_print_css_hardening():
+    markdown = wrap_section_markdown("## 1. Technical Findings\n\nFinding text", "finding_section")
+    html = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert "print-color-adjust: exact !important;" in html
+    assert "-webkit-print-color-adjust: exact !important;" in html
+    assert 'body[data-report-profile="professional_print"] img {' in html
+    assert "max-height: 220mm;" in html
+
+
+def test_professional_metadata_extraction_aliases():
+    md = wrap_section_markdown(
+        """# Assessment Report
+
+| | |
+|---|---|
+| **Kunde** | Initech Global |
+| **Ziel** | 192.168.1.100 |
+| **Datum** | 2026-09-12 |
+| **Vertraulichkeit** | Streng vertraulich |
+| **Version** | v2.3 |
+""",
+        "header_metadata",
+    ) + "\n\n" + wrap_section_markdown("## Findings\n\nSome finding", "finding_section")
+
+    html = HtmlReportExporter.build_full_html(
+        md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
+    )
+
+    assert "Initech Global" in html
+    assert "192.168.1.100" in html
+    assert "2026-09-12" in html
+    assert "Streng vertraulich" in html
+    assert "v2.3" in html
+    assert '<span class="report-cover-meta-label">Auftraggeber</span>' in html
+    assert '<span class="report-cover-meta-label">Ziel / Scope</span>' in html
+
+
+def test_professional_heading_renumbering_consistent():
+    # Mix of unnumbered and numbered sections
+    sec1 = wrap_section_markdown("## Executive Summary\n\nSummary text", "executive_summary")
+    sec2 = wrap_section_markdown("## Scope & Limitations\n\nScope details", "scope_limitations")
+    sec3 = wrap_section_markdown("## 5. Technical Findings\n\nFinding text", "finding_section")
+    sec4 = wrap_section_markdown("## Remediation Plan\n\nRemediation details", "remediation_table")
+
+    combined = f"{sec1}\n\n{sec2}\n\n{sec3}\n\n{sec4}"
+    html = HtmlReportExporter.build_full_html(
+        combined, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    assert "<h2>1. Executive Summary</h2>" in html
+    assert "<h2>2. Scope &amp; Limitations</h2>" in html
+    assert "<h2>3. Technical Findings</h2>" in html
+    assert "<h2>4. Remediation Plan</h2>" in html
+
+

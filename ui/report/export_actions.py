@@ -189,6 +189,7 @@ class ReportExportActions:
         try:
             tpl = self.active_template
             doc_lang = tpl.language if tpl else "en"
+            doc_category = tpl.category if tpl else None
             result = coordinator.export_report_html(
                 target=target,
                 project_name=self.current_project,
@@ -197,6 +198,7 @@ class ReportExportActions:
                 report_font=self.report_font_key(),
                 language=doc_lang,
                 profile=profile,
+                category=doc_category,
             )
             self.present_export_result(
                 result,

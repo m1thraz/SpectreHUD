@@ -25,9 +25,11 @@ def _professional_page_css(
     project_name: str,
     classification: Optional[str],
     language: str,
+    report_label: Optional[str] = None,
 ) -> str:
     is_de = language.lower().startswith("de")
-    report_label = "Penetrationstest-Bericht" if is_de else "Penetration Test Report"
+    default_label = "Penetrationstest-Bericht" if is_de else "Penetration Test Report"
+    resolved_label = report_label or default_label
     page_label = "Seite " if is_de else "Page "
     return f"""
 @media print {{
@@ -40,7 +42,7 @@ def _professional_page_css(
             font: 7.25pt "Segoe UI", sans-serif;
         }}
         @top-right {{
-            content: {_css_string(report_label)};
+            content: {_css_string(resolved_label)};
             color: #899198;
             font: 7.25pt "Segoe UI", sans-serif;
         }}
@@ -76,6 +78,7 @@ def render_report_html(
     language: str = "en",
     profile: str = "interactive",
     classification: Optional[str] = None,
+    report_label: Optional[str] = None,
 ) -> str:
     """Renders the complete, styled standalone HTML document."""
     pname = project_name or "Target"
@@ -100,7 +103,9 @@ def render_report_html(
     is_professional = profile == "professional_print"
     if is_professional:
         btn_print = "Drucken / PDF exportieren" if is_de else "Print / Export PDF"
-        report_css += _professional_page_css(pname, classification, language)
+        report_css += _professional_page_css(
+            pname, classification, language, report_label=report_label
+        )
     editable = "true"
     print_guidance = (
         "Browser-Kopf- und Fußzeilen für ein sauberes PDF deaktivieren."

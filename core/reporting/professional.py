@@ -24,12 +24,65 @@ class ProfessionalCoverData:
     severity: Optional[str]
     classification: Optional[str]
     metadata: tuple[tuple[str, str], ...]
+    header_label: str = ""
 
 
 def _plain_markdown_value(value: str) -> str:
     cleaned = value.strip().strip("`").strip()
     cleaned = re.sub(r"[*_]", "", cleaned)
     return html.unescape(cleaned).strip()
+
+
+_CLIENT_ALIASES = (
+    "auftraggeber / client",
+    "client / organization",
+    "client",
+    "auftraggeber",
+    "kunde",
+    "customer",
+    "organisation",
+    "organization",
+    "company",
+    "unternehmen",
+)
+_TARGET_ALIASES = (
+    "ziel(e) / scope",
+    "scope / target",
+    "target",
+    "scope",
+    "ziel",
+    "ziele",
+    "ziel(e)",
+    "target_ip",
+    "ip",
+    "domain",
+    "netzwerk",
+    "network",
+)
+_DATE_ALIASES = (
+    "berichtsdatum",
+    "report date",
+    "datum",
+    "date",
+    "stand",
+    "zeitraum",
+    "assessment date",
+    "erstellungsdatum",
+)
+_CLASSIFICATION_ALIASES = (
+    "klassifizierung",
+    "classification",
+    "vertraulichkeit",
+    "confidentiality",
+    "tlp",
+    "traffic light protocol",
+)
+_VERSION_ALIASES = (
+    "report-version",
+    "report version",
+    "version",
+    "revision",
+)
 
 
 def _header_metadata(markdown: str) -> dict[str, str]:
@@ -40,16 +93,42 @@ def _header_metadata(markdown: str) -> dict[str, str]:
         for line in segment.markdown.splitlines():
             match = _METADATA_ROW_RE.match(line.strip())
             if match:
-                values[match.group(1).strip().lower()] = _plain_markdown_value(match.group(2))
+                raw_key = match.group(1).strip().lower()
+                clean_val = _plain_markdown_value(match.group(2))
+                values[raw_key] = clean_val
+                normalized_key = re.sub(r"[\s/()_-]+", " ", raw_key).strip()
+                values[normalized_key] = clean_val
         return values
     return {}
 
 
-def _first_metadata_value(values: dict[str, str], *labels: str) -> str:
-    for label in labels:
-        value = values.get(label, "").strip()
-        if value:
-            return value
+def _header_title(markdown: str) -> str:
+    for segment in segment_report_markdown(markdown):
+        if segment.section_type != "header_metadata":
+            continue
+        for line in segment.markdown.splitlines():
+            line_str = line.strip()
+            if line_str.startswith("# "):
+                return line_str[2:].strip()
+    return ""
+
+
+def _first_metadata_value(
+    values: dict[str, str], *labels: str | tuple[str, ...]
+) -> str:
+    aliases: list[str] = []
+    for item in labels:
+        if isinstance(item, (tuple, list)):
+            aliases.extend(item)
+        else:
+            aliases.append(item)
+    for alias in aliases:
+        norm = alias.strip().lower()
+        if norm in values and values[norm]:
+            return values[norm]
+        clean_alias = re.sub(r"[\s/()_-]+", " ", norm).strip()
+        if clean_alias in values and values[clean_alias]:
+            return values[clean_alias]
     return ""
 
 
@@ -60,6 +139,38 @@ def _highest_severity(body_html: str) -> Optional[str]:
     return None
 
 
+def _determine_report_labels(
+    category: Optional[str],
+    title: str,
+    is_de: bool,
+) -> tuple[str, str]:
+    """Returns (cover_kicker, page_header_label) based on category and title."""
+    norm_cat = (category or "").strip().lower()
+    norm_title = title.lower()
+
+    is_ctf = norm_cat == "ctf" or "ctf" in norm_title or "writeup" in norm_title
+    is_audit = norm_cat == "audit" or "audit" in norm_title or "prüfung" in norm_title
+
+    if is_ctf:
+        is_walkthrough = "walkthrough" in norm_title
+        if is_de:
+            kicker = "CTF WALKTHROUGH" if is_walkthrough else "CTF-BERICHT"
+            header = "CTF Walkthrough" if is_walkthrough else "CTF-Bericht"
+        else:
+            kicker = "CTF WALKTHROUGH" if is_walkthrough else "CTF WRITEUP"
+            header = "CTF Walkthrough" if is_walkthrough else "CTF Writeup"
+        return kicker, header
+
+    if is_audit:
+        kicker = "SICHERHEITSAUDIT-BERICHT" if is_de else "SECURITY AUDIT REPORT"
+        header = "Sicherheitsaudit-Bericht" if is_de else "Security Audit Report"
+        return kicker, header
+
+    kicker = "PENETRATIONSTEST-BERICHT" if is_de else "PENETRATION TEST REPORT"
+    header = "Penetrationstest-Bericht" if is_de else "Penetration Test Report"
+    return kicker, header
+
+
 def build_professional_cover_data(
     markdown: str,
     *,
@@ -67,6 +178,7 @@ def build_professional_cover_data(
     target_ip: Optional[str],
     language: str,
     body_html: str,
+    category: Optional[str] = None,
 ) -> ProfessionalCoverData:
     values = _header_metadata(markdown)
     is_de = language.lower().startswith("de")
@@ -77,20 +189,20 @@ def build_professional_cover_data(
         "classification": "Klassifizierung" if is_de else "Classification",
         "version": "Report-Version" if is_de else "Report Version",
     }
-    classification = _first_metadata_value(values, "klassifizierung", "classification")
+    classification = _first_metadata_value(values, _CLASSIFICATION_ALIASES)
     raw_fields = (
         (
             labels["client"],
-            _first_metadata_value(values, "auftraggeber / client", "client / organization"),
+            _first_metadata_value(values, _CLIENT_ALIASES),
         ),
         (
             labels["target"],
             target_ip
-            or _first_metadata_value(values, "ziel(e) / scope", "scope / target"),
+            or _first_metadata_value(values, _TARGET_ALIASES),
         ),
         (
             labels["date"],
-            _first_metadata_value(values, "berichtsdatum", "report date"),
+            _first_metadata_value(values, _DATE_ALIASES),
         ),
         (
             labels["classification"],
@@ -98,15 +210,18 @@ def build_professional_cover_data(
         ),
         (
             labels["version"],
-            _first_metadata_value(values, "report-version", "report version"),
+            _first_metadata_value(values, _VERSION_ALIASES),
         ),
     )
+    title = _header_title(markdown)
+    kicker, header_label = _determine_report_labels(category, title, is_de)
     return ProfessionalCoverData(
         project_name=project_name or "Target",
-        report_label="PENETRATIONSTEST-BERICHT" if is_de else "PENETRATION TEST REPORT",
+        report_label=kicker,
         severity=_highest_severity(body_html),
         classification=classification or None,
         metadata=tuple((label, value) for label, value in raw_fields if value),
+        header_label=header_label,
     )
 
 
@@ -304,12 +419,15 @@ def prune_professional_section_html(section_type: str, body_html: str) -> str:
 
 
 def renumber_professional_heading(markdown: str, number: int) -> tuple[str, bool]:
-    """Renumber only a section's leading numbered H2 for the filtered print view."""
-    renumbered, replacements = re.subn(
-        r"^(##\s+)\d+\.\s+",
-        rf"\g<1>{number}. ",
-        markdown,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    return renumbered, bool(replacements)
+    """Ensure a section's leading H2 is consistently numbered for the filtered print view."""
+    match = re.search(r"^(##\s+)(?:\d+\.\s*)?(\S.*)$", markdown, flags=re.MULTILINE)
+    if match:
+        prefix, title = match.group(1), match.group(2).strip()
+        renumbered = (
+            markdown[: match.start()]
+            + f"{prefix}{number}. {title}"
+            + markdown[match.end() :]
+        )
+        return renumbered, True
+    return markdown, False
+

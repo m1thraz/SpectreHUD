@@ -50,6 +50,42 @@ def get_section_type_name(sec_type: str) -> str:
 SECTION_TYPE_NAMES = {k: v[1] for k, v in SECTION_TYPE_KEYS.items()}
 
 
+SECTION_DESCRIPTIONS = {
+    "header_metadata": (
+        "template_editor.desc_header",
+        "Berichtskopf mit Kunde, Scope, Prüfer, Datum, Klassifizierung und Version (speist auch das Deckblatt).",
+    ),
+    "executive_summary": (
+        "template_editor.desc_summary",
+        "Management-Zusammenfassung & Risikomatrix. Zeigt Gesamtzahlen und tabellarische Übersicht der Findings (enthält keine technischen Detailkarten).",
+    ),
+    "scope_limitations": (
+        "template_editor.desc_scope",
+        "Umfang, Methodik und Grenzen des Penetrationstests / Assessments.",
+    ),
+    "phase_section": (
+        "template_editor.desc_phase",
+        "Phasen-spezifischer Abschnitt für Loot & Notizen einer ausgewählten Kategorie (z. B. Initial Access, PrivEsc).",
+    ),
+    "attack_path": (
+        "template_editor.desc_attack_path",
+        "Chronologische oder logische Rekonstruktion des Angriffspfads / Assessment-Verlaufs.",
+    ),
+    "finding_section": (
+        "template_editor.desc_findings",
+        "Detaillierte technische Finding-Karten mit Schweregrad, Beschreibung, Behebung und Evidenz.",
+    ),
+    "remediation_table": (
+        "template_editor.desc_remediation",
+        "Priorisierter Maßnahmenplan (Action Plan) basierend auf den Empfehlungen der dokumentierten Findings.",
+    ),
+    "appendix": (
+        "template_editor.desc_appendix",
+        "Anhang mit dokumentiertem Befehlsverlauf (Terminal-Historie) und Screenshots.",
+    ),
+}
+
+
 class SectionEditDialog(BaseHudDialog):
     """Dialog to configure or add a single template section."""
 
@@ -58,7 +94,7 @@ class SectionEditDialog(BaseHudDialog):
         super().__init__(title, parent)
         self.setObjectName("TemplateSectionEditDialog")
         self.set_dialog_title(title)
-        self.resize(420, 260)
+        self.resize(460, 310)
 
         self._initial_section = section
         self._build_ui()
@@ -74,6 +110,13 @@ class SectionEditDialog(BaseHudDialog):
             self.combo_type.addItem(get_section_type_name(key), key)
         self.combo_type.currentIndexChanged.connect(self._on_type_changed)
         form.addRow(t("template_editor.lbl_type", "Typ:"), self.combo_type)
+
+        self.lbl_type_desc = QLabel()
+        self.lbl_type_desc.setWordWrap(True)
+        self.lbl_type_desc.setStyleSheet(
+            "color: #8b949e; font-size: 11px; font-style: italic; margin-top: 1px; margin-bottom: 4px;"
+        )
+        form.addRow("", self.lbl_type_desc)
 
         self.txt_title = QLineEdit()
         self.txt_title.setPlaceholderText(
@@ -114,6 +157,11 @@ class SectionEditDialog(BaseHudDialog):
         sec_type = self.combo_type.currentData()
         is_phase = sec_type == "phase_section"
         self.combo_category.setVisible(is_phase)
+        desc_info = SECTION_DESCRIPTIONS.get(sec_type)
+        if desc_info:
+            self.lbl_type_desc.setText(t(desc_info[0], desc_info[1]))
+        else:
+            self.lbl_type_desc.setText("")
 
     def _load_section(self, section: TemplateSection) -> None:
         idx = self.combo_type.findData(section.type)

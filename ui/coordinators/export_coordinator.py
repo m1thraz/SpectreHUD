@@ -94,6 +94,7 @@ class ExportCoordinator(QObject):
         report_font: str,
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
+        category: Optional[str] = None,
     ) -> ExportResult:
         """Render the current editor document as a standalone HTML report."""
         project_dir = self.project_manager.get_project_dir(project_name)
@@ -108,6 +109,7 @@ class ExportCoordinator(QObject):
             report_font=report_font,
             language=language,
             profile=profile,
+            category=category,
         )
         if not res:
             err_msg = (
