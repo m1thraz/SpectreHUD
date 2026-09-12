@@ -19,7 +19,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -34,6 +34,18 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
 )
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
+
+
+class ResponsiveStackedWidget(QStackedWidget):
+    """QStackedWidget that reports the minimum size hint of its active child rather than the union of all."""
+
+    def minimumSizeHint(self) -> QSize:
+        cur = self.currentWidget()
+        if cur is not None and cur.isVisible():
+            hint = cur.minimumSizeHint()
+            if hint.isValid() and hint.width() > 0:
+                return QSize(min(hint.width(), 320), hint.height())
+        return QSize(200, 100)
 
 from core.reporting import (
     ReportAppendix,
@@ -460,6 +472,8 @@ class ReportEditorTab(QWidget):
     def _build_editor_splitter(self, layout: QVBoxLayout) -> None:
         """Build the workspace splitter: Collapsible Navigator, Center Editing Pane, Live Preview."""
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setHandleWidth(6)
 
         # Spalte 1: Navigator (links, standardmäßig im Split-View eingeklappt für reines 2-Spalten-Layout)
         self.navigator = ReportWorkspaceNavigator(self)
@@ -467,13 +481,14 @@ class ReportEditorTab(QWidget):
         self.navigator.add_finding_requested.connect(self._on_add_finding_requested)
         self.navigator.sync_loot_requested.connect(self._on_append_loot_clicked)
         self.navigator_glass = self._wrap_glass_surface(self.navigator)
-        self.navigator_glass.setMaximumWidth(320)
-        self.navigator_glass.setMinimumWidth(220)
+        self.navigator_glass.setMinimumWidth(180)
+        self.navigator_glass.setMaximumWidth(550)
         self.navigator_glass.setVisible(False)
         self.splitter.addWidget(self.navigator_glass)
 
         # Spalte 2: Fokus-Zentrum (Mitte)
-        self.center_stack = QStackedWidget(self)
+        self.center_stack = ResponsiveStackedWidget(self)
+        self.center_stack.setMinimumWidth(200)
 
         # Page 0: Raw Markdown Editor
         self.editor = ReportSourceEditor()
@@ -570,6 +585,7 @@ class ReportEditorTab(QWidget):
         self.preview.setReadOnly(True)
         self.preview.setProperty("class", "ReportPreview")
         self.preview_glass = self._wrap_glass_surface(self.preview)
+        self.preview_glass.setMinimumWidth(150)
         self.splitter.addWidget(self.preview_glass)
         self._apply_report_color_mode()
 
@@ -974,17 +990,30 @@ class ReportEditorTab(QWidget):
         if hasattr(self, "btn_navigator"):
             self.btn_navigator.setChecked(is_vis)
         total_w = self.splitter.width() or 1000
+        cur_sizes = self.splitter.sizes()
+        ratio = (
+            (cur_sizes[1] / max(1, cur_sizes[1] + cur_sizes[2]))
+            if (len(cur_sizes) >= 3 and (cur_sizes[1] + cur_sizes[2]) > 0)
+            else 0.5
+        )
+        ratio = max(0.25, min(0.75, ratio))
+        nav_w = min(max(180, cur_sizes[0] if cur_sizes[0] > 0 else 260), 400)
+
         if is_vis:
             if self._view_mode == ViewMode.EDITOR:
-                self.splitter.setSizes([260, max(100, total_w - 260), 0])
+                self.splitter.setSizes([nav_w, max(200, total_w - nav_w), 0])
             else:
-                half = max(100, (total_w - 260) // 2)
-                self.splitter.setSizes([260, half, half])
+                rem = max(350, total_w - nav_w)
+                c_w = max(200, int(rem * ratio))
+                p_w = max(150, rem - c_w)
+                self.splitter.setSizes([nav_w, c_w, p_w])
         else:
             if self._view_mode == ViewMode.EDITOR:
                 self.splitter.setSizes([0, total_w, 0])
             else:
-                self.splitter.setSizes([0, total_w // 2, total_w // 2])
+                c_w = max(200, int(total_w * ratio))
+                p_w = max(150, total_w - c_w)
+                self.splitter.setSizes([0, c_w, p_w])
 
     def _toggle_inspector_raw(self) -> None:
         """Toggles center editing widget between the active Form Inspector and Raw Markdown Editor."""
@@ -1016,7 +1045,14 @@ class ReportEditorTab(QWidget):
             self.btn_navigator.setChecked(nav_visible)
 
         total_w = self.splitter.width() or 1000
-        nav_w = 260 if nav_visible else 0
+        cur_sizes = self.splitter.sizes()
+        ratio = (
+            (cur_sizes[1] / max(1, cur_sizes[1] + cur_sizes[2]))
+            if (len(cur_sizes) >= 3 and (cur_sizes[1] + cur_sizes[2]) > 0)
+            else 0.5
+        )
+        ratio = max(0.25, min(0.75, ratio))
+        nav_w = min(max(180, cur_sizes[0] if cur_sizes[0] > 0 else 260), 400) if nav_visible else 0
 
         if mode == ViewMode.WORKSPACE:
             if hasattr(self, "navigator_glass"):
@@ -1025,23 +1061,28 @@ class ReportEditorTab(QWidget):
                 self.btn_navigator.setChecked(True)
             self.center_stack.setVisible(True)
             self.preview_glass.setVisible(True)
-            half = max(100, (total_w - 260) // 2)
-            self.splitter.setSizes([260, half, half])
+            actual_nav_w = nav_w if nav_w > 0 else 260
+            rem = max(350, total_w - actual_nav_w)
+            c_w = max(200, int(rem * ratio))
+            p_w = max(150, rem - c_w)
+            self.splitter.setSizes([actual_nav_w, c_w, p_w])
             self._sync_scroll_editor_to_preview()
         elif mode == ViewMode.SPLIT:
             if hasattr(self, "navigator_glass"):
                 self.navigator_glass.setVisible(nav_visible)
             self.center_stack.setVisible(True)
             self.preview_glass.setVisible(True)
-            half = max(100, (total_w - nav_w) // 2)
-            self.splitter.setSizes([nav_w, half, half])
+            rem = max(350, total_w - nav_w)
+            c_w = max(200, int(rem * ratio))
+            p_w = max(150, rem - c_w)
+            self.splitter.setSizes([nav_w, c_w, p_w])
             self._sync_scroll_editor_to_preview()
         elif mode == ViewMode.EDITOR:
             if hasattr(self, "navigator_glass"):
                 self.navigator_glass.setVisible(nav_visible)
             self.center_stack.setVisible(True)
             self.preview_glass.setVisible(False)
-            self.splitter.setSizes([nav_w, max(100, total_w - nav_w), 0])
+            self.splitter.setSizes([nav_w, max(200, total_w - nav_w), 0])
         elif mode == ViewMode.PREVIEW:
             if hasattr(self, "navigator_glass"):
                 self.navigator_glass.setVisible(False)

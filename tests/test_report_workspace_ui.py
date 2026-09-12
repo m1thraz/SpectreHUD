@@ -955,6 +955,49 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.close()
         tab.deleteLater()
 
+    def test_workspace_splitter_interactivity_and_responsiveness(self):
+        """Verify that splitter handles are interactive, non-collapsing, and responsive across all inspectors."""
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.resize(1400, 800)
+        tab.show()
+        tab.load_project("WorkspaceBox")
+
+        # 1. Non-collapsible splitter with 6px grab handles
+        self.assertFalse(tab.splitter.childrenCollapsible())
+        self.assertEqual(tab.splitter.handleWidth(), 6)
+
+        # 2. Free dragging in SPLIT view
+        tab._set_view_mode(ViewMode.SPLIT)
+        tab.splitter.moveSplitter(500, 2)
+        sizes_split = tab.splitter.sizes()
+        self.assertEqual(sizes_split[1], 500)
+        self.assertGreater(sizes_split[2], 500)
+
+        tab.splitter.moveSplitter(900, 2)
+        sizes_split2 = tab.splitter.sizes()
+        self.assertEqual(sizes_split2[1], 900)
+
+        # 3. Free dragging in WORKSPACE view
+        tab._set_view_mode(ViewMode.WORKSPACE)
+        tab.splitter.moveSplitter(300, 1)
+        sizes_ws1 = tab.splitter.sizes()
+        self.assertEqual(sizes_ws1[0], 300)
+
+        tab.splitter.moveSplitter(800, 2)
+        sizes_ws2 = tab.splitter.sizes()
+        self.assertGreaterEqual(sizes_ws2[0], 180)
+        self.assertGreaterEqual(sizes_ws2[1], 200)
+        self.assertGreaterEqual(sizes_ws2[2], 150)
+
+        # 4. Responsive center stack: minimum width is <= 320 across all stacked pages
+        for idx in range(tab.center_stack.count()):
+            tab.center_stack.setCurrentIndex(idx)
+            min_w = tab.center_stack.minimumSizeHint().width()
+            self.assertLessEqual(min_w, 320)
+
+        tab.close()
+        tab.deleteLater()
+
 
 
 

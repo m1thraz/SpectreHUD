@@ -9,7 +9,7 @@ import re
 from typing import Any, Optional
 import uuid
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -324,6 +324,9 @@ class ReportAppendixInspector(QWidget):
         self._clipboard_history = clipboard_history
         self._project_dir = project_dir
 
+    def minimumSizeHint(self) -> QSize:
+        return QSize(260, 200)
+
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -331,25 +334,32 @@ class ReportAppendixInspector(QWidget):
 
         # 1. Header Card
         self.header_card = GlassPanel(self)
-        h_layout = QHBoxLayout(self.header_card)
-        h_layout.setContentsMargins(12, 10, 12, 10)
-        h_layout.setSpacing(8)
+        v_header = QVBoxLayout(self.header_card)
+        v_header.setContentsMargins(12, 8, 12, 8)
+        v_header.setSpacing(6)
+
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
 
         lbl_icon = QLabel()
         lbl_icon.setPixmap(icon("fa5s.paperclip", color="#00e5ff").pixmap(20, 20))
-        h_layout.addWidget(lbl_icon)
+        top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_appendix_title", "Anhang & Nachweise"))
         self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
-        h_layout.addWidget(self.lbl_title)
-        h_layout.addStretch()
+        top_row.addWidget(self.lbl_title)
+        top_row.addStretch()
 
         self.lbl_badge = QLabel()
         self.lbl_badge.setStyleSheet(
             "font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
             "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
         )
-        h_layout.addWidget(self.lbl_badge)
+        top_row.addWidget(self.lbl_badge)
+        v_header.addLayout(top_row)
+
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(8)
 
         self.btn_quick_history = QPushButton(t("report.appendix_quick_history", "Snippet aus History..."))
         self.btn_quick_history.setIcon(icon("fa5s.history", color="#79c0ff"))
@@ -359,7 +369,10 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(121, 192, 255, 0.25); }"
         )
         self.btn_quick_history.clicked.connect(self._on_pick_history_clicked)
-        h_layout.addWidget(self.btn_quick_history)
+        actions_row.addWidget(self.btn_quick_history)
+        actions_row.addStretch()
+
+        v_header.addLayout(actions_row)
 
         main_layout.addWidget(self.header_card)
 

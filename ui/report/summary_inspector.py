@@ -9,10 +9,11 @@ Provides an interactive executive dashboard for the Executive Summary section:
 
 from typing import List, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHeaderView,
     QHBoxLayout,
     QLabel,
@@ -81,6 +82,33 @@ class ReportSummaryInspector(QWidget):
 
         self._build_ui()
 
+    def minimumSizeHint(self) -> QSize:
+        return QSize(260, 200)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "scorecards_panel"):
+            self._reflow_scorecards(self.width())
+
+    def _reflow_scorecards(self, width: int) -> None:
+        if not hasattr(self, "sc_layout"):
+            return
+        self.sc_layout.removeWidget(self.card_posture)
+        self.sc_layout.removeWidget(self.card_breakdown)
+        self.sc_layout.removeWidget(self.card_status)
+        if width >= 580:
+            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+            self.sc_layout.addWidget(self.card_breakdown, 0, 1, 1, 2)
+            self.sc_layout.addWidget(self.card_status, 0, 3, 1, 1)
+        elif width >= 400:
+            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+            self.sc_layout.addWidget(self.card_status, 0, 1, 1, 1)
+            self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 2)
+        else:
+            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+            self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 1)
+            self.sc_layout.addWidget(self.card_status, 2, 0, 1, 1)
+
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -122,9 +150,9 @@ class ReportSummaryInspector(QWidget):
 
         # Scorecards Row
         self.scorecards_panel = GlassPanel(content_widget)
-        sc_layout = QHBoxLayout(self.scorecards_panel)
-        sc_layout.setContentsMargins(12, 10, 12, 10)
-        sc_layout.setSpacing(12)
+        self.sc_layout = QGridLayout(self.scorecards_panel)
+        self.sc_layout.setContentsMargins(12, 10, 12, 10)
+        self.sc_layout.setSpacing(10)
 
         # Card A: Overall Posture
         self.card_posture = QFrame()
@@ -137,7 +165,6 @@ class ReportSummaryInspector(QWidget):
         self.lbl_posture_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff;")
         v_posture.addWidget(lbl_posture_title)
         v_posture.addWidget(self.lbl_posture_val)
-        sc_layout.addWidget(self.card_posture, stretch=1)
 
         # Card B: Severity Breakdown
         self.card_breakdown = QFrame()
@@ -161,7 +188,6 @@ class ReportSummaryInspector(QWidget):
         self.pills_row.addWidget(self.pill_low)
         self.pills_row.addWidget(self.pill_info)
         v_breakdown.addLayout(self.pills_row)
-        sc_layout.addWidget(self.card_breakdown, stretch=2)
 
         # Card C: Findings Status
         self.card_status = QFrame()
@@ -174,7 +200,9 @@ class ReportSummaryInspector(QWidget):
         self.lbl_status_val.setStyleSheet("font-size: 12px; font-weight: bold; color: #c9d1d9;")
         v_status.addWidget(lbl_status_title)
         v_status.addWidget(self.lbl_status_val)
-        sc_layout.addWidget(self.card_status, stretch=1)
+
+        # Place initial cards in grid
+        self._reflow_scorecards(600)
 
         self.content_layout.addWidget(self.scorecards_panel)
 
@@ -237,6 +265,8 @@ class ReportSummaryInspector(QWidget):
         self.tbl_matrix.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tbl_matrix.setMinimumHeight(160)
         self.tbl_matrix.setMaximumHeight(260)
+        self.tbl_matrix.setMinimumWidth(0)
+        self.tbl_matrix.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.tbl_matrix.cellDoubleClicked.connect(self._on_table_double_clicked)
         self.tbl_matrix.setStyleSheet(
             """

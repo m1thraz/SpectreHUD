@@ -6,7 +6,7 @@ Out-of-Scope exclusions, assessment approach (Black/Grey/Whitebox), and Rules of
 
 from typing import List, Optional
 
-from PyQt6.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -35,7 +35,11 @@ from ui.styles.icons import icon
 
 
 class ReportScopeInspector(QWidget):
-    """Contextual Inspector for Scope & Methodology."""
+    """
+    Structured Cockpit for Scope & Methodology.
+    Enables table-based editing of in-scope targets, excluded systems, RoE rules,
+    and penetration testing approach.
+    """
 
     scope_changed = pyqtSignal(ReportScopeMethodology)
 
@@ -54,6 +58,9 @@ class ReportScopeInspector(QWidget):
 
         self._build_ui()
 
+    def minimumSizeHint(self) -> QSize:
+        return QSize(260, 200)
+
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -61,25 +68,32 @@ class ReportScopeInspector(QWidget):
 
         # 1. Header Card
         self.header_card = GlassPanel(self)
-        h_layout = QHBoxLayout(self.header_card)
-        h_layout.setContentsMargins(12, 10, 12, 10)
-        h_layout.setSpacing(8)
+        v_header = QVBoxLayout(self.header_card)
+        v_header.setContentsMargins(12, 8, 12, 8)
+        v_header.setSpacing(6)
+
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
 
         lbl_icon = QLabel()
         lbl_icon.setPixmap(icon("fa5s.bullseye", color="#00e5ff").pixmap(20, 20))
-        h_layout.addWidget(lbl_icon)
+        top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_scope_title", "Scope & Methodik"))
         self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
-        h_layout.addWidget(self.lbl_title)
-        h_layout.addStretch()
+        top_row.addWidget(self.lbl_title)
+        top_row.addStretch()
 
         self.lbl_badge = QLabel()
         self.lbl_badge.setStyleSheet(
             "font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
             "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
         )
-        h_layout.addWidget(self.lbl_badge)
+        top_row.addWidget(self.lbl_badge)
+        v_header.addLayout(top_row)
+
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(8)
 
         self.btn_import_target = QPushButton(t("report.scope_import_project_ip", "Projekt-IP übernehmen"))
         self.btn_import_target.setIcon(icon("fa5s.download", color="#7ee787"))
@@ -89,7 +103,10 @@ class ReportScopeInspector(QWidget):
             "QPushButton:hover { background: rgba(126, 231, 135, 0.25); }"
         )
         self.btn_import_target.clicked.connect(self._on_import_target_clicked)
-        h_layout.addWidget(self.btn_import_target)
+        actions_row.addWidget(self.btn_import_target)
+        actions_row.addStretch()
+
+        v_header.addLayout(actions_row)
 
         main_layout.addWidget(self.header_card)
 
@@ -333,6 +350,8 @@ class ReportScopeInspector(QWidget):
         table.verticalHeader().setVisible(False)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        table.setMinimumWidth(0)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         table.setStyleSheet(
             """
             QTableWidget {

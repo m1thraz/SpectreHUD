@@ -56,11 +56,12 @@ QSizeGrip {
 /* QSplitter */
 QSplitter::handle {
     background-color: {BORDER_DEFAULT};
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
 }
 
-QSplitter::handle:hover {
+QSplitter::handle:hover,
+QSplitter::handle:pressed {
     background-color: {CYBER_CYAN};
 }
 

@@ -5,7 +5,7 @@ Provides strategic hardening guidance, in-place action editing, and status workf
 
 from typing import List, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -86,6 +86,9 @@ class ReportRemediationInspector(QWidget):
         self._guidance_timer.timeout.connect(self._emit_plan_changed)
 
         self._build_ui()
+
+    def minimumSizeHint(self) -> QSize:
+        return QSize(260, 200)
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
@@ -210,6 +213,8 @@ class ReportRemediationInspector(QWidget):
         self.tbl_actions.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         self.tbl_actions.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.tbl_actions.setMinimumHeight(240)
+        self.tbl_actions.setMinimumWidth(0)
+        self.tbl_actions.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.tbl_actions.cellDoubleClicked.connect(self._on_table_double_clicked)
         self.tbl_actions.setStyleSheet(
             """

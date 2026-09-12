@@ -5,7 +5,7 @@ Provides visual attack chain timelines, finding linkage, and auto-chain generati
 
 from typing import List, Optional
 
-from PyQt6.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -17,6 +17,14 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+class ResponsiveComboBox(QComboBox):
+    """QComboBox that does not artificially inflate parent minimum width based on item text length."""
+
+    def minimumSizeHint(self) -> QSize:
+        sz = super().minimumSizeHint()
+        return QSize(80, sz.height())
 
 from core.i18n import t
 from core.phases import PHASES, get_phase
@@ -173,7 +181,9 @@ class AttackStepCard(GlassPanel):
         lbl_link.setStyleSheet("font-size: 11px; color: #8b949e; font-weight: 500;")
         bottom_row.addWidget(lbl_link)
 
-        self.cmb_finding = QComboBox()
+        self.cmb_finding = ResponsiveComboBox()
+        self.cmb_finding.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cmb_finding.setMinimumContentsLength(10)
         self.cmb_finding.setStyleSheet(
             "QComboBox { background: #161b22; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; padding: 2px 6px; font-size: 11px; } "
             "QComboBox:focus { border-color: #00e5ff; }"
@@ -248,6 +258,9 @@ class ReportAttackPathInspector(QWidget):
 
         self._build_ui()
 
+    def minimumSizeHint(self) -> QSize:
+        return QSize(260, 200)
+
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -255,25 +268,32 @@ class ReportAttackPathInspector(QWidget):
 
         # 1. Header Card
         self.header_card = GlassPanel(self)
-        h_layout = QHBoxLayout(self.header_card)
-        h_layout.setContentsMargins(12, 10, 12, 10)
-        h_layout.setSpacing(8)
+        v_header = QVBoxLayout(self.header_card)
+        v_header.setContentsMargins(12, 8, 12, 8)
+        v_header.setSpacing(6)
+
+        top_row = QHBoxLayout()
+        top_row.setSpacing(8)
 
         lbl_icon = QLabel()
         lbl_icon.setPixmap(icon("fa5s.route", color="#00e5ff").pixmap(20, 20))
-        h_layout.addWidget(lbl_icon)
+        top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative"))
         self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
-        h_layout.addWidget(self.lbl_title)
-        h_layout.addStretch()
+        top_row.addWidget(self.lbl_title)
+        top_row.addStretch()
 
         self.lbl_steps_badge = QLabel()
         self.lbl_steps_badge.setStyleSheet(
             "font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
             "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
         )
-        h_layout.addWidget(self.lbl_steps_badge)
+        top_row.addWidget(self.lbl_steps_badge)
+        v_header.addLayout(top_row)
+
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(8)
 
         self.btn_auto_generate = QPushButton(t("report.auto_generate_chain", "Generate Chain from Findings"))
         self.btn_auto_generate.setIcon(icon("fa5s.magic", color="#79c0ff"))
@@ -282,7 +302,7 @@ class ReportAttackPathInspector(QWidget):
             "QPushButton:hover { background: rgba(121, 192, 255, 0.28); }"
         )
         self.btn_auto_generate.clicked.connect(self._on_auto_generate_clicked)
-        h_layout.addWidget(self.btn_auto_generate)
+        actions_row.addWidget(self.btn_auto_generate)
 
         self.btn_add_step = QPushButton(t("report.add_attack_step", "+ Add Step"))
         self.btn_add_step.setIcon(icon("fa5s.plus", color="#00e5ff"))
@@ -291,7 +311,10 @@ class ReportAttackPathInspector(QWidget):
             "QPushButton:hover { background: rgba(0, 229, 255, 0.28); }"
         )
         self.btn_add_step.clicked.connect(self._on_add_step_clicked)
-        h_layout.addWidget(self.btn_add_step)
+        actions_row.addWidget(self.btn_add_step)
+        actions_row.addStretch()
+
+        v_header.addLayout(actions_row)
 
         main_layout.addWidget(self.header_card)
 
