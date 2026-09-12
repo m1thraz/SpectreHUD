@@ -727,6 +727,7 @@ Text
                 report_font=self.tab._report_font_key(),
                 language="de",
                 profile="professional_print",
+                category="ctf",
             )
 
         # 4. Export error
