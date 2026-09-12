@@ -3,6 +3,7 @@ import sys
 
 from core.reporting import (
     AttackPathStep,
+    ReportAppendix,
     ReportAttackPath,
     ReportContext,
     ReportMetadata,
@@ -168,8 +169,10 @@ def test_workspace_document_crud_and_filters():
     # Update
     updated_f2 = ReportFindingItem(id="f2", title="Stored XSS", severity="high", phase="access")
     assert doc.update_finding(updated_f2) is True
-    assert doc.get_finding("f2").title == "Stored XSS"
-    assert doc.get_finding("f2").severity == "high"
+    found_f2 = doc.get_finding("f2")
+    assert found_f2 is not None
+    assert found_f2.title == "Stored XSS"
+    assert found_f2.severity == "high"
 
     # Reorder
     doc.reorder_findings(["f3", "f1", "f2"])
@@ -259,8 +262,10 @@ def test_roundtrip_fidelity_with_template_renderer():
     assert doc2.metadata.client == doc.metadata.client
     assert doc2.metadata.classification == doc.metadata.classification
     assert len(doc2.findings) == len(doc.findings)
-    assert doc2.get_finding("loot-1").title == crit_finding.title
-    assert doc2.get_finding("loot-1").severity == crit_finding.severity
+    found_l1 = doc2.get_finding("loot-1")
+    assert found_l1 is not None
+    assert found_l1.title == crit_finding.title
+    assert found_l1.severity == crit_finding.severity
 
 
 def test_compatibility_across_all_builtin_templates():
@@ -554,6 +559,181 @@ def test_attack_path_parsing_and_serialization():
     assert "FTP Anonymous Access" in rendered
     assert "2. **Rechteausweitung (PrivEsc)**: Root Shell via Sudoers" in rendered
     assert "Sudo NOPASSWD less" in rendered
+
+
+def test_scope_methodology_parsing_and_serialization():
+    from core.reporting import (
+        ReportScopeMethodology,
+        ScopeExclusionItem,
+        ScopeTargetItem,
+    )
+
+    # 1. Structured roundtrip
+    scope = ReportScopeMethodology(
+        title="Scope & Methodik",
+        approach="whitebox",
+        approach_details="Vollständige Einsicht in Netzwerktopologie und Quellcode.",
+        in_scope_targets=[
+            ScopeTargetItem(
+                target="10.10.10.0/24",
+                target_type="network",
+                environment="production",
+                description="Internes Segment & Domain Controller",
+            ),
+            ScopeTargetItem(
+                target="https://app.targetcorp.local",
+                target_type="webapp",
+                environment="staging",
+                description="Kundenportal Webapplikation",
+            ),
+        ],
+        out_of_scope_targets=[
+            ScopeExclusionItem(target="10.10.10.1", reason="Default Gateway / Produktiv-Routing"),
+            ScopeExclusionItem(target="AWS S3 Buckets", reason="Drittanbieter-Infrastruktur"),
+        ],
+        restrictions=["no_dos", "no_social_engineering", "business_hours_only"],
+        custom_rules="Im Notfall sofort Kontakt über SOC-Hotline +49 89 12345.",
+    )
+
+    md = scope.to_markdown(language="de")
+    assert "## Scope & Methodik" in md
+    assert "### Pentest-Ansatz & Methodik" in md
+    assert "Whitebox" in md
+    assert "### In-Scope Ziele & Netzwerke" in md
+    assert "| `10.10.10.0/24` | Netzwerk / Subnetz | Produktion | Internes Segment & Domain Controller |" in md
+    assert "| `https://app.targetcorp.local` | Web-Anwendung | Staging | Kundenportal Webapplikation |" in md
+    assert "### Out-of-Scope & Ausschlusskriterien" in md
+    assert "| `10.10.10.1` | Default Gateway / Produktiv-Routing |" in md
+    assert "### Testeinschränkungen & Rules of Engagement" in md
+    assert "Keine Denial-of-Service-Angriffe" in md
+    assert "SOC-Hotline" in md
+
+    # Parse back
+    parsed = ReportScopeMethodology.from_markdown(md, language="de")
+    assert parsed.title == "Scope & Methodik"
+    assert parsed.approach == "whitebox"
+    assert "Quellcode" in parsed.approach_details
+    assert len(parsed.in_scope_targets) == 2
+    assert parsed.in_scope_targets[0].target == "10.10.10.0/24"
+    assert parsed.in_scope_targets[0].target_type == "network"
+    assert parsed.in_scope_targets[0].environment == "production"
+    assert parsed.in_scope_targets[1].target == "https://app.targetcorp.local"
+    assert parsed.in_scope_targets[1].target_type == "webapp"
+    assert parsed.in_scope_targets[1].environment == "staging"
+
+    assert len(parsed.out_of_scope_targets) == 2
+    assert parsed.out_of_scope_targets[0].target == "10.10.10.1"
+    assert "Gateway" in parsed.out_of_scope_targets[0].reason
+
+    assert "no_dos" in parsed.restrictions
+    assert "no_social_engineering" in parsed.restrictions
+    assert "business_hours_only" in parsed.restrictions
+    assert "SOC-Hotline" in parsed.custom_rules
+
+    # 2. Test legacy markdown bullets parsing
+    legacy_md = (
+        "## Scope & Limitations\n\n"
+        "- **In Scope:** 192.168.1.0/24, api.corp.internal\n"
+        "- **Out of Scope:** 192.168.1.254\n"
+        "- **Testmethodik:** Blackbox\n"
+        "- **Einschränkungen:** Keine Denial-of-Service Tests (DoS), kein Social Engineering\n"
+    )
+    legacy_scope = ReportScopeMethodology.from_markdown(legacy_md, language="de")
+    assert legacy_scope.approach == "blackbox"
+    assert len(legacy_scope.in_scope_targets) == 2
+    assert legacy_scope.in_scope_targets[0].target == "192.168.1.0/24"
+    assert legacy_scope.in_scope_targets[1].target == "api.corp.internal"
+    assert len(legacy_scope.out_of_scope_targets) == 1
+    assert legacy_scope.out_of_scope_targets[0].target == "192.168.1.254"
+    assert "no_dos" in legacy_scope.restrictions
+    assert "no_social_engineering" in legacy_scope.restrictions
+
+    # 3. Test document integration
+    doc = ReportWorkspaceDocument(language="de")
+    doc.set_scope_methodology(scope)
+    retrieved = doc.get_scope_methodology()
+    assert retrieved.approach == "whitebox"
+    assert len(retrieved.in_scope_targets) == 2
+    assert len(retrieved.out_of_scope_targets) == 2
+
+    # Check to_markdown contains rendered scope
+    full_md = doc.to_markdown()
+    assert "<!-- spectre:section:start:scope_limitations -->" in full_md
+    assert "10.10.10.0/24" in full_md
+    assert "Default Gateway" in full_md
+
+
+def test_appendix_parsing_and_serialization():
+    """Verify parsing, structured extraction, and roundtripping of Appendix & Evidence."""
+    raw_md = (
+        "## 6. Anhang & Nachweise\n\n"
+        "### Anhang A: Ausgeführte Befehle\n\n"
+        "#### Portscan Enumeration\n"
+        "```bash\n"
+        "nmap -sV -sC -p- 10.10.10.123\n"
+        "```\n\n"
+        "#### PrivEsc Sudo Check\n"
+        "```sh\n"
+        "sudo -l\n"
+        "```\n\n"
+        "### Anhang B: Screenshots & Nachweise\n\n"
+        "![Root Proof Shell](screenshots/root_proof.png)\n"
+        "![Flag Capture](loot/flag.png)\n\n"
+        "### Anhang C: Ergänzende Rohdaten & Notizen\n\n"
+        "Nmap scan dump:\n"
+        "PORT     STATE SERVICE\n"
+        "21/tcp   open  ftp\n"
+        "22/tcp   open  ssh\n"
+    )
+
+    appendix = ReportAppendix.from_markdown(raw_md, language="de")
+    assert appendix.title == "6. Anhang & Nachweise"
+    assert len(appendix.command_snippets) == 2
+    assert appendix.command_snippets[0].caption == "Portscan Enumeration"
+    assert appendix.command_snippets[0].content == "nmap -sV -sC -p- 10.10.10.123"
+    assert appendix.command_snippets[0].language == "bash"
+    assert appendix.command_snippets[1].caption == "PrivEsc Sudo Check"
+    assert appendix.command_snippets[1].content == "sudo -l"
+
+    assert len(appendix.screenshots) == 2
+    assert appendix.screenshots[0].caption == "Root Proof Shell"
+    assert appendix.screenshots[0].content == "screenshots/root_proof.png"
+    assert appendix.screenshots[1].caption == "Flag Capture"
+    assert appendix.screenshots[1].content == "loot/flag.png"
+
+    assert "Nmap scan dump" in appendix.custom_notes
+    assert "21/tcp" in appendix.custom_notes
+
+    # Serialize to markdown
+    md_out = appendix.to_markdown(language="de")
+    assert "## 6. Anhang & Nachweise" in md_out
+    assert "### Anhang A: Ausgeführte Befehle" in md_out
+    assert "#### Portscan Enumeration" in md_out
+    assert "nmap -sV -sC -p- 10.10.10.123" in md_out
+    assert "### Anhang B: Screenshots & Nachweise" in md_out
+    assert "![Root Proof Shell](screenshots/root_proof.png)" in md_out
+    assert "### Anhang C: Ergänzende Rohdaten & Notizen" in md_out
+
+    # Test document roundtrip
+    doc = ReportWorkspaceDocument.from_markdown(
+        f"<!-- spectre:section:start:appendix -->\n{raw_md}\n<!-- spectre:section:end:appendix -->"
+    )
+    retrieved = doc.get_appendix()
+    assert len(retrieved.command_snippets) == 2
+    assert len(retrieved.screenshots) == 2
+    assert "Nmap scan dump" in retrieved.custom_notes
+
+    # Update through set_appendix
+    retrieved.command_snippets.append(
+        ReportEvidenceItem(id="cmd_3", type="terminal", caption="Whoami Check", content="whoami", language="bash")
+    )
+    doc.set_appendix(retrieved)
+
+    doc_md = doc.to_markdown()
+    assert "whoami" in doc_md
+    assert "#### Whoami Check" in doc_md
+
+
 
 
 

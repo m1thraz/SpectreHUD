@@ -96,7 +96,10 @@ from core.reporting.workspace_model import (
     ReportMetadata,
     ReportNarrativeSection,
     ReportRemediationPlan,
+    ReportScopeMethodology,
     ReportWorkspaceDocument,
+    ScopeExclusionItem,
+    ScopeTargetItem,
 )
 
 __all__ = [
@@ -174,5 +177,8 @@ __all__ = [
     "ReportMetadata",
     "ReportNarrativeSection",
     "ReportRemediationPlan",
+    "ReportScopeMethodology",
     "ReportWorkspaceDocument",
+    "ScopeExclusionItem",
+    "ScopeTargetItem",
 ]

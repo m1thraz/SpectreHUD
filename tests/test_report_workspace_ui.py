@@ -18,6 +18,7 @@ from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
     AttackPathStep,
+    ReportAppendix,
     ReportAttackPath,
     ReportEvidenceItem,
     ReportExecutiveSummary,
@@ -25,7 +26,10 @@ from core.reporting import (
     ReportFindingItem,
     ReportMetadata,
     ReportRemediationPlan,
+    ReportScopeMethodology,
     ReportWorkspaceDocument,
+    ScopeExclusionItem,
+    ScopeTargetItem,
 )
 from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
@@ -37,6 +41,8 @@ from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.attack_path_inspector import ReportAttackPathInspector
+from ui.report.scope_inspector import ReportScopeInspector
+from ui.report.appendix_inspector import CommandSnippetCard, ReportAppendixInspector, ScreenshotCard
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report_editor_tab import ReportEditorTab, ViewMode
 
@@ -787,6 +793,168 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         tab.close()
         tab.deleteLater()
+
+    def test_scope_inspector_ui_and_interactions(self):
+        inspector = ReportScopeInspector()
+        inspector.set_project_target_ip("10.10.10.50")
+
+        scope = ReportScopeMethodology(
+            title="Scope & Methodik",
+            approach="whitebox",
+            approach_details="Vollständige Einsicht.",
+            in_scope_targets=[
+                ScopeTargetItem(
+                    target="10.10.10.0/24",
+                    target_type="network",
+                    environment="production",
+                    description="Netzwerksegment",
+                ),
+            ],
+            out_of_scope_targets=[
+                ScopeExclusionItem(target="10.10.10.1", reason="Gateway"),
+            ],
+            restrictions=["no_dos", "no_social_engineering"],
+            custom_rules="SOC Hotline Notfallkontakt",
+        )
+
+        doc = ReportWorkspaceDocument()
+        doc.set_scope_methodology(scope)
+
+        inspector.load_scope(doc)
+
+        # Verify initial values
+        self.assertEqual(inspector.lbl_title.text(), "Scope & Methodik")
+        self.assertTrue(inspector.btn_whitebox.isChecked())
+        self.assertEqual(inspector.txt_appr_details.text(), "Vollständige Einsicht.")
+        self.assertEqual(inspector.tbl_in_targets.rowCount(), 1)
+        self.assertEqual(inspector.tbl_out_targets.rowCount(), 1)
+        self.assertTrue(inspector.chk_no_dos.isChecked())
+        self.assertTrue(inspector.chk_no_social.isChecked())
+        self.assertFalse(inspector.chk_no_data.isChecked())
+        self.assertIn("1 In-Scope | 1 Out-of-Scope", inspector.lbl_badge.text())
+
+        # Test switching approach
+        inspector.btn_blackbox.click()
+        self.assertEqual(inspector._scope.approach, "blackbox")
+
+        # Test adding in-scope target
+        inspector.btn_add_in.click()
+        self.assertEqual(inspector.tbl_in_targets.rowCount(), 2)
+        self.assertIn("2 In-Scope | 1 Out-of-Scope", inspector.lbl_badge.text())
+
+        # Test import project target IP
+        inspector.btn_import_target.click()
+        # 10.10.10.50 should now be added
+        self.assertEqual(inspector.tbl_in_targets.rowCount(), 3)
+        self.assertIn("3 In-Scope | 1 Out-of-Scope", inspector.lbl_badge.text())
+
+        # Test adding and deleting out-of-scope target
+        inspector.btn_add_out.click()
+        self.assertEqual(inspector.tbl_out_targets.rowCount(), 2)
+        # Delete row 1
+        btn_del = inspector.tbl_out_targets.cellWidget(1, 2)
+        btn_del.click()
+        self.assertEqual(inspector.tbl_out_targets.rowCount(), 1)
+
+        inspector.close()
+        inspector.deleteLater()
+
+    def test_report_editor_tab_scope_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        # Navigate to scope_limitations section
+        tab._on_navigate_requested("section", "scope_limitations")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.scope_inspector_glass)
+
+        # Modify approach and verify doc sync
+        tab.scope_inspector.btn_blackbox.click()
+        tab.scope_inspector._emit_changed()
+
+        retrieved_scope = tab._workspace_doc.get_scope_methodology()
+        self.assertEqual(retrieved_scope.approach, "blackbox")
+
+        tab.close()
+        tab.deleteLater()
+
+    def test_appendix_inspector_widgets_and_operations(self):
+        inspector = ReportAppendixInspector()
+        inspector.set_context(
+            loot_manager=self.loot_mgr,
+            clipboard_history=self.clip_watcher,
+            project_dir=self.project_mgr.get_project_dir("WorkspaceBox"),
+        )
+
+        app = ReportAppendix(
+            title="Anhang & Nachweise",
+            command_snippets=[
+                ReportEvidenceItem(id="cmd1", type="terminal", caption="Nmap", content="nmap -p- 10.10.10.1", language="bash"),
+            ],
+            screenshots=[
+                ReportEvidenceItem(id="sc1", type="screenshot", caption="Root Proof", content="screenshots/proof.png"),
+            ],
+            custom_notes="Nmap output raw...",
+        )
+        doc = ReportWorkspaceDocument(language="de")
+        doc.set_appendix(app)
+
+        inspector.load_appendix(doc)
+
+        # Verify initial rendering
+        self.assertIn("1 Befehle · 1 Nachweise", inspector.lbl_badge.text())
+        self.assertEqual(inspector.snippets_layout.count(), 1)
+        self.assertEqual(inspector.screenshots_layout.count(), 1)
+        self.assertEqual(inspector.edit_notes.toPlainText(), "Nmap output raw...")
+
+        # Add manual command snippet
+        inspector.btn_add_cmd.click()
+        self.assertEqual(inspector.snippets_layout.count(), 2)
+        self.assertIn("2 Befehle · 1 Nachweise", inspector.lbl_badge.text())
+
+        # Add manual image
+        inspector.btn_add_img.click()
+        self.assertEqual(inspector.screenshots_layout.count(), 2)
+        self.assertIn("2 Befehle · 2 Nachweise", inspector.lbl_badge.text())
+
+        # Delete first snippet
+        item0 = inspector.snippets_layout.itemAt(0)
+        assert item0 is not None
+        card0 = item0.widget()
+        assert isinstance(card0, CommandSnippetCard)
+        card0.btn_delete.click()
+        self.assertEqual(inspector.snippets_layout.count(), 1)
+
+        # Delete first screenshot
+        item_sc = inspector.screenshots_layout.itemAt(0)
+        assert item_sc is not None
+        sc0 = item_sc.widget()
+        assert isinstance(sc0, ScreenshotCard)
+        sc0.btn_delete.click()
+        self.assertEqual(inspector.screenshots_layout.count(), 1)
+
+        inspector.close()
+        inspector.deleteLater()
+
+    def test_report_editor_tab_appendix_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        # Navigate to appendix section
+        tab._on_navigate_requested("section", "appendix")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.appendix_inspector_glass)
+
+        # Modify notes and trigger changed
+        tab.appendix_inspector.edit_notes.setPlainText("Updated supplementary notes from inspector.")
+        tab.appendix_inspector._emit_changed()
+
+        assert tab._workspace_doc is not None
+        retrieved_app = tab._workspace_doc.get_appendix()
+        self.assertEqual(retrieved_app.custom_notes, "Updated supplementary notes from inspector.")
+        self.assertIn("Updated supplementary notes", tab.editor.toPlainText())
+
+        tab.close()
+        tab.deleteLater()
+
 
 
 

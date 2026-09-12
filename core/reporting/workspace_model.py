@@ -224,13 +224,14 @@ class ReportEvidenceItem:
     caption: str = ""
     content: str = ""
     source_loot_id: Optional[str] = None
+    language: str = ""
 
     def to_markdown(self) -> str:
         if self.type == "screenshot":
             caption = self.caption or "Screenshot"
             return f"![{caption}]({self.content})"
         if self.type in ("terminal", "credential", "code"):
-            lang = "bash" if self.type == "terminal" else ("text" if self.type == "credential" else "")
+            lang = self.language or ("bash" if self.type == "terminal" else ("text" if self.type == "credential" else ""))
             return f"```{lang}\n{self.content}\n```"
         return self.content
 
@@ -546,30 +547,203 @@ class ReportNarrativeSection:
 
 @dataclass
 class ReportAppendix:
+    """Structured representation of the Appendix & Evidence section."""
+
+    title: str = "Anhang"
     commands_markdown: str = ""
     screenshots_markdown: str = ""
     raw_content: str = ""
+    command_snippets: List[ReportEvidenceItem] = field(default_factory=list)
+    screenshots: List[ReportEvidenceItem] = field(default_factory=list)
+    custom_notes: str = ""
 
-    def to_markdown(self, title: str = "Anhang", language: str = "de") -> str:
-        if self.raw_content:
-            return self.raw_content
-        lines = [f"## {title}", ""]
-        if self.commands_markdown:
-            lines.append(
-                "### Anhang A: Ausgeführte Befehle" if language == "de" else "### Appendix A: Command History"
-            )
+    @classmethod
+    def from_markdown(cls, markdown: str, language: str = "de") -> "ReportAppendix":
+        default_title = "Anhang" if language == "de" else "Appendix"
+        if not markdown:
+            return cls(title=default_title)
+
+        title = default_title
+        h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
+        if h2:
+            title = h2.group(1).strip()
+
+        command_snippets: List[ReportEvidenceItem] = []
+        screenshots: List[ReportEvidenceItem] = []
+        notes_lines: List[str] = []
+
+        has_subsections = bool(re.search(r"^###\s+", markdown, re.MULTILINE))
+        if has_subsections:
+            sections = re.split(r"^###\s+", markdown, flags=re.MULTILINE)
+            preamble = sections[0]
+            preamble_lines = [line_text for line_text in preamble.splitlines() if not line_text.startswith("## ")]
+            if any(line_text.strip() for line_text in preamble_lines):
+                notes_lines.append("\n".join(preamble_lines).strip())
+
+            for sec in sections[1:]:
+                sec_lines = sec.strip().splitlines()
+                if not sec_lines:
+                    continue
+                header = sec_lines[0].lower()
+                sec_body = "\n".join(sec_lines[1:]).strip()
+
+                if any(k in header for k in ("anhang a", "appendix a", "befehl", "command")):
+                    code_matches = list(re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", sec_body, re.DOTALL))
+                    last_idx = 0
+                    for idx, m in enumerate(code_matches, start=1):
+                        preceding = sec_body[last_idx:m.start()].strip()
+                        last_idx = m.end()
+                        caption = ""
+                        if preceding:
+                            lines_prec = [line_text.strip() for line_text in preceding.splitlines() if line_text.strip()]
+                            if lines_prec:
+                                last_line = lines_prec[-1]
+                                m_cap = re.match(r"^(?:####|\*\*|#+)\s*(.+?)(?:\*\*|#*)?$", last_line)
+                                if m_cap:
+                                    caption = m_cap.group(1).strip()
+                                elif not last_line.startswith(("-", "*", "|")) and len(last_line) < 80:
+                                    caption = last_line.strip("*_#`").strip()
+                        lang = m.group(1) or ""
+                        code = m.group(2) or ""
+                        t_type = "terminal" if (not lang or lang in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")) else "code"
+                        command_snippets.append(
+                            ReportEvidenceItem(
+                                id=f"cmd_{idx}",
+                                type=t_type,
+                                caption=caption,
+                                content=code.strip(),
+                                language=lang.strip() or "bash",
+                            )
+                        )
+
+                elif any(k in header for k in ("anhang b", "appendix b", "screenshot", "nachweis", "evidence", "bild")):
+                    imgs = re.findall(r"!\[(.*?)\]\((.*?)\)", sec_body)
+                    for idx, (cap, path) in enumerate(imgs, start=1):
+                        screenshots.append(
+                            ReportEvidenceItem(
+                                id=f"sc_{idx}",
+                                type="screenshot",
+                                caption=cap.strip(),
+                                content=path.strip(),
+                            )
+                        )
+
+                elif any(k in header for k in ("anhang c", "appendix c", "rohdaten", "notiz", "raw", "note", "ergänzend")):
+                    if sec_body:
+                        notes_lines.append(sec_body)
+                else:
+                    notes_lines.append(f"### {sec_lines[0]}\n\n{sec_body}")
+
+        else:
+            imgs = re.findall(r"!\[(.*?)\]\((.*?)\)", markdown)
+            for idx, (cap, path) in enumerate(imgs, start=1):
+                screenshots.append(
+                    ReportEvidenceItem(
+                        id=f"sc_{idx}",
+                        type="screenshot",
+                        caption=cap.strip(),
+                        content=path.strip(),
+                    )
+                )
+
+            code_matches = list(re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", markdown, re.DOTALL))
+            for idx, m in enumerate(code_matches, start=1):
+                lang = m.group(1) or ""
+                code = m.group(2) or ""
+                t_type = "terminal" if (not lang or lang in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")) else "code"
+                command_snippets.append(
+                    ReportEvidenceItem(
+                        id=f"cmd_{idx}",
+                        type=t_type,
+                        caption="",
+                        content=code.strip(),
+                        language=lang.strip() or "bash",
+                    )
+                )
+
+            clean_text = re.sub(r"^##\s+.*$", "", markdown, flags=re.MULTILINE)
+            clean_text = re.sub(r"!\[.*?\]\(.*?\)", "", clean_text)
+            clean_text = re.sub(r"```[a-zA-Z0-9_-]*\r?\n.*?\r?\n```", "", clean_text, flags=re.DOTALL)
+            if clean_text.strip():
+                notes_lines.append(clean_text.strip())
+
+        return cls(
+            title=title,
+            raw_content=markdown if not (command_snippets or screenshots or notes_lines) else "",
+            command_snippets=command_snippets,
+            screenshots=screenshots,
+            custom_notes="\n\n".join(notes_lines).strip(),
+        )
+
+    def to_markdown(self, title: Optional[str] = None, language: str = "de") -> str:
+        default_title = "Anhang" if language == "de" else "Appendix"
+        sec_title = title or self.title or default_title
+        lines: List[str] = [f"## {sec_title}", ""]
+
+        if not self.command_snippets and not self.screenshots and not self.custom_notes.strip():
+            if self.raw_content.strip():
+                return self.raw_content.strip()
+            if self.commands_markdown or self.screenshots_markdown:
+                if self.commands_markdown:
+                    lines.append(
+                        "### Anhang A: Ausgeführte Befehle" if language == "de" else "### Appendix A: Command History"
+                    )
+                    lines.append("")
+                    lines.append(self.commands_markdown.strip())
+                    lines.append("")
+                if self.screenshots_markdown:
+                    lines.append(
+                        "### Anhang B: Screenshots & Nachweise"
+                        if language == "de"
+                        else "### Appendix B: Screenshots & Evidence"
+                    )
+                    lines.append("")
+                    lines.append(self.screenshots_markdown.strip())
+                    lines.append("")
+                return "\n".join(lines).strip()
+            empty_msg = "*Keine Anhänge oder Nachweise erfasst.*" if language == "de" else "*No appendices or evidence recorded.*"
+            lines.append(empty_msg)
             lines.append("")
-            lines.append(self.commands_markdown)
+            return "\n".join(lines).strip()
+
+        # Section A: Commands
+        title_a = "### Anhang A: Ausgeführte Befehle" if language == "de" else "### Appendix A: Executed Commands"
+        lines.append(title_a)
+        lines.append("")
+        if self.command_snippets:
+            for item in self.command_snippets:
+                if item.caption:
+                    lines.append(f"#### {item.caption}")
+                lang = getattr(item, "language", "") or ("bash" if item.type == "terminal" else "")
+                lines.append(f"```{lang}\n{item.content.strip()}\n```")
+                lines.append("")
+        else:
+            msg = "*Keine Befehlsprotokolle hinterlegt.*" if language == "de" else "*No command logs recorded.*"
+            lines.append(msg)
             lines.append("")
-        if self.screenshots_markdown:
-            lines.append(
-                "### Anhang B: Screenshots & Nachweise"
-                if language == "de"
-                else "### Appendix B: Screenshots & Evidence"
-            )
+
+        # Section B: Screenshots
+        title_b = "### Anhang B: Screenshots & Nachweise" if language == "de" else "### Appendix B: Screenshots & Evidence"
+        lines.append(title_b)
+        lines.append("")
+        if self.screenshots:
+            for item in self.screenshots:
+                cap = item.caption or ("Nachweis" if language == "de" else "Evidence")
+                lines.append(f"![{cap}]({item.content})")
+                lines.append("")
+        else:
+            msg = "*Keine Screenshots oder Nachweise hinterlegt.*" if language == "de" else "*No screenshots or evidence recorded.*"
+            lines.append(msg)
             lines.append("")
-            lines.append(self.screenshots_markdown)
+
+        # Section C: Notes / Raw Data
+        if self.custom_notes.strip():
+            title_c = "### Anhang C: Ergänzende Rohdaten & Notizen" if language == "de" else "### Appendix C: Supplementary Raw Data & Notes"
+            lines.append(title_c)
             lines.append("")
+            lines.append(self.custom_notes.strip())
+            lines.append("")
+
         return "\n".join(lines).strip()
 
 
@@ -981,6 +1155,349 @@ class ReportAttackPath:
 
 
 @dataclass
+class ScopeTargetItem:
+    """An authorized testing target within the assessment scope."""
+
+    target: str = ""
+    target_type: str = "network"  # "network", "host", "webapp", "api", "cloud", "other"
+    environment: str = "production"  # "production", "staging", "development", "other"
+    description: str = ""
+
+
+@dataclass
+class ScopeExclusionItem:
+    """An explicitly excluded asset, system, or limitation."""
+
+    target: str = ""
+    reason: str = ""
+
+
+def normalize_target_type(val: str) -> str:
+    v = (val or "").strip().lower()
+    if "web" in v or "app" in v:
+        return "webapp"
+    if "api" in v or "service" in v:
+        return "api"
+    if "net" in v or "sub" in v or "cidr" in v:
+        return "network"
+    if "host" in v or "server" in v or "ip" in v:
+        return "host"
+    if "cloud" in v or "aws" in v or "azure" in v or "gcp" in v:
+        return "cloud"
+    return "other" if v else "network"
+
+
+def normalize_environment(val: str) -> str:
+    v = (val or "").strip().lower()
+    if "prod" in v:
+        return "production"
+    if "stag" in v or "test" in v or "qa" in v:
+        return "staging"
+    if "dev" in v or "entw" in v:
+        return "development"
+    return "other" if v else "production"
+
+
+@dataclass
+class ReportScopeMethodology:
+    """Structured representation of the Scope & Methodology section."""
+
+    title: str = "Scope & Methodik"
+    approach: str = "greybox"  # "blackbox", "greybox", "whitebox"
+    approach_details: str = ""
+    in_scope_targets: List[ScopeTargetItem] = field(default_factory=list)
+    out_of_scope_targets: List[ScopeExclusionItem] = field(default_factory=list)
+    restrictions: List[str] = field(default_factory=lambda: ["no_dos", "no_social_engineering", "no_data_destruction"])
+    custom_rules: str = ""
+
+    @classmethod
+    def from_markdown(cls, markdown: str, language: str = "de") -> "ReportScopeMethodology":
+        default_title = "Scope & Methodik" if language == "de" else "Scope & Methodology"
+        if not markdown:
+            return cls(title=default_title)
+
+        title = default_title
+        h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
+        if h2:
+            title = h2.group(1).strip()
+
+        # Parse approach
+        approach = "greybox"
+        approach_details = ""
+        m_appr = re.search(
+            r"^[ \t]*[-*]\s*[*_]*(?:Ansatz|Approach|Testmethodik|Methodology)[:*_ \t]*\s*(.*)$",
+            markdown,
+            re.IGNORECASE | re.MULTILINE,
+        )
+        if m_appr:
+            raw_appr = m_appr.group(1).lower()
+            if "black" in raw_appr:
+                approach = "blackbox"
+            elif "white" in raw_appr:
+                approach = "whitebox"
+            elif "grey" in raw_appr or "gray" in raw_appr:
+                approach = "greybox"
+
+        in_targets: List[ScopeTargetItem] = []
+        out_targets: List[ScopeExclusionItem] = []
+        restrictions: List[str] = []
+        custom_rules_lines: List[str] = []
+
+        # Check for subsections or full text
+        has_subsections = bool(re.search(r"^###\s+", markdown, re.MULTILINE))
+
+        if has_subsections:
+            sections = re.split(r"^###\s+", markdown, flags=re.MULTILINE)
+            for sec in sections[1:]:
+                sec_lines = sec.strip().splitlines()
+                if not sec_lines:
+                    continue
+                sec_header = sec_lines[0].lower()
+
+                if any(k in sec_header for k in ("ansatz", "approach", "methodik", "methodology")):
+                    for line in sec_lines[1:]:
+                        cl = line.strip()
+                        if not cl:
+                            continue
+                        m_det = re.search(r"^[ \t]*[-*]\s*[*_]*(?:Details|Beschreibung)[:*_ \t]*\s*(.*)$", cl, re.IGNORECASE)
+                        if m_det:
+                            approach_details = m_det.group(1).strip()
+                        elif not cl.startswith(("-", "*", "|")) and not approach_details:
+                            approach_details = cl
+
+                elif "in-scope" in sec_header or "in scope" in sec_header or "ziel" in sec_header or "target" in sec_header:
+                    for line in sec_lines[1:]:
+                        cl = line.strip()
+                        if not cl.startswith("|") or cl.startswith("|---"):
+                            continue
+                        cols = [c.strip() for c in cl.split("|")[1:-1]]
+                        if len(cols) >= 2:
+                            raw_tgt = cols[0].strip().strip("`").strip()
+                            low_tgt = raw_tgt.lower()
+                            if not raw_tgt or low_tgt in ("ziel", "target", "keine ziele definiert", "no targets defined") or low_tgt.startswith(("ziel /", "target /")):
+                                continue
+                            t_type = normalize_target_type(cols[1]) if len(cols) > 1 else "network"
+                            t_env = normalize_environment(cols[2]) if len(cols) > 2 else "production"
+                            t_desc = cols[3] if len(cols) > 3 else ""
+                            in_targets.append(ScopeTargetItem(target=raw_tgt, target_type=t_type, environment=t_env, description=t_desc))
+
+                elif "out-of-scope" in sec_header or "out of scope" in sec_header or "ausschluss" in sec_header or "exclusion" in sec_header:
+                    for line in sec_lines[1:]:
+                        cl = line.strip()
+                        if not cl.startswith("|") or cl.startswith("|---"):
+                            continue
+                        cols = [c.strip() for c in cl.split("|")[1:-1]]
+                        if len(cols) >= 1:
+                            raw_tgt = cols[0].strip().strip("`").strip()
+                            low_tgt = raw_tgt.lower()
+                            if not raw_tgt or low_tgt in ("ausgeschlossen", "excluded", "keine ausschlüsse definiert", "no exclusions defined") or low_tgt.startswith(("ausgeschlossenes", "excluded target")):
+                                continue
+                            reason = cols[1] if len(cols) > 1 else ""
+                            out_targets.append(ScopeExclusionItem(target=raw_tgt, reason=reason))
+
+                elif any(k in sec_header for k in ("einschränkung", "limitation", "rule", "engagement")):
+                    for line in sec_lines[1:]:
+                        cl = line.strip()
+                        if not cl or cl.startswith("|"):
+                            continue
+                        m_bullet = re.search(r"^[-*]\s+(.*)$", cl)
+                        item_text = m_bullet.group(1).strip() if m_bullet else cl
+                        low = item_text.lower()
+                        matched_std = False
+                        if "dos" in low or "denial-of-service" in low or "verfügbarkeit" in low:
+                            if "no_dos" not in restrictions:
+                                restrictions.append("no_dos")
+                            matched_std = True
+                        if "social engineering" in low or "phishing" in low:
+                            if "no_social_engineering" not in restrictions:
+                                restrictions.append("no_social_engineering")
+                            matched_std = True
+                        if "zerstörung" in low or "alteration" in low or "veränderung" in low or "löschung" in low:
+                            if "no_data_destruction" not in restrictions:
+                                restrictions.append("no_data_destruction")
+                            matched_std = True
+                        if "testfenster" in low or "business hours" in low or "zeitfenster" in low:
+                            if "business_hours_only" not in restrictions:
+                                restrictions.append("business_hours_only")
+                            matched_std = True
+                        if not matched_std and not any(ign in low for ign in ("keine besonderen", "no specific")):
+                            custom_rules_lines.append(item_text)
+
+        # Legacy fallback if no tables were parsed
+        if not in_targets:
+            m_in = re.search(r"^[ \t]*[-*]\s*[*_]*In[ -]?Scope[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            if m_in:
+                val = m_in.group(1).strip()
+                if val:
+                    for t_part in re.split(r"[,;\n]+", val):
+                        clean_t = t_part.strip().strip("*_`").strip()
+                        if clean_t:
+                            in_targets.append(ScopeTargetItem(target=clean_t, target_type="network", environment="production"))
+
+        if not out_targets:
+            m_out = re.search(r"^[ \t]*[-*]\s*[*_]*Out[ -]?of[ -]?Scope[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            if m_out:
+                val = m_out.group(1).strip()
+                if val:
+                    for o_part in re.split(r"[,;\n]+", val):
+                        clean_o = o_part.strip().strip("*_`").strip()
+                        if clean_o:
+                            out_targets.append(ScopeExclusionItem(target=clean_o, reason="Out of Scope"))
+
+        if not restrictions and not custom_rules_lines:
+            m_lim = re.search(r"^[ \t]*[-*]\s*[*_]*(?:Einschränkungen|Limitations)[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            if m_lim:
+                lim_text = m_lim.group(1).strip()
+                low_lim = lim_text.lower()
+                if "dos" in low_lim or "denial-of-service" in low_lim:
+                    restrictions.append("no_dos")
+                if "social engineering" in low_lim or "phishing" in low_lim:
+                    restrictions.append("no_social_engineering")
+                if "zerstörung" in low_lim or "alteration" in low_lim or "veränderung" in low_lim or "löschung" in low_lim:
+                    restrictions.append("no_data_destruction")
+                if "testfenster" in low_lim or "business hours" in low_lim:
+                    restrictions.append("business_hours_only")
+            else:
+                restrictions = ["no_dos", "no_social_engineering", "no_data_destruction"]
+
+        return cls(
+            title=title,
+            approach=approach,
+            approach_details=approach_details,
+            in_scope_targets=in_targets,
+            out_of_scope_targets=out_targets,
+            restrictions=restrictions,
+            custom_rules="\n".join(custom_rules_lines),
+        )
+
+    def to_markdown(self, language: str = "de") -> str:
+        sec_title = self.title or ("Scope & Methodik" if language == "de" else "Scope & Methodology")
+        lines: List[str] = [f"## {sec_title}", ""]
+
+        # Approach subsection
+        appr_title = "### Pentest-Ansatz & Methodik" if language == "de" else "### Pentest Approach & Methodology"
+        lines.append(appr_title)
+        lines.append("")
+
+        appr_names_de = {
+            "blackbox": "Blackbox (Keine Vorkenntnisse / externer Angreifer)",
+            "greybox": "Greybox (Teilweise Vorkenntnisse / Standard-Nutzerperspektive)",
+            "whitebox": "Whitebox (Vollständige Kenntnisse / Quellcode & Architektur)",
+        }
+        appr_names_en = {
+            "blackbox": "Blackbox (No prior knowledge / external attacker)",
+            "greybox": "Greybox (Partial knowledge / authenticated user perspective)",
+            "whitebox": "Whitebox (Full knowledge / architecture & source code audit)",
+        }
+        appr_map = appr_names_de if language == "de" else appr_names_en
+        appr_label = appr_map.get(self.approach.lower(), self.approach.capitalize())
+        lbl_appr = "Ansatz" if language == "de" else "Approach"
+        lines.append(f"- **{lbl_appr}:** {appr_label}")
+        if self.approach_details.strip():
+            lines.append(f"  {self.approach_details.strip()}")
+        lines.append("")
+
+        # In-Scope Table
+        in_title = "### In-Scope Ziele & Netzwerke" if language == "de" else "### In-Scope Targets & Networks"
+        lines.append(in_title)
+        lines.append("")
+        if language == "de":
+            lines.append("| Ziel / Host / Subnetz | Typ | Umgebung | Beschreibung |")
+            lines.append("|---|---|---|---|")
+        else:
+            lines.append("| Target / Host / Subnet | Type | Environment | Description |")
+            lines.append("|---|---|---|---|")
+
+        type_map_de = {
+            "network": "Netzwerk / Subnetz",
+            "host": "Host / Server",
+            "webapp": "Web-Anwendung",
+            "api": "API / Web-Service",
+            "cloud": "Cloud-Ressource",
+            "other": "Sonstige",
+        }
+        env_map_de = {
+            "production": "Produktion",
+            "staging": "Staging",
+            "development": "Entwicklung",
+            "other": "Sonstige",
+        }
+
+        if self.in_scope_targets:
+            for item in self.in_scope_targets:
+                tgt = (item.target or "–").replace("|", "\\|").replace("\n", " ")
+                t_lbl = type_map_de.get(item.target_type, item.target_type.capitalize()) if language == "de" else item.target_type.capitalize()
+                e_lbl = env_map_de.get(item.environment, item.environment.capitalize()) if language == "de" else item.environment.capitalize()
+                desc = (item.description or "–").replace("|", "\\|").replace("\n", " ")
+                lines.append(f"| `{tgt}` | {t_lbl} | {e_lbl} | {desc} |")
+        else:
+            empty_msg = "*Keine Ziele definiert*" if language == "de" else "*No targets defined*"
+            lines.append(f"| {empty_msg} | | | |")
+        lines.append("")
+
+        # Out-of-Scope Table
+        out_title = "### Out-of-Scope & Ausschlusskriterien" if language == "de" else "### Out-of-Scope & Exclusions"
+        lines.append(out_title)
+        lines.append("")
+        if language == "de":
+            lines.append("| Ausgeschlossenes Ziel / Komponente | Grund / Kriterium |")
+            lines.append("|---|---|")
+        else:
+            lines.append("| Excluded Target / Component | Reason / Constraint |")
+            lines.append("|---|---|")
+
+        if self.out_of_scope_targets:
+            for ex_item in self.out_of_scope_targets:
+                tgt = (ex_item.target or "–").replace("|", "\\|").replace("\n", " ")
+                reason = (ex_item.reason or "–").replace("|", "\\|").replace("\n", " ")
+                lines.append(f"| `{tgt}` | {reason} |")
+        else:
+            empty_msg = "*Keine Ausschlüsse definiert*" if language == "de" else "*No exclusions defined*"
+            lines.append(f"| {empty_msg} | |")
+        lines.append("")
+
+        # Rules of Engagement / Restrictions
+        roe_title = "### Testeinschränkungen & Rules of Engagement" if language == "de" else "### Limitations & Rules of Engagement"
+        lines.append(roe_title)
+        lines.append("")
+
+        roe_labels_de = {
+            "no_dos": "Keine Denial-of-Service-Angriffe (DoS/DDoS) oder Beeinträchtigung der Systemverfügbarkeit",
+            "no_social_engineering": "Kein Social Engineering / Phishing gegen Mitarbeiter oder Dritte",
+            "no_data_destruction": "Keine dauerhafte Veränderung oder Zerstörung von Geschäfts- und Produktivdaten",
+            "business_hours_only": "Prüfaktivitäten ausschließlich innerhalb vereinbarter Testfenster",
+        }
+        roe_labels_en = {
+            "no_dos": "No Denial-of-Service attacks (DoS/DDoS) or service disruption",
+            "no_social_engineering": "No social engineering or phishing targeting personnel or third parties",
+            "no_data_destruction": "No destructive exploitation or permanent data alteration/deletion",
+            "business_hours_only": "Testing activities restricted to agreed service windows",
+        }
+        labels = roe_labels_de if language == "de" else roe_labels_en
+
+        for r_key in self.restrictions:
+            text = labels.get(r_key, r_key)
+            lines.append(f"- {text}")
+
+        if self.custom_rules.strip():
+            for c_line in self.custom_rules.strip().splitlines():
+                cl = c_line.strip()
+                if not cl:
+                    continue
+                if cl.startswith(("-", "*")):
+                    lines.append(cl)
+                else:
+                    lines.append(f"- {cl}")
+
+        if not self.restrictions and not self.custom_rules.strip():
+            no_roe = "*Keine besonderen Einschränkungen vereinbart.*" if language == "de" else "*No specific restrictions agreed.*"
+            lines.append(no_roe)
+
+        lines.append("")
+        return "\n".join(lines).strip()
+
+
+@dataclass
 class ReportWorkspaceDocument:
     metadata: ReportMetadata = field(default_factory=ReportMetadata)
     narratives: List[ReportNarrativeSection] = field(default_factory=list)
@@ -1120,12 +1637,12 @@ class ReportWorkspaceDocument:
                     )
                 )
             elif seg.section_type == "appendix":
-                appendix = ReportAppendix(raw_content=seg.markdown)
+                appendix = ReportAppendix.from_markdown(seg.markdown, language=language)
                 narratives.append(
                     ReportNarrativeSection(
                         identity=seg.identity or "appendix",
                         section_type="appendix",
-                        title="Appendix" if language != "de" else "Anhang",
+                        title=appendix.title or ("Appendix" if language != "de" else "Anhang"),
                         content=seg.markdown,
                     )
                 )
@@ -1232,6 +1749,63 @@ class ReportWorkspaceDocument:
             ),
         )
 
+    def get_scope_methodology(self) -> ReportScopeMethodology:
+        narrative = next(
+            (n for n in self.narratives if n.identity == "scope_limitations" or n.section_type in ("scope_limitations", "scope")),
+            None,
+        )
+        content = narrative.content if narrative else ""
+        return ReportScopeMethodology.from_markdown(content, language=self.language)
+
+    def set_scope_methodology(self, scope: ReportScopeMethodology) -> None:
+        md = scope.to_markdown(language=self.language)
+        for n in self.narratives:
+            if n.identity == "scope_limitations" or n.section_type in ("scope_limitations", "scope"):
+                n.title = scope.title
+                n.content = md
+                return
+        self.narratives.append(
+            ReportNarrativeSection(
+                identity="scope_limitations",
+                section_type="scope_limitations",
+                title=scope.title,
+                content=md,
+            ),
+        )
+
+    def get_appendix(self) -> ReportAppendix:
+        narrative = next(
+            (n for n in self.narratives if n.identity == "appendix" or n.section_type == "appendix"),
+            None,
+        )
+        content = narrative.content if narrative else ""
+        if self.appendix is not None:
+            if not self.appendix.title and narrative and narrative.title:
+                self.appendix.title = narrative.title
+            return self.appendix
+        app = ReportAppendix.from_markdown(content, language=self.language)
+        if narrative and narrative.title:
+            app.title = narrative.title
+        self.appendix = app
+        return app
+
+    def set_appendix(self, appendix: ReportAppendix) -> None:
+        self.appendix = appendix
+        md = appendix.to_markdown(title=appendix.title, language=self.language)
+        for n in self.narratives:
+            if n.identity == "appendix" or n.section_type == "appendix":
+                n.title = appendix.title
+                n.content = md
+                return
+        self.narratives.append(
+            ReportNarrativeSection(
+                identity="appendix",
+                section_type="appendix",
+                title=appendix.title,
+                content=md,
+            ),
+        )
+
     def _render_executive_summary_content(self, narrative: ReportNarrativeSection) -> str:
         """Regenerates findings matrix inside executive summary while preserving highlights and intro."""
         summary = ReportExecutiveSummary.from_markdown(narrative.content, language=self.language)
@@ -1252,6 +1826,13 @@ class ReportWorkspaceDocument:
         if narrative.title:
             path.title = narrative.title
         return path.to_markdown(self.findings, language=self.language)
+
+    def _render_scope_methodology_content(self, narrative: ReportNarrativeSection) -> str:
+        """Regenerates scope and methodology content."""
+        scope = ReportScopeMethodology.from_markdown(narrative.content, language=self.language)
+        if narrative.title:
+            scope.title = narrative.title
+        return scope.to_markdown(language=self.language)
 
     def to_markdown(self, regenerate_matrices: bool = True) -> str:
         parts: List[str] = []
@@ -1288,6 +1869,14 @@ class ReportWorkspaceDocument:
             elif narr.section_type in ("attack_path", "attack_narrative"):
                 content = (
                     self._render_attack_path_content(narr)
+                    if regenerate_matrices
+                    else narr.content
+                )
+                parts.append(wrap_section_markdown(content.strip(), narr.identity))
+
+            elif narr.identity == "scope_limitations" or narr.section_type in ("scope_limitations", "scope"):
+                content = (
+                    self._render_scope_methodology_content(narr)
                     if regenerate_matrices
                     else narr.content
                 )
@@ -1332,11 +1921,8 @@ class ReportWorkspaceDocument:
                 parts.append(wrap_section_markdown("\n".join(sec_lines).strip(), narr.identity))
 
             elif narr.section_type == "appendix":
-                app_content = (
-                    self.appendix.to_markdown(title=narr.title, language=self.language)
-                    if self.appendix
-                    else narr.content
-                )
+                app = self.get_appendix()
+                app_content = app.to_markdown(title=narr.title or app.title, language=self.language)
                 parts.append(wrap_section_markdown(app_content.strip(), narr.identity))
 
             else:

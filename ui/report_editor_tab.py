@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
 from core.reporting import (
+    ReportAppendix,
     ReportAttackPath,
     ReportEvidenceItem,
     ReportExecutiveSummary,
@@ -43,6 +44,7 @@ from core.reporting import (
     ReportFindingItem,
     ReportMetadata,
     ReportRemediationPlan,
+    ReportScopeMethodology,
     ReportTemplate,
     ReportWorkspaceDocument,
     TemplateRepository,
@@ -72,6 +74,8 @@ from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.attack_path_inspector import ReportAttackPathInspector
+from ui.report.scope_inspector import ReportScopeInspector
+from ui.report.appendix_inspector import ReportAppendixInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
@@ -168,7 +172,7 @@ class ReportEditorTab(QWidget):
         report_file_manager: ReportFileManager,
         loot_manager,
         clipboard_history,
-        parent: QWidget = None,
+        parent: Optional[QWidget] = None,
         config_manager: Optional[ConfigManager] = None,
         export_coordinator: Optional[ExportCoordinator] = None,
     ):
@@ -542,6 +546,18 @@ class ReportEditorTab(QWidget):
         )
         self.attack_path_inspector_glass = self._wrap_glass_surface(self.attack_path_inspector)
         self.center_stack.addWidget(self.attack_path_inspector_glass)
+
+        # Page 7: Scope & Methodology Inspector
+        self.scope_inspector = ReportScopeInspector(self)
+        self.scope_inspector.scope_changed.connect(self._on_scope_changed)
+        self.scope_inspector_glass = self._wrap_glass_surface(self.scope_inspector)
+        self.center_stack.addWidget(self.scope_inspector_glass)
+
+        # Page 8: Appendix & Evidence Inspector
+        self.appendix_inspector = ReportAppendixInspector(self)
+        self.appendix_inspector.appendix_changed.connect(self._on_appendix_changed)
+        self.appendix_inspector_glass = self._wrap_glass_surface(self.appendix_inspector)
+        self.center_stack.addWidget(self.appendix_inspector_glass)
 
         self.splitter.addWidget(self.center_stack)
 
@@ -1483,6 +1499,18 @@ class ReportEditorTab(QWidget):
             pass
         return ""
 
+    def _get_project_dir(self) -> Optional[Path]:
+        if not self.current_project:
+            return None
+        rfm = self.report_file_manager
+        if rfm and getattr(rfm, "project_manager", None):
+            try:
+                pname = rfm.resolve_project_name(self.current_project)
+                return rfm.project_manager.get_project_dir(pname)
+            except Exception:
+                pass
+        return None
+
     def _sync_markdown_to_workspace(self) -> None:
         """Parses current editor markdown into workspace document and refreshes navigator."""
         if getattr(self, "_syncing_from_inspector", False):
@@ -1562,6 +1590,20 @@ class ReportEditorTab(QWidget):
                 self.attack_path_inspector.load_attack_path(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.attack_path_inspector_glass)
                 self._last_active_inspector = self.attack_path_inspector_glass
+            elif sec_id in ("scope_limitations", "scope"):
+                self.scope_inspector.set_project_target_ip(self._get_target_ip())
+                self.scope_inspector.load_scope(self._workspace_doc)
+                self.center_stack.setCurrentWidget(self.scope_inspector_glass)
+                self._last_active_inspector = self.scope_inspector_glass
+            elif sec_id == "appendix":
+                self.appendix_inspector.set_context(
+                    loot_manager=self.loot_manager,
+                    clipboard_history=self.clipboard_history,
+                    project_dir=self._get_project_dir(),
+                )
+                self.appendix_inspector.load_appendix(self._workspace_doc)
+                self.center_stack.setCurrentWidget(self.appendix_inspector_glass)
+                self._last_active_inspector = self.appendix_inspector_glass
             else:
                 narr = next(
                     (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
@@ -1750,6 +1792,18 @@ class ReportEditorTab(QWidget):
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         self._workspace_doc.set_attack_path(updated)
+        self._sync_workspace_doc_to_editor()
+
+    def _on_scope_changed(self, updated: ReportScopeMethodology) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        self._workspace_doc.set_scope_methodology(updated)
+        self._sync_workspace_doc_to_editor()
+
+    def _on_appendix_changed(self, updated: ReportAppendix) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        self._workspace_doc.set_appendix(updated)
         self._sync_workspace_doc_to_editor()
 
     # ------------------------------------------------------------------ #

@@ -16,11 +16,14 @@ from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.attack_path_inspector import ReportAttackPathInspector
+from ui.report.scope_inspector import ReportScopeInspector
+from ui.report.appendix_inspector import ReportAppendixInspector
 
 __all__ = [
     "ClipboardHistoryPickerDialog",
     "LootEntryPickerDialog",
     "LootImagePickerDialog",
+    "ReportAppendixInspector",
     "ReportAttackPathInspector",
     "ReportExportActions",
     "ReportExportTypeDialog",
@@ -28,6 +31,7 @@ __all__ = [
     "ReportFindingInspector",
     "ReportMetadataInspector",
     "ReportRemediationInspector",
+    "ReportScopeInspector",
     "ReportSectionInspector",
     "ReportSummaryInspector",
     "ReportWorkspaceNavigator",
