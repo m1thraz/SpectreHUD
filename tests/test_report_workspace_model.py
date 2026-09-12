@@ -1,0 +1,741 @@
+from pathlib import Path
+import sys
+
+from core.reporting import (
+    AttackPathStep,
+    ReportAppendix,
+    ReportAttackPath,
+    ReportContext,
+    ReportMetadata,
+    ReportEvidenceItem,
+    ReportExecutiveSummary,
+    ReportFindingItem,
+    ReportNarrativeSection,
+    ReportRemediationPlan,
+    ReportWorkspaceDocument,
+    TemplateRenderer,
+    TemplateRepository,
+)
+
+
+def test_evidence_and_narrative_sections():
+    """Test serialization of evidence items and narrative sections."""
+    img_ev = ReportEvidenceItem(
+        id="ev-1",
+        type="screenshot",
+        caption="Dashboard",
+        content="images/dash.png",
+    )
+    assert img_ev.to_markdown() == "![Dashboard](images/dash.png)"
+
+    code_ev = ReportEvidenceItem(
+        id="ev-2",
+        type="terminal",
+        content="whoami && id",
+    )
+    assert "```bash\nwhoami && id\n```" == code_ev.to_markdown()
+
+    narrative = ReportNarrativeSection(
+        identity="scope_limitations",
+        section_type="scope_limitations",
+        title="Scope",
+        content="## Scope\n\n- 192.168.1.1",
+        page_break_before=True,
+    )
+    md = narrative.to_markdown()
+    assert "<!-- spectre:pagebreak -->" in md
+    assert "<!-- spectre:section:start:scope_limitations -->" in md
+    assert "<!-- spectre:section:end:scope_limitations -->" in md
+
+
+def test_core_isolation():
+    """Ensure workspace_model remains pure core headless Python."""
+    assert "core.reporting.workspace_model" in sys.modules
+    import core.reporting.workspace_model as wm
+    source = Path(wm.__file__).read_text(encoding="utf-8")
+    assert "PyQt6" not in source
+    assert "ui." not in source
+
+
+def test_report_metadata_table_roundtrip():
+    md_table = (
+        "# Security Assessment Report: TargetCorp\n\n"
+        "| Eigenschaft | Wert |\n"
+        "|---|---|\n"
+        "| **Auftraggeber / Client** | `TargetCorp GmbH` |\n"
+        "| **Tester** | `SecLab Analyst` |\n"
+        "| **Ziel(e) / Scope** | `10.10.10.0/24` |\n"
+        "| **Testzeitraum** | `01.09.2026 - 05.09.2026` |\n"
+        "| **Berichtsdatum** | `2026-09-12` |\n"
+        "| **Klassifizierung** | `Vertraulich` |\n"
+        "| **Report-Version** | `v1.2` |\n"
+        "| **Audit-Id** | `AUD-9982` |\n"
+    )
+    meta = ReportMetadata.from_markdown_table(md_table)
+    assert meta.title == "Security Assessment Report: TargetCorp"
+    assert meta.client == "TargetCorp GmbH"
+    assert meta.tester == "SecLab Analyst"
+    assert meta.target_scope == "10.10.10.0/24"
+    assert meta.timeframe == "01.09.2026 - 05.09.2026"
+    assert meta.date == "2026-09-12"
+    assert meta.classification == "Vertraulich"
+    assert meta.version == "v1.2"
+    assert meta.custom_fields.get("audit-id") == "AUD-9982"
+
+    exported = meta.to_markdown_table(language="de")
+    assert "TargetCorp GmbH" in exported
+    assert "AUD-9982" in exported
+    assert "| **Report-Version** | `v1.2` |" in exported
+
+
+def test_report_finding_item_parsing_and_serialization():
+    raw_finding_block = (
+        "<!-- spectre:finding:start:loot-42 -->\n"
+        "<!-- spectre:loot:recon:a1b2c3d4 -->\n"
+        "### Remote Code Execution in Webhook Service\n\n"
+        "**Severity:** [HIGH]  \n"
+        "**Target:** `10.10.10.5`  \n"
+        "**Phase:** Access  \n"
+        "**Beobachtet:** `2026-09-12 14:00`  \n"
+        "**Status:** Offen\n\n"
+        "#### Beschreibung\n\n"
+        "Unauthenticated command execution via crafted payload.\n\n"
+        "```bash\n"
+        "curl -X POST http://10.10.10.5/api -d '{\"cmd\": \"id\"}'\n"
+        "```\n\n"
+        "![PoC Screenshot](images/poc.png)\n\n"
+        "#### Empfehlung\n\n"
+        "Input validation and disable debug endpoints.\n\n"
+        "#### Referenzen\n\n"
+        "- CVE-2026-9999\n"
+        "- https://example.com/advisory\n\n"
+        "<!-- spectre:finding:end:loot-42 -->"
+    )
+
+    finding = ReportFindingItem.from_markdown(raw_finding_block, entry_id="loot-42", language="de")
+    assert finding.id == "loot-42"
+    assert finding.title == "Remote Code Execution in Webhook Service"
+    assert finding.severity == "high"
+    assert finding.phase == "access"
+    assert "10.10.10.5" in finding.targets
+    assert finding.status == "open"
+    assert "Unauthenticated command execution" in finding.description
+    assert "Input validation" in finding.recommendation
+    assert len(finding.references) == 2
+    assert "CVE-2026-9999" in finding.references
+    assert len(finding.evidence_items) == 2
+    assert finding.loot_marker == "<!-- spectre:loot:recon:a1b2c3d4 -->"
+
+    # Test serialization
+    serialized = finding.to_markdown(language="de")
+    assert "<!-- spectre:finding:start:loot-42 -->" in serialized
+    assert "<!-- spectre:finding:end:loot-42 -->" in serialized
+    assert "<!-- spectre:loot:recon:a1b2c3d4 -->" in serialized
+    assert "### Remote Code Execution in Webhook Service" in serialized
+    assert "severity-high" in serialized and "HIGH" in serialized
+    assert "#### Beschreibung" in serialized
+    assert "#### Empfehlung" in serialized
+    assert "#### Referenzen" in serialized
+    assert "CVE-2026-9999" in serialized
+
+
+def test_workspace_document_crud_and_filters():
+    doc = ReportWorkspaceDocument(language="de")
+    f1 = ReportFindingItem(id="f1", title="SQLi", severity="critical", phase="access")
+    f2 = ReportFindingItem(id="f2", title="XSS", severity="medium", phase="recon")
+    f3 = ReportFindingItem(id="f3", title="Info Leak", severity="info", phase="recon")
+
+    doc.add_finding(f1)
+    doc.add_finding(f2)
+    doc.add_finding(f3)
+    assert len(doc.findings) == 3
+
+    # Retrieval
+    assert doc.get_finding("f2") == f2
+    assert doc.get_finding("f99") is None
+
+    # Grouping by severity
+    by_sev = doc.get_findings_by_severity()
+    assert len(by_sev["critical"]) == 1
+    assert len(by_sev["medium"]) == 1
+    assert len(by_sev["info"]) == 1
+    assert len(by_sev["high"]) == 0
+
+    # Grouping by phase
+    by_phase = doc.get_findings_by_phase()
+    assert len(by_phase["access"]) == 1
+    assert len(by_phase["recon"]) == 2
+
+    # Update
+    updated_f2 = ReportFindingItem(id="f2", title="Stored XSS", severity="high", phase="access")
+    assert doc.update_finding(updated_f2) is True
+    found_f2 = doc.get_finding("f2")
+    assert found_f2 is not None
+    assert found_f2.title == "Stored XSS"
+    assert found_f2.severity == "high"
+
+    # Reorder
+    doc.reorder_findings(["f3", "f1", "f2"])
+    assert [f.id for f in doc.findings] == ["f3", "f1", "f2"]
+
+    # Delete
+    assert doc.remove_finding("f1") is True
+    assert len(doc.findings) == 2
+    assert doc.get_finding("f1") is None
+
+
+def test_roundtrip_fidelity_with_template_renderer():
+    """Renders a standard report with TemplateRenderer, parses into WorkspaceDocument, and verifies fidelity."""
+    repo = TemplateRepository()
+    template = repo.get_template("pentest_standard_de")
+    assert template is not None
+
+    context = ReportContext(
+        project_name="MegaCorp Audit",
+        target_ip="192.168.10.50",
+        metadata={
+            "client": "MegaCorp AG",
+            "tester": "Lead Auditor",
+            "timeframe": "KW 37",
+            "classification": "Streng Vertraulich",
+            "version": "v1.0",
+        },
+        loot_entries=[
+            {
+                "id": "loot-1",
+                "title": "Default Credentials in Admin Panel",
+                "severity": "critical",
+                "category": "access",
+                "type": "credentials",
+                "content": "admin:admin123",
+                "recommendation": "Change default passwords immediately.",
+                "timestamp": "2026-09-12 10:00",
+                "target_ip": "192.168.10.50",
+            },
+            {
+                "id": "loot-2",
+                "title": "Nmap Scan Results",
+                "severity": "info",
+                "category": "recon",
+                "type": "note",
+                "content": "Port 80, 443, 8080 open",
+                "timestamp": "2026-09-12 09:30",
+                "target_ip": "192.168.10.50",
+            },
+        ],
+    )
+
+    renderer = TemplateRenderer()
+    rendered_md = renderer.render(template, context)
+
+    # Parse into ReportWorkspaceDocument
+    doc = ReportWorkspaceDocument.from_markdown(rendered_md)
+    assert doc.language == "de"
+    assert doc.metadata.client == "MegaCorp AG"
+    assert doc.metadata.tester == "Lead Auditor"
+    assert doc.metadata.classification == "Streng Vertraulich"
+    assert doc.metadata.version == "v1.0"
+    assert len(doc.findings) == 2
+
+    crit_finding = doc.get_finding("loot-1")
+    assert crit_finding is not None
+    assert crit_finding.title == "Default Credentials in Admin Panel"
+    assert crit_finding.severity == "critical"
+    assert "admin:admin123" in crit_finding.description
+
+    # Re-serialize to markdown
+    serialized_md = doc.to_markdown()
+
+    # Section markers must be retained
+    assert "<!-- spectre:section:start:header_metadata -->" in serialized_md
+    assert "<!-- spectre:section:start:executive_summary -->" in serialized_md
+    assert "<!-- spectre:section:start:scope_limitations -->" in serialized_md
+    assert "<!-- spectre:section:start:remediation_table -->" in serialized_md
+    assert "<!-- spectre:section:start:appendix -->" in serialized_md
+
+    # Finding markers must be retained
+    assert "<!-- spectre:finding:start:loot-1 -->" in serialized_md
+    assert "<!-- spectre:finding:end:loot-1 -->" in serialized_md
+
+    # Re-parse serialized markdown and verify identical properties
+    doc2 = ReportWorkspaceDocument.from_markdown(serialized_md)
+    assert doc2.metadata.client == doc.metadata.client
+    assert doc2.metadata.classification == doc.metadata.classification
+    assert len(doc2.findings) == len(doc.findings)
+    found_l1 = doc2.get_finding("loot-1")
+    assert found_l1 is not None
+    assert found_l1.title == crit_finding.title
+    assert found_l1.severity == crit_finding.severity
+
+
+def test_compatibility_across_all_builtin_templates():
+    """Verify parsing and serialization across all 8 built-in report templates."""
+    repo = TemplateRepository()
+    templates = repo.get_all_templates()
+    assert len(templates) >= 8
+
+    renderer = TemplateRenderer()
+    sample_context = ReportContext(
+        project_name="CrossTemplate Validation",
+        target_ip="10.0.0.1",
+        metadata={
+            "client": "Global Security Ltd",
+            "tester": "Spectre Auditor",
+            "timeframe": "2026-Q3",
+            "classification": "Confidential",
+            "version": "1.0",
+        },
+        loot_entries=[
+            {
+                "id": "entry-test-1",
+                "title": "Open SMB Share",
+                "severity": "high",
+                "category": "recon",
+                "content": "\\\\10.0.0.1\\public accessible without auth",
+                "recommendation": "Restrict share permissions",
+                "timestamp": "2026-09-12 11:00",
+            }
+        ],
+    )
+
+    for tmpl in templates:
+        rendered = renderer.render(tmpl, sample_context)
+        assert rendered, f"Template {tmpl.id} rendered empty markdown"
+        doc = ReportWorkspaceDocument.from_markdown(rendered)
+        assert doc.metadata.client in ("Global Security Ltd", "")
+        # Round-trip back to markdown
+        re_exported = doc.to_markdown()
+        assert re_exported, f"Template {tmpl.id} re-exported empty markdown"
+        assert "<!-- spectre:section:start:header_metadata -->" in re_exported
+
+
+def test_finding_evidence_attach_detach_update():
+    f = ReportFindingItem(
+        id="f1",
+        title="Test Finding",
+        description="Initial description without evidence.",
+    )
+    assert len(f.evidence_items) == 0
+
+    # 1. Attach screenshot evidence
+    ev_sc = ReportEvidenceItem(
+        id="ev1",
+        type="screenshot",
+        caption="Nmap Scan",
+        content="screenshots/nmap.png",
+    )
+    f.attach_evidence(ev_sc, insert_into_description=True)
+    assert len(f.evidence_items) == 1
+    assert "![Nmap Scan](screenshots/nmap.png)" in f.description
+
+    # 2. Attach terminal evidence
+    ev_term = ReportEvidenceItem(
+        id="ev2",
+        type="terminal",
+        caption="Terminal PoC",
+        content="curl -v http://target/api",
+    )
+    f.attach_evidence(ev_term, insert_into_description=True)
+    assert len(f.evidence_items) == 2
+    assert "```bash\ncurl -v http://target/api\n```" in f.description
+
+    # 3. Update caption
+    assert f.update_evidence("ev1", caption="Nmap Port Scan Result") is True
+    assert f.evidence_items[0].caption == "Nmap Port Scan Result"
+    assert "![Nmap Port Scan Result](screenshots/nmap.png)" in f.description
+
+    # 4. Detach screenshot evidence
+    removed = f.detach_evidence("ev1", remove_from_description=True)
+    assert removed is not None
+    assert removed.id == "ev1"
+    assert len(f.evidence_items) == 1
+    assert "screenshots/nmap.png" not in f.description
+    assert "```bash\ncurl -v http://target/api\n```" in f.description
+
+    # 5. Detach terminal evidence
+    removed2 = f.detach_evidence("ev2", remove_from_description=True)
+    assert removed2 is not None
+    assert len(f.evidence_items) == 0
+    assert "curl -v" not in f.description
+
+
+def test_finding_phase_normalization_and_grouping():
+    """Verify that findings with variations of enumeration or German phase names normalize to recon."""
+    f1 = ReportFindingItem(id="f1", title="Nmap", phase="enumeration")
+    assert f1.phase == "recon"
+
+    f2 = ReportFindingItem(id="f2", title="Service Enum", phase="Service Enumeration")
+    assert f2.phase == "recon"
+
+    f3 = ReportFindingItem(id="f3", title="Legacy Recon", phase="1. Reconnaissance & Enumeration")
+    assert f3.phase == "recon"
+
+    f4 = ReportFindingItem(id="f4", title="German Recon", phase="Aufklärung & Enumeration")
+    assert f4.phase == "recon"
+
+    doc = ReportWorkspaceDocument(findings=[f1, f2, f3, f4])
+    by_phase = doc.get_findings_by_phase()
+    assert "recon" in by_phase
+    assert len(by_phase["recon"]) == 4
+    assert "enumeration" not in by_phase
+    assert "others" not in by_phase
+
+    # Test deserialization from markdown with Phase metadata
+    md_finding = (
+        "<!-- spectre:finding:start:find-99 -->\n"
+        "### Open Port 80\n\n"
+        "**Severity:** [HIGH]  \n"
+        "**Target:** 10.10.10.1  \n"
+        "**Phase:** Reconnaissance & Enumeration  \n\n"
+        "#### Beschreibung\n\nDiscovered open HTTP port.\n"
+        "<!-- spectre:finding:end:find-99 -->"
+    )
+    parsed = ReportFindingItem.from_markdown(md_finding, "find-99")
+    assert parsed.phase == "recon"
+
+
+def test_executive_summary_parsing_and_serialization():
+    """Verify parsing and serialization of structured Executive Summary with highlights."""
+    raw_md = (
+        "## 1. Executive Summary\n\n"
+        "Im Rahmen des Penetrationstests wurden signifikante Schwachstellen identifiziert.\n\n"
+        "### Findings Matrix\n\n"
+        "| # | Finding | Severity | Phase | Status |\n"
+        "|---|---------|----------|-------|--------|\n"
+        "| 1 | FTP Anonymous Access | MEDIUM | recon | Offen |\n\n"
+        "**Total:** <span class=\"severity-pill severity-medium\">MEDIUM</span> 1\n\n"
+        "### Key Highlights\n\n"
+        "- **Initial Access Vector:** Anonymous FTP upload\n"
+        "- **Privilege Escalation:** Sudo NOPASSWD less\n"
+        "- **Business Impact & Risk:** Full server compromise\n"
+        "- **Recommended Remediation:** Disable anonymous FTP\n"
+    )
+
+    summary = ReportExecutiveSummary.from_markdown(raw_md, language="de")
+    assert summary.title == "1. Executive Summary"
+    assert "signifikante Schwachstellen" in summary.intro_text
+    assert summary.initial_access == "Anonymous FTP upload"
+    assert summary.privilege_escalation == "Sudo NOPASSWD less"
+    assert summary.business_impact == "Full server compromise"
+    assert summary.remediation_summary == "Disable anonymous FTP"
+
+    findings = [
+        ReportFindingItem(id="f1", title="FTP Anonymous Access", severity="medium", phase="recon"),
+        ReportFindingItem(id="f2", title="Root Shell", severity="critical", phase="privesc"),
+    ]
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+    doc.set_executive_summary(summary)
+
+    narr = next(n for n in doc.narratives if n.identity == "executive_summary")
+    assert "Aufklärung & Enumeration" in narr.content
+    assert "Rechteausweitung (PrivEsc)" in narr.content
+    assert "Anonymous FTP upload" in narr.content
+    assert "Sudo NOPASSWD less" in narr.content
+
+
+def test_remediation_plan_parsing_and_serialization():
+    """Verify parsing and serialization of structured Remediation Plan without HTML spans."""
+    raw_md = (
+        "## 5. Remediation & Action Plan\n\n"
+        "Folgende strategische Maßnahmen sollten priorisiert umgesetzt werden.\n\n"
+        "| Priority | Vulnerability | Recommended Action | Status |\n"
+        "|----------|---------------|--------------------|--------|\n"
+        "| <span class=\"severity-pill severity-medium\">MEDIUM</span> | FTP Anonymous Access | Disable anonymous access | Offen |\n"
+    )
+
+    plan = ReportRemediationPlan.from_markdown(raw_md, language="de")
+    assert plan.title == "5. Remediation & Action Plan"
+    assert "Folgende strategische Maßnahmen" in plan.strategic_guidance
+
+    findings = [
+        ReportFindingItem(
+            id="f1",
+            title="FTP Anonymous Access",
+            severity="medium",
+            recommendation="Disable anonymous access",
+            status="open",
+        ),
+        ReportFindingItem(
+            id="f2",
+            title="Sudo NOPASSWD /usr/bin/less",
+            severity="critical",
+            recommendation="Remove sudoers rule",
+            status="resolved",
+        ),
+        ReportFindingItem(
+            id="f3",
+            title="Outdated Kernel",
+            severity="high",
+            recommendation="Upgrade linux kernel",
+            status="in_progress",
+        ),
+    ]
+
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+    doc.set_remediation_plan(plan)
+
+    narr = next(n for n in doc.narratives if n.identity == "remediation_table")
+    content = narr.content
+
+    # Priority sorting: CRITICAL must appear before HIGH, and HIGH before MEDIUM
+    pos_crit = content.find("CRITICAL")
+    pos_high = content.find("HIGH")
+    pos_med = content.find("MEDIUM")
+    assert pos_crit != -1 and pos_high != -1 and pos_med != -1
+    assert pos_crit < pos_high < pos_med
+
+    # Clean markdown, no raw HTML spans
+    assert "<span" not in content
+    assert "severity-pill" not in content
+
+    # Localized status
+    assert "Behoben" in content
+    assert "In Arbeit" in content
+    assert "Offen" in content
+
+
+def test_attack_path_parsing_and_serialization():
+    """Verify parsing and serialization of structured Attack Path narrative and steps."""
+    # 1. Test detailed format
+    detailed_md = (
+        "## 3. Attack Path / Assessment Narrative\n\n"
+        "Der Angriff erfolgte über eine mehrstufige Eskalationskette.\n\n"
+        "### Angriffskette\n\n"
+        "1. **Aufklärung & Enumeration**: Nmap Portscan\n"
+        "   - *Beschreibung:* Erkennung offener Dienste 21 und 80.\n"
+        "   - *Schwachstelle:* FTP Anonymous Access\n"
+        "2. **Rechteausweitung**: Sudo NOPASSWD\n"
+        "   - *Beschreibung:* Ausnutzung von less zur Erlangung einer Root-Shell.\n"
+        "   - *Schwachstelle:* Sudo less\n"
+    )
+
+    path = ReportAttackPath.from_markdown(detailed_md, language="de")
+    assert path.title == "3. Attack Path / Assessment Narrative"
+    assert "mehrstufige Eskalationskette" in path.narrative_intro
+    assert len(path.steps) == 2
+    assert path.steps[0].phase == "recon"
+    assert path.steps[0].title == "Nmap Portscan"
+    assert "Erkennung offener Dienste" in path.steps[0].description
+    assert path.steps[1].phase == "privesc"
+    assert path.steps[1].title == "Sudo NOPASSWD"
+
+    # 2. Test legacy one-line bullet format
+    legacy_md = (
+        "## 3. Angriffspfad / Assessment-Verlauf\n\n"
+        "1. **Aufklärung & Portscan** — Nmap Portscan, FTP Anonymous Access\n"
+        "2. **Initialer Zugriff** — Calibration Probe Script\n"
+        "3. **Rechteausweitung** — Sudo NOPASSWD /usr/bin/less\n"
+    )
+    legacy_path = ReportAttackPath.from_markdown(legacy_md, language="de")
+    assert len(legacy_path.steps) == 3
+    assert legacy_path.steps[0].phase == "recon"
+    assert "Nmap Portscan" in legacy_path.steps[0].title
+    assert legacy_path.steps[1].phase == "access"
+    assert "Probe Script" in legacy_path.steps[1].title
+    assert legacy_path.steps[2].phase == "privesc"
+
+    # 3. Test serialization & doc integration
+    findings = [
+        ReportFindingItem(id="f-ftp", title="FTP Anonymous Access", severity="medium", phase="recon"),
+        ReportFindingItem(id="f-root", title="Sudo NOPASSWD less", severity="critical", phase="privesc"),
+    ]
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+
+    custom_path = ReportAttackPath(
+        title="3. Angriffspfad",
+        narrative_intro="Chronologische Angriffskette durch das Netzwerk.",
+        steps=[
+            AttackPathStep(step_number=1, phase="recon", title="Portscan & Banner Grabbing", finding_id="f-ftp"),
+            AttackPathStep(step_number=2, phase="privesc", title="Root Shell via Sudoers", finding_id="f-root"),
+        ],
+    )
+    doc.set_attack_path(custom_path)
+
+    narr = next(n for n in doc.narratives if n.identity == "attack_path")
+    rendered = narr.content
+
+    assert "Chronologische Angriffskette" in rendered
+    assert "1. **Aufklärung & Enumeration**: Portscan & Banner Grabbing" in rendered
+    assert "FTP Anonymous Access" in rendered
+    assert "2. **Rechteausweitung (PrivEsc)**: Root Shell via Sudoers" in rendered
+    assert "Sudo NOPASSWD less" in rendered
+
+
+def test_scope_methodology_parsing_and_serialization():
+    from core.reporting import (
+        ReportScopeMethodology,
+        ScopeExclusionItem,
+        ScopeTargetItem,
+    )
+
+    # 1. Structured roundtrip
+    scope = ReportScopeMethodology(
+        title="Scope & Methodik",
+        approach="whitebox",
+        approach_details="Vollständige Einsicht in Netzwerktopologie und Quellcode.",
+        in_scope_targets=[
+            ScopeTargetItem(
+                target="10.10.10.0/24",
+                target_type="network",
+                environment="production",
+                description="Internes Segment & Domain Controller",
+            ),
+            ScopeTargetItem(
+                target="https://app.targetcorp.local",
+                target_type="webapp",
+                environment="staging",
+                description="Kundenportal Webapplikation",
+            ),
+        ],
+        out_of_scope_targets=[
+            ScopeExclusionItem(target="10.10.10.1", reason="Default Gateway / Produktiv-Routing"),
+            ScopeExclusionItem(target="AWS S3 Buckets", reason="Drittanbieter-Infrastruktur"),
+        ],
+        restrictions=["no_dos", "no_social_engineering", "business_hours_only"],
+        custom_rules="Im Notfall sofort Kontakt über SOC-Hotline +49 89 12345.",
+    )
+
+    md = scope.to_markdown(language="de")
+    assert "## Scope & Methodik" in md
+    assert "### Pentest-Ansatz & Methodik" in md
+    assert "Whitebox" in md
+    assert "### In-Scope Ziele & Netzwerke" in md
+    assert "| `10.10.10.0/24` | Netzwerk / Subnetz | Produktion | Internes Segment & Domain Controller |" in md
+    assert "| `https://app.targetcorp.local` | Web-Anwendung | Staging | Kundenportal Webapplikation |" in md
+    assert "### Out-of-Scope & Ausschlusskriterien" in md
+    assert "| `10.10.10.1` | Default Gateway / Produktiv-Routing |" in md
+    assert "### Testeinschränkungen & Rules of Engagement" in md
+    assert "Keine Denial-of-Service-Angriffe" in md
+    assert "SOC-Hotline" in md
+
+    # Parse back
+    parsed = ReportScopeMethodology.from_markdown(md, language="de")
+    assert parsed.title == "Scope & Methodik"
+    assert parsed.approach == "whitebox"
+    assert "Quellcode" in parsed.approach_details
+    assert len(parsed.in_scope_targets) == 2
+    assert parsed.in_scope_targets[0].target == "10.10.10.0/24"
+    assert parsed.in_scope_targets[0].target_type == "network"
+    assert parsed.in_scope_targets[0].environment == "production"
+    assert parsed.in_scope_targets[1].target == "https://app.targetcorp.local"
+    assert parsed.in_scope_targets[1].target_type == "webapp"
+    assert parsed.in_scope_targets[1].environment == "staging"
+
+    assert len(parsed.out_of_scope_targets) == 2
+    assert parsed.out_of_scope_targets[0].target == "10.10.10.1"
+    assert "Gateway" in parsed.out_of_scope_targets[0].reason
+
+    assert "no_dos" in parsed.restrictions
+    assert "no_social_engineering" in parsed.restrictions
+    assert "business_hours_only" in parsed.restrictions
+    assert "SOC-Hotline" in parsed.custom_rules
+
+    # 2. Test legacy markdown bullets parsing
+    legacy_md = (
+        "## Scope & Limitations\n\n"
+        "- **In Scope:** 192.168.1.0/24, api.corp.internal\n"
+        "- **Out of Scope:** 192.168.1.254\n"
+        "- **Testmethodik:** Blackbox\n"
+        "- **Einschränkungen:** Keine Denial-of-Service Tests (DoS), kein Social Engineering\n"
+    )
+    legacy_scope = ReportScopeMethodology.from_markdown(legacy_md, language="de")
+    assert legacy_scope.approach == "blackbox"
+    assert len(legacy_scope.in_scope_targets) == 2
+    assert legacy_scope.in_scope_targets[0].target == "192.168.1.0/24"
+    assert legacy_scope.in_scope_targets[1].target == "api.corp.internal"
+    assert len(legacy_scope.out_of_scope_targets) == 1
+    assert legacy_scope.out_of_scope_targets[0].target == "192.168.1.254"
+    assert "no_dos" in legacy_scope.restrictions
+    assert "no_social_engineering" in legacy_scope.restrictions
+
+    # 3. Test document integration
+    doc = ReportWorkspaceDocument(language="de")
+    doc.set_scope_methodology(scope)
+    retrieved = doc.get_scope_methodology()
+    assert retrieved.approach == "whitebox"
+    assert len(retrieved.in_scope_targets) == 2
+    assert len(retrieved.out_of_scope_targets) == 2
+
+    # Check to_markdown contains rendered scope
+    full_md = doc.to_markdown()
+    assert "<!-- spectre:section:start:scope_limitations -->" in full_md
+    assert "10.10.10.0/24" in full_md
+    assert "Default Gateway" in full_md
+
+
+def test_appendix_parsing_and_serialization():
+    """Verify parsing, structured extraction, and roundtripping of Appendix & Evidence."""
+    raw_md = (
+        "## 6. Anhang & Nachweise\n\n"
+        "### Anhang A: Ausgeführte Befehle\n\n"
+        "#### Portscan Enumeration\n"
+        "```bash\n"
+        "nmap -sV -sC -p- 10.10.10.123\n"
+        "```\n\n"
+        "#### PrivEsc Sudo Check\n"
+        "```sh\n"
+        "sudo -l\n"
+        "```\n\n"
+        "### Anhang B: Screenshots & Nachweise\n\n"
+        "![Root Proof Shell](screenshots/root_proof.png)\n"
+        "![Flag Capture](loot/flag.png)\n\n"
+        "### Anhang C: Ergänzende Rohdaten & Notizen\n\n"
+        "Nmap scan dump:\n"
+        "PORT     STATE SERVICE\n"
+        "21/tcp   open  ftp\n"
+        "22/tcp   open  ssh\n"
+    )
+
+    appendix = ReportAppendix.from_markdown(raw_md, language="de")
+    assert appendix.title == "6. Anhang & Nachweise"
+    assert len(appendix.command_snippets) == 2
+    assert appendix.command_snippets[0].caption == "Portscan Enumeration"
+    assert appendix.command_snippets[0].content == "nmap -sV -sC -p- 10.10.10.123"
+    assert appendix.command_snippets[0].language == "bash"
+    assert appendix.command_snippets[1].caption == "PrivEsc Sudo Check"
+    assert appendix.command_snippets[1].content == "sudo -l"
+
+    assert len(appendix.screenshots) == 2
+    assert appendix.screenshots[0].caption == "Root Proof Shell"
+    assert appendix.screenshots[0].content == "screenshots/root_proof.png"
+    assert appendix.screenshots[1].caption == "Flag Capture"
+    assert appendix.screenshots[1].content == "loot/flag.png"
+
+    assert "Nmap scan dump" in appendix.custom_notes
+    assert "21/tcp" in appendix.custom_notes
+
+    # Serialize to markdown
+    md_out = appendix.to_markdown(language="de")
+    assert "## 6. Anhang & Nachweise" in md_out
+    assert "### Anhang A: Ausgeführte Befehle" in md_out
+    assert "#### Portscan Enumeration" in md_out
+    assert "nmap -sV -sC -p- 10.10.10.123" in md_out
+    assert "### Anhang B: Screenshots & Nachweise" in md_out
+    assert "![Root Proof Shell](screenshots/root_proof.png)" in md_out
+    assert "### Anhang C: Ergänzende Rohdaten & Notizen" in md_out
+
+    # Test document roundtrip
+    doc = ReportWorkspaceDocument.from_markdown(
+        f"<!-- spectre:section:start:appendix -->\n{raw_md}\n<!-- spectre:section:end:appendix -->"
+    )
+    retrieved = doc.get_appendix()
+    assert len(retrieved.command_snippets) == 2
+    assert len(retrieved.screenshots) == 2
+    assert "Nmap scan dump" in retrieved.custom_notes
+
+    # Update through set_appendix
+    retrieved.command_snippets.append(
+        ReportEvidenceItem(id="cmd_3", type="terminal", caption="Whoami Check", content="whoami", language="bash")
+    )
+    doc.set_appendix(retrieved)
+
+    doc_md = doc.to_markdown()
+    assert "whoami" in doc_md
+    assert "#### Whoami Check" in doc_md
+
+
+
+
+
+
+

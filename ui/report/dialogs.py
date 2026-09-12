@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QSpinBox,
     QStyle,
@@ -493,6 +494,319 @@ class LootImagePickerDialog(QDialog):
                 return cand
 
         return None
+
+    def _on_double_clicked(self, item: QListWidgetItem) -> None:
+        if self.selected_entry:
+            self.accept()
+
+
+class LootEntryPickerDialog(QDialog):
+    """Dialog to select loot entries (credentials, hashes, flags, commands, notes) as report evidence."""
+
+    def __init__(
+        self,
+        entries: list[dict],
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.entries = [e for e in entries if isinstance(e, dict)]
+        self.selected_entry: Optional[dict] = None
+        self._filtered_entries: list[dict] = []
+
+        self.setWindowTitle(t("report.loot_picker_title", "Select Evidence from Loot"))
+        self.resize(720, 460)
+        self.setMinimumSize(540, 340)
+
+        main_layout = QVBoxLayout(self)
+
+        top_row = QHBoxLayout()
+        search_lbl = QLabel(t("report.search_label", "Search:"))
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            t("report.loot_entry_search_placeholder", "Filter by title, content, target IP, type...")
+        )
+        self.search_edit.textChanged.connect(self._filter_list)
+        top_row.addWidget(search_lbl)
+        top_row.addWidget(self.search_edit, stretch=1)
+
+        self.cmb_category = QComboBox()
+        self.cmb_category.addItem(t("report.category_all", "All Categories"), "all")
+        self.cmb_category.addItem(t("report.category_creds", "Credentials / Hashes"), "creds")
+        self.cmb_category.addItem(t("report.category_flag", "Flags"), "flag")
+        self.cmb_category.addItem(t("report.category_command", "Commands / Terminal"), "command")
+        self.cmb_category.addItem(t("report.category_note", "Notes"), "note")
+        self.cmb_category.currentIndexChanged.connect(self._filter_list)
+        top_row.addWidget(self.cmb_category)
+
+        main_layout.addLayout(top_row)
+
+        content_layout = QHBoxLayout()
+
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self._on_selection_changed)
+        self.list_widget.itemDoubleClicked.connect(self._on_double_clicked)
+        content_layout.addWidget(self.list_widget, stretch=3)
+
+        preview_panel = QVBoxLayout()
+        self.info_label = QLabel()
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        preview_panel.addWidget(self.info_label)
+
+        self.txt_preview = QPlainTextEdit()
+        self.txt_preview.setReadOnly(True)
+        self.txt_preview.setStyleSheet(
+            "font-family: Consolas, 'Courier New', monospace; font-size: 11px; "
+            "background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px;"
+        )
+        preview_panel.addWidget(self.txt_preview, stretch=1)
+
+        content_layout.addLayout(preview_panel, stretch=4)
+        main_layout.addLayout(content_layout)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        self.btn_cancel.setProperty("class", "SecondaryBtn")
+        self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+
+        self.btn_insert = QPushButton(t("report.loot_attach_evidence", "Attach as Evidence"))
+        self.btn_insert.setProperty("class", "PrimaryBtn")
+        self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
+        self.btn_insert.setEnabled(False)
+        self.btn_insert.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_insert)
+
+        main_layout.addLayout(btn_layout)
+
+        self._filter_list()
+
+    def _filter_list(self) -> None:
+        query = self.search_edit.text().strip().lower()
+        cat_filter = str(self.cmb_category.currentData() or "all")
+
+        self.list_widget.clear()
+        self._filtered_entries = []
+
+        for entry in self.entries:
+            e_type = str(entry.get("type") or "").lower()
+            e_cat = str(entry.get("category") or "").lower()
+            title = str(entry.get("title") or "")
+            content = str(entry.get("content") or "")
+            ip = str(entry.get("target_ip") or "")
+
+            if cat_filter != "all":
+                if cat_filter == "creds" and e_type not in ("credential", "credentials", "hash", "creds"):
+                    continue
+                elif cat_filter == "flag" and e_type != "flag":
+                    continue
+                elif cat_filter == "command" and e_type not in ("command", "terminal", "output"):
+                    continue
+                elif cat_filter == "note" and e_type not in ("note", "notes"):
+                    continue
+
+            if query:
+                combined = f"{title} {content} {ip} {e_type} {e_cat}".lower()
+                if query not in combined:
+                    continue
+
+            self._filtered_entries.append(entry)
+
+            item = QListWidgetItem()
+            item.setText(title or t("report.unnamed_entry", "Untitled Entry"))
+
+            if e_type in ("credential", "credentials", "creds"):
+                item.setIcon(icon("fa5s.key", color="#d29922"))
+            elif e_type == "hash":
+                item.setIcon(icon("fa5s.hashtag", color="#d29922"))
+            elif e_type == "flag":
+                item.setIcon(icon("fa5s.flag", color="#f85149"))
+            elif e_type in ("command", "terminal", "output"):
+                item.setIcon(icon("fa5s.terminal", color="#7ee787"))
+            elif e_type in ("screenshot", "image"):
+                item.setIcon(icon("fa5s.camera", color="#79c0ff"))
+            else:
+                item.setIcon(icon("fa5s.sticky-note", color="#79c0ff"))
+
+            self.list_widget.addItem(item)
+
+        if self._filtered_entries:
+            self.list_widget.setCurrentRow(0)
+        else:
+            self._on_selection_changed(-1)
+
+    def _on_selection_changed(self, row: int) -> None:
+        if row < 0 or row >= len(self._filtered_entries):
+            self.selected_entry = None
+            self.btn_insert.setEnabled(False)
+            self.info_label.setText("")
+            self.txt_preview.clear()
+            return
+
+        entry = self._filtered_entries[row]
+        self.selected_entry = entry
+        self.btn_insert.setEnabled(True)
+
+        title = entry.get("title", "")
+        e_type = entry.get("type", "note")
+        ts = entry.get("timestamp", "")
+        ip = entry.get("target_ip", "")
+        sev = entry.get("severity", "info")
+
+        type_label = t("report.dialog_type", "Type:")
+        sev_label = t("report.dialog_severity", "Severity:")
+        info_lines = [f"<b>{title}</b>", f"{type_label} <code>{e_type}</code> | {sev_label} <code>{sev}</code>"]
+        if ip:
+            info_lines.append(f"Target: {ip}")
+        if ts:
+            info_lines.append(t("report.dialog_time", "Time: {time}", time=ts))
+        self.info_label.setText("<br>".join(info_lines))
+
+        content = entry.get("content") or ""
+        self.txt_preview.setPlainText(content)
+
+    def _on_double_clicked(self, item: QListWidgetItem) -> None:
+        if self.selected_entry:
+            self.accept()
+
+
+class ClipboardHistoryPickerDialog(QDialog):
+    """Dialog to select text or command output from clipboard history for report evidence."""
+
+    def __init__(
+        self,
+        history: list[dict],
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.history = [h for h in history if isinstance(h, dict)]
+        self.selected_entry: Optional[dict] = None
+        self._filtered_entries: list[dict] = []
+
+        self.setWindowTitle(t("report.clipboard_picker_title", "Select Terminal / PoC from Clipboard History"))
+        self.resize(720, 460)
+        self.setMinimumSize(540, 340)
+
+        main_layout = QVBoxLayout(self)
+
+        search_layout = QHBoxLayout()
+        search_lbl = QLabel(t("report.search_label", "Search:"))
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            t("report.clipboard_search_placeholder", "Filter by text, target IP...")
+        )
+        self.search_edit.textChanged.connect(self._filter_list)
+        search_layout.addWidget(search_lbl)
+        search_layout.addWidget(self.search_edit)
+        main_layout.addLayout(search_layout)
+
+        content_layout = QHBoxLayout()
+        self.list_widget = QListWidget()
+        self.list_widget.currentRowChanged.connect(self._on_selection_changed)
+        self.list_widget.itemDoubleClicked.connect(self._on_double_clicked)
+        content_layout.addWidget(self.list_widget, stretch=3)
+
+        preview_panel = QVBoxLayout()
+        self.info_label = QLabel()
+        self.info_label.setWordWrap(True)
+        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        preview_panel.addWidget(self.info_label)
+
+        self.txt_preview = QPlainTextEdit()
+        self.txt_preview.setReadOnly(True)
+        self.txt_preview.setStyleSheet(
+            "font-family: Consolas, 'Courier New', monospace; font-size: 11px; "
+            "background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px;"
+        )
+        preview_panel.addWidget(self.txt_preview, stretch=1)
+
+        content_layout.addLayout(preview_panel, stretch=4)
+        main_layout.addLayout(content_layout)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        self.btn_cancel.setProperty("class", "SecondaryBtn")
+        self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+
+        self.btn_insert = QPushButton(t("report.clipboard_attach_evidence", "Attach as Terminal PoC"))
+        self.btn_insert.setProperty("class", "PrimaryBtn")
+        self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
+        self.btn_insert.setEnabled(False)
+        self.btn_insert.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_insert)
+
+        main_layout.addLayout(btn_layout)
+
+        self._filter_list()
+
+    def _filter_list(self) -> None:
+        query = self.search_edit.text().strip().lower()
+
+        self.list_widget.clear()
+        self._filtered_entries = []
+
+        for entry in self.history:
+            text = str(entry.get("text") or "")
+            ip = str(entry.get("target_ip") or "")
+
+            if query and query not in text.lower() and query not in ip.lower():
+                continue
+
+            self._filtered_entries.append(entry)
+
+            first_line = text.strip().splitlines()[0] if text.strip() else "(empty)"
+            if len(first_line) > 60:
+                first_line = first_line[:57] + "..."
+
+            item = QListWidgetItem()
+            item.setText(first_line)
+            item.setIcon(icon("fa5s.terminal", color="#7ee787"))
+            self.list_widget.addItem(item)
+
+        if self._filtered_entries:
+            self.list_widget.setCurrentRow(0)
+        else:
+            self._on_selection_changed(-1)
+
+    def _on_selection_changed(self, row: int) -> None:
+        if row < 0 or row >= len(self._filtered_entries):
+            self.selected_entry = None
+            self.btn_insert.setEnabled(False)
+            self.info_label.setText("")
+            self.txt_preview.clear()
+            return
+
+        entry = self._filtered_entries[row]
+        self.selected_entry = entry
+        self.btn_insert.setEnabled(True)
+
+        text = entry.get("text") or ""
+        ts = entry.get("timestamp", "")
+        ip = entry.get("target_ip", "")
+        lines_cnt = len(text.splitlines())
+        chars_cnt = len(text)
+
+        lines_chars = t(
+            "report.dialog_lines_chars",
+            "Lines: {lines} | Characters: {chars}",
+            lines=lines_cnt,
+            chars=chars_cnt,
+        )
+        info_parts = [lines_chars]
+        if ip:
+            info_parts.append(f"Target: {ip}")
+        if ts:
+            info_parts.append(t("report.dialog_time", "Time: {time}", time=ts))
+        self.info_label.setText(" | ".join(info_parts))
+
+        self.txt_preview.setPlainText(text)
 
     def _on_double_clicked(self, item: QListWidgetItem) -> None:
         if self.selected_entry:

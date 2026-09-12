@@ -2,18 +2,20 @@ from typing import Optional, List
 from PyQt6.QtCore import QObject, QPoint, QRect, QEvent, Qt
 from PyQt6.QtGui import QCursor, QMouseEvent
 from PyQt6.QtWidgets import (
-    QApplication,
-    QWidget,
-    QLabel,
     QAbstractButton,
-    QLineEdit,
-    QTextEdit,
-    QPlainTextEdit,
-    QComboBox,
-    QScrollBar,
+    QAbstractItemView,
     QAbstractSlider,
+    QApplication,
+    QComboBox,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
     QMenu,
+    QPlainTextEdit,
+    QScrollBar,
     QSizeGrip,
+    QTextEdit,
+    QWidget,
 )
 from core.config import ConfigManager
 
@@ -39,6 +41,8 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
                 QAbstractSlider,
                 QMenu,
                 QSizeGrip,
+                QAbstractItemView,
+                QHeaderView,
             ),
         ):
             return True

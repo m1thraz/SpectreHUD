@@ -109,7 +109,7 @@ def setup_logger(
     """Configures and returns a structured logger for SpectreHUD with console streaming."""
     logger = logging.getLogger(name)
     resolved_level = (
-        _LEVEL_MAP.get(str(level).upper(), logging.INFO)
+        _LEVEL_MAP.get(level.upper(), logging.INFO)
         if isinstance(level, str)
         else (level if level is not None else _resolve_default_log_level())
     )
@@ -136,7 +136,7 @@ def get_logger(module_name: Optional[str] = None) -> logging.Logger:
     if not module_name:
         return base
 
-    clean_name = str(module_name).strip()
+    clean_name = module_name.strip()
     if clean_name.startswith("spectrehud."):
         full_name = clean_name
     elif clean_name == "spectrehud":
@@ -149,7 +149,7 @@ def get_logger(module_name: Optional[str] = None) -> logging.Logger:
 
 def set_log_level(level: Union[int, str]) -> None:
     """Sets the logging level for all spectrehud loggers."""
-    resolved = _LEVEL_MAP.get(str(level).upper(), level) if isinstance(level, str) else level
+    resolved = _LEVEL_MAP.get(level.upper(), level) if isinstance(level, str) else level
     root = logging.getLogger("spectrehud")
     root.setLevel(resolved)
     for handler in root.handlers:

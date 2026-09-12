@@ -1,6 +1,7 @@
 """Centralized Pentesting Phase Taxonomy and Normalization."""
 
 from dataclasses import dataclass
+import re
 from typing import Dict, Optional, Set, Tuple
 
 
@@ -59,30 +60,82 @@ VALID_PHASE_KEYS: Set[str] = set(PHASES_BY_KEY.keys())
 DEFAULT_PHASE_KEY: str = "misc"
 
 PHASE_ALIASES: Dict[str, str] = {
-    # Synonyms & shorthand
+    # Recon / Enumeration
+    "recon": "recon",
+    "reconnaissance": "recon",
+    "enumeration": "recon",
+    "enum": "recon",
+    "aufklärung": "recon",
+    "aufklaerung": "recon",
+    "aufklärung & enumeration": "recon",
+    "aufklaerung & enumeration": "recon",
+    "reconnaissance & enumeration": "recon",
+    "service enumeration": "recon",
+    "directory enumeration": "recon",
+    "port scan": "recon",
+    "port scanning": "recon",
+    "nmap": "recon",
+    "discovery": "recon",
+    "footprinting": "recon",
+    # Initial Access / Exploitation
     "initial": "access",
     "init": "access",
+    "initial access": "access",
+    "initialer zugriff": "access",
+    "initial access & exploitation": "access",
+    "initialer zugriff & exploitation": "access",
+    "exploitation": "access",
+    "exploit": "access",
+    "foothold": "access",
+    # Privilege Escalation
+    "privesc": "privesc",
+    "privilege escalation": "privesc",
+    "privilege_escalation": "privesc",
+    "rechteausweitung": "privesc",
+    "rechteausweitung (privesc)": "privesc",
+    "local privilege escalation": "privesc",
+    "lpe": "privesc",
+    # Post-Exploitation / Lateral Movement
     "lateral": "postex",
     "latmove": "postex",
+    "lateral movement": "postex",
+    "persist": "postex",
+    "persistence": "postex",
+    "postex": "postex",
+    "post_exploitation": "postex",
+    "post-exploitation": "postex",
+    "post-exploitation & lateral movement": "postex",
+    # Custom Scripts / Tools
     "poc": "scripts",
     "pocs": "scripts",
     "script": "scripts",
+    "scripts": "scripts",
     "tools": "scripts",
-    "persist": "postex",
-    "persistence": "postex",
-    "enumeration": "recon",
-    "enum": "recon",
-    "privilege_escalation": "privesc",
-    "post_exploitation": "postex",
+    "custom scripts": "scripts",
+    "custom scripts & pocs": "scripts",
+    "eigene skripte": "scripts",
+    "eigene skripte & pocs": "scripts",
+    # Misc / Other
     "general": "misc",
     "other": "misc",
-    # Numbered prefixes / Legacy titles
+    "others": "misc",
+    "weitere": "misc",
+    "sonstiges": "misc",
+    "verschiedenes": "misc",
+    "unassigned": "misc",
+    # Numbered prefixes / Legacy titles (EN & DE)
     "1. reconnaissance & enumeration": "recon",
+    "1. aufklärung & enumeration": "recon",
+    "1. aufklaerung & enumeration": "recon",
     "2. initial access & exploitation": "access",
+    "2. initialer zugriff & exploitation": "access",
     "3. privilege escalation": "privesc",
+    "3. rechteausweitung": "privesc",
     "4. post-exploitation & lateral movement": "postex",
     "5. custom scripts & pocs": "scripts",
+    "5. eigene skripte & pocs": "scripts",
     "6. miscellaneous": "misc",
+    "6. sonstiges": "misc",
     "1. recon": "recon",
     "2. access": "access",
     "3. privesc": "privesc",
@@ -130,6 +183,21 @@ def try_normalize_phase_key(val: Optional[str]) -> Optional[str]:
         for phase in PHASES:
             if phase.order == num:
                 return phase.key
+
+    # Token-based heuristic resolution for descriptive/compound phrases
+    tokens = set(re.findall(r"[a-z0-9äöüß]+", clean))
+    if any(t in tokens for t in ("enum", "enumeration", "recon", "reconnaissance", "aufklärung", "aufklaerung")):
+        return "recon"
+    if any(t in tokens for t in ("privesc", "rechteausweitung", "lpe")) or ("privilege" in tokens and "escalation" in tokens):
+        return "privesc"
+    if any(t in tokens for t in ("postex", "persistence", "latmove")) or ("lateral" in tokens and "movement" in tokens) or ("post" in tokens and "exploitation" in tokens):
+        return "postex"
+    if any(t in tokens for t in ("zugriff", "foothold")) or ("initial" in tokens and "access" in tokens) or "exploitation" in tokens:
+        return "access"
+    if any(t in tokens for t in ("poc", "pocs", "skripte", "skript", "scripts", "script")):
+        return "scripts"
+    if any(t in tokens for t in ("sonstiges", "verschiedenes", "weitere", "others")):
+        return "misc"
 
     return None
 
