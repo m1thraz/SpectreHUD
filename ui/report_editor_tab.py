@@ -309,19 +309,35 @@ class ReportEditorTab(QWidget):
         self._build_view_menu()
         toolbar.addWidget(self.btn_change_view)
 
-        self.btn_navigator = QPushButton(t("report.navigator", "Report Navigator ▾"))
+        # Navigator sidebar toggle button (shows/hides the Navigator panel on demand)
+        self.btn_navigator = QPushButton(t("report.navigator", "Navigator"))
+        self.btn_navigator.setObjectName("btn_report_navigator")
         self.btn_navigator.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
+        self.btn_navigator.setCheckable(True)
+        self.btn_navigator.setChecked(False)
         navigator_tooltip = t(
-            "report.navigator_tip", "Navigate to report sections and findings"
+            "report.navigator_tip", "Show / hide Report Navigator sidebar (Ctrl+Shift+N)"
         )
         self.btn_navigator.setToolTip(navigator_tooltip)
         self.btn_navigator.setAccessibleName(navigator_tooltip)
         self.btn_navigator.setIcon(self._toolbar_icon("fa5s.sitemap"))
         self.btn_navigator.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.btn_navigator.clicked.connect(self._toggle_navigator)
         self.navigator_menu = QMenu(self.btn_navigator)
         self.navigator_menu.aboutToShow.connect(self._populate_navigator_menu)
-        self.btn_navigator.setMenu(self.navigator_menu)
         toolbar.addWidget(self.btn_navigator)
+
+        # Toggle between Form Inspector and Raw Markdown Editor
+        self.btn_toggle_raw = QPushButton()
+        self.btn_toggle_raw.setObjectName("btn_toggle_raw")
+        self.btn_toggle_raw.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
+        self.btn_toggle_raw.setToolTip(
+            t("report.toggle_raw_tip", "Toggle between structured form and Markdown source")
+        )
+        self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
+        self.btn_toggle_raw.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.btn_toggle_raw.clicked.connect(self._toggle_inspector_raw)
+        toolbar.addWidget(self.btn_toggle_raw)
 
         self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
@@ -412,12 +428,11 @@ class ReportEditorTab(QWidget):
         )
 
     def _build_view_menu(self) -> None:
-        """Populate the compact view selector."""
+        """Populate the compact view selector with standard views."""
         self.view_menu = QMenu(self.btn_change_view)
         self._view_actions = {}
         for mode, key, fallback, icon_name in (
-            (ViewMode.WORKSPACE, "report.mode_workspace", "Workspace", "fa5s.columns"),
-            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.window-restore"),
+            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.columns"),
             (ViewMode.EDITOR, "report.mode_editor", "Editor", "fa5s.edit"),
             (ViewMode.PREVIEW, "report.mode_preview", "Live Preview", "fa5s.eye"),
         ):
@@ -432,14 +447,18 @@ class ReportEditorTab(QWidget):
         self.btn_change_view.setMenu(self.view_menu)
 
     def _build_editor_splitter(self, layout: QVBoxLayout) -> None:
-        """Build the 3-column workspace splitter: Navigator, Focus Center, Live Preview."""
+        """Build the workspace splitter: Collapsible Navigator, Center Editing Pane, Live Preview."""
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Spalte 1: Navigator (links)
+        # Spalte 1: Navigator (links, standardmäßig im Split-View eingeklappt für reines 2-Spalten-Layout)
         self.navigator = ReportWorkspaceNavigator(self)
         self.navigator.navigate_requested.connect(self._on_navigate_requested)
         self.navigator.add_finding_requested.connect(self._on_add_finding_requested)
+        self.navigator.sync_loot_requested.connect(self._on_append_loot_clicked)
         self.navigator_glass = self._wrap_glass_surface(self.navigator)
+        self.navigator_glass.setMaximumWidth(320)
+        self.navigator_glass.setMinimumWidth(220)
+        self.navigator_glass.setVisible(False)
         self.splitter.addWidget(self.navigator_glass)
 
         # Spalte 2: Fokus-Zentrum (Mitte)
@@ -549,9 +568,14 @@ class ReportEditorTab(QWidget):
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         sc_mode4 = QShortcut(
-            QKeySequence("Ctrl+4"), self, activated=lambda: self._set_view_mode(ViewMode.WORKSPACE)
+            QKeySequence("Ctrl+4"), self, activated=lambda: self._set_view_mode(ViewMode.SPLIT)
         )
         sc_mode4.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        sc_nav = QShortcut(
+            QKeySequence("Ctrl+Shift+N"), self, activated=self._toggle_navigator
+        )
+        sc_nav.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         self._shortcut_find = QShortcut(
             QKeySequence("Ctrl+F"), self.editor, activated=self.find_replace.open
@@ -890,6 +914,40 @@ class ReportEditorTab(QWidget):
         self._apply_view_mode(mode)
         self._update_status_label()
 
+    def _toggle_navigator(self) -> None:
+        """Toggles visibility of the Navigator sidebar without disrupting 2-column Split view."""
+        if not hasattr(self, "navigator_glass"):
+            return
+        is_vis = not self.navigator_glass.isVisible()
+        self.navigator_glass.setVisible(is_vis)
+        if hasattr(self, "btn_navigator"):
+            self.btn_navigator.setChecked(is_vis)
+        total_w = self.splitter.width() or 1000
+        if is_vis:
+            if self._view_mode == ViewMode.EDITOR:
+                self.splitter.setSizes([260, max(100, total_w - 260), 0])
+            else:
+                half = max(100, (total_w - 260) // 2)
+                self.splitter.setSizes([260, half, half])
+        else:
+            if self._view_mode == ViewMode.EDITOR:
+                self.splitter.setSizes([0, total_w, 0])
+            else:
+                self.splitter.setSizes([0, total_w // 2, total_w // 2])
+
+    def _toggle_inspector_raw(self) -> None:
+        """Toggles center editing widget between the active Form Inspector and Raw Markdown Editor."""
+        if self.center_stack.currentWidget() == self.editor_glass:
+            target = getattr(self, "_last_active_inspector", self.finding_inspector_glass)
+            self.center_stack.setCurrentWidget(target)
+            self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
+            self.btn_toggle_raw.setToolTip(t("report.toggle_raw_code", "Switch to Markdown source"))
+        else:
+            self._last_active_inspector = self.center_stack.currentWidget()
+            self.center_stack.setCurrentWidget(self.editor_glass)
+            self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
+            self.btn_toggle_raw.setToolTip(t("report.toggle_raw_form", "Switch to structured form"))
+
     def _apply_view_mode(self, mode: ViewMode) -> None:
         """Applies visibility and splitter layout for the selected view mode."""
         for action_mode, action in self._view_actions.items():
@@ -901,38 +959,49 @@ class ReportEditorTab(QWidget):
             else:
                 self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
                 self.format_toolbar_widget.tools_container.setVisible(mode != ViewMode.PREVIEW)
+
+        nav_visible = self.navigator_glass.isVisible() if hasattr(self, "navigator_glass") else False
+        if hasattr(self, "btn_navigator"):
+            self.btn_navigator.setChecked(nav_visible)
+
+        total_w = self.splitter.width() or 1000
+        nav_w = 260 if nav_visible else 0
+
         if mode == ViewMode.WORKSPACE:
             if hasattr(self, "navigator_glass"):
                 self.navigator_glass.setVisible(True)
+            if hasattr(self, "btn_navigator"):
+                self.btn_navigator.setChecked(True)
             self.center_stack.setVisible(True)
             self.preview_glass.setVisible(True)
-            total_w = self.splitter.width() or 1000
-            self.splitter.setSizes([260, (total_w - 260) // 2, (total_w - 260) // 2])
+            half = max(100, (total_w - 260) // 2)
+            self.splitter.setSizes([260, half, half])
+            self._sync_scroll_editor_to_preview()
+        elif mode == ViewMode.SPLIT:
+            if hasattr(self, "navigator_glass"):
+                self.navigator_glass.setVisible(nav_visible)
+            self.center_stack.setVisible(True)
+            self.preview_glass.setVisible(True)
+            half = max(100, (total_w - nav_w) // 2)
+            self.splitter.setSizes([nav_w, half, half])
+            self._sync_scroll_editor_to_preview()
         elif mode == ViewMode.EDITOR:
             if hasattr(self, "navigator_glass"):
-                self.navigator_glass.setVisible(False)
+                self.navigator_glass.setVisible(nav_visible)
             self.center_stack.setVisible(True)
-            self.center_stack.setCurrentWidget(self.editor_glass)
             self.preview_glass.setVisible(False)
+            self.splitter.setSizes([nav_w, max(100, total_w - nav_w), 0])
         elif mode == ViewMode.PREVIEW:
             if hasattr(self, "navigator_glass"):
                 self.navigator_glass.setVisible(False)
             self.center_stack.setVisible(False)
             self.preview_glass.setVisible(True)
-        elif mode == ViewMode.SPLIT:
-            if hasattr(self, "navigator_glass"):
-                self.navigator_glass.setVisible(False)
-            self.center_stack.setVisible(True)
-            self.center_stack.setCurrentWidget(self.editor_glass)
-            self.preview_glass.setVisible(True)
-            total_w = self.splitter.width() or 800
-            self.splitter.setSizes([0, total_w // 2, total_w // 2])
-            self._sync_scroll_editor_to_preview()
+            self.splitter.setSizes([0, 0, total_w])
 
     def _cycle_view_mode(self) -> None:
-        """Cycles through EDITOR -> SPLIT -> WORKSPACE -> PREVIEW -> EDITOR."""
-        modes = [ViewMode.EDITOR, ViewMode.SPLIT, ViewMode.WORKSPACE, ViewMode.PREVIEW]
-        idx = modes.index(self._view_mode)
+        """Cycles through standard views: EDITOR -> SPLIT -> PREVIEW -> EDITOR."""
+        modes = [ViewMode.EDITOR, ViewMode.SPLIT, ViewMode.PREVIEW]
+        idx = modes.index(self._view_mode) if self._view_mode in modes else 0
         self._set_view_mode(modes[(idx + 1) % len(modes)])
 
     def save(self) -> bool:
@@ -1040,6 +1109,14 @@ class ReportEditorTab(QWidget):
             self.editor.blockSignals(False)
             self._set_dirty(False)
             self._update_preview()
+            # Update workspace document and navigator after regeneration
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(new_content)
+            if hasattr(self, "navigator"):
+                self.navigator.load_document(
+                    self._workspace_doc,
+                    project_name=self.current_project or "",
+                    target_ip=self._get_target_ip(),
+                )
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
             show_error_dialog(
@@ -1131,6 +1208,15 @@ class ReportEditorTab(QWidget):
         self.editor.blockSignals(False)
         self._set_dirty(False)
         self._update_preview()
+
+        # Immediately update workspace document and navigator after appending loot
+        self._workspace_doc = ReportWorkspaceDocument.from_markdown(result.content)
+        if hasattr(self, "navigator"):
+            self.navigator.load_document(
+                self._workspace_doc,
+                project_name=self.current_project or "",
+                target_ip=self._get_target_ip(),
+            )
 
         # Restore cursor position within bounds
         new_cursor = self.editor.textCursor()
@@ -1400,26 +1486,40 @@ class ReportEditorTab(QWidget):
         if view_type == "metadata":
             self.metadata_inspector.load_metadata(self._workspace_doc.metadata)
             self.center_stack.setCurrentWidget(self.metadata_inspector_glass)
+            self._last_active_inspector = self.metadata_inspector_glass
+            if hasattr(self, "btn_toggle_raw"):
+                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "finding" and item_id:
             finding = self._workspace_doc.get_finding(item_id)
             if finding:
                 self.finding_inspector.set_project_target_ip(self._get_target_ip())
                 self.finding_inspector.load_finding(finding)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-        elif view_type == "findings_overview":
-            if self._workspace_doc.findings:
-                first = self._workspace_doc.findings[0]
+                self._last_active_inspector = self.finding_inspector_glass
+                if hasattr(self, "btn_toggle_raw"):
+                    self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
+        elif view_type in ("findings_overview", "phase_group"):
+            target_finding = None
+            if view_type == "phase_group" and item_id:
+                target_finding = next((f for f in self._workspace_doc.findings if f.phase == item_id), None)
+            if not target_finding and self._workspace_doc.findings:
+                target_finding = self._workspace_doc.findings[0]
+            if target_finding:
                 self.finding_inspector.set_project_target_ip(self._get_target_ip())
-                self.finding_inspector.load_finding(first)
+                self.finding_inspector.load_finding(target_finding)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
+                self._last_active_inspector = self.finding_inspector_glass
+                if hasattr(self, "btn_toggle_raw"):
+                    self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
             else:
                 self.center_stack.setCurrentWidget(self.editor_glass)
-        elif view_type == "section" and item_id:
+        elif view_type in ("section", "narratives_root"):
+            sec_id = item_id or "executive_summary"
             narr = next(
-                (n for n in self._workspace_doc.narratives if n.identity == item_id or n.section_type == item_id),
+                (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
                 None,
             )
-            title = narr.title if narr else item_id
+            title = narr.title if narr else sec_id
             content = narr.content if narr else ""
             icon_map = {
                 "executive_summary": "fa5s.align-left",
@@ -1428,29 +1528,70 @@ class ReportEditorTab(QWidget):
                 "remediation_table": "fa5s.tasks",
                 "appendix": "fa5s.paperclip",
             }
-            sec_icon = icon_map.get(item_id, "fa5s.edit")
-            self.section_inspector.load_section(item_id, title, content, icon_name=sec_icon)
+            sec_icon = icon_map.get(sec_id, "fa5s.edit")
+            self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
             self.center_stack.setCurrentWidget(self.section_inspector_glass)
+            self._last_active_inspector = self.section_inspector_glass
+            if hasattr(self, "btn_toggle_raw"):
+                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "raw_markdown":
             self.center_stack.setCurrentWidget(self.editor_glass)
+            if hasattr(self, "btn_toggle_raw"):
+                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
 
     def _on_add_finding_requested(self) -> None:
-        """Creates a new finding in the workspace model and opens the finding inspector."""
-        import uuid
-
+        """Creates a finding — offering unreferenced Loot entries if available to preserve Loot workflow."""
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
 
-        new_id = f"finding-{uuid.uuid4().hex[:6]}"
-        new_finding = ReportFindingItem(
-            id=new_id,
-            title=t("report.new_finding_default_title", "Neue Schwachstelle"),
-            severity="medium",
-            status="open",
-            phase="recon",
-            description="",
-            recommendation="",
-        )
+        # Check for unreferenced loot entries to preserve Loot workflow
+        unreferenced_loot = []
+        if self.loot_manager:
+            from core.reporting import extract_report_markers
+
+            markers = extract_report_markers(self.editor.toPlainText())
+            for entry in self.loot_manager.get_all_entries():
+                if entry.get("id") and entry["id"] not in markers:
+                    unreferenced_loot.append(entry)
+
+        chosen_entry = None
+        if unreferenced_loot:
+            dialog = LootEntryPickerDialog(unreferenced_loot, parent=self)
+            dialog.setWindowTitle(
+                t("report.add_finding_from_loot_title", "Create Finding from Unassigned Loot")
+            )
+            if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
+                chosen_entry = dialog.selected_entry
+
+        import uuid
+        from core.reporting import format_loot_marker, loot_content_hash
+
+        if chosen_entry:
+            new_id = chosen_entry["id"]
+            new_finding = ReportFindingItem(
+                id=new_id,
+                title=chosen_entry.get("title") or t("report.new_finding_default_title", "New Finding"),
+                severity=chosen_entry.get("severity", "medium"),
+                status="open",
+                phase=chosen_entry.get("category", "recon"),
+                targets=[chosen_entry.get("target_ip")] if chosen_entry.get("target_ip") else [],
+                description=chosen_entry.get("content", ""),
+                recommendation=chosen_entry.get("recommendation", ""),
+                loot_marker=format_loot_marker(new_id, loot_content_hash(chosen_entry)),
+            )
+        else:
+            new_id = f"finding-{uuid.uuid4().hex[:6]}"
+            new_finding = ReportFindingItem(
+                id=new_id,
+                title=t("report.new_finding_default_title", "New Finding"),
+                severity="medium",
+                status="open",
+                phase="recon",
+                targets=[self._get_target_ip()] if self._get_target_ip() else [],
+                description="",
+                recommendation="",
+            )
+
         self._workspace_doc.add_finding(new_finding)
         self._sync_workspace_doc_to_editor()
         self.navigator.load_document(
@@ -1459,8 +1600,10 @@ class ReportEditorTab(QWidget):
             target_ip=self._get_target_ip(),
         )
         self.navigator.select_item("finding", new_id)
+        self.finding_inspector.set_project_target_ip(self._get_target_ip())
         self.finding_inspector.load_finding(new_finding)
         self.center_stack.setCurrentWidget(self.finding_inspector_glass)
+        self._last_active_inspector = self.finding_inspector_glass
 
     def _on_metadata_changed(self, updated: ReportMetadata) -> None:
         if self._workspace_doc is None:

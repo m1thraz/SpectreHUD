@@ -76,7 +76,7 @@ class ReportEvidenceCard(QFrame):
 
         self.txt_caption = QLineEdit()
         self.txt_caption.setText(item.caption or item.type.capitalize())
-        self.txt_caption.setPlaceholderText(t("report.evidence_caption_placeholder", "Caption / Beschriftung..."))
+        self.txt_caption.setPlaceholderText(t("report.evidence_caption_placeholder", "Caption / label..."))
         self.txt_caption.setStyleSheet(
             "background: #0d1117; color: #f0f6fc; border: 1px solid #21262d; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 4px;"
         )
@@ -94,14 +94,14 @@ class ReportEvidenceCard(QFrame):
 
         self.btn_insert = QPushButton()
         self.btn_insert.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_insert.setToolTip(t("report.insert_in_desc", "In Beschreibung einfügen"))
+        self.btn_insert.setToolTip(t("report.insert_in_desc", "Insert into description"))
         self.btn_insert.setIcon(icon("fa5s.arrow-up", color="#79c0ff"))
         self.btn_insert.clicked.connect(lambda: self.insert_requested.emit(self.item.id))
         layout.addWidget(self.btn_insert)
 
         self.btn_delete = QPushButton()
         self.btn_delete.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_delete.setToolTip(t("report.delete_evidence", "Evidence entfernen"))
+        self.btn_delete.setToolTip(t("report.delete_evidence", "Remove evidence"))
         self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self.item.id))
         layout.addWidget(self.btn_delete)
@@ -164,7 +164,7 @@ class ReportFindingInspector(QWidget):
         self.btn_duplicate = QPushButton()
         self.btn_duplicate.setObjectName("btn_duplicate_finding")
         self.btn_duplicate.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_duplicate.setToolTip(t("report.duplicate_finding", "Finding duplizieren"))
+        self.btn_duplicate.setToolTip(t("report.duplicate_finding", "Duplicate finding"))
         self.btn_duplicate.setIcon(icon("fa5s.copy", color="#79c0ff"))
         self.btn_duplicate.clicked.connect(self._on_duplicate_clicked)
         h_layout.addWidget(self.btn_duplicate)
@@ -172,7 +172,7 @@ class ReportFindingInspector(QWidget):
         self.btn_delete = QPushButton()
         self.btn_delete.setObjectName("btn_delete_finding")
         self.btn_delete.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_delete.setToolTip(t("report.delete_finding", "Finding löschen"))
+        self.btn_delete.setToolTip(t("report.delete_finding", "Delete finding"))
         self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         h_layout.addWidget(self.btn_delete)
@@ -195,9 +195,11 @@ class ReportFindingInspector(QWidget):
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         self.txt_title = QLineEdit()
-        self.txt_title.setPlaceholderText("z.B. Remote Code Execution via Deserialization")
+        self.txt_title.setPlaceholderText(
+            t("report.finding_title_placeholder", "e.g. Remote Code Execution via Deserialization")
+        )
         self.txt_title.textChanged.connect(self._on_field_changed)
-        form.addRow(self._make_label(t("report.finding_title", "Titel:")), self.txt_title)
+        form.addRow(self._make_label(t("report.finding_title", "Title:")), self.txt_title)
 
         # Severity & Status
         sev_row = QHBoxLayout()
@@ -210,7 +212,7 @@ class ReportFindingInspector(QWidget):
         sev_row.addWidget(self._make_label(t("report.finding_status", "Status:")))
         self.cmb_status = QComboBox()
         for s_code, s_label in STATUSES:
-            self.cmb_status.addItem(s_label, s_code)
+            self.cmb_status.addItem(t(f"report.status_{s_code}", s_label), s_code)
         self.cmb_status.currentIndexChanged.connect(self._on_field_changed)
         sev_row.addWidget(self.cmb_status)
         form.addRow(self._make_label(t("report.finding_severity", "Severity:")), sev_row)
@@ -219,20 +221,22 @@ class ReportFindingInspector(QWidget):
         phase_row = QHBoxLayout()
         self.cmb_phase = QComboBox()
         for p in PHASES:
-            self.cmb_phase.addItem(p.capitalize(), p)
+            self.cmb_phase.addItem(t(f"phases.{p}", p.capitalize()), p)
         self.cmb_phase.currentIndexChanged.connect(self._on_field_changed)
         phase_row.addWidget(self.cmb_phase)
 
         phase_row.addWidget(self._make_label(t("report.finding_target", "Target:")))
         self.txt_target = QLineEdit()
-        self.txt_target.setPlaceholderText("z.B. 10.10.10.5 oder /api/v1/auth")
+        self.txt_target.setPlaceholderText(
+            t("report.finding_target_placeholder", "e.g. 10.10.10.5 or /api/v1/auth")
+        )
         self.txt_target.textChanged.connect(self._on_field_changed)
         phase_row.addWidget(self.txt_target)
 
         self.btn_apply_target = QPushButton()
         self.btn_apply_target.setObjectName("btn_apply_target")
         self.btn_apply_target.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_apply_target.setToolTip(t("report.apply_project_target", "Projekt-Ziel IP übernehmen"))
+        self.btn_apply_target.setToolTip(t("report.apply_project_target", "Apply project target IP"))
         self.btn_apply_target.setIcon(icon("fa5s.crosshairs", color="#79c0ff"))
         self.btn_apply_target.clicked.connect(self._on_apply_project_target)
         phase_row.addWidget(self.btn_apply_target)
@@ -241,16 +245,21 @@ class ReportFindingInspector(QWidget):
         v_content.addLayout(form)
 
         # Description text
-        v_content.addWidget(self._make_section_header(t("report.finding_desc", "Beschreibung & Proof of Concept")))
+        v_content.addWidget(self._make_section_header(t("report.finding_desc", "Description & Proof of Concept")))
         self.txt_desc = QPlainTextEdit()
-        self.txt_desc.setPlaceholderText("Technische Beschreibung der Schwachstelle, Ausnutzungsschritte und Nachweise...")
+        self.txt_desc.setPlaceholderText(
+            t(
+                "report.finding_desc_placeholder",
+                "Technical description of the vulnerability, reproduction steps, and proof of concept...",
+            )
+        )
         self.txt_desc.setMinimumHeight(140)
         self.txt_desc.textChanged.connect(self._on_field_changed)
         v_content.addWidget(self.txt_desc)
 
         # Evidence Drawer Section
         ev_header_layout = QHBoxLayout()
-        ev_header_layout.addWidget(self._make_section_header(t("report.finding_evidence", "Evidence & Proof of Concept")))
+        ev_header_layout.addWidget(self._make_section_header(t("report.finding_evidence", "Evidence & Artifacts")))
         self.lbl_evidence_count = QLabel("(0)")
         self.lbl_evidence_count.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: bold;")
         ev_header_layout.addWidget(self.lbl_evidence_count)
@@ -260,7 +269,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_loot_screenshot = QPushButton()
         self.btn_add_loot_screenshot.setObjectName("btn_add_loot_screenshot")
         self.btn_add_loot_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_loot_screenshot.setToolTip(t("report.add_loot_screenshot", "Screenshot aus Loot einfügen"))
+        self.btn_add_loot_screenshot.setToolTip(t("report.add_loot_screenshot", "Insert screenshot from Loot"))
         self.btn_add_loot_screenshot.setIcon(icon("fa5s.camera", color="#79c0ff"))
         self.btn_add_loot_screenshot.clicked.connect(self.request_loot_screenshot.emit)
         ev_header_layout.addWidget(self.btn_add_loot_screenshot)
@@ -268,7 +277,7 @@ class ReportFindingInspector(QWidget):
         self.btn_browse_screenshot = QPushButton()
         self.btn_browse_screenshot.setObjectName("btn_browse_screenshot")
         self.btn_browse_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_browse_screenshot.setToolTip(t("report.browse_screenshot", "Bild von Festplatte importieren"))
+        self.btn_browse_screenshot.setToolTip(t("report.browse_screenshot", "Import image from disk"))
         self.btn_browse_screenshot.setIcon(icon("fa5s.folder-open", color="#79c0ff"))
         self.btn_browse_screenshot.clicked.connect(self.request_image_file.emit)
         ev_header_layout.addWidget(self.btn_browse_screenshot)
@@ -276,7 +285,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_terminal = QPushButton()
         self.btn_add_terminal.setObjectName("btn_add_terminal")
         self.btn_add_terminal.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_terminal.setToolTip(t("report.add_terminal_evidence", "Aus Clipboard-Historie (Terminal/PoC)"))
+        self.btn_add_terminal.setToolTip(t("report.add_terminal_evidence", "From clipboard history (Terminal/PoC)"))
         self.btn_add_terminal.setIcon(icon("fa5s.terminal", color="#7ee787"))
         self.btn_add_terminal.clicked.connect(self.request_clipboard_history.emit)
         ev_header_layout.addWidget(self.btn_add_terminal)
@@ -284,7 +293,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_loot_entry = QPushButton()
         self.btn_add_loot_entry.setObjectName("btn_add_loot_entry")
         self.btn_add_loot_entry.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_loot_entry.setToolTip(t("report.add_loot_entry", "Loot / Credential / Hash verknüpfen"))
+        self.btn_add_loot_entry.setToolTip(t("report.add_loot_entry", "From session loot (Creds/Hashes/Flags)"))
         self.btn_add_loot_entry.setIcon(icon("fa5s.key", color="#d29922"))
         self.btn_add_loot_entry.clicked.connect(self.request_loot_entry.emit)
         ev_header_layout.addWidget(self.btn_add_loot_entry)
@@ -292,7 +301,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_code = QPushButton()
         self.btn_add_code.setObjectName("btn_add_code")
         self.btn_add_code.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_code.setToolTip(t("report.add_code_snippet", "Code-Snippet anfügen"))
+        self.btn_add_code.setToolTip(t("report.add_code_evidence", "Insert code snippet / exploit"))
         self.btn_add_code.setIcon(icon("fa5s.code", color="#bc8cff"))
         self.btn_add_code.clicked.connect(self._on_add_code_clicked)
         ev_header_layout.addWidget(self.btn_add_code)
@@ -307,15 +316,20 @@ class ReportFindingInspector(QWidget):
         v_content.addWidget(self.evidence_container)
 
         # Recommendation text
-        v_content.addWidget(self._make_section_header(t("report.finding_rec", "Empfohlene Behebung (Remediation)")))
+        v_content.addWidget(self._make_section_header(t("report.finding_remediation", "Remediation & Recommendations")))
         self.txt_rec = QPlainTextEdit()
-        self.txt_rec.setPlaceholderText("Konkrete Handlungsempfehlungen zur Behebung oder Risikominderung...")
+        self.txt_rec.setPlaceholderText(
+            t(
+                "report.finding_remediation_placeholder",
+                "Remediation steps, configuration hardening, or patch guidance...",
+            )
+        )
         self.txt_rec.setMinimumHeight(100)
         self.txt_rec.textChanged.connect(self._on_field_changed)
         v_content.addWidget(self.txt_rec)
 
         # References
-        v_content.addWidget(self._make_section_header(t("report.finding_refs", "Referenzen & CVEs (eine pro Zeile)")))
+        v_content.addWidget(self._make_section_header(t("report.finding_refs", "References & CVEs (one per line)")))
         self.txt_refs = QPlainTextEdit()
         self.txt_refs.setPlaceholderText("- CVE-2026-12345\n- https://owasp.org/...")
         self.txt_refs.setMaximumHeight(80)
@@ -339,7 +353,7 @@ class ReportFindingInspector(QWidget):
         self._loading = True
         try:
             self._finding = finding
-            self.lbl_header_title.setText(finding.title or t("report.new_finding", "Neues Finding"))
+            self.lbl_header_title.setText(finding.title or t("report.new_finding_default_title", "New Finding"))
             self.txt_title.setText(finding.title)
 
             sev_idx = self.cmb_severity.findData(finding.severity.lower())
@@ -373,7 +387,7 @@ class ReportFindingInspector(QWidget):
         self.lbl_evidence_count.setText(f"({len(items)})")
 
         if not items:
-            lbl_empty = QLabel(t("report.no_evidence_yet", "Noch keine Beweismittel verknüpft."))
+            lbl_empty = QLabel(t("report.no_evidence_yet", "No evidence linked yet."))
             lbl_empty.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 4px;")
             self.evidence_cards_layout.addWidget(lbl_empty)
             return
@@ -480,7 +494,7 @@ class ReportFindingInspector(QWidget):
             raw_extra=self._finding.raw_extra,
         )
         self._finding = updated
-        self.lbl_header_title.setText(updated.title or t("report.new_finding", "Neues Finding"))
+        self.lbl_header_title.setText(updated.title or t("report.new_finding_default_title", "New Finding"))
         self.finding_changed.emit(updated)
 
     def _on_delete_clicked(self) -> None:

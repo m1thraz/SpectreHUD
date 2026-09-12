@@ -67,7 +67,7 @@ class ReportMetadataInspector(QWidget):
         lbl_icon.setPixmap(icon("fa5s.clipboard-list", color="#00e5ff").pixmap(20, 20))
         h_layout.addWidget(lbl_icon)
 
-        lbl_title = QLabel(t("report.inspector_metadata_title", "Berichts-Metadaten & Parameter"))
+        lbl_title = QLabel(t("report.inspector_metadata_title", "Report Metadata & Parameters"))
         lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
         h_layout.addWidget(lbl_title)
         h_layout.addStretch()
@@ -94,45 +94,45 @@ class ReportMetadataInspector(QWidget):
 
         # Inputs
         self.txt_title = QLineEdit()
-        self.txt_title.setPlaceholderText("z.B. Security Assessment Report: TargetCorp")
+        self.txt_title.setPlaceholderText("e.g. Security Assessment Report: TargetCorp")
         self.txt_title.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_title", "Berichtstitel:")), self.txt_title)
+        form_layout.addRow(self._make_label(t("report.meta_title", "Report Title:")), self.txt_title)
 
         self.txt_client = QLineEdit()
-        self.txt_client.setPlaceholderText("z.B. TargetCorp AG")
+        self.txt_client.setPlaceholderText("e.g. TargetCorp AG")
         self.txt_client.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_client", "Auftraggeber / Client:")), self.txt_client)
+        form_layout.addRow(self._make_label(t("report.meta_client", "Client / Organization:")), self.txt_client)
 
         self.txt_tester = QLineEdit()
-        self.txt_tester.setPlaceholderText("z.B. SecLab Lead Auditor")
+        self.txt_tester.setPlaceholderText("e.g. SecLab Lead Auditor")
         self.txt_tester.textChanged.connect(self._on_field_changed)
         form_layout.addRow(self._make_label(t("report.meta_tester", "Lead Tester / Analyst:")), self.txt_tester)
 
         self.txt_scope = QLineEdit()
-        self.txt_scope.setPlaceholderText("z.B. 10.10.10.0/24 oder *.example.com")
+        self.txt_scope.setPlaceholderText("e.g. 10.10.10.0/24 or *.example.com")
         self.txt_scope.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_scope", "Ziel(e) / Scope:")), self.txt_scope)
+        form_layout.addRow(self._make_label(t("report.meta_scope", "Target / Scope:")), self.txt_scope)
 
         self.txt_timeframe = QLineEdit()
-        self.txt_timeframe.setPlaceholderText("z.B. 01.09.2026 – 05.09.2026")
+        self.txt_timeframe.setPlaceholderText("e.g. 01.09.2026 – 05.09.2026")
         self.txt_timeframe.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_timeframe", "Testzeitraum:")), self.txt_timeframe)
+        form_layout.addRow(self._make_label(t("report.meta_timeframe", "Assessment Period:")), self.txt_timeframe)
 
         self.txt_date = QLineEdit()
         self.txt_date.setPlaceholderText("YYYY-MM-DD")
         self.txt_date.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_date", "Berichtsdatum:")), self.txt_date)
+        form_layout.addRow(self._make_label(t("report.meta_date", "Report Date:")), self.txt_date)
 
         self.cmb_classification = QComboBox()
         self.cmb_classification.setEditable(True)
         self.cmb_classification.addItems(CLASSIFICATIONS)
         self.cmb_classification.currentTextChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_classification", "Klassifizierung:")), self.cmb_classification)
+        form_layout.addRow(self._make_label(t("report.meta_classification", "Classification:")), self.cmb_classification)
 
         self.txt_version = QLineEdit()
         self.txt_version.setPlaceholderText("v1.0")
         self.txt_version.textChanged.connect(self._on_field_changed)
-        form_layout.addRow(self._make_label(t("report.meta_version", "Report-Version:")), self.txt_version)
+        form_layout.addRow(self._make_label(t("report.meta_version", "Report Version:")), self.txt_version)
 
         scroll.setWidget(content_widget)
         main_layout.addWidget(scroll, stretch=1)

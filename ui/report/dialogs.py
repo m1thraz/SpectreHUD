@@ -567,13 +567,13 @@ class LootEntryPickerDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton(t("report.cancel", "Abbrechen"))
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_insert = QPushButton(t("report.loot_attach_evidence", "Als Evidence anfügen"))
+        self.btn_insert = QPushButton(t("report.loot_attach_evidence", "Attach as Evidence"))
         self.btn_insert.setProperty("class", "PrimaryBtn")
         self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
         self.btn_insert.setEnabled(False)
@@ -616,7 +616,7 @@ class LootEntryPickerDialog(QDialog):
             self._filtered_entries.append(entry)
 
             item = QListWidgetItem()
-            item.setText(title or t("report.unnamed_entry", "Unbenannter Eintrag"))
+            item.setText(title or t("report.unnamed_entry", "Untitled Entry"))
 
             if e_type in ("credential", "credentials", "creds"):
                 item.setIcon(icon("fa5s.key", color="#d29922"))
@@ -656,11 +656,13 @@ class LootEntryPickerDialog(QDialog):
         ip = entry.get("target_ip", "")
         sev = entry.get("severity", "info")
 
-        info_lines = [f"<b>{title}</b>", f"Typ: <code>{e_type}</code> | Severity: <code>{sev}</code>"]
+        type_label = t("report.dialog_type", "Type:")
+        sev_label = t("report.dialog_severity", "Severity:")
+        info_lines = [f"<b>{title}</b>", f"{type_label} <code>{e_type}</code> | {sev_label} <code>{sev}</code>"]
         if ip:
             info_lines.append(f"Target: {ip}")
         if ts:
-            info_lines.append(f"Zeit: {ts}")
+            info_lines.append(t("report.dialog_time", "Time: {time}", time=ts))
         self.info_label.setText("<br>".join(info_lines))
 
         content = entry.get("content") or ""
@@ -727,13 +729,13 @@ class ClipboardHistoryPickerDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.btn_cancel = QPushButton(t("report.cancel", "Abbrechen"))
+        self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
         self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_insert = QPushButton(t("report.clipboard_attach_evidence", "Als Terminal-PoC anfügen"))
+        self.btn_insert = QPushButton(t("report.clipboard_attach_evidence", "Attach as Terminal PoC"))
         self.btn_insert.setProperty("class", "PrimaryBtn")
         self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
         self.btn_insert.setEnabled(False)
@@ -791,11 +793,17 @@ class ClipboardHistoryPickerDialog(QDialog):
         lines_cnt = len(text.splitlines())
         chars_cnt = len(text)
 
-        info_parts = [f"Zeilen: {lines_cnt} | Zeichen: {chars_cnt}"]
+        lines_chars = t(
+            "report.dialog_lines_chars",
+            "Lines: {lines} | Characters: {chars}",
+            lines=lines_cnt,
+            chars=chars_cnt,
+        )
+        info_parts = [lines_chars]
         if ip:
             info_parts.append(f"Target: {ip}")
         if ts:
-            info_parts.append(f"Zeit: {ts}")
+            info_parts.append(t("report.dialog_time", "Time: {time}", time=ts))
         self.info_label.setText(" | ".join(info_parts))
 
         self.txt_preview.setPlainText(text)

@@ -54,12 +54,12 @@ class ReportSectionInspector(QWidget):
         self.lbl_icon = QLabel()
         h_layout.addWidget(self.lbl_icon)
 
-        self.lbl_title = QLabel(t("report.inspector_section_title", "Abschnitts-Editor"))
+        self.lbl_title = QLabel(t("report.inspector_section_title", "Section Editor"))
         self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
         h_layout.addWidget(self.lbl_title)
         h_layout.addStretch()
 
-        self.lbl_hint = QLabel(t("report.inspector_section_hint", "Fokussierte Bearbeitung"))
+        self.lbl_hint = QLabel(t("report.inspector_section_hint", "Focused Editing"))
         self.lbl_hint.setStyleSheet("font-size: 11px; color: #8b949e;")
         h_layout.addWidget(self.lbl_hint)
 

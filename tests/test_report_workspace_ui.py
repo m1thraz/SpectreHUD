@@ -9,8 +9,11 @@ import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QListWidget, QTableWidget, QTreeWidget
 
 from core.clipboard_history import ClipboardHistory
+from core.i18n import get_i18n, t
+from ui.controllers.window_frame_manager import is_interactive_widget
 from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
@@ -171,7 +174,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         initial_finding_count = len(tab._workspace_doc.findings) if tab._workspace_doc else 0
         tab._on_add_finding_requested()
         self.assertEqual(len(tab._workspace_doc.findings), initial_finding_count + 1)
-        self.assertIn("Neue Schwachstelle", tab.editor.toPlainText())
+        self.assertIn(t("report.new_finding_default_title", "New Finding"), tab.editor.toPlainText())
         self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
 
         # Navigate to metadata
@@ -302,3 +305,105 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         dialog.accept()
         dialog.deleteLater()
+
+    def test_window_frame_manager_interactive_widgets(self):
+        tree = QTreeWidget()
+        list_widget = QListWidget()
+        table = QTableWidget()
+        header = tree.header()
+
+        self.assertTrue(is_interactive_widget(tree))
+        self.assertTrue(is_interactive_widget(list_widget))
+        self.assertTrue(is_interactive_widget(table))
+        self.assertTrue(is_interactive_widget(header))
+        tree.deleteLater()
+        list_widget.deleteLater()
+        table.deleteLater()
+
+    def test_navigator_grouping_by_loot_phases(self):
+        nav = ReportWorkspaceNavigator()
+        doc = ReportWorkspaceDocument(
+            findings=[
+                ReportFindingItem(id="f1", title="Nmap Scan", severity="info", phase="recon"),
+                ReportFindingItem(id="f2", title="SSH Bruteforce", severity="high", phase="access"),
+                ReportFindingItem(id="f3", title="Kernel Exploit", severity="critical", phase="privesc"),
+            ]
+        )
+        nav.load_document(doc)
+
+        findings_root = nav.tree.topLevelItem(2)
+        self.assertIn("Loot", findings_root.text(0))
+
+        phase_keys = [
+            findings_root.child(i).data(0, Qt.ItemDataRole.UserRole)[1]
+            for i in range(findings_root.childCount())
+        ]
+        self.assertIn("recon", phase_keys)
+        self.assertIn("access", phase_keys)
+        self.assertIn("privesc", phase_keys)
+
+        recon_item = next(
+            findings_root.child(i)
+            for i in range(findings_root.childCount())
+            if findings_root.child(i).data(0, Qt.ItemDataRole.UserRole)[1] == "recon"
+        )
+        self.assertEqual(recon_item.childCount(), 1)
+        self.assertEqual(recon_item.child(0).text(0), "Nmap Scan")
+
+        sync_called = []
+        nav.sync_loot_requested.connect(lambda: sync_called.append(True))
+        nav.btn_sync_loot.click()
+        self.assertEqual(sync_called, [True])
+        nav.deleteLater()
+
+    def test_report_editor_tab_collapsible_navigator_and_raw_toggle(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+        tab.show()
+
+        # In Split view, navigator starts hidden for 2-column layout
+        self.assertFalse(tab.navigator_glass.isVisible())
+        self.assertFalse(tab.btn_navigator.isChecked())
+
+        # Toggle on demand
+        tab._toggle_navigator()
+        self.assertTrue(tab.navigator_glass.isVisible())
+        self.assertTrue(tab.btn_navigator.isChecked())
+
+        # Toggle off
+        tab._toggle_navigator()
+        self.assertFalse(tab.navigator_glass.isVisible())
+        self.assertFalse(tab.btn_navigator.isChecked())
+
+        # Toggle raw markdown vs inspector
+        self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
+        tab._toggle_inspector_raw()
+        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        tab._toggle_inspector_raw()
+        self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
+
+        tab.close()
+        tab.deleteLater()
+
+    def test_workspace_translations_de_en(self):
+        i18n = get_i18n()
+        saved_locale = i18n.current_locale
+
+        try:
+            # Test English translations
+            i18n.set_locale("en")
+            self.assertEqual(t("report.new_finding_default_title"), "New Finding")
+            self.assertEqual(t("report.navigator"), "Navigator")
+            self.assertEqual(t("report.section_metadata"), "Metadata & Scope")
+            self.assertEqual(t("report.inspector_finding_title"), "Finding Details")
+            self.assertEqual(t("report.finding_desc"), "Description & Proof of Concept")
+
+            # Test German translations
+            i18n.set_locale("de")
+            self.assertEqual(t("report.new_finding_default_title"), "Neue Schwachstelle")
+            self.assertEqual(t("report.navigator"), "Navigator")
+            self.assertEqual(t("report.section_metadata"), "Metadaten & Scope")
+            self.assertEqual(t("report.inspector_finding_title"), "Schwachstellen-Details")
+            self.assertEqual(t("report.finding_desc"), "Beschreibung & Proof of Concept")
+        finally:
+            i18n.set_locale(saved_locale)
