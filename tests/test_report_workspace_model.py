@@ -2,6 +2,8 @@ from pathlib import Path
 import sys
 
 from core.reporting import (
+    AttackPathStep,
+    ReportAttackPath,
     ReportContext,
     ReportMetadata,
     ReportEvidenceItem,
@@ -485,6 +487,74 @@ def test_remediation_plan_parsing_and_serialization():
     assert "Behoben" in content
     assert "In Arbeit" in content
     assert "Offen" in content
+
+
+def test_attack_path_parsing_and_serialization():
+    """Verify parsing and serialization of structured Attack Path narrative and steps."""
+    # 1. Test detailed format
+    detailed_md = (
+        "## 3. Attack Path / Assessment Narrative\n\n"
+        "Der Angriff erfolgte über eine mehrstufige Eskalationskette.\n\n"
+        "### Angriffskette\n\n"
+        "1. **Aufklärung & Enumeration**: Nmap Portscan\n"
+        "   - *Beschreibung:* Erkennung offener Dienste 21 und 80.\n"
+        "   - *Schwachstelle:* FTP Anonymous Access\n"
+        "2. **Rechteausweitung**: Sudo NOPASSWD\n"
+        "   - *Beschreibung:* Ausnutzung von less zur Erlangung einer Root-Shell.\n"
+        "   - *Schwachstelle:* Sudo less\n"
+    )
+
+    path = ReportAttackPath.from_markdown(detailed_md, language="de")
+    assert path.title == "3. Attack Path / Assessment Narrative"
+    assert "mehrstufige Eskalationskette" in path.narrative_intro
+    assert len(path.steps) == 2
+    assert path.steps[0].phase == "recon"
+    assert path.steps[0].title == "Nmap Portscan"
+    assert "Erkennung offener Dienste" in path.steps[0].description
+    assert path.steps[1].phase == "privesc"
+    assert path.steps[1].title == "Sudo NOPASSWD"
+
+    # 2. Test legacy one-line bullet format
+    legacy_md = (
+        "## 3. Angriffspfad / Assessment-Verlauf\n\n"
+        "1. **Aufklärung & Portscan** — Nmap Portscan, FTP Anonymous Access\n"
+        "2. **Initialer Zugriff** — Calibration Probe Script\n"
+        "3. **Rechteausweitung** — Sudo NOPASSWD /usr/bin/less\n"
+    )
+    legacy_path = ReportAttackPath.from_markdown(legacy_md, language="de")
+    assert len(legacy_path.steps) == 3
+    assert legacy_path.steps[0].phase == "recon"
+    assert "Nmap Portscan" in legacy_path.steps[0].title
+    assert legacy_path.steps[1].phase == "access"
+    assert "Probe Script" in legacy_path.steps[1].title
+    assert legacy_path.steps[2].phase == "privesc"
+
+    # 3. Test serialization & doc integration
+    findings = [
+        ReportFindingItem(id="f-ftp", title="FTP Anonymous Access", severity="medium", phase="recon"),
+        ReportFindingItem(id="f-root", title="Sudo NOPASSWD less", severity="critical", phase="privesc"),
+    ]
+    doc = ReportWorkspaceDocument(findings=findings, language="de")
+
+    custom_path = ReportAttackPath(
+        title="3. Angriffspfad",
+        narrative_intro="Chronologische Angriffskette durch das Netzwerk.",
+        steps=[
+            AttackPathStep(step_number=1, phase="recon", title="Portscan & Banner Grabbing", finding_id="f-ftp"),
+            AttackPathStep(step_number=2, phase="privesc", title="Root Shell via Sudoers", finding_id="f-root"),
+        ],
+    )
+    doc.set_attack_path(custom_path)
+
+    narr = next(n for n in doc.narratives if n.identity == "attack_path")
+    rendered = narr.content
+
+    assert "Chronologische Angriffskette" in rendered
+    assert "1. **Aufklärung & Enumeration**: Portscan & Banner Grabbing" in rendered
+    assert "FTP Anonymous Access" in rendered
+    assert "2. **Rechteausweitung (PrivEsc)**: Root Shell via Sudoers" in rendered
+    assert "Sudo NOPASSWD less" in rendered
+
 
 
 

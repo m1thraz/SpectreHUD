@@ -17,6 +17,8 @@ from ui.controllers.window_frame_manager import is_interactive_widget
 from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
+    AttackPathStep,
+    ReportAttackPath,
     ReportEvidenceItem,
     ReportExecutiveSummary,
     ReportFileManager,
@@ -34,6 +36,7 @@ from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
+from ui.report.attack_path_inspector import ReportAttackPathInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report_editor_tab import ReportEditorTab, ViewMode
 
@@ -676,5 +679,114 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         tab.close()
         tab.deleteLater()
+
+    def test_attack_path_inspector_ui_and_interactions(self):
+        inspector = ReportAttackPathInspector()
+
+        f1 = ReportFindingItem(
+            id="f-probe",
+            title="Initial Access via Probe Script",
+            severity="high",
+            phase="access",
+            status="open",
+        )
+        f2 = ReportFindingItem(
+            id="f-priv",
+            title="Sudo NOPASSWD /usr/bin/less",
+            severity="critical",
+            phase="privesc",
+            status="open",
+        )
+
+        path = ReportAttackPath(
+            title="Angriffspfad / Assessment-Verlauf",
+            narrative_intro="Assessment narrative overview.",
+            steps=[
+                AttackPathStep(
+                    step_number=1,
+                    phase="access",
+                    title="Probe Script Exploitation",
+                    description="Triggered calibration script",
+                    finding_id="f-probe",
+                ),
+            ],
+        )
+
+        doc = ReportWorkspaceDocument(
+            metadata=ReportMetadata(),
+            findings=[f1, f2],
+        )
+        doc.set_attack_path(path)
+
+        inspector.load_attack_path(doc)
+
+        # Check title, storyline, and steps count
+        self.assertEqual(inspector.lbl_title.text(), "Angriffspfad / Assessment-Verlauf")
+        self.assertEqual(inspector.txt_intro.toPlainText(), "Assessment narrative overview.")
+        self.assertEqual(inspector.steps_layout.count(), 1)
+        self.assertIn("1 Schritte", inspector.lbl_steps_badge.text())
+
+        # Check step card widgets
+        card = inspector.steps_layout.itemAt(0).widget()
+        self.assertEqual(card.edit_title.text(), "Probe Script Exploitation")
+        self.assertEqual(card.txt_desc.toPlainText(), "Triggered calibration script")
+        self.assertEqual(card.cmb_finding.currentData(), "f-probe")
+
+        # Test adding a step
+        inspector.btn_add_step.click()
+        self.assertEqual(inspector.steps_layout.count(), 2)
+        self.assertIn("2 Schritte", inspector.lbl_steps_badge.text())
+
+        # Test auto-generate from findings
+        inspector.btn_auto_generate.click()
+        self.assertEqual(inspector.steps_layout.count(), 2)
+        # First step is access, second is privesc
+        step0_card = inspector.steps_layout.itemAt(0).widget()
+        self.assertEqual(step0_card.cmb_phase.currentData(), "access")
+        self.assertEqual(step0_card.step.finding_id, "f-probe")
+
+        step1_card = inspector.steps_layout.itemAt(1).widget()
+        self.assertEqual(step1_card.cmb_phase.currentData(), "privesc")
+        self.assertEqual(step1_card.step.finding_id, "f-priv")
+
+        # Test jump to finding signal
+        jumped_ids = []
+        inspector.finding_selected.connect(jumped_ids.append)
+        step0_card.btn_jump.click()
+        self.assertEqual(jumped_ids, ["f-probe"])
+
+        # Test deleting a step
+        step1_card.btn_del.click()
+        self.assertEqual(inspector.steps_layout.count(), 1)
+
+        inspector.close()
+        inspector.deleteLater()
+
+    def test_report_editor_tab_attack_path_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        f1 = ReportFindingItem(
+            id="f-attack-test",
+            title="Attack Finding",
+            severity="HIGH",
+            phase="access",
+            status="open",
+        )
+        tab._workspace_doc.findings.append(f1)
+        tab._sync_workspace_doc_to_editor()
+
+        # Navigate to attack_path section
+        tab._on_navigate_requested("section", "attack_path")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.attack_path_inspector_glass)
+
+        # Click navigation from attack path to finding details
+        tab.attack_path_inspector.finding_selected.emit("f-attack-test")
+        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertEqual(tab.finding_inspector._finding.id, "f-attack-test")
+
+        tab.close()
+        tab.deleteLater()
+
 
 

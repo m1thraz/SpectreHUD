@@ -15,11 +15,13 @@ from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
+from ui.report.attack_path_inspector import ReportAttackPathInspector
 
 __all__ = [
     "ClipboardHistoryPickerDialog",
     "LootEntryPickerDialog",
     "LootImagePickerDialog",
+    "ReportAttackPathInspector",
     "ReportExportActions",
     "ReportExportTypeDialog",
     "ReportFormatActions",

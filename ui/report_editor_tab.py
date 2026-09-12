@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
 
 from core.reporting import (
+    ReportAttackPath,
     ReportEvidenceItem,
     ReportExecutiveSummary,
     ReportFileManager,
@@ -70,6 +71,7 @@ from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
+from ui.report.attack_path_inspector import ReportAttackPathInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
@@ -531,6 +533,15 @@ class ReportEditorTab(QWidget):
         )
         self.remediation_inspector_glass = self._wrap_glass_surface(self.remediation_inspector)
         self.center_stack.addWidget(self.remediation_inspector_glass)
+
+        # Page 6: Attack Path / Assessment Narrative Inspector
+        self.attack_path_inspector = ReportAttackPathInspector(self)
+        self.attack_path_inspector.attack_path_changed.connect(self._on_attack_path_changed)
+        self.attack_path_inspector.finding_selected.connect(
+            lambda fid: self._on_navigate_requested("finding", fid)
+        )
+        self.attack_path_inspector_glass = self._wrap_glass_surface(self.attack_path_inspector)
+        self.center_stack.addWidget(self.attack_path_inspector_glass)
 
         self.splitter.addWidget(self.center_stack)
 
@@ -1547,6 +1558,10 @@ class ReportEditorTab(QWidget):
                 self.remediation_inspector.load_remediation(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.remediation_inspector_glass)
                 self._last_active_inspector = self.remediation_inspector_glass
+            elif sec_id in ("attack_path", "attack_narrative"):
+                self.attack_path_inspector.load_attack_path(self._workspace_doc)
+                self.center_stack.setCurrentWidget(self.attack_path_inspector_glass)
+                self._last_active_inspector = self.attack_path_inspector_glass
             else:
                 narr = next(
                     (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
@@ -1605,7 +1620,7 @@ class ReportEditorTab(QWidget):
                 severity=chosen_entry.get("severity", "medium"),
                 status="open",
                 phase=normalize_phase_key(chosen_entry.get("phase") or chosen_entry.get("category") or "recon"),
-                targets=[chosen_entry.get("target_ip")] if chosen_entry.get("target_ip") else [],
+                targets=[str(chosen_entry["target_ip"])] if chosen_entry.get("target_ip") else [],
                 description=chosen_entry.get("content", ""),
                 recommendation=chosen_entry.get("recommendation", ""),
                 loot_marker=format_loot_marker(new_id, loot_content_hash(chosen_entry)),
@@ -1651,6 +1666,8 @@ class ReportEditorTab(QWidget):
             self.summary_inspector.load_summary(self._workspace_doc)
         if hasattr(self, "remediation_inspector_glass") and self.center_stack.currentWidget() == self.remediation_inspector_glass:
             self.remediation_inspector.load_remediation(self._workspace_doc)
+        if hasattr(self, "attack_path_inspector_glass") and self.center_stack.currentWidget() == self.attack_path_inspector_glass:
+            self.attack_path_inspector.load_attack_path(self._workspace_doc)
 
     def _on_finding_deleted(self, finding_id: str) -> None:
         if self._workspace_doc is None:
@@ -1727,6 +1744,12 @@ class ReportEditorTab(QWidget):
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         self._workspace_doc.set_remediation_plan(updated)
+        self._sync_workspace_doc_to_editor()
+
+    def _on_attack_path_changed(self, updated: ReportAttackPath) -> None:
+        if self._workspace_doc is None:
+            self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        self._workspace_doc.set_attack_path(updated)
         self._sync_workspace_doc_to_editor()
 
     # ------------------------------------------------------------------ #

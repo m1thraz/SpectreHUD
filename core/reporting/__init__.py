@@ -87,7 +87,9 @@ from core.reporting.loot_sync import (
 )
 from core.reporting.outline import HeadingItem, extract_headings
 from core.reporting.workspace_model import (
+    AttackPathStep,
     ReportAppendix,
+    ReportAttackPath,
     ReportEvidenceItem,
     ReportExecutiveSummary,
     ReportFindingItem,
@@ -163,7 +165,9 @@ __all__ = [
     "strip_report_markers",
     "HeadingItem",
     "extract_headings",
+    "AttackPathStep",
     "ReportAppendix",
+    "ReportAttackPath",
     "ReportEvidenceItem",
     "ReportExecutiveSummary",
     "ReportFindingItem",
