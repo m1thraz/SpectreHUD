@@ -349,3 +349,39 @@ def test_finding_evidence_attach_detach_update():
     assert len(f.evidence_items) == 0
     assert "curl -v" not in f.description
 
+
+def test_finding_phase_normalization_and_grouping():
+    """Verify that findings with variations of enumeration or German phase names normalize to recon."""
+    f1 = ReportFindingItem(id="f1", title="Nmap", phase="enumeration")
+    assert f1.phase == "recon"
+
+    f2 = ReportFindingItem(id="f2", title="Service Enum", phase="Service Enumeration")
+    assert f2.phase == "recon"
+
+    f3 = ReportFindingItem(id="f3", title="Legacy Recon", phase="1. Reconnaissance & Enumeration")
+    assert f3.phase == "recon"
+
+    f4 = ReportFindingItem(id="f4", title="German Recon", phase="Aufklärung & Enumeration")
+    assert f4.phase == "recon"
+
+    doc = ReportWorkspaceDocument(findings=[f1, f2, f3, f4])
+    by_phase = doc.get_findings_by_phase()
+    assert "recon" in by_phase
+    assert len(by_phase["recon"]) == 4
+    assert "enumeration" not in by_phase
+    assert "others" not in by_phase
+
+    # Test deserialization from markdown with Phase metadata
+    md_finding = (
+        "<!-- spectre:finding:start:find-99 -->\n"
+        "### Open Port 80\n\n"
+        "**Severity:** [HIGH]  \n"
+        "**Target:** 10.10.10.1  \n"
+        "**Phase:** Reconnaissance & Enumeration  \n\n"
+        "#### Beschreibung\n\nDiscovered open HTTP port.\n"
+        "<!-- spectre:finding:end:find-99 -->"
+    )
+    parsed = ReportFindingItem.from_markdown(md_finding, "find-99")
+    assert parsed.phase == "recon"
+
+

@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import t
+from core.phases import normalize_phase_key
 from core.reporting import ReportEvidenceItem, ReportFindingItem
 from ui.glass_panel import GlassPanel
 from ui.styles.icons import icon
@@ -364,7 +365,7 @@ class ReportFindingInspector(QWidget):
             if stat_idx >= 0:
                 self.cmb_status.setCurrentIndex(stat_idx)
 
-            phase_idx = self.cmb_phase.findData(finding.phase.lower())
+            phase_idx = self.cmb_phase.findData(normalize_phase_key(finding.phase))
             if phase_idx >= 0:
                 self.cmb_phase.setCurrentIndex(phase_idx)
 

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from ui.coordinators.export_coordinator import ExportCoordinator
 from core.project import ProjectState
+from core.reporting import ReportExportProfile
 
 
 def _coordinator(config_values, project_dir: Path) -> tuple[ExportCoordinator, MagicMock]:
@@ -131,7 +132,8 @@ def test_html_report_export_resolves_project_through_coordinator(tmp_path):
         theme="light",
         report_font="inter",
         language="en",
-        profile="interactive",
+        profile=ReportExportProfile.INTERACTIVE,
+        category=None,
     )
 
 

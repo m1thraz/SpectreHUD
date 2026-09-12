@@ -81,6 +81,40 @@ class TestReportWorkspaceUI(unittest.TestCase):
         nav.btn_add_finding.click()
         self.assertEqual(add_clicked, [True])
 
+    def test_workspace_navigator_enumeration_loot_grouping(self):
+        """Verify that enumeration and German recon findings are categorized under Recon, never under Others."""
+        nav = ReportWorkspaceNavigator()
+        doc = ReportWorkspaceDocument(
+            findings=[
+                ReportFindingItem(id="e1", title="Nmap Scan", phase="enumeration"),
+                ReportFindingItem(id="e2", title="Service Discovery", phase="Service Enumeration"),
+                ReportFindingItem(id="e3", title="Port Enum", phase="Reconnaissance & Enumeration"),
+                ReportFindingItem(id="e4", title="Web Enum", phase="Aufklärung & Enumeration"),
+            ]
+        )
+        nav.load_document(doc, project_name="WorkspaceBox", target_ip="192.168.1.100")
+
+        tree = nav.tree
+        # Find Findings root item
+        item_findings_root = None
+        for i in range(tree.topLevelItemCount()):
+            it = tree.topLevelItem(i)
+            role_data = it.data(0, Qt.ItemDataRole.UserRole)
+            if role_data and role_data[0] == "findings_overview":
+                item_findings_root = it
+                break
+
+        self.assertIsNotNone(item_findings_root)
+        self.assertEqual(item_findings_root.childCount(), 1)  # Only Recon phase group!
+
+        recon_child = item_findings_root.child(0)
+        self.assertEqual(recon_child.data(0, Qt.ItemDataRole.UserRole), ("phase_group", "recon"))
+        self.assertEqual(recon_child.childCount(), 4)
+
+        # Ensure no 'other' group exists
+        child_roles = [item_findings_root.child(j).data(0, Qt.ItemDataRole.UserRole) for j in range(item_findings_root.childCount())]
+        self.assertNotIn(("phase_group", "misc"), child_roles)
+
     def test_metadata_inspector_edits(self):
         insp = ReportMetadataInspector()
         meta = ReportMetadata(

@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import t
+from core.phases import normalize_phase_key
 from core.reporting import ReportWorkspaceDocument
 from ui.glass_panel import GlassPanel
 from ui.styles.icons import icon
@@ -221,7 +222,7 @@ class ReportWorkspaceNavigator(QWidget):
 
         # Catch any findings with unknown phase
         known_phases = set(PHASE_META.keys())
-        other_findings = [f for f in doc.findings if (f.phase or "").lower() not in known_phases]
+        other_findings = [f for f in doc.findings if normalize_phase_key(f.phase) not in known_phases]
         if other_findings:
             item_other = QTreeWidgetItem(item_findings_root)
             item_other.setText(0, t("report.phase_other", "Other ({count})", count=len(other_findings)))

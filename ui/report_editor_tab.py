@@ -48,6 +48,7 @@ from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
 from core.logger import get_logger
 from core.i18n import t
+from core.phases import normalize_phase_key
 from core.fonts import get_report_font_stack
 from core.platform import open_path  # noqa: F401
 from core.theme_loader import ThemeLoader
@@ -1501,7 +1502,7 @@ class ReportEditorTab(QWidget):
         elif view_type in ("findings_overview", "phase_group"):
             target_finding = None
             if view_type == "phase_group" and item_id:
-                target_finding = next((f for f in self._workspace_doc.findings if f.phase == item_id), None)
+                target_finding = next((f for f in self._workspace_doc.findings if normalize_phase_key(f.phase) == item_id), None)
             if not target_finding and self._workspace_doc.findings:
                 target_finding = self._workspace_doc.findings[0]
             if target_finding:
@@ -1573,7 +1574,7 @@ class ReportEditorTab(QWidget):
                 title=chosen_entry.get("title") or t("report.new_finding_default_title", "New Finding"),
                 severity=chosen_entry.get("severity", "medium"),
                 status="open",
-                phase=chosen_entry.get("category", "recon"),
+                phase=normalize_phase_key(chosen_entry.get("phase") or chosen_entry.get("category") or "recon"),
                 targets=[chosen_entry.get("target_ip")] if chosen_entry.get("target_ip") else [],
                 description=chosen_entry.get("content", ""),
                 recommendation=chosen_entry.get("recommendation", ""),

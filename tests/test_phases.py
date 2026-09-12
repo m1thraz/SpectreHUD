@@ -60,6 +60,21 @@ def test_normalization_and_get_phase():
     assert normalize_phase_key("Reconnaissance & Enumeration") == "recon"
     assert normalize_phase_key("Custom Scripts & PoCs") == "scripts"
 
+    # Enumeration variations & German taxonomy
+    assert normalize_phase_key("enumeration") == "recon"
+    assert normalize_phase_key("service enumeration") == "recon"
+    assert normalize_phase_key("directory enumeration") == "recon"
+    assert normalize_phase_key("DNS Enumeration & Zone Transfer") == "recon"
+    assert normalize_phase_key("Aufklärung & Enumeration") == "recon"
+    assert normalize_phase_key("1. Aufklärung & Enumeration") == "recon"
+    assert normalize_phase_key("Aufklärung") == "recon"
+    assert normalize_phase_key("Initialer Zugriff") == "access"
+    assert normalize_phase_key("Rechteausweitung") == "privesc"
+    assert normalize_phase_key("Rechteausweitung (PrivEsc)") == "privesc"
+    assert normalize_phase_key("Eigene Skripte & PoCs") == "scripts"
+    assert normalize_phase_key("Sonstiges") == "misc"
+    assert normalize_phase_key("Weitere") == "misc"
+
     # Digits
     assert normalize_phase_key("1") == "recon"
     assert normalize_phase_key("2") == "access"

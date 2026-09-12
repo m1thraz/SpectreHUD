@@ -13,6 +13,7 @@ import html
 import re
 from typing import Any, Dict, List, Optional
 
+from core.phases import normalize_phase_key
 from core.reporting.charts import render_severity_badge, render_severity_counts
 from core.reporting.findings import (
     FINDING_END_RE,
@@ -252,6 +253,9 @@ class ReportFindingItem:
     loot_marker: Optional[str] = None
     raw_extra: str = ""
 
+    def __post_init__(self) -> None:
+        self.phase = normalize_phase_key(self.phase)
+
     @classmethod
     def from_markdown(cls, markdown: str, entry_id: str, language: str = "de") -> "ReportFindingItem":
         loot_match = _LOOT_MARKER_RE.search(markdown)
@@ -279,7 +283,7 @@ class ReportFindingItem:
         phase = "recon"
         phase_match = re.search(r"\*\*Phase:\*\*\s*(.*?)(?:  |$)", markdown, re.MULTILINE)
         if phase_match:
-            phase = _clean_md_val(phase_match.group(1)).lower()
+            phase = normalize_phase_key(_clean_md_val(phase_match.group(1)))
 
         timestamp = None
         time_match = re.search(r"\*\*(?:Observed|Beobachtet):\*\*\s*(.*?)(?:  |$)", markdown, re.MULTILINE)
@@ -633,7 +637,7 @@ class ReportWorkspaceDocument:
     def get_findings_by_phase(self) -> Dict[str, List[ReportFindingItem]]:
         buckets: Dict[str, List[ReportFindingItem]] = {}
         for f in self.findings:
-            phase = f.phase.lower() or "misc"
+            phase = normalize_phase_key(f.phase)
             buckets.setdefault(phase, []).append(f)
         return buckets
 
@@ -687,7 +691,7 @@ class ReportWorkspaceDocument:
                     block = seg.markdown[start.start():end.end()]
                     finding = ReportFindingItem.from_markdown(block, entry_id, language=language)
                     if seg.category_id:
-                        finding.phase = seg.category_id
+                        finding.phase = normalize_phase_key(seg.category_id)
                     findings.append(finding)
                     cursor = end.end()
 
