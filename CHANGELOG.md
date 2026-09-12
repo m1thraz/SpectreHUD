@@ -6,6 +6,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Modular Report Workspace featuring a tri-pane environment with a semantic navigator, dedicated section and finding inspectors, and live Markdown preview.
+* Interactive inspectors for assessment metadata, executive summary scorecards, scope methodology, attack path narratives, technical findings, remediation plans, and appendix evidence.
+* Bidirectional live synchronization between the structured workspace document model and the underlying Markdown editor.
+* Responsive workspace layout with free-form splitter resizing across Editor, Split, and Workspace view modes.
+* Clipboard History curation allowing individual terminal snippets to be marked (`[x] Report`) for exclusive inclusion in Appendix A during report generation.
+
 ### Security
 
 * Pinned all GitHub Actions across workflows to immutable 40-character commit SHAs with version comments and automated test enforcement.
