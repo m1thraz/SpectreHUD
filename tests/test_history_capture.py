@@ -104,8 +104,33 @@ class TestHistoryCardPromoteButton(unittest.TestCase):
             self.card.contextMenuEvent(ev)
 
         self.assertEqual(len(menus_created), 1)
-        actions = menus_created[0].actions()
-        self.assertEqual(len(actions), 2, f"Expected 2 context actions, got {len(actions)}")
+        actions = [a for a in menus_created[0].actions() if not a.isSeparator()]
+        self.assertEqual(
+            len(actions), 3, f"Expected 3 context actions (report, edit, delete), got {len(actions)}"
+        )
+
+    def test_report_checkbox_initial_state_and_toggle(self):
+        self.assertIsNotNone(self.card.chk_report)
+        self.assertFalse(self.card.chk_report.isChecked())
+
+        # Creating card with include_in_report=True sets checked state
+        card_marked = HistoryCard({"id": "h-2", "text": "id", "include_in_report": True})
+        self.assertTrue(card_marked.chk_report.isChecked())
+        card_marked.close()
+
+        # Toggling emits report_toggled signal
+        emitted = []
+        self.card.report_toggled.connect(lambda entry, checked: emitted.append((entry, checked)))
+        self.card.chk_report.setChecked(True)
+        self.assertEqual(len(emitted), 1)
+        self.assertEqual(emitted[0][0]["id"], "hist-123")
+        self.assertTrue(emitted[0][1])
+
+        # Test context menu toggle helper
+        self.card._toggle_report_from_menu()
+        self.assertFalse(self.card.chk_report.isChecked())
+        self.assertEqual(len(emitted), 2)
+        self.assertFalse(emitted[1][1])
 
     def test_copy_button_present_and_permanent(self):
         self.assertTrue(hasattr(self.card, "btn_copy"))
@@ -256,12 +281,18 @@ class TestClipboardCoordinatorCapture(unittest.TestCase):
         self.quick_note_ctrl.add_entry.assert_not_called()
 
 
+
 class TestHistoryControllerFilterPills(unittest.TestCase):
     def test_history_controller_has_no_notes_filter(self):
         from ui.controllers.history_controller import HistoryController
 
+        mock_clip = MagicMock()
+        mock_clip.get_history.return_value = [
+            {"id": "c1", "text": "cmd1", "include_in_report": True},
+            {"id": "c2", "text": "cmd2", "include_in_report": False},
+        ]
         controller = HistoryController(
-            clipboard_history=MagicMock(),
+            clipboard_history=mock_clip,
             loot_manager=MagicMock(),
             project_manager=MagicMock(),
         )
@@ -269,8 +300,13 @@ class TestHistoryControllerFilterPills(unittest.TestCase):
         filter_ids = [a.data.get("filter") for a in actions]
         self.assertNotIn("notes", filter_ids)
         self.assertIn("all", filter_ids)
+        self.assertIn("report", filter_ids)
         self.assertIn("commands", filter_ids)
         self.assertIn("outputs", filter_ids)
+
+        # Ensure "report" filter action has count 1
+        report_action = next(a for a in actions if a.data.get("filter") == "report")
+        self.assertIn("(1)", report_action.text)
 
 
 if __name__ == "__main__":

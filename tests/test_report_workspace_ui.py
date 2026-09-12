@@ -998,6 +998,30 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.close()
         tab.deleteLater()
 
+    def test_clipboard_history_picker_dialog_filter_and_marking(self):
+        history = [
+            {"id": "c1", "text": "nmap -sV target", "target_ip": "10.10.10.1", "include_in_report": True},
+            {"id": "c2", "text": "ls -la /tmp", "target_ip": "10.10.10.1", "include_in_report": False},
+        ]
+        dlg = ClipboardHistoryPickerDialog(history)
+        self.assertEqual(dlg.list_widget.count(), 2)
+        # Check that marked item has [Report] prefix
+        self.assertIn("[Report]", dlg.list_widget.item(0).text())
+        self.assertNotIn("[Report]", dlg.list_widget.item(1).text())
+
+        # Toggle filter for report only
+        dlg.chk_only_report.setChecked(True)
+        self.assertEqual(dlg.list_widget.count(), 1)
+        self.assertIn("nmap -sV target", dlg.list_widget.item(0).text())
+
+        # Select first item and verify preview
+        dlg.list_widget.setCurrentRow(0)
+        self.assertEqual(dlg.selected_entry["id"], "c1")
+        self.assertIn("nmap -sV target", dlg.txt_preview.toPlainText())
+
+        dlg.close()
+        dlg.deleteLater()
+
 
 
 

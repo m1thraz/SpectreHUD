@@ -77,6 +77,7 @@ class ReportContext:
     project_name: str = "Default"
     target_ip: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
+    has_raw_clipboard_history: bool = False
 
 
 def _render_header_metadata(section: TemplateSection, context: ReportContext, lang: str) -> str:
@@ -462,7 +463,9 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
     return "\n".join(lines)
 
 
-def _render_appendix_a_history(filtered_clips: List[Dict[str, Any]], lang: str) -> List[str]:
+def _render_appendix_a_history(
+    filtered_clips: List[Dict[str, Any]], lang: str, has_raw_history: bool = False
+) -> List[str]:
     """Renders Appendix A: Terminal Command History lines."""
     heading = (
         "## Anhang A: Chronologischer Befehlsverlauf (Terminal History)"
@@ -471,11 +474,18 @@ def _render_appendix_a_history(filtered_clips: List[Dict[str, Any]], lang: str) 
     )
     lines = [heading, ""]
     if not filtered_clips:
-        no_cmds = (
-            "*Keine Clipboard-Historie aufgezeichnet.*"
-            if lang == "de"
-            else "*No clipboard history recorded.*"
-        )
+        if has_raw_history:
+            no_cmds = (
+                "*Keine Befehle für den Report ausgewählt.*"
+                if lang == "de"
+                else "*No commands selected for report.*"
+            )
+        else:
+            no_cmds = (
+                "*Keine Clipboard-Historie aufgezeichnet.*"
+                if lang == "de"
+                else "*No clipboard history recorded.*"
+            )
         lines.append(no_cmds)
         lines.append("")
     else:
@@ -536,7 +546,9 @@ def _render_appendix(section: TemplateSection, context: ReportContext, lang: str
         and (not target_ip or target_ip == "all" or e.get("target_ip") == target_ip)
     ]
 
-    lines = _render_appendix_a_history(filtered_clips, lang)
+    lines = _render_appendix_a_history(
+        filtered_clips, lang, has_raw_history=context.has_raw_clipboard_history
+    )
     lines.append("---")
     lines.append("")
     lines.extend(_render_appendix_b_screenshots(screenshot_entries, lang))

@@ -39,18 +39,32 @@ class ReportBuilder:
         )
 
         all_loot = self.loot_manager.get_entries(target_ip=target_ip) if self.loot_manager else []
-        all_clips = (
+        raw_clips = (
             self.clipboard_watcher.get_history(target_ip=target_ip)
             if self.clipboard_watcher
             else []
         )
+        has_raw = bool(raw_clips)
+        try:
+            all_clips = (
+                self.clipboard_watcher.get_history(target_ip=target_ip, only_report=True)
+                if self.clipboard_watcher
+                else []
+            )
+        except TypeError:
+            all_clips = [c for c in raw_clips if c.get("include_in_report", False)]
+
         pname = project_name or (
             self.project_manager.get_active_project() if self.project_manager else "Default"
         )
         tip = target_ip or ""
 
         context = ReportContext(
-            loot_entries=all_loot, clipboard_history=all_clips, project_name=pname, target_ip=tip
+            loot_entries=all_loot,
+            clipboard_history=all_clips,
+            project_name=pname,
+            target_ip=tip,
+            has_raw_clipboard_history=has_raw,
         )
 
         active_template = template or LEGACY_DEFAULT_TEMPLATE

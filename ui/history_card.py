@@ -5,6 +5,7 @@ from PyQt6.QtCore import QEvent, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QContextMenuEvent, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -38,6 +39,7 @@ class HistoryCard(QFrame):
     edit_requested = pyqtSignal(dict)
     transfer_to_loot = pyqtSignal(dict)
     transfer_to_note = pyqtSignal(dict)
+    report_toggled = pyqtSignal(dict, bool)
     # Legacy aliases kept so existing signal connections don't break.
     add_to_loot_requested = transfer_to_loot
     added_to_loot = transfer_to_loot
@@ -84,6 +86,15 @@ class HistoryCard(QFrame):
         footer.addWidget(self.lbl_meta)
 
         footer.addStretch()
+
+        self.chk_report = QCheckBox(t("history.for_report", "Report"))
+        self.chk_report.setObjectName("HistoryReportCheck")
+        self.chk_report.setToolTip(
+            t("history.for_report_tip", "Include this command in pentest report (Appendix A)")
+        )
+        self.chk_report.setChecked(bool(self.entry.get("include_in_report", False)))
+        self.chk_report.toggled.connect(self._on_report_toggled)
+        footer.addWidget(self.chk_report)
 
         self.btn_copy = QPushButton()
         self.btn_copy.setIcon(icon("fa5s.copy"))
@@ -222,11 +233,35 @@ class HistoryCard(QFrame):
         self.btn_copy.style().polish(self.btn_copy)
 
     # ------------------------------------------------------------------ #
-    # Context menu — Edit / Delete
+    # Report Inclusion Toggle
+    # ------------------------------------------------------------------ #
+
+    def _on_report_toggled(self, checked: bool) -> None:
+        self.entry["include_in_report"] = checked
+        self.report_toggled.emit(self.entry, checked)
+
+    def _toggle_report_from_menu(self) -> None:
+        self.chk_report.setChecked(not self.chk_report.isChecked())
+
+    # ------------------------------------------------------------------ #
+    # Context menu — Report / Edit / Delete
     # ------------------------------------------------------------------ #
 
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         menu = QMenu(self)
+        is_in_report = bool(self.entry.get("include_in_report", False))
+        report_icon = icon("fa5s.check-square" if is_in_report else "fa5s.square")
+        report_text = (
+            t("history.toggle_report_remove_action", "Remove from report")
+            if is_in_report
+            else t("history.toggle_report_action", "Mark for report")
+        )
+        menu.addAction(
+            report_icon,
+            report_text,
+            self._toggle_report_from_menu,
+        )
+        menu.addSeparator()
         menu.addAction(
             icon("fa5s.pen"),
             t("history.edit_tip", "Edit this history entry"),

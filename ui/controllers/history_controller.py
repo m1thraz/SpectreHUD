@@ -83,7 +83,7 @@ class HistoryController(QObject):
     ) -> List[Dict[str, Any]]:
         active_filter = filter_type if filter_type is not None else self.current_history_filter
         actual_target = target_ip if active_filter == "target_only" else None
-        actual_filter_type = active_filter if active_filter in ["commands", "outputs"] else "all"
+        actual_filter_type = active_filter if active_filter in ["commands", "outputs", "report"] else "all"
         return self.clipboard_history.get_history(
             target_ip=actual_target, filter_type=actual_filter_type, search_query=search_query
         )
@@ -177,8 +177,10 @@ class HistoryController(QObject):
     ) -> List[MenuAction]:
         """Returns a list of MenuAction DTOs for filtering history."""
         history_all = self.clipboard_history.get_history()
+        report_count = len([e for e in history_all if e.get("include_in_report", False)])
         pills = [
             ("all", t("filter.all_history", "All ({count})", count=len(history_all))),
+            ("report", t("history.filter_report_only", "Report ({count})", count=report_count)),
             ("target_only", t("filter.target_only", "Target IP Only")),
             ("commands", t("filter.commands_only", "Commands")),
             ("outputs", t("filter.outputs_only", "Outputs")),
@@ -222,8 +224,10 @@ class HistoryController(QObject):
     ) -> None:
         self.filter_buttons.clear()
         history_all = self.clipboard_history.get_history()
+        report_count = len([e for e in history_all if e.get("include_in_report", False)])
         pills = [
             ("all", t("filter.all_history", "All ({count})", count=len(history_all))),
+            ("report", t("history.filter_report_only", "Report ({count})", count=report_count)),
             ("target_only", t("filter.target_only", "Target IP Only")),
             ("commands", t("filter.commands_only", "Commands")),
             ("outputs", t("filter.outputs_only", "Outputs")),
@@ -301,10 +305,21 @@ class HistoryController(QObject):
                 card.edit_requested.connect(
                     lambda entry, p=parent_widget: self.open_edit_dialog(p, entry)
                 )
+            card.report_toggled.connect(self._handle_report_toggled)
             content_layout.addWidget(card)
             rendered_cards.append(card)
 
         return rendered_cards
+
+    def _handle_report_toggled(self, entry: Dict[str, Any], checked: bool) -> None:
+        entry_id = entry.get("id", "")
+        if not entry_id:
+            return
+        try:
+            self.clipboard_history.update_entry(entry_id, include_in_report=checked)
+            self.history_updated.emit()
+        except (PersistenceError, StorageError, OSError) as e:
+            self._notify_persistence_error("update_entry", e)
 
     def export_report_dialog(
         self,

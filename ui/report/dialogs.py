@@ -3,6 +3,7 @@ from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -701,6 +702,13 @@ class ClipboardHistoryPickerDialog(QDialog):
         self.search_edit.textChanged.connect(self._filter_list)
         search_layout.addWidget(search_lbl)
         search_layout.addWidget(self.search_edit)
+
+        self.chk_only_report = QCheckBox(
+            t("report.clipboard_picker_only_marked", "Show marked for report only")
+        )
+        self.chk_only_report.toggled.connect(self._filter_list)
+        search_layout.addWidget(self.chk_only_report)
+
         main_layout.addLayout(search_layout)
 
         content_layout = QHBoxLayout()
@@ -748,11 +756,15 @@ class ClipboardHistoryPickerDialog(QDialog):
 
     def _filter_list(self) -> None:
         query = self.search_edit.text().strip().lower()
+        only_report = self.chk_only_report.isChecked()
 
         self.list_widget.clear()
         self._filtered_entries = []
 
         for entry in self.history:
+            if only_report and not entry.get("include_in_report", False):
+                continue
+
             text = str(entry.get("text") or "")
             ip = str(entry.get("target_ip") or "")
 
@@ -765,9 +777,12 @@ class ClipboardHistoryPickerDialog(QDialog):
             if len(first_line) > 60:
                 first_line = first_line[:57] + "..."
 
+            is_report_marked = bool(entry.get("include_in_report", False))
+            prefix = "[Report] " if is_report_marked else ""
+
             item = QListWidgetItem()
-            item.setText(first_line)
-            item.setIcon(icon("fa5s.terminal", color="#7ee787"))
+            item.setText(f"{prefix}{first_line}")
+            item.setIcon(icon("fa5s.star" if is_report_marked else "fa5s.terminal", color="#7ee787"))
             self.list_widget.addItem(item)
 
         if self._filtered_entries:

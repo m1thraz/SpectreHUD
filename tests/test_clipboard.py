@@ -91,8 +91,15 @@ class TestClipboardHistory(unittest.TestCase):
         )
 
         # Add clipboard history
-        self.watcher.add_entry("nmap -p 22,80 10.10.10.77", target_ip="10.10.10.77")
-        self.watcher.add_entry("ssh admin@10.10.10.77", target_ip="10.10.10.77")
+        self.watcher.add_entry(
+            "nmap -p 22,80 10.10.10.77", target_ip="10.10.10.77", include_in_report=True
+        )
+        self.watcher.add_entry(
+            "ssh admin@10.10.10.77", target_ip="10.10.10.77", include_in_report=True
+        )
+        self.watcher.add_entry(
+            "ls -la /tmp/noisy_command", target_ip="10.10.10.77", include_in_report=False
+        )
 
         report_path = self.temp_path / "ctf_report.md"
         result = ReportBuilder(
@@ -107,6 +114,39 @@ class TestClipboardHistory(unittest.TestCase):
         self.assertIn("![Dashboard Exploit](loot/screenshot_dash.png)", content)
         self.assertIn("nmap -p 22,80", content)
         self.assertIn("ssh admin@10.10.10.77", content)
+        self.assertNotIn("noisy_command", content)
+
+    def test_include_in_report_toggle_and_filter(self):
+        e1 = self.watcher.add_entry("nmap -sV 10.10.10.1", target_ip="10.10.10.1")
+        e2 = self.watcher.add_entry(
+            "cat /etc/shadow", target_ip="10.10.10.1", include_in_report=True
+        )
+        self.assertFalse(e1.get("include_in_report", False))
+        self.assertTrue(e2.get("include_in_report", False))
+
+        # Toggle e1 to True
+        toggled = self.watcher.toggle_report_inclusion(e1["id"])
+        self.assertIsNotNone(toggled)
+        self.assertTrue(toggled.get("include_in_report"))
+
+        # Filter only report
+        report_clips = self.watcher.get_history(only_report=True)
+        self.assertEqual(len(report_clips), 2)
+
+        # Toggle e2 to False
+        toggled_e2 = self.watcher.toggle_report_inclusion(e2["id"])
+        self.assertIsNotNone(toggled_e2)
+        self.assertFalse(toggled_e2.get("include_in_report"))
+
+        report_clips_after = self.watcher.get_history(filter_type="report")
+        self.assertEqual(len(report_clips_after), 1)
+        self.assertEqual(report_clips_after[0]["id"], e1["id"])
+
+        # Reload watcher from storage to verify persistence
+        new_watcher = ClipboardHistory(storage_file=self.storage_file)
+        persisted_report_clips = new_watcher.get_history(only_report=True)
+        self.assertEqual(len(persisted_report_clips), 1)
+        self.assertEqual(persisted_report_clips[0]["id"], e1["id"])
 
     def test_pause_and_clear(self):
         self.watcher.add_entry("test cmd 1")

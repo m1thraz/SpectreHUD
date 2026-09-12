@@ -110,11 +110,23 @@ class TestReportBuilder(unittest.TestCase):
     def test_standalone_builder_without_loot_manager(self):
         """ReportBuilder works safely with only clipboard history and no LootManager."""
         standalone_builder = ReportBuilder(loot_manager=None, clipboard_watcher=self.clip_watcher)
-        self.clip_watcher.add_entry("whoami")
+        self.clip_watcher.add_entry("whoami", include_in_report=True)
         report = standalone_builder.build()
         self.assertIn("## 1. Reconnaissance & Enumeration", report)
         self.assertIn("*Keine Einträge in dieser Phase.*", report)
         self.assertIn("whoami", report)
+
+    def test_report_builder_filters_unmarked_clipboard_entries(self):
+        """Only commands marked for report appear in Appendix A; clean message when none are marked."""
+        self.clip_watcher.add_entry("curl http://unmarked.local", include_in_report=False)
+        report_none_marked = self.builder.build()
+        self.assertIn("*Keine Befehle für den Report ausgewählt.*", report_none_marked)
+        self.assertNotIn("curl http://unmarked.local", report_none_marked)
+
+        self.clip_watcher.add_entry("nmap -sV target.local", include_in_report=True)
+        report_marked = self.builder.build()
+        self.assertIn("nmap -sV target.local", report_marked)
+        self.assertNotIn("curl http://unmarked.local", report_marked)
 
     def test_export_file(self):
         """Export writes file cleanly and enforces .md extension."""

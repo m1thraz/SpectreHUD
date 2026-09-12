@@ -182,6 +182,7 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
     lines_count = text.count("\n") + 1
     is_multiline = ("\n" in text) or (char_count > 120)
 
+    include_in_report = bool(entry.get("include_in_report", False))
     phase_id = str(entry.get("phase_id")).strip()[:64] if entry.get("phase_id") else None
 
     result = {
@@ -192,6 +193,7 @@ def validate_clipboard_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "lines_count": lines_count,
         "char_count": char_count,
         "is_multiline": is_multiline,
+        "include_in_report": include_in_report,
     }
     if phase_id:
         result["phase_id"] = phase_id

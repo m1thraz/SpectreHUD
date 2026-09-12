@@ -63,7 +63,13 @@ class ClipboardHistory:
             )
 
     def add_entry(
-        self, text: str, target_ip: str = "", *, persist: bool = True, phase_id: Optional[str] = None
+        self,
+        text: str,
+        target_ip: str = "",
+        *,
+        persist: bool = True,
+        phase_id: Optional[str] = None,
+        include_in_report: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """Add a sanitized history entry if it is valid and not a duplicate."""
         if not text or not text.strip():
@@ -88,6 +94,7 @@ class ClipboardHistory:
             "lines_count": lines_count,
             "char_count": char_count,
             "is_multiline": lines_count > 2 or char_count > 120,
+            "include_in_report": bool(include_in_report),
         }
         if phase_id:
             entry["phase_id"] = str(phase_id).strip()
@@ -148,16 +155,13 @@ class ClipboardHistory:
     def update_entry(
         self,
         entry_id: str,
-        text: str,
+        text: Optional[str] = None,
         target_ip: Optional[str] = None,
+        include_in_report: Optional[bool] = None,
         *,
         persist: bool = True,
     ) -> Optional[Dict[str, Any]]:
-        """Update text and optionally the target IP of one entry."""
-        clean_text = str(text or "").strip()
-        if not clean_text:
-            return None
-
+        """Update text, target IP, or report inclusion flag of one entry."""
         index = next(
             (i for i, entry in enumerate(self.history) if entry.get("id") == entry_id),
             -1,
@@ -166,18 +170,26 @@ class ClipboardHistory:
             return None
 
         current = dict(self.history[index])
-        lines_count = clean_text.count("\n") + 1
-        char_count = len(clean_text)
-        current.update(
-            {
-                "text": clean_text,
-                "lines_count": lines_count,
-                "char_count": char_count,
-                "is_multiline": lines_count > 2 or char_count > 120,
-            }
-        )
+        if text is not None:
+            clean_text = str(text or "").strip()
+            if not clean_text:
+                return None
+            lines_count = clean_text.count("\n") + 1
+            char_count = len(clean_text)
+            current.update(
+                {
+                    "text": clean_text,
+                    "lines_count": lines_count,
+                    "char_count": char_count,
+                    "is_multiline": lines_count > 2 or char_count > 120,
+                }
+            )
+
         if target_ip is not None:
             current["target_ip"] = str(target_ip).strip()
+
+        if include_in_report is not None:
+            current["include_in_report"] = bool(include_in_report)
 
         new_history = list(self.history)
         new_history[index] = current
@@ -187,6 +199,21 @@ class ClipboardHistory:
         self.history = new_history
         self._publish_updated("update", current)
         return dict(current)
+
+    def toggle_report_inclusion(
+        self, entry_id: str, *, persist: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """Toggle the include_in_report flag of a specific clipboard entry."""
+        index = next(
+            (i for i, entry in enumerate(self.history) if entry.get("id") == entry_id),
+            -1,
+        )
+        if index == -1:
+            return None
+        current_state = bool(self.history[index].get("include_in_report", False))
+        return self.update_entry(
+            entry_id, include_in_report=not current_state, persist=persist
+        )
 
     def clear_history(self) -> int:
         """Clear all clipboard history and return the removed entry count."""
@@ -203,8 +230,9 @@ class ClipboardHistory:
         search_query: Optional[str] = "",
         target_ip: Optional[str] = None,
         filter_type: Optional[str] = None,
+        only_report: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Filter history by query, target IP, or command/output type."""
+        """Filter history by query, target IP, command/output type, or report inclusion."""
         results = self.history
         if target_ip and target_ip != "all":
             results = [
@@ -216,6 +244,11 @@ class ClipboardHistory:
             results = [entry for entry in results if not entry.get("is_multiline", False)]
         elif filter_type == "outputs":
             results = [entry for entry in results if entry.get("is_multiline", False)]
+        elif filter_type == "report":
+            results = [entry for entry in results if entry.get("include_in_report", False)]
+
+        if only_report:
+            results = [entry for entry in results if entry.get("include_in_report", False)]
 
         query = (search_query or "").strip().lower()
         if not query:
