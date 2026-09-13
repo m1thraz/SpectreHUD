@@ -3,6 +3,32 @@ Button Stylesheets and Interactive Controls for SpectreHUD.
 """
 
 BUTTONS_QSS_TEMPLATE = """
+QPushButton.ReadinessIssueBtn,
+QPushButton[class~="ReadinessIssueBtn"] {
+    background-color: {CONTROL_A70};
+    color: {TEXT_SECONDARY};
+    border: 1px solid {BORDER_A60};
+    border-radius: 5px;
+    padding: 7px 9px;
+    text-align: left;
+    font-size: 11px;
+}
+
+QPushButton.ReadinessIssueBtn[readinessLevel="blocker"] {
+    border-left: 3px solid {STATUS_ERROR};
+}
+
+QPushButton.ReadinessIssueBtn[readinessLevel="review"] {
+    border-left: 3px solid {STATUS_WARNING};
+}
+
+QPushButton.ReadinessIssueBtn:hover,
+QPushButton[class~="ReadinessIssueBtn"]:hover {
+    background-color: {ACTIVE_BLUE_A20};
+    color: {TEXT_PRIMARY};
+    border-color: {CYBER_CYAN};
+}
+
 /* Mode Switcher Tabs */
 QPushButton.ModeSwitchBtn {
     background-color: {SURFACE_A85};

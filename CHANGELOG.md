@@ -9,6 +9,7 @@ semantic versioning.
 ### Added
 
 * Added live Loot/report sync status for new, changed, and report-only entries.
+* Added an integrated Report Readiness review with actionable handoff and export checks.
 
 ### Changed
 

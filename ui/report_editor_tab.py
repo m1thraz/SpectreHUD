@@ -70,6 +70,7 @@ from core.reporting import (
     ReportTemplate,
     ReportWorkspaceDocument,
     TemplateRepository,
+    assess_report_readiness,
     classify_loot_report_state,
 )
 from core.config import ConfigManager
@@ -93,6 +94,7 @@ from ui.report.export_actions import ReportExportActions
 from ui.report.format_actions import ReportFormatActions
 from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
+from ui.report.readiness_inspector import ReportReadinessInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
@@ -628,6 +630,14 @@ class ReportEditorTab(QWidget):
         self.metadata_inspector.metadata_changed.connect(self._on_metadata_changed)
         self.metadata_inspector_glass = self._wrap_glass_surface(self.metadata_inspector)
         self.center_stack.addWidget(self.metadata_inspector_glass)
+
+        # Integrated handoff/readiness review
+        self.readiness_inspector = ReportReadinessInspector(self)
+        self.readiness_inspector.navigate_requested.connect(self._on_navigate_requested)
+        self.readiness_inspector_glass = self._wrap_glass_surface(
+            self.readiness_inspector
+        )
+        self.center_stack.addWidget(self.readiness_inspector_glass)
 
         # Page 2: Finding Inspector
         self.finding_inspector = ReportFindingInspector(self)
@@ -1765,6 +1775,13 @@ class ReportEditorTab(QWidget):
         )
         if selected_data:
             self.navigator.select_item(*selected_data)
+        if (
+            hasattr(self, "readiness_inspector")
+            and self.center_stack.currentWidget() == self.readiness_inspector_glass
+        ):
+            self.readiness_inspector.load_assessment(
+                assess_report_readiness(self._workspace_doc)
+            )
         self.refresh_loot_sync_state()
 
     def _sync_markdown_to_workspace(self) -> None:
@@ -1810,6 +1827,14 @@ class ReportEditorTab(QWidget):
             self.center_stack.setCurrentWidget(self.metadata_inspector_glass)
             self._last_active_inspector = self.metadata_inspector_glass
             preview_target = ("section", "header_metadata")
+            if hasattr(self, "btn_toggle_raw"):
+                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
+        elif view_type == "readiness":
+            self.readiness_inspector.load_assessment(
+                assess_report_readiness(self._workspace_doc)
+            )
+            self.center_stack.setCurrentWidget(self.readiness_inspector_glass)
+            self._last_active_inspector = self.readiness_inspector_glass
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "finding" and item_id:

@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from core.i18n import t
 from core.phases import normalize_phase_key
-from core.reporting import ReportWorkspaceDocument
+from core.reporting import ReportWorkspaceDocument, assess_report_readiness
 from ui.glass_panel import GlassPanel
 from ui.styles.icons import get_theme_color, icon
 
@@ -145,6 +145,40 @@ class ReportWorkspaceNavigator(QWidget):
 
         nav_color = get_theme_color("CYBER_BLUE_LIGHT")
         accent_cyan = get_theme_color("CYBER_CYAN")
+
+        readiness = assess_report_readiness(doc)
+        if readiness.status == "incomplete":
+            readiness_text = t(
+                "report.readiness_nav_incomplete",
+                "Readiness · {count} required",
+                count=len(readiness.blockers),
+            )
+            readiness_icon = "fa5s.exclamation-circle"
+            readiness_color = get_theme_color("STATUS_ERROR")
+        elif readiness.status == "review":
+            readiness_text = t(
+                "report.readiness_nav_review",
+                "Readiness · {count} to review",
+                count=len(readiness.review_items),
+            )
+            readiness_icon = "fa5s.search"
+            readiness_color = get_theme_color("STATUS_WARNING")
+        else:
+            readiness_text = t("report.readiness_nav_ready", "Readiness · Ready")
+            readiness_icon = "fa5s.check-circle"
+            readiness_color = get_theme_color("STATUS_SUCCESS")
+
+        item_readiness = QTreeWidgetItem(self.tree)
+        item_readiness.setText(0, readiness_text)
+        item_readiness.setIcon(0, icon(readiness_icon, color=readiness_color))
+        item_readiness.setData(0, Qt.ItemDataRole.UserRole, ("readiness", None))
+        item_readiness.setToolTip(
+            0,
+            t(
+                "report.readiness_nav_tip",
+                "Review missing required fields and advisory items before export.",
+            ),
+        )
 
         # 1. Metadaten
         item_meta = QTreeWidgetItem(self.tree)

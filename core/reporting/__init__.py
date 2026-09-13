@@ -61,6 +61,12 @@ from core.reporting.file_manager import (
 from core.reporting.builder import ReportBuilder
 from core.reporting.note_formatter import append_report_note, format_report_note
 from core.reporting.navigation import build_report_navigation
+from core.reporting.readiness import (
+    ReportReadinessAssessment,
+    ReportReadinessIssue,
+    ReportReadinessLevel,
+    assess_report_readiness,
+)
 from core.reporting.draft_manager import (
     DRAFT_FILENAME,
     discard_draft,
@@ -146,6 +152,10 @@ __all__ = [
     "append_report_note",
     "format_report_note",
     "build_report_navigation",
+    "ReportReadinessAssessment",
+    "ReportReadinessIssue",
+    "ReportReadinessLevel",
+    "assess_report_readiness",
     "DRAFT_FILENAME",
     "discard_draft",
     "get_draft",

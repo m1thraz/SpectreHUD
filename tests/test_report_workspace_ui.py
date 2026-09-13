@@ -9,7 +9,14 @@ import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLineEdit, QListWidget, QTableWidget, QTreeWidget, QWidget
+from PyQt6.QtWidgets import (
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QTableWidget,
+    QTreeWidget,
+    QWidget,
+)
 
 from core.clipboard_history import ClipboardHistory
 from core.i18n import get_i18n, t
@@ -30,6 +37,7 @@ from core.reporting import (
     ReportWorkspaceDocument,
     ScopeExclusionItem,
     ScopeTargetItem,
+    assess_report_readiness,
 )
 from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
@@ -37,6 +45,7 @@ from ui.report.dialogs import (
 )
 from ui.report.finding_inspector import ReportEvidenceCard, ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
+from ui.report.readiness_inspector import ReportReadinessInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
 from ui.report.remediation_inspector import ReportRemediationInspector
@@ -78,8 +87,14 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tree = nav.tree
         self.assertGreaterEqual(tree.topLevelItemCount(), 4)
 
-        # First top-level is Metadata
-        item_meta = tree.topLevelItem(0)
+        item_readiness = tree.topLevelItem(0)
+        self.assertEqual(
+            item_readiness.data(0, Qt.ItemDataRole.UserRole), ("readiness", None)
+        )
+        self.assertIn("6", item_readiness.text(0))
+
+        # Metadata follows the completion overview.
+        item_meta = tree.topLevelItem(1)
         self.assertEqual(item_meta.data(0, Qt.ItemDataRole.UserRole), ("metadata", None))
 
         # Check signal emission on click
@@ -204,6 +219,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
             ReportAttackPathInspector(),
             ReportScopeInspector(),
             ReportAppendixInspector(),
+            ReportReadinessInspector(),
         ]
         try:
             for inspector in inspectors:
@@ -228,6 +244,48 @@ class TestReportWorkspaceUI(unittest.TestCase):
         finally:
             for inspector in inspectors:
                 inspector.deleteLater()
+
+    def test_readiness_inspector_groups_issues_and_navigates(self):
+        document = ReportWorkspaceDocument(
+            metadata=ReportMetadata(client="Example", target_scope="10.10.10.42"),
+            findings=[
+                ReportFindingItem(
+                    id="finding-1",
+                    title="Exposed service",
+                    description="Service is reachable.",
+                )
+            ],
+        )
+        inspector = ReportReadinessInspector()
+        inspector.load_assessment(assess_report_readiness(document))
+
+        self.assertEqual(inspector.lbl_status.property("readinessState"), "incomplete")
+        self.assertEqual(inspector.lbl_findings.text(), "1")
+        self.assertEqual(inspector.lbl_open.text(), "1")
+        self.assertEqual(inspector.lbl_evidence.text(), "0")
+
+        issue_buttons = [
+            button
+            for button in inspector.findChildren(QPushButton)
+            if "ReadinessIssueBtn"
+            in str(button.property("class") or "").split()
+        ]
+        self.assertEqual(len(issue_buttons), 5)
+        blocker_buttons = [
+            button
+            for button in issue_buttons
+            if button.property("readinessLevel") == "blocker"
+        ]
+        self.assertEqual(len(blocker_buttons), 3)
+
+        navigated = []
+        inspector.navigate_requested.connect(
+            lambda kind, identity: navigated.append((kind, identity))
+        )
+        blocker_buttons[0].click()
+        self.assertEqual(navigated[0][0], "metadata")
+
+        inspector.deleteLater()
 
     def test_finding_inspector_edits_and_actions(self):
         insp = ReportFindingInspector()
@@ -324,6 +382,13 @@ class TestReportWorkspaceUI(unittest.TestCase):
         # Navigate to metadata
         tab._on_navigate_requested("metadata", None)
         self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
+
+        tab._on_navigate_requested("readiness", None)
+        self.assertEqual(tab.center_stack.currentWidget(), tab.readiness_inspector_glass)
+        self.assertEqual(
+            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            ("readiness", None),
+        )
 
         # Navigate back to raw markdown
         tab._on_navigate_requested("raw_markdown", None)
@@ -568,7 +633,12 @@ Appendix body
         )
         nav.load_document(doc)
 
-        findings_root = nav.tree.topLevelItem(2)
+        findings_root = next(
+            nav.tree.topLevelItem(index)
+            for index in range(nav.tree.topLevelItemCount())
+            if nav.tree.topLevelItem(index).data(0, Qt.ItemDataRole.UserRole)
+            == ("findings_overview", None)
+        )
         self.assertIn("Loot", findings_root.text(0))
 
         phase_keys = [

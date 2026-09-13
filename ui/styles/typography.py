@@ -124,6 +124,32 @@ QLabel[class~="ReportMetricValue"] {
     font-weight: 700;
 }
 
+QLabel.ReportReadinessBadge,
+QLabel[class~="ReportReadinessBadge"] {
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel.ReportReadinessBadge[readinessState="incomplete"] {
+    background-color: {ERROR_A20};
+    color: {STATUS_ERROR};
+    border: 1px solid {ERROR_A70};
+}
+
+QLabel.ReportReadinessBadge[readinessState="review"] {
+    background-color: {WARNING_A20};
+    color: {STATUS_WARNING};
+    border: 1px solid {WARNING_A40};
+}
+
+QLabel.ReportReadinessBadge[readinessState="ready"] {
+    background-color: {SUCCESS_A20};
+    color: {STATUS_GREEN_LIGHT};
+    border: 1px solid {SUCCESS_A40};
+}
+
 /* Variable Status Bar Labels */
 QLabel.VarTagLabel {
     color: {CYBER_BLUE_LIGHT};
