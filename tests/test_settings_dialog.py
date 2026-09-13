@@ -59,11 +59,13 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertNotIn("loot_view_mode", settings)
 
     def test_general_page_exposes_manual_update_check(self):
+        from core.cli import APP_VERSION
+
         page = GeneralSettingsPage(self.config_manager)
 
         self.assertEqual(page.btn_check_updates.text(), "Check for Updates")
         self.assertFalse(page.btn_open_release.isVisible())
-        self.assertIn("2.1.5", page.lbl_update_status.text())
+        self.assertIn(APP_VERSION, page.lbl_update_status.text())
 
     def test_general_page_exposes_diagnostics_log_location(self):
         page = GeneralSettingsPage(self.config_manager)

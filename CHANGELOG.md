@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.6] - 2026-09-13
+
 ### Added
 
 * Modular Report Workspace featuring a tri-pane environment with a semantic navigator, dedicated section and finding inspectors, and live Markdown preview.
@@ -317,7 +319,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...HEAD
+[2.1.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...v2.1.3
