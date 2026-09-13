@@ -207,9 +207,9 @@ python scripts/build_exe.py
 ## Platform notes
 
 Windows is the primary production-verified platform.
+Linux X11 support is also veryfied.
 
-Linux support is implemented and CI-validated; real-desktop X11/Wayland acceptance is still being expanded across physical and virtualized desktop environments.
-
+Wayland acceptance is still being expanded across physical and virtualized desktop environments.
 On modern Wayland compositors, global background key logging and arbitrary display grabbing are restricted by the compositor security model. SpectreHUD gracefully degrades to in-app keyboard shortcuts and provides clear UI guidance without blocking the application.
 
 ## Contributing and security
