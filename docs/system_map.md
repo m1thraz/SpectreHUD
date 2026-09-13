@@ -26,3 +26,4 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - Tree item data remains a simple `(kind, identity)` tuple for Qt storage compatibility; `ReportWorkspaceNavigator` converts it to `ReportLocation` before emitting navigation requests.
 - `ReportWorkspaceRouter` owns semantic destination-to-inspector resolution, while `ReportEditorTab` retains shell state such as view mode, active stack surface, toolbar state, and preview focus.
 - `ReportEvidenceActions` owns picker, import, and evidence-normalization workflows; it receives live project dependencies through providers and reports completed evidence through one callback.
+- `ReportActionToolbar` owns document-action widget construction; its callbacks resolve tab operations at activation time so runtime overrides and test seams remain effective.

@@ -22,17 +22,12 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QHBoxLayout,
     QSplitter,
-    QPushButton,
-    QLabel,
     QMessageBox,
     QDialog,
-    QMenu,
     QTextEdit,
 )
 from PyQt6.QtGui import (
-    QAction,
     QColor,
     QFont,
     QKeySequence,
@@ -85,6 +80,11 @@ from ui.report.remediation_inspector import ReportRemediationInspector
 from ui.report.attack_path_inspector import ReportAttackPathInspector
 from ui.report.scope_inspector import ReportScopeInspector
 from ui.report.appendix_inspector import ReportAppendixInspector
+from ui.report.action_toolbar import (
+    ReportActionCallbacks,
+    ReportActionToolbar,
+    ReportViewOption,
+)
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.workspace_router import (
     InspectorSurface,
@@ -105,7 +105,7 @@ from ui.report.preview_transforms import (
     strip_preview_surrogates,
 )
 from ui.report.source_editor import ReportSourceEditor
-from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
+from ui.report.toolbar import build_format_toolbar
 from ui.report.workspace_shell import ResponsiveStackedWidget
 from ui.styles.icons import icon
 from ui.message_boxes import (
@@ -236,7 +236,50 @@ class ReportEditorTab(QWidget):
         layout.setSpacing(6)
 
         # Ebene 1: Dokumentaktionen (links) und Projekt-Status (rechts)
-        self.action_toolbar_widget = self._build_action_toolbar()
+        self.action_toolbar_widget = ReportActionToolbar(
+            parent=self,
+            callbacks=ReportActionCallbacks(
+                change_view=lambda mode: self._set_view_mode(mode),
+                toggle_navigator=lambda: self._toggle_navigator(),
+                populate_navigator=lambda: self._populate_navigator_menu(),
+                toggle_raw=lambda: self._toggle_inspector_raw(),
+                append_loot=lambda: self._on_append_loot_clicked(),
+                regenerate=lambda: self._on_regenerate_clicked(),
+                export=lambda: self.export_actions.on_export_clicked(),
+                toggle_metadata=lambda visible: self._toggle_report_metadata(visible),
+                toggle_theme=lambda: self._toggle_report_color_mode(),
+                save=lambda: self.save(),
+            ),
+            view_options=(
+                ReportViewOption(
+                    ViewMode.WORKSPACE,
+                    "report.mode_workspace",
+                    "Workspace",
+                    "fa5s.project-diagram",
+                ),
+                ReportViewOption(
+                    ViewMode.EDITOR,
+                    "report.mode_editor",
+                    "Editor",
+                    "fa5s.edit",
+                ),
+                ReportViewOption(
+                    ViewMode.SPLIT,
+                    "report.mode_split",
+                    "Split",
+                    "fa5s.columns",
+                ),
+                ReportViewOption(
+                    ViewMode.PREVIEW,
+                    "report.mode_preview",
+                    "Live Preview",
+                    "fa5s.eye",
+                ),
+            ),
+            icon_factory=lambda name, color=None: self._toolbar_icon(name, color),
+            error_color=self._toolbar_palette["STATUS_ERROR"],
+        )
+        self._expose_action_toolbar_handles(self.action_toolbar_widget)
         layout.addWidget(self.action_toolbar_widget)
 
         # Ebene 2: Formatierungsleiste (Struktur, Inline-Stil, Einfügen)
@@ -287,168 +330,29 @@ class ReportEditorTab(QWidget):
         if not collapsed and self._view_mode == ViewMode.PREVIEW:
             self.format_toolbar_widget.tools_container.setVisible(False)
 
-    def _build_action_toolbar(self) -> QWidget:
-        """Build Ebene 1: Document actions on the left, status text on the right."""
-        container = QWidget(self)
-        container.setObjectName("ReportActionToolbar")
-        toolbar = QHBoxLayout(container)
-        toolbar.setContentsMargins(0, 0, 0, 0)
-        toolbar.setSpacing(6)
-
-        # Compact view selector; shortcuts remain available for power users.
-        self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
-        self.btn_change_view.setProperty("class", "SecondaryBtn")
-        self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
-        self.btn_change_view.setIcon(self._toolbar_icon("fa5s.columns"))
-        self.btn_change_view.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self._build_view_menu()
-        toolbar.addWidget(self.btn_change_view)
-
-        # Navigator sidebar toggle button (shows/hides the Navigator panel on demand)
-        self.btn_navigator = QPushButton(t("report.navigator", "Navigator"))
-        self.btn_navigator.setObjectName("btn_report_navigator")
-        self.btn_navigator.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
-        self.btn_navigator.setCheckable(True)
-        self.btn_navigator.setChecked(False)
-        navigator_tooltip = t(
-            "report.navigator_tip", "Show / hide Report Navigator sidebar (Ctrl+Shift+N)"
-        )
-        self.btn_navigator.setToolTip(navigator_tooltip)
-        self.btn_navigator.setAccessibleName(navigator_tooltip)
-        self.btn_navigator.setIcon(self._toolbar_icon("fa5s.sitemap"))
-        self.btn_navigator.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_navigator.clicked.connect(self._toggle_navigator)
-        self.navigator_menu = QMenu(self.btn_navigator)
-        self.navigator_menu.aboutToShow.connect(self._populate_navigator_menu)
-        toolbar.addWidget(self.btn_navigator)
-
-        # Toggle between Form Inspector and Raw Markdown Editor
-        self.btn_toggle_raw = QPushButton()
-        self.btn_toggle_raw.setObjectName("btn_toggle_raw")
-        self.btn_toggle_raw.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
-        self.btn_toggle_raw.setToolTip(
-            t("report.toggle_raw_tip", "Toggle between structured form and Markdown source")
-        )
-        self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        self.btn_toggle_raw.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_toggle_raw.clicked.connect(self._toggle_inspector_raw)
-        toolbar.addWidget(self.btn_toggle_raw)
-
-        self.btn_report_actions = QPushButton(t("report.actions", "Report Actions"))
-        self.btn_report_actions.setObjectName("btn_report_actions")
-        self.btn_report_actions.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
-        self.btn_report_actions.setToolTip(
-            t("report.actions_tip", "Synchronize project Loot or rebuild the report")
-        )
-        self.btn_report_actions.setIcon(self._toolbar_icon("fa5s.tools"))
-        self.btn_report_actions.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.report_actions_menu = QMenu(self.btn_report_actions)
-
-        self.action_sync_loot = QAction(
-            self._toolbar_icon("fa5s.plus-circle"),
-            t("report.append_loot", "Add Missing Loot"),
-            self.report_actions_menu,
-        )
-        self.action_sync_loot.triggered.connect(
-            lambda _checked=False: self._on_append_loot_clicked()
-        )
-        self.report_actions_menu.addAction(self.action_sync_loot)
-        self.report_actions_menu.addSeparator()
-
-        self.action_regenerate = QAction(
-            self._toolbar_icon("fa5s.sync-alt"),
-            t("report.regenerate", "Regenerate from Loot"),
-            self.report_actions_menu,
-        )
-        self.action_regenerate.setToolTip(
-            t("report.regenerate_destructive_tip", "Rebuilds the report after confirmation")
-        )
-        self.action_regenerate.triggered.connect(
-            lambda _checked=False: self._on_regenerate_clicked()
-        )
-        self.report_actions_menu.addAction(self.action_regenerate)
-        self.btn_report_actions.setMenu(self.report_actions_menu)
-        toolbar.addWidget(self.btn_report_actions)
-
-        self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
-        self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
-        self.btn_append_loot.setToolTip(
-            t(
-                "report.append_loot_tip",
-                "Appends missing loot entries to the report without overwriting manual notes",
-            )
-        )
-        self.btn_append_loot.setIcon(self._toolbar_icon("fa5s.plus-circle"))
-        self.btn_append_loot.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_append_loot.clicked.connect(self._on_append_loot_clicked)
-        toolbar.addWidget(self.btn_append_loot)
-
-        self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
-        self.btn_regenerate.setProperty("class", "SecondaryBtn RegenerateBtn")
-        self.btn_regenerate.setToolTip(
-            t("report.regenerate_tip", "Updates report structure and appends new loot entries")
-        )
-        self.btn_regenerate.setIcon(
-            self._toolbar_icon("fa5s.sync-alt", color=self._toolbar_palette["STATUS_ERROR"])
-        )
-        self.btn_regenerate.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_regenerate.clicked.connect(self._on_regenerate_clicked)
-        toolbar.addWidget(self.btn_regenerate)
-
-        self.btn_export = QPushButton(t("report.export", "Export..."))
-        self.btn_export.setProperty("class", "SecondaryBtn")
-        self.btn_export.setToolTip(
-            t("report.export_tip", "Choose how to export the current report")
-        )
-        self.btn_export.setIcon(self._toolbar_icon("fa5s.file-export"))
-        self.btn_export.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_export.clicked.connect(self.export_actions.on_export_clicked)
-        toolbar.addWidget(self.btn_export)
-
-        self.btn_report_metadata = QPushButton()
-        self.btn_report_metadata.setObjectName("btn_report_metadata")
-        self.btn_report_metadata.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
-        )
-        self.btn_report_metadata.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_report_metadata.setCheckable(True)
-        self.btn_report_metadata.toggled.connect(self._toggle_report_metadata)
-        toolbar.addWidget(self.btn_report_metadata)
+    def _expose_action_toolbar_handles(
+        self, toolbar: ReportActionToolbar
+    ) -> None:
+        """Keep stable tab attributes while the toolbar owns construction."""
+        self.btn_change_view = toolbar.btn_change_view
+        self.btn_navigator = toolbar.btn_navigator
+        self.navigator_menu = toolbar.navigator_menu
+        self.btn_toggle_raw = toolbar.btn_toggle_raw
+        self.btn_report_actions = toolbar.btn_report_actions
+        self.report_actions_menu = toolbar.report_actions_menu
+        self.action_sync_loot = toolbar.action_sync_loot
+        self.action_regenerate = toolbar.action_regenerate
+        self.btn_append_loot = toolbar.btn_append_loot
+        self.btn_regenerate = toolbar.btn_regenerate
+        self.btn_export = toolbar.btn_export
+        self.btn_report_metadata = toolbar.btn_report_metadata
+        self.btn_report_theme = toolbar.btn_report_theme
+        self.lbl_status = toolbar.lbl_status
+        self.btn_save = toolbar.btn_save
+        self.view_menu = toolbar.view_menu
+        self._view_actions = toolbar.view_actions
         self._update_report_metadata_button()
-
-        self.btn_report_theme = QPushButton()
-        self.btn_report_theme.setObjectName("btn_report_theme")
-        self.btn_report_theme.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
-        )
-        self.btn_report_theme.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_report_theme.clicked.connect(self._toggle_report_color_mode)
-        toolbar.addWidget(self.btn_report_theme)
         self._update_report_theme_button()
-
-        # Verschiebe Status-Text nach rechts auf Ebene 1
-        toolbar.addStretch()
-
-        self.lbl_status = QLabel("")
-        self.lbl_status.setProperty("class", "ReportStatusLabel")
-        self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        toolbar.addWidget(self.lbl_status)
-
-        # Kompakter QtAwesome-Save-Button rechts neben dem Status-Label
-        self.btn_save = QPushButton()
-        self.btn_save.setObjectName("btn_save_report")
-        self.btn_save.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn SaveIconBtn"
-        )
-        save_tooltip = t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
-        self.btn_save.setToolTip(save_tooltip)
-        self.btn_save.setAccessibleName(save_tooltip)
-        self.btn_save.setIcon(self._toolbar_icon("fa5s.save"))
-        self.btn_save.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
-        self.btn_save.clicked.connect(self.save)
-        toolbar.addWidget(self.btn_save)
-
-        return container
 
     def _toolbar_icon(self, icon_name: str, color: Optional[str] = None):
         """Create a toolbar icon using the active app theme through the central wrapper."""
@@ -457,26 +361,6 @@ class ReportEditorTab(QWidget):
             color=color or self._toolbar_palette["CYBER_BLUE_LIGHT"],
             color_active=self._toolbar_palette["TEXT_PRIMARY"],
         )
-
-    def _build_view_menu(self) -> None:
-        """Populate the compact view selector with standard views."""
-        self.view_menu = QMenu(self.btn_change_view)
-        self._view_actions = {}
-        for mode, key, fallback, icon_name in (
-            (ViewMode.WORKSPACE, "report.mode_workspace", "Workspace", "fa5s.project-diagram"),
-            (ViewMode.EDITOR, "report.mode_editor", "Editor", "fa5s.edit"),
-            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.columns"),
-            (ViewMode.PREVIEW, "report.mode_preview", "Live Preview", "fa5s.eye"),
-        ):
-            action = QAction(t(key, fallback), self.view_menu)
-            action.setIcon(self._toolbar_icon(icon_name))
-            action.setCheckable(True)
-            action.triggered.connect(
-                lambda _checked=False, selected=mode: self._set_view_mode(selected)
-            )
-            self.view_menu.addAction(action)
-            self._view_actions[mode] = action
-        self.btn_change_view.setMenu(self.view_menu)
 
     def _build_editor_splitter(self, layout: QVBoxLayout) -> None:
         """Build the workspace splitter: Collapsible Navigator, Center Editing Pane, Live Preview."""

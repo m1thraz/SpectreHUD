@@ -20,6 +20,7 @@ semantic versioning.
 * Kept navigator selections semantically aligned and highlighted in the live report preview.
 * Split preview transformations, workspace sizing, typed navigation, and controller access out of the Report Editor composition root.
 * Moved inspector routing and finding-evidence attachment workflows into dedicated Report Workspace components.
+* Extracted document-action toolbar construction and signal wiring from the Report Editor composition root.
 
 ### Fixed
 
