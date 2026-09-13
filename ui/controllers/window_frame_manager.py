@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QScrollBar,
     QSizeGrip,
+    QSplitterHandle,
     QTextEdit,
     QWidget,
 )
@@ -43,6 +44,7 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
                 QSizeGrip,
                 QAbstractItemView,
                 QHeaderView,
+                QSplitterHandle,
             ),
         ):
             return True

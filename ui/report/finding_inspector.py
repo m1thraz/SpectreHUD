@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -124,6 +125,8 @@ class ReportFindingInspector(QWidget):
     request_image_file = pyqtSignal()
     request_clipboard_history = pyqtSignal()
     request_loot_entry = pyqtSignal()
+    request_create_finding = pyqtSignal()
+    request_loot_sync = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -138,17 +141,86 @@ class ReportFindingInspector(QWidget):
         self._debounce_timer.timeout.connect(self._emit_changed)
 
         self._build_ui()
+        self.load_finding(None)
 
     def set_project_target_ip(self, ip: str) -> None:
         self._project_target_ip = ip
 
+    def _build_empty_state_ui(self) -> QWidget:
+        container = QWidget(self)
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(16, 24, 16, 24)
+        layout.setSpacing(16)
+        layout.addStretch(1)
+
+        panel = GlassPanel(container)
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(24, 28, 24, 28)
+        panel_layout.setSpacing(14)
+        panel_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        lbl_icon = QLabel()
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_icon.setPixmap(icon("fa5s.shield-alt", color="#00e5ff").pixmap(48, 48))
+        panel_layout.addWidget(lbl_icon)
+
+        lbl_title = QLabel(t("report.empty_findings_title", "Keine Schwachstellen erfasst"))
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #f0f6fc;")
+        panel_layout.addWidget(lbl_title)
+
+        lbl_desc = QLabel(
+            t(
+                "report.empty_findings_desc",
+                "Es wurden noch keine Schwachstellen im Bericht angelegt. Du kannst ein neues Finding manuell anlegen oder unzugewiesene Einträge aus Loot importieren.",
+            )
+        )
+        lbl_desc.setWordWrap(True)
+        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_desc.setStyleSheet("color: #8b949e; font-size: 12px; max-width: 480px; line-height: 1.4;")
+        panel_layout.addWidget(lbl_desc)
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.btn_empty_create = QPushButton(t("report.empty_add_finding_btn", "Neues Finding anlegen"))
+        self.btn_empty_create.setProperty("class", "PrimaryBtn")
+        self.btn_empty_create.setIcon(icon("fa5s.plus", color="#ffffff"))
+        self.btn_empty_create.clicked.connect(self.request_create_finding.emit)
+        btn_row.addWidget(self.btn_empty_create)
+
+        self.btn_empty_sync = QPushButton(t("report.empty_sync_loot_btn", "Aus Loot synchronisieren"))
+        self.btn_empty_sync.setProperty("class", "SecondaryBtn")
+        self.btn_empty_sync.setIcon(icon("fa5s.sync-alt", color="#7ee787"))
+        self.btn_empty_sync.clicked.connect(self.request_loot_sync.emit)
+        btn_row.addWidget(self.btn_empty_sync)
+
+        panel_layout.addLayout(btn_row)
+
+        layout.addWidget(panel, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addStretch(2)
+        return container
+
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(6)
+        main_layout.setSpacing(0)
+
+        self._stack = QStackedWidget(self)
+
+        # Page 0: Empty state
+        self.empty_widget = self._build_empty_state_ui()
+        self._stack.addWidget(self.empty_widget)
+
+        # Page 1: Finding Editor
+        self.editor_widget = QWidget(self)
+        ed_layout = QVBoxLayout(self.editor_widget)
+        ed_layout.setContentsMargins(0, 0, 0, 0)
+        ed_layout.setSpacing(6)
 
         # Header card
-        header_card = GlassPanel(self)
+        header_card = GlassPanel(self.editor_widget)
         h_layout = QHBoxLayout(header_card)
         h_layout.setContentsMargins(12, 8, 12, 8)
         h_layout.setSpacing(8)
@@ -178,10 +250,10 @@ class ReportFindingInspector(QWidget):
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         h_layout.addWidget(self.btn_delete)
 
-        main_layout.addWidget(header_card)
+        ed_layout.addWidget(header_card)
 
         # Form Scroll Area
-        scroll = QScrollArea(self)
+        scroll = QScrollArea(self.editor_widget)
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
@@ -242,7 +314,7 @@ class ReportFindingInspector(QWidget):
         self.btn_apply_target.clicked.connect(self._on_apply_project_target)
         phase_row.addWidget(self.btn_apply_target)
 
-        form.addRow(self._make_label(t("report.finding_phase", "Phase:")), phase_row)
+        form.addRow(self._make_label(t("report.finding_phase", "Phase & Target:")), phase_row)
         v_content.addLayout(form)
 
         # Description text
@@ -259,10 +331,16 @@ class ReportFindingInspector(QWidget):
         v_content.addWidget(self.txt_desc)
 
         # Evidence Drawer Section
-        ev_header_layout = QHBoxLayout()
-        ev_header_layout.addWidget(self._make_section_header(t("report.finding_evidence", "Evidence & Artifacts")))
+        ev_header = QWidget()
+        ev_header_layout = QHBoxLayout(ev_header)
+        ev_header_layout.setContentsMargins(0, 4, 0, 2)
+        ev_header_layout.setSpacing(6)
+
+        lbl_ev = self._make_section_header(t("report.finding_evidence", "Evidence & Proof of Concept"))
+        ev_header_layout.addWidget(lbl_ev)
+
         self.lbl_evidence_count = QLabel("(0)")
-        self.lbl_evidence_count.setStyleSheet("color: #8b949e; font-size: 11px; font-weight: bold;")
+        self.lbl_evidence_count.setStyleSheet("color: #8b949e; font-size: 11px;")
         ev_header_layout.addWidget(self.lbl_evidence_count)
         ev_header_layout.addStretch()
 
@@ -275,54 +353,57 @@ class ReportFindingInspector(QWidget):
         self.btn_add_loot_screenshot.clicked.connect(self.request_loot_screenshot.emit)
         ev_header_layout.addWidget(self.btn_add_loot_screenshot)
 
-        self.btn_browse_screenshot = QPushButton()
-        self.btn_browse_screenshot.setObjectName("btn_browse_screenshot")
-        self.btn_browse_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_browse_screenshot.setToolTip(t("report.browse_screenshot", "Import image from disk"))
-        self.btn_browse_screenshot.setIcon(icon("fa5s.folder-open", color="#79c0ff"))
-        self.btn_browse_screenshot.clicked.connect(self.request_image_file.emit)
-        ev_header_layout.addWidget(self.btn_browse_screenshot)
+        self.btn_add_file_screenshot = QPushButton()
+        self.btn_add_file_screenshot.setObjectName("btn_add_file_screenshot")
+        self.btn_add_file_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
+        self.btn_add_file_screenshot.setToolTip(t("report.browse_screenshot", "Import image from disk"))
+        self.btn_add_file_screenshot.setIcon(icon("fa5s.folder-open", color="#d29922"))
+        self.btn_add_file_screenshot.clicked.connect(self.request_image_file.emit)
+        ev_header_layout.addWidget(self.btn_add_file_screenshot)
 
         self.btn_add_terminal = QPushButton()
         self.btn_add_terminal.setObjectName("btn_add_terminal")
         self.btn_add_terminal.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_terminal.setToolTip(t("report.add_terminal_evidence", "From clipboard history (Terminal/PoC)"))
+        self.btn_add_terminal.setToolTip(
+            t("report.add_terminal_evidence", "From Clipboard History (Terminal/PoC)")
+        )
         self.btn_add_terminal.setIcon(icon("fa5s.terminal", color="#7ee787"))
         self.btn_add_terminal.clicked.connect(self.request_clipboard_history.emit)
         ev_header_layout.addWidget(self.btn_add_terminal)
 
-        self.btn_add_loot_entry = QPushButton()
-        self.btn_add_loot_entry.setObjectName("btn_add_loot_entry")
-        self.btn_add_loot_entry.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_loot_entry.setToolTip(t("report.add_loot_entry", "From session loot (Creds/Hashes/Flags)"))
-        self.btn_add_loot_entry.setIcon(icon("fa5s.key", color="#d29922"))
-        self.btn_add_loot_entry.clicked.connect(self.request_loot_entry.emit)
-        ev_header_layout.addWidget(self.btn_add_loot_entry)
+        self.btn_add_loot = QPushButton()
+        self.btn_add_loot.setObjectName("btn_add_loot")
+        self.btn_add_loot.setProperty("class", "SecondaryBtn FormatToolBtn")
+        self.btn_add_loot.setToolTip(t("report.add_loot_entry", "From Session Loot (Creds/Hashes/Flags)"))
+        self.btn_add_loot.setIcon(icon("fa5s.key", color="#bc8cff"))
+        self.btn_add_loot.clicked.connect(self.request_loot_entry.emit)
+        ev_header_layout.addWidget(self.btn_add_loot)
 
         self.btn_add_code = QPushButton()
         self.btn_add_code.setObjectName("btn_add_code")
         self.btn_add_code.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_code.setToolTip(t("report.add_code_evidence", "Insert code snippet / exploit"))
-        self.btn_add_code.setIcon(icon("fa5s.code", color="#bc8cff"))
+        self.btn_add_code.setToolTip(t("report.add_code_evidence", "Insert Code Snippet / Exploit"))
+        self.btn_add_code.setIcon(icon("fa5s.code", color="#58a6ff"))
         self.btn_add_code.clicked.connect(self._on_add_code_clicked)
         ev_header_layout.addWidget(self.btn_add_code)
 
-        v_content.addLayout(ev_header_layout)
+        v_content.addWidget(ev_header)
 
         # Evidence Cards Container
         self.evidence_container = QWidget()
+        self.evidence_cards_widget = self.evidence_container
         self.evidence_cards_layout = QVBoxLayout(self.evidence_container)
         self.evidence_cards_layout.setContentsMargins(0, 0, 0, 0)
         self.evidence_cards_layout.setSpacing(6)
         v_content.addWidget(self.evidence_container)
 
         # Recommendation text
-        v_content.addWidget(self._make_section_header(t("report.finding_remediation", "Remediation & Recommendations")))
+        v_content.addWidget(self._make_section_header(t("report.finding_remediation", "Recommended Remediation")))
         self.txt_rec = QPlainTextEdit()
         self.txt_rec.setPlaceholderText(
             t(
                 "report.finding_remediation_placeholder",
-                "Remediation steps, configuration hardening, or patch guidance...",
+                "Remediation steps, configuration changes, or patches...",
             )
         )
         self.txt_rec.setMinimumHeight(100)
@@ -338,7 +419,10 @@ class ReportFindingInspector(QWidget):
         v_content.addWidget(self.txt_refs)
 
         scroll.setWidget(content_widget)
-        main_layout.addWidget(scroll, stretch=1)
+        ed_layout.addWidget(scroll, stretch=1)
+
+        self._stack.addWidget(self.editor_widget)
+        main_layout.addWidget(self._stack)
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
@@ -350,7 +434,13 @@ class ReportFindingInspector(QWidget):
         lbl.setStyleSheet("font-weight: bold; color: #79c0ff; font-size: 12px; margin-top: 4px;")
         return lbl
 
-    def load_finding(self, finding: ReportFindingItem) -> None:
+    def load_finding(self, finding: Optional[ReportFindingItem]) -> None:
+        if finding is None:
+            self._finding = None
+            self._stack.setCurrentWidget(self.empty_widget)
+            return
+
+        self._stack.setCurrentWidget(self.editor_widget)
         self._loading = True
         try:
             self._finding = finding

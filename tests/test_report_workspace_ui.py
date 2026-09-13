@@ -232,8 +232,43 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab._on_navigate_requested("raw_markdown", None)
         self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
 
+        # When findings is empty, navigating to findings_overview displays finding_inspector_glass (empty state), NOT raw editor
+        tab._workspace_doc.findings.clear()
+        tab._on_navigate_requested("findings_overview", None)
+        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertIsNone(tab.finding_inspector._finding)
+        self.assertEqual(tab.finding_inspector._stack.currentWidget(), tab.finding_inspector.empty_widget)
+
         tab.close()
         tab.deleteLater()
+
+    def test_finding_inspector_empty_state_and_signals(self):
+        insp = ReportFindingInspector()
+        # Default state is empty state
+        self.assertIsNone(insp._finding)
+        self.assertEqual(insp._stack.currentWidget(), insp.empty_widget)
+
+        created = []
+        synced = []
+        insp.request_create_finding.connect(lambda: created.append(True))
+        insp.request_loot_sync.connect(lambda: synced.append(True))
+
+        insp.btn_empty_create.click()
+        self.assertEqual(created, [True])
+
+        insp.btn_empty_sync.click()
+        self.assertEqual(synced, [True])
+
+        # Loading finding switches to editor widget
+        f = ReportFindingItem(id="f-1", title="Test Finding")
+        insp.load_finding(f)
+        self.assertEqual(insp._stack.currentWidget(), insp.editor_widget)
+        self.assertEqual(insp.txt_title.text(), "Test Finding")
+
+        # Loading None switches back to empty state
+        insp.load_finding(None)
+        self.assertIsNone(insp._finding)
+        self.assertEqual(insp._stack.currentWidget(), insp.empty_widget)
 
     def test_finding_inspector_evidence_drawer_and_cards(self):
         insp = ReportFindingInspector()
@@ -354,18 +389,26 @@ class TestReportWorkspaceUI(unittest.TestCase):
         dialog.deleteLater()
 
     def test_window_frame_manager_interactive_widgets(self):
+        from PyQt6.QtWidgets import QSplitter, QTextEdit
+
         tree = QTreeWidget()
         list_widget = QListWidget()
         table = QTableWidget()
         header = tree.header()
+        splitter = QSplitter()
+        splitter.addWidget(QTextEdit())
+        splitter.addWidget(QTextEdit())
+        handle = splitter.handle(1)
 
         self.assertTrue(is_interactive_widget(tree))
         self.assertTrue(is_interactive_widget(list_widget))
         self.assertTrue(is_interactive_widget(table))
         self.assertTrue(is_interactive_widget(header))
+        self.assertTrue(is_interactive_widget(handle))
         tree.deleteLater()
         list_widget.deleteLater()
         table.deleteLater()
+        splitter.deleteLater()
 
     def test_navigator_grouping_by_loot_phases(self):
         nav = ReportWorkspaceNavigator()

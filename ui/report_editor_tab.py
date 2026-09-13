@@ -525,6 +525,8 @@ class ReportEditorTab(QWidget):
         self.finding_inspector.request_image_file.connect(self._on_attach_image_file)
         self.finding_inspector.request_clipboard_history.connect(self._on_attach_clipboard_history)
         self.finding_inspector.request_loot_entry.connect(self._on_attach_loot_entry)
+        self.finding_inspector.request_create_finding.connect(self._on_add_finding_requested)
+        self.finding_inspector.request_loot_sync.connect(self._on_append_loot_clicked)
         self.finding_inspector_glass = self._wrap_glass_surface(self.finding_inspector)
         self.center_stack.addWidget(self.finding_inspector_glass)
 
@@ -1061,6 +1063,11 @@ class ReportEditorTab(QWidget):
                 self.btn_navigator.setChecked(True)
             self.center_stack.setVisible(True)
             self.preview_glass.setVisible(True)
+            if self.center_stack.currentWidget() == self.editor_glass:
+                target = getattr(self, "_last_active_inspector", self.finding_inspector_glass)
+                self.center_stack.setCurrentWidget(target)
+                if hasattr(self, "btn_toggle_raw"):
+                    self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
             actual_nav_w = nav_w if nav_w > 0 else 260
             rem = max(350, total_w - actual_nav_w)
             c_w = max(200, int(rem * ratio))
@@ -1608,15 +1615,12 @@ class ReportEditorTab(QWidget):
                 target_finding = next((f for f in self._workspace_doc.findings if normalize_phase_key(f.phase) == item_id), None)
             if not target_finding and self._workspace_doc.findings:
                 target_finding = self._workspace_doc.findings[0]
-            if target_finding:
-                self.finding_inspector.set_project_target_ip(self._get_target_ip())
-                self.finding_inspector.load_finding(target_finding)
-                self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-                self._last_active_inspector = self.finding_inspector_glass
-                if hasattr(self, "btn_toggle_raw"):
-                    self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-            else:
-                self.center_stack.setCurrentWidget(self.editor_glass)
+            self.finding_inspector.set_project_target_ip(self._get_target_ip())
+            self.finding_inspector.load_finding(target_finding)
+            self.center_stack.setCurrentWidget(self.finding_inspector_glass)
+            self._last_active_inspector = self.finding_inspector_glass
+            if hasattr(self, "btn_toggle_raw"):
+                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type in ("section", "narratives_root"):
             sec_id = item_id or "executive_summary"
             if sec_id == "executive_summary":
@@ -1762,7 +1766,10 @@ class ReportEditorTab(QWidget):
             project_name=self.current_project or "",
             target_ip=self._get_target_ip(),
         )
-        self.center_stack.setCurrentWidget(self.editor_glass)
+        remaining = self._workspace_doc.findings[0] if self._workspace_doc.findings else None
+        self.finding_inspector.load_finding(remaining)
+        self.center_stack.setCurrentWidget(self.finding_inspector_glass)
+        self._last_active_inspector = self.finding_inspector_glass
 
     def _on_finding_duplicated(self, finding_id: str) -> None:
         import uuid
