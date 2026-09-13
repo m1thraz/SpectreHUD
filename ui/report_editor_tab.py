@@ -22,7 +22,6 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QSplitter,
     QMessageBox,
     QDialog,
     QTextEdit,
@@ -70,32 +69,14 @@ from ui.report.dialogs import (
 from ui.report.export_actions import ReportExportActions
 from ui.report.evidence_actions import ReportEvidenceActions
 from ui.report.format_actions import ReportFormatActions
-from ui.report.finding_inspector import ReportFindingInspector
-from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.navigation import ReportLocation
-from ui.report.readiness_inspector import ReportReadinessInspector
-from ui.report.section_inspector import ReportSectionInspector
-from ui.report.summary_inspector import ReportSummaryInspector
-from ui.report.remediation_inspector import ReportRemediationInspector
-from ui.report.attack_path_inspector import ReportAttackPathInspector
-from ui.report.scope_inspector import ReportScopeInspector
-from ui.report.appendix_inspector import ReportAppendixInspector
 from ui.report.action_toolbar import (
     ReportActionCallbacks,
     ReportActionToolbar,
     ReportViewOption,
 )
-from ui.report.workspace_navigator import ReportWorkspaceNavigator
-from ui.report.workspace_router import (
-    InspectorSurface,
-    ReportRouteContext,
-    ReportWorkspaceRouter,
-    ReportWorkspaceSurfaces,
-)
+from ui.report.workspace_router import ReportRouteContext
 from ui.report.icon_assets import render_report_icon  # noqa: F401
-from ui.report.find_replace import FindReplaceBar
-from ui.glass_panel import GlassPanel
-from ui.report.preview import ReportDocument, ReportPreviewEdit
 from ui.report.preview_transforms import (
     PREVIEW_PAGEBREAK_LABEL,
     PREVIEW_PAGEBREAK_TOKEN,
@@ -104,9 +85,13 @@ from ui.report.preview_transforms import (
     prepare_preview_markdown,
     strip_preview_surrogates,
 )
-from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import build_format_toolbar
-from ui.report.workspace_shell import ResponsiveStackedWidget
+from ui.report.workspace_shell import (
+    ReportWorkspaceCallbacks,
+    ReportWorkspaceShell,
+    build_report_workspace_shell,
+    wrap_glass_surface,
+)
 from ui.styles.icons import icon
 from ui.message_boxes import (
     ask_confirmation,  # noqa: F401
@@ -363,195 +348,82 @@ class ReportEditorTab(QWidget):
         )
 
     def _build_editor_splitter(self, layout: QVBoxLayout) -> None:
-        """Build the workspace splitter: Collapsible Navigator, Center Editing Pane, Live Preview."""
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setChildrenCollapsible(False)
-        self.splitter.setHandleWidth(6)
-
-        # Spalte 1: Navigator (links, standardmäßig im Split-View eingeklappt für reines 2-Spalten-Layout)
-        self.navigator = ReportWorkspaceNavigator(self)
-        self.navigator.navigate_requested.connect(self.navigate_to)
-        self.navigator.add_finding_requested.connect(self._on_add_finding_requested)
-        self.navigator.sync_loot_requested.connect(self._on_append_loot_clicked)
-        self.navigator_glass = self._wrap_glass_surface(self.navigator)
-        self.navigator_glass.setMinimumWidth(180)
-        self.navigator_glass.setMaximumWidth(550)
-        self.navigator_glass.setVisible(False)
-        self.splitter.addWidget(self.navigator_glass)
-
-        # Spalte 2: Fokus-Zentrum (Mitte)
-        self.center_stack = ResponsiveStackedWidget(self)
-        self.center_stack.setMinimumWidth(200)
-
-        # Page 0: Raw Markdown Editor
-        self.editor = ReportSourceEditor()
-        self.editor.setPlaceholderText(
-            t(
-                "report.editor_placeholder",
-                "No report available for this project yet.\n\n"
-                "Click 'Regenerate from Loot' above to start with an "
-                "auto-generated report, or write your markdown directly here.",
-            )
+        """Build and expose the Report Workspace shell."""
+        shell = build_report_workspace_shell(
+            parent=self,
+            callbacks=ReportWorkspaceCallbacks(
+                navigate=lambda location: self.navigate_to(location),
+                add_finding=lambda: self._on_add_finding_requested(),
+                sync_loot=lambda: self._on_append_loot_clicked(),
+                text_changed=lambda: self._on_text_changed(),
+                metadata_changed=lambda value: self._on_metadata_changed(value),
+                finding_changed=lambda value: self._on_finding_changed(value),
+                finding_deleted=lambda value: self._on_finding_deleted(value),
+                finding_duplicated=lambda value: self._on_finding_duplicated(value),
+                section_changed=lambda identity, content: self._on_section_changed(
+                    identity, content
+                ),
+                summary_changed=lambda value: self._on_summary_changed(value),
+                finding_action_changed=(
+                    lambda finding_id, recommendation, status:
+                    self._on_finding_action_changed(
+                        finding_id, recommendation, status
+                    )
+                ),
+                remediation_plan_changed=(
+                    lambda value: self._on_remediation_plan_changed(value)
+                ),
+                attack_path_changed=lambda value: self._on_attack_path_changed(value),
+                scope_changed=lambda value: self._on_scope_changed(value),
+                appendix_changed=lambda value: self._on_appendix_changed(value),
+                editor_scroll=lambda value: self._on_editor_scroll(value),
+                preview_scroll=lambda value: self._on_preview_scroll(value),
+            ),
+            evidence_actions=self.evidence_actions,
         )
-        self.editor.setProperty("class", "ReportSourceEditor")
-        self.editor.textChanged.connect(self._on_text_changed)
-        from ui.markdown_highlighter import MarkdownHighlighter
-
-        self._highlighter = MarkdownHighlighter(self.editor.document())
-        self.find_replace = FindReplaceBar(self.editor, self)
+        self._expose_workspace_shell(shell)
         layout.addWidget(self.find_replace)
-        self.editor_glass = self._wrap_glass_surface(self.editor)
-        self.center_stack.addWidget(self.editor_glass)
-
-        # Page 1: Metadata Inspector
-        self.metadata_inspector = ReportMetadataInspector(self)
-        self.metadata_inspector.metadata_changed.connect(self._on_metadata_changed)
-        self.metadata_inspector_glass = self._wrap_glass_surface(self.metadata_inspector)
-        self.center_stack.addWidget(self.metadata_inspector_glass)
-
-        # Integrated handoff/readiness review
-        self.readiness_inspector = ReportReadinessInspector(self)
-        self.readiness_inspector.navigate_requested.connect(self.navigate_to)
-        self.readiness_inspector_glass = self._wrap_glass_surface(
-            self.readiness_inspector
-        )
-        self.center_stack.addWidget(self.readiness_inspector_glass)
-
-        # Page 2: Finding Inspector
-        self.finding_inspector = ReportFindingInspector(self)
-        self.finding_inspector.finding_changed.connect(self._on_finding_changed)
-        self.finding_inspector.finding_deleted.connect(self._on_finding_deleted)
-        self.finding_inspector.finding_duplicated.connect(self._on_finding_duplicated)
-        self.finding_inspector.request_loot_screenshot.connect(
-            self.evidence_actions.attach_loot_screenshot
-        )
-        self.finding_inspector.request_image_file.connect(
-            self.evidence_actions.attach_image_file
-        )
-        self.finding_inspector.request_clipboard_history.connect(
-            self.evidence_actions.attach_clipboard_history
-        )
-        self.finding_inspector.request_loot_entry.connect(
-            self.evidence_actions.attach_loot_entry
-        )
-        self.finding_inspector.request_create_finding.connect(self._on_add_finding_requested)
-        self.finding_inspector.request_loot_sync.connect(self._on_append_loot_clicked)
-        self.finding_inspector_glass = self._wrap_glass_surface(self.finding_inspector)
-        self.center_stack.addWidget(self.finding_inspector_glass)
-
-        # Page 3: Section Inspector
-        self.section_inspector = ReportSectionInspector(self)
-        self.section_inspector.section_changed.connect(self._on_section_changed)
-        self.section_inspector_glass = self._wrap_glass_surface(self.section_inspector)
-        self.center_stack.addWidget(self.section_inspector_glass)
-
-        # Page 4: Summary Inspector
-        self.summary_inspector = ReportSummaryInspector(self)
-        self.summary_inspector.summary_changed.connect(self._on_summary_changed)
-        self.summary_inspector.finding_selected.connect(
-            lambda fid: self.navigate_to(ReportLocation.finding(fid))
-        )
-        self.summary_inspector_glass = self._wrap_glass_surface(self.summary_inspector)
-        self.center_stack.addWidget(self.summary_inspector_glass)
-
-        # Page 5: Remediation & Action Plan Inspector
-        self.remediation_inspector = ReportRemediationInspector(self)
-        self.remediation_inspector.finding_action_changed.connect(self._on_finding_action_changed)
-        self.remediation_inspector.plan_changed.connect(self._on_remediation_plan_changed)
-        self.remediation_inspector.finding_selected.connect(
-            lambda fid: self.navigate_to(ReportLocation.finding(fid))
-        )
-        self.remediation_inspector_glass = self._wrap_glass_surface(self.remediation_inspector)
-        self.center_stack.addWidget(self.remediation_inspector_glass)
-
-        # Page 6: Attack Path / Assessment Narrative Inspector
-        self.attack_path_inspector = ReportAttackPathInspector(self)
-        self.attack_path_inspector.attack_path_changed.connect(self._on_attack_path_changed)
-        self.attack_path_inspector.finding_selected.connect(
-            lambda fid: self.navigate_to(ReportLocation.finding(fid))
-        )
-        self.attack_path_inspector_glass = self._wrap_glass_surface(self.attack_path_inspector)
-        self.center_stack.addWidget(self.attack_path_inspector_glass)
-
-        # Page 7: Scope & Methodology Inspector
-        self.scope_inspector = ReportScopeInspector(self)
-        self.scope_inspector.scope_changed.connect(self._on_scope_changed)
-        self.scope_inspector_glass = self._wrap_glass_surface(self.scope_inspector)
-        self.center_stack.addWidget(self.scope_inspector_glass)
-
-        # Page 8: Appendix & Evidence Inspector
-        self.appendix_inspector = ReportAppendixInspector(self)
-        self.appendix_inspector.appendix_changed.connect(self._on_appendix_changed)
-        self.appendix_inspector_glass = self._wrap_glass_surface(self.appendix_inspector)
-        self.center_stack.addWidget(self.appendix_inspector_glass)
-
-        self.splitter.addWidget(self.center_stack)
-
-        # Spalte 3: Live Preview (rechts)
-        self.preview_document = ReportDocument(parent=self)
         self._apply_preview_font()
-
-        self.preview = ReportPreviewEdit()
-        self.preview.setDocument(self.preview_document)
-        self.preview.setReadOnly(True)
-        self.preview.setProperty("class", "ReportPreview")
-        self.preview_glass = self._wrap_glass_surface(self.preview)
-        self.preview_glass.setMinimumWidth(150)
-        self.splitter.addWidget(self.preview_glass)
         self._apply_report_color_mode()
-
-        self.workspace_router = ReportWorkspaceRouter(
-            ReportWorkspaceSurfaces(
-                metadata=InspectorSurface(
-                    self.metadata_inspector, self.metadata_inspector_glass
-                ),
-                readiness=InspectorSurface(
-                    self.readiness_inspector, self.readiness_inspector_glass
-                ),
-                finding=InspectorSurface(
-                    self.finding_inspector, self.finding_inspector_glass
-                ),
-                section=InspectorSurface(
-                    self.section_inspector, self.section_inspector_glass
-                ),
-                summary=InspectorSurface(
-                    self.summary_inspector, self.summary_inspector_glass
-                ),
-                remediation=InspectorSurface(
-                    self.remediation_inspector, self.remediation_inspector_glass
-                ),
-                attack_path=InspectorSurface(
-                    self.attack_path_inspector, self.attack_path_inspector_glass
-                ),
-                scope=InspectorSurface(
-                    self.scope_inspector, self.scope_inspector_glass
-                ),
-                appendix=InspectorSurface(
-                    self.appendix_inspector, self.appendix_inspector_glass
-                ),
-                raw_markdown=self.editor_glass,
-            )
-        )
-
-        # Bi-directional scroll-sync between editor and live preview in Split mode
-        self.editor.verticalScrollBar().valueChanged.connect(self._on_editor_scroll)
-        self.preview.verticalScrollBar().valueChanged.connect(self._on_preview_scroll)
-
-        self.splitter.setStretchFactor(0, 0)
-        self.splitter.setStretchFactor(1, 1)
-        self.splitter.setStretchFactor(2, 1)
         layout.addWidget(self.splitter, stretch=1)
+
+    def _expose_workspace_shell(self, shell: ReportWorkspaceShell) -> None:
+        """Keep stable tab handles while the shell owns widget construction."""
+        self.splitter = shell.splitter
+        self.navigator = shell.navigator
+        self.navigator_glass = shell.navigator_glass
+        self.center_stack = shell.center_stack
+        self.editor = shell.editor
+        self._highlighter = shell.highlighter
+        self.find_replace = shell.find_replace
+        self.editor_glass = shell.editor_glass
+        self.metadata_inspector = shell.metadata_inspector
+        self.metadata_inspector_glass = shell.metadata_inspector_glass
+        self.readiness_inspector = shell.readiness_inspector
+        self.readiness_inspector_glass = shell.readiness_inspector_glass
+        self.finding_inspector = shell.finding_inspector
+        self.finding_inspector_glass = shell.finding_inspector_glass
+        self.section_inspector = shell.section_inspector
+        self.section_inspector_glass = shell.section_inspector_glass
+        self.summary_inspector = shell.summary_inspector
+        self.summary_inspector_glass = shell.summary_inspector_glass
+        self.remediation_inspector = shell.remediation_inspector
+        self.remediation_inspector_glass = shell.remediation_inspector_glass
+        self.attack_path_inspector = shell.attack_path_inspector
+        self.attack_path_inspector_glass = shell.attack_path_inspector_glass
+        self.scope_inspector = shell.scope_inspector
+        self.scope_inspector_glass = shell.scope_inspector_glass
+        self.appendix_inspector = shell.appendix_inspector
+        self.appendix_inspector_glass = shell.appendix_inspector_glass
+        self.preview_document = shell.preview_document
+        self.preview = shell.preview
+        self.preview_glass = shell.preview_glass
+        self.workspace_router = shell.router
 
     @staticmethod
     def _wrap_glass_surface(widget):
-        panel = GlassPanel()
-        panel.setProperty("class", "ReportGlassPanel")
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(widget)
-        if hasattr(widget, "viewport") and callable(widget.viewport) and widget.viewport():
-            widget.viewport().setAutoFillBackground(False)
-        return panel
+        """Compatibility entry point for callers outside the workspace shell."""
+        return wrap_glass_surface(widget)
 
     def _setup_shortcuts(self) -> None:
         """Register report editing and view-mode shortcuts."""

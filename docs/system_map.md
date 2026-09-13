@@ -27,3 +27,4 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - `ReportWorkspaceRouter` owns semantic destination-to-inspector resolution, while `ReportEditorTab` retains shell state such as view mode, active stack surface, toolbar state, and preview focus.
 - `ReportEvidenceActions` owns picker, import, and evidence-normalization workflows; it receives live project dependencies through providers and reports completed evidence through one callback.
 - `ReportActionToolbar` owns document-action widget construction; its callbacks resolve tab operations at activation time so runtime overrides and test seams remain effective.
+- `build_report_workspace_shell()` owns creation and signal wiring for the navigator, inspectors, source editor, preview, and splitter; `ReportEditorTab` exposes stable handles from the returned `ReportWorkspaceShell` for compatibility.

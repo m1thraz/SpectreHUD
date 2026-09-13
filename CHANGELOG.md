@@ -21,6 +21,7 @@ semantic versioning.
 * Split preview transformations, workspace sizing, typed navigation, and controller access out of the Report Editor composition root.
 * Moved inspector routing and finding-evidence attachment workflows into dedicated Report Workspace components.
 * Extracted document-action toolbar construction and signal wiring from the Report Editor composition root.
+* Extracted Report Workspace splitter, inspector, source editor, and preview construction into a typed shell builder.
 
 ### Fixed
 
