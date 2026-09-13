@@ -19,6 +19,7 @@ semantic versioning.
 * Unified Report Workspace inspector headers, sections, forms, tables, and scroll surfaces around shared theme-aware styles.
 * Kept navigator selections semantically aligned and highlighted in the live report preview.
 * Split preview transformations, workspace sizing, typed navigation, and controller access out of the Report Editor composition root.
+* Moved inspector routing and finding-evidence attachment workflows into dedicated Report Workspace components.
 
 ### Fixed
 

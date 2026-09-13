@@ -24,3 +24,5 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 
 - `ReportEditorTab` is the composition root: preview-only Markdown transformations live in `ui.report.preview_transforms`, workspace destinations cross widget boundaries as `ReportLocation`, and controllers use the tab's public Markdown/export methods rather than its child widgets.
 - Tree item data remains a simple `(kind, identity)` tuple for Qt storage compatibility; `ReportWorkspaceNavigator` converts it to `ReportLocation` before emitting navigation requests.
+- `ReportWorkspaceRouter` owns semantic destination-to-inspector resolution, while `ReportEditorTab` retains shell state such as view mode, active stack surface, toolbar state, and preview focus.
+- `ReportEvidenceActions` owns picker, import, and evidence-normalization workflows; it receives live project dependencies through providers and reports completed evidence through one callback.

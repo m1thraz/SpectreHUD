@@ -16,7 +16,6 @@ sie ohne Qt testbar bleibt.
 
 from enum import Enum
 from pathlib import Path
-import re
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -28,7 +27,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLabel,
     QMessageBox,
-    QFileDialog,  # noqa: F401
     QDialog,
     QMenu,
     QTextEdit,
@@ -46,7 +44,6 @@ from PyQt6.QtGui import (
 from core.reporting import (
     ReportAppendix,
     ReportAttackPath,
-    ReportEvidenceItem,
     ReportExecutiveSummary,
     ReportFileManager,
     ReportFindingItem,
@@ -69,15 +66,14 @@ from core.fonts import get_report_font_stack
 from core.platform import open_path  # noqa: F401
 from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
-    ClipboardHistoryPickerDialog,
     LootEntryPickerDialog,
-    LootImagePickerDialog,  # noqa: F401
     MarkdownTableDialog,  # noqa: F401
     ReportGenerationDialog,
     ReportIconPickerDialog,  # noqa: F401
     ReportRegenerationConfirmDialog,
 )
 from ui.report.export_actions import ReportExportActions
+from ui.report.evidence_actions import ReportEvidenceActions
 from ui.report.format_actions import ReportFormatActions
 from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
@@ -90,6 +86,12 @@ from ui.report.attack_path_inspector import ReportAttackPathInspector
 from ui.report.scope_inspector import ReportScopeInspector
 from ui.report.appendix_inspector import ReportAppendixInspector
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
+from ui.report.workspace_router import (
+    InspectorSurface,
+    ReportRouteContext,
+    ReportWorkspaceRouter,
+    ReportWorkspaceSurfaces,
+)
 from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
 from ui.glass_panel import GlassPanel
@@ -186,6 +188,16 @@ class ReportEditorTab(QWidget):
             current_project_provider=lambda: self.current_project,
             active_template_provider=lambda: self.active_template,
             report_font_key_provider=lambda: self._report_font_key(),
+        )
+        self.evidence_actions = ReportEvidenceActions(
+            parent_widget=self,
+            loot_manager_provider=lambda: self.loot_manager,
+            clipboard_history_provider=lambda: self.clipboard_history,
+            report_file_manager_provider=lambda: self.report_file_manager,
+            current_project_provider=lambda: self.current_project,
+            attach_evidence=lambda item: self.finding_inspector.attach_evidence_item(
+                item, insert_into_description=True
+            ),
         )
 
         self._preview_timer = QTimer(self)
@@ -526,10 +538,18 @@ class ReportEditorTab(QWidget):
         self.finding_inspector.finding_changed.connect(self._on_finding_changed)
         self.finding_inspector.finding_deleted.connect(self._on_finding_deleted)
         self.finding_inspector.finding_duplicated.connect(self._on_finding_duplicated)
-        self.finding_inspector.request_loot_screenshot.connect(self._on_attach_loot_screenshot)
-        self.finding_inspector.request_image_file.connect(self._on_attach_image_file)
-        self.finding_inspector.request_clipboard_history.connect(self._on_attach_clipboard_history)
-        self.finding_inspector.request_loot_entry.connect(self._on_attach_loot_entry)
+        self.finding_inspector.request_loot_screenshot.connect(
+            self.evidence_actions.attach_loot_screenshot
+        )
+        self.finding_inspector.request_image_file.connect(
+            self.evidence_actions.attach_image_file
+        )
+        self.finding_inspector.request_clipboard_history.connect(
+            self.evidence_actions.attach_clipboard_history
+        )
+        self.finding_inspector.request_loot_entry.connect(
+            self.evidence_actions.attach_loot_entry
+        )
         self.finding_inspector.request_create_finding.connect(self._on_add_finding_requested)
         self.finding_inspector.request_loot_sync.connect(self._on_append_loot_clicked)
         self.finding_inspector_glass = self._wrap_glass_surface(self.finding_inspector)
@@ -595,6 +615,39 @@ class ReportEditorTab(QWidget):
         self.preview_glass.setMinimumWidth(150)
         self.splitter.addWidget(self.preview_glass)
         self._apply_report_color_mode()
+
+        self.workspace_router = ReportWorkspaceRouter(
+            ReportWorkspaceSurfaces(
+                metadata=InspectorSurface(
+                    self.metadata_inspector, self.metadata_inspector_glass
+                ),
+                readiness=InspectorSurface(
+                    self.readiness_inspector, self.readiness_inspector_glass
+                ),
+                finding=InspectorSurface(
+                    self.finding_inspector, self.finding_inspector_glass
+                ),
+                section=InspectorSurface(
+                    self.section_inspector, self.section_inspector_glass
+                ),
+                summary=InspectorSurface(
+                    self.summary_inspector, self.summary_inspector_glass
+                ),
+                remediation=InspectorSurface(
+                    self.remediation_inspector, self.remediation_inspector_glass
+                ),
+                attack_path=InspectorSurface(
+                    self.attack_path_inspector, self.attack_path_inspector_glass
+                ),
+                scope=InspectorSurface(
+                    self.scope_inspector, self.scope_inspector_glass
+                ),
+                appendix=InspectorSurface(
+                    self.appendix_inspector, self.appendix_inspector_glass
+                ),
+                raw_markdown=self.editor_glass,
+            )
+        )
 
         # Bi-directional scroll-sync between editor and live preview in Split mode
         self.editor.verticalScrollBar().valueChanged.connect(self._on_editor_scroll)
@@ -1709,123 +1762,34 @@ class ReportEditorTab(QWidget):
 
     def navigate_to(self, location: ReportLocation) -> None:
         """Show the inspector and preview focus for a semantic report location."""
-        view_type, item_id = location.as_legacy_tuple()
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         if self._view_mode != ViewMode.WORKSPACE:
             self._set_view_mode(ViewMode.WORKSPACE)
 
-        preview_target: Optional[tuple[str, str]] = None
-
-        if view_type == "metadata":
-            self.metadata_inspector.load_metadata(self._workspace_doc.metadata)
-            self.center_stack.setCurrentWidget(self.metadata_inspector_glass)
-            self._last_active_inspector = self.metadata_inspector_glass
-            preview_target = ("section", "header_metadata")
-            if hasattr(self, "btn_toggle_raw"):
-                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        elif view_type == "readiness":
-            self.readiness_inspector.load_assessment(
-                assess_report_readiness(self._workspace_doc)
-            )
-            self.center_stack.setCurrentWidget(self.readiness_inspector_glass)
-            self._last_active_inspector = self.readiness_inspector_glass
-            if hasattr(self, "btn_toggle_raw"):
-                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        elif view_type == "finding" and item_id:
-            finding = self._workspace_doc.get_finding(item_id)
-            if finding:
-                self.finding_inspector.set_project_target_ip(self._get_target_ip())
-                self.finding_inspector.load_finding(finding)
-                self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-                self._last_active_inspector = self.finding_inspector_glass
-                preview_target = ("finding", finding.id)
-                if hasattr(self, "btn_toggle_raw"):
-                    self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        elif view_type in ("findings_overview", "phase_group"):
-            target_finding = None
-            if view_type == "phase_group" and item_id:
-                target_finding = next((f for f in self._workspace_doc.findings if normalize_phase_key(f.phase) == item_id), None)
-            if not target_finding and self._workspace_doc.findings:
-                target_finding = self._workspace_doc.findings[0]
-            self.finding_inspector.set_project_target_ip(self._get_target_ip())
-            self.finding_inspector.load_finding(target_finding)
-            self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-            self._last_active_inspector = self.finding_inspector_glass
-            preview_target = (
-                ("finding", target_finding.id)
-                if target_finding
-                else ("section", "finding_section")
-            )
-            if hasattr(self, "btn_toggle_raw"):
-                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        elif view_type in ("section", "narratives_root"):
-            sec_id = item_id or "executive_summary"
-            sec_id = {
-                "summary": "executive_summary",
-                "scope": "scope_limitations",
-                "attack_narrative": "attack_path",
-            }.get(sec_id, sec_id)
-            if sec_id == "executive_summary":
-                self.summary_inspector.load_summary(self._workspace_doc)
-                self.center_stack.setCurrentWidget(self.summary_inspector_glass)
-                self._last_active_inspector = self.summary_inspector_glass
-                preview_target = ("section", sec_id)
-            elif sec_id == "remediation_table":
-                self.remediation_inspector.load_remediation(self._workspace_doc)
-                self.center_stack.setCurrentWidget(self.remediation_inspector_glass)
-                self._last_active_inspector = self.remediation_inspector_glass
-                preview_target = ("section", sec_id)
-            elif sec_id in ("attack_path", "attack_narrative"):
-                self.attack_path_inspector.load_attack_path(self._workspace_doc)
-                self.center_stack.setCurrentWidget(self.attack_path_inspector_glass)
-                self._last_active_inspector = self.attack_path_inspector_glass
-                preview_target = ("section", sec_id)
-            elif sec_id in ("scope_limitations", "scope"):
-                self.scope_inspector.set_project_target_ip(self._get_target_ip())
-                self.scope_inspector.load_scope(self._workspace_doc)
-                self.center_stack.setCurrentWidget(self.scope_inspector_glass)
-                self._last_active_inspector = self.scope_inspector_glass
-                preview_target = ("section", sec_id)
-            elif sec_id == "appendix":
-                self.appendix_inspector.set_context(
-                    loot_manager=self.loot_manager,
-                    clipboard_history=self.clipboard_history,
-                    project_dir=self._get_project_dir(),
-                )
-                self.appendix_inspector.load_appendix(self._workspace_doc)
-                self.center_stack.setCurrentWidget(self.appendix_inspector_glass)
-                self._last_active_inspector = self.appendix_inspector_glass
-                preview_target = ("section", sec_id)
-            else:
-                narr = next(
-                    (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
-                    None,
-                )
-                title = narr.title if narr else sec_id
-                content = narr.content if narr else ""
-                icon_map = {
-                    "scope_limitations": "fa5s.bullseye",
-                    "attack_path": "fa5s.route",
-                    "appendix": "fa5s.paperclip",
-                }
-                sec_icon = icon_map.get(sec_id, "fa5s.edit")
-                self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
-                self.center_stack.setCurrentWidget(self.section_inspector_glass)
-                self._last_active_inspector = self.section_inspector_glass
-                preview_target = ("section", sec_id)
-            if hasattr(self, "btn_toggle_raw"):
-                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
-        elif view_type == "raw_markdown":
-            self.center_stack.setCurrentWidget(self.editor_glass)
-            if hasattr(self, "btn_toggle_raw"):
-                self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
+        route = self.workspace_router.route(
+            location,
+            self._workspace_doc,
+            ReportRouteContext(
+                target_ip=self._get_target_ip(),
+                project_dir=self._get_project_dir(),
+                loot_manager=self.loot_manager,
+                clipboard_history=self.clipboard_history,
+            ),
+        )
+        if route.surface is not None:
+            self.center_stack.setCurrentWidget(route.surface)
+            if route.structured:
+                self._last_active_inspector = route.surface
+        if route.structured is not None and hasattr(self, "btn_toggle_raw"):
+            icon_name = "fa5s.code" if route.structured else "fa5s.sliders-h"
+            self.btn_toggle_raw.setIcon(self._toolbar_icon(icon_name))
         self.navigator.select_location(location)
         self._update_contextual_toolbar_visibility()
-        if preview_target is None:
+        if route.preview_target is None:
             self._clear_preview_focus()
         else:
-            self._focus_preview_on_item(*preview_target)
+            self._focus_preview_on_item(*route.preview_target)
 
     def _focus_preview_on_item(
         self,
@@ -2021,169 +1985,3 @@ class ReportEditorTab(QWidget):
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         self._workspace_doc.set_appendix(updated)
         self._sync_workspace_doc_to_editor()
-
-    # ------------------------------------------------------------------ #
-    # Evidence & Loot Attachment Handlers
-    # ------------------------------------------------------------------ #
-
-    def _on_attach_loot_screenshot(self) -> None:
-        """Opens LootImagePickerDialog and attaches selected screenshot to the active finding."""
-        if not self.loot_manager:
-            return
-        screenshot_entries = [
-            e
-            for e in self.loot_manager.get_all_entries()
-            if (e.get("type") in ("screenshot", "image") or "![image]" in (e.get("content") or ""))
-        ]
-        if not screenshot_entries:
-            show_warning_dialog(
-                self,
-                t("report.no_screenshots_title", "Keine Screenshots gefunden"),
-                t("report.no_screenshots_msg", "Im aktiven Projekt wurden noch keine Screenshots in Loot erfasst."),
-            )
-            return
-
-        project_dir = None
-        rfm = self.report_file_manager
-        if rfm and getattr(rfm, "project_manager", None):
-            try:
-                pname = rfm.resolve_project_name(self.current_project)
-                project_dir = rfm.project_manager.get_project_dir(pname)
-            except Exception:
-                pass
-
-        dialog = LootImagePickerDialog(screenshot_entries, project_dir=project_dir, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
-            entry = dialog.selected_entry
-            title = entry.get("title", "Screenshot")
-            content = (entry.get("content") or "").strip()
-            rel_path = content
-            m = re.search(r"\((.*?)\)", content)
-            if m:
-                rel_path = m.group(1)
-
-            import uuid
-
-            ev_item = ReportEvidenceItem(
-                id=f"ev-{uuid.uuid4().hex[:6]}",
-                type="screenshot",
-                caption=title,
-                content=rel_path,
-                source_loot_id=entry.get("id"),
-            )
-            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
-
-    def _on_attach_image_file(self) -> None:
-        """Prompts for image from disk, imports into project screenshots, and attaches as evidence."""
-        start_dir = ""
-        project_dir = None
-        rfm = self.report_file_manager
-        if rfm and getattr(rfm, "project_manager", None):
-            try:
-                pname = rfm.resolve_project_name(self.current_project)
-                project_dir = rfm.project_manager.get_project_dir(pname)
-                screenshots_dir = project_dir / "screenshots"
-                if screenshots_dir.is_dir():
-                    start_dir = str(screenshots_dir)
-                elif project_dir.is_dir():
-                    start_dir = str(project_dir)
-            except Exception as e:
-                logger.debug("Failed to resolve project dir for image dialog: %s", e)
-
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            t("report.select_image_title", "Select Image"),
-            start_dir,
-            t(
-                "report.select_image_filter",
-                "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp *.svg);;All Files (*.*)",
-            ),
-        )
-        if not file_path:
-            return
-
-        rel_path = file_path
-        if rfm:
-            try:
-                rel_path = rfm.import_image(file_path, self.current_project)
-            except Exception as e:
-                logger.warning("Could not copy image to project directory: %s", e)
-                if project_dir:
-                    try:
-                        rel_path = Path(file_path).resolve().relative_to(project_dir.resolve()).as_posix()
-                    except ValueError:
-                        rel_path = file_path.replace("\\", "/")
-                else:
-                    rel_path = file_path.replace("\\", "/")
-
-        import uuid
-
-        alt_text = Path(file_path).stem
-        ev_item = ReportEvidenceItem(
-            id=f"ev-{uuid.uuid4().hex[:6]}",
-            type="screenshot",
-            caption=alt_text,
-            content=rel_path,
-        )
-        self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
-
-    def _on_attach_clipboard_history(self) -> None:
-        """Opens ClipboardHistoryPickerDialog and attaches terminal/PoC snippet to the active finding."""
-        if not self.clipboard_history:
-            return
-        history = self.clipboard_history.get_all_history()
-        if not history:
-            show_warning_dialog(
-                self,
-                t("report.no_clipboard_title", "Keine Clipboard-Einträge"),
-                t("report.no_clipboard_msg", "In der Clipboard-Historie wurden noch keine Einträge erfasst."),
-            )
-            return
-
-        dialog = ClipboardHistoryPickerDialog(history, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
-            text = dialog.selected_entry.get("text", "").strip()
-            first_line = text.splitlines()[0] if text else "Terminal Output"
-            if len(first_line) > 40:
-                first_line = first_line[:37] + "..."
-            import uuid
-
-            ev_item = ReportEvidenceItem(
-                id=f"ev-{uuid.uuid4().hex[:6]}",
-                type="terminal",
-                caption=first_line,
-                content=text,
-                source_loot_id=dialog.selected_entry.get("id"),
-            )
-            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
-
-    def _on_attach_loot_entry(self) -> None:
-        """Opens LootEntryPickerDialog and attaches credential/loot snippet to the active finding."""
-        if not self.loot_manager:
-            return
-        entries = self.loot_manager.get_all_entries()
-        if not entries:
-            show_warning_dialog(
-                self,
-                t("report.no_loot_title", "Keine Loot-Einträge"),
-                t("report.no_loot_msg", "Im aktiven Projekt wurden noch keine Einträge in Loot gespeichert."),
-            )
-            return
-
-        dialog = LootEntryPickerDialog(entries, parent=self)
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_entry:
-            entry = dialog.selected_entry
-            title = entry.get("title", "Loot")
-            content = (entry.get("content") or "").strip()
-            e_type = entry.get("type", "note")
-            ev_type = "credential" if e_type in ("credential", "credentials", "hash", "flag") else "code"
-            import uuid
-
-            ev_item = ReportEvidenceItem(
-                id=f"ev-{uuid.uuid4().hex[:6]}",
-                type=ev_type,
-                caption=title,
-                content=content,
-                source_loot_id=entry.get("id"),
-            )
-            self.finding_inspector.attach_evidence_item(ev_item, insert_into_description=True)
