@@ -218,7 +218,7 @@ class ReportWorkspaceNavigator(QWidget):
                 item_f.setToolTip(0, tooltip)
                 item_f.setData(0, Qt.ItemDataRole.UserRole, ("finding", f.id))
 
-            item_phase.setExpanded(True)
+            item_phase.setExpanded(False)
 
         # Catch any findings with unknown phase
         known_phases = set(PHASE_META.keys())
@@ -234,9 +234,9 @@ class ReportWorkspaceNavigator(QWidget):
                 sev = (f.severity or "medium").lower()
                 item_f.setIcon(0, icon(SEV_ICONS.get(sev, "fa5s.circle"), color=SEV_COLORS.get(sev, "#d29922")))
                 item_f.setData(0, Qt.ItemDataRole.UserRole, ("finding", f.id))
-            item_other.setExpanded(True)
+            item_other.setExpanded(False)
 
-        item_findings_root.setExpanded(True)
+        item_findings_root.setExpanded(False)
 
         # 4. Remediation & Anhang
         item_remed = QTreeWidgetItem(self.tree)
@@ -273,7 +273,12 @@ class ReportWorkspaceNavigator(QWidget):
             for i in range(parent_item.childCount()):
                 child = parent_item.child(i)
                 if child.data(0, Qt.ItemDataRole.UserRole) == (view_type, item_id):
+                    p: Optional[QTreeWidgetItem] = child.parent()
+                    while p is not None:
+                        p.setExpanded(True)
+                        p = p.parent()
                     self.tree.setCurrentItem(child)
+                    self.tree.scrollToItem(child)
                     return True
                 if search_node(child):
                     return True

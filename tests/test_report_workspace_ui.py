@@ -128,6 +128,16 @@ class TestReportWorkspaceUI(unittest.TestCase):
         child_roles = [item_findings_root.child(j).data(0, Qt.ItemDataRole.UserRole) for j in range(item_findings_root.childCount())]
         self.assertNotIn(("phase_group", "misc"), child_roles)
 
+        # Ensure findings root and phase groups are collapsed by default
+        self.assertFalse(item_findings_root.isExpanded())
+        self.assertFalse(recon_child.isExpanded())
+
+        # When select_item is called on a finding, parent hierarchy auto-expands
+        finding_id = recon_child.child(0).data(0, Qt.ItemDataRole.UserRole)[1]
+        nav.select_item("finding", finding_id)
+        self.assertTrue(item_findings_root.isExpanded())
+        self.assertTrue(recon_child.isExpanded())
+
     def test_metadata_inspector_edits(self):
         insp = ReportMetadataInspector()
         meta = ReportMetadata(
