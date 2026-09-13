@@ -50,3 +50,16 @@ def test_append_note_rejects_blank_content(qapp):
 
     assert controller.append_note({"text": "  "}) is False
     controller.report_file_manager.save.assert_not_called()
+
+
+def test_refresh_loot_sync_state_does_not_initialize_editor(qapp):
+    controller = _controller()
+
+    controller.refresh_loot_sync_state()
+
+    assert controller.report_editor_tab is None
+
+    editor_tab = MagicMock()
+    controller.report_editor_tab = editor_tab
+    controller.refresh_loot_sync_state()
+    editor_tab.refresh_loot_sync_state.assert_called_once_with()

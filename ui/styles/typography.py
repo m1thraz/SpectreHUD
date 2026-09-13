@@ -45,6 +45,39 @@ QLabel#SnippetDesc {
     font-size: 11px;
 }
 
+/* Report Workspace Navigator */
+QLabel.WorkspaceNavProjectLabel,
+QLabel[class~="WorkspaceNavProjectLabel"] {
+    color: {TEXT_PRIMARY};
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel.WorkspaceNavScopeLabel,
+QLabel[class~="WorkspaceNavScopeLabel"] {
+    color: {TEXT_MUTED};
+    font-size: 11px;
+}
+
+QLabel.WorkspaceSyncState,
+QLabel[class~="WorkspaceSyncState"] {
+    color: {TEXT_MUTED};
+    font-size: 10px;
+    font-weight: 600;
+}
+
+QLabel.WorkspaceSyncState[syncState="pending"] {
+    color: {CYBER_CYAN};
+}
+
+QLabel.WorkspaceSyncState[syncState="diverged"] {
+    color: {STATUS_WARNING};
+}
+
+QLabel.WorkspaceSyncState[syncState="current"] {
+    color: {STATUS_GREEN_LIGHT};
+}
+
 /* Variable Status Bar Labels */
 QLabel.VarTagLabel {
     color: {CYBER_BLUE_LIGHT};

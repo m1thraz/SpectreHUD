@@ -63,7 +63,10 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertEqual(
             self.tab.btn_change_view.text(), t("report.mode_workspace", "Workspace")
         )
+        self.assertTrue(self.tab.btn_report_actions.isVisible())
         self.assertTrue(self.tab.btn_append_loot.isHidden())
+        self.assertTrue(self.tab.btn_regenerate.isHidden())
+        self.assertFalse(self.tab.action_sync_loot.isEnabled())
         self.assertTrue(self.tab._view_actions[ViewMode.WORKSPACE].isChecked())
         self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
@@ -152,6 +155,9 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab.preview.isReadOnly())
         self.assertIn("Editor", self.tab.lbl_status.text())
         self.assertTrue(self.tab._view_actions[ViewMode.EDITOR].isChecked())
+        self.assertTrue(self.tab.btn_report_actions.isHidden())
+        self.assertFalse(self.tab.btn_append_loot.isHidden())
+        self.assertFalse(self.tab.btn_regenerate.isHidden())
 
         # 2. Switch to PREVIEW mode (editable)
         self.tab._set_view_mode(ViewMode.PREVIEW)
@@ -303,6 +309,9 @@ class TestReportEditorTab(unittest.TestCase):
         editor_text = self.tab.editor.toPlainText()
         self.assertIn("Important unsaved manual finding from tester!", editor_text)
         self.assertIn("Port 80 HTTP", editor_text)
+        self.assertEqual(self.tab.navigator.lbl_sync_state.property("syncState"), "current")
+        self.assertFalse(self.tab.navigator.btn_sync_loot.isEnabled())
+        self.assertFalse(self.tab.action_sync_loot.isEnabled())
 
         # 3. Automatic backup must contain the manual user text (NOT the stale initial_disk_text)
         bak_path = self.report_file_mgr.get_backup_path("TestBox")
@@ -412,6 +421,7 @@ class TestReportEditorTab(unittest.TestCase):
         action_buttons = (
             self.tab.btn_change_view,
             self.tab.btn_navigator,
+            self.tab.btn_report_actions,
             self.tab.btn_append_loot,
             self.tab.btn_regenerate,
             self.tab.btn_export,
@@ -424,6 +434,18 @@ class TestReportEditorTab(unittest.TestCase):
             self.assertTrue(action.isCheckable())
             self.assertFalse(action.icon().isNull())
             self.assertNotRegex(action.text(), "[📝◫👁️]")
+
+    def test_workspace_report_actions_menu_routes_existing_workflows(self):
+        self.tab.action_sync_loot.setEnabled(True)
+        with (
+            patch.object(self.tab, "_on_append_loot_clicked") as append_loot,
+            patch.object(self.tab, "_on_regenerate_clicked") as regenerate,
+        ):
+            self.tab.action_sync_loot.trigger()
+            self.tab.action_regenerate.trigger()
+
+        append_loot.assert_called_once_with()
+        regenerate.assert_called_once_with()
 
     def test_toolbar_icons_use_primary_theme_accent(self):
         with patch("ui.report_editor_tab.icon", return_value=QIcon()) as icon_factory:

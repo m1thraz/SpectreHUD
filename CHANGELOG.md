@@ -6,6 +6,21 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Added live Loot/report sync status for new, changed, and report-only entries.
+
+### Changed
+
+* Made the structured Report Workspace the default view with contextual Markdown tools and preview navigation.
+* Grouped workspace-level Loot sync and regeneration under compact Report Actions.
+* Aligned report export, generation, and regeneration dialogs with the active HUD theme.
+
+### Fixed
+
+* Prevented metadata aliases from appearing as duplicate custom report fields.
+* Kept restored drafts, navigator state, inspectors, and preview content synchronized.
+
 ## [2.1.6] - 2026-09-13
 
 ### Added

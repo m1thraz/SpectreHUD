@@ -846,6 +846,7 @@ class AppController(QObject):
 
     def _on_loot_data_updated(self) -> None:
         self.save_current_project_state()
+        self.report_ctrl.refresh_loot_sync_state()
         self.refresh_filter_pills()
         self.refresh_content()
 

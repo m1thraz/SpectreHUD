@@ -96,6 +96,11 @@ class ReportController(QObject):
         if self.report_editor_tab is not None:
             self.report_editor_tab.refresh_font_configuration()
 
+    def refresh_loot_sync_state(self) -> None:
+        """Refresh report/Loot status without eagerly constructing the editor."""
+        if self.report_editor_tab is not None:
+            self.report_editor_tab.refresh_loot_sync_state()
+
     def append_note(self, note: dict) -> bool:
         """Appends a quick note to the active project's report.md."""
         if self.report_editor_tab is not None:

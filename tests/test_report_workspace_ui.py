@@ -507,6 +507,20 @@ class TestReportWorkspaceUI(unittest.TestCase):
         nav.sync_loot_requested.connect(lambda: sync_called.append(True))
         nav.btn_sync_loot.click()
         self.assertEqual(sync_called, [True])
+
+        nav.set_loot_sync_state(2, 1, 0)
+        self.assertEqual(nav.lbl_sync_state.property("syncState"), "pending")
+        self.assertIn("2", nav.lbl_sync_state.text())
+        self.assertIn("1", nav.lbl_sync_state.text())
+        self.assertTrue(nav.btn_sync_loot.isEnabled())
+
+        nav.set_loot_sync_state(0, 1, 1)
+        self.assertEqual(nav.lbl_sync_state.property("syncState"), "diverged")
+        self.assertFalse(nav.btn_sync_loot.isEnabled())
+
+        nav.set_loot_sync_state(0, 0, 0)
+        self.assertEqual(nav.lbl_sync_state.property("syncState"), "current")
+        self.assertIn("Loot", nav.lbl_sync_state.text())
         nav.deleteLater()
 
     def test_report_editor_tab_collapsible_navigator_and_raw_toggle(self):

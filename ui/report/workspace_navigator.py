@@ -81,31 +81,40 @@ class ReportWorkspaceNavigator(QWidget):
         top_row = QHBoxLayout()
         self.lbl_project = QLabel(t("report.workspace_no_project", "No Project"))
         self.lbl_project.setProperty("class", "WorkspaceNavProjectLabel")
-        self.lbl_project.setStyleSheet("font-weight: bold; font-size: 13px; color: #f0f6fc;")
         top_row.addWidget(self.lbl_project)
         top_row.addStretch()
-
-        self.btn_sync_loot = QPushButton()
-        self.btn_sync_loot.setObjectName("btn_nav_sync_loot")
-        self.btn_sync_loot.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_sync_loot.setToolTip(t("report.sync_from_loot", "Sync / append from Loot"))
-        self.btn_sync_loot.setIcon(icon("fa5s.sync-alt", color=get_theme_color("STATUS_SUCCESS")))
-        self.btn_sync_loot.clicked.connect(self.sync_loot_requested.emit)
-        top_row.addWidget(self.btn_sync_loot)
-
-        self.btn_add_finding = QPushButton()
-        self.btn_add_finding.setObjectName("btn_nav_add_finding")
-        self.btn_add_finding.setProperty("class", "SecondaryBtn FormatToolBtn")
-        self.btn_add_finding.setToolTip(t("report.add_finding", "Add new finding"))
-        self.btn_add_finding.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
-        self.btn_add_finding.clicked.connect(self.add_finding_requested.emit)
-        top_row.addWidget(self.btn_add_finding)
 
         h_layout.addLayout(top_row)
 
         self.lbl_scope = QLabel("")
-        self.lbl_scope.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self.lbl_scope.setProperty("class", "WorkspaceNavScopeLabel")
         h_layout.addWidget(self.lbl_scope)
+
+        self.lbl_sync_state = QLabel(t("report.loot_sync_unknown", "Loot status unavailable"))
+        self.lbl_sync_state.setProperty("class", "WorkspaceSyncState")
+        self.lbl_sync_state.setProperty("syncState", "unknown")
+        h_layout.addWidget(self.lbl_sync_state)
+
+        action_row = QHBoxLayout()
+        action_row.setSpacing(6)
+
+        self.btn_sync_loot = QPushButton(t("report.sync_loot_short", "Sync Loot"))
+        self.btn_sync_loot.setObjectName("btn_nav_sync_loot")
+        self.btn_sync_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
+        self.btn_sync_loot.setToolTip(t("report.sync_from_loot", "Sync / append from Loot"))
+        self.btn_sync_loot.setIcon(icon("fa5s.sync-alt", color=get_theme_color("STATUS_SUCCESS")))
+        self.btn_sync_loot.clicked.connect(self.sync_loot_requested.emit)
+        action_row.addWidget(self.btn_sync_loot, stretch=1)
+
+        self.btn_add_finding = QPushButton(t("report.add_finding_short", "Finding"))
+        self.btn_add_finding.setObjectName("btn_nav_add_finding")
+        self.btn_add_finding.setProperty("class", "SecondaryBtn")
+        self.btn_add_finding.setToolTip(t("report.add_finding", "Add new finding"))
+        self.btn_add_finding.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
+        self.btn_add_finding.clicked.connect(self.add_finding_requested.emit)
+        action_row.addWidget(self.btn_add_finding, stretch=1)
+
+        h_layout.addLayout(action_row)
 
         main_layout.addWidget(self.header_panel)
 
@@ -236,6 +245,52 @@ class ReportWorkspaceNavigator(QWidget):
         item_raw.setText(0, t("report.section_raw_markdown", "Raw Markdown (Source)"))
         item_raw.setIcon(0, icon("fa5s.code", color=nav_color))
         item_raw.setData(0, Qt.ItemDataRole.UserRole, ("raw_markdown", None))
+
+    def set_loot_sync_state(
+        self,
+        missing_count: int,
+        stale_count: int = 0,
+        orphaned_count: int = 0,
+    ) -> None:
+        """Show the relationship between project Loot and report markers."""
+        parts = []
+        if missing_count:
+            parts.append(t("report.loot_sync_missing", "New: {count}", count=missing_count))
+        if stale_count:
+            parts.append(t("report.loot_sync_stale", "Changed: {count}", count=stale_count))
+        if orphaned_count:
+            parts.append(
+                t("report.loot_sync_orphaned", "Report only: {count}", count=orphaned_count)
+            )
+
+        if missing_count:
+            sync_state = "pending"
+            tooltip = t(
+                "report.loot_sync_pending_tip",
+                "Add new Loot entries without overwriting existing report text.",
+            )
+        elif stale_count or orphaned_count:
+            sync_state = "diverged"
+            tooltip = t(
+                "report.loot_sync_diverged_tip",
+                "Existing report content is preserved; additive sync does not overwrite changed entries.",
+            )
+        else:
+            sync_state = "current"
+            tooltip = t(
+                "report.loot_sync_current_tip",
+                "All project Loot entries are represented in the report.",
+            )
+
+        self.lbl_sync_state.setText(
+            " · ".join(parts) if parts else t("report.loot_sync_current", "Loot up to date")
+        )
+        self.lbl_sync_state.setProperty("syncState", sync_state)
+        self.lbl_sync_state.setToolTip(tooltip)
+        self.btn_sync_loot.setEnabled(missing_count > 0)
+        self.btn_sync_loot.setToolTip(tooltip)
+        self.lbl_sync_state.style().unpolish(self.lbl_sync_state)
+        self.lbl_sync_state.style().polish(self.lbl_sync_state)
 
     def _on_item_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         data = item.data(0, Qt.ItemDataRole.UserRole)

@@ -511,8 +511,12 @@ class TestAppController(unittest.TestCase):
         with patch.object(self.controller, "save_current_project_state") as mock_save:
             with patch.object(self.controller, "refresh_filter_pills"):
                 with patch.object(self.controller, "refresh_content"):
-                    self.controller._on_loot_data_updated()
-                    mock_save.assert_called_once()
+                    with patch.object(
+                        self.controller.report_ctrl, "refresh_loot_sync_state"
+                    ) as refresh_report_loot:
+                        self.controller._on_loot_data_updated()
+                        mock_save.assert_called_once()
+                        refresh_report_loot.assert_called_once_with()
 
                     self.controller.active_mode = "history"
                     self.controller._on_history_data_updated()

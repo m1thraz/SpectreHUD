@@ -60,6 +60,7 @@ from core.reporting import (
     ReportTemplate,
     ReportWorkspaceDocument,
     TemplateRepository,
+    classify_loot_report_state,
 )
 from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
@@ -361,6 +362,42 @@ class ReportEditorTab(QWidget):
         self.btn_toggle_raw.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_toggle_raw.clicked.connect(self._toggle_inspector_raw)
         toolbar.addWidget(self.btn_toggle_raw)
+
+        self.btn_report_actions = QPushButton(t("report.actions", "Report Actions"))
+        self.btn_report_actions.setObjectName("btn_report_actions")
+        self.btn_report_actions.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
+        self.btn_report_actions.setToolTip(
+            t("report.actions_tip", "Synchronize project Loot or rebuild the report")
+        )
+        self.btn_report_actions.setIcon(self._toolbar_icon("fa5s.tools"))
+        self.btn_report_actions.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
+        self.report_actions_menu = QMenu(self.btn_report_actions)
+
+        self.action_sync_loot = QAction(
+            self._toolbar_icon("fa5s.plus-circle"),
+            t("report.append_loot", "Add Missing Loot"),
+            self.report_actions_menu,
+        )
+        self.action_sync_loot.triggered.connect(
+            lambda _checked=False: self._on_append_loot_clicked()
+        )
+        self.report_actions_menu.addAction(self.action_sync_loot)
+        self.report_actions_menu.addSeparator()
+
+        self.action_regenerate = QAction(
+            self._toolbar_icon("fa5s.sync-alt"),
+            t("report.regenerate", "Regenerate from Loot"),
+            self.report_actions_menu,
+        )
+        self.action_regenerate.setToolTip(
+            t("report.regenerate_destructive_tip", "Rebuilds the report after confirmation")
+        )
+        self.action_regenerate.triggered.connect(
+            lambda _checked=False: self._on_regenerate_clicked()
+        )
+        self.report_actions_menu.addAction(self.action_regenerate)
+        self.btn_report_actions.setMenu(self.report_actions_menu)
+        toolbar.addWidget(self.btn_report_actions)
 
         self.btn_append_loot = QPushButton(t("report.append_loot", "Add Missing Loot"))
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
@@ -852,11 +889,7 @@ class ReportEditorTab(QWidget):
         self._set_dirty(restored_draft)
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(content)
         if hasattr(self, "navigator"):
-            self.navigator.load_document(
-                self._workspace_doc,
-                project_name=project_name,
-                target_ip=self._get_target_ip(),
-            )
+            self._refresh_workspace_navigator(preserve_selection=False)
         if self._view_mode == ViewMode.WORKSPACE:
             self._on_navigate_requested("metadata", None)
         self._update_preview()
@@ -1047,8 +1080,11 @@ class ReportEditorTab(QWidget):
                 not self.format_toolbar_widget.is_collapsed()
             )
         self.action_toolbar_widget.setVisible(True)
-        self.btn_toggle_raw.setVisible(self._view_mode != ViewMode.WORKSPACE)
-        self.btn_append_loot.setVisible(self._view_mode != ViewMode.WORKSPACE)
+        workspace_active = self._view_mode == ViewMode.WORKSPACE
+        self.btn_toggle_raw.setVisible(not workspace_active)
+        self.btn_report_actions.setVisible(workspace_active)
+        self.btn_append_loot.setVisible(not workspace_active)
+        self.btn_regenerate.setVisible(not workspace_active)
 
     def _update_view_button(self) -> None:
         labels = {
@@ -1247,11 +1283,7 @@ class ReportEditorTab(QWidget):
             # Update workspace document and navigator after regeneration
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(new_content)
             if hasattr(self, "navigator"):
-                self.navigator.load_document(
-                    self._workspace_doc,
-                    project_name=self.current_project or "",
-                    target_ip=self._get_target_ip(),
-                )
+                self._refresh_workspace_navigator()
         except ReportBackupError as e:
             logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
             show_error_dialog(
@@ -1333,6 +1365,7 @@ class ReportEditorTab(QWidget):
             return
 
         if result.added_count == 0:
+            self.refresh_loot_sync_state()
             self.lbl_status.setText(
                 t("report.append_loot_no_changes", "No missing loot entries found")
             )
@@ -1347,11 +1380,7 @@ class ReportEditorTab(QWidget):
         # Immediately update workspace document and navigator after appending loot
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(result.content)
         if hasattr(self, "navigator"):
-            self.navigator.load_document(
-                self._workspace_doc,
-                project_name=self.current_project or "",
-                target_ip=self._get_target_ip(),
-            )
+            self._refresh_workspace_navigator()
 
         # Restore cursor position within bounds
         new_cursor = self.editor.textCursor()
@@ -1595,6 +1624,42 @@ class ReportEditorTab(QWidget):
                 pass
         return None
 
+    def refresh_loot_sync_state(self) -> None:
+        """Refresh the navigator's non-destructive Loot/report comparison."""
+        if not hasattr(self, "navigator") or self.loot_manager is None:
+            return
+        try:
+            state = classify_loot_report_state(
+                self.editor.toPlainText(), self.loot_manager.get_all_entries()
+            )
+        except Exception:
+            logger.exception("Could not compare report markers with project Loot")
+            return
+        self.navigator.set_loot_sync_state(
+            len(state.missing), len(state.stale), len(state.orphaned_ids)
+        )
+        if hasattr(self, "action_sync_loot"):
+            self.action_sync_loot.setEnabled(bool(state.missing))
+
+    def _refresh_workspace_navigator(self, *, preserve_selection: bool = True) -> None:
+        """Reload navigator content while retaining the active report context."""
+        if self._workspace_doc is None or not hasattr(self, "navigator"):
+            return
+        selected_data = None
+        if preserve_selection:
+            selected = self.navigator.tree.currentItem()
+            selected_data = (
+                selected.data(0, Qt.ItemDataRole.UserRole) if selected is not None else None
+            )
+        self.navigator.load_document(
+            self._workspace_doc,
+            project_name=self.current_project or "",
+            target_ip=self._get_target_ip(),
+        )
+        if selected_data:
+            self.navigator.select_item(*selected_data)
+        self.refresh_loot_sync_state()
+
     def _sync_markdown_to_workspace(self) -> None:
         """Parses current editor markdown into workspace document and refreshes navigator."""
         if getattr(self, "_syncing_from_inspector", False):
@@ -1602,11 +1667,7 @@ class ReportEditorTab(QWidget):
         content = self.editor.toPlainText()
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(content)
         if hasattr(self, "navigator"):
-            self.navigator.load_document(
-                self._workspace_doc,
-                project_name=self.current_project or "",
-                target_ip=self._get_target_ip(),
-            )
+            self._refresh_workspace_navigator()
 
     def _sync_workspace_doc_to_editor(self) -> None:
         """Serializes workspace document to markdown and updates editor without re-triggering parse."""
@@ -1626,17 +1687,7 @@ class ReportEditorTab(QWidget):
         self._draft_timer.start()
         self._update_preview()
         if hasattr(self, "navigator"):
-            selected = self.navigator.tree.currentItem()
-            selected_data = (
-                selected.data(0, Qt.ItemDataRole.UserRole) if selected is not None else None
-            )
-            self.navigator.load_document(
-                self._workspace_doc,
-                project_name=self.current_project or "",
-                target_ip=self._get_target_ip(),
-            )
-            if selected_data:
-                self.navigator.select_item(*selected_data)
+            self._refresh_workspace_navigator()
 
     def _on_navigate_requested(self, view_type: str, item_id: Optional[str]) -> None:
         """Switches the center inspector stack to the requested document section or finding."""
