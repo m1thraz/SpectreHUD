@@ -32,13 +32,13 @@ def test_append_note_persists_without_initializing_editor(qapp):
 def test_append_note_updates_existing_editor(qapp):
     controller = _controller()
     editor_tab = MagicMock()
-    editor_tab.editor.toPlainText.return_value = ""
+    editor_tab.current_markdown.return_value = ""
     controller.report_editor_tab = editor_tab
 
     result = controller.append_note({"text": "Finding"})
 
     assert result is True
-    editor_tab.editor.setPlainText.assert_called_once_with(
+    editor_tab.replace_markdown.assert_called_once_with(
         "# CTF Report - Blue\n\n### Note (MISC)\n\nFinding\n"
     )
     editor_tab.save.assert_called_once_with()

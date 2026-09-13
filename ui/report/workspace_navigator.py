@@ -23,6 +23,7 @@ from core.i18n import t
 from core.phases import normalize_phase_key
 from core.reporting import ReportWorkspaceDocument, assess_report_readiness
 from ui.glass_panel import GlassPanel
+from ui.report.navigation import ReportLocation
 from ui.styles.icons import get_theme_color, icon
 
 SEV_COLORS = {
@@ -54,7 +55,7 @@ PHASE_META = {
 class ReportWorkspaceNavigator(QWidget):
     """Collapsible structure navigator for the SpectreHUD Report Workspace."""
 
-    navigate_requested = pyqtSignal(str, object)  # view_type: str, item_id: Optional[str]
+    navigate_requested = pyqtSignal(object)  # ReportLocation
     add_finding_requested = pyqtSignal()
     sync_loot_requested = pyqtSignal()
 
@@ -330,7 +331,7 @@ class ReportWorkspaceNavigator(QWidget):
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if data:
             view_type, item_id = data
-            self.navigate_requested.emit(view_type, item_id)
+            self.navigate_requested.emit(ReportLocation.from_legacy(view_type, item_id))
 
     def _on_item_double_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         if item.childCount() > 0:
@@ -339,11 +340,17 @@ class ReportWorkspaceNavigator(QWidget):
             self._on_item_clicked(item, _column)
 
     def select_item(self, view_type: str, item_id: Optional[str] = None) -> None:
-        """Selects the tree item matching view_type and item_id."""
+        """Compatibility adapter for callers not yet using ReportLocation."""
+        self.select_location(ReportLocation.from_legacy(view_type, item_id))
+
+    def select_location(self, location: ReportLocation) -> None:
+        """Select the tree item matching a semantic report location."""
+        target = location.as_legacy_tuple()
+
         def search_node(parent_item: QTreeWidgetItem) -> bool:
             for i in range(parent_item.childCount()):
                 child = parent_item.child(i)
-                if child.data(0, Qt.ItemDataRole.UserRole) == (view_type, item_id):
+                if child.data(0, Qt.ItemDataRole.UserRole) == target:
                     p: Optional[QTreeWidgetItem] = child.parent()
                     while p is not None:
                         p.setExpanded(True)
@@ -357,7 +364,7 @@ class ReportWorkspaceNavigator(QWidget):
 
         for i in range(self.tree.topLevelItemCount()):
             top = self.tree.topLevelItem(i)
-            if top.data(0, Qt.ItemDataRole.UserRole) == (view_type, item_id):
+            if top.data(0, Qt.ItemDataRole.UserRole) == target:
                 self.tree.setCurrentItem(top)
                 return
             if search_node(top):

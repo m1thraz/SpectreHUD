@@ -23,10 +23,10 @@ from core.reporting import (
 )
 from core.reporting import template_to_dict, dict_to_template
 from ui.markdown_toolbar_actions import insert_page_break, insert_spacer
-from ui.report_editor_tab import (
+from ui.report.preview_transforms import (
     PREVIEW_PAGEBREAK_LABEL,
-    _markdown_with_preview_pagebreaks,
-    _strip_preview_pagebreaks,
+    prepare_preview_markdown,
+    strip_preview_surrogates,
 )
 
 class TestPageBreakConversion(unittest.TestCase):
@@ -209,11 +209,14 @@ Text 3
             "```html\n<!-- spectre:pagebreak -->\n```"
         )
 
-        preview_markdown = _markdown_with_preview_pagebreaks(markdown)
+        preview_markdown = prepare_preview_markdown(markdown).markdown
 
         self.assertEqual(preview_markdown.count("SPECTRE_PAGEBREAK_PREVIEW_TOKEN"), 1)
         self.assertIn("```html\n<!-- spectre:pagebreak -->\n```", preview_markdown)
-        self.assertNotIn(PREVIEW_PAGEBREAK_LABEL, _strip_preview_pagebreaks(PREVIEW_PAGEBREAK_LABEL))
+        self.assertNotIn(
+            PREVIEW_PAGEBREAK_LABEL,
+            strip_preview_surrogates(PREVIEW_PAGEBREAK_LABEL),
+        )
 
     def test_preserves_spacer_dropped_by_preview(self):
         original = "Before\n\n<!-- spectre:spacer:large -->\n\n## After"

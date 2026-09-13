@@ -554,7 +554,7 @@ Text
 
     def test_live_preview_shows_compact_pagebreak_indicator(self):
         from core.reporting import PAGEBREAK_MARKER
-        from ui.report_editor_tab import PREVIEW_PAGEBREAK_LABEL
+        from ui.report.preview_transforms import PREVIEW_PAGEBREAK_LABEL
 
         self.tab.editor.setPlainText(f"Before\n\n{PAGEBREAK_MARKER}\n\nAfter")
         self.tab._update_preview()
@@ -569,7 +569,7 @@ Text
         self.assertNotIn(PREVIEW_PAGEBREAK_LABEL, self.tab.editor.toPlainText())
 
     def test_live_preview_shows_spacer_size_and_preserves_marker(self):
-        from ui.report_editor_tab import PREVIEW_SPACER_LABELS
+        from ui.report.preview_transforms import PREVIEW_SPACER_LABELS
 
         marker = "<!-- spectre:spacer:large -->"
         self.tab.editor.setPlainText(f"Before\n\n{marker}\n\nAfter")

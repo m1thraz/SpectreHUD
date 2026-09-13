@@ -26,11 +26,12 @@ from ui.report.inspector_style import (
     style_inspector_scroll,
     style_inspector_section,
 )
+from ui.report.navigation import ReportLocation
 from ui.styles.icons import get_theme_color, icon
 
 
 class ReportReadinessInspector(QWidget):
-    navigate_requested = pyqtSignal(str, object)
+    navigate_requested = pyqtSignal(object)  # ReportLocation
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -222,7 +223,7 @@ class ReportReadinessInspector(QWidget):
             )
             button.clicked.connect(
                 lambda _checked=False, target=issue: self.navigate_requested.emit(
-                    target.target_kind, target.target_id
+                    ReportLocation.from_legacy(target.target_kind, target.target_id)
                 )
             )
             layout.addWidget(button)

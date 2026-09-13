@@ -99,7 +99,9 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         # Check signal emission on click
         clicked_events = []
-        nav.navigate_requested.connect(lambda v, i: clicked_events.append((v, i)))
+        nav.navigate_requested.connect(
+            lambda location: clicked_events.append(location.as_legacy_tuple())
+        )
         nav._on_item_clicked(item_meta, 0)
         self.assertEqual(clicked_events, [("metadata", None)])
 
@@ -280,7 +282,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         navigated = []
         inspector.navigate_requested.connect(
-            lambda kind, identity: navigated.append((kind, identity))
+            lambda location: navigated.append(location.as_legacy_tuple())
         )
         blocker_buttons[0].click()
         self.assertEqual(navigated[0][0], "metadata")

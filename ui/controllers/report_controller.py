@@ -62,7 +62,7 @@ class ReportController(QObject):
         """Inject the shared export operations into the lazy editor."""
         self.export_coordinator = coordinator
         if self.report_editor_tab is not None:
-            self.report_editor_tab.export_coordinator = coordinator
+            self.report_editor_tab.set_export_coordinator(coordinator)
 
     def load_project(self, project_name: str) -> None:
         if self.report_editor_tab is not None:
@@ -104,7 +104,7 @@ class ReportController(QObject):
     def append_note(self, note: dict) -> bool:
         """Appends a quick note to the active project's report.md."""
         if self.report_editor_tab is not None:
-            current = self.report_editor_tab.editor.toPlainText()
+            current = self.report_editor_tab.current_markdown()
         else:
             current = self.report_file_manager.load() or ""
 
@@ -117,7 +117,7 @@ class ReportController(QObject):
             return False
 
         if self.report_editor_tab is not None:
-            self.report_editor_tab.editor.setPlainText(new_content)
+            self.report_editor_tab.replace_markdown(new_content)
             self.report_editor_tab.save()
             return True
 

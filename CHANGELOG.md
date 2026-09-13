@@ -18,6 +18,7 @@ semantic versioning.
 * Aligned report export, generation, and regeneration dialogs with the active HUD theme.
 * Unified Report Workspace inspector headers, sections, forms, tables, and scroll surfaces around shared theme-aware styles.
 * Kept navigator selections semantically aligned and highlighted in the live report preview.
+* Split preview transformations, workspace sizing, typed navigation, and controller access out of the Report Editor composition root.
 
 ### Fixed
 

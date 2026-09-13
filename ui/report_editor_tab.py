@@ -19,7 +19,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
-from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -31,7 +31,6 @@ from PyQt6.QtWidgets import (
     QFileDialog,  # noqa: F401
     QDialog,
     QMenu,
-    QStackedWidget,
     QTextEdit,
 )
 from PyQt6.QtGui import (
@@ -44,19 +43,6 @@ from PyQt6.QtGui import (
     QTextCursor,
     QTextFormat,
 )
-
-
-class ResponsiveStackedWidget(QStackedWidget):
-    """QStackedWidget that reports the minimum size hint of its active child rather than the union of all."""
-
-    def minimumSizeHint(self) -> QSize:
-        cur = self.currentWidget()
-        if cur is not None and cur.isVisible():
-            hint = cur.minimumSizeHint()
-            if hint.isValid() and hint.width() > 0:
-                return QSize(min(hint.width(), 320), hint.height())
-        return QSize(200, 100)
-
 from core.reporting import (
     ReportAppendix,
     ReportAttackPath,
@@ -71,6 +57,7 @@ from core.reporting import (
     ReportWorkspaceDocument,
     TemplateRepository,
     assess_report_readiness,
+    build_report_navigation,
     classify_loot_report_state,
 )
 from core.config import ConfigManager
@@ -94,6 +81,7 @@ from ui.report.export_actions import ReportExportActions
 from ui.report.format_actions import ReportFormatActions
 from ui.report.finding_inspector import ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
+from ui.report.navigation import ReportLocation
 from ui.report.readiness_inspector import ReportReadinessInspector
 from ui.report.section_inspector import ReportSectionInspector
 from ui.report.summary_inspector import ReportSummaryInspector
@@ -106,8 +94,17 @@ from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.find_replace import FindReplaceBar
 from ui.glass_panel import GlassPanel
 from ui.report.preview import ReportDocument, ReportPreviewEdit
+from ui.report.preview_transforms import (
+    PREVIEW_PAGEBREAK_LABEL,
+    PREVIEW_PAGEBREAK_TOKEN,
+    PREVIEW_SPACER_LABELS,
+    PREVIEW_SPACER_TOKENS,
+    prepare_preview_markdown,
+    strip_preview_surrogates,
+)
 from ui.report.source_editor import ReportSourceEditor
 from ui.report.toolbar import REPORT_TOOLBAR_ICON_SIZE, build_format_toolbar
+from ui.report.workspace_shell import ResponsiveStackedWidget
 from ui.styles.icons import icon
 from ui.message_boxes import (
     ask_confirmation,  # noqa: F401
@@ -115,7 +112,6 @@ from ui.message_boxes import (
     show_information_dialog,  # noqa: F401
     show_warning_dialog,
 )
-from core.reporting import build_report_navigation
 from core.reporting import (
     discard_draft,
     get_draft,
@@ -128,120 +124,6 @@ logger = get_logger("report_editor")
 PREVIEW_DEBOUNCE_MS = 300
 DRAFT_DEBOUNCE_MS = 5_000
 AUTOSAVE_INTERVAL_MS = 45_000
-PREVIEW_PAGEBREAK_TOKEN = "SPECTRE_PAGEBREAK_PREVIEW_TOKEN"
-PREVIEW_PAGEBREAK_LABEL = "──────── PAGE BREAK ────────"
-PREVIEW_SPACER_TOKENS = {
-    size: f"SPECTRE_SPACER_PREVIEW_{size.upper()}" for size in ("small", "medium", "large")
-}
-PREVIEW_SPACER_LABELS = {
-    "small": "──── SPACER · SMALL ────",
-    "medium": "──── SPACER · MEDIUM ────",
-    "large": "──── SPACER · LARGE ────",
-}
-PREVIEW_NAV_TOKEN_PREFIX = "SPECTRE_NAV_PREVIEW_"
-PREVIEW_NAV_MARKER_RE = re.compile(
-    r"^<!--\s*spectre:(section|finding):start:([A-Za-z0-9_:-]+)\s*-->\s*$",
-    re.IGNORECASE,
-)
-PREVIEW_PAGEBREAK_LINE_RE = re.compile(
-    rf"(?m)^.*(?:{re.escape(PREVIEW_PAGEBREAK_LABEL)}|"
-    + "|".join(re.escape(label) for label in PREVIEW_SPACER_LABELS.values())
-    + r").*(?:\r?\n)?"
-)
-PREVIEW_NAV_LINE_RE = re.compile(
-    rf"(?m)^.*{PREVIEW_NAV_TOKEN_PREFIX}\d{{4}}.*(?:\r?\n)?"
-)
-
-
-def _markdown_with_preview_navigation(
-    markdown: str,
-) -> tuple[str, tuple[tuple[str, str, str], ...]]:
-    navigation = build_report_navigation(markdown)
-    indexed_entries = {
-        (entry.kind, entry.identity.casefold()): entry.identity
-        for entry in (*navigation.sections, *navigation.findings)
-    }
-    rendered: list[str] = []
-    landmarks: list[tuple[str, str, str]] = []
-    pending_tokens: list[str] = []
-    in_fence = False
-    fence_marker = ""
-
-    for line in markdown.splitlines():
-        stripped = line.lstrip()
-        opening = re.match(r"(`{3,}|~{3,})", stripped)
-        if opening:
-            marker = opening.group(1)
-            if not in_fence:
-                in_fence = True
-                fence_marker = marker[0]
-            elif marker[0] == fence_marker:
-                in_fence = False
-                fence_marker = ""
-            rendered.append(line)
-            continue
-
-        marker_match = None if in_fence else PREVIEW_NAV_MARKER_RE.fullmatch(line.strip())
-        if marker_match is None:
-            if pending_tokens and line.strip() and not line.strip().startswith("<!--"):
-                line = f"{line} {' '.join(pending_tokens)}"
-                pending_tokens.clear()
-            rendered.append(line)
-            continue
-
-        kind, marker_identity = marker_match.groups()
-        identity = indexed_entries.get((kind.casefold(), marker_identity.casefold()))
-        if identity is None:
-            rendered.append(line)
-            continue
-
-        token = f"{PREVIEW_NAV_TOKEN_PREFIX}{len(landmarks):04d}"
-        pending_tokens.append(token)
-        landmarks.append((token, kind.casefold(), identity))
-
-    if pending_tokens:
-        rendered.append(" ".join(pending_tokens))
-    return "\n".join(rendered), tuple(landmarks)
-
-
-def _markdown_with_preview_pagebreaks(markdown: str) -> str:
-    """Expose page-break comments to Qt while preserving fenced code examples."""
-    from core.reporting import PAGEBREAK_REGEX, SPACER_REGEX
-
-    lines = markdown.splitlines()
-    in_fence = False
-    fence_marker = ""
-    rendered = []
-    for line in lines:
-        stripped = line.lstrip()
-        opening = re.match(r"(`{3,}|~{3,})", stripped)
-        if opening:
-            marker = opening.group(1)
-            if not in_fence:
-                in_fence = True
-                fence_marker = marker[0]
-            elif marker[0] == fence_marker:
-                in_fence = False
-                fence_marker = ""
-            rendered.append(line)
-        elif not in_fence and PAGEBREAK_REGEX.fullmatch(line.strip()):
-            rendered.append(PREVIEW_PAGEBREAK_TOKEN)
-        elif not in_fence and (spacer_match := SPACER_REGEX.fullmatch(line.strip())):
-            rendered.append(PREVIEW_SPACER_TOKENS[spacer_match.group(1).lower()])
-        else:
-            rendered.append(line)
-    return "\n".join(rendered)
-
-
-def _strip_preview_pagebreaks(markdown: str) -> str:
-    """Remove the visual surrogate before canonical markers are reconciled."""
-    return PREVIEW_PAGEBREAK_LINE_RE.sub("", markdown)
-
-
-def _strip_preview_navigation(markdown: str) -> str:
-    return PREVIEW_NAV_LINE_RE.sub("", markdown)
-
-
 class ViewMode(Enum):
     WORKSPACE = "workspace"
     EDITOR = "editor"
@@ -592,7 +474,7 @@ class ReportEditorTab(QWidget):
 
         # Spalte 1: Navigator (links, standardmäßig im Split-View eingeklappt für reines 2-Spalten-Layout)
         self.navigator = ReportWorkspaceNavigator(self)
-        self.navigator.navigate_requested.connect(self._on_navigate_requested)
+        self.navigator.navigate_requested.connect(self.navigate_to)
         self.navigator.add_finding_requested.connect(self._on_add_finding_requested)
         self.navigator.sync_loot_requested.connect(self._on_append_loot_clicked)
         self.navigator_glass = self._wrap_glass_surface(self.navigator)
@@ -633,7 +515,7 @@ class ReportEditorTab(QWidget):
 
         # Integrated handoff/readiness review
         self.readiness_inspector = ReportReadinessInspector(self)
-        self.readiness_inspector.navigate_requested.connect(self._on_navigate_requested)
+        self.readiness_inspector.navigate_requested.connect(self.navigate_to)
         self.readiness_inspector_glass = self._wrap_glass_surface(
             self.readiness_inspector
         )
@@ -663,7 +545,7 @@ class ReportEditorTab(QWidget):
         self.summary_inspector = ReportSummaryInspector(self)
         self.summary_inspector.summary_changed.connect(self._on_summary_changed)
         self.summary_inspector.finding_selected.connect(
-            lambda fid: self._on_navigate_requested("finding", fid)
+            lambda fid: self.navigate_to(ReportLocation.finding(fid))
         )
         self.summary_inspector_glass = self._wrap_glass_surface(self.summary_inspector)
         self.center_stack.addWidget(self.summary_inspector_glass)
@@ -673,7 +555,7 @@ class ReportEditorTab(QWidget):
         self.remediation_inspector.finding_action_changed.connect(self._on_finding_action_changed)
         self.remediation_inspector.plan_changed.connect(self._on_remediation_plan_changed)
         self.remediation_inspector.finding_selected.connect(
-            lambda fid: self._on_navigate_requested("finding", fid)
+            lambda fid: self.navigate_to(ReportLocation.finding(fid))
         )
         self.remediation_inspector_glass = self._wrap_glass_surface(self.remediation_inspector)
         self.center_stack.addWidget(self.remediation_inspector_glass)
@@ -682,7 +564,7 @@ class ReportEditorTab(QWidget):
         self.attack_path_inspector = ReportAttackPathInspector(self)
         self.attack_path_inspector.attack_path_changed.connect(self._on_attack_path_changed)
         self.attack_path_inspector.finding_selected.connect(
-            lambda fid: self._on_navigate_requested("finding", fid)
+            lambda fid: self.navigate_to(ReportLocation.finding(fid))
         )
         self.attack_path_inspector_glass = self._wrap_glass_surface(self.attack_path_inspector)
         self.center_stack.addWidget(self.attack_path_inspector_glass)
@@ -987,6 +869,18 @@ class ReportEditorTab(QWidget):
     def is_dirty(self) -> bool:
         return self._dirty
 
+    def current_markdown(self) -> str:
+        """Return the canonical Markdown owned by the editor."""
+        return self.editor.toPlainText()
+
+    def replace_markdown(self, markdown: str) -> None:
+        """Replace the canonical Markdown through the tab's public boundary."""
+        self.editor.setPlainText(markdown)
+
+    def set_export_coordinator(self, coordinator: ExportCoordinator) -> None:
+        """Update the shared export dependency without exposing tab internals."""
+        self.export_coordinator = coordinator
+
     def confirm_discard_if_dirty(self) -> bool:
         """
         Fragt bei ungespeicherten Änderungen nach, ob gespeichert, verworfen
@@ -1047,9 +941,7 @@ class ReportEditorTab(QWidget):
         """Commits rich-text edits from the preview document back to the markdown editor."""
         from core.reporting import preserve_markers_in_preview_roundtrip
 
-        raw_markdown = _strip_preview_navigation(
-            _strip_preview_pagebreaks(self.preview_document.toMarkdown())
-        )
+        raw_markdown = strip_preview_surrogates(self.preview_document.toMarkdown())
         new_markdown = preserve_markers_in_preview_roundtrip(
             self._preview_markdown_snapshot or "", raw_markdown
         )
@@ -1511,12 +1403,10 @@ class ReportEditorTab(QWidget):
                 self.current_project
             )
             self.preview_document.set_project_dir(proj_dir)
-        preview_markdown, landmarks = _markdown_with_preview_navigation(
-            self.editor.toPlainText()
-        )
-        self.preview.setMarkdown(_markdown_with_preview_pagebreaks(preview_markdown))
+        prepared = prepare_preview_markdown(self.editor.toPlainText())
+        self.preview.setMarkdown(prepared.markdown)
         self._decorate_preview_pagebreaks()
-        self._index_preview_landmarks(landmarks)
+        self._index_preview_landmarks(prepared.landmarks)
         if self._active_preview_target is not None:
             self._focus_preview_on_item(*self._active_preview_target, remember=False)
         self._sync_scroll_editor_to_preview()
@@ -1814,7 +1704,12 @@ class ReportEditorTab(QWidget):
             self._refresh_workspace_navigator()
 
     def _on_navigate_requested(self, view_type: str, item_id: Optional[str]) -> None:
-        """Switches the center inspector stack to the requested document section or finding."""
+        """Compatibility adapter for legacy internal and test callers."""
+        self.navigate_to(ReportLocation.from_legacy(view_type, item_id))
+
+    def navigate_to(self, location: ReportLocation) -> None:
+        """Show the inspector and preview focus for a semantic report location."""
+        view_type, item_id = location.as_legacy_tuple()
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
         if self._view_mode != ViewMode.WORKSPACE:
@@ -1925,7 +1820,7 @@ class ReportEditorTab(QWidget):
             self.center_stack.setCurrentWidget(self.editor_glass)
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
-        self.navigator.select_item(view_type, item_id)
+        self.navigator.select_location(location)
         self._update_contextual_toolbar_visibility()
         if preview_target is None:
             self._clear_preview_focus()
