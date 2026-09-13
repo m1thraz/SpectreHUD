@@ -12,7 +12,11 @@ class BaseHudDialog(QDialog):
     """
 
     def __init__(self, title: str = "SPECTRE // DIALOG", parent: Optional[QWidget] = None):
-        super().__init__(parent)
+        # Dialogs opened from widgets inside MainScrollArea must not inherit its
+        # pane-only transparent stylesheet. The owning top-level window retains
+        # modality and lifetime ownership without leaking descendant QSS here.
+        dialog_parent = parent.window() if parent is not None else None
+        super().__init__(dialog_parent)
         self.dialog_title_text = title
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)

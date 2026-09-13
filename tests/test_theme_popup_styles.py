@@ -12,11 +12,16 @@ from PyQt6.QtWidgets import QFrame, QPushButton, QScrollArea, QToolTip, QVBoxLay
 from PyQt6.QtGui import QPalette
 
 from core.config import ConfigManager
+from core.reporting import TemplateRepository
 from core.storage import InMemoryStorageBackend
 from core.theme_loader import ThemeLoader
 from ui.appearance import apply_application_style
 from ui.panels.content_panel import ContentPanel
-from ui.report.dialogs import ReportExportTypeDialog
+from ui.report.dialogs import (
+    ReportExportTypeDialog,
+    ReportGenerationDialog,
+    ReportRegenerationConfirmDialog,
+)
 from ui.settings_dialog import (
     AppearanceSettingsPage,
     GeneralSettingsPage,
@@ -175,7 +180,7 @@ def test_combo_popup_inside_settings_page_keeps_theme_colors():
     _run_isolated_qt_probe("combo")
 
 
-def _probe_export_dialog_keeps_application_theme(qapp):
+def _probe_report_dialogs_keep_application_theme(qapp):
     _apply_daylight_theme(qapp)
 
     root = QWidget()
@@ -191,36 +196,44 @@ def _probe_export_dialog_keeps_application_theme(qapp):
     root.resize(760, 560)
     root.show()
 
-    dialog = ReportExportTypeDialog(report_editor)
-    dialog.show()
-    qapp.processEvents()
-
-    assert dialog.parentWidget() is root
-    frame_image = dialog.hud_frame.grab().toImage()
-    frame_color = frame_image.pixelColor(
-        frame_image.width() // 2,
-        dialog.header_bar.height() + 8,
+    dialogs = (
+        ReportExportTypeDialog(report_editor),
+        ReportRegenerationConfirmDialog(report_editor),
+        ReportGenerationDialog(TemplateRepository(), parent=report_editor),
     )
-    assert frame_color.lightness() > 128, (
-        f"export dialog shell is dark ({frame_color.name()}) in daylight theme"
-    )
+    for dialog in dialogs:
+        dialog.show()
+        qapp.processEvents()
 
+        assert dialog.parentWidget() is root
+        frame_image = dialog.hud_frame.grab().toImage()
+        frame_color = frame_image.pixelColor(
+            frame_image.width() // 2,
+            dialog.header_bar.height() + 8,
+        )
+        assert frame_color.lightness() > 128, (
+            f"{type(dialog).__name__} shell is dark ({frame_color.name()}) in daylight theme"
+        )
+        dialog.hide()
+
+    export_dialog = dialogs[0]
     html_icon_box = next(
         box
-        for box in dialog.findChildren(QFrame, "ExportIconBox")
+        for box in export_dialog.findChildren(QFrame, "ExportIconBox")
         if box.property("exportType") == "html"
     )
     assert "rgba(0, 145, 179, 0.15)" in html_icon_box.styleSheet()
 
-    dialog.close()
     root.close()
-    dialog.deleteLater()
+    for dialog in dialogs:
+        dialog.close()
+        dialog.deleteLater()
     root.deleteLater()
 
 
 @pytest.mark.integration
-def test_export_dialog_keeps_application_theme():
-    _run_isolated_qt_probe("export_dialog")
+def test_report_dialogs_keep_application_theme():
+    _run_isolated_qt_probe("report_dialogs")
 
 
 if __name__ == "__main__":
@@ -228,7 +241,7 @@ if __name__ == "__main__":
     probe = {
         "tooltip": _probe_tooltip_inside_content_panel_keeps_theme_colors,
         "combo": _probe_combo_popup_inside_settings_page_keeps_theme_colors,
-        "export_dialog": _probe_export_dialog_keeps_application_theme,
+        "report_dialogs": _probe_report_dialogs_keep_application_theme,
     }.get(probe_name)
     if probe is None:
         raise SystemExit(f"unknown Qt probe: {probe_name!r}")

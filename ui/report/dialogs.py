@@ -834,12 +834,7 @@ class ReportExportTypeDialog(BaseHudDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         title = t("report.export_dialog_title", "SPECTRE // EXPORT REPORT")
-        # The report workspace lives below MainScrollArea, whose local stylesheet
-        # deliberately makes report descendants transparent. Keep this top-level
-        # chooser parented to the owning window so those pane-only rules cannot
-        # erase the dialog shell, cards, and controls.
-        dialog_parent = parent.window() if parent is not None else None
-        super().__init__(title=title, parent=dialog_parent)
+        super().__init__(title=title, parent=parent)
         self.setObjectName("ReportExportTypeDialog")
         self.set_dialog_title(title)
         self.setMinimumWidth(540)
