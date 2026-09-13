@@ -983,7 +983,7 @@ Text
         proj_dir = self.project_mgr.get_project_dir("TestBox")
         save_draft(proj_dir, "# Restored Draft Content")
 
-        with patch("ui.report_editor_tab.QMessageBox") as MockMsgBox:
+        with patch("ui.report.session_controller.QMessageBox") as MockMsgBox:
             mock_box = MagicMock()
             MockMsgBox.return_value = mock_box
             dummy_btn = object()
@@ -1005,7 +1005,7 @@ Text
         proj_dir = self.project_mgr.get_project_dir("TestBox")
         save_draft(proj_dir, "# Draft To Discard")
 
-        with patch("ui.report_editor_tab.QMessageBox") as MockMsgBox:
+        with patch("ui.report.session_controller.QMessageBox") as MockMsgBox:
             mock_box = MagicMock()
             MockMsgBox.return_value = mock_box
             mock_box.clickedButton.return_value = object()  # Not btn_restore

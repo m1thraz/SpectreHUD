@@ -24,16 +24,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QDialog,
-    QTextEdit,
 )
 from PyQt6.QtGui import (
-    QColor,
-    QFont,
     QKeySequence,
     QShortcut,
-    QTextCharFormat,
-    QTextCursor,
-    QTextFormat,
 )
 from core.reporting import (
     ReportAppendix,
@@ -44,6 +38,7 @@ from core.reporting import (
     ReportMetadata,
     ReportRemediationPlan,
     ReportScopeMethodology,
+    ReportSessionService,
     ReportTemplate,
     ReportWorkspaceDocument,
     TemplateRepository,
@@ -53,8 +48,8 @@ from core.reporting import (
 )
 from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
-from core.logger import get_logger
 from core.i18n import t
+from core.logger import get_logger
 from core.phases import normalize_phase_key
 from core.fonts import get_report_font_stack
 from core.platform import open_path  # noqa: F401
@@ -78,13 +73,10 @@ from ui.report.action_toolbar import (
 from ui.report.workspace_router import ReportRouteContext
 from ui.report.icon_assets import render_report_icon  # noqa: F401
 from ui.report.preview_transforms import (
-    PREVIEW_PAGEBREAK_LABEL,
-    PREVIEW_PAGEBREAK_TOKEN,
-    PREVIEW_SPACER_LABELS,
-    PREVIEW_SPACER_TOKENS,
-    prepare_preview_markdown,
     strip_preview_surrogates,
 )
+from ui.report.preview_controller import ReportPreviewController
+from ui.report.session_controller import ReportSessionController
 from ui.report.toolbar import build_format_toolbar
 from ui.report.workspace_shell import (
     ReportWorkspaceCallbacks,
@@ -99,18 +91,14 @@ from ui.message_boxes import (
     show_information_dialog,  # noqa: F401
     show_warning_dialog,
 )
-from core.reporting import (
-    discard_draft,
-    get_draft,
-    has_recoverable_draft,
-    save_draft,
-)
 
 logger = get_logger("report_editor")
 
 PREVIEW_DEBOUNCE_MS = 300
 DRAFT_DEBOUNCE_MS = 5_000
 AUTOSAVE_INTERVAL_MS = 45_000
+
+
 class ViewMode(Enum):
     WORKSPACE = "workspace"
     EDITOR = "editor"
@@ -135,6 +123,7 @@ class ReportEditorTab(QWidget):
     ):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
+        self.report_session = ReportSessionService(report_file_manager)
         self.loot_manager = loot_manager
         self.clipboard_history = clipboard_history
         self.config = config_manager
@@ -154,8 +143,11 @@ class ReportEditorTab(QWidget):
         self._preview_markdown_snapshot: Optional[str] = None
         self._preview_landmarks: dict[tuple[str, str], int] = {}
         self._active_preview_target: Optional[tuple[str, str]] = None
-
-        self._syncing_scroll = False
+        self.session_controller = ReportSessionController(
+            service=self.report_session,
+            parent=self,
+            set_status=lambda message: self.lbl_status.setText(message),
+        )
 
         self.format_actions = ReportFormatActions(
             editor=lambda: self.editor,
@@ -382,6 +374,15 @@ class ReportEditorTab(QWidget):
             evidence_actions=self.evidence_actions,
         )
         self._expose_workspace_shell(shell)
+        self.preview_controller = ReportPreviewController(
+            editor=self.editor,
+            preview=self.preview,
+            document=self.preview_document,
+            light_mode_provider=lambda: self._light_report_view,
+            split_mode_provider=lambda: self._view_mode == ViewMode.SPLIT,
+        )
+        self._preview_landmarks = self.preview_controller.landmarks
+        self._active_preview_target = self.preview_controller.active_target
         layout.addWidget(self.find_replace)
         self._apply_preview_font()
         self._apply_report_color_mode()
@@ -487,69 +488,9 @@ class ReportEditorTab(QWidget):
         return self.config.get("report_font", "segoe_ui") if self.config else "segoe_ui"
 
     def _apply_preview_font(self) -> None:
-        """Apply the report font to the rich-text live preview."""
+        """Apply configured typography and color mode to the preview document."""
         report_font = get_report_font_stack(self._report_font_key())
-        primary_font = report_font.split(",", 1)[0].strip().strip("'\"")
-        preview_font = QFont(primary_font, 10)
-        preview_font.setStyleHint(QFont.StyleHint.SansSerif)
-        self.preview_document.setDefaultFont(preview_font)
-        palette = (
-            {
-                "text": "#1f2328",
-                "heading": "#0550ae",
-                "heading_2": "#0969da",
-                "heading_3": "#0550ae",
-                "border": "#d0d7de",
-                "code_bg": "#f6f8fa",
-                "code": "#1a7f37",
-                "quote": "#57606a",
-                "link": "#0969da",
-            }
-            if self._light_report_view
-            else {
-                "text": "#f0f6fc",
-                "heading": "#58a6ff",
-                "heading_2": "#79c0ff",
-                "heading_3": "#a5d6ff",
-                "border": "#30363d",
-                "code_bg": "#161b22",
-                "code": "#7ee787",
-                "quote": "#8b949e",
-                "link": "#58a6ff",
-            }
-        )
-        css = """
-            body { font-family: __REPORT_FONT_STACK__; font-size: 13px; color: __TEXT__; line-height: 1.6; }
-            h1, h2, h3, h4, h5, h6 { color: __HEADING__; font-family: __REPORT_FONT_STACK__; font-weight: 600; margin-top: 14px; margin-bottom: 6px; }
-            h1 { font-size: 18px; border-bottom: 1px solid __BORDER__; padding-bottom: 4px; }
-            h2 { font-size: 15px; border-bottom: 1px solid __BORDER__; padding-bottom: 3px; color: __HEADING_2__; }
-            h3 { font-size: 14px; color: __HEADING_3__; }
-            code { font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace; background-color: __CODE_BG__; color: __CODE__; padding: 2px 4px; border-radius: 4px; font-size: 12px; }
-            pre { background-color: __CODE_BG__; border: 1px solid __BORDER__; border-radius: 6px; padding: 8px; }
-            blockquote { border-left: 3px solid __LINK__; margin: 8px 0; padding-left: 10px; color: __QUOTE__; }
-            hr { border: 0; border-top: 1px solid __BORDER__; margin: 14px 0; }
-            a { color: __LINK__; text-decoration: none; }
-            img { max-width: 100%; border-radius: 6px; border: 1px solid __BORDER__; margin: 8px 0; }
-            ul, ol { padding-left: 20px; margin: 6px 0; }
-            li { margin: 3px 0; }
-            p { margin: 6px 0; }
-        """
-        replacements = {
-            "__REPORT_FONT_STACK__": report_font,
-            "__TEXT__": palette["text"],
-            "__HEADING__": palette["heading"],
-            "__HEADING_2__": palette["heading_2"],
-            "__HEADING_3__": palette["heading_3"],
-            "__BORDER__": palette["border"],
-            "__CODE_BG__": palette["code_bg"],
-            "__CODE__": palette["code"],
-            "__QUOTE__": palette["quote"],
-            "__LINK__": palette["link"],
-        }
-        for marker, value in replacements.items():
-            css = css.replace(marker, value)
-        self.preview_document.setDefaultStyleSheet(css)
-
+        self.preview_controller.configure_typography(report_font)
     def _toggle_report_color_mode(self) -> None:
         self._light_report_view = not self._light_report_view
         self._apply_report_color_mode()
@@ -617,52 +558,16 @@ class ReportEditorTab(QWidget):
         Projekt, das ist Aufgabe des Aufrufers (siehe confirm_discard_if_dirty).
         """
         self.current_project = project_name
-        proj_dir = self.report_file_manager.project_manager.get_project_dir(project_name)
-        self.preview_document.set_project_dir(proj_dir)
-
-        content = self.report_file_manager.load(project_name)
-        restored_draft = False
-
-        # Crash Recovery: Check for uncommitted draft from unexpected termination
-        if has_recoverable_draft(proj_dir, content):
-            res = get_draft(proj_dir)
-            if res:
-                draft_text, draft_time = res
-                time_str = draft_time.strftime("%H:%M:%S")
-                msg = QMessageBox(self.window() if self else None)
-                msg.setWindowTitle(t("report.draft_recovery_title", "Recover Unsaved Draft"))
-                msg.setText(
-                    t(
-                        "report.draft_recovery_msg",
-                        "An unsaved draft for '{project}' from {time} was found.\n\nDo you want to restore it?",
-                        project=project_name,
-                        time=time_str,
-                    )
-                )
-                msg.setIcon(QMessageBox.Icon.Question)
-                btn_restore = msg.addButton(
-                    t("report.draft_restore_btn", "Restore Draft"),
-                    QMessageBox.ButtonRole.AcceptRole,
-                )
-                msg.addButton(
-                    t("report.draft_discard_btn", "Discard Draft"),
-                    QMessageBox.ButtonRole.RejectRole,
-                )
-                msg.setDefaultButton(btn_restore)
-                msg.exec()
-
-                if msg.clickedButton() is btn_restore:
-                    content = draft_text
-                    restored_draft = True
-                else:
-                    discard_draft(proj_dir)
+        loaded = self.session_controller.load_project(project_name)
+        self.preview_document.set_project_dir(loaded.project_dir)
+        content = loaded.markdown
 
         # setPlainText löst textChanged aus -> _dirty würde faelschlich True
         # werden, deshalb Signal kurz blocken.
         self.editor.blockSignals(True)
         self.editor.setPlainText(content)
         self.editor.blockSignals(False)
-        self._set_dirty(restored_draft)
+        self._set_dirty(loaded.restored_draft)
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(content)
         if hasattr(self, "navigator"):
             self._refresh_workspace_navigator(preserve_selection=False)
@@ -729,7 +634,10 @@ class ReportEditorTab(QWidget):
     def _on_text_changed(self) -> None:
         if getattr(self, "_syncing_from_inspector", False):
             return
-        if self._syncing_scroll:
+        if (
+            hasattr(self, "preview_controller")
+            and self.preview_controller.syncing_scroll
+        ):
             return
         self._set_dirty(True)
         self._preview_timer.start()  # debounced preview
@@ -970,24 +878,14 @@ class ReportEditorTab(QWidget):
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
 
-        ok = self.report_file_manager.save(
-            self.editor.toPlainText(), project_name=self.current_project
+        saved = self.session_controller.save(
+            self.current_project, self.editor.toPlainText()
         )
-        if ok:
+        if saved:
             self._set_dirty(False)
-            proj_dir = self.report_file_manager.project_manager.get_project_dir(
-                self.current_project
-            )
-            discard_draft(proj_dir)
             if self._draft_timer.isActive():
                 self._draft_timer.stop()
-        else:
-            show_error_dialog(
-                self.window() if self else None,
-                t("dialog.error", "Error"),
-                t("report.save_error", "The report could not be saved. Details are in the log.")
-            )
-        return ok
+        return saved
 
     def _autosave(self) -> None:
         """Persist a dirty report without interrupting the user on failures."""
@@ -995,23 +893,10 @@ class ReportEditorTab(QWidget):
             return
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
-        try:
-            ok = self.report_file_manager.save(
-                self.editor.toPlainText(), project_name=self.current_project
-            )
-        except Exception:
-            logger.exception("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText(
-                t("report.autosave_failed", "Autosave failed — please save manually")
-            )
-            return
-        if ok:
+        if self.session_controller.autosave(
+            self.current_project, self.editor.toPlainText()
+        ):
             self._set_dirty(False)
-        else:
-            logger.error("Autosave failed for report '%s'", self.current_project)
-            self.lbl_status.setText(
-                t("report.autosave_failed", "Autosave failed — please save manually")
-            )
 
     def closeEvent(self, event) -> None:
         self._autosave_timer.stop()
@@ -1207,72 +1092,13 @@ class ReportEditorTab(QWidget):
     # ------------------------------------------------------------------ #
 
     def _update_preview(self) -> None:
+        project_dir = None
         if self.current_project:
-            proj_dir = self.report_file_manager.project_manager.get_project_dir(
+            project_dir = self.report_file_manager.project_manager.get_project_dir(
                 self.current_project
             )
-            self.preview_document.set_project_dir(proj_dir)
-        prepared = prepare_preview_markdown(self.editor.toPlainText())
-        self.preview.setMarkdown(prepared.markdown)
-        self._decorate_preview_pagebreaks()
-        self._index_preview_landmarks(prepared.landmarks)
-        if self._active_preview_target is not None:
-            self._focus_preview_on_item(*self._active_preview_target, remember=False)
-        self._sync_scroll_editor_to_preview()
-
-    def _index_preview_landmarks(
-        self, landmarks: tuple[tuple[str, str, str], ...]
-    ) -> None:
-        self._preview_landmarks.clear()
-        for token, kind, identity in landmarks:
-            cursor = self.preview_document.find(token)
-            if cursor.isNull():
-                continue
-            target_block = cursor.block()
-            selection_start = cursor.selectionStart()
-            selection_end = cursor.selectionEnd()
-            removal_start = selection_start
-            if selection_start > target_block.position():
-                separator = QTextCursor(self.preview_document)
-                separator.setPosition(selection_start - 1)
-                separator.setPosition(selection_start, QTextCursor.MoveMode.KeepAnchor)
-                if separator.selectedText() == " ":
-                    removal_start -= 1
-            cursor.setPosition(removal_start)
-            cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
-            cursor.removeSelectedText()
-            if target_block.isValid():
-                self._preview_landmarks[(kind, identity)] = target_block.position()
-
-    def _decorate_preview_pagebreaks(self) -> None:
-        cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN)
-        while not cursor.isNull():
-            char_format = QTextCharFormat()
-            char_format.setForeground(QColor("#57606a" if self._light_report_view else "#8b949e"))
-            char_format.setFontWeight(QFont.Weight.DemiBold)
-            cursor.insertText(PREVIEW_PAGEBREAK_LABEL, char_format)
-            block_format = cursor.blockFormat()
-            block_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            block_format.setTopMargin(3)
-            block_format.setBottomMargin(3)
-            cursor.setBlockFormat(block_format)
-            cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN, cursor)
-        for size, token in PREVIEW_SPACER_TOKENS.items():
-            cursor = self.preview_document.find(token)
-            while not cursor.isNull():
-                char_format = QTextCharFormat()
-                char_format.setForeground(
-                    QColor("#6e7781" if self._light_report_view else "#6e7681")
-                )
-                cursor.insertText(PREVIEW_SPACER_LABELS[size], char_format)
-                block_format = cursor.blockFormat()
-                block_format.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                margin = {"small": 3, "medium": 7, "large": 14}[size]
-                block_format.setTopMargin(margin)
-                block_format.setBottomMargin(margin)
-                cursor.setBlockFormat(block_format)
-                cursor = self.preview_document.find(token, cursor)
-
+        self.preview_controller.render(self.editor.toPlainText(), project_dir)
+        self._active_preview_target = self.preview_controller.active_target
     def _update_status_label(self) -> None:
         if not self.current_project:
             self.lbl_status.setText("")
@@ -1295,60 +1121,13 @@ class ReportEditorTab(QWidget):
     # ------------------------------------------------------------------ #
 
     def _on_editor_scroll(self, value: int) -> None:
-        """Synchronizes preview scrollbar proportionally when editor scrolls in Split mode."""
-        if self._syncing_scroll or self._view_mode != ViewMode.SPLIT:
-            return
-        ed_bar = self.editor.verticalScrollBar()
-        pr_bar = self.preview.verticalScrollBar()
-        ed_max = ed_bar.maximum()
-        pr_max = pr_bar.maximum()
-        if ed_max <= 0 or pr_max <= 0:
-            return
-        ratio = value / ed_max
-        self._syncing_scroll = True
-        try:
-            pr_bar.setValue(int(ratio * pr_max))
-        finally:
-            self._syncing_scroll = False
+        self.preview_controller.on_editor_scroll(value)
 
     def _on_preview_scroll(self, value: int) -> None:
-        """Synchronizes editor scrollbar proportionally when preview scrolls in Split mode."""
-        if self._syncing_scroll or self._view_mode != ViewMode.SPLIT:
-            return
-        ed_bar = self.editor.verticalScrollBar()
-        pr_bar = self.preview.verticalScrollBar()
-        ed_max = ed_bar.maximum()
-        pr_max = pr_bar.maximum()
-        if ed_max <= 0 or pr_max <= 0:
-            return
-        ratio = value / pr_max
-        self._syncing_scroll = True
-        try:
-            ed_bar.setValue(int(ratio * ed_max))
-        finally:
-            self._syncing_scroll = False
+        self.preview_controller.on_preview_scroll(value)
 
     def _sync_scroll_editor_to_preview(self) -> None:
-        """Aligns preview scroll position to editor position (e.g. after mode switch or reload)."""
-        if self._view_mode != ViewMode.SPLIT:
-            return
-        ed_bar = self.editor.verticalScrollBar()
-        pr_bar = self.preview.verticalScrollBar()
-        ed_max = ed_bar.maximum()
-        pr_max = pr_bar.maximum()
-        if ed_max <= 0 or pr_max <= 0:
-            return
-        ratio = ed_bar.value() / ed_max
-        self._syncing_scroll = True
-        try:
-            pr_bar.setValue(int(ratio * pr_max))
-        finally:
-            self._syncing_scroll = False
-
-    # ------------------------------------------------------------------ #
-    # Semantische Sprung-Navigation
-    # ------------------------------------------------------------------ #
-
+        self.preview_controller.sync_editor_to_preview()
     def _jump_to_heading_line(self, line_number: int) -> None:
         """Positions cursor at the given 1-based line number and ensures it is visible."""
         block = self.editor.document().findBlockByNumber(line_number - 1)
@@ -1406,10 +1185,9 @@ class ReportEditorTab(QWidget):
         """Saves an in-flight draft snapshot for crash recovery if content is dirty."""
         if not self._dirty or not self.current_project:
             return
-        proj_dir = self.report_file_manager.project_manager.get_project_dir(
-            self.current_project
+        self.session_controller.save_draft(
+            self.current_project, self.editor.toPlainText()
         )
-        save_draft(proj_dir, self.editor.toPlainText())
 
     # ------------------------------------------------------------------ #
     # Workspace Navigation & Modulare Inspektoren
@@ -1554,32 +1332,12 @@ class ReportEditorTab(QWidget):
         *,
         remember: bool = True,
     ) -> None:
-        target = (kind, identity)
-        if remember:
-            self._active_preview_target = target
-        position = self._preview_landmarks.get(target)
-        if position is None:
-            self.preview.setExtraSelections([])
-            return
-
-        cursor = QTextCursor(self.preview_document)
-        cursor.setPosition(position)
-        self.preview.setTextCursor(cursor)
-
-        selection = QTextEdit.ExtraSelection()
-        selection.cursor = QTextCursor(cursor)
-        selection.cursor.clearSelection()
-        highlight = QColor("#0969da" if self._light_report_view else "#00e5ff")
-        highlight.setAlpha(34 if self._light_report_view else 28)
-        selection.format.setBackground(highlight)
-        selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
-        self.preview.setExtraSelections([selection])
-        self.preview.ensureCursorVisible()
+        self.preview_controller.focus(kind, identity, remember=remember)
+        self._active_preview_target = self.preview_controller.active_target
 
     def _clear_preview_focus(self) -> None:
+        self.preview_controller.clear_focus()
         self._active_preview_target = None
-        self.preview.setExtraSelections([])
-
     def _on_add_finding_requested(self) -> None:
         """Creates a finding — offering unreferenced Loot entries if available to preserve Loot workflow."""
         if self._workspace_doc is None:

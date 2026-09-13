@@ -54,7 +54,7 @@ class TestReportRecoveryUI(unittest.TestCase):
             mock_exec.side_effect = side_effect
 
             # Simulate dialog where clickedButton matches default button
-            with patch("ui.report_editor_tab.QMessageBox") as mock_mb_cls:
+            with patch("ui.report.session_controller.QMessageBox") as mock_mb_cls:
                 instance = MagicMock()
                 mock_mb_cls.return_value = instance
                 # The first button added is btn_restore
@@ -74,7 +74,7 @@ class TestReportRecoveryUI(unittest.TestCase):
         save_draft(self.project_dir, draft_content)
         self.assertTrue(get_draft_path(self.project_dir).exists())
 
-        with patch("ui.report_editor_tab.QMessageBox") as mock_mb_cls:
+        with patch("ui.report.session_controller.QMessageBox") as mock_mb_cls:
             instance = MagicMock()
             mock_mb_cls.return_value = instance
             btn_restore = MagicMock()

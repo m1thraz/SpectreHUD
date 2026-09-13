@@ -75,6 +75,13 @@ from core.reporting.draft_manager import (
     has_recoverable_draft,
     save_draft,
 )
+from core.reporting.session import (
+    ReportLoadState,
+    ReportPersistFailureReason,
+    ReportPersistResult,
+    ReportRecoveryDraft,
+    ReportSessionService,
+)
 from core.reporting.loot_sync import (
     FALLBACK_SECTION_TITLE,
     LootReportState,
@@ -162,6 +169,11 @@ __all__ = [
     "get_draft_path",
     "has_recoverable_draft",
     "save_draft",
+    "ReportLoadState",
+    "ReportPersistFailureReason",
+    "ReportPersistResult",
+    "ReportRecoveryDraft",
+    "ReportSessionService",
     "FALLBACK_SECTION_TITLE",
     "LootReportState",
     "PAGEBREAK_HTML",
