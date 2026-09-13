@@ -340,6 +340,55 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.close()
         tab.deleteLater()
 
+    def test_workspace_navigation_uses_semantic_preview_landmarks(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+        markdown = """<!-- spectre:section:start:header_metadata -->
+# Shared Heading
+<!-- spectre:section:end:header_metadata -->
+
+<!-- spectre:section:start:executive_summary -->
+## Shared Heading
+<!-- spectre:section:end:executive_summary -->
+
+<!-- spectre:section:start:appendix -->
+## Shared Heading
+Appendix body
+<!-- spectre:section:end:appendix -->
+"""
+        tab.editor.setPlainText(markdown)
+        tab._workspace_doc = ReportWorkspaceDocument.from_markdown(markdown)
+        tab._update_preview()
+
+        tab._on_navigate_requested("section", "appendix")
+
+        appendix_target = ("section", "appendix")
+        self.assertEqual(tab._active_preview_target, appendix_target)
+        self.assertEqual(
+            tab.preview.textCursor().position(),
+            tab._preview_landmarks[appendix_target],
+        )
+        self.assertGreater(
+            tab._preview_landmarks[appendix_target],
+            tab._preview_landmarks[("section", "executive_summary")],
+        )
+        self.assertEqual(len(tab.preview.extraSelections()), 1)
+        self.assertNotIn("SPECTRE_NAV_PREVIEW_", tab.preview.toPlainText())
+
+        tab._update_preview()
+        self.assertEqual(
+            tab.preview.textCursor().position(),
+            tab._preview_landmarks[appendix_target],
+        )
+        self.assertEqual(len(tab.preview.extraSelections()), 1)
+
+        tab._on_navigate_requested("raw_markdown", None)
+        self.assertIsNone(tab._active_preview_target)
+        self.assertEqual(tab.preview.extraSelections(), [])
+
+        tab.close()
+        tab.deleteLater()
+
     def test_finding_inspector_empty_state_and_signals(self):
         insp = ReportFindingInspector()
         # Default state is empty state

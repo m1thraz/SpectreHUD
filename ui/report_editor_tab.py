@@ -32,8 +32,18 @@ from PyQt6.QtWidgets import (
     QDialog,
     QMenu,
     QStackedWidget,
+    QTextEdit,
 )
-from PyQt6.QtGui import QAction, QColor, QFont, QShortcut, QKeySequence, QTextCharFormat
+from PyQt6.QtGui import (
+    QAction,
+    QColor,
+    QFont,
+    QKeySequence,
+    QShortcut,
+    QTextCharFormat,
+    QTextCursor,
+    QTextFormat,
+)
 
 
 class ResponsiveStackedWidget(QStackedWidget):
@@ -126,11 +136,70 @@ PREVIEW_SPACER_LABELS = {
     "medium": "──── SPACER · MEDIUM ────",
     "large": "──── SPACER · LARGE ────",
 }
+PREVIEW_NAV_TOKEN_PREFIX = "SPECTRE_NAV_PREVIEW_"
+PREVIEW_NAV_MARKER_RE = re.compile(
+    r"^<!--\s*spectre:(section|finding):start:([A-Za-z0-9_:-]+)\s*-->\s*$",
+    re.IGNORECASE,
+)
 PREVIEW_PAGEBREAK_LINE_RE = re.compile(
     rf"(?m)^.*(?:{re.escape(PREVIEW_PAGEBREAK_LABEL)}|"
     + "|".join(re.escape(label) for label in PREVIEW_SPACER_LABELS.values())
     + r").*(?:\r?\n)?"
 )
+PREVIEW_NAV_LINE_RE = re.compile(
+    rf"(?m)^.*{PREVIEW_NAV_TOKEN_PREFIX}\d{{4}}.*(?:\r?\n)?"
+)
+
+
+def _markdown_with_preview_navigation(
+    markdown: str,
+) -> tuple[str, tuple[tuple[str, str, str], ...]]:
+    navigation = build_report_navigation(markdown)
+    indexed_entries = {
+        (entry.kind, entry.identity.casefold()): entry.identity
+        for entry in (*navigation.sections, *navigation.findings)
+    }
+    rendered: list[str] = []
+    landmarks: list[tuple[str, str, str]] = []
+    pending_tokens: list[str] = []
+    in_fence = False
+    fence_marker = ""
+
+    for line in markdown.splitlines():
+        stripped = line.lstrip()
+        opening = re.match(r"(`{3,}|~{3,})", stripped)
+        if opening:
+            marker = opening.group(1)
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker[0]
+            elif marker[0] == fence_marker:
+                in_fence = False
+                fence_marker = ""
+            rendered.append(line)
+            continue
+
+        marker_match = None if in_fence else PREVIEW_NAV_MARKER_RE.fullmatch(line.strip())
+        if marker_match is None:
+            if pending_tokens and line.strip() and not line.strip().startswith("<!--"):
+                line = f"{line} {' '.join(pending_tokens)}"
+                pending_tokens.clear()
+            rendered.append(line)
+            continue
+
+        kind, marker_identity = marker_match.groups()
+        identity = indexed_entries.get((kind.casefold(), marker_identity.casefold()))
+        if identity is None:
+            rendered.append(line)
+            continue
+
+        token = f"{PREVIEW_NAV_TOKEN_PREFIX}{len(landmarks):04d}"
+        pending_tokens.append(token)
+        landmarks.append((token, kind.casefold(), identity))
+
+    if pending_tokens:
+        rendered.append(" ".join(pending_tokens))
+    return "\n".join(rendered), tuple(landmarks)
 
 
 def _markdown_with_preview_pagebreaks(markdown: str) -> str:
@@ -165,6 +234,10 @@ def _markdown_with_preview_pagebreaks(markdown: str) -> str:
 def _strip_preview_pagebreaks(markdown: str) -> str:
     """Remove the visual surrogate before canonical markers are reconciled."""
     return PREVIEW_PAGEBREAK_LINE_RE.sub("", markdown)
+
+
+def _strip_preview_navigation(markdown: str) -> str:
+    return PREVIEW_NAV_LINE_RE.sub("", markdown)
 
 
 class ViewMode(Enum):
@@ -208,6 +281,8 @@ class ReportEditorTab(QWidget):
         self._view_mode = ViewMode.WORKSPACE
         self._light_report_view = False
         self._preview_markdown_snapshot: Optional[str] = None
+        self._preview_landmarks: dict[tuple[str, str], int] = {}
+        self._active_preview_target: Optional[tuple[str, str]] = None
 
         self._syncing_scroll = False
 
@@ -962,7 +1037,9 @@ class ReportEditorTab(QWidget):
         """Commits rich-text edits from the preview document back to the markdown editor."""
         from core.reporting import preserve_markers_in_preview_roundtrip
 
-        raw_markdown = _strip_preview_pagebreaks(self.preview_document.toMarkdown())
+        raw_markdown = _strip_preview_navigation(
+            _strip_preview_pagebreaks(self.preview_document.toMarkdown())
+        )
         new_markdown = preserve_markers_in_preview_roundtrip(
             self._preview_markdown_snapshot or "", raw_markdown
         )
@@ -1424,9 +1501,39 @@ class ReportEditorTab(QWidget):
                 self.current_project
             )
             self.preview_document.set_project_dir(proj_dir)
-        self.preview.setMarkdown(_markdown_with_preview_pagebreaks(self.editor.toPlainText()))
+        preview_markdown, landmarks = _markdown_with_preview_navigation(
+            self.editor.toPlainText()
+        )
+        self.preview.setMarkdown(_markdown_with_preview_pagebreaks(preview_markdown))
         self._decorate_preview_pagebreaks()
+        self._index_preview_landmarks(landmarks)
+        if self._active_preview_target is not None:
+            self._focus_preview_on_item(*self._active_preview_target, remember=False)
         self._sync_scroll_editor_to_preview()
+
+    def _index_preview_landmarks(
+        self, landmarks: tuple[tuple[str, str, str], ...]
+    ) -> None:
+        self._preview_landmarks.clear()
+        for token, kind, identity in landmarks:
+            cursor = self.preview_document.find(token)
+            if cursor.isNull():
+                continue
+            target_block = cursor.block()
+            selection_start = cursor.selectionStart()
+            selection_end = cursor.selectionEnd()
+            removal_start = selection_start
+            if selection_start > target_block.position():
+                separator = QTextCursor(self.preview_document)
+                separator.setPosition(selection_start - 1)
+                separator.setPosition(selection_start, QTextCursor.MoveMode.KeepAnchor)
+                if separator.selectedText() == " ":
+                    removal_start -= 1
+            cursor.setPosition(removal_start)
+            cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+            cursor.removeSelectedText()
+            if target_block.isValid():
+                self._preview_landmarks[(kind, identity)] = target_block.position()
 
     def _decorate_preview_pagebreaks(self) -> None:
         cursor = self.preview_document.find(PREVIEW_PAGEBREAK_TOKEN)
@@ -1696,13 +1803,13 @@ class ReportEditorTab(QWidget):
         if self._view_mode != ViewMode.WORKSPACE:
             self._set_view_mode(ViewMode.WORKSPACE)
 
-        preview_text = ""
+        preview_target: Optional[tuple[str, str]] = None
 
         if view_type == "metadata":
             self.metadata_inspector.load_metadata(self._workspace_doc.metadata)
             self.center_stack.setCurrentWidget(self.metadata_inspector_glass)
             self._last_active_inspector = self.metadata_inspector_glass
-            preview_text = self._workspace_doc.metadata.title
+            preview_target = ("section", "header_metadata")
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "finding" and item_id:
@@ -1712,7 +1819,7 @@ class ReportEditorTab(QWidget):
                 self.finding_inspector.load_finding(finding)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
                 self._last_active_inspector = self.finding_inspector_glass
-                preview_text = finding.title
+                preview_target = ("finding", finding.id)
                 if hasattr(self, "btn_toggle_raw"):
                     self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type in ("findings_overview", "phase_group"):
@@ -1725,32 +1832,41 @@ class ReportEditorTab(QWidget):
             self.finding_inspector.load_finding(target_finding)
             self.center_stack.setCurrentWidget(self.finding_inspector_glass)
             self._last_active_inspector = self.finding_inspector_glass
-            preview_text = target_finding.title if target_finding else ""
+            preview_target = (
+                ("finding", target_finding.id)
+                if target_finding
+                else ("section", "finding_section")
+            )
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type in ("section", "narratives_root"):
             sec_id = item_id or "executive_summary"
+            sec_id = {
+                "summary": "executive_summary",
+                "scope": "scope_limitations",
+                "attack_narrative": "attack_path",
+            }.get(sec_id, sec_id)
             if sec_id == "executive_summary":
                 self.summary_inspector.load_summary(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.summary_inspector_glass)
                 self._last_active_inspector = self.summary_inspector_glass
-                preview_text = self.summary_inspector.lbl_title.text()
+                preview_target = ("section", sec_id)
             elif sec_id == "remediation_table":
                 self.remediation_inspector.load_remediation(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.remediation_inspector_glass)
                 self._last_active_inspector = self.remediation_inspector_glass
-                preview_text = self.remediation_inspector.lbl_title.text()
+                preview_target = ("section", sec_id)
             elif sec_id in ("attack_path", "attack_narrative"):
                 self.attack_path_inspector.load_attack_path(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.attack_path_inspector_glass)
                 self._last_active_inspector = self.attack_path_inspector_glass
-                preview_text = self.attack_path_inspector.lbl_title.text()
+                preview_target = ("section", sec_id)
             elif sec_id in ("scope_limitations", "scope"):
                 self.scope_inspector.set_project_target_ip(self._get_target_ip())
                 self.scope_inspector.load_scope(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.scope_inspector_glass)
                 self._last_active_inspector = self.scope_inspector_glass
-                preview_text = self.scope_inspector.lbl_title.text()
+                preview_target = ("section", sec_id)
             elif sec_id == "appendix":
                 self.appendix_inspector.set_context(
                     loot_manager=self.loot_manager,
@@ -1760,7 +1876,7 @@ class ReportEditorTab(QWidget):
                 self.appendix_inspector.load_appendix(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.appendix_inspector_glass)
                 self._last_active_inspector = self.appendix_inspector_glass
-                preview_text = self.appendix_inspector.lbl_title.text()
+                preview_target = ("section", sec_id)
             else:
                 narr = next(
                     (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
@@ -1777,7 +1893,7 @@ class ReportEditorTab(QWidget):
                 self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
                 self.center_stack.setCurrentWidget(self.section_inspector_glass)
                 self._last_active_inspector = self.section_inspector_glass
-                preview_text = title
+                preview_target = ("section", sec_id)
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "raw_markdown":
@@ -1786,21 +1902,43 @@ class ReportEditorTab(QWidget):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
         self.navigator.select_item(view_type, item_id)
         self._update_contextual_toolbar_visibility()
-        self._focus_preview_on_text(preview_text, scroll_to_top=view_type == "metadata")
+        if preview_target is None:
+            self._clear_preview_focus()
+        else:
+            self._focus_preview_on_item(*preview_target)
 
-    def _focus_preview_on_text(self, text: str, *, scroll_to_top: bool = False) -> None:
-        """Keep the preview aligned with the report item selected in the workspace."""
-        if scroll_to_top:
-            self.preview.verticalScrollBar().setValue(0)
+    def _focus_preview_on_item(
+        self,
+        kind: str,
+        identity: str,
+        *,
+        remember: bool = True,
+    ) -> None:
+        target = (kind, identity)
+        if remember:
+            self._active_preview_target = target
+        position = self._preview_landmarks.get(target)
+        if position is None:
+            self.preview.setExtraSelections([])
             return
-        if not text:
-            return
-        cursor = self.preview.document().find(text)
-        if cursor.isNull():
-            return
-        cursor.clearSelection()
+
+        cursor = QTextCursor(self.preview_document)
+        cursor.setPosition(position)
         self.preview.setTextCursor(cursor)
+
+        selection = QTextEdit.ExtraSelection()
+        selection.cursor = QTextCursor(cursor)
+        selection.cursor.clearSelection()
+        highlight = QColor("#0969da" if self._light_report_view else "#00e5ff")
+        highlight.setAlpha(34 if self._light_report_view else 28)
+        selection.format.setBackground(highlight)
+        selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+        self.preview.setExtraSelections([selection])
         self.preview.ensureCursorVisible()
+
+    def _clear_preview_focus(self) -> None:
+        self._active_preview_target = None
+        self.preview.setExtraSelections([])
 
     def _on_add_finding_requested(self) -> None:
         """Creates a finding — offering unreferenced Loot entries if available to preserve Loot workflow."""
