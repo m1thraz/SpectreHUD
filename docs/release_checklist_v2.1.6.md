@@ -24,11 +24,11 @@ release are intentionally left to the repository owner after CI validation.
 
 ## Repository-owner release steps
 
-- [ ] Review, commit, and push the prepared v2.1.6 release state.
-- [ ] Confirm the GitHub CI matrix and CodeQL complete successfully.
-- [ ] Create the annotated v2.1.6 tag from the CI-verified commit and push it.
-- [ ] Confirm the release workflow publishes the Windows executable, Debian packages,
+- [x] Review, commit, and push the prepared v2.1.6 release state.
+- [x] Confirm the GitHub CI matrix and CodeQL complete successfully.
+- [x] Create the annotated v2.1.6 tag from the CI-verified commit and push it.
+- [x] Confirm the release workflow publishes the Windows executable, Debian packages,
   and wheel.
-- [ ] Download the published executable/deb and verify `--version`, startup, and UI.
-- [ ] Confirm the GitHub release description links to
+- [x] Download the published executable/deb and verify `--version`, startup, and UI.
+- [x] Confirm the GitHub release description links to
   `docs/release_notes_v2.1.6.md`.
