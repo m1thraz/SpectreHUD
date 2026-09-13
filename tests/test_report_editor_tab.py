@@ -633,7 +633,7 @@ Text
                 "exec",
                 return_value=QDialog.DialogCode.Accepted,
             ),
-            patch("ui.report_editor_tab.ReportGenerationDialog") as MockGenDialog,
+            patch("ui.report.mutation_actions.ReportGenerationDialog") as MockGenDialog,
         ):
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = QDialog.DialogCode.Accepted

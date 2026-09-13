@@ -36,6 +36,7 @@ from core.reporting import (
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
+    ReportMutationService,
     ReportRemediationPlan,
     ReportScopeMethodology,
     ReportSessionService,
@@ -44,7 +45,6 @@ from core.reporting import (
     TemplateRepository,
     assess_report_readiness,
     build_report_navigation,
-    classify_loot_report_state,
 )
 from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
@@ -57,9 +57,7 @@ from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
     LootEntryPickerDialog,
     MarkdownTableDialog,  # noqa: F401
-    ReportGenerationDialog,
     ReportIconPickerDialog,  # noqa: F401
-    ReportRegenerationConfirmDialog,
 )
 from ui.report.export_actions import ReportExportActions
 from ui.report.evidence_actions import ReportEvidenceActions
@@ -76,6 +74,10 @@ from ui.report.preview_transforms import (
     strip_preview_surrogates,
 )
 from ui.report.preview_controller import ReportPreviewController
+from ui.report.mutation_actions import (
+    ReportMutationActions,
+    ReportMutationCallbacks,
+)
 from ui.report.session_controller import ReportSessionController
 from ui.report.toolbar import build_format_toolbar
 from ui.report.workspace_shell import (
@@ -124,6 +126,7 @@ class ReportEditorTab(QWidget):
         super().__init__(parent)
         self.report_file_manager = report_file_manager
         self.report_session = ReportSessionService(report_file_manager)
+        self.report_mutations = ReportMutationService(report_file_manager)
         self.loot_manager = loot_manager
         self.clipboard_history = clipboard_history
         self.config = config_manager
@@ -147,6 +150,25 @@ class ReportEditorTab(QWidget):
             service=self.report_session,
             parent=self,
             set_status=lambda message: self.lbl_status.setText(message),
+        )
+        self.mutation_actions = ReportMutationActions(
+            parent=self,
+            service=self.report_mutations,
+            template_repository=self.template_repo,
+            loot_manager=lambda: self.loot_manager,
+            clipboard_history=lambda: self.clipboard_history,
+            callbacks=ReportMutationCallbacks(
+                current_project=lambda: self.current_project,
+                current_markdown=self.current_markdown,
+                is_dirty=self.is_dirty,
+                commit_preview=self._commit_preview_if_active,
+                save_pending=self.save,
+                active_template=lambda: self.active_template,
+                set_active_template=self._set_active_template,
+                apply_content=self._apply_persisted_mutation,
+                set_loot_sync_state=self._set_loot_sync_state,
+                set_status=lambda message: self.lbl_status.setText(message),
+            ),
         )
 
         self.format_actions = ReportFormatActions(
@@ -903,180 +925,34 @@ class ReportEditorTab(QWidget):
         super().closeEvent(event)
 
     def _on_regenerate_clicked(self) -> None:
-        """Commit and save user Markdown before destructive regeneration.
-
-        Confirmation follows that save so the backup captures the latest work; unlike
-        additive sync, successful regeneration replaces the complete report structure.
-        """
-        if not self.current_project:
-            return
-
-        if self._view_mode == ViewMode.PREVIEW:
-            self._commit_preview_to_markdown()
-
-        if self._dirty:
-            if not self.save():
-                logger.error(
-                    "Could not save pending report edits before regenerate for project '%s'",
-                    self.current_project,
-                )
-                return
-
-        has_existing = self.report_file_manager.exists(self.current_project)
-        current_content = self.editor.toPlainText().strip()
-        if has_existing and current_content:
-            confirmation = ReportRegenerationConfirmDialog(parent=self)
-            if confirmation.exec() != QDialog.DialogCode.Accepted:
-                return
-
-        dialog = ReportGenerationDialog(
-            template_repo=self.template_repo,
-            selected_template=self.active_template,
-            has_existing_report=has_existing,
-            parent=self,
-        )
-        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.selected_template is None:
-            return
-        self.active_template = dialog.selected_template
-
-        from core.reporting import ReportBackupError, ReportSaveError
-
-        try:
-            new_content = self.report_file_manager.regenerate(
-                self.loot_manager,
-                self.clipboard_history,
-                project_name=self.current_project,
-                template=self.active_template,
-            )
-            self.editor.blockSignals(True)
-            self.editor.setPlainText(new_content)
-            self.editor.blockSignals(False)
-            self._set_dirty(False)
-            self._update_preview()
-            # Update workspace document and navigator after regeneration
-            self._workspace_doc = ReportWorkspaceDocument.from_markdown(new_content)
-            if hasattr(self, "navigator"):
-                self._refresh_workspace_navigator()
-        except ReportBackupError as e:
-            logger.error(f"Regenerierung abgebrochen wegen Backup-Fehler: {e}")
-            show_error_dialog(
-                self.window() if self else None,
-                t("report.backup_failed_title", "Backup fehlgeschlagen"),
-                t(
-                    "report.backup_failed_msg",
-                    "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
-                    "Zum Schutz deiner bestehenden Notizen wurde die Regenerierung abgebrochen.",
-                ),
-                details=str(e),
-            )
-        except ReportSaveError as e:
-            logger.error(f"Regenerierung: Speichern fehlgeschlagen: {e}")
-            show_error_dialog(
-                self.window() if self else None,
-                t("report.save_failed_title", "Speichern fehlgeschlagen"),
-                t(
-                    "report.save_failed_msg",
-                    "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
-                    "Der bisherige Report bleibt erhalten.",
-                ),
-                details=str(e),
-            )
+        self.mutation_actions.regenerate()
 
     def _on_append_loot_clicked(self) -> None:
-        """Appends unreferenced loot entries to existing report sections without rewriting user text."""
-        if not self.current_project:
-            return
+        self.mutation_actions.append_missing_loot()
 
+    def _commit_preview_if_active(self) -> None:
         if self._view_mode == ViewMode.PREVIEW:
             self._commit_preview_to_markdown()
 
-        # Ensure dirty changes are saved before performing additive sync
-        if self._dirty:
-            if not self.save():
-                logger.error(
-                    "Could not save pending report edits before appending loot for project '%s'",
-                    self.current_project,
-                )
-                return
+    def _set_active_template(self, template: ReportTemplate) -> None:
+        self.active_template = template
 
-        from core.reporting import ReportBackupError, ReportSaveError
-
-        cursor = self.editor.textCursor()
-        saved_pos = cursor.position()
-
-        try:
-            result = self.report_file_manager.append_missing_loot(
-                self.loot_manager,
-                project_name=self.current_project,
-                template=self.active_template,
-            )
-        except ReportBackupError as exc:
-            logger.error("Append missing loot aborted due to backup error: %s", exc)
-            show_error_dialog(
-                self.window() if self else None,
-                t("dialog.error", "Error"),
-                t(
-                    "report.append_backup_failed_msg",
-                    "Das automatische Backup des bisherigen Reports ist fehlgeschlagen.\n\n"
-                    "Zum Schutz deiner bestehenden Notizen wurde das Ergänzen abgebrochen.",
-                ),
-                details=str(exc),
-            )
-            return
-        except ReportSaveError as exc:
-            logger.error("Append missing loot: save failed: %s", exc)
-            show_error_dialog(
-                self.window() if self else None,
-                t("dialog.error", "Error"),
-                t(
-                    "report.append_save_failed_msg",
-                    "Der ergänzte Report konnte nicht auf die Festplatte geschrieben werden.\n\n"
-                    "Der bisherige Report bleibt erhalten.",
-                ),
-                details=str(exc),
-            )
-            return
-
-        if result.added_count == 0:
-            self.refresh_loot_sync_state()
-            self.lbl_status.setText(
-                t("report.append_loot_no_changes", "No missing loot entries found")
-            )
-            return
-
+    def _apply_persisted_mutation(
+        self, markdown: str, preserve_cursor: bool
+    ) -> None:
+        cursor_position = self.editor.textCursor().position() if preserve_cursor else 0
         self.editor.blockSignals(True)
-        self.editor.setPlainText(result.content)
+        self.editor.setPlainText(markdown)
         self.editor.blockSignals(False)
         self._set_dirty(False)
         self._update_preview()
-
-        # Immediately update workspace document and navigator after appending loot
-        self._workspace_doc = ReportWorkspaceDocument.from_markdown(result.content)
+        self._workspace_doc = ReportWorkspaceDocument.from_markdown(markdown)
         if hasattr(self, "navigator"):
             self._refresh_workspace_navigator()
-
-        # Restore cursor position within bounds
-        new_cursor = self.editor.textCursor()
-        new_cursor.setPosition(min(saved_pos, len(result.content)))
-        self.editor.setTextCursor(new_cursor)
-
-        if result.used_fallback:
-            self.lbl_status.setText(
-                t(
-                    "report.append_loot_success_fallback",
-                    "{count} entries appended · {fallback_count} category(ies) under 'New Loot Entries'",
-                    count=result.added_count,
-                    fallback_count=len(result.fallback_categories),
-                )
-            )
-        else:
-            self.lbl_status.setText(
-                t(
-                    "report.append_loot_success",
-                    "{count} new loot entries appended",
-                    count=result.added_count,
-                )
-            )
+        if preserve_cursor:
+            cursor = self.editor.textCursor()
+            cursor.setPosition(min(cursor_position, len(markdown)))
+            self.editor.setTextCursor(cursor)
 
     def _ensure_active_template(self) -> None:
         """Keeps the most recently selected template available for the next dialog."""
@@ -1220,20 +1096,16 @@ class ReportEditorTab(QWidget):
 
     def refresh_loot_sync_state(self) -> None:
         """Refresh the navigator's non-destructive Loot/report comparison."""
-        if not hasattr(self, "navigator") or self.loot_manager is None:
+        if not hasattr(self, "navigator"):
             return
-        try:
-            state = classify_loot_report_state(
-                self.editor.toPlainText(), self.loot_manager.get_all_entries()
-            )
-        except Exception:
-            logger.exception("Could not compare report markers with project Loot")
-            return
+        self.mutation_actions.refresh_loot_sync_state()
+
+    def _set_loot_sync_state(self, missing: int, stale: int, orphaned: int) -> None:
         self.navigator.set_loot_sync_state(
-            len(state.missing), len(state.stale), len(state.orphaned_ids)
+            missing, stale, orphaned
         )
         if hasattr(self, "action_sync_loot"):
-            self.action_sync_loot.setEnabled(bool(state.missing))
+            self.action_sync_loot.setEnabled(bool(missing))
 
     def _refresh_workspace_navigator(self, *, preserve_selection: bool = True) -> None:
         """Reload navigator content while retaining the active report context."""

@@ -905,6 +905,7 @@
     "report.export_html_success_title": "HTML-Report exportiert",
     "report.export_saved_msg": "Kopie gespeichert: {filename}",
     "report.export_saved_title": "Exportiert",
+    "report.mutation_failed_msg": "Der Report konnte nicht aktualisiert werden. Details stehen im Log.",
     "report.save_failed_msg": "Der neu generierte Report konnte nicht auf die Festplatte geschrieben werden.\n\nDer bisherige Report bleibt erhalten.",
     "report.save_failed_title": "Speichern fehlgeschlagen",
     "report.warn_large_diff_msg": "Die Bearbeitung in der Live-Ansicht hat den Inhalt stark verkürzt (möglicher Konvertierungsverlust).\n\nTrotzdem übernehmen?",

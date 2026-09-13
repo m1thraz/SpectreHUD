@@ -905,6 +905,7 @@
     "report.export_html_success_title": "HTML Report Exported",
     "report.export_saved_msg": "Copy saved: {filename}",
     "report.export_saved_title": "Exported",
+    "report.mutation_failed_msg": "The report could not be updated. Details are in the log.",
     "report.save_failed_msg": "Could not write freshly generated report to disk.\n\nThe existing report remains unchanged.",
     "report.save_failed_title": "Save Failed",
     "report.warn_large_diff_msg": "Edits in the live view significantly reduced the content length (possible conversion loss).\n\nApply changes anyway?",

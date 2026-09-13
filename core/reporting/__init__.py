@@ -82,6 +82,11 @@ from core.reporting.session import (
     ReportRecoveryDraft,
     ReportSessionService,
 )
+from core.reporting.mutation_service import (
+    ReportMutationFailureReason,
+    ReportMutationResult,
+    ReportMutationService,
+)
 from core.reporting.loot_sync import (
     FALLBACK_SECTION_TITLE,
     LootReportState,
@@ -174,6 +179,9 @@ __all__ = [
     "ReportPersistResult",
     "ReportRecoveryDraft",
     "ReportSessionService",
+    "ReportMutationFailureReason",
+    "ReportMutationResult",
+    "ReportMutationService",
     "FALLBACK_SECTION_TITLE",
     "LootReportState",
     "PAGEBREAK_HTML",
