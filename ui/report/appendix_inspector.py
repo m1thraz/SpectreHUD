@@ -10,7 +10,7 @@ from typing import Any, Optional
 import uuid
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -98,9 +98,13 @@ class CommandSnippetCard(GlassPanel):
             "QLineEdit:focus { border: 1px solid #7ee787; }"
         )
         self.edit_caption.textChanged.connect(self._on_data_changed)
+        self.edit_caption.setMinimumWidth(60)
         top_row.addWidget(self.edit_caption, stretch=1)
 
         self.combo_lang = QComboBox()
+        self.combo_lang.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.combo_lang.setMinimumContentsLength(4)
+        self.combo_lang.setMaximumWidth(130)
         for key, label in _SUPPORTED_LANGUAGES:
             self.combo_lang.addItem(label, key)
         curr_lang = getattr(self.item, "language", "") or "bash"
@@ -147,6 +151,12 @@ class CommandSnippetCard(GlassPanel):
         self.edit_code.textChanged.connect(self._on_data_changed)
         layout.addWidget(self.edit_code)
 
+    def set_compact_mode(self, compact: bool) -> None:
+        if compact:
+            self.combo_lang.setMaximumWidth(85)
+        else:
+            self.combo_lang.setMaximumWidth(130)
+
     def _on_data_changed(self) -> None:
         self.item.caption = self.edit_caption.text().strip()
         self.item.language = self.combo_lang.currentData() or "bash"
@@ -175,8 +185,8 @@ class ScreenshotCard(GlassPanel):
 
     def _build_ui(self) -> None:
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(10)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(8)
 
         # 1. Thumbnail preview
         self.lbl_thumb = QLabel()
@@ -196,6 +206,7 @@ class ScreenshotCard(GlassPanel):
         self.edit_caption = QLineEdit()
         self.edit_caption.setPlaceholderText(t("report.appendix_img_caption_placeholder", "Bildunterschrift / Titel (z.B. Root Proof)"))
         self.edit_caption.setText(self.item.caption)
+        self.edit_caption.setMinimumWidth(60)
         self.edit_caption.setStyleSheet(
             "QLineEdit { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
             "border-radius: 4px; padding: 4px 8px; color: #f0f6fc; font-weight: bold; font-size: 12px; } "
@@ -213,6 +224,7 @@ class ScreenshotCard(GlassPanel):
         self.edit_path = QLineEdit()
         self.edit_path.setPlaceholderText(t("report.appendix_img_path_placeholder", "Dateipfad oder URL..."))
         self.edit_path.setText(self.item.content)
+        self.edit_path.setMinimumWidth(60)
         self.edit_path.setStyleSheet(
             "QLineEdit { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); "
             "border-radius: 4px; padding: 3px 6px; color: #8b949e; font-size: 11px; font-family: monospace; } "
@@ -231,7 +243,7 @@ class ScreenshotCard(GlassPanel):
 
         self.btn_up = QPushButton()
         self.btn_up.setIcon(icon("fa5s.chevron-up", color="#8b949e"))
-        self.btn_up.setFixedSize(26, 22)
+        self.btn_up.setFixedSize(24, 22)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
         self.btn_up.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self))
@@ -239,7 +251,7 @@ class ScreenshotCard(GlassPanel):
 
         self.btn_down = QPushButton()
         self.btn_down.setIcon(icon("fa5s.chevron-down", color="#8b949e"))
-        self.btn_down.setFixedSize(26, 22)
+        self.btn_down.setFixedSize(24, 22)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
         self.btn_down.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self))
@@ -247,7 +259,7 @@ class ScreenshotCard(GlassPanel):
 
         self.btn_delete = QPushButton()
         self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
-        self.btn_delete.setFixedSize(26, 22)
+        self.btn_delete.setFixedSize(24, 22)
         self.btn_delete.setToolTip(t("report.delete", "Screenshot entfernen"))
         self.btn_delete.setStyleSheet(
             "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; } "
@@ -257,6 +269,13 @@ class ScreenshotCard(GlassPanel):
         btn_layout.addWidget(self.btn_delete)
 
         layout.addLayout(btn_layout)
+
+    def set_compact_mode(self, compact: bool) -> None:
+        if compact:
+            self.lbl_thumb.setFixedSize(70, 48)
+        else:
+            self.lbl_thumb.setFixedSize(110, 75)
+        self._load_thumbnail()
 
     def _load_thumbnail(self) -> None:
         path_str = (self.item.content or "").strip()
@@ -273,13 +292,16 @@ class ScreenshotCard(GlassPanel):
         if full_path and full_path.is_file():
             pix = QPixmap(str(full_path))
             if not pix.isNull():
+                target_w = max(24, self.lbl_thumb.width() - 4)
+                target_h = max(24, self.lbl_thumb.height() - 4)
                 self.lbl_thumb.setPixmap(
-                    pix.scaled(106, 71, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    pix.scaled(target_w, target_h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 )
                 return
 
         # Fallback icon
-        self.lbl_thumb.setPixmap(icon("fa5s.image", color="#484f58").pixmap(32, 32))
+        icon_sz = 20 if self.lbl_thumb.width() < 80 else 32
+        self.lbl_thumb.setPixmap(icon("fa5s.image", color="#484f58").pixmap(icon_sz, icon_sz))
 
     def _on_path_changed(self) -> None:
         self.item.content = self.edit_path.text().strip()
@@ -325,7 +347,7 @@ class ReportAppendixInspector(QWidget):
         self._project_dir = project_dir
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(260, 200)
+        return QSize(220, 200)
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
@@ -352,7 +374,7 @@ class ReportAppendixInspector(QWidget):
 
         self.lbl_badge = QLabel()
         self.lbl_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
+            "font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
             "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
         )
         top_row.addWidget(self.lbl_badge)
@@ -379,6 +401,7 @@ class ReportAppendixInspector(QWidget):
         # 2. Scroll Area
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         scroll_content = QWidget()
@@ -389,19 +412,24 @@ class ReportAppendixInspector(QWidget):
         # --- Card A: Command Protocols & PoCs ---
         self.card_a = GlassPanel(scroll_content)
         card_a_layout = QVBoxLayout(self.card_a)
-        card_a_layout.setContentsMargins(14, 12, 14, 14)
-        card_a_layout.setSpacing(10)
+        card_a_layout.setContentsMargins(12, 10, 12, 12)
+        card_a_layout.setSpacing(8)
 
-        header_a = QHBoxLayout()
-        header_a.setSpacing(8)
+        title_a_row = QHBoxLayout()
+        title_a_row.setSpacing(8)
         lbl_icon_a = QLabel()
         lbl_icon_a.setPixmap(icon("fa5s.terminal", color="#7ee787").pixmap(16, 16))
-        header_a.addWidget(lbl_icon_a)
+        title_a_row.addWidget(lbl_icon_a)
 
         self.lbl_title_a = QLabel(t("report.appendix_section_a_title", "Anhang A: Ausgeführte Befehle & PoCs"))
         self.lbl_title_a.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
-        header_a.addWidget(self.lbl_title_a)
-        header_a.addStretch()
+        self.lbl_title_a.setWordWrap(True)
+        title_a_row.addWidget(self.lbl_title_a)
+        title_a_row.addStretch()
+        card_a_layout.addLayout(title_a_row)
+
+        actions_a_row = QHBoxLayout()
+        actions_a_row.setSpacing(6)
 
         self.btn_pick_history = QPushButton(t("report.appendix_btn_history", "Aus History wählen..."))
         self.btn_pick_history.setIcon(icon("fa5s.history", color="#79c0ff"))
@@ -411,7 +439,7 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(121, 192, 255, 0.2); }"
         )
         self.btn_pick_history.clicked.connect(self._on_pick_history_clicked)
-        header_a.addWidget(self.btn_pick_history)
+        actions_a_row.addWidget(self.btn_pick_history)
 
         self.btn_import_all_history = QPushButton(t("report.appendix_btn_import_all", "Alle Befehle übernehmen"))
         self.btn_import_all_history.setIcon(icon("fa5s.layer-group", color="#d2a8ff"))
@@ -421,7 +449,7 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(210, 168, 255, 0.2); }"
         )
         self.btn_import_all_history.clicked.connect(self._on_import_all_history_clicked)
-        header_a.addWidget(self.btn_import_all_history)
+        actions_a_row.addWidget(self.btn_import_all_history)
 
         self.btn_add_cmd = QPushButton(t("report.appendix_btn_add_cmd", "+ Manuelles Snippet"))
         self.btn_add_cmd.setIcon(icon("fa5s.plus", color="#7ee787"))
@@ -431,9 +459,10 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(126, 231, 135, 0.2); }"
         )
         self.btn_add_cmd.clicked.connect(self._on_add_cmd_clicked)
-        header_a.addWidget(self.btn_add_cmd)
+        actions_a_row.addWidget(self.btn_add_cmd)
+        actions_a_row.addStretch()
 
-        card_a_layout.addLayout(header_a)
+        card_a_layout.addLayout(actions_a_row)
 
         # Snippets container
         self.snippets_container = QWidget()
@@ -443,7 +472,8 @@ class ReportAppendixInspector(QWidget):
         card_a_layout.addWidget(self.snippets_container)
 
         self.lbl_empty_cmd = QLabel(t("report.appendix_empty_cmd", "Noch keine Befehle hinterlegt. Klicken Sie auf '+ Manuelles Snippet' oder wählen Sie Befehle aus der History."))
-        self.lbl_empty_cmd.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 8px;")
+        self.lbl_empty_cmd.setWordWrap(True)
+        self.lbl_empty_cmd.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 6px;")
         card_a_layout.addWidget(self.lbl_empty_cmd)
 
         scroll_layout.addWidget(self.card_a)
@@ -451,19 +481,24 @@ class ReportAppendixInspector(QWidget):
         # --- Card B: Screenshots & Image Evidence ---
         self.card_b = GlassPanel(scroll_content)
         card_b_layout = QVBoxLayout(self.card_b)
-        card_b_layout.setContentsMargins(14, 12, 14, 14)
-        card_b_layout.setSpacing(10)
+        card_b_layout.setContentsMargins(12, 10, 12, 12)
+        card_b_layout.setSpacing(8)
 
-        header_b = QHBoxLayout()
-        header_b.setSpacing(8)
+        title_b_row = QHBoxLayout()
+        title_b_row.setSpacing(8)
         lbl_icon_b = QLabel()
         lbl_icon_b.setPixmap(icon("fa5s.camera", color="#00e5ff").pixmap(16, 16))
-        header_b.addWidget(lbl_icon_b)
+        title_b_row.addWidget(lbl_icon_b)
 
         self.lbl_title_b = QLabel(t("report.appendix_section_b_title", "Anhang B: Screenshots & Bildnachweise"))
         self.lbl_title_b.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
-        header_b.addWidget(self.lbl_title_b)
-        header_b.addStretch()
+        self.lbl_title_b.setWordWrap(True)
+        title_b_row.addWidget(self.lbl_title_b)
+        title_b_row.addStretch()
+        card_b_layout.addLayout(title_b_row)
+
+        actions_b_row = QHBoxLayout()
+        actions_b_row.setSpacing(6)
 
         self.btn_pick_loot = QPushButton(t("report.appendix_btn_loot", "Aus Projekt-Loot wählen..."))
         self.btn_pick_loot.setIcon(icon("fa5s.gem", color="#00e5ff"))
@@ -473,7 +508,7 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(0, 229, 255, 0.2); }"
         )
         self.btn_pick_loot.clicked.connect(self._on_pick_loot_clicked)
-        header_b.addWidget(self.btn_pick_loot)
+        actions_b_row.addWidget(self.btn_pick_loot)
 
         self.btn_pick_file = QPushButton(t("report.appendix_btn_disk", "Datei von Festplatte..."))
         self.btn_pick_file.setIcon(icon("fa5s.folder-open", color="#f2cc60"))
@@ -483,7 +518,7 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(242, 204, 96, 0.2); }"
         )
         self.btn_pick_file.clicked.connect(self._on_pick_file_clicked)
-        header_b.addWidget(self.btn_pick_file)
+        actions_b_row.addWidget(self.btn_pick_file)
 
         self.btn_add_img = QPushButton(t("report.appendix_btn_add_img", "+ Bildpfad"))
         self.btn_add_img.setIcon(icon("fa5s.plus", color="#7ee787"))
@@ -493,9 +528,10 @@ class ReportAppendixInspector(QWidget):
             "QPushButton:hover { background: rgba(126, 231, 135, 0.2); }"
         )
         self.btn_add_img.clicked.connect(self._on_add_img_clicked)
-        header_b.addWidget(self.btn_add_img)
+        actions_b_row.addWidget(self.btn_add_img)
+        actions_b_row.addStretch()
 
-        card_b_layout.addLayout(header_b)
+        card_b_layout.addLayout(actions_b_row)
 
         # Screenshots container
         self.screenshots_container = QWidget()
@@ -505,7 +541,8 @@ class ReportAppendixInspector(QWidget):
         card_b_layout.addWidget(self.screenshots_container)
 
         self.lbl_empty_sc = QLabel(t("report.appendix_empty_sc", "Noch keine Screenshots hinterlegt. Fügen Sie Nachweise aus dem Loot oder von der Festplatte hinzu."))
-        self.lbl_empty_sc.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 8px;")
+        self.lbl_empty_sc.setWordWrap(True)
+        self.lbl_empty_sc.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 6px;")
         card_b_layout.addWidget(self.lbl_empty_sc)
 
         scroll_layout.addWidget(self.card_b)
@@ -513,7 +550,7 @@ class ReportAppendixInspector(QWidget):
         # --- Card C: Supplementary Raw Data & Notes ---
         self.card_c = GlassPanel(scroll_content)
         card_c_layout = QVBoxLayout(self.card_c)
-        card_c_layout.setContentsMargins(14, 12, 14, 14)
+        card_c_layout.setContentsMargins(12, 10, 12, 12)
         card_c_layout.setSpacing(8)
 
         header_c = QHBoxLayout()
@@ -524,11 +561,13 @@ class ReportAppendixInspector(QWidget):
 
         self.lbl_title_c = QLabel(t("report.appendix_section_c_title", "Anhang C: Ergänzende Rohdaten & Notizen"))
         self.lbl_title_c.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
+        self.lbl_title_c.setWordWrap(True)
         header_c.addWidget(self.lbl_title_c)
         header_c.addStretch()
         card_c_layout.addLayout(header_c)
 
         lbl_desc_c = QLabel(t("report.appendix_notes_desc", "Freitext für vollständige Portscan-Dumps, Banner-Ausgaben, Hash-Listen oder ergänzende Rohdaten."))
+        lbl_desc_c.setWordWrap(True)
         lbl_desc_c.setStyleSheet("font-size: 11px; color: #8b949e;")
         card_c_layout.addWidget(lbl_desc_c)
 
@@ -548,6 +587,44 @@ class ReportAppendixInspector(QWidget):
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll, stretch=1)
 
+    def resizeEvent(self, event: Optional[QResizeEvent] = None) -> None:
+        super().resizeEvent(event)
+        self._reflow_ui(self.width())
+
+    def _reflow_ui(self, width: int) -> None:
+        is_compact = width < 450
+        use_short_buttons = width < 480
+
+        if use_short_buttons:
+            self.btn_pick_history.setText(t("report.appendix_btn_history_short", "History..."))
+            self.btn_import_all_history.setText(t("report.appendix_btn_import_all_short", "Alle importieren"))
+            self.btn_add_cmd.setText(t("report.appendix_btn_add_cmd_short", "+ Manuell"))
+            self.btn_pick_loot.setText(t("report.appendix_btn_loot_short", "Loot..."))
+            self.btn_pick_file.setText(t("report.appendix_btn_disk_short", "Festplatte..."))
+            self.btn_add_img.setText(t("report.appendix_btn_add_img_short", "+ Bild"))
+        else:
+            self.btn_pick_history.setText(t("report.appendix_btn_history", "Aus History wählen..."))
+            self.btn_import_all_history.setText(t("report.appendix_btn_import_all", "Alle Befehle übernehmen"))
+            self.btn_add_cmd.setText(t("report.appendix_btn_add_cmd", "+ Manuelles Snippet"))
+            self.btn_pick_loot.setText(t("report.appendix_btn_loot", "Aus Projekt-Loot wählen..."))
+            self.btn_pick_file.setText(t("report.appendix_btn_disk", "Datei von Festplatte..."))
+            self.btn_add_img.setText(t("report.appendix_btn_add_img", "+ Bildpfad"))
+
+        # Reflow cards
+        for i in range(self.snippets_layout.count()):
+            item = self.snippets_layout.itemAt(i)
+            if item and item.widget():
+                w = item.widget()
+                if isinstance(w, CommandSnippetCard):
+                    w.set_compact_mode(is_compact)
+
+        for i in range(self.screenshots_layout.count()):
+            item = self.screenshots_layout.itemAt(i)
+            if item and item.widget():
+                w = item.widget()
+                if isinstance(w, ScreenshotCard):
+                    w.set_compact_mode(is_compact)
+
     # ------------------------------------------------------------------ #
     # Data Loading & Synchronization
     # ------------------------------------------------------------------ #
@@ -563,6 +640,7 @@ class ReportAppendixInspector(QWidget):
 
         self.edit_notes.setPlainText(self._appendix.custom_notes)
         self._update_badges()
+        self._reflow_ui(self.width())
         self._loading = False
 
     def _render_command_snippets(self) -> None:
@@ -575,8 +653,10 @@ class ReportAppendixInspector(QWidget):
         has_items = bool(self._appendix.command_snippets)
         self.lbl_empty_cmd.setVisible(not has_items)
 
+        is_compact = self.width() < 450
         for snip in self._appendix.command_snippets:
             card = CommandSnippetCard(snip, parent=self.snippets_container)
+            card.set_compact_mode(is_compact)
             card.changed.connect(self._on_card_data_changed)
             card.delete_requested.connect(self._on_delete_cmd)
             card.move_up_requested.connect(self._on_move_up_cmd)
@@ -593,8 +673,10 @@ class ReportAppendixInspector(QWidget):
         has_items = bool(self._appendix.screenshots)
         self.lbl_empty_sc.setVisible(not has_items)
 
+        is_compact = self.width() < 450
         for sc in self._appendix.screenshots:
             card = ScreenshotCard(sc, project_dir=self._project_dir, parent=self.screenshots_container)
+            card.set_compact_mode(is_compact)
             card.changed.connect(self._on_card_data_changed)
             card.delete_requested.connect(self._on_delete_sc)
             card.move_up_requested.connect(self._on_move_up_sc)

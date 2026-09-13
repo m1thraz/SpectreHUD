@@ -998,6 +998,95 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.close()
         tab.deleteLater()
 
+    def test_appendix_inspector_responsiveness_and_compact_reflow(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+        tab._on_navigate_requested("section", "appendix")
+        inspector = tab.appendix_inspector
+
+        # 1. Verify minimum size hint allows narrow split view
+        self.assertLessEqual(inspector.minimumSizeHint().width(), 240)
+
+        # 2. Verify word wrap on section headers and empty labels to prevent layout blowup
+        self.assertTrue(inspector.lbl_empty_cmd.wordWrap())
+        self.assertTrue(inspector.lbl_empty_sc.wordWrap())
+        self.assertTrue(inspector.lbl_title_a.wordWrap())
+        self.assertTrue(inspector.lbl_title_b.wordWrap())
+        self.assertTrue(inspector.lbl_title_c.wordWrap())
+
+        # 3. Add items to test cards reflow
+        inspector._on_add_cmd_clicked()
+        inspector._on_add_img_clicked()
+
+        snippet_card = inspector.snippets_layout.itemAt(0).widget()
+        screenshot_card = inspector.screenshots_layout.itemAt(0).widget()
+
+        # 4. Reflow in normal/wide mode (>= 480px)
+        inspector._reflow_ui(600)
+        self.assertEqual(snippet_card.combo_lang.maximumWidth(), 130)
+        self.assertEqual(screenshot_card.lbl_thumb.width(), 110)
+        self.assertEqual(screenshot_card.lbl_thumb.height(), 75)
+
+        # 5. Reflow in compact mode (< 450px)
+        inspector._reflow_ui(360)
+        self.assertEqual(snippet_card.combo_lang.maximumWidth(), 85)
+        self.assertEqual(screenshot_card.lbl_thumb.width(), 70)
+        self.assertEqual(screenshot_card.lbl_thumb.height(), 48)
+
+        # Button texts should switch to short versions
+        self.assertIn("History", inspector.btn_pick_history.text())
+        self.assertNotIn("wählen", inspector.btn_pick_history.text())
+
+        tab.close()
+        tab.deleteLater()
+
+    def test_summary_inspector_responsiveness_and_intermediate_reflow(self):
+        from PyQt6.QtWidgets import QFormLayout
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+        tab._on_navigate_requested("section", "summary")
+        inspector = tab.summary_inspector
+
+        # 1. Minimum size hint
+        self.assertLessEqual(inspector.minimumSizeHint().width(), 240)
+
+        # 2. Word wrap on labels
+        self.assertTrue(inspector.lbl_title.wordWrap())
+        self.assertTrue(inspector.lbl_matrix_title.wordWrap())
+        self.assertTrue(inspector.lbl_matrix_hint.wordWrap())
+        self.assertTrue(inspector.lbl_posture_val.wordWrap())
+        self.assertTrue(inspector.lbl_status_val.wordWrap())
+
+        # 3. Wide mode (>= 720px)
+        inspector._reflow_summary(750)
+        self.assertEqual(inspector._current_grid_mode, "wide")
+        self.assertFalse(inspector._current_two_rows)
+        self.assertEqual(inspector.form.rowWrapPolicy(), QFormLayout.RowWrapPolicy.DontWrapRows)
+        self.assertFalse(inspector.lbl_matrix_hint.isHidden())
+        self.assertFalse(inspector.tbl_matrix.isColumnHidden(3))
+        self.assertFalse(inspector.tbl_matrix.isColumnHidden(4))
+
+        # 4. Intermediate mode (480px - 719px)
+        inspector._reflow_summary(520)
+        self.assertEqual(inspector._current_grid_mode, "intermediate")
+        self.assertFalse(inspector._current_two_rows)
+        self.assertEqual(inspector.form.rowWrapPolicy(), QFormLayout.RowWrapPolicy.WrapAllRows)
+        self.assertFalse(inspector.lbl_matrix_hint.isHidden())
+        self.assertTrue(inspector.tbl_matrix.isColumnHidden(3))  # Phase hidden in intermediate
+        self.assertFalse(inspector.tbl_matrix.isColumnHidden(4)) # Status visible
+
+        # 5. Narrow mode (< 480px)
+        inspector._reflow_summary(380)
+        self.assertEqual(inspector._current_grid_mode, "narrow")
+        self.assertTrue(inspector._current_two_rows)
+        self.assertEqual(inspector.form.rowWrapPolicy(), QFormLayout.RowWrapPolicy.WrapAllRows)
+        self.assertTrue(inspector.lbl_matrix_hint.isHidden())
+        self.assertTrue(inspector.tbl_matrix.isColumnHidden(3))
+        self.assertTrue(inspector.tbl_matrix.isColumnHidden(4))
+
+        tab.close()
+        tab.deleteLater()
+
     def test_workspace_splitter_interactivity_and_responsiveness(self):
         """Verify that splitter handles are interactive, non-collapsing, and responsive across all inspectors."""
         tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)

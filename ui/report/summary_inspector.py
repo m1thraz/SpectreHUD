@@ -10,6 +10,7 @@ Provides an interactive executive dashboard for the Executive Summary section:
 from typing import List, Optional
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QResizeEvent
 from PyQt6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -83,31 +84,108 @@ class ReportSummaryInspector(QWidget):
         self._build_ui()
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(260, 200)
+        return QSize(220, 200)
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: Optional[QResizeEvent] = None) -> None:
         super().resizeEvent(event)
-        if hasattr(self, "scorecards_panel"):
-            self._reflow_scorecards(self.width())
+        self._reflow_summary(self.width())
+
+    def _reflow_summary(self, width: int) -> None:
+        self._reflow_scorecards(width)
+
+        if hasattr(self, "form"):
+            wrap_policy = QFormLayout.RowWrapPolicy.WrapAllRows if width < 580 else QFormLayout.RowWrapPolicy.DontWrapRows
+            align = (Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop) if width < 580 else (Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+            if self.form.rowWrapPolicy() != wrap_policy:
+                self.form.setRowWrapPolicy(wrap_policy)
+                self.form.setLabelAlignment(align)
+
+        if hasattr(self, "lbl_matrix_hint"):
+            self.lbl_matrix_hint.setVisible(width >= 480)
+
+        if hasattr(self, "tbl_matrix"):
+            if width < 450:
+                self.tbl_matrix.setColumnHidden(3, True)  # Phase
+                self.tbl_matrix.setColumnHidden(4, True)  # Status
+            elif width < 560:
+                self.tbl_matrix.setColumnHidden(3, True)  # Phase
+                self.tbl_matrix.setColumnHidden(4, False) # Status
+            else:
+                self.tbl_matrix.setColumnHidden(3, False)
+                self.tbl_matrix.setColumnHidden(4, False)
 
     def _reflow_scorecards(self, width: int) -> None:
         if not hasattr(self, "sc_layout"):
             return
-        self.sc_layout.removeWidget(self.card_posture)
-        self.sc_layout.removeWidget(self.card_breakdown)
-        self.sc_layout.removeWidget(self.card_status)
-        if width >= 580:
-            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
-            self.sc_layout.addWidget(self.card_breakdown, 0, 1, 1, 2)
-            self.sc_layout.addWidget(self.card_status, 0, 3, 1, 1)
-        elif width >= 400:
-            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
-            self.sc_layout.addWidget(self.card_status, 0, 1, 1, 1)
-            self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 2)
+
+        if width >= 720:
+            grid_mode = "wide"
+        elif width >= 480:
+            grid_mode = "intermediate"
         else:
-            self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
-            self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 1)
-            self.sc_layout.addWidget(self.card_status, 2, 0, 1, 1)
+            grid_mode = "narrow"
+
+        if getattr(self, "_current_grid_mode", None) != grid_mode:
+            self._current_grid_mode = grid_mode
+            self.sc_layout.removeWidget(self.card_posture)
+            self.sc_layout.removeWidget(self.card_breakdown)
+            self.sc_layout.removeWidget(self.card_status)
+
+            if grid_mode == "wide":
+                self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+                self.sc_layout.addWidget(self.card_breakdown, 0, 1, 1, 2)
+                self.sc_layout.addWidget(self.card_status, 0, 3, 1, 1)
+            elif grid_mode == "intermediate":
+                self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+                self.sc_layout.addWidget(self.card_status, 0, 1, 1, 1)
+                self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 2)
+            else:
+                self.sc_layout.addWidget(self.card_posture, 0, 0, 1, 1)
+                self.sc_layout.addWidget(self.card_breakdown, 1, 0, 1, 1)
+                self.sc_layout.addWidget(self.card_status, 2, 0, 1, 1)
+
+        self._reflow_pills(two_rows=(width < 480))
+
+    def _reflow_pills(self, two_rows: bool) -> None:
+        if not hasattr(self, "pills_container_layout"):
+            return
+        if getattr(self, "_current_two_rows", None) == two_rows:
+            return
+        self._current_two_rows = two_rows
+
+        while self.pills_container_layout.count() > 0:
+            item = self.pills_container_layout.takeAt(0)
+            sub_layout = item.layout()
+            if sub_layout:
+                while sub_layout.count() > 0:
+                    sub_layout.takeAt(0)
+
+        if two_rows:
+            row1 = QHBoxLayout()
+            row1.setSpacing(4)
+            row1.addWidget(self.pill_crit)
+            row1.addWidget(self.pill_high)
+            row1.addWidget(self.pill_med)
+            row1.addStretch()
+
+            row2 = QHBoxLayout()
+            row2.setSpacing(4)
+            row2.addWidget(self.pill_low)
+            row2.addWidget(self.pill_info)
+            row2.addStretch()
+
+            self.pills_container_layout.addLayout(row1)
+            self.pills_container_layout.addLayout(row2)
+        else:
+            row = QHBoxLayout()
+            row.setSpacing(6)
+            row.addWidget(self.pill_crit)
+            row.addWidget(self.pill_high)
+            row.addWidget(self.pill_med)
+            row.addWidget(self.pill_low)
+            row.addWidget(self.pill_info)
+            row.addStretch()
+            self.pills_container_layout.addLayout(row)
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
@@ -126,8 +204,8 @@ class ReportSummaryInspector(QWidget):
 
         self.lbl_title = QLabel(t("report.inspector_summary_title", "Executive Summary & Management Overview"))
         self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
-        h_layout.addWidget(self.lbl_title)
-        h_layout.addStretch()
+        self.lbl_title.setWordWrap(True)
+        h_layout.addWidget(self.lbl_title, stretch=1)
 
         self.lbl_posture_badge = QLabel()
         self.lbl_posture_badge.setStyleSheet(
@@ -141,6 +219,7 @@ class ReportSummaryInspector(QWidget):
         # 2. Scrollable Body
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
@@ -163,6 +242,7 @@ class ReportSummaryInspector(QWidget):
         lbl_posture_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
         self.lbl_posture_val = QLabel("NO FINDINGS")
         self.lbl_posture_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff;")
+        self.lbl_posture_val.setWordWrap(True)
         v_posture.addWidget(lbl_posture_title)
         v_posture.addWidget(self.lbl_posture_val)
 
@@ -171,23 +251,24 @@ class ReportSummaryInspector(QWidget):
         self.card_breakdown.setStyleSheet("background: rgba(22, 27, 34, 0.7); border: 1px solid #30363d; border-radius: 6px; padding: 6px;")
         v_breakdown = QVBoxLayout(self.card_breakdown)
         v_breakdown.setContentsMargins(6, 6, 6, 6)
+        v_breakdown.setSpacing(6)
         lbl_breakdown_title = QLabel(t("report.summary_breakdown_label", "SEVERITY BREAKDOWN"))
         lbl_breakdown_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
         v_breakdown.addWidget(lbl_breakdown_title)
 
-        self.pills_row = QHBoxLayout()
-        self.pills_row.setSpacing(6)
         self.pill_crit = self._create_pill_label("CRITICAL", "#f85149")
         self.pill_high = self._create_pill_label("HIGH", "#e3b341")
         self.pill_med = self._create_pill_label("MEDIUM", "#d29922")
         self.pill_low = self._create_pill_label("LOW", "#39d353")
         self.pill_info = self._create_pill_label("INFO", "#58a6ff")
-        self.pills_row.addWidget(self.pill_crit)
-        self.pills_row.addWidget(self.pill_high)
-        self.pills_row.addWidget(self.pill_med)
-        self.pills_row.addWidget(self.pill_low)
-        self.pills_row.addWidget(self.pill_info)
-        v_breakdown.addLayout(self.pills_row)
+
+        self.pills_container = QWidget()
+        self.pills_container_layout = QVBoxLayout(self.pills_container)
+        self.pills_container_layout.setContentsMargins(0, 0, 0, 0)
+        self.pills_container_layout.setSpacing(4)
+        self._current_two_rows = None
+        self._reflow_pills(two_rows=False)
+        v_breakdown.addWidget(self.pills_container)
 
         # Card C: Findings Status
         self.card_status = QFrame()
@@ -198,10 +279,12 @@ class ReportSummaryInspector(QWidget):
         lbl_status_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
         self.lbl_status_val = QLabel("0 Total · 0 Open · 0 Resolved")
         self.lbl_status_val.setStyleSheet("font-size: 12px; font-weight: bold; color: #c9d1d9;")
+        self.lbl_status_val.setWordWrap(True)
         v_status.addWidget(lbl_status_title)
         v_status.addWidget(self.lbl_status_val)
 
         # Place initial cards in grid
+        self._current_grid_mode = None
         self._reflow_scorecards(600)
 
         self.content_layout.addWidget(self.scorecards_panel)
@@ -214,6 +297,7 @@ class ReportSummaryInspector(QWidget):
 
         lbl_intro_header = QLabel(t("report.summary_intro_title", "Management Summary / Executive Narrative"))
         lbl_intro_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        lbl_intro_header.setWordWrap(True)
         intro_layout.addWidget(lbl_intro_header)
 
         self.txt_intro = QPlainTextEdit()
@@ -233,14 +317,16 @@ class ReportSummaryInspector(QWidget):
         matrix_layout.setSpacing(6)
 
         matrix_hdr = QHBoxLayout()
-        lbl_matrix_title = QLabel(t("report.summary_matrix_title", "Findings Matrix (Overview)"))
-        lbl_matrix_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
-        matrix_hdr.addWidget(lbl_matrix_title)
+        self.lbl_matrix_title = QLabel(t("report.summary_matrix_title", "Findings Matrix (Overview)"))
+        self.lbl_matrix_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        self.lbl_matrix_title.setWordWrap(True)
+        matrix_hdr.addWidget(self.lbl_matrix_title)
         matrix_hdr.addStretch()
 
-        lbl_matrix_hint = QLabel(t("report.summary_matrix_hint", "Double-click or click [>] to inspect finding"))
-        lbl_matrix_hint.setStyleSheet("font-size: 11px; color: #8b949e;")
-        matrix_hdr.addWidget(lbl_matrix_hint)
+        self.lbl_matrix_hint = QLabel(t("report.summary_matrix_hint", "Double-click or click [>] to inspect finding"))
+        self.lbl_matrix_hint.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self.lbl_matrix_hint.setWordWrap(True)
+        matrix_hdr.addWidget(self.lbl_matrix_hint)
         matrix_layout.addLayout(matrix_hdr)
 
         self.tbl_matrix = QTableWidget()
@@ -306,12 +392,13 @@ class ReportSummaryInspector(QWidget):
 
         lbl_hl_header = QLabel(t("report.summary_highlights_title", "Key Assessment Highlights & Vectors"))
         lbl_hl_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        lbl_hl_header.setWordWrap(True)
         hl_layout.addWidget(lbl_hl_header)
 
-        form = QFormLayout()
-        form.setContentsMargins(0, 4, 0, 0)
-        form.setSpacing(8)
-        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        self.form = QFormLayout()
+        self.form.setContentsMargins(0, 4, 0, 0)
+        self.form.setSpacing(8)
+        self.form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
 
         self.txt_initial_access = QPlainTextEdit()
         self.txt_initial_access.setPlaceholderText(
@@ -319,7 +406,7 @@ class ReportSummaryInspector(QWidget):
         )
         self.txt_initial_access.setMaximumHeight(50)
         self.txt_initial_access.textChanged.connect(self._on_field_changed)
-        form.addRow(self._make_label(t("report.summary_initial_access", "Initial Access:")), self.txt_initial_access)
+        self.form.addRow(self._make_label(t("report.summary_initial_access", "Initial Access:")), self.txt_initial_access)
 
         self.txt_privesc = QPlainTextEdit()
         self.txt_privesc.setPlaceholderText(
@@ -327,7 +414,7 @@ class ReportSummaryInspector(QWidget):
         )
         self.txt_privesc.setMaximumHeight(50)
         self.txt_privesc.textChanged.connect(self._on_field_changed)
-        form.addRow(self._make_label(t("report.summary_privesc", "Privilege Escalation:")), self.txt_privesc)
+        self.form.addRow(self._make_label(t("report.summary_privesc", "Privilege Escalation:")), self.txt_privesc)
 
         self.txt_business_impact = QPlainTextEdit()
         self.txt_business_impact.setPlaceholderText(
@@ -335,7 +422,7 @@ class ReportSummaryInspector(QWidget):
         )
         self.txt_business_impact.setMaximumHeight(50)
         self.txt_business_impact.textChanged.connect(self._on_field_changed)
-        form.addRow(self._make_label(t("report.summary_business_impact", "Business Impact & Risk:")), self.txt_business_impact)
+        self.form.addRow(self._make_label(t("report.summary_business_impact", "Business Impact & Risk:")), self.txt_business_impact)
 
         self.txt_remediation = QPlainTextEdit()
         self.txt_remediation.setPlaceholderText(
@@ -343,9 +430,9 @@ class ReportSummaryInspector(QWidget):
         )
         self.txt_remediation.setMaximumHeight(50)
         self.txt_remediation.textChanged.connect(self._on_field_changed)
-        form.addRow(self._make_label(t("report.summary_remediation", "Key Recommendations:")), self.txt_remediation)
+        self.form.addRow(self._make_label(t("report.summary_remediation", "Key Recommendations:")), self.txt_remediation)
 
-        hl_layout.addLayout(form)
+        hl_layout.addLayout(self.form)
         self.content_layout.addWidget(highlights_card)
 
         scroll.setWidget(content_widget)
@@ -362,6 +449,7 @@ class ReportSummaryInspector(QWidget):
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
+        lbl.setWordWrap(True)
         lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #8b949e;")
         return lbl
 
@@ -387,6 +475,7 @@ class ReportSummaryInspector(QWidget):
             self._refresh_matrix_table(self._findings, doc.language)
         finally:
             self._loading = False
+            self._reflow_summary(self.width())
 
     def _refresh_scorecards(self, findings: List[ReportFindingItem]) -> None:
         counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
@@ -448,6 +537,7 @@ class ReportSummaryInspector(QWidget):
 
     def _refresh_matrix_table(self, findings: List[ReportFindingItem], language: str = "de") -> None:
         self.tbl_matrix.setRowCount(len(findings))
+        use_short_phase = self.width() < 680
 
         for row, f in enumerate(findings):
             # Col 0: Index
@@ -471,7 +561,10 @@ class ReportSummaryInspector(QWidget):
 
             # Col 3: Phase
             p_obj = get_phase(f.phase)
-            ph_name = PHASE_LABELS_DE.get(p_obj.key, p_obj.short) if language == "de" else p_obj.short
+            if use_short_phase or language != "de":
+                ph_name = p_obj.short
+            else:
+                ph_name = PHASE_LABELS_DE.get(p_obj.key, p_obj.short)
             it_phase = QTableWidgetItem(ph_name)
             it_phase.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.tbl_matrix.setItem(row, 3, it_phase)
