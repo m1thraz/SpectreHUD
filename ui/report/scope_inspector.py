@@ -34,6 +34,51 @@ from ui.glass_panel import GlassPanel
 from ui.styles.icons import icon
 
 
+_SCOPE_INPUT_STYLE = (
+    "QLineEdit { "
+    "background: rgba(13, 17, 23, 0.7); "
+    "border: 1px solid rgba(48, 54, 61, 0.7); "
+    "border-radius: 4px; "
+    "color: #f0f6fc; "
+    "padding: 3px 6px; "
+    "font-size: 11px; "
+    "} "
+    "QLineEdit:focus { "
+    "background: rgba(13, 17, 23, 0.95); "
+    "border: 1px solid #00e5ff; "
+    "color: #ffffff; "
+    "} "
+    "QLineEdit::placeholder { "
+    "color: #6e7681; "
+    "}"
+)
+
+_SCOPE_COMBO_STYLE = (
+    "QComboBox { "
+    "background: rgba(13, 17, 23, 0.7); "
+    "border: 1px solid rgba(48, 54, 61, 0.7); "
+    "border-radius: 4px; "
+    "color: #c9d1d9; "
+    "padding: 3px 6px; "
+    "font-size: 11px; "
+    "} "
+    "QComboBox:hover, QComboBox:focus { "
+    "border-color: #00e5ff; "
+    "color: #f0f6fc; "
+    "} "
+    "QComboBox::drop-down { "
+    "border: none; "
+    "width: 18px; "
+    "} "
+    "QComboBox QAbstractItemView { "
+    "background: #161b22; "
+    "color: #f0f6fc; "
+    "selection-background-color: #1f293d; "
+    "selection-color: #00e5ff; "
+    "}"
+)
+
+
 class ReportScopeInspector(QWidget):
     """
     Structured Cockpit for Scope & Methodology.
@@ -348,8 +393,8 @@ class ReportScopeInspector(QWidget):
 
     def _style_table(self, table: QTableWidget) -> None:
         table.verticalHeader().setVisible(False)
-        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         table.setMinimumWidth(0)
         table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         table.setStyleSheet(
@@ -361,6 +406,19 @@ class ReportScopeInspector(QWidget):
                 gridline-color: #21262d;
                 color: #f0f6fc;
                 font-size: 11px;
+                selection-background-color: transparent;
+                selection-color: #f0f6fc;
+            }
+            QTableWidget::item {
+                background: transparent;
+            }
+            QTableWidget::item:selected {
+                background: transparent;
+            }
+            QTableWidget::item:focus {
+                background: transparent;
+                border: none;
+                outline: none;
             }
             QHeaderView::section {
                 background: #0d1117;
@@ -464,7 +522,7 @@ class ReportScopeInspector(QWidget):
         # Col 0: Target input
         edit_tgt = QLineEdit(item.target)
         edit_tgt.setPlaceholderText("z. B. 10.10.10.0/24")
-        edit_tgt.setStyleSheet("background: transparent; border: 1px solid transparent; color: #f0f6fc; padding: 2px 4px;")
+        edit_tgt.setStyleSheet(_SCOPE_INPUT_STYLE)
         edit_tgt.textChanged.connect(lambda t, idx=row: self._on_in_target_changed(idx, t))
         self.tbl_in_targets.setCellWidget(row, 0, edit_tgt)
 
@@ -484,7 +542,7 @@ class ReportScopeInspector(QWidget):
             if item.target_type == k:
                 cur_type_idx = idx
         cmb_type.setCurrentIndex(cur_type_idx)
-        cmb_type.setStyleSheet("background: #0d1117; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; font-size: 11px;")
+        cmb_type.setStyleSheet(_SCOPE_COMBO_STYLE)
         cmb_type.currentIndexChanged.connect(lambda _, c=cmb_type, idx=row: self._on_in_type_changed(idx, str(c.currentData())))
         self.tbl_in_targets.setCellWidget(row, 1, cmb_type)
 
@@ -502,14 +560,14 @@ class ReportScopeInspector(QWidget):
             if item.environment == k:
                 cur_env_idx = idx
         cmb_env.setCurrentIndex(cur_env_idx)
-        cmb_env.setStyleSheet("background: #0d1117; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; font-size: 11px;")
+        cmb_env.setStyleSheet(_SCOPE_COMBO_STYLE)
         cmb_env.currentIndexChanged.connect(lambda _, c=cmb_env, idx=row: self._on_in_env_changed(idx, str(c.currentData())))
         self.tbl_in_targets.setCellWidget(row, 2, cmb_env)
 
         # Col 3: Description input
         edit_desc = QLineEdit(item.description)
         edit_desc.setPlaceholderText(t("report.scope_desc_placeholder", "Zweck / Notiz..."))
-        edit_desc.setStyleSheet("background: transparent; border: 1px solid transparent; color: #c9d1d9; padding: 2px 4px;")
+        edit_desc.setStyleSheet(_SCOPE_INPUT_STYLE)
         edit_desc.textChanged.connect(lambda d, idx=row: self._on_in_desc_changed(idx, d))
         self.tbl_in_targets.setCellWidget(row, 3, edit_desc)
 
@@ -533,14 +591,14 @@ class ReportScopeInspector(QWidget):
         # Col 0: Excluded target
         edit_tgt = QLineEdit(item.target)
         edit_tgt.setPlaceholderText("z. B. 10.10.10.1 Gateway")
-        edit_tgt.setStyleSheet("background: transparent; border: 1px solid transparent; color: #f0f6fc; padding: 2px 4px;")
+        edit_tgt.setStyleSheet(_SCOPE_INPUT_STYLE)
         edit_tgt.textChanged.connect(lambda t, idx=row: self._on_out_target_changed(idx, t))
         self.tbl_out_targets.setCellWidget(row, 0, edit_tgt)
 
         # Col 1: Reason input
         edit_rsn = QLineEdit(item.reason)
         edit_rsn.setPlaceholderText(t("report.scope_reason_placeholder", "Ausschlussgrund (z. B. Produktives Routing, Fremdhosting)..."))
-        edit_rsn.setStyleSheet("background: transparent; border: 1px solid transparent; color: #c9d1d9; padding: 2px 4px;")
+        edit_rsn.setStyleSheet(_SCOPE_INPUT_STYLE)
         edit_rsn.textChanged.connect(lambda r, idx=row: self._on_out_reason_changed(idx, r))
         self.tbl_out_targets.setCellWidget(row, 1, edit_rsn)
 

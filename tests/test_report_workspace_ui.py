@@ -9,7 +9,7 @@ import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidget, QTableWidget, QTreeWidget
+from PyQt6.QtWidgets import QLineEdit, QListWidget, QTableWidget, QTreeWidget
 
 from core.clipboard_history import ClipboardHistory
 from core.i18n import get_i18n, t
@@ -881,6 +881,16 @@ class TestReportWorkspaceUI(unittest.TestCase):
         self.assertEqual(inspector.txt_appr_details.text(), "Vollständige Einsicht.")
         self.assertEqual(inspector.tbl_in_targets.rowCount(), 1)
         self.assertEqual(inspector.tbl_out_targets.rowCount(), 1)
+        self.assertEqual(inspector.tbl_in_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection)
+        self.assertEqual(inspector.tbl_out_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection)
+        self.assertEqual(inspector.tbl_in_targets.focusPolicy(), Qt.FocusPolicy.NoFocus)
+        self.assertEqual(inspector.tbl_out_targets.focusPolicy(), Qt.FocusPolicy.NoFocus)
+
+        edit_in_target = inspector.tbl_in_targets.cellWidget(0, 0)
+        self.assertIsInstance(edit_in_target, QLineEdit)
+        self.assertIn("#00e5ff", edit_in_target.styleSheet())
+        self.assertIn("rgba(13, 17, 23", edit_in_target.styleSheet())
+
         self.assertTrue(inspector.chk_no_dos.isChecked())
         self.assertTrue(inspector.chk_no_social.isChecked())
         self.assertFalse(inspector.chk_no_data.isChecked())
