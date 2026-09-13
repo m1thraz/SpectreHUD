@@ -18,8 +18,9 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from ui.glass_panel import GlassPanel
 from ui.markdown_highlighter import MarkdownHighlighter
+from ui.report.inspector_style import style_inspector_header
 from ui.report.source_editor import ReportSourceEditor
-from ui.styles.icons import icon
+from ui.styles.icons import get_theme_color, icon
 
 
 class ReportSectionInspector(QWidget):
@@ -55,12 +56,11 @@ class ReportSectionInspector(QWidget):
         h_layout.addWidget(self.lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_section_title", "Section Editor"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
         h_layout.addWidget(self.lbl_title)
         h_layout.addStretch()
 
         self.lbl_hint = QLabel(t("report.inspector_section_hint", "Focused Editing"))
-        self.lbl_hint.setStyleSheet("font-size: 11px; color: #8b949e;")
+        style_inspector_header(self.header_card, self.lbl_title, hint=self.lbl_hint)
         h_layout.addWidget(self.lbl_hint)
 
         main_layout.addWidget(self.header_card)
@@ -84,7 +84,9 @@ class ReportSectionInspector(QWidget):
         try:
             self._identity = identity
             self.lbl_title.setText(title or identity)
-            self.lbl_icon.setPixmap(icon(icon_name, color="#00e5ff").pixmap(20, 20))
+            self.lbl_icon.setPixmap(
+                icon(icon_name, color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+            )
             self.editor.setPlainText(content)
         finally:
             self._loading = False

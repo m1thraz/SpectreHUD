@@ -78,6 +78,52 @@ QLabel.WorkspaceSyncState[syncState="current"] {
     color: {STATUS_GREEN_LIGHT};
 }
 
+QLabel.ReportInspectorTitle,
+QLabel[class~="ReportInspectorTitle"] {
+    color: {TEXT_PRIMARY};
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QLabel.ReportInspectorSectionTitle,
+QLabel[class~="ReportInspectorSectionTitle"] {
+    color: {TEXT_PRIMARY};
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QLabel.ReportInspectorHint,
+QLabel[class~="ReportInspectorHint"] {
+    color: {TEXT_MUTED};
+    font-size: 11px;
+}
+
+QLabel.ReportFormLabel,
+QLabel[class~="ReportFormLabel"] {
+    color: {TEXT_SECONDARY};
+    font-size: 12px;
+    font-weight: 500;
+}
+
+QLabel.ReportInspectorAccentTitle,
+QLabel[class~="ReportInspectorAccentTitle"] {
+    color: {CYBER_BLUE_LIGHT};
+}
+
+QLabel.ReportMetricLabel,
+QLabel[class~="ReportMetricLabel"] {
+    color: {TEXT_MUTED};
+    font-size: 10px;
+    font-weight: 700;
+}
+
+QLabel.ReportMetricValue,
+QLabel[class~="ReportMetricValue"] {
+    color: {TEXT_SECONDARY};
+    font-size: 12px;
+    font-weight: 700;
+}
+
 /* Variable Status Bar Labels */
 QLabel.VarTagLabel {
     color: {CYBER_BLUE_LIGHT};

@@ -29,7 +29,8 @@ from core.i18n import t
 from core.phases import normalize_phase_key
 from core.reporting import ReportEvidenceItem, ReportFindingItem
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import style_inspector_header, style_inspector_scroll
+from ui.styles.icons import get_theme_color, icon
 
 SEVERITIES = ["critical", "high", "medium", "low", "info"]
 PHASES = ["recon", "access", "privesc", "postex", "scripts", "misc"]
@@ -161,12 +162,14 @@ class ReportFindingInspector(QWidget):
 
         lbl_icon = QLabel()
         lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_icon.setPixmap(icon("fa5s.shield-alt", color="#00e5ff").pixmap(48, 48))
+        lbl_icon.setPixmap(
+            icon("fa5s.shield-alt", color=get_theme_color("CYBER_CYAN")).pixmap(48, 48)
+        )
         panel_layout.addWidget(lbl_icon)
 
         lbl_title = QLabel(t("report.empty_findings_title", "Keine Schwachstellen erfasst"))
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #f0f6fc;")
+        lbl_title.setProperty("class", "ReportInspectorTitle")
         panel_layout.addWidget(lbl_title)
 
         lbl_desc = QLabel(
@@ -177,7 +180,7 @@ class ReportFindingInspector(QWidget):
         )
         lbl_desc.setWordWrap(True)
         lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_desc.setStyleSheet("color: #8b949e; font-size: 12px; max-width: 480px; line-height: 1.4;")
+        lbl_desc.setProperty("class", "ReportInspectorHint")
         panel_layout.addWidget(lbl_desc)
 
         btn_row = QHBoxLayout()
@@ -220,17 +223,20 @@ class ReportFindingInspector(QWidget):
         ed_layout.setSpacing(6)
 
         # Header card
-        header_card = GlassPanel(self.editor_widget)
-        h_layout = QHBoxLayout(header_card)
+        self.header_card = GlassPanel(self.editor_widget)
+        h_layout = QHBoxLayout(self.header_card)
         h_layout.setContentsMargins(12, 8, 12, 8)
         h_layout.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.shield-alt", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.shield-alt", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         h_layout.addWidget(lbl_icon)
 
         self.lbl_header_title = QLabel(t("report.inspector_finding_title", "Finding Details"))
-        self.lbl_header_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        self.lbl_title = self.lbl_header_title
+        style_inspector_header(self.header_card, self.lbl_title)
         h_layout.addWidget(self.lbl_header_title)
         h_layout.addStretch()
 
@@ -250,7 +256,7 @@ class ReportFindingInspector(QWidget):
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         h_layout.addWidget(self.btn_delete)
 
-        ed_layout.addWidget(header_card)
+        ed_layout.addWidget(self.header_card)
 
         # Form Scroll Area
         scroll = QScrollArea(self.editor_widget)
@@ -258,6 +264,7 @@ class ReportFindingInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         v_content = QVBoxLayout(content_widget)
         v_content.setContentsMargins(12, 8, 12, 12)
         v_content.setSpacing(12)
@@ -426,12 +433,12 @@ class ReportFindingInspector(QWidget):
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
-        lbl.setStyleSheet("font-weight: 500; color: #c9d1d9; font-size: 12px;")
+        lbl.setProperty("class", "ReportFormLabel")
         return lbl
 
     def _make_section_header(self, text: str) -> QLabel:
         lbl = QLabel(text)
-        lbl.setStyleSheet("font-weight: bold; color: #79c0ff; font-size: 12px; margin-top: 4px;")
+        lbl.setProperty("class", "ReportInspectorSectionTitle ReportInspectorAccentTitle")
         return lbl
 
     def load_finding(self, finding: Optional[ReportFindingItem]) -> None:

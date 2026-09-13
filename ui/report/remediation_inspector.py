@@ -30,7 +30,12 @@ from core.reporting import (
     ReportWorkspaceDocument,
 )
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import (
+    style_inspector_header,
+    style_inspector_scroll,
+    style_inspector_section,
+)
+from ui.styles.icons import get_theme_color, icon
 
 SEVERITY_ORDER = {
     "critical": 0,
@@ -102,11 +107,13 @@ class ReportRemediationInspector(QWidget):
         h_layout.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.tasks", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.tasks", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         h_layout.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_remediation_title", "Remediation & Action Plan"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_header(self.header_card, self.lbl_title)
         h_layout.addWidget(self.lbl_title)
         h_layout.addStretch()
 
@@ -125,6 +132,7 @@ class ReportRemediationInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         self.content_layout = QVBoxLayout(content_widget)
         self.content_layout.setContentsMargins(12, 8, 12, 12)
         self.content_layout.setSpacing(10)
@@ -136,7 +144,7 @@ class ReportRemediationInspector(QWidget):
         g_layout.setSpacing(6)
 
         lbl_g_header = QLabel(t("report.remediation_guidance_title", "Strategic Guidance & Hardening Roadmap"))
-        lbl_g_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(guidance_card, lbl_g_header)
         g_layout.addWidget(lbl_g_header)
 
         self.txt_guidance = QPlainTextEdit()
@@ -161,7 +169,7 @@ class ReportRemediationInspector(QWidget):
         # Toolbar above table: Title + Filter Toggle Buttons
         tbl_top_bar = QHBoxLayout()
         lbl_matrix_title = QLabel(t("report.remediation_matrix_title", "Remediation & Action Matrix"))
-        lbl_matrix_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(matrix_card, lbl_matrix_title)
         tbl_top_bar.addWidget(lbl_matrix_title)
         tbl_top_bar.addStretch()
 
@@ -216,32 +224,7 @@ class ReportRemediationInspector(QWidget):
         self.tbl_actions.setMinimumWidth(0)
         self.tbl_actions.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.tbl_actions.cellDoubleClicked.connect(self._on_table_double_clicked)
-        self.tbl_actions.setStyleSheet(
-            """
-            QTableWidget {
-                background: #161b22;
-                border: 1px solid #30363d;
-                border-radius: 4px;
-                gridline-color: #21262d;
-                color: #c9d1d9;
-            }
-            QHeaderView::section {
-                background: #0d1117;
-                color: #8b949e;
-                font-weight: bold;
-                font-size: 11px;
-                border: 1px solid #21262d;
-                padding: 5px;
-            }
-            QTableWidget::item:hover {
-                background: rgba(0, 229, 255, 0.08);
-            }
-            QTableWidget::item:selected {
-                background: rgba(0, 229, 255, 0.18);
-                color: #f0f6fc;
-            }
-            """
-        )
+        self.tbl_actions.setProperty("class", "ReportInspectorTable")
         matrix_layout.addWidget(self.tbl_actions)
 
         self.content_layout.addWidget(matrix_card)

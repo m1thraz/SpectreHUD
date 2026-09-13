@@ -35,7 +35,12 @@ from core.reporting import (
     ReportWorkspaceDocument,
 )
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import (
+    style_inspector_header,
+    style_inspector_scroll,
+    style_inspector_section,
+)
+from ui.styles.icons import get_theme_color, icon
 
 PHASE_COLORS = {
     "recon": "#58a6ff",
@@ -276,11 +281,13 @@ class ReportAttackPathInspector(QWidget):
         top_row.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.route", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.route", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_header(self.header_card, self.lbl_title)
         top_row.addWidget(self.lbl_title)
         top_row.addStretch()
 
@@ -296,19 +303,17 @@ class ReportAttackPathInspector(QWidget):
         actions_row.setSpacing(8)
 
         self.btn_auto_generate = QPushButton(t("report.auto_generate_chain", "Generate Chain from Findings"))
-        self.btn_auto_generate.setIcon(icon("fa5s.magic", color="#79c0ff"))
-        self.btn_auto_generate.setStyleSheet(
-            "QPushButton { background: rgba(121, 192, 255, 0.15); border: 1px solid rgba(121, 192, 255, 0.35); border-radius: 4px; color: #79c0ff; font-weight: bold; padding: 4px 10px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(121, 192, 255, 0.28); }"
+        self.btn_auto_generate.setProperty("class", "SecondaryBtn")
+        self.btn_auto_generate.setIcon(
+            icon("fa5s.magic", color=get_theme_color("CYBER_BLUE_LIGHT"))
         )
         self.btn_auto_generate.clicked.connect(self._on_auto_generate_clicked)
         actions_row.addWidget(self.btn_auto_generate)
 
         self.btn_add_step = QPushButton(t("report.add_attack_step", "+ Add Step"))
-        self.btn_add_step.setIcon(icon("fa5s.plus", color="#00e5ff"))
-        self.btn_add_step.setStyleSheet(
-            "QPushButton { background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 4px; color: #00e5ff; font-weight: bold; padding: 4px 10px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(0, 229, 255, 0.28); }"
+        self.btn_add_step.setProperty("class", "SecondaryBtn AppendLootBtn")
+        self.btn_add_step.setIcon(
+            icon("fa5s.plus", color=get_theme_color("CYBER_CYAN"))
         )
         self.btn_add_step.clicked.connect(self._on_add_step_clicked)
         actions_row.addWidget(self.btn_add_step)
@@ -324,6 +329,7 @@ class ReportAttackPathInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         self.content_layout = QVBoxLayout(content_widget)
         self.content_layout.setContentsMargins(12, 8, 12, 12)
         self.content_layout.setSpacing(10)
@@ -335,7 +341,7 @@ class ReportAttackPathInspector(QWidget):
         intro_layout.setSpacing(6)
 
         lbl_intro_title = QLabel(t("report.attack_storyline_title", "Assessment Narrative & Storyline"))
-        lbl_intro_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(intro_card, lbl_intro_title)
         intro_layout.addWidget(lbl_intro_title)
 
         self.txt_intro = QPlainTextEdit()
@@ -350,7 +356,7 @@ class ReportAttackPathInspector(QWidget):
 
         # Steps Timeline Header
         lbl_timeline_title = QLabel(t("report.attack_chain_timeline_title", "Attack Chain Timeline"))
-        lbl_timeline_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #8b949e; margin-top: 4px;")
+        lbl_timeline_title.setProperty("class", "ReportInspectorSectionTitle")
         self.content_layout.addWidget(lbl_timeline_title)
 
         # Container for step cards

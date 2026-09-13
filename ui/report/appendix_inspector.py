@@ -37,7 +37,12 @@ from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
     LootImagePickerDialog,
 )
-from ui.styles.icons import icon
+from ui.report.inspector_style import (
+    style_inspector_header,
+    style_inspector_scroll,
+    style_inspector_section,
+)
+from ui.styles.icons import get_theme_color, icon
 
 _SUPPORTED_LANGUAGES = [
     ("bash", "Bash / Shell"),
@@ -364,11 +369,13 @@ class ReportAppendixInspector(QWidget):
         top_row.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.paperclip", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.paperclip", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_appendix_title", "Anhang & Nachweise"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_header(self.header_card, self.lbl_title)
         top_row.addWidget(self.lbl_title)
         top_row.addStretch()
 
@@ -405,6 +412,7 @@ class ReportAppendixInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         scroll_content = QWidget()
+        style_inspector_scroll(scroll, scroll_content)
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(4, 4, 4, 12)
         scroll_layout.setSpacing(12)
@@ -422,7 +430,7 @@ class ReportAppendixInspector(QWidget):
         title_a_row.addWidget(lbl_icon_a)
 
         self.lbl_title_a = QLabel(t("report.appendix_section_a_title", "Anhang A: Ausgeführte Befehle & PoCs"))
-        self.lbl_title_a.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(self.card_a, self.lbl_title_a)
         self.lbl_title_a.setWordWrap(True)
         title_a_row.addWidget(self.lbl_title_a)
         title_a_row.addStretch()
@@ -491,7 +499,7 @@ class ReportAppendixInspector(QWidget):
         title_b_row.addWidget(lbl_icon_b)
 
         self.lbl_title_b = QLabel(t("report.appendix_section_b_title", "Anhang B: Screenshots & Bildnachweise"))
-        self.lbl_title_b.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(self.card_b, self.lbl_title_b)
         self.lbl_title_b.setWordWrap(True)
         title_b_row.addWidget(self.lbl_title_b)
         title_b_row.addStretch()
@@ -560,7 +568,7 @@ class ReportAppendixInspector(QWidget):
         header_c.addWidget(lbl_icon_c)
 
         self.lbl_title_c = QLabel(t("report.appendix_section_c_title", "Anhang C: Ergänzende Rohdaten & Notizen"))
-        self.lbl_title_c.setStyleSheet("font-size: 13px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(self.card_c, self.lbl_title_c)
         self.lbl_title_c.setWordWrap(True)
         header_c.addWidget(self.lbl_title_c)
         header_c.addStretch()

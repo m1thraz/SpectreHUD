@@ -15,6 +15,7 @@ semantic versioning.
 * Made the structured Report Workspace the default view with contextual Markdown tools and preview navigation.
 * Grouped workspace-level Loot sync and regeneration under compact Report Actions.
 * Aligned report export, generation, and regeneration dialogs with the active HUD theme.
+* Unified Report Workspace inspector headers, sections, forms, tables, and scroll surfaces around shared theme-aware styles.
 
 ### Fixed
 

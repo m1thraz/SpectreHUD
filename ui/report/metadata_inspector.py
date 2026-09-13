@@ -22,7 +22,8 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from core.reporting import ReportMetadata
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import style_inspector_header, style_inspector_scroll
+from ui.styles.icons import get_theme_color, icon
 
 CLASSIFICATIONS = [
     "Vertraulich – Nur für internen Gebrauch",
@@ -59,20 +60,22 @@ class ReportMetadataInspector(QWidget):
         main_layout.setSpacing(6)
 
         # Header card
-        header_card = GlassPanel(self)
-        h_layout = QHBoxLayout(header_card)
+        self.header_card = GlassPanel(self)
+        h_layout = QHBoxLayout(self.header_card)
         h_layout.setContentsMargins(12, 10, 12, 10)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.clipboard-list", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.clipboard-list", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         h_layout.addWidget(lbl_icon)
 
-        lbl_title = QLabel(t("report.inspector_metadata_title", "Report Metadata & Parameters"))
-        lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
-        h_layout.addWidget(lbl_title)
+        self.lbl_title = QLabel(t("report.inspector_metadata_title", "Report Metadata & Parameters"))
+        style_inspector_header(self.header_card, self.lbl_title)
+        h_layout.addWidget(self.lbl_title)
         h_layout.addStretch()
 
-        main_layout.addWidget(header_card)
+        main_layout.addWidget(self.header_card)
 
         # Form Scroll Area
         scroll = QScrollArea(self)
@@ -87,6 +90,7 @@ class ReportMetadataInspector(QWidget):
         )
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         form_layout = QFormLayout(content_widget)
         form_layout.setContentsMargins(12, 12, 12, 12)
         form_layout.setSpacing(12)
@@ -139,7 +143,7 @@ class ReportMetadataInspector(QWidget):
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
-        lbl.setStyleSheet("font-weight: 500; color: #c9d1d9; font-size: 12px;")
+        lbl.setProperty("class", "ReportFormLabel")
         return lbl
 
     def load_metadata(self, metadata: ReportMetadata) -> None:

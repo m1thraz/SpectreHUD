@@ -9,7 +9,7 @@ import pytest
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLineEdit, QListWidget, QTableWidget, QTreeWidget
+from PyQt6.QtWidgets import QLineEdit, QListWidget, QTableWidget, QTreeWidget, QWidget
 
 from core.clipboard_history import ClipboardHistory
 from core.i18n import get_i18n, t
@@ -193,6 +193,41 @@ class TestReportWorkspaceUI(unittest.TestCase):
 
         self.assertEqual(len(changed), 1)
         self.assertEqual(changed[0].client, "New Client AG")
+
+    def test_all_inspectors_share_header_and_section_style_roles(self):
+        inspectors = [
+            ReportMetadataInspector(),
+            ReportFindingInspector(),
+            ReportSectionInspector(),
+            ReportSummaryInspector(),
+            ReportRemediationInspector(),
+            ReportAttackPathInspector(),
+            ReportScopeInspector(),
+            ReportAppendixInspector(),
+        ]
+        try:
+            for inspector in inspectors:
+                self.assertIn(
+                    "ReportInspectorHeader",
+                    str(inspector.header_card.property("class") or "").split(),
+                )
+                self.assertIn(
+                    "ReportInspectorTitle",
+                    str(inspector.lbl_title.property("class") or "").split(),
+                )
+                self.assertEqual(inspector.lbl_title.styleSheet(), "")
+
+            for inspector in inspectors[3:]:
+                section_cards = [
+                    child
+                    for child in inspector.findChildren(QWidget)
+                    if "ReportInspectorSection"
+                    in str(child.property("class") or "").split()
+                ]
+                self.assertTrue(section_cards, inspector.objectName())
+        finally:
+            for inspector in inspectors:
+                inspector.deleteLater()
 
     def test_finding_inspector_edits_and_actions(self):
         insp = ReportFindingInspector()

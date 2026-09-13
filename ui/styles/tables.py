@@ -147,4 +147,24 @@ QTreeWidget#WorkspaceNavTree::item:selected {
     color: {CYBER_BLUE_LIGHT};
     font-weight: bold;
 }
+
+QTableWidget.ReportInspectorTable,
+QTableWidget[class~="ReportInspectorTable"] {
+    background-color: {BG_CONTROL};
+    color: {TEXT_SECONDARY};
+    border: 1px solid {BORDER_A60};
+    border-radius: 4px;
+    gridline-color: {BORDER_A40};
+}
+
+QTableWidget.ReportInspectorTable::item:hover,
+QTableWidget[class~="ReportInspectorTable"]::item:hover {
+    background-color: {CYAN_A15};
+}
+
+QTableWidget.ReportInspectorTable::item:selected,
+QTableWidget[class~="ReportInspectorTable"]::item:selected {
+    background-color: {ACTIVE_BLUE_A20};
+    color: {TEXT_PRIMARY};
+}
 """

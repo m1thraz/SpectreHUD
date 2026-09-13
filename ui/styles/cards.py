@@ -59,6 +59,37 @@ QWidget#ReportFormatToolbar[collapsed="true"] {
     padding: 0px;
 }
 
+/* Shared Report Workspace inspector hierarchy */
+QFrame.ReportInspectorHeader,
+QFrame[class~="ReportInspectorHeader"] {
+    background-color: {SURFACE_A70};
+    border: 1px solid {BORDER_A60};
+    border-radius: 7px;
+}
+
+QFrame.ReportInspectorSection,
+QFrame[class~="ReportInspectorSection"] {
+    background-color: {SURFACE_A70};
+    border: 1px solid {BORDER_A60};
+    border-radius: 7px;
+}
+
+QScrollArea.ReportInspectorScroll,
+QScrollArea[class~="ReportInspectorScroll"],
+QWidget.ReportInspectorBody,
+QWidget[class~="ReportInspectorBody"] {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame.ReportMetricCard,
+QFrame[class~="ReportMetricCard"] {
+    background-color: {SURFACE_A85};
+    border: 1px solid {BORDER_A60};
+    border-radius: 6px;
+    padding: 6px;
+}
+
 /* Snippet & Loot Cards */
 QFrame#SnippetCard {
     background-color: {SURFACE_A85};

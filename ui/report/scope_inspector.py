@@ -31,7 +31,12 @@ from core.reporting import (
     ScopeTargetItem,
 )
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import (
+    style_inspector_header,
+    style_inspector_scroll,
+    style_inspector_section,
+)
+from ui.styles.icons import get_theme_color, icon
 
 
 _SCOPE_INPUT_STYLE = (
@@ -121,11 +126,13 @@ class ReportScopeInspector(QWidget):
         top_row.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.bullseye", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.bullseye", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         top_row.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_scope_title", "Scope & Methodik"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_header(self.header_card, self.lbl_title)
         top_row.addWidget(self.lbl_title)
         top_row.addStretch()
 
@@ -161,6 +168,7 @@ class ReportScopeInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         self.content_layout = QVBoxLayout(content_widget)
         self.content_layout.setContentsMargins(12, 8, 12, 12)
         self.content_layout.setSpacing(10)
@@ -172,7 +180,7 @@ class ReportScopeInspector(QWidget):
         appr_layout.setSpacing(8)
 
         lbl_appr_header = QLabel(t("report.scope_approach_header", "Pentest-Ansatz & Methodik"))
-        lbl_appr_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(approach_card, lbl_appr_header)
         appr_layout.addWidget(lbl_appr_header)
 
         btn_row = QHBoxLayout()
@@ -233,7 +241,7 @@ class ReportScopeInspector(QWidget):
 
         in_header_row = QHBoxLayout()
         lbl_in_header = QLabel(t("report.scope_in_targets_header", "In-Scope Ziele & Netzwerke"))
-        lbl_in_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(in_card, lbl_in_header)
         in_header_row.addWidget(lbl_in_header)
         in_header_row.addStretch()
 
@@ -276,7 +284,7 @@ class ReportScopeInspector(QWidget):
 
         out_header_row = QHBoxLayout()
         lbl_out_header = QLabel(t("report.scope_out_targets_header", "Out-of-Scope & Ausschlusskriterien"))
-        lbl_out_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(out_card, lbl_out_header)
         out_header_row.addWidget(lbl_out_header)
         out_header_row.addStretch()
 
@@ -314,7 +322,7 @@ class ReportScopeInspector(QWidget):
         roe_layout.setSpacing(8)
 
         lbl_roe_header = QLabel(t("report.scope_roe_header", "Testeinschränkungen & Rules of Engagement"))
-        lbl_roe_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(roe_card, lbl_roe_header)
         roe_layout.addWidget(lbl_roe_header)
 
         # Standard checkboxes

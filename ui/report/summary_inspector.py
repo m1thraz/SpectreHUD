@@ -35,7 +35,12 @@ from core.reporting import (
     ReportWorkspaceDocument,
 )
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.report.inspector_style import (
+    style_inspector_header,
+    style_inspector_scroll,
+    style_inspector_section,
+)
+from ui.styles.icons import get_theme_color, icon
 
 SEV_COLORS = {
     "critical": "#f85149",
@@ -199,11 +204,13 @@ class ReportSummaryInspector(QWidget):
         h_layout.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(icon("fa5s.chart-pie", color="#00e5ff").pixmap(20, 20))
+        lbl_icon.setPixmap(
+            icon("fa5s.chart-pie", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
         h_layout.addWidget(lbl_icon)
 
         self.lbl_title = QLabel(t("report.inspector_summary_title", "Executive Summary & Management Overview"))
-        self.lbl_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_header(self.header_card, self.lbl_title)
         self.lbl_title.setWordWrap(True)
         h_layout.addWidget(self.lbl_title, stretch=1)
 
@@ -223,23 +230,25 @@ class ReportSummaryInspector(QWidget):
         scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         content_widget = QWidget()
+        style_inspector_scroll(scroll, content_widget)
         self.content_layout = QVBoxLayout(content_widget)
         self.content_layout.setContentsMargins(12, 8, 12, 12)
         self.content_layout.setSpacing(12)
 
         # Scorecards Row
         self.scorecards_panel = GlassPanel(content_widget)
+        self.scorecards_panel.setProperty("class", "ReportInspectorSection")
         self.sc_layout = QGridLayout(self.scorecards_panel)
         self.sc_layout.setContentsMargins(12, 10, 12, 10)
         self.sc_layout.setSpacing(10)
 
         # Card A: Overall Posture
         self.card_posture = QFrame()
-        self.card_posture.setStyleSheet("background: rgba(22, 27, 34, 0.7); border: 1px solid #30363d; border-radius: 6px; padding: 6px;")
+        self.card_posture.setProperty("class", "ReportMetricCard")
         v_posture = QVBoxLayout(self.card_posture)
         v_posture.setContentsMargins(6, 6, 6, 6)
         lbl_posture_title = QLabel(t("report.summary_posture_label", "OVERALL POSTURE"))
-        lbl_posture_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
+        lbl_posture_title.setProperty("class", "ReportMetricLabel")
         self.lbl_posture_val = QLabel("NO FINDINGS")
         self.lbl_posture_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff;")
         self.lbl_posture_val.setWordWrap(True)
@@ -248,12 +257,12 @@ class ReportSummaryInspector(QWidget):
 
         # Card B: Severity Breakdown
         self.card_breakdown = QFrame()
-        self.card_breakdown.setStyleSheet("background: rgba(22, 27, 34, 0.7); border: 1px solid #30363d; border-radius: 6px; padding: 6px;")
+        self.card_breakdown.setProperty("class", "ReportMetricCard")
         v_breakdown = QVBoxLayout(self.card_breakdown)
         v_breakdown.setContentsMargins(6, 6, 6, 6)
         v_breakdown.setSpacing(6)
         lbl_breakdown_title = QLabel(t("report.summary_breakdown_label", "SEVERITY BREAKDOWN"))
-        lbl_breakdown_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
+        lbl_breakdown_title.setProperty("class", "ReportMetricLabel")
         v_breakdown.addWidget(lbl_breakdown_title)
 
         self.pill_crit = self._create_pill_label("CRITICAL", "#f85149")
@@ -272,13 +281,13 @@ class ReportSummaryInspector(QWidget):
 
         # Card C: Findings Status
         self.card_status = QFrame()
-        self.card_status.setStyleSheet("background: rgba(22, 27, 34, 0.7); border: 1px solid #30363d; border-radius: 6px; padding: 6px;")
+        self.card_status.setProperty("class", "ReportMetricCard")
         v_status = QVBoxLayout(self.card_status)
         v_status.setContentsMargins(6, 6, 6, 6)
         lbl_status_title = QLabel(t("report.summary_status_label", "FINDINGS STATUS"))
-        lbl_status_title.setStyleSheet("font-size: 10px; font-weight: bold; color: #8b949e;")
+        lbl_status_title.setProperty("class", "ReportMetricLabel")
         self.lbl_status_val = QLabel("0 Total · 0 Open · 0 Resolved")
-        self.lbl_status_val.setStyleSheet("font-size: 12px; font-weight: bold; color: #c9d1d9;")
+        self.lbl_status_val.setProperty("class", "ReportMetricValue")
         self.lbl_status_val.setWordWrap(True)
         v_status.addWidget(lbl_status_title)
         v_status.addWidget(self.lbl_status_val)
@@ -296,7 +305,7 @@ class ReportSummaryInspector(QWidget):
         intro_layout.setSpacing(6)
 
         lbl_intro_header = QLabel(t("report.summary_intro_title", "Management Summary / Executive Narrative"))
-        lbl_intro_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(intro_card, lbl_intro_header)
         lbl_intro_header.setWordWrap(True)
         intro_layout.addWidget(lbl_intro_header)
 
@@ -318,13 +327,13 @@ class ReportSummaryInspector(QWidget):
 
         matrix_hdr = QHBoxLayout()
         self.lbl_matrix_title = QLabel(t("report.summary_matrix_title", "Findings Matrix (Overview)"))
-        self.lbl_matrix_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(matrix_card, self.lbl_matrix_title)
         self.lbl_matrix_title.setWordWrap(True)
         matrix_hdr.addWidget(self.lbl_matrix_title)
         matrix_hdr.addStretch()
 
         self.lbl_matrix_hint = QLabel(t("report.summary_matrix_hint", "Double-click or click [>] to inspect finding"))
-        self.lbl_matrix_hint.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self.lbl_matrix_hint.setProperty("class", "ReportInspectorHint")
         self.lbl_matrix_hint.setWordWrap(True)
         matrix_hdr.addWidget(self.lbl_matrix_hint)
         matrix_layout.addLayout(matrix_hdr)
@@ -354,32 +363,7 @@ class ReportSummaryInspector(QWidget):
         self.tbl_matrix.setMinimumWidth(0)
         self.tbl_matrix.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.tbl_matrix.cellDoubleClicked.connect(self._on_table_double_clicked)
-        self.tbl_matrix.setStyleSheet(
-            """
-            QTableWidget {
-                background: #161b22;
-                border: 1px solid #30363d;
-                border-radius: 4px;
-                gridline-color: #21262d;
-                color: #c9d1d9;
-            }
-            QHeaderView::section {
-                background: #0d1117;
-                color: #8b949e;
-                font-weight: bold;
-                font-size: 11px;
-                border: 1px solid #21262d;
-                padding: 4px;
-            }
-            QTableWidget::item:hover {
-                background: rgba(0, 229, 255, 0.08);
-            }
-            QTableWidget::item:selected {
-                background: rgba(0, 229, 255, 0.18);
-                color: #f0f6fc;
-            }
-            """
-        )
+        self.tbl_matrix.setProperty("class", "ReportInspectorTable")
         matrix_layout.addWidget(self.tbl_matrix)
 
         self.content_layout.addWidget(matrix_card)
@@ -391,7 +375,7 @@ class ReportSummaryInspector(QWidget):
         hl_layout.setSpacing(8)
 
         lbl_hl_header = QLabel(t("report.summary_highlights_title", "Key Assessment Highlights & Vectors"))
-        lbl_hl_header.setStyleSheet("font-size: 12px; font-weight: bold; color: #f0f6fc;")
+        style_inspector_section(highlights_card, lbl_hl_header)
         lbl_hl_header.setWordWrap(True)
         hl_layout.addWidget(lbl_hl_header)
 
