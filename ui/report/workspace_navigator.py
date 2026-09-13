@@ -8,7 +8,7 @@ with 1-click Loot synchronization and quick navigation.
 
 from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -23,7 +23,7 @@ from core.i18n import t
 from core.phases import normalize_phase_key
 from core.reporting import ReportWorkspaceDocument
 from ui.glass_panel import GlassPanel
-from ui.styles.icons import icon
+from ui.styles.icons import get_theme_color, icon
 
 SEV_COLORS = {
     "critical": "#f85149",
@@ -62,6 +62,8 @@ class ReportWorkspaceNavigator(QWidget):
         super().__init__(parent)
         self.setObjectName("ReportWorkspaceNavigator")
         self._doc: Optional[ReportWorkspaceDocument] = None
+        self._project_name: str = ""
+        self._target_ip: str = ""
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -87,7 +89,7 @@ class ReportWorkspaceNavigator(QWidget):
         self.btn_sync_loot.setObjectName("btn_nav_sync_loot")
         self.btn_sync_loot.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_sync_loot.setToolTip(t("report.sync_from_loot", "Sync / append from Loot"))
-        self.btn_sync_loot.setIcon(icon("fa5s.sync-alt", color="#7ee787"))
+        self.btn_sync_loot.setIcon(icon("fa5s.sync-alt", color=get_theme_color("STATUS_SUCCESS")))
         self.btn_sync_loot.clicked.connect(self.sync_loot_requested.emit)
         top_row.addWidget(self.btn_sync_loot)
 
@@ -95,7 +97,7 @@ class ReportWorkspaceNavigator(QWidget):
         self.btn_add_finding.setObjectName("btn_nav_add_finding")
         self.btn_add_finding.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_add_finding.setToolTip(t("report.add_finding", "Add new finding"))
-        self.btn_add_finding.setIcon(icon("fa5s.plus", color="#00e5ff"))
+        self.btn_add_finding.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
         self.btn_add_finding.clicked.connect(self.add_finding_requested.emit)
         top_row.addWidget(self.btn_add_finding)
 
@@ -113,31 +115,6 @@ class ReportWorkspaceNavigator(QWidget):
         self.tree.setHeaderHidden(True)
         self.tree.setAnimated(True)
         self.tree.setIndentation(16)
-        self.tree.setStyleSheet(
-            """
-            QTreeWidget#WorkspaceNavTree {
-                background-color: rgba(13, 17, 23, 0.7);
-                border: 1px solid rgba(48, 54, 61, 0.6);
-                border-radius: 6px;
-                color: #c9d1d9;
-                font-size: 12px;
-                padding: 4px;
-            }
-            QTreeWidget#WorkspaceNavTree::item {
-                padding: 5px 8px;
-                border-radius: 4px;
-            }
-            QTreeWidget#WorkspaceNavTree::item:hover {
-                background-color: rgba(22, 27, 34, 0.9);
-                color: #f0f6fc;
-            }
-            QTreeWidget#WorkspaceNavTree::item:selected {
-                background-color: #1f293d;
-                color: #00e5ff;
-                font-weight: bold;
-            }
-            """
-        )
         self.tree.itemClicked.connect(self._on_item_clicked)
         self.tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         main_layout.addWidget(self.tree, stretch=1)
@@ -149,40 +126,45 @@ class ReportWorkspaceNavigator(QWidget):
         target_ip: str = "",
     ) -> None:
         self._doc = doc
+        self._project_name = project_name
+        self._target_ip = target_ip
         self.lbl_project.setText(project_name or t("report.workspace_no_project", "Kein Projekt"))
         scope_text = target_ip or doc.metadata.target_scope
         self.lbl_scope.setText(f"Scope: {scope_text}" if scope_text else "")
 
         self.tree.clear()
 
+        nav_color = get_theme_color("CYBER_BLUE_LIGHT")
+        accent_cyan = get_theme_color("CYBER_CYAN")
+
         # 1. Metadaten
         item_meta = QTreeWidgetItem(self.tree)
         item_meta.setText(0, t("report.section_metadata", "Metadata & Scope"))
-        item_meta.setIcon(0, icon("fa5s.clipboard-list", color="#79c0ff"))
+        item_meta.setIcon(0, icon("fa5s.clipboard-list", color=nav_color))
         item_meta.setData(0, Qt.ItemDataRole.UserRole, ("metadata", None))
 
         # 2. Narrativ Sektionen
         item_narrative_root = QTreeWidgetItem(self.tree)
         item_narrative_root.setText(0, t("report.group_narrative", "Report Sections"))
-        item_narrative_root.setIcon(0, icon("fa5s.book-open", color="#79c0ff"))
+        item_narrative_root.setIcon(0, icon("fa5s.book-open", color=nav_color))
         item_narrative_root.setData(0, Qt.ItemDataRole.UserRole, ("narratives_root", None))
 
         # Executive Summary
         item_exec = QTreeWidgetItem(item_narrative_root)
         item_exec.setText(0, t("report.section_exec_summary", "Executive Summary"))
-        item_exec.setIcon(0, icon("fa5s.align-left", color="#79c0ff"))
+        item_exec.setIcon(0, icon("fa5s.align-left", color=nav_color))
         item_exec.setData(0, Qt.ItemDataRole.UserRole, ("section", "executive_summary"))
 
         # Scope & Methodik
         item_scope = QTreeWidgetItem(item_narrative_root)
         item_scope.setText(0, t("report.section_scope", "Scope & Methodology"))
-        item_scope.setIcon(0, icon("fa5s.bullseye", color="#79c0ff"))
+        item_scope.setIcon(0, icon("fa5s.bullseye", color=nav_color))
         item_scope.setData(0, Qt.ItemDataRole.UserRole, ("section", "scope_limitations"))
 
         # Angriffspfad
         item_attack = QTreeWidgetItem(item_narrative_root)
         item_attack.setText(0, t("report.section_attack_path", "Attack Path"))
-        item_attack.setIcon(0, icon("fa5s.route", color="#79c0ff"))
+        item_attack.setIcon(0, icon("fa5s.route", color=nav_color))
         item_attack.setData(0, Qt.ItemDataRole.UserRole, ("section", "attack_path"))
 
         item_narrative_root.setExpanded(True)
@@ -191,7 +173,7 @@ class ReportWorkspaceNavigator(QWidget):
         findings_count = len(doc.findings)
         item_findings_root = QTreeWidgetItem(self.tree)
         item_findings_root.setText(0, f"{t('report.group_findings', 'Findings (Loot / Findings)')} ({findings_count})")
-        item_findings_root.setIcon(0, icon("fa5s.shield-alt", color="#00e5ff"))
+        item_findings_root.setIcon(0, icon("fa5s.shield-alt", color=accent_cyan))
         item_findings_root.setData(0, Qt.ItemDataRole.UserRole, ("findings_overview", None))
 
         # Group findings by phase
@@ -241,18 +223,18 @@ class ReportWorkspaceNavigator(QWidget):
         # 4. Remediation & Anhang
         item_remed = QTreeWidgetItem(self.tree)
         item_remed.setText(0, t("report.section_remediation", "Remediation & Action Plan"))
-        item_remed.setIcon(0, icon("fa5s.tasks", color="#79c0ff"))
+        item_remed.setIcon(0, icon("fa5s.tasks", color=nav_color))
         item_remed.setData(0, Qt.ItemDataRole.UserRole, ("section", "remediation_table"))
 
         item_appendix = QTreeWidgetItem(self.tree)
         item_appendix.setText(0, t("report.section_appendix", "Appendix & Evidence"))
-        item_appendix.setIcon(0, icon("fa5s.paperclip", color="#79c0ff"))
+        item_appendix.setIcon(0, icon("fa5s.paperclip", color=nav_color))
         item_appendix.setData(0, Qt.ItemDataRole.UserRole, ("section", "appendix"))
 
         # 5. Raw Markdown
         item_raw = QTreeWidgetItem(self.tree)
         item_raw.setText(0, t("report.section_raw_markdown", "Raw Markdown (Source)"))
-        item_raw.setIcon(0, icon("fa5s.code", color="#c9d1d9"))
+        item_raw.setIcon(0, icon("fa5s.code", color=nav_color))
         item_raw.setData(0, Qt.ItemDataRole.UserRole, ("raw_markdown", None))
 
     def _on_item_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
@@ -291,3 +273,16 @@ class ReportWorkspaceNavigator(QWidget):
                 return
             if search_node(top):
                 return
+
+    def refresh_theme(self) -> None:
+        """Re-applies theme colors to navigation icons and header buttons."""
+        self.btn_sync_loot.setIcon(icon("fa5s.sync-alt", color=get_theme_color("STATUS_SUCCESS")))
+        self.btn_add_finding.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
+        if self._doc is not None:
+            self.load_document(self._doc, self._project_name, self._target_ip)
+
+    def changeEvent(self, event: Optional[QEvent]) -> None:
+        super().changeEvent(event)
+        if event is not None and event.type() in (QEvent.Type.PaletteChange, QEvent.Type.StyleChange):
+            self.refresh_theme()
+

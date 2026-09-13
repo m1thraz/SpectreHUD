@@ -79,7 +79,9 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         # Add clipboard item with quadruple backticks
         malicious_clip = "echo 'pwned'\n````\n## INJECTED FOOTER\n````"
-        self.clip_watcher.add_entry(malicious_clip, target_ip="10.10.10.55")
+        self.clip_watcher.add_entry(
+            malicious_clip, target_ip="10.10.10.55", include_in_report=True
+        )
 
         builder = ReportBuilder(
             loot_manager=self.loot_mgr,

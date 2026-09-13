@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -30,7 +31,11 @@ from core.theme_palette import (
     ACCENT_NAV_ACTIVE,
     BG_SURFACE,
     BORDER_DEFAULT,
+    CYBER_BLUE,
+    CYBER_BLUE_LIGHT,
     CYBER_CYAN,
+    STATUS_PURPLE,
+    STATUS_SUCCESS,
     TEXT_PRIMARY,
 )
 from ui.report.icon_assets import (
@@ -828,67 +833,152 @@ class ClipboardHistoryPickerDialog(QDialog):
             self.accept()
 
 
-class ReportExportTypeDialog(QDialog):
+class ReportExportTypeDialog(BaseHudDialog):
     """Dialog for choosing report export format (HTML/PDF, Obsidian, CherryTree, Markdown)."""
 
     def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        self.setWindowTitle(t("report.export_dialog_title", "Export Report"))
-        self.setMinimumWidth(320)
+        title = t("report.export_dialog_title", "SPECTRE // EXPORT REPORT")
+        super().__init__(title=title, parent=parent)
+        self.setObjectName("ReportExportTypeDialog")
+        self.set_dialog_title(title)
+        self.setMinimumWidth(540)
         self.selected_type: Optional[str] = None
+        self.export_buttons: list[QPushButton] = []
         self._build_ui()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setSpacing(8)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout = self.body_layout
+        layout.setSpacing(10)
+        layout.setContentsMargins(16, 12, 16, 16)
 
         lbl = QLabel(
             t("report.export_dialog_message", "Choose an export format for the current report.")
         )
         lbl.setWordWrap(True)
+        lbl.setStyleSheet(f"color: {TEXT_PRIMARY}; font-size: 12px; margin-bottom: 4px;")
         layout.addWidget(lbl)
-        layout.addSpacing(4)
 
         choices = (
             (
                 "html",
                 t("report.export_html", "Export HTML/PDF"),
+                "WEB / PDF",
                 t(
                     "report.export_html_desc",
                     "Create an editable web report or a print-ready HTML file for PDF output.",
                 ),
+                "fa5s.file-pdf",
+                CYBER_CYAN,
+                "rgba(0, 229, 255, 0.12)",
+                "rgba(0, 229, 255, 0.35)",
             ),
             (
                 "obsidian",
                 t("report.export_obsidian", "Export to Obsidian..."),
+                "VAULT",
                 t(
                     "report.export_obsidian_desc",
                     "Write the report and linked screenshots into the configured Obsidian vault.",
                 ),
+                "fa5s.gem",
+                STATUS_PURPLE,
+                "rgba(188, 140, 255, 0.12)",
+                "rgba(188, 140, 255, 0.35)",
             ),
             (
                 "cherrytree",
                 t("report.export_cherrytree", "Export CherryTree Package..."),
+                "PACKAGE",
                 t(
                     "report.export_cherrytree_desc",
                     "Create a portable HTML package with attachments for import into CherryTree.",
                 ),
+                "fa5s.tree",
+                STATUS_SUCCESS,
+                "rgba(57, 211, 83, 0.12)",
+                "rgba(57, 211, 83, 0.35)",
             ),
             (
                 "markdown",
                 t("report.export_copy", "Export MD..."),
+                ".MD RAW",
                 t(
                     "report.export_markdown_desc",
                     "Save an exact Markdown copy of the current Report Editor document.",
                 ),
+                "fa5s.file-alt",
+                CYBER_BLUE,
+                "rgba(88, 166, 255, 0.12)",
+                "rgba(88, 166, 255, 0.35)",
             ),
         )
 
-        for export_type, label, description in choices:
+        for (
+            export_type,
+            label,
+            badge,
+            description,
+            icon_name,
+            accent_color,
+            bg_tint,
+            border_tint,
+        ) in choices:
+            card = QFrame()
+            card.setObjectName("ExportOptionCard")
+            card.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            card_layout = QHBoxLayout(card)
+            card_layout.setContentsMargins(14, 10, 14, 10)
+            card_layout.setSpacing(14)
+
+            # Icon Box
+            icon_box = QFrame()
+            icon_box.setObjectName("ExportIconBox")
+            icon_box.setFixedSize(40, 40)
+            icon_box.setStyleSheet(
+                f"QFrame#ExportIconBox {{ background: {bg_tint}; border: 1px solid {border_tint}; border-radius: 8px; }}"
+            )
+            ib_layout = QVBoxLayout(icon_box)
+            ib_layout.setContentsMargins(0, 0, 0, 0)
+            ib_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_icon = QLabel()
+            lbl_icon.setPixmap(icon(icon_name, color=accent_color).pixmap(20, 20))
+            ib_layout.addWidget(lbl_icon)
+            card_layout.addWidget(icon_box)
+
+            # Center text layout
+            text_layout = QVBoxLayout()
+            text_layout.setContentsMargins(0, 0, 0, 0)
+            text_layout.setSpacing(3)
+
+            title_row = QHBoxLayout()
+            title_row.setSpacing(8)
+            lbl_title = QLabel(label)
+            lbl_title.setObjectName("ExportOptionTitle")
+            title_row.addWidget(lbl_title)
+
+            lbl_badge = QLabel(badge)
+            lbl_badge.setObjectName("ExportOptionBadge")
+            title_row.addWidget(lbl_badge)
+            title_row.addStretch()
+            text_layout.addLayout(title_row)
+
+            desc_label = QLabel(description)
+            desc_label.setObjectName("ExportOptionDesc")
+            desc_label.setWordWrap(True)
+            desc_label.setProperty("class", "HintLabel")
+            desc_label.setProperty("exportType", export_type)
+            text_layout.addWidget(desc_label)
+
+            card_layout.addLayout(text_layout, stretch=1)
+
+            # Action button
             btn = QPushButton(label)
-            btn.setMinimumHeight(32)
+            btn.setObjectName("ExportOptionBtn")
             btn.setProperty("class", "SecondaryBtn")
+            btn.setProperty("exportType", export_type)
+            btn.setIcon(icon("fa5s.arrow-right", color=CYBER_BLUE_LIGHT))
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
             def _make_handler(et: str):
                 def _handle(_checked: bool = False) -> None:
@@ -897,20 +987,31 @@ class ReportExportTypeDialog(QDialog):
 
                 return _handle
 
-            btn.clicked.connect(_make_handler(export_type))
-            layout.addWidget(btn)
+            handler = _make_handler(export_type)
+            btn.clicked.connect(handler)
+            self.export_buttons.append(btn)
+            card_layout.addWidget(btn)
 
-            description_label = QLabel(description)
-            description_label.setWordWrap(True)
-            description_label.setProperty("class", "HintLabel")
-            description_label.setProperty("exportType", export_type)
-            layout.addWidget(description_label)
+            # Clicking anywhere on the card triggers the button
+            def _make_card_click(b: QPushButton):
+                def _mouse_press(e) -> None:
+                    b.click()
 
-        layout.addSpacing(4)
+                return _mouse_press
+
+            card.mousePressEvent = _make_card_click(btn)  # type: ignore[assignment]
+            layout.addWidget(card)
+
+        layout.addSpacing(6)
+        footer = QHBoxLayout()
+        footer.addStretch()
         cancel_btn = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel_btn.setProperty("class", "SecondaryBtn")
         cancel_btn.setMinimumHeight(32)
+        cancel_btn.setMinimumWidth(100)
         cancel_btn.clicked.connect(self.reject)
-        layout.addWidget(cancel_btn)
+        footer.addWidget(cancel_btn)
+        layout.addLayout(footer)
 
     @classmethod
     def select_export_type(cls, parent: Optional[QWidget] = None) -> Optional[str]:

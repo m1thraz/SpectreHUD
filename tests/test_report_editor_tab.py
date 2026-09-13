@@ -893,7 +893,7 @@ Text
         self.assertEqual(dialog.selected_type, "html")
 
         # Verify button options on dialog
-        labels = [btn.text() for btn in dialog.findChildren(QPushButton)]
+        labels = [btn.text() for btn in dialog.findChildren(QPushButton) if btn != dialog.btn_dialog_close]
         self.assertEqual(
             labels[:4],
             [
@@ -906,6 +906,9 @@ Text
                 t("report.export_copy", "Export MD..."),
             ],
         )
+        self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
+        self.assertEqual(dialog.lbl_dialog_title.text(), t("report.export_dialog_title", "SPECTRE // EXPORT REPORT"))
+        self.assertEqual(len(dialog.export_buttons), 4)
 
         # 2. Test export_actions delegation
         with patch.object(ReportExportTypeDialog, "select_export_type", return_value="html"):

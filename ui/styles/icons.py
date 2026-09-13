@@ -9,8 +9,9 @@ from typing import Mapping, Optional
 from PyQt6.QtGui import QIcon
 import qtawesome as qta
 
-from ui.styles.palette import CYBER_CYAN, TEXT_PRIMARY
+from ui.styles.palette import CYBER_CYAN, CYBER_DARK_PALETTE, TEXT_PRIMARY
 
+_active_palette: dict[str, str] = dict(CYBER_DARK_PALETTE)
 _active_icon_color = CYBER_CYAN
 _active_icon_color_active = TEXT_PRIMARY
 _DEFAULT_ACTIVE_COLOR = object()
@@ -18,9 +19,20 @@ _DEFAULT_ACTIVE_COLOR = object()
 
 def set_icon_palette(palette: Mapping[str, str]) -> None:
     """Use the active application palette for subsequently created default icons."""
-    global _active_icon_color, _active_icon_color_active
-    _active_icon_color = palette["CYBER_CYAN"]
-    _active_icon_color_active = palette["TEXT_PRIMARY"]
+    global _active_icon_color, _active_icon_color_active, _active_palette
+    _active_palette = dict(palette)
+    _active_icon_color = palette.get("CYBER_CYAN", CYBER_CYAN)
+    _active_icon_color_active = palette.get("TEXT_PRIMARY", TEXT_PRIMARY)
+
+
+def get_theme_color(token: str, default: Optional[str] = None) -> str:
+    """Return the active theme's hex/rgba value for the requested palette token."""
+    return _active_palette.get(token, default or _active_icon_color)
+
+
+def get_active_palette() -> dict[str, str]:
+    """Return a copy of the currently active theme palette dictionary."""
+    return dict(_active_palette)
 
 
 def icon(

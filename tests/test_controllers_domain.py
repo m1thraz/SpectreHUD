@@ -551,7 +551,9 @@ class TestControllersDomain(unittest.TestCase):
 
     def test_history_controller_export_report_uses_report_builder_directly(self):
         """HistoryController export must invoke ReportBuilder directly."""
-        self.history_ctrl.add_entry("curl -s http://10.10.10.55/admin", target_ip="10.10.10.55")
+        self.history_ctrl.add_entry(
+            "curl -s http://10.10.10.55/admin", target_ip="10.10.10.55", include_in_report=True
+        )
         out_file = self.temp_path / "controller_history_export.md"
 
         self.history_ctrl.export_report_markdown(out_file, target_ip="10.10.10.55")

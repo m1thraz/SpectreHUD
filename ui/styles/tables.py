@@ -121,4 +121,30 @@ QHeaderView::section {
     padding: 6px;
     font-weight: bold;
 }
+
+/* Report Workspace Tree Navigator */
+QTreeWidget#WorkspaceNavTree {
+    background-color: {SURFACE_A70};
+    border: 1px solid {BORDER_A60};
+    border-radius: 6px;
+    color: {TEXT_PRIMARY};
+    font-size: 12px;
+    padding: 4px;
+}
+
+QTreeWidget#WorkspaceNavTree::item {
+    padding: 5px 8px;
+    border-radius: 4px;
+}
+
+QTreeWidget#WorkspaceNavTree::item:hover {
+    background-color: {CARD_HOVER_A90};
+    color: {TEXT_WHITE};
+}
+
+QTreeWidget#WorkspaceNavTree::item:selected {
+    background-color: {ACCENT_NAV_ACTIVE};
+    color: {CYBER_BLUE_LIGHT};
+    font-weight: bold;
+}
 """

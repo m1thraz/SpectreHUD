@@ -88,9 +88,20 @@ class HistoryController(QObject):
             target_ip=actual_target, filter_type=actual_filter_type, search_query=search_query
         )
 
-    def add_entry(self, text: str, target_ip: Optional[str] = None) -> None:
+    def add_entry(
+        self,
+        text: str,
+        target_ip: Optional[str] = None,
+        phase_id: Optional[str] = None,
+        include_in_report: bool = False,
+    ) -> None:
         try:
-            entry = self.clipboard_history.add_entry(text=text, target_ip=target_ip)
+            entry = self.clipboard_history.add_entry(
+                text=text,
+                target_ip=target_ip or "",
+                phase_id=phase_id,
+                include_in_report=include_in_report,
+            )
             if entry is not None:
                 self.history_updated.emit()
         except (PersistenceError, StorageError, OSError) as e:

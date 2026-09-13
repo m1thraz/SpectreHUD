@@ -94,6 +94,40 @@ class TestReportWorkspaceUI(unittest.TestCase):
         nav.btn_add_finding.click()
         self.assertEqual(add_clicked, [True])
 
+    def test_workspace_navigator_theme_dependent_icon_colors(self):
+        """Verify that navigator section items use theme-dependent accent colors (e.g. violet on Dracula)."""
+        from core.theme_loader import ThemeLoader
+        from ui.styles.icons import get_theme_color, set_icon_palette
+
+        theme_loader = ThemeLoader()
+        cyber_palette = theme_loader.load_theme("cyber_dark")
+        dracula_palette = theme_loader.load_theme("dracula")
+
+        # Start on cyber dark
+        set_icon_palette(cyber_palette)
+        self.assertEqual(get_theme_color("CYBER_BLUE_LIGHT"), "#79c0ff")
+
+        nav = ReportWorkspaceNavigator()
+        doc = ReportWorkspaceDocument(
+            metadata=ReportMetadata(client="TestCorp"),
+            findings=[ReportFindingItem(id="f1", title="SQLi", severity="high", phase="access")],
+        )
+        nav.load_document(doc, project_name="Box", target_ip="10.10.10.10")
+
+        # Verify initial load creates valid icons
+        self.assertFalse(nav.tree.topLevelItem(0).icon(0).isNull())
+
+        # Switch to Dracula theme (violet accent)
+        set_icon_palette(dracula_palette)
+        self.assertEqual(get_theme_color("CYBER_BLUE_LIGHT"), "#d6b3ff")
+
+        # Refresh theme updates navigator icons
+        nav.refresh_theme()
+        self.assertFalse(nav.tree.topLevelItem(0).icon(0).isNull())
+
+        # Cleanup: restore cyber dark
+        set_icon_palette(cyber_palette)
+
     def test_workspace_navigator_enumeration_loot_grouping(self):
         """Verify that enumeration and German recon findings are categorized under Recon, never under Others."""
         nav = ReportWorkspaceNavigator()

@@ -141,6 +141,58 @@ QLabel#DialogTitle {
     letter-spacing: 0.5px;
 }
 
+/* Export Report Dialog Cards */
+QFrame#ExportOptionCard {
+    background-color: {SURFACE_A70};
+    border: 1px solid {BORDER_A60};
+    border-radius: 8px;
+}
+
+QFrame#ExportOptionCard:hover {
+    background-color: {CARD_HOVER_A90};
+    border-color: {CYAN_A50};
+}
+
+QLabel#ExportOptionTitle {
+    color: {TEXT_PRIMARY};
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#ExportOptionDesc {
+    color: {TEXT_MUTED};
+    font-size: 11px;
+}
+
+QLabel#ExportOptionBadge {
+    background-color: {NAV_A95};
+    color: {CYBER_BLUE};
+    border: 1px solid {ACTIVE_BLUE_A50};
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: {code_font};
+    font-size: 9px;
+    font-weight: bold;
+}
+
+QPushButton#ExportOptionBtn {
+    background-color: {SURFACE_A85};
+    color: {TEXT_PRIMARY};
+    border: 1px solid {BORDER_A80};
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    min-height: 22px;
+}
+
+QPushButton#ExportOptionBtn:hover {
+    background-color: {ACTIVE_BLUE_A25};
+    border-color: {CYBER_CYAN};
+    color: {CYBER_CYAN};
+}
+
+
 /* Form Inputs inside HUD and Dialogs */
 QLineEdit, QPlainTextEdit, QTextEdit {
     background-color: {SURFACE_A90};
