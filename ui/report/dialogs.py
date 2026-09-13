@@ -31,11 +31,7 @@ from core.theme_palette import (
     ACCENT_NAV_ACTIVE,
     BG_SURFACE,
     BORDER_DEFAULT,
-    CYBER_BLUE,
-    CYBER_BLUE_LIGHT,
     CYBER_CYAN,
-    STATUS_PURPLE,
-    STATUS_SUCCESS,
     TEXT_PRIMARY,
 )
 from ui.report.icon_assets import (
@@ -44,7 +40,7 @@ from ui.report.icon_assets import (
     REPORT_ICONS,
     ReportIconDefinition,
 )
-from ui.styles.icons import icon
+from ui.styles.icons import get_theme_color, icon
 from ui.template_manager_dialog import TemplateManagerDialog
 from ui.base_dialog import BaseHudDialog
 
@@ -838,7 +834,12 @@ class ReportExportTypeDialog(BaseHudDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         title = t("report.export_dialog_title", "SPECTRE // EXPORT REPORT")
-        super().__init__(title=title, parent=parent)
+        # The report workspace lives below MainScrollArea, whose local stylesheet
+        # deliberately makes report descendants transparent. Keep this top-level
+        # chooser parented to the owning window so those pane-only rules cannot
+        # erase the dialog shell, cards, and controls.
+        dialog_parent = parent.window() if parent is not None else None
+        super().__init__(title=title, parent=dialog_parent)
         self.setObjectName("ReportExportTypeDialog")
         self.set_dialog_title(title)
         self.setMinimumWidth(540)
@@ -854,8 +855,8 @@ class ReportExportTypeDialog(BaseHudDialog):
         lbl = QLabel(
             t("report.export_dialog_message", "Choose an export format for the current report.")
         )
+        lbl.setObjectName("ExportDialogIntro")
         lbl.setWordWrap(True)
-        lbl.setStyleSheet(f"color: {TEXT_PRIMARY}; font-size: 12px; margin-bottom: 4px;")
         layout.addWidget(lbl)
 
         choices = (
@@ -868,9 +869,9 @@ class ReportExportTypeDialog(BaseHudDialog):
                     "Create an editable web report or a print-ready HTML file for PDF output.",
                 ),
                 "fa5s.file-pdf",
-                CYBER_CYAN,
-                "rgba(0, 229, 255, 0.12)",
-                "rgba(0, 229, 255, 0.35)",
+                "CYBER_CYAN",
+                "CYAN_A15",
+                "CYAN_A35",
             ),
             (
                 "obsidian",
@@ -881,9 +882,9 @@ class ReportExportTypeDialog(BaseHudDialog):
                     "Write the report and linked screenshots into the configured Obsidian vault.",
                 ),
                 "fa5s.gem",
-                STATUS_PURPLE,
-                "rgba(188, 140, 255, 0.12)",
-                "rgba(188, 140, 255, 0.35)",
+                "STATUS_PURPLE",
+                "PURPLE_A20",
+                "PURPLE_A40",
             ),
             (
                 "cherrytree",
@@ -894,9 +895,9 @@ class ReportExportTypeDialog(BaseHudDialog):
                     "Create a portable HTML package with attachments for import into CherryTree.",
                 ),
                 "fa5s.tree",
-                STATUS_SUCCESS,
-                "rgba(57, 211, 83, 0.12)",
-                "rgba(57, 211, 83, 0.35)",
+                "STATUS_SUCCESS",
+                "SUCCESS_A20",
+                "SUCCESS_A40",
             ),
             (
                 "markdown",
@@ -907,9 +908,9 @@ class ReportExportTypeDialog(BaseHudDialog):
                     "Save an exact Markdown copy of the current Report Editor document.",
                 ),
                 "fa5s.file-alt",
-                CYBER_BLUE,
-                "rgba(88, 166, 255, 0.12)",
-                "rgba(88, 166, 255, 0.35)",
+                "CYBER_BLUE",
+                "BLUE_A25",
+                "BLUE_A40",
             ),
         )
 
@@ -919,10 +920,13 @@ class ReportExportTypeDialog(BaseHudDialog):
             badge,
             description,
             icon_name,
-            accent_color,
-            bg_tint,
-            border_tint,
+            accent_token,
+            bg_tint_token,
+            border_tint_token,
         ) in choices:
+            accent_color = get_theme_color(accent_token)
+            bg_tint = get_theme_color(bg_tint_token)
+            border_tint = get_theme_color(border_tint_token)
             card = QFrame()
             card.setObjectName("ExportOptionCard")
             card.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -934,6 +938,7 @@ class ReportExportTypeDialog(BaseHudDialog):
             # Icon Box
             icon_box = QFrame()
             icon_box.setObjectName("ExportIconBox")
+            icon_box.setProperty("exportType", export_type)
             icon_box.setFixedSize(40, 40)
             icon_box.setStyleSheet(
                 f"QFrame#ExportIconBox {{ background: {bg_tint}; border: 1px solid {border_tint}; border-radius: 8px; }}"
@@ -977,7 +982,7 @@ class ReportExportTypeDialog(BaseHudDialog):
             btn.setObjectName("ExportOptionBtn")
             btn.setProperty("class", "SecondaryBtn")
             btn.setProperty("exportType", export_type)
-            btn.setIcon(icon("fa5s.arrow-right", color=CYBER_BLUE_LIGHT))
+            btn.setIcon(icon("fa5s.arrow-right", color=get_theme_color("CYBER_BLUE_LIGHT")))
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
             def _make_handler(et: str):

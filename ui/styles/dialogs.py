@@ -142,6 +142,12 @@ QLabel#DialogTitle {
 }
 
 /* Export Report Dialog Cards */
+QLabel#ExportDialogIntro {
+    color: {TEXT_PRIMARY};
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
 QFrame#ExportOptionCard {
     background-color: {SURFACE_A70};
     border: 1px solid {BORDER_A60};
