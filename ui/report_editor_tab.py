@@ -204,7 +204,7 @@ class ReportEditorTab(QWidget):
         self.active_template: Optional[ReportTemplate] = None
         self.current_project: Optional[str] = None
         self._dirty = False
-        self._view_mode = ViewMode.SPLIT
+        self._view_mode = ViewMode.WORKSPACE
         self._light_report_view = False
         self._preview_markdown_snapshot: Optional[str] = None
 
@@ -455,8 +455,9 @@ class ReportEditorTab(QWidget):
         self.view_menu = QMenu(self.btn_change_view)
         self._view_actions = {}
         for mode, key, fallback, icon_name in (
-            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.columns"),
+            (ViewMode.WORKSPACE, "report.mode_workspace", "Workspace", "fa5s.project-diagram"),
             (ViewMode.EDITOR, "report.mode_editor", "Editor", "fa5s.edit"),
+            (ViewMode.SPLIT, "report.mode_split", "Split", "fa5s.columns"),
             (ViewMode.PREVIEW, "report.mode_preview", "Live Preview", "fa5s.eye"),
         ):
             action = QAction(t(key, fallback), self.view_menu)
@@ -637,7 +638,7 @@ class ReportEditorTab(QWidget):
         sc_mode3.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         sc_mode4 = QShortcut(
-            QKeySequence("Ctrl+4"), self, activated=lambda: self._set_view_mode(ViewMode.SPLIT)
+            QKeySequence("Ctrl+4"), self, activated=lambda: self._set_view_mode(ViewMode.WORKSPACE)
         )
         sc_mode4.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
@@ -807,6 +808,7 @@ class ReportEditorTab(QWidget):
         self.preview_document.set_project_dir(proj_dir)
 
         content = self.report_file_manager.load(project_name)
+        restored_draft = False
 
         # Crash Recovery: Check for uncommitted draft from unexpected termination
         if has_recoverable_draft(proj_dir, content):
@@ -838,13 +840,7 @@ class ReportEditorTab(QWidget):
 
                 if msg.clickedButton() is btn_restore:
                     content = draft_text
-                    self.editor.blockSignals(True)
-                    self.editor.setPlainText(content)
-                    self.editor.blockSignals(False)
-                    self._set_dirty(True)
-                    self._update_preview()
-                    self._update_status_label()
-                    return
+                    restored_draft = True
                 else:
                     discard_draft(proj_dir)
 
@@ -853,7 +849,7 @@ class ReportEditorTab(QWidget):
         self.editor.blockSignals(True)
         self.editor.setPlainText(content)
         self.editor.blockSignals(False)
-        self._set_dirty(False)
+        self._set_dirty(restored_draft)
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(content)
         if hasattr(self, "navigator"):
             self.navigator.load_document(
@@ -861,6 +857,8 @@ class ReportEditorTab(QWidget):
                 project_name=project_name,
                 target_ip=self._get_target_ip(),
             )
+        if self._view_mode == ViewMode.WORKSPACE:
+            self._on_navigate_requested("metadata", None)
         self._update_preview()
         self._update_status_label()
 
@@ -1029,20 +1027,56 @@ class ReportEditorTab(QWidget):
             self.center_stack.setCurrentWidget(self.editor_glass)
             self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
             self.btn_toggle_raw.setToolTip(t("report.toggle_raw_form", "Switch to structured form"))
+        self._update_contextual_toolbar_visibility()
+
+    def _update_contextual_toolbar_visibility(self) -> None:
+        """Show Markdown tools only while the Markdown surface is actually active."""
+        if not hasattr(self, "format_toolbar_widget"):
+            return
+        raw_active = (
+            hasattr(self, "center_stack")
+            and hasattr(self, "editor_glass")
+            and self.center_stack.currentWidget() == self.editor_glass
+        )
+        show_formatting = self._view_mode in (ViewMode.EDITOR, ViewMode.SPLIT) or (
+            self._view_mode == ViewMode.WORKSPACE and raw_active
+        )
+        self.format_toolbar_widget.setVisible(show_formatting)
+        if show_formatting:
+            self.format_toolbar_widget.tools_container.setVisible(
+                not self.format_toolbar_widget.is_collapsed()
+            )
+        self.action_toolbar_widget.setVisible(True)
+        self.btn_toggle_raw.setVisible(self._view_mode != ViewMode.WORKSPACE)
+        self.btn_append_loot.setVisible(self._view_mode != ViewMode.WORKSPACE)
+
+    def _update_view_button(self) -> None:
+        labels = {
+            ViewMode.WORKSPACE: t("report.mode_workspace", "Workspace"),
+            ViewMode.EDITOR: t("report.mode_editor", "Editor"),
+            ViewMode.SPLIT: t("report.mode_split", "Split"),
+            ViewMode.PREVIEW: t("report.mode_preview", "Live Preview"),
+        }
+        icons = {
+            ViewMode.WORKSPACE: "fa5s.project-diagram",
+            ViewMode.EDITOR: "fa5s.edit",
+            ViewMode.SPLIT: "fa5s.columns",
+            ViewMode.PREVIEW: "fa5s.eye",
+        }
+        self.btn_change_view.setText(labels.get(self._view_mode, t("report.change_view", "Change View")))
+        self.btn_change_view.setIcon(self._toolbar_icon(icons.get(self._view_mode, "fa5s.columns")))
 
     def _apply_view_mode(self, mode: ViewMode) -> None:
         """Applies visibility and splitter layout for the selected view mode."""
         for action_mode, action in self._view_actions.items():
             action.setChecked(action_mode == mode)
-        if hasattr(self, "format_toolbar_widget"):
-            if self.format_toolbar_widget.is_collapsed():
-                self.format_toolbar_widget.setVisible(True)
-                self.format_toolbar_widget.tools_container.setVisible(False)
-            else:
-                self.format_toolbar_widget.setVisible(mode != ViewMode.PREVIEW)
-                self.format_toolbar_widget.tools_container.setVisible(mode != ViewMode.PREVIEW)
-
         nav_visible = self.navigator_glass.isVisible() if hasattr(self, "navigator_glass") else False
+        if mode in (ViewMode.EDITOR, ViewMode.SPLIT):
+            # The legacy views are deliberately clean Markdown surfaces; the
+            # navigator remains available through its explicit toolbar toggle.
+            nav_visible = False
+            self.navigator_glass.setVisible(False)
+            self.center_stack.setCurrentWidget(self.editor_glass)
         if hasattr(self, "btn_navigator"):
             self.btn_navigator.setChecked(nav_visible)
 
@@ -1096,10 +1130,12 @@ class ReportEditorTab(QWidget):
             self.center_stack.setVisible(False)
             self.preview_glass.setVisible(True)
             self.splitter.setSizes([0, 0, total_w])
+        self._update_contextual_toolbar_visibility()
+        self._update_view_button()
 
     def _cycle_view_mode(self) -> None:
-        """Cycles through standard views: EDITOR -> SPLIT -> PREVIEW -> EDITOR."""
-        modes = [ViewMode.EDITOR, ViewMode.SPLIT, ViewMode.PREVIEW]
+        """Cycles through all report views, starting with the primary workspace."""
+        modes = [ViewMode.WORKSPACE, ViewMode.EDITOR, ViewMode.SPLIT, ViewMode.PREVIEW]
         idx = modes.index(self._view_mode) if self._view_mode in modes else 0
         self._set_view_mode(modes[(idx + 1) % len(modes)])
 
@@ -1587,17 +1623,35 @@ class ReportEditorTab(QWidget):
         finally:
             self._syncing_from_inspector = False
         self._set_dirty(True)
+        self._draft_timer.start()
         self._update_preview()
+        if hasattr(self, "navigator"):
+            selected = self.navigator.tree.currentItem()
+            selected_data = (
+                selected.data(0, Qt.ItemDataRole.UserRole) if selected is not None else None
+            )
+            self.navigator.load_document(
+                self._workspace_doc,
+                project_name=self.current_project or "",
+                target_ip=self._get_target_ip(),
+            )
+            if selected_data:
+                self.navigator.select_item(*selected_data)
 
     def _on_navigate_requested(self, view_type: str, item_id: Optional[str]) -> None:
         """Switches the center inspector stack to the requested document section or finding."""
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(self.editor.toPlainText())
+        if self._view_mode != ViewMode.WORKSPACE:
+            self._set_view_mode(ViewMode.WORKSPACE)
+
+        preview_text = ""
 
         if view_type == "metadata":
             self.metadata_inspector.load_metadata(self._workspace_doc.metadata)
             self.center_stack.setCurrentWidget(self.metadata_inspector_glass)
             self._last_active_inspector = self.metadata_inspector_glass
+            preview_text = self._workspace_doc.metadata.title
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "finding" and item_id:
@@ -1607,6 +1661,7 @@ class ReportEditorTab(QWidget):
                 self.finding_inspector.load_finding(finding)
                 self.center_stack.setCurrentWidget(self.finding_inspector_glass)
                 self._last_active_inspector = self.finding_inspector_glass
+                preview_text = finding.title
                 if hasattr(self, "btn_toggle_raw"):
                     self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type in ("findings_overview", "phase_group"):
@@ -1619,6 +1674,7 @@ class ReportEditorTab(QWidget):
             self.finding_inspector.load_finding(target_finding)
             self.center_stack.setCurrentWidget(self.finding_inspector_glass)
             self._last_active_inspector = self.finding_inspector_glass
+            preview_text = target_finding.title if target_finding else ""
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type in ("section", "narratives_root"):
@@ -1627,19 +1683,23 @@ class ReportEditorTab(QWidget):
                 self.summary_inspector.load_summary(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.summary_inspector_glass)
                 self._last_active_inspector = self.summary_inspector_glass
+                preview_text = self.summary_inspector.lbl_title.text()
             elif sec_id == "remediation_table":
                 self.remediation_inspector.load_remediation(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.remediation_inspector_glass)
                 self._last_active_inspector = self.remediation_inspector_glass
+                preview_text = self.remediation_inspector.lbl_title.text()
             elif sec_id in ("attack_path", "attack_narrative"):
                 self.attack_path_inspector.load_attack_path(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.attack_path_inspector_glass)
                 self._last_active_inspector = self.attack_path_inspector_glass
+                preview_text = self.attack_path_inspector.lbl_title.text()
             elif sec_id in ("scope_limitations", "scope"):
                 self.scope_inspector.set_project_target_ip(self._get_target_ip())
                 self.scope_inspector.load_scope(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.scope_inspector_glass)
                 self._last_active_inspector = self.scope_inspector_glass
+                preview_text = self.scope_inspector.lbl_title.text()
             elif sec_id == "appendix":
                 self.appendix_inspector.set_context(
                     loot_manager=self.loot_manager,
@@ -1649,6 +1709,7 @@ class ReportEditorTab(QWidget):
                 self.appendix_inspector.load_appendix(self._workspace_doc)
                 self.center_stack.setCurrentWidget(self.appendix_inspector_glass)
                 self._last_active_inspector = self.appendix_inspector_glass
+                preview_text = self.appendix_inspector.lbl_title.text()
             else:
                 narr = next(
                     (n for n in self._workspace_doc.narratives if n.identity == sec_id or n.section_type == sec_id),
@@ -1665,12 +1726,30 @@ class ReportEditorTab(QWidget):
                 self.section_inspector.load_section(sec_id, title, content, icon_name=sec_icon)
                 self.center_stack.setCurrentWidget(self.section_inspector_glass)
                 self._last_active_inspector = self.section_inspector_glass
+                preview_text = title
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.code"))
         elif view_type == "raw_markdown":
             self.center_stack.setCurrentWidget(self.editor_glass)
             if hasattr(self, "btn_toggle_raw"):
                 self.btn_toggle_raw.setIcon(self._toolbar_icon("fa5s.sliders-h"))
+        self.navigator.select_item(view_type, item_id)
+        self._update_contextual_toolbar_visibility()
+        self._focus_preview_on_text(preview_text, scroll_to_top=view_type == "metadata")
+
+    def _focus_preview_on_text(self, text: str, *, scroll_to_top: bool = False) -> None:
+        """Keep the preview aligned with the report item selected in the workspace."""
+        if scroll_to_top:
+            self.preview.verticalScrollBar().setValue(0)
+            return
+        if not text:
+            return
+        cursor = self.preview.document().find(text)
+        if cursor.isNull():
+            return
+        cursor.clearSelection()
+        self.preview.setTextCursor(cursor)
+        self.preview.ensureCursorVisible()
 
     def _on_add_finding_requested(self) -> None:
         """Creates a finding — offering unreferenced Loot entries if available to preserve Loot workflow."""
@@ -1727,16 +1806,7 @@ class ReportEditorTab(QWidget):
 
         self._workspace_doc.add_finding(new_finding)
         self._sync_workspace_doc_to_editor()
-        self.navigator.load_document(
-            self._workspace_doc,
-            project_name=self.current_project or "",
-            target_ip=self._get_target_ip(),
-        )
-        self.navigator.select_item("finding", new_id)
-        self.finding_inspector.set_project_target_ip(self._get_target_ip())
-        self.finding_inspector.load_finding(new_finding)
-        self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-        self._last_active_inspector = self.finding_inspector_glass
+        self._on_navigate_requested("finding", new_id)
 
     def _on_metadata_changed(self, updated: ReportMetadata) -> None:
         if self._workspace_doc is None:
@@ -1761,15 +1831,11 @@ class ReportEditorTab(QWidget):
             return
         self._workspace_doc.remove_finding(finding_id)
         self._sync_workspace_doc_to_editor()
-        self.navigator.load_document(
-            self._workspace_doc,
-            project_name=self.current_project or "",
-            target_ip=self._get_target_ip(),
-        )
         remaining = self._workspace_doc.findings[0] if self._workspace_doc.findings else None
-        self.finding_inspector.load_finding(remaining)
-        self.center_stack.setCurrentWidget(self.finding_inspector_glass)
-        self._last_active_inspector = self.finding_inspector_glass
+        self._on_navigate_requested(
+            "finding" if remaining else "findings_overview",
+            remaining.id if remaining else None,
+        )
 
     def _on_finding_duplicated(self, finding_id: str) -> None:
         import uuid
@@ -1793,14 +1859,7 @@ class ReportEditorTab(QWidget):
         )
         self._workspace_doc.add_finding(dup)
         self._sync_workspace_doc_to_editor()
-        self.navigator.load_document(
-            self._workspace_doc,
-            project_name=self.current_project or "",
-            target_ip=self._get_target_ip(),
-        )
-        self.navigator.select_item("finding", new_id)
-        self.finding_inspector.load_finding(dup)
-        self.center_stack.setCurrentWidget(self.finding_inspector_glass)
+        self._on_navigate_requested("finding", new_id)
 
     def _on_section_changed(self, identity: str, content: str) -> None:
         if self._workspace_doc is None:

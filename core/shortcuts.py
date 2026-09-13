@@ -330,7 +330,7 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
             id="report_cycle_view",
             sequence="Ctrl+Shift+V",
             label_key="shortcuts.report_cycle_view",
-            default_label="Ansichtsmodus wechseln (Editor / Split / Vorschau)",
+            default_label="Ansichtsmodus wechseln (Workspace / Editor / Split / Vorschau)",
             scope="in_app",
             category="report_editor",
         ),

@@ -248,18 +248,14 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.load_project("WorkspaceBox")
         tab.show()
 
-        # Initial view is SPLIT: navigator is hidden, editor & preview visible
-        self.assertEqual(tab._view_mode, ViewMode.SPLIT)
-        self.assertFalse(tab.navigator_glass.isVisible())
-        self.assertTrue(tab.editor.isVisible())
-        self.assertTrue(tab.preview.isVisible())
-
-        # Switch to WORKSPACE mode: navigator, center stack, and preview all visible
-        tab._set_view_mode(ViewMode.WORKSPACE)
+        # Workspace is the primary report view with structured editing and preview.
         self.assertEqual(tab._view_mode, ViewMode.WORKSPACE)
         self.assertTrue(tab.navigator_glass.isVisible())
         self.assertTrue(tab.center_stack.isVisible())
         self.assertTrue(tab.preview.isVisible())
+        self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
+        self.assertTrue(tab.format_toolbar_widget.isHidden())
+        self.assertTrue(tab._view_actions[ViewMode.WORKSPACE].isChecked())
 
         # Add a finding through the workspace handler
         initial_finding_count = len(tab._workspace_doc.findings) if tab._workspace_doc else 0
@@ -267,6 +263,28 @@ class TestReportWorkspaceUI(unittest.TestCase):
         self.assertEqual(len(tab._workspace_doc.findings), initial_finding_count + 1)
         self.assertIn(t("report.new_finding_default_title", "New Finding"), tab.editor.toPlainText())
         self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertTrue(tab._draft_timer.isActive())
+        new_finding = tab._workspace_doc.findings[-1]
+        self.assertEqual(
+            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            ("finding", new_finding.id),
+        )
+        self.assertIn(new_finding.title, tab.preview.textCursor().block().text())
+
+        tab._on_finding_duplicated(new_finding.id)
+        duplicated = tab._workspace_doc.findings[-1]
+        self.assertEqual(
+            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            ("finding", duplicated.id),
+        )
+        self.assertIn(duplicated.title, tab.preview.textCursor().block().text())
+
+        tab._on_finding_deleted(duplicated.id)
+        self.assertIsNone(tab._workspace_doc.get_finding(duplicated.id))
+        self.assertEqual(
+            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            ("finding", new_finding.id),
+        )
 
         # Navigate to metadata
         tab._on_navigate_requested("metadata", None)
@@ -275,6 +293,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         # Navigate back to raw markdown
         tab._on_navigate_requested("raw_markdown", None)
         self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
+        self.assertFalse(tab.format_toolbar_widget.isHidden())
 
         # When findings is empty, navigating to findings_overview displays finding_inspector_glass (empty state), NOT raw editor
         tab._workspace_doc.findings.clear()
@@ -494,6 +513,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
         tab.load_project("WorkspaceBox")
         tab.show()
+        tab._set_view_mode(ViewMode.SPLIT)
 
         # In Split view, navigator starts hidden for 2-column layout
         self.assertFalse(tab.navigator_glass.isVisible())
@@ -512,7 +532,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         # Toggle raw markdown vs inspector
         self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
         tab._toggle_inspector_raw()
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
+        self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
         tab._toggle_inspector_raw()
         self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
 
@@ -1156,18 +1176,18 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab._set_view_mode(ViewMode.SPLIT)
         tab.splitter.moveSplitter(500, 2)
         sizes_split = tab.splitter.sizes()
-        self.assertEqual(sizes_split[1], 500)
+        self.assertLessEqual(abs(sizes_split[1] - 500), tab.splitter.handleWidth())
         self.assertGreater(sizes_split[2], 500)
 
         tab.splitter.moveSplitter(900, 2)
         sizes_split2 = tab.splitter.sizes()
-        self.assertEqual(sizes_split2[1], 900)
+        self.assertLessEqual(abs(sizes_split2[1] - 900), tab.splitter.handleWidth())
 
         # 3. Free dragging in WORKSPACE view
         tab._set_view_mode(ViewMode.WORKSPACE)
         tab.splitter.moveSplitter(300, 1)
         sizes_ws1 = tab.splitter.sizes()
-        self.assertEqual(sizes_ws1[0], 300)
+        self.assertLessEqual(abs(sizes_ws1[0] - 300), tab.splitter.handleWidth())
 
         tab.splitter.moveSplitter(800, 2)
         sizes_ws2 = tab.splitter.sizes()

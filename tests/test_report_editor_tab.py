@@ -49,14 +49,22 @@ class TestReportEditorTab(unittest.TestCase):
         self.tab.close()
         self.tab.deleteLater()
 
-    def test_initial_view_mode_is_split(self):
-        """Default view mode must be SPLIT with preview read-only."""
-        self.assertEqual(self.tab._view_mode, ViewMode.SPLIT)
-        self.assertTrue(self.tab.editor.isVisible())
+    def test_initial_view_mode_is_workspace(self):
+        """The structured workspace is the primary report experience."""
+        self.assertEqual(self.tab._view_mode, ViewMode.WORKSPACE)
+        self.assertTrue(self.tab.navigator_glass.isVisible())
+        self.assertEqual(
+            self.tab.center_stack.currentWidget(), self.tab.metadata_inspector_glass
+        )
         self.assertTrue(self.tab.preview.isVisible())
         self.assertTrue(self.tab.preview.isReadOnly())
-        self.assertIn("Split", self.tab.lbl_status.text())
-        self.assertTrue(self.tab._view_actions[ViewMode.SPLIT].isChecked())
+        self.assertTrue(self.tab.format_toolbar_widget.isHidden())
+        self.assertIn("Workspace", self.tab.lbl_status.text())
+        self.assertEqual(
+            self.tab.btn_change_view.text(), t("report.mode_workspace", "Workspace")
+        )
+        self.assertTrue(self.tab.btn_append_loot.isHidden())
+        self.assertTrue(self.tab._view_actions[ViewMode.WORKSPACE].isChecked())
         self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
     def test_obsidian_export_delegates_current_editor_state(self):
@@ -135,7 +143,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertIn("Markdown", descriptions["markdown"])
 
     def test_view_mode_switching(self):
-        """Tests switching between EDITOR, PREVIEW, and SPLIT modes."""
+        """Tests switching between the report view modes."""
         # 1. Switch to EDITOR mode
         self.tab._set_view_mode(ViewMode.EDITOR)
         self.assertEqual(self.tab._view_mode, ViewMode.EDITOR)
@@ -153,9 +161,10 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertFalse(self.tab.preview.isReadOnly())
         self.assertIn(t("report.view_preview_short", "Live Preview"), self.tab.lbl_status.text())
 
-        # 3. Cycle view mode back to EDITOR
+        # 3. Cycle view mode back to the primary workspace
         self.tab._cycle_view_mode()
-        self.assertEqual(self.tab._view_mode, ViewMode.EDITOR)
+        self.assertEqual(self.tab._view_mode, ViewMode.WORKSPACE)
+        self.assertTrue(self.tab.preview.isReadOnly())
 
     def test_live_preview_commit_to_markdown(self):
         """Tests that editing in PREVIEW mode commits markdown back to editor on mode switch."""
@@ -617,6 +626,7 @@ Text
 
     def test_toolbar_collapse_toggles_both_levels(self):
         """Verifies that clicking the toolbar toggle button collapses and expands Ebene 1 and Ebene 2."""
+        self.tab._set_view_mode(ViewMode.EDITOR)
         self.assertFalse(self.tab.action_toolbar_widget.isHidden())
         self.assertFalse(self.tab.format_toolbar_widget.tools_container.isHidden())
         self.assertEqual(self.tab.format_toolbar_widget.btn_toggle.text(), "")

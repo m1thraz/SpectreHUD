@@ -81,11 +81,15 @@ def test_report_metadata_table_roundtrip():
     assert meta.classification == "Vertraulich"
     assert meta.version == "v1.2"
     assert meta.custom_fields.get("audit-id") == "AUD-9982"
+    assert "auftraggeber client" not in meta.custom_fields
+    assert "ziel e scope" not in meta.custom_fields
 
     exported = meta.to_markdown_table(language="de")
     assert "TargetCorp GmbH" in exported
     assert "AUD-9982" in exported
     assert "| **Report-Version** | `v1.2` |" in exported
+    assert exported.count("TargetCorp GmbH") == 1
+    assert exported.count("10.10.10.0/24") == 1
 
 
 def test_report_finding_item_parsing_and_serialization():

@@ -165,10 +165,14 @@ class ReportMetadata:
             *_CLASSIFICATION_ALIASES,
             *_VERSION_ALIASES,
         }
+        normalized_standard_keys = {
+            re.sub(r"[\s/()_-]+", " ", key).strip() for key in standard_keys
+        }
         custom = {
             k: v
             for k, v in kv.items()
-            if k not in standard_keys and re.sub(r"[\s/()_-]+", " ", k).strip() not in standard_keys
+            if k not in standard_keys
+            and re.sub(r"[\s/()_-]+", " ", k).strip() not in normalized_standard_keys
         }
 
         return cls(
