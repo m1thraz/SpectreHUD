@@ -534,6 +534,7 @@ Text
         self.assertTrue(self.tab.workspace_shell.editor.property("reportLight"))
         self.assertTrue(self.tab.workspace_shell.preview.property("reportLight"))
         self.assertTrue(self.tab.workspace_shell.editor_glass.property("reportLight"))
+        self.assertFalse(self.tab.workspace_shell.navigator_glass.property("reportLight"))
         self.assertIn("#1f2328", self.tab.workspace_shell.preview_document.defaultStyleSheet())
 
         button.click()

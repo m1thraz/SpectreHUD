@@ -488,7 +488,7 @@ class ReportEditorTab(QWidget):
             self.workspace_shell.editor_glass,
             self.workspace_shell.preview_glass,
         ]
-        widgets.extend([self.workspace_shell.navigator_glass, self.workspace_shell.center_stack])
+
         for widget in widgets:
             widget.setProperty("reportLight", self._light_report_view)
             widget.style().unpolish(widget)
