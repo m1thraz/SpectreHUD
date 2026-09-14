@@ -49,3 +49,24 @@ def test_linux_desktop_assets_are_required_in_release_wheel():
     }
 
     assert expected.issubset(REQUIRED_FILES)
+
+
+def test_report_workspace_boundaries_are_required_in_release_wheel():
+    expected = {
+        "core/reporting/mutation_service.py",
+        "core/reporting/readiness.py",
+        "core/reporting/session.py",
+        "core/reporting/workspace_model.py",
+        "ui/report/action_toolbar.py",
+        "ui/report/evidence_actions.py",
+        "ui/report/mutation_actions.py",
+        "ui/report/navigation.py",
+        "ui/report/preview_controller.py",
+        "ui/report/preview_transforms.py",
+        "ui/report/readiness_inspector.py",
+        "ui/report/session_controller.py",
+        "ui/report/workspace_router.py",
+        "ui/report/workspace_shell.py",
+    }
+
+    assert expected.issubset(REQUIRED_FILES)

@@ -119,8 +119,6 @@ def test_release_workflow_includes_supply_chain_artifacts():
 
 def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds():
     """pyproject.toml must keep open bounds while constraints-release.txt provides exact version pins."""
-    import tomllib
-
     repo_root = Path(__file__).parent.parent
     pyproject_path = repo_root / "pyproject.toml"
     constraints_path = repo_root / "constraints-release.txt"
@@ -202,5 +200,4 @@ def test_ruff_and_mypy_quality_gates():
     prohibited_disabled = ["call-arg", "func-returns-value", "has-type", "truthy-function", "return-value", "index"]
     for code in prohibited_disabled:
         assert code not in disabled, f"Mypy ui.* must not disable {code}"
-
 

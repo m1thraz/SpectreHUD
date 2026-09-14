@@ -62,6 +62,10 @@ REQUIRED_FILES = [
     "core/reporting/__init__.py",
     "core/reporting/builder.py",
     "core/reporting/file_manager.py",
+    "core/reporting/mutation_service.py",
+    "core/reporting/readiness.py",
+    "core/reporting/session.py",
+    "core/reporting/workspace_model.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The
     # former reporting/models.py module was removed during the refactor.
     "core/reporting/template_engine.py",
@@ -83,6 +87,17 @@ REQUIRED_FILES = [
     "ui/controllers/report_controller.py",
     "ui/controllers/project_controller.py",
     "ui/controllers/window_frame_manager.py",
+    # Report Workspace composition and workflow boundaries
+    "ui/report/action_toolbar.py",
+    "ui/report/evidence_actions.py",
+    "ui/report/mutation_actions.py",
+    "ui/report/navigation.py",
+    "ui/report/preview_controller.py",
+    "ui/report/preview_transforms.py",
+    "ui/report/readiness_inspector.py",
+    "ui/report/session_controller.py",
+    "ui/report/workspace_router.py",
+    "ui/report/workspace_shell.py",
     "ui/base_dialog.py",
     "ui/settings_dialog.py",
     "ui/styles/icons.py",

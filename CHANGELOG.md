@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.7] - 2026-09-14
+
 ### Added
 
 * Added live Loot/report sync status for new, changed, and report-only entries.
@@ -18,14 +20,6 @@ semantic versioning.
 * Aligned report export, generation, and regeneration dialogs with the active HUD theme.
 * Unified Report Workspace inspector headers, sections, forms, tables, and scroll surfaces around shared theme-aware styles.
 * Kept navigator selections semantically aligned and highlighted in the live report preview.
-* Split preview transformations, workspace sizing, typed navigation, and controller access out of the Report Editor composition root.
-* Moved inspector routing and finding-evidence attachment workflows into dedicated Report Workspace components.
-* Extracted document-action toolbar construction and signal wiring from the Report Editor composition root.
-* Extracted Report Workspace splitter, inspector, source editor, and preview construction into a typed shell builder.
-* Moved report preview rendering, typography, semantic focus, and scroll synchronization into a dedicated controller.
-* Moved report loading, typed persistence outcomes, recovery prompts, and crash-draft handling behind dedicated session boundaries.
-* Moved report regeneration and additive Loot synchronization behind typed mutation services and focused UI actions.
-* Removed transitional Report Editor aliases and moved tests onto component-owned widgets and public workflow APIs.
 
 ### Fixed
 
@@ -345,7 +339,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...HEAD
+[2.1.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.4
