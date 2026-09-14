@@ -569,6 +569,54 @@ Appendix body
 
         insp.deleteLater()
 
+    def test_finding_inspector_hides_evidence_metadata_tags_and_preserves_on_save(self):
+        from core.reporting.evidence_markers import parse_evidence_blocks
+        insp = ReportFindingInspector()
+
+        ev = ReportEvidenceItem(
+            id="loot_d054cb7d-evidence",
+            type="credential",
+            caption="Root Proof & Calibration Flag",
+            content="SPECTRE{calibration_chain_complete}\nRoot compromise verified",
+            source_loot_id="loot_d054cb7d",
+            language="flag",
+        )
+        persisted_md = ev.to_persisted_markdown()
+        finding = ReportFindingItem(
+            id="f-proof",
+            title="Root Proof & Calibration Flag",
+            description=f"Automated check yielded shell:\n\n{persisted_md}",
+            evidence_items=[ev],
+        )
+
+        # 1. Loading finding strips the envelope tags in the UI
+        insp.load_finding(finding)
+        self.assertNotIn("spectre:evidence:start", insp.txt_desc.toPlainText())
+        self.assertNotIn("spectre:evidence:end", insp.txt_desc.toPlainText())
+        self.assertIn("SPECTRE{calibration_chain_complete}", insp.txt_desc.toPlainText())
+
+        # 2. Emitting changes reconciles envelopes back into persisted description
+        emitted: list[ReportFindingItem] = []
+        insp.finding_changed.connect(emitted.append)
+        insp._emit_changed()
+
+        self.assertEqual(len(emitted), 1)
+        updated = emitted[0]
+        self.assertIn("<!-- spectre:evidence:start:v1:", updated.description)
+        self.assertIn("<!-- spectre:evidence:end -->", updated.description)
+        blocks = parse_evidence_blocks(updated.description)
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0].metadata["id"], "loot_d054cb7d-evidence")
+        self.assertEqual(blocks[0].metadata["caption"], "Root Proof & Calibration Flag")
+
+        # 3. Inserting evidence from drawer inserts clean markdown without metadata tags
+        insp.txt_desc.clear()
+        insp._on_insert_evidence_into_desc("loot_d054cb7d-evidence")
+        self.assertNotIn("spectre:evidence:start", insp.txt_desc.toPlainText())
+        self.assertIn("SPECTRE{calibration_chain_complete}", insp.txt_desc.toPlainText())
+
+        insp.deleteLater()
+
     def test_loot_entry_picker_dialog(self):
         entries = [
             {

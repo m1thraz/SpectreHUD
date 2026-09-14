@@ -29,6 +29,12 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from core.phases import normalize_phase_key
 from core.reporting import ReportEvidenceItem, ReportFindingItem
+from core.reporting.evidence_markers import (
+    format_evidence_block,
+    parse_evidence_blocks,
+    reconcile_evidence_markers,
+    strip_evidence_markers,
+)
 from ui.glass_panel import GlassPanel
 from ui.report.inspector_style import style_inspector_header, style_inspector_scroll
 from ui.styles.icons import get_theme_color, icon
@@ -134,6 +140,7 @@ class ReportFindingInspector(QWidget):
         super().__init__(parent)
         self.setObjectName("ReportFindingInspector")
         self._finding: Optional[ReportFindingItem] = None
+        self._original_description: str = ""
         self._loading = False
         self._project_target_ip = ""
 
@@ -463,6 +470,7 @@ class ReportFindingInspector(QWidget):
     def load_finding(self, finding: Optional[ReportFindingItem]) -> None:
         if finding is None:
             self._finding = None
+            self._original_description = ""
             self._stack.setCurrentWidget(self.empty_widget)
             return
 
@@ -470,6 +478,7 @@ class ReportFindingInspector(QWidget):
         self._loading = True
         try:
             self._finding = finding
+            self._original_description = finding.description
             self.lbl_header_title.setText(finding.title or t("report.new_finding_default_title", "New Finding"))
             self.txt_title.setText(finding.title)
 
@@ -490,7 +499,7 @@ class ReportFindingInspector(QWidget):
                 f"{finding.cvss_score:.1f}" if finding.cvss_score is not None else ""
             )
             self.txt_cvss_vector.setText(finding.cvss_vector or "")
-            self.txt_desc.setPlainText(finding.description)
+            self.txt_desc.setPlainText(strip_evidence_markers(finding.description))
             self.txt_rec.setPlainText(finding.recommendation)
             self.txt_refs.setPlainText("\n".join(finding.references))
             self._refresh_evidence_cards()
@@ -524,9 +533,10 @@ class ReportFindingInspector(QWidget):
         if not self._finding:
             return
         self._finding.attach_evidence(item, insert_into_description=insert_into_description)
+        self._original_description = self._finding.description
         self._loading = True
         try:
-            self.txt_desc.setPlainText(self._finding.description)
+            self.txt_desc.setPlainText(strip_evidence_markers(self._finding.description))
         finally:
             self._loading = False
         self._refresh_evidence_cards()
@@ -538,7 +548,7 @@ class ReportFindingInspector(QWidget):
         ev = next((i for i in self._finding.evidence_items if i.id == item_id), None)
         if not ev:
             return
-        md = ev.to_persisted_markdown()
+        md = ev.to_markdown()
         cur = self.txt_desc.textCursor()
         cur.insertText(f"\n\n{md}\n")
         self.txt_desc.setTextCursor(cur)
@@ -548,9 +558,10 @@ class ReportFindingInspector(QWidget):
         if not self._finding:
             return
         self._finding.detach_evidence(item_id, remove_from_description=True)
+        self._original_description = self._finding.description
         self._loading = True
         try:
-            self.txt_desc.setPlainText(self._finding.description)
+            self.txt_desc.setPlainText(strip_evidence_markers(self._finding.description))
         finally:
             self._loading = False
         self._refresh_evidence_cards()
@@ -560,9 +571,10 @@ class ReportFindingInspector(QWidget):
         if not self._finding:
             return
         self._finding.update_evidence(item_id, caption=new_caption)
+        self._original_description = self._finding.description
         self._loading = True
         try:
-            self.txt_desc.setPlainText(self._finding.description)
+            self.txt_desc.setPlainText(strip_evidence_markers(self._finding.description))
         finally:
             self._loading = False
         self._emit_changed()
@@ -593,6 +605,29 @@ class ReportFindingInspector(QWidget):
             return
         self._debounce_timer.start()
 
+    def _reconcile_description(self) -> str:
+        visible_text = self.txt_desc.toPlainText()
+        if not self._finding:
+            return visible_text
+        result = reconcile_evidence_markers(self._original_description, visible_text)
+        present_envelopes = parse_evidence_blocks(result)
+        present_ids = {block.metadata["id"] for block in present_envelopes}
+        for ev in self._finding.evidence_items:
+            if ev.id not in present_ids:
+                body = ev.to_markdown().strip()
+                if body and body in result:
+                    metadata = {
+                        "id": ev.id,
+                        "type": ev.type,
+                        "caption": ev.caption,
+                        "source_loot_id": ev.source_loot_id,
+                        "language": ev.language,
+                    }
+                    wrapped = format_evidence_block(metadata, body)
+                    result = result.replace(body, wrapped, 1)
+                    present_ids.add(ev.id)
+        return result
+
     def _emit_changed(self) -> None:
         if not self._finding:
             return
@@ -606,6 +641,9 @@ class ReportFindingInspector(QWidget):
             except ValueError:
                 cvss_score = None
 
+        desc = self._reconcile_description()
+        self._original_description = desc
+
         updated = ReportFindingItem(
             id=self._finding.id,
             title=self.txt_title.text().strip(),
@@ -616,7 +654,7 @@ class ReportFindingInspector(QWidget):
             phase=str(self.cmb_phase.currentData()),
             targets=targets,
             timestamp=self._finding.timestamp,
-            description=self.txt_desc.toPlainText(),
+            description=desc,
             recommendation=self.txt_rec.toPlainText(),
             references=refs,
             evidence_items=list(self._finding.evidence_items),
