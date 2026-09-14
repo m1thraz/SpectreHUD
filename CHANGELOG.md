@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.8] - 2026-09-14
+
 ### Added
 
 * Added optional remediation guidance while capturing new Loot.
@@ -20,12 +22,16 @@ semantic versioning.
 * Harmonized UI components, dialogs, and filter pills to strictly derive colors from the active theme palette.
 * Centralized report light and print export palette tokens into headless `core.reporting.report_palette`.
 * Hardened theme architecture guardrails against unlisted Hex and CSS `rgb()`/`rgba()` literals across UI and reporting logic.
+* Decoupled Report Workspace navigator sidebar styling from the report document light mode toggle.
+* Standardized Appendix Inspector input fields and code editors to themed `CommandBox` styling for optimal contrast.
 
 ### Fixed
 
 * Preserved CVSS data and evidence provenance when Loot becomes a report finding.
 * Restored localized severity dropdown labels in the session loot dialog.
 * Removed degrading opacity fade effect on quick notes and clipboard history cards.
+* Hidden internal evidence metadata tags in the finding description inspector and reconciled on save.
+* Resolved contrast blowout in appendix code editor and notes by providing robust theme background resolution.
 
 ## [2.1.7] - 2026-09-14
 
@@ -360,7 +366,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...HEAD
+[2.1.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...v2.1.8
 [2.1.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...v2.1.5
