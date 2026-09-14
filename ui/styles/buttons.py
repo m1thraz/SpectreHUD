@@ -146,8 +146,8 @@ QPushButton.FilterPill:hover {
 
 QPushButton.FilterPillActive {
     background-color: {ACCENT_NAV_ACTIVE};
-    color: {CYBER_CYAN};
-    border: 1px solid {CYBER_CYAN};
+    color: {ACCENT_PRIMARY};
+    border: 1px solid {ACCENT_PRIMARY};
     border-radius: 12px;
     padding: 3px 10px;
     font-size: 11px;

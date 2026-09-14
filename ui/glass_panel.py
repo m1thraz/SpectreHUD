@@ -4,6 +4,7 @@ from PyQt6.QtCore import QRectF, Qt, pyqtProperty
 from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QRadialGradient
 from PyQt6.QtWidgets import QFrame
 
+from ui.styles.icons import get_theme_color
 from ui.styles.noise import generate_coarse_noise_pixmap, generate_noise_pixmap
 
 
@@ -12,8 +13,9 @@ class GlassPanel(QFrame):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._raw_base_color = QColor("#0d1117")
-        self._base_color = QColor("#0d1117")
+        default_bg = get_theme_color("BG_DARK")
+        self._raw_base_color = QColor(default_bg)
+        self._base_color = QColor(default_bg)
         self._intensity = 5
         self._real_alpha = 0
         self._panel_opacity = 1.0

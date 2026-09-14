@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 class FooterPanel(QFrame):
@@ -40,20 +41,22 @@ class FooterPanel(QFrame):
         self.btn_shortcuts.setToolTip(
             t("footer.shortcuts_tip", "Tastenkürzel-Übersicht öffnen (Ctrl+/)")
         )
+        text_muted = get_theme_color("TEXT_MUTED")
+        accent_brand = get_theme_color("ACCENT_BRAND")
         self.btn_shortcuts.setStyleSheet(
-            """
-            QPushButton#FooterShortcutsBtn {
+            f"""
+            QPushButton#FooterShortcutsBtn {{
                 background: transparent;
                 border: none;
-                color: #8b949e;
+                color: {text_muted};
                 font-size: 11px;
                 font-weight: 700;
                 font-family: Consolas, "Courier New", monospace;
                 padding: 2px 4px;
-            }
-            QPushButton#FooterShortcutsBtn:hover {
-                color: #00e5ff;
-            }
+            }}
+            QPushButton#FooterShortcutsBtn:hover {{
+                color: {accent_brand};
+            }}
             """
         )
         self.btn_shortcuts.clicked.connect(self.shortcuts_requested.emit)
@@ -137,36 +140,39 @@ class FooterPanel(QFrame):
         return " + ".join(parts)
 
     def _apply_phase_button_style(self, phase_key: Optional[str]) -> None:
+        text_muted = get_theme_color("TEXT_MUTED")
+        accent_brand = get_theme_color("ACCENT_BRAND")
+        cyber_blue_light = get_theme_color("CYBER_BLUE_LIGHT")
         if not phase_key:
             self.btn_phase.setStyleSheet(
-                """
-                QPushButton#FooterPhaseBtn {
+                f"""
+                QPushButton#FooterPhaseBtn {{
                     background: transparent;
                     border: none;
-                    color: #8b949e;
+                    color: {text_muted};
                     font-size: 11px;
                     font-weight: 700;
                     padding: 2px 4px;
-                }
-                QPushButton#FooterPhaseBtn:hover {
-                    color: #00e5ff;
-                }
+                }}
+                QPushButton#FooterPhaseBtn:hover {{
+                    color: {accent_brand};
+                }}
                 """
             )
         else:
             self.btn_phase.setStyleSheet(
-                """
-                QPushButton#FooterPhaseBtn {
+                f"""
+                QPushButton#FooterPhaseBtn {{
                     background: transparent;
                     border: none;
-                    color: #00e5ff;
+                    color: {accent_brand};
                     font-size: 11px;
                     font-weight: 700;
                     padding: 2px 4px;
-                }
-                QPushButton#FooterPhaseBtn:hover {
-                    color: #79c0ff;
-                }
+                }}
+                QPushButton#FooterPhaseBtn:hover {{
+                    color: {cyber_blue_light};
+                }}
                 """
             )
 

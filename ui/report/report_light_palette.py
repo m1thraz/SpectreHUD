@@ -14,3 +14,11 @@ REPORT_LIGHT_PALETTE: dict[str, str] = {
     "pagebreak_marker": "#57606a",
     "spacer_marker": "#6e7781",
 }
+
+REPORT_ICON_COLORS: dict[str, str] = {
+    "default": "#3b82f6",
+    "info": "#0284c7",
+    "success": "#16a34a",
+    "warning": "#d97706",
+    "critical": "#dc2626",
+}

@@ -4,13 +4,8 @@ import re
 
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QSyntaxHighlighter
 
-from ui.styles.palette import (
-    CYBER_BLUE_LIGHT,
-    CYBER_CYAN,
-    STATUS_GREEN_LIGHT,
-    TEXT_CODE,
-    TEXT_MUTED,
-)
+from ui.report.report_light_palette import REPORT_LIGHT_PALETTE
+from ui.styles.icons import get_theme_color
 
 
 class MarkdownHighlighter(QSyntaxHighlighter):
@@ -31,15 +26,22 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
     def set_light_mode(self, enabled: bool) -> None:
         colors = (
-            ("#0550ae", "#0969da", "#57606a", "#1a7f37", "#0969da", "#1a7f37")
+            (
+                REPORT_LIGHT_PALETTE["heading"],
+                REPORT_LIGHT_PALETTE["heading_2"],
+                REPORT_LIGHT_PALETTE["quote"],
+                REPORT_LIGHT_PALETTE["code"],
+                REPORT_LIGHT_PALETTE["link"],
+                REPORT_LIGHT_PALETTE["code"],
+            )
             if enabled
             else (
-                CYBER_BLUE_LIGHT,
-                CYBER_CYAN,
-                TEXT_MUTED,
-                TEXT_CODE,
-                CYBER_CYAN,
-                STATUS_GREEN_LIGHT,
+                get_theme_color("CYBER_BLUE_LIGHT"),
+                get_theme_color("ACCENT_BRAND"),
+                get_theme_color("TEXT_MUTED"),
+                get_theme_color("TEXT_CODE"),
+                get_theme_color("ACCENT_BRAND"),
+                get_theme_color("STATUS_GREEN_LIGHT"),
             )
         )
         self.header_format = self._format(colors[0], bold=True)

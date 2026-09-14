@@ -261,7 +261,7 @@ QLabel.ShortcutKeyBadge {
 
 /* Footer & Banner Text */
 QLabel#FooterText {
-    color: {TEXT_DIMMED};
+    color: {TEXT_MUTED};
     font-size: 11px;
 }
 

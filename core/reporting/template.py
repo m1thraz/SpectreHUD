@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from core.reporting.styles import get_report_css
+from core.reporting.styles import PRINT_MARGIN_HEADER_COLOR, get_report_css
 
 
 def _css_string(value: str) -> str:
@@ -23,8 +23,8 @@ def _css_string(value: str) -> str:
 
 def _professional_page_css(
     project_name: str,
-    classification: Optional[str],
-    language: str,
+    classification: Optional[str] = None,
+    language: str = "de",
     report_label: Optional[str] = None,
 ) -> str:
     is_de = language.lower().startswith("de")
@@ -38,22 +38,22 @@ def _professional_page_css(
         margin: 22mm 18mm 20mm;
         @top-left {{
             content: {_css_string(project_name)};
-            color: #899198;
+            color: {PRINT_MARGIN_HEADER_COLOR};
             font: 7.25pt "Segoe UI", sans-serif;
         }}
         @top-right {{
             content: {_css_string(resolved_label)};
-            color: #899198;
+            color: {PRINT_MARGIN_HEADER_COLOR};
             font: 7.25pt "Segoe UI", sans-serif;
         }}
         @bottom-left {{
             content: {_css_string(classification or "")};
-            color: #899198;
+            color: {PRINT_MARGIN_HEADER_COLOR};
             font: 7.25pt "Segoe UI", sans-serif;
         }}
         @bottom-right {{
             content: {_css_string(page_label)} counter(page);
-            color: #899198;
+            color: {PRINT_MARGIN_HEADER_COLOR};
             font: 7.25pt "Segoe UI", sans-serif;
         }}
     }}

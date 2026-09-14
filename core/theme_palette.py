@@ -1,8 +1,14 @@
 """
-Core Design Tokens and Color Palette Constants for SpectreHUD Cyber Dark Theme.
-
-This module contains the domain-level theme palette dictionary and token constants,
-decoupled from Qt UI presentation classes.
+===============================================================================
+WICHTIGER ARCHITEKTUR-HINWEIS / THEME-FALLBACK ONLY:
+===============================================================================
+- Diese Palette spiegelt den historischen Stand ("Cyber Dark") wider und dient
+  AUSSCHLIESSLICH als interner Fallback, falls kein Theme geladen werden kann.
+- Neue UI-Komponenten duerfen NIEMALS Werte direkt aus dieser Datei importieren!
+- UI-Farben MUESSEN dynamisch ueber das aktive Theme (data/themes/*.json) bzw.
+  ueber ui.styles.icons.get_theme_color("TOKEN") bezogen werden.
+- Severity-Farben MUESSEN ueber get_severity_color(sev) bezogen werden.
+===============================================================================
 """
 
 # Core Backgrounds & Surfaces

@@ -10,17 +10,11 @@ from PyQt6.QtCore import QBuffer, QIODevice, QSize
 from PyQt6.QtGui import QImage
 
 from core.atomic_write import atomic_write_bytes
+from ui.report.report_light_palette import REPORT_ICON_COLORS
 from ui.styles.icons import icon
 
 
 REPORT_ICON_SIZE = 32
-REPORT_ICON_COLORS = {
-    "default": "#3b82f6",
-    "info": "#0284c7",
-    "success": "#16a34a",
-    "warning": "#d97706",
-    "critical": "#dc2626",
-}
 
 _ICON_NAME_RE = re.compile(r"^[a-z0-9]+\.[a-z0-9-]+$")
 

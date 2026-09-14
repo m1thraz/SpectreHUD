@@ -75,7 +75,7 @@ QWidget#ShortcutsContainer {
 }
 
 QLabel#ShortcutFooterHint {
-    color: {TEXT_DIMMED};
+    color: {TEXT_MUTED};
     font-size: 10px;
     font-style: italic;
 }

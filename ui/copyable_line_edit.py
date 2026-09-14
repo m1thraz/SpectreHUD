@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QLineEdit, QPushButton, QWidget, QApplication
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush
 from PyQt6.QtCore import Qt, QRectF, QTimer
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 class CircularCopyButton(QPushButton):
@@ -53,13 +54,16 @@ class CircularCopyButton(QPushButton):
 
         if self.copied:
             # Success: glowing green circular badge + checkmark
-            painter.setPen(QPen(QColor("#00ff9d"), 1.2))
-            painter.setBrush(QBrush(QColor(0, 255, 157, 45)))
+            success_color = QColor(get_theme_color("STATUS_SUCCESS"))
+            success_bg = QColor(success_color)
+            success_bg.setAlpha(45)
+            painter.setPen(QPen(success_color, 1.2))
+            painter.setBrush(QBrush(success_bg))
             painter.drawEllipse(rect)
 
             painter.setPen(
                 QPen(
-                    QColor("#00ff9d"),
+                    success_color,
                     1.6,
                     Qt.PenStyle.SolidLine,
                     Qt.PenCapStyle.RoundCap,
@@ -71,12 +75,15 @@ class CircularCopyButton(QPushButton):
             painter.drawLine(7, 11, 12, 5)
 
         elif self._hovered:
-            # Hover: active cyan circular badge + crisp copy sheets
-            painter.setPen(QPen(QColor("#00f0ff"), 1.2))
-            painter.setBrush(QBrush(QColor(0, 240, 255, 35)))
+            # Hover: active brand circular badge + crisp copy sheets
+            brand_color = QColor(get_theme_color("ACCENT_BRAND"))
+            brand_bg = QColor(brand_color)
+            brand_bg.setAlpha(35)
+            painter.setPen(QPen(brand_color, 1.2))
+            painter.setBrush(QBrush(brand_bg))
             painter.drawEllipse(rect)
 
-            painter.setPen(QPen(QColor("#00f0ff"), 1.2))
+            painter.setPen(QPen(brand_color, 1.2))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             # Front sheet
             painter.drawRoundedRect(QRectF(5.5, 5.5, 6.0, 6.0), 1.0, 1.0)
@@ -90,7 +97,8 @@ class CircularCopyButton(QPushButton):
             painter.setBrush(QBrush(QColor(255, 255, 255, 10)))
             painter.drawEllipse(rect)
 
-            painter.setPen(QPen(QColor("#8b949e"), 1.1))
+            muted_color = QColor(get_theme_color("TEXT_MUTED"))
+            painter.setPen(QPen(muted_color, 1.1))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             # Front sheet
             painter.drawRoundedRect(QRectF(5.5, 5.5, 6.0, 6.0), 1.0, 1.0)

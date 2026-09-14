@@ -2,6 +2,7 @@ from typing import List, Optional
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QFrame, QLabel
 from PyQt6.QtCore import Qt, QTimer, QSize
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 class ViewportBoundContent(QWidget):
@@ -158,7 +159,7 @@ class ContentPanel(QWidget):
         empty_lbl.setTextFormat(Qt.TextFormat.PlainText)
         empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty_lbl.setStyleSheet(
-            "color: #6e7681; font-size: 13px; font-style: italic; padding: 40px 20px;"
+            f"color: {get_theme_color('TEXT_MUTED')}; font-size: 13px; font-style: italic; padding: 40px 20px;"
         )
         empty_lbl.setWordWrap(True)
         self.content_layout.addWidget(empty_lbl)

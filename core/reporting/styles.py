@@ -2,6 +2,7 @@
 
 from core.fonts import get_report_font_stack
 
+PRINT_MARGIN_HEADER_COLOR = "#899198"
 
 REPORT_BASE_CSS = """
 :root {

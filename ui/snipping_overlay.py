@@ -12,6 +12,7 @@ from PyQt6.QtGui import (
     QMouseEvent,
 )
 from core.display_geometry import VirtualDesktopBoundingBox
+from ui.styles.icons import get_theme_color
 
 
 class SnippingOverlay(QWidget):
@@ -84,8 +85,8 @@ class SnippingOverlay(QWidget):
             if selection_rect.width() > 0 and selection_rect.height() > 0:
                 painter.drawPixmap(selection_rect, self.full_pixmap, selection_rect)
 
-                # Draw glowing cyan border
-                pen = QPen(QColor("#00e5ff"), 2)
+                # Draw glowing brand border
+                pen = QPen(QColor(get_theme_color("ACCENT_BRAND")), 2)
                 painter.setPen(pen)
                 painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.drawRect(selection_rect)
@@ -106,10 +107,12 @@ class SnippingOverlay(QWidget):
 
                 badge_rect = QRect(max(10, badge_x), max(10, badge_y), badge_w, badge_h)
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.setBrush(QColor(13, 17, 23, 220))
+                bg_col = QColor(get_theme_color("BG_DARK"))
+                bg_col.setAlpha(220)
+                painter.setBrush(bg_col)
                 painter.drawRoundedRect(badge_rect, 4, 4)
 
-                painter.setPen(QColor("#00e5ff"))
+                painter.setPen(QColor(get_theme_color("ACCENT_BRAND")))
                 painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, dim_text)
 
         painter.end()
