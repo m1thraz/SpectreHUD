@@ -145,13 +145,16 @@ class HistoryCard(QFrame):
         return "  ·  ".join(parts)
 
     def _apply_age_opacity(self) -> None:
-        """Static age fade — calculated once at construction, never animated."""
+        """Static age fade — disabled to keep history entries fully legible."""
         if self._created_at is None:
             return
         opacity = opacity_for_age(self._created_at)
-        effect = QGraphicsOpacityEffect(self)
-        effect.setOpacity(opacity)
-        self.setGraphicsEffect(effect)
+        if opacity < 1.0:
+            effect = QGraphicsOpacityEffect(self)
+            effect.setOpacity(opacity)
+            self.setGraphicsEffect(effect)
+        else:
+            self.setGraphicsEffect(None)
 
     # ------------------------------------------------------------------ #
     # Promote actions

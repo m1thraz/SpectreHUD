@@ -46,15 +46,8 @@ def parse_note_timestamp(value: Any) -> Optional[datetime]:
 
 
 def opacity_for_age(created_at: datetime, now: Optional[datetime] = None) -> float:
-    """Keep old open notes legible while making stream age scannable."""
-    age_hours = ((now or datetime.now()) - created_at).total_seconds() / 3600
-    if age_hours < 0.5:
-        return 1.0
-    if age_hours < 2:
-        return 0.85
-    if age_hours < 6:
-        return 0.65
-    return 0.5
+    """Return 1.0; time-based fading is disabled so notes remain fully legible."""
+    return 1.0
 
 
 class NoteEditor(QPlainTextEdit):
@@ -208,13 +201,17 @@ class QuickNoteCard(QFrame):
         excluded = self.entry.get("status", "inbox") == "resolved" or bool(
             self.entry.get("pinned", False)
         )
-        effect = QGraphicsOpacityEffect(self.content_container)
-        effect.setOpacity(
+        opacity = (
             1.0
             if excluded or self._created_at is None
             else opacity_for_age(self._created_at, now=now)
         )
-        self.content_container.setGraphicsEffect(effect)
+        if opacity < 1.0:
+            effect = QGraphicsOpacityEffect(self.content_container)
+            effect.setOpacity(opacity)
+            self.content_container.setGraphicsEffect(effect)
+        else:
+            self.content_container.setGraphicsEffect(None)
         self.setProperty("overdue", self._is_overdue())
 
     def _request_completion_toggle(self) -> None:

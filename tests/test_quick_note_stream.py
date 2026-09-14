@@ -52,20 +52,20 @@ def _render(controller, parent):
 def test_opacity_thresholds_and_exempt_states(qapp):
     now = datetime(2026, 9, 6, 12, 0, 0)
     assert opacity_for_age(now - timedelta(minutes=10), now) == 1.0
-    assert opacity_for_age(now - timedelta(hours=1), now) == 0.85
-    assert opacity_for_age(now - timedelta(hours=4), now) == 0.65
-    assert opacity_for_age(now - timedelta(hours=12), now) == 0.5
+    assert opacity_for_age(now - timedelta(hours=1), now) == 1.0
+    assert opacity_for_age(now - timedelta(hours=4), now) == 1.0
+    assert opacity_for_age(now - timedelta(hours=12), now) == 1.0
 
     old = _entry("old", "2026-09-06 04:00:00")
     card = QuickNoteCard(old, now=now)
-    assert card.content_container.graphicsEffect().opacity() == 0.5
+    assert card.content_container.graphicsEffect() is None
     assert card.property("overdue") is True
     assert "open for 8 h" in card.lbl_meta.text()
 
     pinned = QuickNoteCard({**old, "pinned": True}, now=now)
     resolved = QuickNoteCard({**old, "status": "resolved"}, now=now)
-    assert pinned.content_container.graphicsEffect().opacity() == 1.0
-    assert resolved.content_container.graphicsEffect().opacity() == 1.0
+    assert pinned.content_container.graphicsEffect() is None
+    assert resolved.content_container.graphicsEffect() is None
     assert pinned.property("overdue") is False
     assert resolved.property("overdue") is False
 
