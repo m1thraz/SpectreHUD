@@ -10,6 +10,7 @@ from ui.report.dialogs import (
 )
 from ui.report.export_actions import ReportExportActions
 from ui.report.format_actions import ReportFormatActions
+from ui.report.finding_promotion_actions import ReportFindingPromotionActions
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.finding_inspector import ReportFindingInspector
@@ -31,6 +32,7 @@ __all__ = [
     "ReportExportTypeDialog",
     "ReportFormatActions",
     "ReportFindingInspector",
+    "ReportFindingPromotionActions",
     "ReportMetadataInspector",
     "ReportRemediationInspector",
     "ReportScopeInspector",

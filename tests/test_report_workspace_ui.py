@@ -42,6 +42,7 @@ from core.reporting import (
 from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
     LootEntryPickerDialog,
+    LootFindingPromotionDialog,
 )
 from ui.report.finding_inspector import ReportEvidenceCard, ReportFindingInspector
 from ui.report.metadata_inspector import ReportMetadataInspector
@@ -107,6 +108,11 @@ class TestReportWorkspaceUI(unittest.TestCase):
         nav.add_finding_requested.connect(lambda: add_clicked.append(True))
         nav.btn_add_finding.click()
         self.assertEqual(add_clicked, [True])
+
+        promoted = []
+        nav.promote_finding_requested.connect(lambda: promoted.append(True))
+        nav.btn_promote_finding.click()
+        self.assertEqual(promoted, [True])
 
     def test_workspace_navigator_theme_dependent_icon_colors(self):
         """Verify that navigator section items use theme-dependent accent colors (e.g. violet on Dracula)."""
@@ -490,15 +496,15 @@ Appendix body
         self.assertEqual(insp._stack.currentWidget(), insp.empty_widget)
 
         created = []
-        synced = []
+        promoted = []
         insp.request_create_finding.connect(lambda: created.append(True))
-        insp.request_loot_sync.connect(lambda: synced.append(True))
+        insp.request_promote_loot.connect(lambda: promoted.append(True))
 
         insp.btn_empty_create.click()
         self.assertEqual(created, [True])
 
-        insp.btn_empty_sync.click()
-        self.assertEqual(synced, [True])
+        insp.btn_empty_promote.click()
+        self.assertEqual(promoted, [True])
 
         # Loading finding switches to editor widget
         f = ReportFindingItem(id="f-1", title="Test Finding")
@@ -596,6 +602,26 @@ Appendix body
         self.assertEqual(dialog.selected_entry["id"], "loot-2")
 
         dialog.accept()
+        dialog.deleteLater()
+
+    def test_loot_finding_promotion_dialog_selects_primary_and_multiple_evidence(self):
+        entries = [
+            {"id": "primary", "type": "note", "title": "SQL injection"},
+            {"id": "request", "type": "note", "title": "HTTP request"},
+            {"id": "proof", "type": "screenshot", "title": "Admin proof"},
+        ]
+        dialog = LootFindingPromotionDialog(entries)
+
+        self.assertEqual(dialog.selected_entry["id"], "primary")
+        self.assertEqual(dialog.evidence_list.count(), 2)
+        dialog.evidence_list.item(0).setSelected(True)
+        dialog.evidence_list.item(1).setSelected(True)
+
+        self.assertEqual(
+            [entry["id"] for entry in dialog.selected_evidence_entries],
+            ["request", "proof"],
+        )
+        self.assertIn("2", dialog.lbl_selection.text())
         dialog.deleteLater()
 
     def test_clipboard_history_picker_dialog(self):

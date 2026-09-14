@@ -119,6 +119,31 @@ class TestLootReportSync(unittest.TestCase):
         self.assertEqual(result.added_count, 0)
         self.assertEqual(result.text, report)
 
+    def test_evidence_only_loot_does_not_participate_in_finding_sync(self):
+        evidence = dict(self.entry_a, report_role="evidence")
+
+        state = classify_loot_report_state("# Report", [evidence])
+        result = append_missing_loot_to_text(
+            "# Report", [evidence], language="en"
+        )
+
+        self.assertFalse(state.missing)
+        self.assertFalse(state.current)
+        self.assertFalse(state.stale)
+        self.assertEqual(result.added_count, 0)
+        self.assertEqual(result.text, "# Report")
+
+    def test_demoted_finding_marker_is_reported_as_orphaned(self):
+        marker = (
+            f"<!-- spectre:loot:{self.entry_a['id']}:"
+            f"{loot_content_hash(self.entry_a)} -->"
+        )
+        evidence = dict(self.entry_a, report_role="evidence")
+
+        state = classify_loot_report_state(marker, [evidence])
+
+        self.assertEqual(state.orphaned_ids, (self.entry_a["id"],))
+
     # ------------------------------------------------------------------ #
     # Ticket 29: Marker Parsing & Robustness
     # ------------------------------------------------------------------ #

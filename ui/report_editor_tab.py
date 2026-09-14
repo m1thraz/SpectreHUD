@@ -23,7 +23,6 @@ from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QMessageBox,
-    QDialog,
 )
 from PyQt6.QtGui import (
     QKeySequence,
@@ -36,6 +35,7 @@ from core.reporting import (
     ReportFileManager,
     ReportFindingItem,
     ReportMetadata,
+    FindingPromotionService,
     ReportMutationService,
     ReportRemediationPlan,
     ReportScopeMethodology,
@@ -46,9 +46,7 @@ from core.reporting import (
     assess_report_readiness,
     build_report_navigation,
     duplicate_report_finding,
-    finding_from_loot_entry,
     strip_generator_footer,
-    supporting_evidence_from_loot_entry,
 )
 from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
@@ -56,11 +54,12 @@ from core.i18n import t
 from core.logger import get_logger
 from core.fonts import get_report_font_stack
 from core.theme_loader import ThemeLoader
-from ui.report.dialogs import (
-    LootFindingPromotionDialog,
-)
 from ui.report.export_actions import ReportExportActions
 from ui.report.evidence_actions import ReportEvidenceActions
+from ui.report.finding_promotion_actions import (
+    FindingPromotionCallbacks,
+    ReportFindingPromotionActions,
+)
 from ui.report.format_actions import ReportFormatActions
 from ui.report.navigation import ReportLocation, ReportLocationKind
 from ui.report.action_toolbar import (
@@ -191,6 +190,15 @@ class ReportEditorTab(QWidget):
                 self.workspace_shell.finding_inspector.attach_evidence_item(
                     item, insert_into_description=True
                 )
+            ),
+        )
+        self.finding_promotion_actions = ReportFindingPromotionActions(
+            parent=self,
+            service=FindingPromotionService(),
+            loot_manager=lambda: self.loot_manager,
+            callbacks=FindingPromotionCallbacks(
+                current_markdown=self.current_markdown,
+                add_finding=self._add_promoted_finding,
             ),
         )
 
@@ -340,7 +348,7 @@ class ReportEditorTab(QWidget):
             callbacks=ReportWorkspaceCallbacks(
                 navigate=lambda location: self.navigate_to(location),
                 add_finding=lambda: self.add_finding(),
-                promote_finding=lambda: self.promote_loot_to_finding(),
+                promote_finding=self.finding_promotion_actions.promote,
                 sync_loot=lambda: self.mutation_actions.append_missing_loot(),
                 text_changed=lambda: self._on_text_changed(),
                 metadata_changed=lambda value: self._on_metadata_changed(value),
@@ -1156,76 +1164,12 @@ class ReportEditorTab(QWidget):
         self.apply_workspace_document()
         self.navigate_to(ReportLocation.finding(new_id))
 
-    def promote_loot_to_finding(self) -> None:
-        """Promote one unreferenced Loot entry and bundle selected supporting evidence."""
-        if not self.loot_manager:
-            return
+    def _add_promoted_finding(self, finding: ReportFindingItem) -> None:
+        """Commit a prepared promotion result to the active workspace document."""
         if self._workspace_doc is None:
             self._workspace_doc = ReportWorkspaceDocument.from_markdown(
                 self.workspace_shell.editor.toPlainText()
             )
-
-        from core.reporting import extract_report_markers
-
-        entries = self.loot_manager.get_all_entries()
-        markers = extract_report_markers(self.workspace_shell.editor.toPlainText())
-        candidates = [
-            entry
-            for entry in entries
-            if entry.get("id") and str(entry["id"]) not in markers
-        ]
-        if not candidates:
-            show_warning_dialog(
-                self,
-                t("report.no_promotable_loot_title", "No unassigned Loot"),
-                t(
-                    "report.no_promotable_loot_msg",
-                    "All available Loot is already represented by report findings.",
-                ),
-            )
-            return
-
-        dialog = LootFindingPromotionDialog(
-            candidates,
-            evidence_entries=candidates,
-            parent=self,
-        )
-        if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_entry:
-            return
-
-        primary = dialog.selected_entry
-        supporting = dialog.selected_evidence_entries
-        supporting_ids = [str(entry.get("id", "")) for entry in supporting]
-        try:
-            promoted = self.loot_manager.assign_report_roles(
-                str(primary["id"]),
-                supporting_ids,
-            )
-        except Exception as error:
-            logger.error("Could not persist Loot report roles: %s", error, exc_info=True)
-            show_warning_dialog(
-                self,
-                t("report.promote_failed_title", "Could not create finding"),
-                str(error),
-            )
-            return
-        if promoted is None:
-            return
-
-        finding = finding_from_loot_entry(
-            promoted,
-            fallback_title=t("report.new_finding_default_title", "New Finding"),
-        )
-        existing_sources = {
-            evidence.source_loot_id for evidence in finding.evidence_items
-        }
-        for entry in supporting:
-            evidence = supporting_evidence_from_loot_entry(entry)
-            if evidence is None or evidence.source_loot_id in existing_sources:
-                continue
-            finding.attach_evidence(evidence, insert_into_description=True)
-            existing_sources.add(evidence.source_loot_id)
-
         self._workspace_doc.add_finding(finding)
         self.apply_workspace_document()
         self.navigate_to(ReportLocation.finding(finding.id))

@@ -9,9 +9,11 @@ semantic versioning.
 ### Added
 
 * Added optional remediation guidance while capturing new Loot.
+* Added an explicit Loot-to-Finding workflow that can bundle multiple Loot entries as supporting evidence for one finding.
 
 ### Changed
 
+* Distinguished standalone report findings from evidence-only Loot during report generation and synchronization.
 * Harmonized UI components, dialogs, and filter pills to strictly derive colors from the active theme palette.
 * Centralized report light and print export palette tokens into headless `core.reporting.report_palette`.
 * Hardened theme architecture guardrails against unlisted Hex and CSS `rgb()`/`rgba()` literals across UI and reporting logic.

@@ -731,6 +731,8 @@
     "report.no_promotable_loot_title": "No unassigned Loot",
     "report.no_promotable_loot_msg": "All available Loot is already represented by report findings.",
     "report.promote_failed_title": "Could not create finding",
+    "report.promote_loot_changed_msg": "The selected Loot changed before it could be promoted. Please select it again.",
+    "report.promote_loot_failed_msg": "The Loot roles could not be saved, so no finding was created.",
     "report.loot_entry_search_placeholder": "Filter by title, content, target IP, type...",
     "report.category_all": "All Categories",
     "report.category_creds": "Credentials / Hashes",

@@ -129,7 +129,6 @@ class ReportFindingInspector(QWidget):
     request_loot_entry = pyqtSignal()
     request_create_finding = pyqtSignal()
     request_promote_loot = pyqtSignal()
-    request_loot_sync = request_promote_loot
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -201,7 +200,6 @@ class ReportFindingInspector(QWidget):
         self.btn_empty_promote.setProperty("class", "SecondaryBtn")
         self.btn_empty_promote.setIcon(icon("fa5s.file-medical", color=get_theme_color("SUCCESS")))
         self.btn_empty_promote.clicked.connect(self.request_promote_loot.emit)
-        self.btn_empty_sync = self.btn_empty_promote
         btn_row.addWidget(self.btn_empty_promote)
 
         panel_layout.addLayout(btn_row)

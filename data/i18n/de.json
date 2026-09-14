@@ -731,6 +731,8 @@
     "report.no_promotable_loot_title": "Kein unzugeordnetes Loot",
     "report.no_promotable_loot_msg": "Alle verfügbaren Loot-Einträge werden bereits durch Report-Findings repräsentiert.",
     "report.promote_failed_title": "Finding konnte nicht erstellt werden",
+    "report.promote_loot_changed_msg": "Das ausgewählte Loot wurde vor der Übernahme geändert. Bitte wähle es erneut aus.",
+    "report.promote_loot_failed_msg": "Die Report-Rollen des Loots konnten nicht gespeichert werden; daher wurde kein Finding erstellt.",
     "report.loot_entry_search_placeholder": "Nach Titel, Inhalt, Ziel-IP, Typ filtern...",
     "report.category_all": "Alle Kategorien",
     "report.category_creds": "Zugangsdaten / Hashes",

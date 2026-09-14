@@ -131,6 +131,12 @@ from core.reporting.finding_conversion import (
     finding_from_loot_entry,
     supporting_evidence_from_loot_entry,
 )
+from core.reporting.finding_promotion import (
+    FindingPromotionFailureReason,
+    FindingPromotionResult,
+    FindingPromotionService,
+    LootFindingPromotionStore,
+)
 from core.reporting.professional import (
     strip_generator_footer,
     strip_professional_generator_footer,
@@ -236,4 +242,8 @@ __all__ = [
     "evidence_from_loot_entry",
     "finding_from_loot_entry",
     "supporting_evidence_from_loot_entry",
+    "FindingPromotionFailureReason",
+    "FindingPromotionResult",
+    "FindingPromotionService",
+    "LootFindingPromotionStore",
 ]

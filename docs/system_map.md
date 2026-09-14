@@ -36,6 +36,8 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 ## Loot to Report Findings
 
 - `core.reporting.finding_conversion` is the canonical boundary for turning a Loot entry into a structured finding; UI creation and template regeneration must use it instead of maintaining separate field mappings.
+- Loot persists an explicit report role: `finding` participates in generated finding sections and synchronization, `evidence` remains available for attachment and appendices, and migrated pre-role entries use `legacy` to preserve prior report behavior.
+- `FindingPromotionService` is the headless transaction boundary for assigning those roles and building one finding from a primary Loot entry plus zero or more supporting entries; `ReportFindingPromotionActions` owns its selection dialog and feedback, while `ReportEditorTab` only accepts the completed finding into the workspace document.
 - Evidence embedded in editable `report.md` uses versioned invisible envelopes to retain its evidence ID, type, caption, source Loot ID, and language. Rich-preview commits restore those envelopes when the visible evidence body still exists, while export cleanup removes only the envelopes and preserves the client-facing proof.
 - A Loot synchronization marker records source identity and the last rendered Loot hash; it does not imply semantic equality after report-side edits. Additive sync therefore reports changed entries but does not overwrite report-authored content.
 - Duplicating a finding intentionally removes its Loot synchronization marker and re-keys embedded evidence, while retaining evidence provenance for traceability.

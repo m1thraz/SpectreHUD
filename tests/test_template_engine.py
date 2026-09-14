@@ -97,6 +97,31 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertIn("Domain Admin Credentials", out)
         self.assertIn("CRITICAL", out)
 
+    def test_evidence_only_loot_is_not_rendered_as_a_standalone_finding(self):
+        evidence_only = dict(
+            self.sample_loot[2],
+            report_role="evidence",
+            title="Supporting screenshot only",
+        )
+        context = ReportContext(
+            loot_entries=[self.sample_loot[0], evidence_only],
+            clipboard_history=[],
+        )
+
+        summary = _render_executive_summary(
+            TemplateSection(type="executive_summary"), context, "en"
+        )
+        findings = _render_finding_section(
+            TemplateSection(type="finding_section"), context, "en"
+        )
+        appendix = _render_appendix(
+            TemplateSection(type="appendix"), context, "en"
+        )
+
+        self.assertNotIn("Supporting screenshot only", summary)
+        self.assertNotIn("Supporting screenshot only", findings)
+        self.assertIn("Supporting screenshot only", appendix)
+
     def test_render_phase_section(self):
         sec_access = TemplateSection(type="phase_section", category_id="access")
         out_access = _render_phase_section(sec_access, self.context, "de")
