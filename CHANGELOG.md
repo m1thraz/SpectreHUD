@@ -10,9 +10,17 @@ semantic versioning.
 
 * Added optional remediation guidance while capturing new Loot.
 
+### Changed
+
+* Harmonized UI components, dialogs, and filter pills to strictly derive colors from the active theme palette.
+* Centralized report light and print export palette tokens into headless `core.reporting.report_palette`.
+* Hardened theme architecture guardrails against unlisted Hex and CSS `rgb()`/`rgba()` literals across UI and reporting logic.
+
 ### Fixed
 
 * Preserved CVSS data and evidence provenance when Loot becomes a report finding.
+* Restored localized severity dropdown labels in the session loot dialog.
+* Removed degrading opacity fade effect on quick notes and clipboard history cards.
 
 ## [2.1.7] - 2026-09-14
 
