@@ -1,11 +1,12 @@
 # SpectreHUD
 
-![SpectreHUD logo](data/icon.svg)
-
 [![CI](https://github.com/m1thraz/SpectreHUD/actions/workflows/ci.yml/badge.svg)](https://github.com/m1thraz/SpectreHUD/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Windows and Linux](https://img.shields.io/badge/OS-Windows%20%7C%20Linux-orange)
 
+<p align="center">
+  <img src="data/icon.svg" alt="SpectreHUD logo" width="128" height="128">
+</p>
 **A local companion that stays open through an entire CTF or pentest engagement, from the first recon command to the finished report.**
 
 SpectreHUD is built to make **live pentest documentation as frictionless as possible**. Instead of reconstructing a report afterward from terminals, notes, screenshots, and browser tabs, the documentation grows alongside the engagement.
