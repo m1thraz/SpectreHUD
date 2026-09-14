@@ -9,8 +9,17 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QWidget,
 )
+from PyQt6.QtCore import QLocale
+from PyQt6.QtGui import QDoubleValidator
 from typing import Dict, Any, Optional, Callable
-from core.loot import LOOT_TYPES, CATEGORIES
+from core.loot import (
+    CATEGORIES,
+    LOOT_TYPES,
+    normalize_cvss_score,
+    normalize_finding_references,
+    normalize_finding_status,
+    normalize_finding_targets,
+)
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
@@ -41,6 +50,11 @@ class AddLootDialog(BaseHudDialog):
         initial_recommendation: str = "",
         recommendation: str = "",
         default_report_role: str = "evidence",
+        default_targets: Optional[list[str]] = None,
+        default_cvss_score: Any = None,
+        default_cvss_vector: str = "",
+        default_finding_status: str = "open",
+        default_references: Optional[list[str]] = None,
         entry_id: Optional[str] = None,
         is_edit: bool = False,
         on_export_file: Optional[Callable[[str], None]] = None,
@@ -83,6 +97,22 @@ class AddLootDialog(BaseHudDialog):
         )
         self.initial_report_role = str(
             kwargs.get("report_role", default_report_role) or "evidence"
+        )
+        self.initial_targets = normalize_finding_targets(
+            kwargs.get("targets", default_targets),
+            fallback_target=self.current_target_ip,
+        )
+        self.initial_cvss_score = normalize_cvss_score(
+            kwargs.get("cvss_score", default_cvss_score)
+        )
+        self.initial_cvss_vector = str(
+            kwargs.get("cvss_vector", default_cvss_vector) or ""
+        ).strip()
+        self.initial_finding_status = normalize_finding_status(
+            kwargs.get("finding_status", default_finding_status)
+        )
+        self.initial_references = normalize_finding_references(
+            kwargs.get("references", default_references)
         )
 
         # When opened non-modally (Quick Loot), set to True after first activation
@@ -233,13 +263,80 @@ class AddLootDialog(BaseHudDialog):
         self.chk_report_finding.setChecked(self.initial_report_role in {"finding", "legacy"})
         layout.addWidget(self.chk_report_finding)
 
+        self.finding_details_widget = QWidget()
+        details_layout = QVBoxLayout(self.finding_details_widget)
+        details_layout.setContentsMargins(0, 4, 0, 4)
+        details_layout.setSpacing(8)
+
+        details_row = QHBoxLayout()
+        details_row.setSpacing(10)
+        status_col = QVBoxLayout()
+        status_col.addWidget(
+            self._form_label(t("loot_dialog.lbl_finding_status", "Finding Status:"))
+        )
+        self.combo_finding_status = QComboBox()
+        for status in ("open", "in_progress", "resolved", "accepted_risk"):
+            self.combo_finding_status.addItem(
+                t(f"report.status_{status}", status.replace("_", " ").title()),
+                status,
+            )
+        self.combo_finding_status.setCurrentIndex(
+            max(0, self.combo_finding_status.findData(self.initial_finding_status))
+        )
+        status_col.addWidget(self.combo_finding_status)
+        details_row.addLayout(status_col, stretch=1)
+
+        score_col = QVBoxLayout()
+        score_col.addWidget(self._form_label(t("loot_dialog.lbl_cvss_score", "CVSS Score:")))
+        self.txt_cvss_score = QLineEdit()
+        score_validator = QDoubleValidator(0.0, 10.0, 1, self)
+        score_validator.setLocale(QLocale.c())
+        self.txt_cvss_score.setValidator(score_validator)
+        self.txt_cvss_score.setPlaceholderText("0.0–10.0")
+        if self.initial_cvss_score is not None:
+            self.txt_cvss_score.setText(f"{self.initial_cvss_score:.1f}")
+        score_col.addWidget(self.txt_cvss_score)
+        details_row.addLayout(score_col, stretch=1)
+
+        vector_col = QVBoxLayout()
+        vector_col.addWidget(
+            self._form_label(t("loot_dialog.lbl_cvss_vector", "CVSS Vector:"))
+        )
+        self.txt_cvss_vector = QLineEdit(self.initial_cvss_vector)
+        self.txt_cvss_vector.setPlaceholderText("CVSS:3.1/AV:N/AC:L/PR:N/...")
+        vector_col.addWidget(self.txt_cvss_vector)
+        details_row.addLayout(vector_col, stretch=2)
+        details_layout.addLayout(details_row)
+
+        details_layout.addWidget(
+            self._form_label(t("loot_dialog.lbl_references", "References (one per line):"))
+        )
+        self.txt_references = QPlainTextEdit()
+        self.txt_references.setObjectName("CommandBox")
+        self.txt_references.setPlainText("\n".join(self.initial_references))
+        self.txt_references.setPlaceholderText(
+            t(
+                "loot_dialog.ph_references",
+                "CVE, advisory, ticket, or documentation URL",
+            )
+        )
+        self.txt_references.setFixedHeight(70)
+        details_layout.addWidget(self.txt_references)
+        self.finding_details_widget.setVisible(self.chk_report_finding.isChecked())
+        self.chk_report_finding.toggled.connect(self._set_finding_details_visible)
+        layout.addWidget(self.finding_details_widget)
+        if self.chk_report_finding.isChecked():
+            self.resize(max(self.width(), 660), max(self.height(), 740))
+
         # 4. Target IP
-        lbl_target = QLabel(t("loot_dialog.lbl_target", "Associated Target (optional):"))
+        lbl_target = QLabel(t("loot_dialog.lbl_targets", "Associated Targets (optional):"))
         lbl_target.setProperty("class", "FormLabel")
         layout.addWidget(lbl_target)
 
-        self.txt_target = QLineEdit(self.current_target_ip)
-        self.txt_target.setPlaceholderText("10.10.10.x")
+        self.txt_target = QLineEdit(", ".join(self.initial_targets))
+        self.txt_target.setPlaceholderText(
+            t("loot_dialog.ph_targets", "10.10.10.x, /api/v1/auth")
+        )
         layout.addWidget(self.txt_target)
 
         # 5. Action Buttons
@@ -299,6 +396,7 @@ class AddLootDialog(BaseHudDialog):
         self.accept()
 
     def get_data(self) -> Dict[str, Any]:
+        targets = normalize_finding_targets(self.txt_target.text())
         data = {
             "type": self.combo_type.currentData(),
             "severity": self.combo_severity.currentData(),
@@ -309,8 +407,28 @@ class AddLootDialog(BaseHudDialog):
             "report_role": (
                 "finding" if self.chk_report_finding.isChecked() else "evidence"
             ),
-            "target_ip": self.txt_target.text().strip(),
+            "target_ip": targets[0] if targets else "",
+            "targets": targets,
+            "cvss_score": normalize_cvss_score(self.txt_cvss_score.text()),
+            "cvss_vector": self.txt_cvss_vector.text().strip(),
+            "finding_status": self.combo_finding_status.currentData(),
+            "references": normalize_finding_references(
+                self.txt_references.toPlainText()
+            ),
         }
         if self.entry_id:
             data["id"] = self.entry_id
         return data
+
+    @staticmethod
+    def _form_label(text: str) -> QLabel:
+        label = QLabel(text)
+        label.setProperty("class", "FormLabel")
+        return label
+
+    def _set_finding_details_visible(self, visible: bool) -> None:
+        self.finding_details_widget.setVisible(visible)
+        if visible and self.height() < 740:
+            self.resize(max(self.width(), 660), 740)
+        elif not visible and self.height() <= 740:
+            self.resize(self.width(), 600)

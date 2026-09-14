@@ -101,6 +101,34 @@ class TestLootReportSync(unittest.TestCase):
             loot_content_hash(with_recommendation),
         )
 
+    def test_hash_tracks_non_default_structured_finding_metadata(self):
+        base_hash = loot_content_hash(self.entry_a)
+        self.assertEqual(
+            loot_content_hash(
+                dict(
+                    self.entry_a,
+                    targets=[self.entry_a["target_ip"]],
+                    finding_status="open",
+                    references=[],
+                    cvss_score=None,
+                    cvss_vector="",
+                )
+            ),
+            base_hash,
+        )
+        for field, value in (
+            ("targets", [self.entry_a["target_ip"], "/admin"]),
+            ("finding_status", "resolved"),
+            ("references", ["CVE-2026-1234"]),
+            ("cvss_score", 8.8),
+            ("cvss_vector", "CVSS:3.1/AV:N/AC:L"),
+        ):
+            self.assertNotEqual(
+                loot_content_hash(dict(self.entry_a, **{field: value})),
+                base_hash,
+                field,
+            )
+
     def test_recommendation_change_is_stale_and_never_rewrites_report(self):
         original_hash = loot_content_hash(self.entry_a)
         report = (

@@ -75,6 +75,31 @@ class TestSemanticValidators(unittest.TestCase):
         self.assertEqual(legacy["recommendation"], "")
         self.assertEqual(enriched["recommendation"], "First action\nSecond action")
 
+    def test_validate_loot_finding_metadata_normalizes_legacy_and_enriched_entries(self):
+        legacy = validate_loot_entry(
+            {"title": "Legacy", "content": "Evidence", "target_ip": "10.0.0.1"}
+        )
+        enriched = validate_loot_entry(
+            {
+                "title": "Finding",
+                "content": "Evidence",
+                "targets": ["10.0.0.2", "10.0.0.2", "/admin"],
+                "cvss_score": "8.8",
+                "cvss_vector": "CVSS:3.1/AV:N/AC:L",
+                "finding_status": "RESOLVED",
+                "references": ["CVE-2026-1234", "", "CVE-2026-1234"],
+            }
+        )
+
+        self.assertEqual(legacy["targets"], ["10.0.0.1"])
+        self.assertIsNone(legacy["cvss_score"])
+        self.assertEqual(legacy["finding_status"], "open")
+        self.assertEqual(enriched["targets"], ["10.0.0.2", "/admin"])
+        self.assertEqual(enriched["target_ip"], "10.0.0.2")
+        self.assertEqual(enriched["cvss_score"], 8.8)
+        self.assertEqual(enriched["finding_status"], "resolved")
+        self.assertEqual(enriched["references"], ["CVE-2026-1234"])
+
     def test_validate_clipboard_list_with_mixed_malformed_items(self):
         """Tests that invalid clipboard entries (e.g. empty text, non-dict) are handled safely."""
         raw_history = [

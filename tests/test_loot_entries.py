@@ -89,6 +89,43 @@ class TestLootManager(unittest.TestCase):
         )
         self.assertEqual(recommendations["No recommendation"], "")
 
+    def test_structured_finding_metadata_roundtrips_and_can_be_cleared(self):
+        entry = self.loot_mgr.add_entry(
+            "note",
+            "Authentication bypass",
+            "Unsigned tokens are accepted.",
+            target_ip="api.example.test",
+            targets=["api.example.test", "/v1/auth"],
+            cvss_score="9.1",
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            finding_status="in_progress",
+            references=["CVE-2026-1234", "https://example.test/advisory"],
+        )
+
+        self.assertEqual(entry["targets"], ["api.example.test", "/v1/auth"])
+        self.assertEqual(entry["target_ip"], "api.example.test")
+        self.assertEqual(entry["cvss_score"], 9.1)
+        self.assertEqual(entry["finding_status"], "in_progress")
+        self.assertEqual(len(entry["references"]), 2)
+
+        updated = self.loot_mgr.update_entry(
+            entry["id"],
+            cvss_score=None,
+            cvss_vector="",
+            finding_status="resolved",
+            targets=[],
+            references=[],
+        )
+        self.assertIsNone(updated["cvss_score"])
+        self.assertEqual(updated["cvss_vector"], "")
+        self.assertEqual(updated["finding_status"], "resolved")
+        self.assertEqual(updated["targets"], [])
+        self.assertEqual(updated["target_ip"], "")
+        self.assertEqual(updated["references"], [])
+
+        reloaded = LootManager(storage_file=self.storage_file)
+        self.assertEqual(reloaded.get_all_entries()[0], updated)
+
     def test_report_roles_are_persisted_and_assigned_atomically(self):
         primary = self.loot_mgr.add_entry(
             "note", "Authentication bypass", "Unsigned token accepted", report_role="evidence"
@@ -220,12 +257,18 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(mgr.entries[1]["category"], "misc")
         self.assertEqual(mgr.entries[0]["report_role"], "legacy")
         self.assertEqual(mgr.entries[1]["report_role"], "legacy")
+        self.assertEqual(mgr.entries[0]["targets"], ["10.10.10.10"])
+        self.assertEqual(mgr.entries[0]["finding_status"], "open")
+        self.assertIsNone(mgr.entries[0]["cvss_score"])
+        self.assertEqual(mgr.entries[0]["references"], [])
 
         # Check that file on disk was IMMEDIATELY updated without needing manual save
         with open(legacy_file, "r", encoding="utf-8") as f:
             migrated_disk_data = json.load(f)
         self.assertEqual(migrated_disk_data[0]["category"], "misc")
         self.assertEqual(migrated_disk_data[1]["category"], "misc")
+        self.assertEqual(migrated_disk_data[0]["targets"], ["10.10.10.10"])
+        self.assertIn("finding_status", migrated_disk_data[0])
 
     def test_replace_entries_and_persist_migrates_and_immediately_saves(self):
         """The explicitly persistent replacement API migrates entries and saves them."""

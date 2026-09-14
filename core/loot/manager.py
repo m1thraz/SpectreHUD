@@ -17,6 +17,15 @@ from core.validators import (
     MAX_TITLE_LENGTH,
 )
 from core.loot.migrator import LootMigrator
+from core.loot.finding_metadata import (
+    MAX_CVSS_VECTOR_LENGTH,
+    MAX_FINDING_REFERENCES,
+    MAX_FINDING_REFERENCE_LENGTH,
+    MAX_FINDING_TARGETS,
+    MAX_FINDING_TARGET_LENGTH,
+    normalize_finding_metadata,
+    normalize_finding_targets,
+)
 from core.phases import PHASES
 
 logger = get_logger("loot")
@@ -117,6 +126,25 @@ class LootManager:
             )
         return text
 
+    @classmethod
+    def _validate_user_list(
+        cls,
+        values: Optional[List[str]],
+        field_name: str,
+        max_items: int,
+        max_length: int,
+    ) -> List[str]:
+        if values is None:
+            return []
+        if len(values) > max_items:
+            raise LootValidationError(
+                f"{field_name} exceeds the maximum of {max_items} entries."
+            )
+        return [
+            cls._validate_user_text(value, field_name, max_length)
+            for value in values
+        ]
+
     @staticmethod
     def _migrate_entries(
         entries: List[Dict[str, Any]],
@@ -134,7 +162,7 @@ class LootManager:
 
         raw_data = self.storage.load_json("loot")
         if raw_data is not None:
-            position_migration_needed = (
+            schema_migration_needed = (
                 any(
                     isinstance(item, dict)
                     and (
@@ -142,6 +170,18 @@ class LootManager:
                         or isinstance(item.get("position"), bool)
                         or not isinstance(item.get("position"), int)
                         or item.get("position", 0) < 0
+                        or any(
+                            field not in item
+                            for field in (
+                                "report_role",
+                                "recommendation",
+                                "targets",
+                                "cvss_score",
+                                "cvss_vector",
+                                "finding_status",
+                                "references",
+                            )
+                        )
                     )
                     for item in raw_data
                 )
@@ -151,13 +191,13 @@ class LootManager:
             self.entries = validate_loot_list(raw_data)
         else:
             self.entries = []
-            position_migration_needed = False
+            schema_migration_needed = False
 
         # Automatic migration of legacy entries lacking category or with invalid category
         self.entries, migrated = self._migrate_entries(self.entries)
-        if migrated or position_migration_needed:
+        if migrated or schema_migration_needed:
             logger.info(
-                "Migrated legacy loot entries to include category/severity/position and persisted."
+                "Migrated legacy Loot entries to the current persisted schema."
             )
             self.save_entries()
 
@@ -204,6 +244,11 @@ class LootManager:
         severity: str = "info",
         recommendation: str = "",
         report_role: str = "finding",
+        targets: Optional[List[str]] = None,
+        cvss_score: Any = None,
+        cvss_vector: str = "",
+        finding_status: str = "open",
+        references: Optional[List[str]] = None,
         **kwargs,
     ) -> Dict[str, Any]:
         """Creates and stores a new loot entry with category and severity classification."""
@@ -228,6 +273,34 @@ class LootManager:
         from core.loot.report_roles import normalize_report_role
 
         time_format = kwargs.get("time_format", self.time_format)
+        clean_targets = normalize_finding_targets(
+            self._validate_user_list(
+                targets,
+                "Loot targets",
+                MAX_FINDING_TARGETS,
+                MAX_FINDING_TARGET_LENGTH,
+            ),
+            fallback_target=clean_target_ip,
+        )
+        clean_target_ip = (
+            clean_targets[0][:MAX_TARGET_IP_LENGTH] if clean_targets else ""
+        )
+        finding_metadata = normalize_finding_metadata(
+            {
+                "targets": clean_targets,
+                "cvss_score": cvss_score,
+                "cvss_vector": self._validate_user_text(
+                    cvss_vector, "CVSS vector", MAX_CVSS_VECTOR_LENGTH
+                ),
+                "finding_status": finding_status,
+                "references": self._validate_user_list(
+                    references,
+                    "Loot references",
+                    MAX_FINDING_REFERENCES,
+                    MAX_FINDING_REFERENCE_LENGTH,
+                ),
+            }
+        )
         entry = {
             "id": f"loot_{uuid.uuid4().hex[:8]}",
             "type": normalized_type,
@@ -238,6 +311,7 @@ class LootManager:
             "recommendation": clean_recommendation,
             "report_role": normalize_report_role(report_role),
             "target_ip": clean_target_ip,
+            **finding_metadata,
             "timestamp": format_timestamp(time_format=time_format),
             "position": 0,
         }
@@ -263,6 +337,7 @@ class LootManager:
         for entry in new_entries:
             if entry.get("id") == entry_id:
                 previous_category = entry.get("category", "misc")
+                previous_target = str(entry.get("target_ip", "") or "")
                 if "category" in fields:
                     cat = fields["category"]
                     entry["category"] = cat if cat in VALID_CATEGORY_IDS else "misc"
@@ -306,6 +381,67 @@ class LootManager:
                     entry["target_ip"] = self._validate_user_text(
                         fields["target_ip"], "Target IP", MAX_TARGET_IP_LENGTH
                     )
+                raw_targets: Any
+                if "targets" in fields:
+                    raw_targets = self._validate_user_list(
+                        fields["targets"],
+                        "Loot targets",
+                        MAX_FINDING_TARGETS,
+                        MAX_FINDING_TARGET_LENGTH,
+                    )
+                elif "target_ip" in fields:
+                    existing_targets = normalize_finding_targets(
+                        entry.get("targets"), fallback_target=previous_target
+                    )
+                    extras = existing_targets[1:] if existing_targets else []
+                    raw_targets = (
+                        [entry["target_ip"], *extras]
+                        if entry["target_ip"]
+                        else extras
+                    )
+                else:
+                    raw_targets = entry.get("targets")
+                normalized_targets = normalize_finding_targets(
+                    raw_targets,
+                    fallback_target=(
+                        ""
+                        if "targets" in fields
+                        else str(entry.get("target_ip", "") or "")
+                    ),
+                )
+                entry["targets"] = normalized_targets
+                entry["target_ip"] = (
+                    normalized_targets[0][:MAX_TARGET_IP_LENGTH]
+                    if normalized_targets
+                    else ""
+                )
+                metadata_source = {
+                    "targets": normalized_targets,
+                    "cvss_score": fields.get("cvss_score", entry.get("cvss_score")),
+                    "cvss_vector": fields.get(
+                        "cvss_vector", entry.get("cvss_vector", "")
+                    ),
+                    "finding_status": fields.get(
+                        "finding_status", entry.get("finding_status", "open")
+                    ),
+                    "references": fields.get(
+                        "references", entry.get("references", [])
+                    ),
+                }
+                if "cvss_vector" in fields:
+                    metadata_source["cvss_vector"] = self._validate_user_text(
+                        fields["cvss_vector"],
+                        "CVSS vector",
+                        MAX_CVSS_VECTOR_LENGTH,
+                    )
+                if "references" in fields:
+                    metadata_source["references"] = self._validate_user_list(
+                        fields["references"],
+                        "Loot references",
+                        MAX_FINDING_REFERENCES,
+                        MAX_FINDING_REFERENCE_LENGTH,
+                    )
+                entry.update(normalize_finding_metadata(metadata_source))
                 updated_entry = entry
                 break
 

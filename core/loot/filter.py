@@ -22,6 +22,19 @@ TYPE_ALIASES: Dict[str, str] = {
 }
 
 
+def _entry_targets(entry: Mapping[str, Any]) -> list[str]:
+    values = entry.get("targets")
+    targets = (
+        [str(value) for value in values if str(value)]
+        if isinstance(values, (list, tuple))
+        else []
+    )
+    primary = str(entry.get("target_ip", "") or "")
+    if primary and primary not in targets:
+        targets.insert(0, primary)
+    return targets
+
+
 def filter_loot_entries(
     entries: Sequence[Mapping[str, Any]],
     target_ip: Optional[str] = None,
@@ -40,7 +53,9 @@ def filter_loot_entries(
 
     if target_ip and target_ip != "all":
         results = [
-            e for e in results if e.get("target_ip") == target_ip or not e.get("target_ip")
+            e
+            for e in results
+            if target_ip in _entry_targets(e) or not _entry_targets(e)
         ]
 
     if entry_type and entry_type != "all":
@@ -60,9 +75,25 @@ def filter_loot_entries(
         for e in results:
             title = str(e.get("title", "")).lower()
             content = str(e.get("content", "")).lower()
-            target = str(e.get("target_ip", "")).lower()
+            targets = " ".join(_entry_targets(e)).lower()
             cat = str(e.get("category", "")).lower()
-            if q in title or q in content or q in target or q in cat:
+            recommendation = str(e.get("recommendation", "")).lower()
+            cvss = f"{e.get('cvss_score', '')} {e.get('cvss_vector', '')}".lower()
+            reference_values = e.get("references")
+            if not isinstance(reference_values, (list, tuple)):
+                reference_values = []
+            references = " ".join(
+                str(value) for value in reference_values
+            ).lower()
+            if (
+                q in title
+                or q in content
+                or q in targets
+                or q in cat
+                or q in recommendation
+                or q in cvss
+                or q in references
+            ):
                 matched.append(e)
         results = matched
 

@@ -70,6 +70,20 @@ def test_filter_by_target_ip(sample_loot):
     assert "loot_4" in ids  # universal (empty target_ip)
 
 
+def test_filter_matches_secondary_targets_and_structured_metadata(sample_loot):
+    enriched = dict(
+        sample_loot[0],
+        targets=["10.10.10.55", "/api/v1/auth"],
+        cvss_vector="CVSS:3.1/AV:N/AC:L",
+        references=["CVE-2026-1234"],
+    )
+    entries = [enriched, *sample_loot[1:]]
+
+    assert filter_loot_entries(entries, target_ip="/api/v1/auth")[0]["id"] == "loot_1"
+    assert filter_loot_entries(entries, search_query="AV:N")[0]["id"] == "loot_1"
+    assert filter_loot_entries(entries, search_query="CVE-2026")[0]["id"] == "loot_1"
+
+
 def test_filter_by_entry_type(sample_loot):
     """Filtering by entry type supports canonical types and aliases."""
     results = filter_loot_entries(sample_loot, entry_type="credentials")

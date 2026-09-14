@@ -10,6 +10,7 @@ semantic versioning.
 
 * Added optional remediation guidance while capturing new Loot.
 * Added an explicit Loot-to-Finding workflow that can bundle multiple Loot entries as supporting evidence for one finding.
+* Added CVSS, finding status, references, and multiple targets to report-ready Loot capture.
 
 ### Changed
 

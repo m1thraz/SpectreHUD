@@ -53,12 +53,16 @@ def test_linux_desktop_assets_are_required_in_release_wheel():
 
 def test_report_workspace_boundaries_are_required_in_release_wheel():
     expected = {
+        "core/loot/finding_metadata.py",
+        "core/loot/report_roles.py",
+        "core/reporting/finding_promotion.py",
         "core/reporting/mutation_service.py",
         "core/reporting/readiness.py",
         "core/reporting/session.py",
         "core/reporting/workspace_model.py",
         "ui/report/action_toolbar.py",
         "ui/report/evidence_actions.py",
+        "ui/report/finding_promotion_actions.py",
         "ui/report/mutation_actions.py",
         "ui/report/navigation.py",
         "ui/report/preview_controller.py",

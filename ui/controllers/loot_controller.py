@@ -20,6 +20,7 @@ from ui.add_loot_dialog import AddLootDialog
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
 
 logger = get_logger("loot_controller")
+_UNSET = object()
 
 
 def _loot_type_name(loot_type: Dict[str, Any]) -> str:
@@ -102,6 +103,11 @@ class LootController(QObject):
         severity: str = "info",
         recommendation: str = "",
         report_role: str = "finding",
+        targets: Optional[List[str]] = None,
+        cvss_score: Any = None,
+        cvss_vector: str = "",
+        finding_status: str = "open",
+        references: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         try:
             entry = self.loot_manager.add_entry(
@@ -113,6 +119,11 @@ class LootController(QObject):
                 severity=severity,
                 recommendation=recommendation,
                 report_role=report_role,
+                targets=targets,
+                cvss_score=cvss_score,
+                cvss_vector=cvss_vector,
+                finding_status=finding_status,
+                references=references,
             )
             self.loot_updated.emit()
             return entry
@@ -131,6 +142,11 @@ class LootController(QObject):
         severity: Optional[str] = None,
         recommendation: Optional[str] = None,
         report_role: Optional[str] = None,
+        targets: Optional[List[str]] = None,
+        cvss_score: Any = _UNSET,
+        cvss_vector: Optional[str] = None,
+        finding_status: Optional[str] = None,
+        references: Optional[List[str]] = None,
     ) -> bool:
         try:
             fields: Dict[str, Any] = {
@@ -148,6 +164,16 @@ class LootController(QObject):
                 fields["recommendation"] = recommendation
             if report_role is not None:
                 fields["report_role"] = report_role
+            if targets is not None:
+                fields["targets"] = targets
+            if cvss_score is not _UNSET:
+                fields["cvss_score"] = cvss_score
+            if cvss_vector is not None:
+                fields["cvss_vector"] = cvss_vector
+            if finding_status is not None:
+                fields["finding_status"] = finding_status
+            if references is not None:
+                fields["references"] = references
             success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
@@ -628,6 +654,11 @@ class LootController(QObject):
                     severity=data.get("severity", "info"),
                     recommendation=data.get("recommendation", ""),
                     report_role=data.get("report_role", "evidence"),
+                    targets=data.get("targets", []),
+                    cvss_score=data.get("cvss_score"),
+                    cvss_vector=data.get("cvss_vector", ""),
+                    finding_status=data.get("finding_status", "open"),
+                    references=data.get("references", []),
                 )
                 if on_accepted:
                     on_accepted(data)
@@ -670,6 +701,11 @@ class LootController(QObject):
                 severity=data.get("severity", "info"),
                 recommendation=data.get("recommendation", ""),
                 report_role=data.get("report_role", "evidence"),
+                targets=data.get("targets", []),
+                cvss_score=data.get("cvss_score"),
+                cvss_vector=data.get("cvss_vector", ""),
+                finding_status=data.get("finding_status", "open"),
+                references=data.get("references", []),
             )
             if on_accepted:
                 on_accepted(data)
@@ -695,11 +731,27 @@ class LootController(QObject):
             default_recommendation=entry.get("recommendation", ""),
             default_report_role=entry.get("report_role", "legacy"),
             default_severity=entry.get("severity", "info"),
+            default_targets=entry.get("targets", []),
+            default_cvss_score=entry.get("cvss_score"),
+            default_cvss_vector=entry.get("cvss_vector", ""),
+            default_finding_status=entry.get("finding_status", "open"),
+            default_references=entry.get("references", []),
             on_export_file=on_export_file,
             on_export_obsidian=on_export_obsidian,
         )
         if dlg.exec():
             data = dlg.get_data()
+            finding_fields = {
+                key: data[key]
+                for key in (
+                    "targets",
+                    "cvss_score",
+                    "cvss_vector",
+                    "finding_status",
+                    "references",
+                )
+                if key in data
+            }
             self.update_entry(
                 entry_id=entry["id"],
                 title=data["title"],
@@ -710,6 +762,7 @@ class LootController(QObject):
                 severity=data.get("severity"),
                 recommendation=data.get("recommendation", ""),
                 report_role=data.get("report_role", "evidence"),
+                **finding_fields,
             )
             return True
         return False

@@ -216,6 +216,25 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertNotIn("Impact", rendered)
         self.assertNotIn("Recommendation", rendered)
 
+    def test_generated_finding_renders_structured_loot_metadata(self):
+        entry = dict(
+            self.sample_loot[1],
+            targets=["10.10.10.50", "/admin"],
+            cvss_score=8.8,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            finding_status="accepted_risk",
+            references=["CVE-2026-1234", "https://example.test/advisory"],
+        )
+
+        rendered = "\n".join(_render_loot_entry_block(entry, lang="en"))
+
+        self.assertIn("**CVSS Score:** `8.8`", rendered)
+        self.assertIn("**CVSS Vector:** `CVSS:3.1/", rendered)
+        self.assertIn("**Target:** `10.10.10.50, /admin`", rendered)
+        self.assertIn("**Status:** Accepted Risk", rendered)
+        self.assertIn("#### References", rendered)
+        self.assertIn("- CVE-2026-1234", rendered)
+
     def test_generated_finding_omits_missing_optional_metadata(self):
         entry = {
             "id": "loot_minimal",

@@ -5,13 +5,19 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Optional
 
+from core.loot import (
+    normalize_cvss_score,
+    normalize_cvss_vector,
+    normalize_finding_references,
+    normalize_finding_status,
+    normalize_finding_targets,
+)
 from core.phases import normalize_phase_key
 from core.reporting.evidence_markers import replace_evidence_block
 from core.reporting.workspace_model import ReportEvidenceItem, ReportFindingItem
 
 
 _IMAGE_TARGET_RE = re.compile(r"^!\[.*?\]\((.*?)\)$", re.DOTALL)
-_VALID_STATUSES = {"open", "in_progress", "resolved", "accepted_risk"}
 
 
 def evidence_from_loot_entry(entry: Mapping[str, Any]) -> Optional[ReportEvidenceItem]:
@@ -75,30 +81,13 @@ def finding_from_loot_entry(
     from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 
     entry_id = str(entry.get("id", "") or "")
-    target_values = entry.get("targets")
-    if isinstance(target_values, (list, tuple)):
-        targets = [str(value).strip() for value in target_values if str(value).strip()]
-    else:
-        target = str(entry.get("target_ip", "") or "").strip()
-        targets = [target] if target else []
-
-    references_value = entry.get("references")
-    references = (
-        [str(value).strip() for value in references_value if str(value).strip()]
-        if isinstance(references_value, (list, tuple))
-        else []
+    targets = normalize_finding_targets(
+        entry.get("targets"),
+        fallback_target=str(entry.get("target_ip", "") or ""),
     )
-    status = str(entry.get("finding_status", "open") or "open").lower()
-    if status not in _VALID_STATUSES:
-        status = "open"
-
-    cvss_score = None
-    try:
-        if entry.get("cvss_score") not in (None, ""):
-            candidate = float(entry["cvss_score"])
-            cvss_score = candidate if 0.0 <= candidate <= 10.0 else None
-    except (TypeError, ValueError):
-        pass
+    references = normalize_finding_references(entry.get("references"))
+    status = normalize_finding_status(entry.get("finding_status"))
+    cvss_score = normalize_cvss_score(entry.get("cvss_score"))
 
     evidence = evidence_from_loot_entry(entry)
     content = str(entry.get("content", "") or "").strip()
@@ -108,7 +97,7 @@ def finding_from_loot_entry(
         title=str(entry.get("title", "") or fallback_title),
         severity=str(entry.get("severity", "info") or "info").lower(),
         cvss_score=cvss_score,
-        cvss_vector=str(entry.get("cvss_vector", "") or "").strip() or None,
+        cvss_vector=normalize_cvss_vector(entry.get("cvss_vector")) or None,
         status=status,
         phase=normalize_phase_key(entry.get("phase") or entry.get("category") or "recon"),
         targets=targets,

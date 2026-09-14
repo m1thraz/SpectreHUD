@@ -52,6 +52,18 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(dlg.get_data()["recommendation"], "Rotate the password")
         dlg.chk_report_finding.setChecked(True)
         self.assertEqual(dlg.get_data()["report_role"], "finding")
+        dlg.txt_target.setText("10.10.10.50, /api/v1/auth")
+        dlg.txt_cvss_score.setText("8.8")
+        dlg.txt_cvss_vector.setText("CVSS:3.1/AV:N/AC:L")
+        dlg.combo_finding_status.setCurrentIndex(
+            dlg.combo_finding_status.findData("in_progress")
+        )
+        dlg.txt_references.setPlainText("CVE-2026-1234\nhttps://example.test")
+        enriched = dlg.get_data()
+        self.assertEqual(enriched["targets"], ["10.10.10.50", "/api/v1/auth"])
+        self.assertEqual(enriched["cvss_score"], 8.8)
+        self.assertEqual(enriched["finding_status"], "in_progress")
+        self.assertEqual(len(enriched["references"]), 2)
         dlg.close()
 
     def test_edit_loot_dialog_exposes_multiline_recommendation(self):
@@ -70,6 +82,30 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(
             dlg.get_data()["recommendation"], "First action\nSecond action"
         )
+        dlg.close()
+
+    def test_finding_details_are_progressive_and_restore_existing_values(self):
+        dlg = AddLootDialog(
+            entry_id="loot-1",
+            is_edit=True,
+            default_report_role="finding",
+            default_title="Finding",
+            default_content="Evidence",
+            default_targets=["host.local", "/admin"],
+            default_cvss_score=7.5,
+            default_cvss_vector="CVSS:3.1/AV:N/AC:H",
+            default_finding_status="accepted_risk",
+            default_references=["https://example.test/advisory"],
+        )
+
+        self.assertFalse(dlg.finding_details_widget.isHidden())
+        data = dlg.get_data()
+        self.assertEqual(data["targets"], ["host.local", "/admin"])
+        self.assertEqual(data["cvss_score"], 7.5)
+        self.assertEqual(data["finding_status"], "accepted_risk")
+        self.assertEqual(data["references"], ["https://example.test/advisory"])
+        dlg.chk_report_finding.setChecked(False)
+        self.assertTrue(dlg.finding_details_widget.isHidden())
         dlg.close()
 
     def test_new_project_dialog_data(self):

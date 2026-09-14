@@ -49,11 +49,11 @@ def loot_content_hash(entry: Mapping[str, Any]) -> str:
     """Calculates a deterministic 12-hex-character SHA-256 hash for a loot entry.
 
     Fields hashed: category, content, severity, target_ip, timestamp, title, type,
-    and a non-empty recommendation.
+    and non-default report metadata.
     Note: position is intentionally omitted so board reordering does not mark a report stale.
     Omitting an empty recommendation preserves hashes produced before that field existed.
     """
-    payload = {
+    payload: Dict[str, Any] = {
         "category": str(entry.get("category", "") or ""),
         "content": str(entry.get("content", "") or ""),
         "severity": str(entry.get("severity", "info") or "info").lower(),
@@ -65,6 +65,24 @@ def loot_content_hash(entry: Mapping[str, Any]) -> str:
     recommendation = str(entry.get("recommendation", "") or "").strip()
     if recommendation:
         payload["recommendation"] = recommendation
+    cvss_score = entry.get("cvss_score")
+    if cvss_score not in (None, ""):
+        payload["cvss_score"] = cvss_score
+    cvss_vector = str(entry.get("cvss_vector", "") or "").strip()
+    if cvss_vector:
+        payload["cvss_vector"] = cvss_vector
+    finding_status = str(entry.get("finding_status", "open") or "open").strip()
+    if finding_status != "open":
+        payload["finding_status"] = finding_status
+    references = entry.get("references")
+    if isinstance(references, (list, tuple)) and references:
+        payload["references"] = [str(value) for value in references]
+    targets = entry.get("targets")
+    legacy_target = str(entry.get("target_ip", "") or "")
+    if isinstance(targets, (list, tuple)):
+        normalized_targets = [str(value) for value in targets if str(value)]
+        if normalized_targets and normalized_targets != ([legacy_target] if legacy_target else []):
+            payload["targets"] = normalized_targets
     canonical_json = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()[:12]
 

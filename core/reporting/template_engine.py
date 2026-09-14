@@ -20,7 +20,10 @@ from core.reporting.section_markers import (
     wrap_section_markdown,
 )
 from core.reporting.findings import finding_end_marker, finding_start_marker
-from core.reporting.finding_conversion import evidence_from_loot_entry
+from core.reporting.finding_conversion import (
+    evidence_from_loot_entry,
+    finding_from_loot_entry,
+)
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -250,12 +253,13 @@ def _render_loot_entry_block(
     """
     entry_id = str(entry.get("id", "")).strip()
     marker = format_loot_marker(entry_id, loot_content_hash(entry)) if entry_id else ""
+    finding = finding_from_loot_entry(entry)
     entry_type = entry.get("type", "note")
-    severity = str(entry.get("severity", "info")).lower()
+    severity = finding.severity
     title_fallback = "Unbenannter Eintrag" if lang == "de" else "Unnamed Entry"
     title = entry.get("title") or title_fallback
     content = (entry.get("content") or "").strip()
-    recommendation = (entry.get("recommendation") or "").strip()
+    recommendation = finding.recommendation
 
     lines = []
     if entry_id:
@@ -265,14 +269,26 @@ def _render_loot_entry_block(
     lines.append(f"### {title}")
     lines.append("")
     meta = [f"**Severity:** {render_severity_badge(severity, include_emoji=False)}"]
-    if entry.get("target_ip"):
-        meta.append(f"**Target:** {_wrap_inline_code(str(entry.get('target_ip')))}")
+    if finding.cvss_score is not None:
+        meta.append(f"**CVSS Score:** {_wrap_inline_code(f'{finding.cvss_score:.1f}')}")
+    if finding.cvss_vector:
+        meta.append(f"**CVSS Vector:** {_wrap_inline_code(finding.cvss_vector)}")
+    if finding.targets:
+        meta.append(f"**Target:** {_wrap_inline_code(', '.join(finding.targets))}")
     if include_phase and entry.get("category"):
         phase_label = "**Phase:**"
         meta.append(f"{phase_label} {_category_label(str(entry.get('category')))}")
     if entry.get("timestamp"):
         time_label = "**Beobachtet:**" if lang == "de" else "**Observed:**"
         meta.append(f"{time_label} {_wrap_inline_code(str(entry.get('timestamp')))}")
+    if "finding_status" in entry:
+        status_labels = {
+            "open": "Offen" if lang == "de" else "Open",
+            "in_progress": "In Arbeit" if lang == "de" else "In Progress",
+            "resolved": "Behoben" if lang == "de" else "Resolved",
+            "accepted_risk": "Akzeptiert" if lang == "de" else "Accepted Risk",
+        }
+        meta.append(f"**Status:** {status_labels[finding.status]}")
     if meta:
         lines.append("  \n".join(meta))
     lines.append("")
@@ -296,6 +312,16 @@ def _render_loot_entry_block(
                 "#### Empfehlung" if lang == "de" else "#### Recommendation",
                 "",
                 recommendation,
+            ]
+        )
+
+    if finding.references:
+        lines.extend(
+            [
+                "",
+                "#### Referenzen" if lang == "de" else "#### References",
+                "",
+                *(f"- {reference}" for reference in finding.references),
             ]
         )
 

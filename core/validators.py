@@ -122,13 +122,20 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     recommendation = str(entry.get("recommendation") or "").strip()[
         :MAX_RECOMMENDATION_LENGTH
     ]
-    from core.loot import normalize_report_role
+    from core.loot import (
+        normalize_finding_metadata,
+        normalize_report_role,
+    )
 
     report_role = normalize_report_role(
         entry.get("report_role"),
         missing_is_legacy="report_role" not in entry,
     )
     target_ip = str(entry.get("target_ip") or "").strip()[:MAX_TARGET_IP_LENGTH]
+    finding_metadata = normalize_finding_metadata(entry, fallback_target=target_ip)
+    targets = finding_metadata["targets"]
+    if targets:
+        target_ip = targets[0][:MAX_TARGET_IP_LENGTH]
     timestamp = str(entry.get("timestamp") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))[
         :MAX_TIMESTAMP_LENGTH
     ]
@@ -147,6 +154,7 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
         "recommendation": recommendation,
         "report_role": report_role,
         "target_ip": target_ip,
+        **finding_metadata,
         "timestamp": timestamp,
         "position": position,
     }

@@ -47,7 +47,9 @@ REQUIRED_FILES = [
     "core/loot/__init__.py",
     "core/loot/manager.py",
     "core/loot/filter.py",
+    "core/loot/finding_metadata.py",
     "core/loot/migrator.py",
+    "core/loot/report_roles.py",
     # Screenshots package
     "core/screenshots/__init__.py",
     "core/screenshots/manager.py",
@@ -67,6 +69,7 @@ REQUIRED_FILES = [
     "core/reporting/session.py",
     "core/reporting/evidence_markers.py",
     "core/reporting/finding_conversion.py",
+    "core/reporting/finding_promotion.py",
     "core/reporting/workspace_model.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The
     # former reporting/models.py module was removed during the refactor.
@@ -92,6 +95,7 @@ REQUIRED_FILES = [
     # Report Workspace composition and workflow boundaries
     "ui/report/action_toolbar.py",
     "ui/report/evidence_actions.py",
+    "ui/report/finding_promotion_actions.py",
     "ui/report/mutation_actions.py",
     "ui/report/navigation.py",
     "ui/report/preview_controller.py",
