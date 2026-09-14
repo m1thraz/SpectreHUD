@@ -9,7 +9,12 @@ from typing import Mapping, Optional
 from PyQt6.QtGui import QIcon
 import qtawesome as qta
 
-from ui.styles.palette import CYBER_CYAN, CYBER_DARK_PALETTE, TEXT_PRIMARY
+from ui.styles.palette import (
+    BG_DARK,
+    CYBER_CYAN,
+    CYBER_DARK_PALETTE,
+    TEXT_PRIMARY,
+)
 
 from core.theme_palette import SEVERITY_COLOR_TOKENS
 
@@ -30,7 +35,7 @@ def set_icon_palette(palette: Mapping[str, str]) -> None:
 def get_theme_color(token: str, default: Optional[str] = None) -> str:
     """Return the active theme's hex/rgba value for the requested palette token."""
     if token == "BG_PRIMARY":
-        return _active_palette.get("BG_DARK", _active_palette.get("BG_SURFACE", default or "#0d1117"))
+        return _active_palette.get("BG_DARK", _active_palette.get("BG_SURFACE", default or BG_DARK))
     return _active_palette.get(token, default or _active_icon_color)
 
 
