@@ -147,6 +147,13 @@ from core.reporting.finding_promotion import (
     FindingPromotionService,
     LootFindingPromotionStore,
 )
+from core.reporting.evidence_markers import (
+    format_evidence_block,
+    parse_evidence_blocks,
+    reconcile_evidence_markers,
+    replace_evidence_block,
+    strip_evidence_markers,
+)
 from core.reporting.professional import (
     strip_generator_footer,
     strip_professional_generator_footer,
@@ -259,6 +266,11 @@ __all__ = [
     "duplicate_report_finding",
     "evidence_from_loot_entry",
     "finding_from_loot_entry",
+    "format_evidence_block",
+    "parse_evidence_blocks",
+    "reconcile_evidence_markers",
+    "replace_evidence_block",
+    "strip_evidence_markers",
     "supporting_evidence_from_loot_entry",
     "FindingPromotionFailureReason",
     "FindingPromotionResult",

@@ -28,8 +28,9 @@ from PyQt6.QtWidgets import (
 
 from core.i18n import t
 from core.phases import normalize_phase_key
-from core.reporting import ReportEvidenceItem, ReportFindingItem
-from core.reporting.evidence_markers import (
+from core.reporting import (
+    ReportEvidenceItem,
+    ReportFindingItem,
     format_evidence_block,
     parse_evidence_blocks,
     reconcile_evidence_markers,

@@ -570,7 +570,7 @@ Appendix body
         insp.deleteLater()
 
     def test_finding_inspector_hides_evidence_metadata_tags_and_preserves_on_save(self):
-        from core.reporting.evidence_markers import parse_evidence_blocks
+        from core.reporting import parse_evidence_blocks
         insp = ReportFindingInspector()
 
         ev = ReportEvidenceItem(
