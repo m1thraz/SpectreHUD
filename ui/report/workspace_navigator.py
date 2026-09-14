@@ -318,7 +318,7 @@ class ReportWorkspaceNavigator(QWidget):
             sync_state = "diverged"
             tooltip = t(
                 "report.loot_sync_diverged_tip",
-                "Existing report content is preserved; additive sync does not overwrite changed entries.",
+                "Review each changed or report-only finding without silent overwrites.",
             )
         else:
             sync_state = "current"
@@ -332,7 +332,7 @@ class ReportWorkspaceNavigator(QWidget):
         )
         self.lbl_sync_state.setProperty("syncState", sync_state)
         self.lbl_sync_state.setToolTip(tooltip)
-        self.btn_sync_loot.setEnabled(missing_count > 0)
+        self.btn_sync_loot.setEnabled(bool(missing_count or stale_count or orphaned_count))
         self.btn_sync_loot.setToolTip(tooltip)
         self.lbl_sync_state.style().unpolish(self.lbl_sync_state)
         self.lbl_sync_state.style().polish(self.lbl_sync_state)

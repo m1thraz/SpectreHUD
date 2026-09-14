@@ -108,6 +108,16 @@ from core.reporting.loot_sync import (
     preserve_markers_in_preview_roundtrip,
     strip_report_markers,
 )
+from core.reporting.loot_reconciliation import (
+    LootDifferenceKind,
+    LootReconciliationAction,
+    LootReconciliationError,
+    LootReconciliationItem,
+    LootReconciliationResult,
+    LootReconciliationSelection,
+    analyze_loot_reconciliation,
+    reconcile_loot_report,
+)
 from core.reporting.outline import HeadingItem, extract_headings
 from core.reporting.report_metadata import ReportMetadata
 from core.reporting.report_evidence import ReportEvidenceItem
@@ -223,6 +233,14 @@ __all__ = [
     "loot_content_hash",
     "preserve_markers_in_preview_roundtrip",
     "strip_report_markers",
+    "LootDifferenceKind",
+    "LootReconciliationAction",
+    "LootReconciliationError",
+    "LootReconciliationItem",
+    "LootReconciliationResult",
+    "LootReconciliationSelection",
+    "analyze_loot_reconciliation",
+    "reconcile_loot_report",
     "HeadingItem",
     "extract_headings",
     "AttackPathStep",

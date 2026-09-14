@@ -25,6 +25,9 @@ from core.loot import LootManager
 from core.project import ProjectManager
 from core.reporting import (
     AttackPathStep,
+    LootDifferenceKind,
+    LootReconciliationAction,
+    LootReconciliationItem,
     ReportAppendix,
     ReportAttackPath,
     ReportEvidenceItem,
@@ -45,6 +48,7 @@ from ui.report.dialogs import (
     LootFindingPromotionDialog,
 )
 from ui.report.finding_inspector import ReportEvidenceCard, ReportFindingInspector
+from ui.report.loot_reconciliation_dialog import LootReconciliationDialog
 from ui.report.metadata_inspector import ReportMetadataInspector
 from ui.report.readiness_inspector import ReportReadinessInspector
 from ui.report.section_inspector import ReportSectionInspector
@@ -624,6 +628,48 @@ Appendix body
         self.assertIn("2", dialog.lbl_selection.text())
         dialog.deleteLater()
 
+    def test_loot_reconciliation_dialog_collects_explicit_snapshot_choices(self):
+        items = (
+            LootReconciliationItem(
+                entry_id="loot-1",
+                kind=LootDifferenceKind.CHANGED,
+                report_title="Edited report finding",
+                loot_title="Updated Loot finding",
+                report_hash="oldhash",
+                loot_hash="newhash",
+            ),
+            LootReconciliationItem(
+                entry_id="loot-deleted",
+                kind=LootDifferenceKind.REPORT_ONLY,
+                report_title="Historical finding",
+                report_hash="orphanhash",
+            ),
+        )
+        dialog = LootReconciliationDialog(items, missing_count=2)
+
+        self.assertEqual(dialog.table.rowCount(), 2)
+        self.assertTrue(dialog.append_missing)
+        self.assertTrue(dialog.btn_apply.isEnabled())
+        changed_combo = dialog.table.cellWidget(0, 3)
+        changed_combo.setCurrentIndex(
+            changed_combo.findData(LootReconciliationAction.KEEP_BOTH)
+        )
+        orphan_combo = dialog.table.cellWidget(1, 3)
+        orphan_combo.setCurrentIndex(
+            orphan_combo.findData(LootReconciliationAction.DETACH_REPORT)
+        )
+
+        decisions = dialog.decisions
+        self.assertEqual(
+            decisions["loot-1"].action, LootReconciliationAction.KEEP_BOTH
+        )
+        self.assertEqual(decisions["loot-1"].expected_loot_hash, "newhash")
+        self.assertEqual(
+            decisions["loot-deleted"].action,
+            LootReconciliationAction.DETACH_REPORT,
+        )
+        dialog.deleteLater()
+
     def test_clipboard_history_picker_dialog(self):
         history = [
             {
@@ -727,7 +773,7 @@ Appendix body
 
         nav.set_loot_sync_state(0, 1, 1)
         self.assertEqual(nav.lbl_sync_state.property("syncState"), "diverged")
-        self.assertFalse(nav.btn_sync_loot.isEnabled())
+        self.assertTrue(nav.btn_sync_loot.isEnabled())
 
         nav.set_loot_sync_state(0, 0, 0)
         self.assertEqual(nav.lbl_sync_state.property("syncState"), "current")

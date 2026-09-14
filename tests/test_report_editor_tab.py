@@ -277,7 +277,7 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(hasattr(self.tab.action_toolbar, "btn_append_loot"))
         self.assertEqual(
             self.tab.action_toolbar.btn_append_loot.text(),
-            t("report.append_loot", "Add Missing Loot"),
+            t("report.sync_loot", "Sync Loot & Findings"),
         )
 
     def test_btn_save_exists_as_compact_icon_in_toolbar(self):
@@ -456,13 +456,13 @@ class TestReportEditorTab(unittest.TestCase):
     def test_workspace_report_actions_menu_routes_existing_workflows(self):
         self.tab.action_toolbar.action_sync_loot.setEnabled(True)
         with (
-            patch.object(self.tab.mutation_actions, "append_missing_loot") as append_loot,
+            patch.object(self.tab.mutation_actions, "synchronize_loot") as sync_loot,
             patch.object(self.tab.mutation_actions, "regenerate") as regenerate,
         ):
             self.tab.action_toolbar.action_sync_loot.trigger()
             self.tab.action_toolbar.action_regenerate.trigger()
 
-        append_loot.assert_called_once_with()
+        sync_loot.assert_called_once_with()
         regenerate.assert_called_once_with()
 
     def test_semantic_navigator_rebuilds_from_current_editor_text(self):

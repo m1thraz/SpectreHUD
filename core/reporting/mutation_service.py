@@ -10,6 +10,13 @@ from core.reporting.file_manager import (
     ReportSaveError,
 )
 from core.reporting.loot_sync import LootReportState, classify_loot_report_state
+from core.reporting.loot_reconciliation import (
+    LootReconciliationAction,
+    LootReconciliationError,
+    LootReconciliationItem,
+    LootReconciliationSelection,
+    analyze_loot_reconciliation,
+)
 
 
 class ReportMutationFailureReason(str, Enum):
@@ -17,6 +24,7 @@ class ReportMutationFailureReason(str, Enum):
 
     BACKUP_FAILED = "backup_failed"
     SAVE_FAILED = "save_failed"
+    RECONCILIATION_CHANGED = "reconciliation_changed"
     UNEXPECTED_ERROR = "unexpected_error"
 
 
@@ -27,6 +35,12 @@ class ReportMutationResult:
     success: bool
     content: str = ""
     added_count: int = 0
+    resolved_count: int = 0
+    replaced_count: int = 0
+    accepted_count: int = 0
+    duplicated_count: int = 0
+    detached_count: int = 0
+    deleted_count: int = 0
     used_fallback: bool = False
     fallback_categories: tuple[str, ...] = ()
     failure_reason: Optional[ReportMutationFailureReason] = None
@@ -110,7 +124,63 @@ class ReportMutationService:
             fallback_categories=result.fallback_categories,
         )
 
+    def reconcile_loot(
+        self,
+        *,
+        project_name: str,
+        loot_manager: Any,
+        decisions: dict[
+            str, LootReconciliationAction | LootReconciliationSelection | str
+        ],
+        append_missing: bool = False,
+        template: Any = None,
+    ) -> ReportMutationResult:
+        try:
+            result = self._file_manager.reconcile_loot(
+                loot_manager,
+                decisions,
+                append_missing=append_missing,
+                project_name=project_name,
+                template=template,
+            )
+        except LootReconciliationError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.RECONCILIATION_CHANGED, detail=str(exc)
+            )
+        except ReportBackupError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.BACKUP_FAILED, detail=str(exc)
+            )
+        except ReportSaveError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.SAVE_FAILED, detail=str(exc)
+            )
+        except Exception as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.UNEXPECTED_ERROR, detail=str(exc)
+            )
+        return ReportMutationResult(
+            success=True,
+            content=result.text,
+            added_count=result.added_count,
+            resolved_count=result.resolved_count,
+            replaced_count=result.replaced_count,
+            accepted_count=result.accepted_count,
+            duplicated_count=result.duplicated_count,
+            detached_count=result.detached_count,
+            deleted_count=result.deleted_count,
+            used_fallback=result.used_fallback,
+            fallback_categories=result.fallback_categories,
+        )
+
     @staticmethod
     def compare_loot(markdown: str, loot_manager: Any) -> LootReportState:
         entries = loot_manager.get_all_entries() if loot_manager is not None else []
         return classify_loot_report_state(markdown, entries)
+
+    @staticmethod
+    def describe_loot_differences(
+        markdown: str, loot_manager: Any
+    ) -> tuple[LootReconciliationItem, ...]:
+        entries = loot_manager.get_all_entries() if loot_manager is not None else []
+        return analyze_loot_reconciliation(markdown, entries)

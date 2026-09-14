@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.reporting import (
+    LootReconciliationError,
     ReportBackupError,
     ReportFileManager,
     ReportMutationFailureReason,
@@ -107,3 +108,46 @@ def test_compare_loot_uses_current_manager_entries(dependencies) -> None:
     state = service.compare_loot("# Report", loot_manager)
 
     assert len(state.missing) == 1
+
+
+def test_reconcile_loot_preserves_typed_counts(dependencies) -> None:
+    service, file_manager = dependencies
+    file_manager.reconcile_loot.return_value = MagicMock(
+        text="# Reconciled",
+        added_count=1,
+        resolved_count=2,
+        replaced_count=1,
+        accepted_count=0,
+        duplicated_count=0,
+        detached_count=1,
+        deleted_count=0,
+        used_fallback=False,
+        fallback_categories=(),
+    )
+
+    result = service.reconcile_loot(
+        project_name="Box",
+        loot_manager="loot",
+        decisions={"loot-1": "apply_loot"},
+        append_missing=True,
+        template="template",
+    )
+
+    assert result.success
+    assert result.content == "# Reconciled"
+    assert result.resolved_count == 2
+    assert result.replaced_count == 1
+    assert result.detached_count == 1
+    assert result.added_count == 1
+
+
+def test_reconcile_loot_maps_changed_review_state(dependencies) -> None:
+    service, file_manager = dependencies
+    file_manager.reconcile_loot.side_effect = LootReconciliationError("changed")
+
+    result = service.reconcile_loot(
+        project_name="Box", loot_manager="loot", decisions={}
+    )
+
+    assert not result.success
+    assert result.failure_reason is ReportMutationFailureReason.RECONCILIATION_CHANGED

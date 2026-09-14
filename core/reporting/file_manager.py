@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Optional, Any, Tuple
 
 from core.reporting.loot_sync import append_missing_loot_to_text
+from core.reporting.loot_reconciliation import (
+    LootReconciliationAction,
+    LootReconciliationResult,
+    LootReconciliationSelection,
+    reconcile_loot_report,
+)
 from core.reporting.builder import ReportBuilder
 from core.logger import get_logger
 
@@ -227,6 +233,42 @@ class ReportFileManager:
             used_fallback=result.used_fallback,
             fallback_categories=result.fallback_categories,
         )
+
+    def reconcile_loot(
+        self,
+        loot_manager: Any,
+        decisions: dict[
+            str, LootReconciliationAction | LootReconciliationSelection | str
+        ],
+        *,
+        append_missing: bool = False,
+        project_name: Optional[str] = None,
+        template: Optional[Any] = None,
+    ) -> LootReconciliationResult:
+        """Persist one explicit Loot/report reconciliation as a fail-closed mutation."""
+        pname = self._resolve_project_name(project_name)
+        current_content = self.load(project_name=pname)
+        loot_entries = loot_manager.get_all_entries() if loot_manager else []
+        result = reconcile_loot_report(
+            current_content,
+            loot_entries,
+            decisions,
+            append_missing=append_missing,
+            template=template,
+            language=getattr(template, "language", "de") if template else "de",
+        )
+        if not result.changed:
+            return result
+
+        if self.exists(pname) and not self.backup(pname):
+            raise ReportBackupError(
+                f"Automatisches Backup von report.md für Projekt '{pname}' fehlgeschlagen."
+            )
+        if not self.save(result.text, project_name=pname):
+            raise ReportSaveError(
+                f"Speichern des abgeglichenen Reports für Projekt '{pname}' fehlgeschlagen."
+            )
+        return result
 
     def import_image(self, src_path: Path | str, project_name: Optional[str] = None) -> str:
         """

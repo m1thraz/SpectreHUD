@@ -245,7 +245,7 @@ class ReportEditorTab(QWidget):
                 toggle_navigator=lambda: self._toggle_navigator(),
                 populate_navigator=lambda: self._populate_navigator_menu(),
                 toggle_raw=lambda: self._toggle_inspector_raw(),
-                append_loot=lambda: self.mutation_actions.append_missing_loot(),
+                append_loot=lambda: self.mutation_actions.synchronize_loot(),
                 regenerate=lambda: self.mutation_actions.regenerate(),
                 export=lambda: self.export_actions.on_export_clicked(),
                 toggle_metadata=lambda visible: self._toggle_report_metadata(visible),
@@ -349,7 +349,7 @@ class ReportEditorTab(QWidget):
                 navigate=lambda location: self.navigate_to(location),
                 add_finding=lambda: self.add_finding(),
                 promote_finding=self.finding_promotion_actions.promote,
-                sync_loot=lambda: self.mutation_actions.append_missing_loot(),
+                sync_loot=lambda: self.mutation_actions.synchronize_loot(),
                 text_changed=lambda: self._on_text_changed(),
                 metadata_changed=lambda value: self._on_metadata_changed(value),
                 finding_changed=lambda value: self._on_finding_changed(value),
@@ -1051,7 +1051,9 @@ class ReportEditorTab(QWidget):
 
     def _set_loot_sync_state(self, missing: int, stale: int, orphaned: int) -> None:
         self.workspace_shell.navigator.set_loot_sync_state(missing, stale, orphaned)
-        self.action_toolbar.action_sync_loot.setEnabled(bool(missing))
+        self.action_toolbar.action_sync_loot.setEnabled(
+            bool(missing or stale or orphaned)
+        )
 
     def _refresh_workspace_navigator(self, *, preserve_selection: bool = True) -> None:
         """Reload navigator content while retaining the active report context."""

@@ -12,6 +12,10 @@ from core.project import ProjectManager
 from core.loot import LootManager
 from core.reporting import ReportFileManager
 from core.reporting import ReportTemplate
+from core.reporting import (
+    LootReconciliationAction,
+    finding_from_loot_entry,
+)
 from core.validators import MAX_REPORT_FILE_SIZE
 
 
@@ -275,6 +279,91 @@ class TestReportFileManager(unittest.TestCase):
         with patch.object(self.report_mgr, "save", return_value=False):
             with self.assertRaises(ReportSaveError):
                 self.report_mgr.append_missing_loot(self.loot_mgr, "SaveFailBox")
+
+    def test_reconcile_loot_backs_up_and_persists_explicit_selection(self):
+        from unittest.mock import MagicMock
+
+        self.project_mgr.create_project("ReconcileBox")
+        original_entry = {
+            "id": "loot-1",
+            "report_role": "finding",
+            "category": "recon",
+            "type": "note",
+            "title": "Loot title",
+            "content": "Original source",
+            "severity": "high",
+        }
+        finding = finding_from_loot_entry(original_entry)
+        finding.description = "Hand-edited report prose"
+        report = finding.to_markdown(language="en")
+        self.assertTrue(self.report_mgr.save(report, "ReconcileBox"))
+        changed_entry = dict(original_entry, content="Changed source")
+        manager = MagicMock()
+        manager.get_all_entries.return_value = [changed_entry]
+
+        result = self.report_mgr.reconcile_loot(
+            manager,
+            {"loot-1": LootReconciliationAction.ACCEPT_REPORT},
+            project_name="ReconcileBox",
+        )
+
+        self.assertEqual(result.accepted_count, 1)
+        self.assertIn("Hand-edited report prose", self.report_mgr.load("ReconcileBox"))
+        self.assertEqual(
+            self.report_mgr.get_backup_path("ReconcileBox").read_text(encoding="utf-8"),
+            report,
+        )
+
+    def test_reconcile_loot_noop_does_not_write_backup(self):
+        from unittest.mock import MagicMock
+
+        self.project_mgr.create_project("ReconcileNoop")
+        self.assertTrue(self.report_mgr.save("# Existing", "ReconcileNoop"))
+        manager = MagicMock()
+        manager.get_all_entries.return_value = []
+
+        result = self.report_mgr.reconcile_loot(
+            manager, {}, project_name="ReconcileNoop"
+        )
+
+        self.assertFalse(result.changed)
+        self.assertFalse(self.report_mgr.get_backup_path("ReconcileNoop").exists())
+
+    def test_reconcile_loot_fails_closed_on_persistence_error(self):
+        from unittest.mock import MagicMock, patch
+        from core.reporting import ReportBackupError, ReportSaveError
+
+        original_entry = {
+            "id": "loot-1",
+            "report_role": "finding",
+            "category": "recon",
+            "type": "note",
+            "title": "Loot title",
+            "content": "Original source",
+            "severity": "high",
+        }
+        report = finding_from_loot_entry(original_entry).to_markdown(language="en")
+        for failure_point, expected_error in (
+            ("backup", ReportBackupError),
+            ("save", ReportSaveError),
+        ):
+            with self.subTest(failure_point=failure_point):
+                project_name = f"Reconcile{failure_point.title()}Fail"
+                self.project_mgr.create_project(project_name)
+                self.assertTrue(self.report_mgr.save(report, project_name))
+                manager = MagicMock()
+                manager.get_all_entries.return_value = [
+                    dict(original_entry, content="Changed source")
+                ]
+                with patch.object(self.report_mgr, failure_point, return_value=False):
+                    with self.assertRaises(expected_error):
+                        self.report_mgr.reconcile_loot(
+                            manager,
+                            {"loot-1": LootReconciliationAction.APPLY_LOOT},
+                            project_name=project_name,
+                        )
+
+                self.assertEqual(self.report_mgr.load(project_name), report)
 
     @pytest.mark.integration
     def test_report_editor_export_button_dispatches_html_export(self):

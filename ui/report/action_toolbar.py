@@ -125,8 +125,8 @@ class ReportActionToolbar(QWidget):
         self.report_actions_menu = QMenu(self.btn_report_actions)
 
         self.action_sync_loot = QAction(
-            self._icon("fa5s.plus-circle"),
-            t("report.append_loot", "Add Missing Loot"),
+            self._icon("fa5s.sync-alt"),
+            t("report.sync_loot", "Sync Loot & Findings"),
             self.report_actions_menu,
         )
         self.action_sync_loot.triggered.connect(self._callbacks.append_loot)
@@ -150,13 +150,13 @@ class ReportActionToolbar(QWidget):
         toolbar.addWidget(self.btn_report_actions)
 
         self.btn_append_loot = QPushButton(
-            t("report.append_loot", "Add Missing Loot")
+            t("report.sync_loot", "Sync Loot & Findings")
         )
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
         self.btn_append_loot.setToolTip(
             t(
-                "report.append_loot_tip",
-                "Appends missing loot entries to the report without overwriting manual notes",
+                "report.sync_loot_tip",
+                "Add new findings or review changed and report-only findings",
             )
         )
         self.btn_append_loot.setIcon(self._icon("fa5s.plus-circle"))

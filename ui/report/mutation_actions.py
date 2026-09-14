@@ -16,6 +16,7 @@ from core.reporting import (
 )
 from ui.message_boxes import show_error_dialog
 from ui.report.dialogs import ReportGenerationDialog, ReportRegenerationConfirmDialog
+from ui.report.loot_reconciliation_dialog import LootReconciliationDialog
 
 logger = get_logger("report_mutation_actions")
 
@@ -94,6 +95,54 @@ class ReportMutationActions:
         if project_name is None:
             return
 
+        self._append_missing_loot(project_name)
+
+    def synchronize_loot(self) -> None:
+        """Append missing Loot or review divergences in one user-facing workflow."""
+        project_name = self._prepare_persisted_mutation("synchronize Loot")
+        if project_name is None:
+            return
+
+        loot_manager = self._loot_manager()
+        markdown = self._callbacks.current_markdown()
+        state = self._service.compare_loot(markdown, loot_manager)
+        if not state.stale and not state.orphaned_ids:
+            self._append_missing_loot(project_name)
+            return
+
+        items = self._service.describe_loot_differences(markdown, loot_manager)
+        dialog = LootReconciliationDialog(
+            items,
+            missing_count=len(state.missing),
+            parent=self._parent,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        result = self._service.reconcile_loot(
+            project_name=project_name,
+            loot_manager=loot_manager,
+            decisions=dialog.decisions,
+            append_missing=dialog.append_missing,
+            template=self._callbacks.active_template(),
+        )
+        if not result.success:
+            self._show_failure(result, operation="reconcile")
+            return
+        if not result.resolved_count and not result.added_count:
+            self.refresh_loot_sync_state()
+            return
+
+        self._callbacks.apply_content(result.content, True)
+        self._callbacks.set_status(
+            t(
+                "report.reconcile.success",
+                "{resolved} difference(s) resolved · {added} new finding(s) added",
+                resolved=result.resolved_count,
+                added=result.added_count,
+            )
+        )
+
+    def _append_missing_loot(self, project_name: str) -> None:
         result = self._service.append_missing_loot(
             project_name=project_name,
             loot_manager=self._loot_manager(),
@@ -189,6 +238,12 @@ class ReportMutationActions:
                 if operation == "regenerate"
                 else "report.append_save_failed_msg",
                 "Der geänderte Report konnte nicht gespeichert werden. Der bisherige Report bleibt erhalten.",
+            )
+        elif result.failure_reason is ReportMutationFailureReason.RECONCILIATION_CHANGED:
+            title = t("report.reconcile.changed_title", "Loot changed during review")
+            message = t(
+                "report.reconcile.changed_msg",
+                "The report was not changed. Reopen the review to compare the latest Loot state.",
             )
         else:
             title = t("dialog.error", "Error")
