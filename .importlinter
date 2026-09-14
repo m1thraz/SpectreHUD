@@ -67,4 +67,18 @@ protected_modules =
 allowed_importers =
     core.exporters
 
+[importlinter:contract:9]
+name = Core domain layers
+type = layers
+layers =
+    core.exporters
+    core.reporting
+    core.project
+    core.screenshots
+    core.snippets
+    core.loot
+    core.platform
+
+
+
 

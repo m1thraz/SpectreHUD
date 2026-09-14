@@ -5,48 +5,17 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPORTING_ROOT = PROJECT_ROOT / "core" / "reporting"
 REPORT_EDITOR = PROJECT_ROOT / "ui" / "report_editor_tab.py"
 APP_CONTROLLER = PROJECT_ROOT / "ui" / "app_controller.py"
-PLATFORM_ROOT = PROJECT_ROOT / "core" / "platform"
 CLIPBOARD_HISTORY = PROJECT_ROOT / "core" / "clipboard_history.py"
 LEGACY_CLIPBOARD_WATCHER = PROJECT_ROOT / "core" / "clipboard_watcher.py"
 
 
-CORE_ROOT = PROJECT_ROOT / "core"
 TESTS_ROOT = PROJECT_ROOT / "tests"
 QAPPLICATION_OWNERS = {
     TESTS_ROOT / "conftest.py",
     TESTS_ROOT / "qt_subprocess.py",
 }
-
-
-def _ui_imports(path: Path) -> list[tuple[int, str]]:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    violations: list[tuple[int, str]] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name == "ui" or alias.name.startswith("ui."):
-                    violations.append((node.lineno, alias.name))
-        elif isinstance(node, ast.ImportFrom):
-            module = node.module or ""
-            if module == "ui" or module.startswith("ui."):
-                violations.append((node.lineno, module))
-    return violations
-
-
-def test_core_layer_does_not_import_ui():
-    """Architectural invariant: The entire core layer must never import from ui."""
-    violations = []
-    for path in sorted(CORE_ROOT.rglob("*.py")):
-        for line, module in _ui_imports(path):
-            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
-
-    assert violations == [], (
-        "Core layer violated architecture boundaries by importing from ui:\n"
-        + "\n".join(violations)
-    )
 
 
 def test_qapplication_is_only_constructed_by_central_test_infrastructure():
@@ -76,23 +45,6 @@ def test_qapplication_is_only_constructed_by_central_test_infrastructure():
         "Direct QApplication construction outside central fixtures:\n" + "\n".join(violations)
     )
 
-
-def test_reporting_layer_does_not_import_ui():
-    violations = []
-    for path in sorted(REPORTING_ROOT.rglob("*.py")):
-        for line, module in _ui_imports(path):
-            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
-
-    assert violations == [], "\n".join(violations)
-
-
-def test_platform_layer_does_not_import_ui():
-    violations = []
-    for path in sorted(PLATFORM_ROOT.rglob("*.py")):
-        for line, module in _ui_imports(path):
-            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
-
-    assert violations == [], "\n".join(violations)
 
 
 def test_platform_package_does_not_eagerly_import_qt():
@@ -207,47 +159,6 @@ def test_app_controller_receives_resolved_application_services():
     assert "container" not in parameter_names
     assert constructed.isdisjoint(forbidden_calls)
 
-
-def test_external_modules_do_not_import_core_subpackage_internals():
-    """External code (UI and other core modules) must consume core packages via their public package API,
-    never directly importing internal submodules."""
-    public_core_packages = {
-        "loot",
-        "snippets",
-        "screenshots",
-        "platform",
-        "project",
-        "reporting",
-        "exporters",
-    }
-
-    violations = []
-
-    for search_root in (PROJECT_ROOT / "ui", PROJECT_ROOT / "core"):
-        for path in search_root.rglob("*.py"):
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            for node in ast.walk(tree):
-                target_module = None
-                if isinstance(node, ast.ImportFrom) and node.module:
-                    target_module = node.module
-                elif isinstance(node, ast.Import):
-                    for alias in node.names:
-                        for pkg in public_core_packages:
-                            if alias.name.startswith(f"core.{pkg}."):
-                                target_module = alias.name
-                                break
-                if target_module:
-                    for pkg in public_core_packages:
-                        if target_module.startswith(f"core.{pkg}."):
-                            if path.is_relative_to(PROJECT_ROOT / "core" / pkg):
-                                continue
-                            violations.append(
-                                f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} imports {target_module}"
-                            )
-
-    assert violations == [], (
-        "Found internal core subpackage imports from external modules:\n" + "\n".join(violations)
-    )
 
 
 def test_core_packages_have_no_dependency_cycles():
