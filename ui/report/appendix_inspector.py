@@ -81,7 +81,6 @@ class CommandSnippetCard(GlassPanel):
 
         qc_border = QColor(get_theme_color("BORDER_DEFAULT"))
         qc_card = QColor(get_theme_color("BG_SURFACE"))
-        qc_bg = QColor(get_theme_color("BG_DARK"))
         qc_err = QColor(get_theme_color("STATUS_ERROR"))
         btn_nav_style = (
             f"QPushButton {{ background: {rgba_str(qc_card, 0.5)}; border: 1px solid {rgba_str(qc_border, 0.4)}; border-radius: 3px; }} "
@@ -90,7 +89,7 @@ class CommandSnippetCard(GlassPanel):
 
         self.btn_up = QPushButton()
         self.btn_up.setIcon(icon("fa5s.chevron-up", color=get_theme_color("TEXT_MUTED")))
-        self.btn_up.setFixedSize(26, 24)
+        self.btn_up.setFixedSize(28, 28)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
         self.btn_up.setStyleSheet(btn_nav_style)
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self))
@@ -98,7 +97,7 @@ class CommandSnippetCard(GlassPanel):
 
         self.btn_down = QPushButton()
         self.btn_down.setIcon(icon("fa5s.chevron-down", color=get_theme_color("TEXT_MUTED")))
-        self.btn_down.setFixedSize(26, 24)
+        self.btn_down.setFixedSize(28, 28)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
         self.btn_down.setStyleSheet(btn_nav_style)
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self))
@@ -107,11 +106,6 @@ class CommandSnippetCard(GlassPanel):
         self.edit_caption = QLineEdit()
         self.edit_caption.setPlaceholderText(t("report.appendix_cmd_caption_placeholder", "Beschreibung / Titel (z.B. Portscan Enumeration)"))
         self.edit_caption.setText(self.item.caption)
-        self.edit_caption.setStyleSheet(
-            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
-            f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
-            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
-        )
         self.edit_caption.textChanged.connect(self._on_data_changed)
         self.edit_caption.setMinimumWidth(60)
         top_row.addWidget(self.edit_caption, stretch=1)
@@ -129,20 +123,15 @@ class CommandSnippetCard(GlassPanel):
         else:
             self.combo_lang.addItem(curr_lang, curr_lang)
             self.combo_lang.setCurrentIndex(self.combo_lang.count() - 1)
-        self.combo_lang.setStyleSheet(
-            f"QComboBox {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
-            f"border-radius: 4px; padding: 3px 8px; color: {get_theme_color('TEXT_SECONDARY')}; font-size: 11px; }} "
-            f"QComboBox:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
-        )
         self.combo_lang.currentIndexChanged.connect(self._on_data_changed)
         top_row.addWidget(self.combo_lang)
 
         self.btn_delete = QPushButton()
         self.btn_delete.setIcon(icon("fa5s.trash-alt", color=get_theme_color("ERROR")))
-        self.btn_delete.setFixedSize(26, 24)
+        self.btn_delete.setFixedSize(28, 28)
         self.btn_delete.setToolTip(t("report.delete", "Snippet löschen"))
         self.btn_delete.setStyleSheet(
-            f"QPushButton {{ background: {rgba_str(qc_err, 0.1)}; border: 1px solid {rgba_str(qc_err, 0.3)}; border-radius: 3px; }} "
+            f"QPushButton {{ background: {rgba_str(qc_err, 0.1)}; border: 1px solid {rgba_str(qc_err, 0.3)}; border-radius: 4px; }} "
             f"QPushButton:hover {{ background: {rgba_str(qc_err, 0.25)}; }}"
         )
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self))
@@ -150,17 +139,11 @@ class CommandSnippetCard(GlassPanel):
 
         layout.addLayout(top_row)
 
-        # Code editor
+        # Code editor styled as CommandBox (like in AddLootDialog)
         self.edit_code = QPlainTextEdit()
+        self.edit_code.setObjectName("CommandBox")
         self.edit_code.setPlaceholderText(t("report.appendix_cmd_code_placeholder", "# Befehl oder PoC-Code eingeben..."))
         self.edit_code.setPlainText(self.item.content)
-        qc_code_bg = QColor(get_theme_color("BG_PRIMARY"))
-        self.edit_code.setStyleSheet(
-            f"QPlainTextEdit {{ background: {rgba_str(qc_code_bg, 0.85)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
-            f"border-radius: 4px; padding: 6px; color: {get_theme_color('TEXT_CODE')}; font-family: 'Consolas', 'Cascadia Code', monospace; "
-            f"font-size: 11px; }} "
-            f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
-        )
         # Adapt height based on line count
         lines_count = max(3, min(15, len(self.item.content.splitlines()) + 1))
         self.edit_code.setMinimumHeight(lines_count * 18 + 20)
@@ -232,11 +215,6 @@ class ScreenshotCard(GlassPanel):
         self.edit_caption.setPlaceholderText(t("report.appendix_img_caption_placeholder", "Bildunterschrift / Titel (z.B. Root Proof)"))
         self.edit_caption.setText(self.item.caption)
         self.edit_caption.setMinimumWidth(60)
-        self.edit_caption.setStyleSheet(
-            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
-            f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
-            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; }}"
-        )
         self.edit_caption.textChanged.connect(self._on_data_changed)
         field_layout.addWidget(self.edit_caption)
 
@@ -250,11 +228,6 @@ class ScreenshotCard(GlassPanel):
         self.edit_path.setPlaceholderText(t("report.appendix_img_path_placeholder", "Dateipfad oder URL..."))
         self.edit_path.setText(self.item.content)
         self.edit_path.setMinimumWidth(60)
-        self.edit_path.setStyleSheet(
-            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
-            f"border-radius: 4px; padding: 3px 6px; color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-family: monospace; }} "
-            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; color: {get_theme_color('TEXT_PRIMARY')}; }}"
-        )
         self.edit_path.textChanged.connect(self._on_path_changed)
         path_row.addWidget(self.edit_path, stretch=1)
 
@@ -610,14 +583,8 @@ class ReportAppendixInspector(QWidget):
         card_c_layout.addWidget(lbl_desc_c)
 
         self.edit_notes = QPlainTextEdit()
+        self.edit_notes.setObjectName("CommandBox")
         self.edit_notes.setPlaceholderText(t("report.appendix_notes_placeholder", "Zusätzliche Rohdaten, Auszüge oder Referenzen einfügen..."))
-        qc_code_bg = QColor(get_theme_color("BG_PRIMARY"))
-        qc_border = QColor(get_theme_color("BORDER_DEFAULT"))
-        self.edit_notes.setStyleSheet(
-            f"QPlainTextEdit {{ background: {rgba_str(qc_code_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
-            f"border-radius: 4px; padding: 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-family: monospace; font-size: 11px; }} "
-            f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('WARNING')}; }}"
-        )
         self.edit_notes.setMinimumHeight(150)
         self.edit_notes.textChanged.connect(self._on_notes_changed)
         card_c_layout.addWidget(self.edit_notes)

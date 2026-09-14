@@ -1491,6 +1491,38 @@ Appendix body
         tab.close()
         tab.deleteLater()
 
+    def test_appendix_inspector_fields_styled_consistently_with_command_box(self):
+        from ui.styles.icons import get_theme_color
+
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "appendix"))
+        inspector = tab.workspace_shell.appendix_inspector
+
+        inspector._on_add_cmd_clicked()
+        inspector._on_add_img_clicked()
+
+        snippet_card = inspector.snippets_layout.itemAt(0).widget()
+        assert isinstance(snippet_card, CommandSnippetCard)
+
+        self.assertEqual(snippet_card.edit_code.objectName(), "CommandBox")
+        self.assertEqual(snippet_card.edit_code.styleSheet(), "")
+        self.assertEqual(snippet_card.edit_caption.styleSheet(), "")
+        self.assertEqual(snippet_card.combo_lang.styleSheet(), "")
+
+        screenshot_card = inspector.screenshots_layout.itemAt(0).widget()
+        assert isinstance(screenshot_card, ScreenshotCard)
+        self.assertEqual(screenshot_card.edit_caption.styleSheet(), "")
+        self.assertEqual(screenshot_card.edit_path.styleSheet(), "")
+
+        self.assertEqual(inspector.edit_notes.objectName(), "CommandBox")
+        self.assertEqual(inspector.edit_notes.styleSheet(), "")
+
+        self.assertNotEqual(get_theme_color("BG_PRIMARY"), get_theme_color("CYBER_CYAN"))
+
+        tab.close()
+        tab.deleteLater()
+
     def test_summary_inspector_responsiveness_and_intermediate_reflow(self):
         from PyQt6.QtWidgets import QFormLayout
 

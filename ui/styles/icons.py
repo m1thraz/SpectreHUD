@@ -29,6 +29,8 @@ def set_icon_palette(palette: Mapping[str, str]) -> None:
 
 def get_theme_color(token: str, default: Optional[str] = None) -> str:
     """Return the active theme's hex/rgba value for the requested palette token."""
+    if token == "BG_PRIMARY":
+        return _active_palette.get("BG_DARK", _active_palette.get("BG_SURFACE", default or "#0d1117"))
     return _active_palette.get(token, default or _active_icon_color)
 
 

@@ -50,7 +50,7 @@ class PhaseToastHUD(QWidget):
 
         self.card = QFrame(self)
         self.card.setObjectName("PhaseHUDCard")
-        bg_col = QColor(get_theme_color("BG_PRIMARY"))
+        bg_col = QColor(get_theme_color("BG_DARK"))
         accent_col = QColor(get_theme_color("ACCENT_BRAND"))
         self.card.setStyleSheet(
             f"""

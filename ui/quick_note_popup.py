@@ -81,7 +81,7 @@ class QuickNotePopup(QWidget):
         # Card container with glass HUD styling
         self.card = QFrame(self)
         self.card.setObjectName("QuickNoteCard")
-        bg_col = QColor(get_theme_color("BG_PRIMARY"))
+        bg_col = QColor(get_theme_color("BG_DARK"))
         accent_col = QColor(get_theme_color("ACCENT_BRAND"))
         self.card.setStyleSheet(
             f"""
