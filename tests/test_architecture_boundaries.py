@@ -72,8 +72,8 @@ def test_qapplication_is_only_constructed_by_central_test_infrastructure():
                     f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} constructs QApplication"
                 )
 
-    assert violations == [], "Direct QApplication construction outside central fixtures:\n" + "\n".join(
-        violations
+    assert violations == [], (
+        "Direct QApplication construction outside central fixtures:\n" + "\n".join(violations)
     )
 
 
@@ -90,9 +90,7 @@ def test_platform_layer_does_not_import_ui():
     violations = []
     for path in sorted(PLATFORM_ROOT.rglob("*.py")):
         for line, module in _ui_imports(path):
-            violations.append(
-                f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}"
-            )
+            violations.append(f"{path.relative_to(PROJECT_ROOT)}:{line} imports {module}")
 
     assert violations == [], "\n".join(violations)
 
@@ -117,7 +115,9 @@ def test_platform_package_does_not_eagerly_import_qt():
         text=True,
         cwd=str(PROJECT_ROOT),
     )
-    assert result.returncode == 0, f"Subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+    assert result.returncode == 0, (
+        f"Subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
+    )
 
 
 def test_clipboard_history_is_headless_and_legacy_watcher_is_removed():
@@ -131,9 +131,7 @@ def test_clipboard_history_is_headless_and_legacy_watcher_is_removed():
     qt_imports = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            qt_imports.extend(
-                alias.name for alias in node.names if alias.name.startswith("PyQt6")
-            )
+            qt_imports.extend(alias.name for alias in node.names if alias.name.startswith("PyQt6"))
         elif isinstance(node, ast.ImportFrom) and (node.module or "").startswith("PyQt6"):
             qt_imports.append(node.module or "")
     assert qt_imports == []
@@ -149,9 +147,8 @@ def test_local_path_opening_does_not_use_platform_shell_branches():
             if any(token in source for token in forbidden):
                 violations.append(str(path.relative_to(PROJECT_ROOT)))
 
-    assert violations == [], (
-        "Local-path shell opening escaped the platform boundary: "
-        + ", ".join(violations)
+    assert violations == [], "Local-path shell opening escaped the platform boundary: " + ", ".join(
+        violations
     )
 
 
@@ -249,9 +246,9 @@ def test_external_modules_do_not_import_core_subpackage_internals():
                             )
 
     assert violations == [], (
-        "Found internal core subpackage imports from external modules:\n"
-        + "\n".join(violations)
+        "Found internal core subpackage imports from external modules:\n" + "\n".join(violations)
     )
+
 
 def test_core_packages_have_no_dependency_cycles():
     """Core domain packages must form a clean Directed Acyclic Graph (DAG) with zero cycles."""
@@ -317,7 +314,11 @@ def test_ui_does_not_access_private_core_attributes():
     for py_file in (PROJECT_ROOT / "ui").rglob("*.py"):
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
-            if isinstance(node, ast.Attribute) and node.attr.startswith("_") and not node.attr.startswith("__"):
+            if (
+                isinstance(node, ast.Attribute)
+                and node.attr.startswith("_")
+                and not node.attr.startswith("__")
+            ):
                 val_name = None
                 if isinstance(node.value, ast.Name):
                     val_name = node.value.id
@@ -334,8 +335,7 @@ def test_ui_does_not_access_private_core_attributes():
                     )
 
     assert violations == [], (
-        "UI code accesses private attributes on core domain services:\n"
-        + "\n".join(violations)
+        "UI code accesses private attributes on core domain services:\n" + "\n".join(violations)
     )
 
 
@@ -376,10 +376,12 @@ KNOWN_PURE_CORE_TEST_FILES = {
     "test_quick_note_manager.py",
     "test_report_builder.py",
     "test_report_draft_manager.py",
+    "test_report_mutation_service.py",
     "test_report_navigation.py",
     "test_report_note_formatter.py",
     "test_report_outline.py",
     "test_report_sections.py",
+    "test_report_session_service.py",
     "test_snippet_filter.py",
     "test_snippet_importer.py",
     "test_storage.py",
@@ -421,3 +423,35 @@ def test_pure_core_test_files_do_not_import_ui_or_pyqt():
     )
 
 
+def test_report_tests_do_not_access_private_tab_members():
+    """Report tests use public tab APIs or the owning component directly."""
+    violations = []
+    for path in sorted(TESTS_ROOT.glob("test_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        imports_report_tab = any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "ui.report_editor_tab"
+            and any(alias.name == "ReportEditorTab" for alias in node.names)
+            for node in ast.walk(tree)
+        )
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Attribute) or not node.attr.startswith("_"):
+                continue
+            owner = node.value
+            direct_tab = imports_report_tab and isinstance(owner, ast.Name) and owner.id == "tab"
+            fixture_tab = (
+                imports_report_tab
+                and isinstance(owner, ast.Attribute)
+                and isinstance(owner.value, ast.Name)
+                and owner.value.id == "self"
+                and owner.attr == "tab"
+            )
+            controller_tab = isinstance(owner, ast.Attribute) and owner.attr == "report_editor_tab"
+            if direct_tab or fixture_tab or controller_tab:
+                violations.append(
+                    f"{path.relative_to(PROJECT_ROOT)}:{node.lineno} accesses {node.attr}"
+                )
+
+    assert violations == [], "Report tests access private ReportEditorTab members:\n" + "\n".join(
+        violations
+    )

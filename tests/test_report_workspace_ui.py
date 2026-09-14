@@ -53,6 +53,7 @@ from ui.report.attack_path_inspector import ReportAttackPathInspector
 from ui.report.scope_inspector import ReportScopeInspector
 from ui.report.appendix_inspector import CommandSnippetCard, ReportAppendixInspector, ScreenshotCard
 from ui.report.workspace_navigator import ReportWorkspaceNavigator
+from ui.report.navigation import ReportLocation, ReportLocationKind
 from ui.report_editor_tab import ReportEditorTab, ViewMode
 
 pytestmark = pytest.mark.integration
@@ -64,9 +65,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         self.project_mgr = ProjectManager(base_dir=self.temp_path / "projects")
         self.project_mgr.create_project("WorkspaceBox", target_ip="192.168.1.100")
         self.loot_mgr = LootManager(storage_file=self.temp_path / "config" / "loot.json")
-        self.clip_watcher = ClipboardHistory(
-            storage_file=self.temp_path / "config" / "clip.json"
-        )
+        self.clip_watcher = ClipboardHistory(storage_file=self.temp_path / "config" / "clip.json")
         self.report_file_mgr = ReportFileManager(self.project_mgr)
 
     def test_workspace_navigator_population_and_selection(self):
@@ -88,9 +87,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
         self.assertGreaterEqual(tree.topLevelItemCount(), 4)
 
         item_readiness = tree.topLevelItem(0)
-        self.assertEqual(
-            item_readiness.data(0, Qt.ItemDataRole.UserRole), ("readiness", None)
-        )
+        self.assertEqual(item_readiness.data(0, Qt.ItemDataRole.UserRole), ("readiness", None))
         self.assertIn("6", item_readiness.text(0))
 
         # Metadata follows the completion overview.
@@ -176,7 +173,10 @@ class TestReportWorkspaceUI(unittest.TestCase):
         self.assertEqual(recon_child.childCount(), 4)
 
         # Ensure no 'other' group exists
-        child_roles = [item_findings_root.child(j).data(0, Qt.ItemDataRole.UserRole) for j in range(item_findings_root.childCount())]
+        child_roles = [
+            item_findings_root.child(j).data(0, Qt.ItemDataRole.UserRole)
+            for j in range(item_findings_root.childCount())
+        ]
         self.assertNotIn(("phase_group", "misc"), child_roles)
 
         # Ensure findings root and phase groups are collapsed by default
@@ -239,8 +239,7 @@ class TestReportWorkspaceUI(unittest.TestCase):
                 section_cards = [
                     child
                     for child in inspector.findChildren(QWidget)
-                    if "ReportInspectorSection"
-                    in str(child.property("class") or "").split()
+                    if "ReportInspectorSection" in str(child.property("class") or "").split()
                 ]
                 self.assertTrue(section_cards, inspector.objectName())
         finally:
@@ -269,14 +268,11 @@ class TestReportWorkspaceUI(unittest.TestCase):
         issue_buttons = [
             button
             for button in inspector.findChildren(QPushButton)
-            if "ReadinessIssueBtn"
-            in str(button.property("class") or "").split()
+            if "ReadinessIssueBtn" in str(button.property("class") or "").split()
         ]
         self.assertEqual(len(issue_buttons), 5)
         blocker_buttons = [
-            button
-            for button in issue_buttons
-            if button.property("readinessLevel") == "blocker"
+            button for button in issue_buttons if button.property("readinessLevel") == "blocker"
         ]
         self.assertEqual(len(blocker_buttons), 3)
 
@@ -344,65 +340,88 @@ class TestReportWorkspaceUI(unittest.TestCase):
         tab.show()
 
         # Workspace is the primary report view with structured editing and preview.
-        self.assertEqual(tab._view_mode, ViewMode.WORKSPACE)
-        self.assertTrue(tab.navigator_glass.isVisible())
-        self.assertTrue(tab.center_stack.isVisible())
-        self.assertTrue(tab.preview.isVisible())
-        self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
+        self.assertEqual(tab.view_mode, ViewMode.WORKSPACE)
+        self.assertTrue(tab.workspace_shell.navigator_glass.isVisible())
+        self.assertTrue(tab.workspace_shell.center_stack.isVisible())
+        self.assertTrue(tab.workspace_shell.preview.isVisible())
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.metadata_inspector_glass,
+        )
         self.assertTrue(tab.format_toolbar_widget.isHidden())
-        self.assertTrue(tab._view_actions[ViewMode.WORKSPACE].isChecked())
+        self.assertTrue(tab.action_toolbar.view_actions[ViewMode.WORKSPACE].isChecked())
 
         # Add a finding through the workspace handler
-        initial_finding_count = len(tab._workspace_doc.findings) if tab._workspace_doc else 0
-        tab._on_add_finding_requested()
-        self.assertEqual(len(tab._workspace_doc.findings), initial_finding_count + 1)
-        self.assertIn(t("report.new_finding_default_title", "New Finding"), tab.editor.toPlainText())
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
-        self.assertTrue(tab._draft_timer.isActive())
-        new_finding = tab._workspace_doc.findings[-1]
+        assert tab.workspace_document is not None
+        initial_finding_count = len(tab.workspace_document.findings)
+        tab.add_finding()
+        self.assertEqual(len(tab.workspace_document.findings), initial_finding_count + 1)
+        self.assertIn(
+            t("report.new_finding_default_title", "New Finding"),
+            tab.workspace_shell.editor.toPlainText(),
+        )
         self.assertEqual(
-            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        new_finding = tab.workspace_document.findings[-1]
+        self.assertEqual(
+            tab.workspace_shell.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
             ("finding", new_finding.id),
         )
-        self.assertIn(new_finding.title, tab.preview.textCursor().block().text())
+        self.assertIn(new_finding.title, tab.workspace_shell.preview.textCursor().block().text())
 
-        tab._on_finding_duplicated(new_finding.id)
-        duplicated = tab._workspace_doc.findings[-1]
+        tab.duplicate_finding(new_finding.id)
+        duplicated = tab.workspace_document.findings[-1]
         self.assertEqual(
-            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            tab.workspace_shell.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
             ("finding", duplicated.id),
         )
-        self.assertIn(duplicated.title, tab.preview.textCursor().block().text())
+        self.assertIn(duplicated.title, tab.workspace_shell.preview.textCursor().block().text())
 
-        tab._on_finding_deleted(duplicated.id)
-        self.assertIsNone(tab._workspace_doc.get_finding(duplicated.id))
+        tab.delete_finding(duplicated.id)
+        self.assertIsNone(tab.workspace_document.get_finding(duplicated.id))
         self.assertEqual(
-            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            tab.workspace_shell.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
             ("finding", new_finding.id),
         )
 
         # Navigate to metadata
-        tab._on_navigate_requested("metadata", None)
-        self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
-
-        tab._on_navigate_requested("readiness", None)
-        self.assertEqual(tab.center_stack.currentWidget(), tab.readiness_inspector_glass)
+        tab.navigate_to(ReportLocation(ReportLocationKind.METADATA))
         self.assertEqual(
-            tab.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.metadata_inspector_glass,
+        )
+
+        tab.navigate_to(ReportLocation(ReportLocationKind.READINESS))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.readiness_inspector_glass,
+        )
+        self.assertEqual(
+            tab.workspace_shell.navigator.tree.currentItem().data(0, Qt.ItemDataRole.UserRole),
             ("readiness", None),
         )
 
         # Navigate back to raw markdown
-        tab._on_navigate_requested("raw_markdown", None)
-        self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
+        tab.navigate_to(ReportLocation(ReportLocationKind.RAW_MARKDOWN))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(), tab.workspace_shell.editor_glass
+        )
         self.assertFalse(tab.format_toolbar_widget.isHidden())
 
         # When findings is empty, navigating to findings_overview displays finding_inspector_glass (empty state), NOT raw editor
-        tab._workspace_doc.findings.clear()
-        tab._on_navigate_requested("findings_overview", None)
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
-        self.assertIsNone(tab.finding_inspector._finding)
-        self.assertEqual(tab.finding_inspector._stack.currentWidget(), tab.finding_inspector.empty_widget)
+        tab.workspace_document.findings.clear()
+        tab.navigate_to(ReportLocation(ReportLocationKind.FINDINGS_OVERVIEW))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        self.assertIsNone(tab.workspace_shell.finding_inspector._finding)
+        self.assertEqual(
+            tab.workspace_shell.finding_inspector._stack.currentWidget(),
+            tab.workspace_shell.finding_inspector.empty_widget,
+        )
 
         tab.close()
         tab.deleteLater()
@@ -423,35 +442,36 @@ class TestReportWorkspaceUI(unittest.TestCase):
 Appendix body
 <!-- spectre:section:end:appendix -->
 """
-        tab.editor.setPlainText(markdown)
-        tab._workspace_doc = ReportWorkspaceDocument.from_markdown(markdown)
-        tab._update_preview()
+        tab.workspace_shell.editor.setPlainText(markdown)
+        tab.replace_markdown(markdown)
+        tab.sync_workspace_from_markdown()
+        tab.refresh_preview()
 
-        tab._on_navigate_requested("section", "appendix")
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "appendix"))
 
         appendix_target = ("section", "appendix")
-        self.assertEqual(tab._active_preview_target, appendix_target)
+        self.assertEqual(tab.preview_controller.active_target, appendix_target)
         self.assertEqual(
-            tab.preview.textCursor().position(),
-            tab._preview_landmarks[appendix_target],
+            tab.workspace_shell.preview.textCursor().position(),
+            tab.preview_controller.landmarks[appendix_target],
         )
         self.assertGreater(
-            tab._preview_landmarks[appendix_target],
-            tab._preview_landmarks[("section", "executive_summary")],
+            tab.preview_controller.landmarks[appendix_target],
+            tab.preview_controller.landmarks[("section", "executive_summary")],
         )
-        self.assertEqual(len(tab.preview.extraSelections()), 1)
-        self.assertNotIn("SPECTRE_NAV_PREVIEW_", tab.preview.toPlainText())
+        self.assertEqual(len(tab.workspace_shell.preview.extraSelections()), 1)
+        self.assertNotIn("SPECTRE_NAV_PREVIEW_", tab.workspace_shell.preview.toPlainText())
 
-        tab._update_preview()
+        tab.refresh_preview()
         self.assertEqual(
-            tab.preview.textCursor().position(),
-            tab._preview_landmarks[appendix_target],
+            tab.workspace_shell.preview.textCursor().position(),
+            tab.preview_controller.landmarks[appendix_target],
         )
-        self.assertEqual(len(tab.preview.extraSelections()), 1)
+        self.assertEqual(len(tab.workspace_shell.preview.extraSelections()), 1)
 
-        tab._on_navigate_requested("raw_markdown", None)
-        self.assertIsNone(tab._active_preview_target)
-        self.assertEqual(tab.preview.extraSelections(), [])
+        tab.navigate_to(ReportLocation(ReportLocationKind.RAW_MARKDOWN))
+        self.assertIsNone(tab.preview_controller.active_target)
+        self.assertEqual(tab.workspace_shell.preview.extraSelections(), [])
 
         tab.close()
         tab.deleteLater()
@@ -630,7 +650,9 @@ Appendix body
             findings=[
                 ReportFindingItem(id="f1", title="Nmap Scan", severity="info", phase="recon"),
                 ReportFindingItem(id="f2", title="SSH Bruteforce", severity="high", phase="access"),
-                ReportFindingItem(id="f3", title="Kernel Exploit", severity="critical", phase="privesc"),
+                ReportFindingItem(
+                    id="f3", title="Kernel Exploit", severity="critical", phase="privesc"
+                ),
             ]
         )
         nav.load_document(doc)
@@ -683,28 +705,35 @@ Appendix body
         tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
         tab.load_project("WorkspaceBox")
         tab.show()
-        tab._set_view_mode(ViewMode.SPLIT)
+        tab.set_view_mode(ViewMode.SPLIT)
 
         # In Split view, navigator starts hidden for 2-column layout
-        self.assertFalse(tab.navigator_glass.isVisible())
-        self.assertFalse(tab.btn_navigator.isChecked())
+        self.assertFalse(tab.workspace_shell.navigator_glass.isVisible())
+        self.assertFalse(tab.action_toolbar.btn_navigator.isChecked())
 
         # Toggle on demand
-        tab._toggle_navigator()
-        self.assertTrue(tab.navigator_glass.isVisible())
-        self.assertTrue(tab.btn_navigator.isChecked())
+        tab.action_toolbar.btn_navigator.click()
+        self.assertTrue(tab.workspace_shell.navigator_glass.isVisible())
+        self.assertTrue(tab.action_toolbar.btn_navigator.isChecked())
 
         # Toggle off
-        tab._toggle_navigator()
-        self.assertFalse(tab.navigator_glass.isVisible())
-        self.assertFalse(tab.btn_navigator.isChecked())
+        tab.action_toolbar.btn_navigator.click()
+        self.assertFalse(tab.workspace_shell.navigator_glass.isVisible())
+        self.assertFalse(tab.action_toolbar.btn_navigator.isChecked())
 
         # Toggle raw markdown vs inspector
-        self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
-        tab._toggle_inspector_raw()
-        self.assertEqual(tab.center_stack.currentWidget(), tab.metadata_inspector_glass)
-        tab._toggle_inspector_raw()
-        self.assertEqual(tab.center_stack.currentWidget(), tab.editor_glass)
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(), tab.workspace_shell.editor_glass
+        )
+        tab.action_toolbar.btn_toggle_raw.click()
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.metadata_inspector_glass,
+        )
+        tab.action_toolbar.btn_toggle_raw.click()
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(), tab.workspace_shell.editor_glass
+        )
 
         tab.close()
         tab.deleteLater()
@@ -814,18 +843,25 @@ Appendix body
             phase="privesc",
             status="Open",
         )
-        tab._workspace_doc.findings.append(f1)
-        tab._sync_workspace_doc_to_editor()
+        assert tab.workspace_document is not None
+        tab.workspace_document.findings.append(f1)
+        tab.apply_workspace_document()
 
         # Navigate to executive summary section
-        tab._on_navigate_requested("section", "executive_summary")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.summary_inspector_glass)
-        self.assertEqual(tab.summary_inspector.tbl_matrix.rowCount(), 1)
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "executive_summary"))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.summary_inspector_glass,
+        )
+        self.assertEqual(tab.workspace_shell.summary_inspector.tbl_matrix.rowCount(), 1)
 
         # Click navigation from summary matrix to finding
-        tab.summary_inspector.finding_selected.emit("f-test-1")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
-        self.assertEqual(tab.finding_inspector._finding.id, "f-test-1")
+        tab.workspace_shell.summary_inspector.finding_selected.emit("f-test-1")
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        self.assertEqual(tab.workspace_shell.finding_inspector._finding.id, "f-test-1")
 
         tab.close()
         tab.deleteLater()
@@ -872,7 +908,9 @@ Appendix body
 
         # Check title and guidance
         self.assertEqual(inspector.lbl_title.text(), "Remediation & Maßnahmenplan")
-        self.assertEqual(inspector.txt_guidance.toPlainText(), "Prioritize external perimeter patches.")
+        self.assertEqual(
+            inspector.txt_guidance.toPlainText(), "Prioritize external perimeter patches."
+        )
 
         # Check progress badge (1 of 3 resolved = 33%)
         self.assertIn("1 / 3 Resolved", inspector.lbl_progress_badge.text())
@@ -904,7 +942,9 @@ Appendix body
 
         # Test in-place editing of recommendation
         action_events = []
-        inspector.finding_action_changed.connect(lambda fid, rec, st: action_events.append((fid, rec, st)))
+        inspector.finding_action_changed.connect(
+            lambda fid, rec, st: action_events.append((fid, rec, st))
+        )
 
         edit_action = inspector.tbl_actions.cellWidget(0, 2)
         self.assertIsNotNone(edit_action)
@@ -923,7 +963,9 @@ Appendix body
         cmb_status.setCurrentIndex(resolved_idx)
 
         self.assertEqual(len(action_events), 2)
-        self.assertEqual(action_events[1], ("f-crit", "Remove sudoers rule immediately", "resolved"))
+        self.assertEqual(
+            action_events[1], ("f-crit", "Remove sudoers rule immediately", "resolved")
+        )
         self.assertIn("2 / 3 Resolved", inspector.lbl_progress_badge.text())
 
         # Test double-click jumps to finding
@@ -947,18 +989,25 @@ Appendix body
             status="open",
             recommendation="Test action",
         )
-        tab._workspace_doc.findings.append(f1)
-        tab._sync_workspace_doc_to_editor()
+        assert tab.workspace_document is not None
+        tab.workspace_document.findings.append(f1)
+        tab.apply_workspace_document()
 
         # Navigate to remediation table section
-        tab._on_navigate_requested("section", "remediation_table")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.remediation_inspector_glass)
-        self.assertEqual(tab.remediation_inspector.tbl_actions.rowCount(), 1)
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "remediation_table"))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.remediation_inspector_glass,
+        )
+        self.assertEqual(tab.workspace_shell.remediation_inspector.tbl_actions.rowCount(), 1)
 
         # Click navigation from remediation table to finding details
-        tab.remediation_inspector.finding_selected.emit("f-action-test")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
-        self.assertEqual(tab.finding_inspector._finding.id, "f-action-test")
+        tab.workspace_shell.remediation_inspector.finding_selected.emit("f-action-test")
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        self.assertEqual(tab.workspace_shell.finding_inspector._finding.id, "f-action-test")
 
         tab.close()
         tab.deleteLater()
@@ -1056,17 +1105,24 @@ Appendix body
             phase="access",
             status="open",
         )
-        tab._workspace_doc.findings.append(f1)
-        tab._sync_workspace_doc_to_editor()
+        assert tab.workspace_document is not None
+        tab.workspace_document.findings.append(f1)
+        tab.apply_workspace_document()
 
         # Navigate to attack_path section
-        tab._on_navigate_requested("section", "attack_path")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.attack_path_inspector_glass)
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "attack_path"))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.attack_path_inspector_glass,
+        )
 
         # Click navigation from attack path to finding details
-        tab.attack_path_inspector.finding_selected.emit("f-attack-test")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.finding_inspector_glass)
-        self.assertEqual(tab.finding_inspector._finding.id, "f-attack-test")
+        tab.workspace_shell.attack_path_inspector.finding_selected.emit("f-attack-test")
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        self.assertEqual(tab.workspace_shell.finding_inspector._finding.id, "f-attack-test")
 
         tab.close()
         tab.deleteLater()
@@ -1105,8 +1161,12 @@ Appendix body
         self.assertEqual(inspector.txt_appr_details.text(), "Vollständige Einsicht.")
         self.assertEqual(inspector.tbl_in_targets.rowCount(), 1)
         self.assertEqual(inspector.tbl_out_targets.rowCount(), 1)
-        self.assertEqual(inspector.tbl_in_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection)
-        self.assertEqual(inspector.tbl_out_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection)
+        self.assertEqual(
+            inspector.tbl_in_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection
+        )
+        self.assertEqual(
+            inspector.tbl_out_targets.selectionMode(), QTableWidget.SelectionMode.NoSelection
+        )
         self.assertEqual(inspector.tbl_in_targets.focusPolicy(), Qt.FocusPolicy.NoFocus)
         self.assertEqual(inspector.tbl_out_targets.focusPolicy(), Qt.FocusPolicy.NoFocus)
 
@@ -1151,14 +1211,18 @@ Appendix body
         tab.load_project("WorkspaceBox")
 
         # Navigate to scope_limitations section
-        tab._on_navigate_requested("section", "scope_limitations")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.scope_inspector_glass)
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "scope_limitations"))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.scope_inspector_glass,
+        )
 
         # Modify approach and verify doc sync
-        tab.scope_inspector.btn_blackbox.click()
-        tab.scope_inspector._emit_changed()
+        tab.workspace_shell.scope_inspector.btn_blackbox.click()
+        tab.workspace_shell.scope_inspector._emit_changed()
 
-        retrieved_scope = tab._workspace_doc.get_scope_methodology()
+        assert tab.workspace_document is not None
+        retrieved_scope = tab.workspace_document.get_scope_methodology()
         self.assertEqual(retrieved_scope.approach, "blackbox")
 
         tab.close()
@@ -1175,10 +1239,21 @@ Appendix body
         app = ReportAppendix(
             title="Anhang & Nachweise",
             command_snippets=[
-                ReportEvidenceItem(id="cmd1", type="terminal", caption="Nmap", content="nmap -p- 10.10.10.1", language="bash"),
+                ReportEvidenceItem(
+                    id="cmd1",
+                    type="terminal",
+                    caption="Nmap",
+                    content="nmap -p- 10.10.10.1",
+                    language="bash",
+                ),
             ],
             screenshots=[
-                ReportEvidenceItem(id="sc1", type="screenshot", caption="Root Proof", content="screenshots/proof.png"),
+                ReportEvidenceItem(
+                    id="sc1",
+                    type="screenshot",
+                    caption="Root Proof",
+                    content="screenshots/proof.png",
+                ),
             ],
             custom_notes="Nmap output raw...",
         )
@@ -1227,17 +1302,22 @@ Appendix body
         tab.load_project("WorkspaceBox")
 
         # Navigate to appendix section
-        tab._on_navigate_requested("section", "appendix")
-        self.assertEqual(tab.center_stack.currentWidget(), tab.appendix_inspector_glass)
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "appendix"))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.appendix_inspector_glass,
+        )
 
         # Modify notes and trigger changed
-        tab.appendix_inspector.edit_notes.setPlainText("Updated supplementary notes from inspector.")
-        tab.appendix_inspector._emit_changed()
+        tab.workspace_shell.appendix_inspector.edit_notes.setPlainText(
+            "Updated supplementary notes from inspector."
+        )
+        tab.workspace_shell.appendix_inspector._emit_changed()
 
-        assert tab._workspace_doc is not None
-        retrieved_app = tab._workspace_doc.get_appendix()
+        assert tab.workspace_document is not None
+        retrieved_app = tab.workspace_document.get_appendix()
         self.assertEqual(retrieved_app.custom_notes, "Updated supplementary notes from inspector.")
-        self.assertIn("Updated supplementary notes", tab.editor.toPlainText())
+        self.assertIn("Updated supplementary notes", tab.workspace_shell.editor.toPlainText())
 
         tab.close()
         tab.deleteLater()
@@ -1245,8 +1325,8 @@ Appendix body
     def test_appendix_inspector_responsiveness_and_compact_reflow(self):
         tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
         tab.load_project("WorkspaceBox")
-        tab._on_navigate_requested("section", "appendix")
-        inspector = tab.appendix_inspector
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "appendix"))
+        inspector = tab.workspace_shell.appendix_inspector
 
         # 1. Verify minimum size hint allows narrow split view
         self.assertLessEqual(inspector.minimumSizeHint().width(), 240)
@@ -1286,10 +1366,11 @@ Appendix body
 
     def test_summary_inspector_responsiveness_and_intermediate_reflow(self):
         from PyQt6.QtWidgets import QFormLayout
+
         tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
         tab.load_project("WorkspaceBox")
-        tab._on_navigate_requested("section", "summary")
-        inspector = tab.summary_inspector
+        tab.navigate_to(ReportLocation(ReportLocationKind.SECTION, "summary"))
+        inspector = tab.workspace_shell.summary_inspector
 
         # 1. Minimum size hint
         self.assertLessEqual(inspector.minimumSizeHint().width(), 240)
@@ -1317,7 +1398,7 @@ Appendix body
         self.assertEqual(inspector.form.rowWrapPolicy(), QFormLayout.RowWrapPolicy.WrapAllRows)
         self.assertFalse(inspector.lbl_matrix_hint.isHidden())
         self.assertTrue(inspector.tbl_matrix.isColumnHidden(3))  # Phase hidden in intermediate
-        self.assertFalse(inspector.tbl_matrix.isColumnHidden(4)) # Status visible
+        self.assertFalse(inspector.tbl_matrix.isColumnHidden(4))  # Status visible
 
         # 5. Narrow mode (< 480px)
         inspector._reflow_summary(380)
@@ -1339,36 +1420,36 @@ Appendix body
         tab.load_project("WorkspaceBox")
 
         # 1. Non-collapsible splitter with 6px grab handles
-        self.assertFalse(tab.splitter.childrenCollapsible())
-        self.assertEqual(tab.splitter.handleWidth(), 6)
+        self.assertFalse(tab.workspace_shell.splitter.childrenCollapsible())
+        self.assertEqual(tab.workspace_shell.splitter.handleWidth(), 6)
 
         # 2. Free dragging in SPLIT view
-        tab._set_view_mode(ViewMode.SPLIT)
-        tab.splitter.moveSplitter(500, 2)
-        sizes_split = tab.splitter.sizes()
-        self.assertLessEqual(abs(sizes_split[1] - 500), tab.splitter.handleWidth())
+        tab.set_view_mode(ViewMode.SPLIT)
+        tab.workspace_shell.splitter.moveSplitter(500, 2)
+        sizes_split = tab.workspace_shell.splitter.sizes()
+        self.assertLessEqual(abs(sizes_split[1] - 500), tab.workspace_shell.splitter.handleWidth())
         self.assertGreater(sizes_split[2], 500)
 
-        tab.splitter.moveSplitter(900, 2)
-        sizes_split2 = tab.splitter.sizes()
-        self.assertLessEqual(abs(sizes_split2[1] - 900), tab.splitter.handleWidth())
+        tab.workspace_shell.splitter.moveSplitter(900, 2)
+        sizes_split2 = tab.workspace_shell.splitter.sizes()
+        self.assertLessEqual(abs(sizes_split2[1] - 900), tab.workspace_shell.splitter.handleWidth())
 
         # 3. Free dragging in WORKSPACE view
-        tab._set_view_mode(ViewMode.WORKSPACE)
-        tab.splitter.moveSplitter(300, 1)
-        sizes_ws1 = tab.splitter.sizes()
-        self.assertLessEqual(abs(sizes_ws1[0] - 300), tab.splitter.handleWidth())
+        tab.set_view_mode(ViewMode.WORKSPACE)
+        tab.workspace_shell.splitter.moveSplitter(300, 1)
+        sizes_ws1 = tab.workspace_shell.splitter.sizes()
+        self.assertLessEqual(abs(sizes_ws1[0] - 300), tab.workspace_shell.splitter.handleWidth())
 
-        tab.splitter.moveSplitter(800, 2)
-        sizes_ws2 = tab.splitter.sizes()
+        tab.workspace_shell.splitter.moveSplitter(800, 2)
+        sizes_ws2 = tab.workspace_shell.splitter.sizes()
         self.assertGreaterEqual(sizes_ws2[0], 180)
         self.assertGreaterEqual(sizes_ws2[1], 200)
         self.assertGreaterEqual(sizes_ws2[2], 150)
 
         # 4. Responsive center stack: minimum width is <= 320 across all stacked pages
-        for idx in range(tab.center_stack.count()):
-            tab.center_stack.setCurrentIndex(idx)
-            min_w = tab.center_stack.minimumSizeHint().width()
+        for idx in range(tab.workspace_shell.center_stack.count()):
+            tab.workspace_shell.center_stack.setCurrentIndex(idx)
+            min_w = tab.workspace_shell.center_stack.minimumSizeHint().width()
             self.assertLessEqual(min_w, 320)
 
         tab.close()
@@ -1376,8 +1457,18 @@ Appendix body
 
     def test_clipboard_history_picker_dialog_filter_and_marking(self):
         history = [
-            {"id": "c1", "text": "nmap -sV target", "target_ip": "10.10.10.1", "include_in_report": True},
-            {"id": "c2", "text": "ls -la /tmp", "target_ip": "10.10.10.1", "include_in_report": False},
+            {
+                "id": "c1",
+                "text": "nmap -sV target",
+                "target_ip": "10.10.10.1",
+                "include_in_report": True,
+            },
+            {
+                "id": "c2",
+                "text": "ls -la /tmp",
+                "target_ip": "10.10.10.1",
+                "include_in_report": False,
+            },
         ]
         dlg = ClipboardHistoryPickerDialog(history)
         self.assertEqual(dlg.list_widget.count(), 2)
@@ -1397,7 +1488,3 @@ Appendix body
 
         dlg.close()
         dlg.deleteLater()
-
-
-
-

@@ -10,6 +10,7 @@ from core.reporting import ReportFileManager
 from core.reporting import get_draft_path, save_draft
 from ui.report_editor_tab import ReportEditorTab
 
+
 class TestReportRecoveryUI(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -36,21 +37,28 @@ class TestReportRecoveryUI(unittest.TestCase):
         with patch.object(QMessageBox, "exec") as mock_exec:
             self.tab.load_project("TestBox")
             mock_exec.assert_not_called()
-        self.assertEqual(self.tab.editor.toPlainText(), "# Saved Report Content\nInitial text.")
+        self.assertEqual(
+            self.tab.workspace_shell.editor.toPlainText(), "# Saved Report Content\nInitial text."
+        )
         self.assertFalse(self.tab.is_dirty())
 
     def test_load_project_prompts_and_restores_draft(self):
         """When a recoverable draft exists and user accepts, draft is restored and marked dirty."""
-        draft_content = "# Saved Report Content\nInitial text.\nUnsaved finding discovered before crash!"
+        draft_content = (
+            "# Saved Report Content\nInitial text.\nUnsaved finding discovered before crash!"
+        )
         save_draft(self.project_dir, draft_content)
 
-        with patch.object(QMessageBox, "exec") as mock_exec, \
-             patch.object(QMessageBox, "clickedButton") as mock_btn:
+        with (
+            patch.object(QMessageBox, "exec") as mock_exec,
+            patch.object(QMessageBox, "clickedButton") as mock_btn,
+        ):
             # Fake clicking the restore button (the default button)
             def side_effect():
                 # Let clickedButton return the default restore button
                 mock_btn.return_value = self.tab.sender()
                 return 0
+
             mock_exec.side_effect = side_effect
 
             # Simulate dialog where clickedButton matches default button
@@ -65,7 +73,7 @@ class TestReportRecoveryUI(unittest.TestCase):
                 self.tab.load_project("TestBox")
                 instance.exec.assert_called_once()
 
-        self.assertEqual(self.tab.editor.toPlainText(), draft_content)
+        self.assertEqual(self.tab.workspace_shell.editor.toPlainText(), draft_content)
         self.assertTrue(self.tab.is_dirty())
 
     def test_load_project_prompts_and_discards_draft(self):
@@ -85,7 +93,9 @@ class TestReportRecoveryUI(unittest.TestCase):
             self.tab.load_project("TestBox")
             instance.exec.assert_called_once()
 
-        self.assertEqual(self.tab.editor.toPlainText(), "# Saved Report Content\nInitial text.")
+        self.assertEqual(
+            self.tab.workspace_shell.editor.toPlainText(), "# Saved Report Content\nInitial text."
+        )
         self.assertFalse(self.tab.is_dirty())
         self.assertFalse(get_draft_path(self.project_dir).exists())
 
@@ -95,12 +105,10 @@ class TestReportRecoveryUI(unittest.TestCase):
         save_draft(self.project_dir, "Temporary in-flight text")
         self.assertTrue(get_draft_path(self.project_dir).exists())
 
-        self.tab._draft_timer.start()
-        self.tab._set_dirty(True)
+        self.tab.replace_markdown("Temporary in-flight text updated")
         self.tab.save()
 
         self.assertFalse(get_draft_path(self.project_dir).exists())
-        self.assertFalse(self.tab._draft_timer.isActive())
 
 
 if __name__ == "__main__":

@@ -170,10 +170,10 @@ class TestWorkflowInvariants(unittest.TestCase):
 
         # Verify UI editor tab synchronization on switch
         self.window.app.switch_to_project("BoxAlpha")
-        self.assertEqual(self.window.report_editor_tab.editor.toPlainText(), alpha_text)
+        self.assertEqual(self.window.report_editor_tab.current_markdown(), alpha_text)
 
         self.window.app.switch_to_project("BoxBeta")
-        self.assertEqual(self.window.report_editor_tab.editor.toPlainText(), beta_text)
+        self.assertEqual(self.window.report_editor_tab.current_markdown(), beta_text)
 
     # -------------------------------------------------------------------------
     # Invariant 3: Report Regeneration, Automatic Backup & Restoration
@@ -250,7 +250,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         self.assertFalse(editor_tab.is_dirty())
 
         # User types changes in editor
-        editor_tab.editor.setPlainText("Unsaved critical pentest notes...")
+        editor_tab.replace_markdown("Unsaved critical pentest notes...")
         self.assertTrue(editor_tab.is_dirty(), "Editor must be dirty after manual text edits")
 
         # Simulate user cancelling discard when switching project
@@ -258,7 +258,7 @@ class TestWorkflowInvariants(unittest.TestCase):
             self.window.app.switch_to_project("BoxDirty2")
             # Invariant: Project switch was aborted to protect unsaved work
             self.assertEqual(self.project_mgr.get_active_project(), "BoxDirty1")
-            self.assertEqual(editor_tab.editor.toPlainText(), "Unsaved critical pentest notes...")
+            self.assertEqual(editor_tab.current_markdown(), "Unsaved critical pentest notes...")
 
         # Simulate user saving report
         editor_tab.save()

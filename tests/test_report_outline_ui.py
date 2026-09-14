@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from core.reporting import ReportFileManager
 from ui.report_editor_tab import ReportEditorTab
 
+
 class TestReportNavigatorReplacement(unittest.TestCase):
     def setUp(self):
         self.mock_rfm = MagicMock(spec=ReportFileManager)
@@ -37,12 +38,12 @@ class TestReportNavigatorReplacement(unittest.TestCase):
     def test_toolbar_keeps_only_semantic_navigator(self):
         self.assertFalse(hasattr(self.tab, "btn_outline"))
         self.assertFalse(hasattr(self.tab, "outline_menu"))
-        self.assertTrue(hasattr(self.tab, "btn_navigator"))
-        self.assertTrue(hasattr(self.tab, "navigator_menu"))
+        self.assertTrue(hasattr(self.tab.action_toolbar, "btn_navigator"))
+        self.assertTrue(hasattr(self.tab.action_toolbar, "navigator_menu"))
 
     def test_legacy_report_has_safe_empty_navigator(self):
-        self.tab._populate_navigator_menu()
-        actions = self.tab.navigator_menu.actions()
+        self.tab.action_toolbar.navigator_menu.aboutToShow.emit()
+        actions = self.tab.action_toolbar.navigator_menu.actions()
         self.assertEqual(len(actions), 1)
         self.assertFalse(actions[0].isEnabled())
 

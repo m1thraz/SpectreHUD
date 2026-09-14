@@ -196,19 +196,24 @@ class TestUI(unittest.TestCase):
 
         # 1. Load project with no report.md yet
         tab.load_project("BoxGamma")
-        self.assertEqual(tab.editor.toPlainText(), "")
+        self.assertEqual(tab.workspace_shell.editor.toPlainText(), "")
         self.assertFalse(tab.is_dirty())
 
         # 2. Modify editor content -> dirty flag becomes True
-        tab.editor.setPlainText("# Box Gamma Writeup\nInitial foothold via port 80.")
+        tab.workspace_shell.editor.setPlainText(
+            "# Box Gamma Writeup\nInitial foothold via port 80."
+        )
         self.assertTrue(tab.is_dirty())
-        self.assertIn(t("report.unsaved", "Unsaved changes"), tab.lbl_status.text())
+        self.assertIn(
+            t("report.unsaved", "Unsaved changes"),
+            tab.action_toolbar.lbl_status.text(),
+        )
 
         # 3. Save -> dirty flag becomes False and file is written
         ok = tab.save()
         self.assertTrue(ok)
         self.assertFalse(tab.is_dirty())
-        self.assertIn(t("report.saved", "Saved"), tab.lbl_status.text())
+        self.assertIn(t("report.saved", "Saved"), tab.action_toolbar.lbl_status.text())
         self.assertTrue(report_file_manager.exists("BoxGamma"))
         self.assertEqual(
             report_file_manager.load("BoxGamma"),
@@ -218,6 +223,7 @@ class TestUI(unittest.TestCase):
         # 4. Load project with existing content
         tab.load_project("BoxGamma")
         self.assertEqual(
-            tab.editor.toPlainText(), "# Box Gamma Writeup\nInitial foothold via port 80."
+            tab.workspace_shell.editor.toPlainText(),
+            "# Box Gamma Writeup\nInitial foothold via port 80.",
         )
         self.assertFalse(tab.is_dirty())

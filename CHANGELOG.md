@@ -25,6 +25,7 @@ semantic versioning.
 * Moved report preview rendering, typography, semantic focus, and scroll synchronization into a dedicated controller.
 * Moved report loading, typed persistence outcomes, recovery prompts, and crash-draft handling behind dedicated session boundaries.
 * Moved report regeneration and additive Loot synchronization behind typed mutation services and focused UI actions.
+* Removed transitional Report Editor aliases and moved tests onto component-owned widgets and public workflow APIs.
 
 ### Fixed
 

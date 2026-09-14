@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QPlainTextEdit
 
 from core.theme_loader import ThemeLoader
 from ui.glass_panel import GlassPanel
-from ui.report_editor_tab import ReportEditorTab
+from ui.report.workspace_shell import wrap_glass_surface
 from ui.styles import build_app_theme
 
 
@@ -55,7 +55,7 @@ def test_rendered_glass_is_opaque_and_changes_with_intensity(qapp, theme):
 
 def test_report_text_viewport_exposes_glass_without_changing_content(qapp):
     editor = QPlainTextEdit()
-    panel = ReportEditorTab._wrap_glass_surface(editor)
+    panel = wrap_glass_surface(editor)
     panel.resize(400, 300)
     palette = ThemeLoader().load_theme("cyber_dark")
     editor.setProperty("class", "ReportSourceEditor")

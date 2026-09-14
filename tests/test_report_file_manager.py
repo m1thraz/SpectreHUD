@@ -229,9 +229,7 @@ class TestReportFileManager(unittest.TestCase):
     def test_append_missing_loot_uses_active_template_language_for_fallback(self):
         self.project_mgr.create_project("EnglishBox")
         self.report_mgr.save("# English Assessment\n", "EnglishBox")
-        self.loot_mgr.add_entry(
-            "note", "Port Scan", "Found port 22 open", category="recon"
-        )
+        self.loot_mgr.add_entry("note", "Port Scan", "Found port 22 open", category="recon")
         template = ReportTemplate(
             id="english_custom",
             name="English Custom",
@@ -241,9 +239,7 @@ class TestReportFileManager(unittest.TestCase):
             sections=[],
         )
 
-        result = self.report_mgr.append_missing_loot(
-            self.loot_mgr, "EnglishBox", template=template
-        )
+        result = self.report_mgr.append_missing_loot(self.loot_mgr, "EnglishBox", template=template)
 
         self.assertTrue(result.used_fallback)
         self.assertIn("## New Loot Entries", result.content)
@@ -304,10 +300,10 @@ class TestReportFileManager(unittest.TestCase):
             ),
         )
         tab.load_project("BoxHtmlTest")
-        tab.editor.setPlainText("# HTML Export Test\nContent goes here.")
+        tab.workspace_shell.editor.setPlainText("# HTML Export Test\nContent goes here.")
 
-        self.assertTrue(hasattr(tab, "btn_export"))
-        self.assertEqual(tab.btn_export.text(), "Export...")
+        self.assertTrue(hasattr(tab.action_toolbar, "btn_export"))
+        self.assertEqual(tab.action_toolbar.btn_export.text(), "Export...")
 
         out_html = self.temp_path / "exported_test.html"
         with (
@@ -322,7 +318,7 @@ class TestReportFileManager(unittest.TestCase):
             ),
             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
         ):
-            tab.btn_export.click()
+            tab.action_toolbar.btn_export.click()
 
         self.assertTrue(out_html.exists())
         content = out_html.read_text(encoding="utf-8")
@@ -355,7 +351,6 @@ class TestReportFileManager(unittest.TestCase):
         self.assertEqual(rel_path_imported, "screenshots/external.png")
         self.assertTrue((screenshots_dir / "external.png").exists())
         self.assertEqual((screenshots_dir / "external.png").read_bytes(), b"payload")
-
 
 
 if __name__ == "__main__":
