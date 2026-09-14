@@ -350,11 +350,11 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
 
 def _section_categories(section: TemplateSection) -> List[str]:
     configured = section.options.get("categories", [])
-    valid_ids = {str(category["id"]) for category in CATEGORIES}
+    valid_ids = {category["id"] for category in CATEGORIES}
     if not isinstance(configured, list):
-        return [str(category["id"]) for category in CATEGORIES]
+        return [category["id"] for category in CATEGORIES]
     categories = [str(category) for category in configured if str(category) in valid_ids]
-    return categories or [str(category["id"]) for category in CATEGORIES]
+    return categories or [category["id"] for category in CATEGORIES]
 
 
 def _render_attack_path(section: TemplateSection, context: ReportContext, lang: str) -> str:

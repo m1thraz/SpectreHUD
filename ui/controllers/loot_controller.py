@@ -101,7 +101,7 @@ class LootController(QObject):
         category: str = "misc",
         severity: str = "info",
         recommendation: str = "",
-        report_role: str = "evidence",
+        report_role: str = "finding",
     ) -> Dict[str, Any]:
         try:
             entry = self.loot_manager.add_entry(
@@ -484,7 +484,7 @@ class LootController(QObject):
             return []
 
         rendered_cards: List[QWidget] = []
-        for category in sorted(CATEGORIES, key=lambda c: int(c.get("order", 0))):
+        for category in sorted(CATEGORIES, key=lambda c: c.get("order", 0)):
             cat_entries = [e for e in loot_entries if e.get("category") == category["id"]]
             if not cat_entries:
                 continue
