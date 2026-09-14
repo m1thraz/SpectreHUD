@@ -3,11 +3,12 @@
 from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.i18n import t
 from ui.styles.icons import icon
-from ui.styles.palette import CYBER_CYAN, TEXT_MUTED
+from ui.styles.theme import get_theme_color, rgba_str
 
 
 class QuickNoteBulkBar(QFrame):
@@ -20,9 +21,10 @@ class QuickNoteBulkBar(QFrame):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("QuickNoteBulkBar")
+        accent = QColor(get_theme_color("ACCENT_BRAND"))
         self.setStyleSheet(
-            "QFrame#QuickNoteBulkBar { background-color: rgba(0, 229, 255, 0.08); "
-            "border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 6px; } "
+            f"QFrame#QuickNoteBulkBar {{ background-color: {rgba_str(accent, 0.08)}; "
+            f"border: 1px solid {rgba_str(accent, 0.35)}; border-radius: 6px; }} "
             "QPushButton { font-size: 11px; padding: 2px 8px; border-radius: 4px; }"
         )
 
@@ -32,12 +34,12 @@ class QuickNoteBulkBar(QFrame):
 
         self.lbl_selected = QLabel()
         self.lbl_selected.setStyleSheet(
-            f"color: {CYBER_CYAN}; font-weight: bold; font-size: 11px;"
+            f"color: {get_theme_color('ACCENT_BRAND')}; font-weight: bold; font-size: 11px;"
         )
         layout.addWidget(self.lbl_selected)
 
         lbl_mark = QLabel(t("quick_note.bulk_mark_as", "Mark:"))
-        lbl_mark.setStyleSheet(f"color: {TEXT_MUTED}; font-size: 11px;")
+        lbl_mark.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         layout.addWidget(lbl_mark)
 
         layout.addWidget(

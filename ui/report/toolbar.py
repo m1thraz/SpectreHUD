@@ -4,10 +4,12 @@ from collections.abc import Callable
 from typing import Optional
 
 from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPushButton, QWidget
 
 from core.i18n import t
 from ui.styles.icons import icon
+from ui.styles.theme import get_theme_color, rgba_str
 
 
 REPORT_TOOLBAR_ICON_SIZE = QSize(13, 13)
@@ -39,8 +41,9 @@ def create_toolbar_divider(parent: QWidget | None = None) -> QFrame:
     divider.setFrameShadow(QFrame.Shadow.Plain)
     divider.setProperty("class", "ToolbarDivider")
     divider.setFixedWidth(1)
+    border_col = QColor(get_theme_color("BORDER_MUTED"))
     divider.setStyleSheet(
-        "background-color: rgba(139, 148, 158, 0.5); max-height: 20px; min-width: 1px; max-width: 1px; margin: 3px 6px;"
+        f"background-color: {rgba_str(border_col, 0.5)}; max-height: 20px; min-width: 1px; max-width: 1px; margin: 3px 6px;"
     )
     return divider
 

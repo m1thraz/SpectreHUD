@@ -1,24 +1,13 @@
-"""Central light/print export palette for Report Workspace."""
+"""Central light/print export palette for Report Workspace (re-exported from core)."""
 
-REPORT_LIGHT_PALETTE: dict[str, str] = {
-    "text": "#1f2328",
-    "heading": "#0550ae",
-    "heading_2": "#0969da",
-    "heading_3": "#0550ae",
-    "border": "#d0d7de",
-    "code_bg": "#f6f8fa",
-    "code": "#1a7f37",
-    "quote": "#57606a",
-    "link": "#0969da",
-    "focus_highlight": "#0969da",
-    "pagebreak_marker": "#57606a",
-    "spacer_marker": "#6e7781",
-}
+from core.reporting.report_palette import (
+    PRINT_MARGIN_HEADER_COLOR,
+    REPORT_ICON_COLORS,
+    REPORT_LIGHT_PALETTE,
+)
 
-REPORT_ICON_COLORS: dict[str, str] = {
-    "default": "#3b82f6",
-    "info": "#0284c7",
-    "success": "#16a34a",
-    "warning": "#d97706",
-    "critical": "#dc2626",
-}
+__all__ = [
+    "PRINT_MARGIN_HEADER_COLOR",
+    "REPORT_LIGHT_PALETTE",
+    "REPORT_ICON_COLORS",
+]

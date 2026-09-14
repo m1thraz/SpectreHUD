@@ -1,8 +1,17 @@
 """CSS stylesheets for standalone SpectreHUD reports."""
 
 from core.fonts import get_report_font_stack
+from core.reporting.report_palette import PRINT_MARGIN_HEADER_COLOR
 
-PRINT_MARGIN_HEADER_COLOR = "#899198"
+__all__ = [
+    "PRINT_MARGIN_HEADER_COLOR",
+    "REPORT_BASE_CSS",
+    "REPORT_CSS",
+    "REPORT_LIGHT_CSS",
+    "REPORT_PRINT_CSS",
+    "REPORT_PROFESSIONAL_CSS",
+    "get_report_css",
+]
 
 REPORT_BASE_CSS = """
 :root {

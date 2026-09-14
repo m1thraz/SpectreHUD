@@ -16,12 +16,13 @@ from PyQt6.QtWidgets import (
     QFrame,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QEvent, QTimer
-from PyQt6.QtGui import QCursor, QGuiApplication, QKeyEvent
+from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QKeyEvent
 
 from core.i18n import t
 from core.net_detector import NetDetector
 from ui.copyable_line_edit import CopyableLineEdit
 from ui.styles.icons import get_theme_color
+from ui.styles.theme import rgba_str
 
 
 class QuickIpPopup(QWidget):
@@ -65,13 +66,15 @@ class QuickIpPopup(QWidget):
         # Card container with glass HUD styling
         self.card = QFrame(self)
         self.card.setObjectName("QuickIpCard")
+        bg_col = QColor(get_theme_color("BG_PRIMARY"))
+        accent_col = QColor(get_theme_color("ACCENT_BRAND"))
         self.card.setStyleSheet(
-            """
-            QFrame#QuickIpCard {
-                background-color: rgba(13, 17, 23, 0.96);
-                border: 1px solid rgba(0, 229, 255, 0.45);
+            f"""
+            QFrame#QuickIpCard {{
+                background-color: {rgba_str(bg_col, 0.96)};
+                border: 1px solid {rgba_str(accent_col, 0.45)};
                 border-radius: 8px;
-            }
+            }}
             """
         )
         card_layout = QVBoxLayout(self.card)

@@ -17,6 +17,11 @@ from core.reporting.assets import (
     ImageEmbeddingBudget,
     encode_image_base64,
 )
+from core.reporting.report_palette import (
+    PRINT_MARGIN_HEADER_COLOR,
+    REPORT_ICON_COLORS,
+    REPORT_LIGHT_PALETTE,
+)
 from core.reporting.styles import (
     REPORT_BASE_CSS,
     REPORT_CSS,
@@ -142,9 +147,12 @@ __all__ = [
     "HtmlReportExporter",
     "MAX_EMBED_IMAGE_FILE_SIZE",
     "ImageEmbeddingBudget",
+    "PRINT_MARGIN_HEADER_COLOR",
     "REPORT_BASE_CSS",
     "REPORT_CSS",
+    "REPORT_ICON_COLORS",
     "REPORT_LIGHT_CSS",
+    "REPORT_LIGHT_PALETTE",
     "REPORT_PRINT_CSS",
     "REPORT_PROFESSIONAL_CSS",
     "get_report_css",

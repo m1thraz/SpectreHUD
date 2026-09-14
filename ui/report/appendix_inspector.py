@@ -43,6 +43,7 @@ from ui.report.inspector_style import (
     style_inspector_section,
 )
 from ui.styles.icons import get_theme_color, icon
+from ui.styles.theme import rgba_str
 
 _SUPPORTED_LANGUAGES = [
     ("bash", "Bash / Shell"),
@@ -78,11 +79,20 @@ class CommandSnippetCard(GlassPanel):
         top_row = QHBoxLayout()
         top_row.setSpacing(6)
 
+        qc_border = QColor(get_theme_color("BORDER_DEFAULT"))
+        qc_card = QColor(get_theme_color("BG_SURFACE"))
+        qc_bg = QColor(get_theme_color("BG_DARK"))
+        qc_err = QColor(get_theme_color("STATUS_ERROR"))
+        btn_nav_style = (
+            f"QPushButton {{ background: {rgba_str(qc_card, 0.5)}; border: 1px solid {rgba_str(qc_border, 0.4)}; border-radius: 3px; }} "
+            f"QPushButton:hover {{ background: {rgba_str(qc_border, 0.3)}; }}"
+        )
+
         self.btn_up = QPushButton()
         self.btn_up.setIcon(icon("fa5s.chevron-up", color=get_theme_color("TEXT_MUTED")))
         self.btn_up.setFixedSize(26, 24)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
-        self.btn_up.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
+        self.btn_up.setStyleSheet(btn_nav_style)
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self))
         top_row.addWidget(self.btn_up)
 
@@ -90,7 +100,7 @@ class CommandSnippetCard(GlassPanel):
         self.btn_down.setIcon(icon("fa5s.chevron-down", color=get_theme_color("TEXT_MUTED")))
         self.btn_down.setFixedSize(26, 24)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
-        self.btn_down.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
+        self.btn_down.setStyleSheet(btn_nav_style)
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self))
         top_row.addWidget(self.btn_down)
 
@@ -98,7 +108,7 @@ class CommandSnippetCard(GlassPanel):
         self.edit_caption.setPlaceholderText(t("report.appendix_cmd_caption_placeholder", "Beschreibung / Titel (z.B. Portscan Enumeration)"))
         self.edit_caption.setText(self.item.caption)
         self.edit_caption.setStyleSheet(
-            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
             f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
             f"QLineEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
         )
@@ -120,7 +130,7 @@ class CommandSnippetCard(GlassPanel):
             self.combo_lang.addItem(curr_lang, curr_lang)
             self.combo_lang.setCurrentIndex(self.combo_lang.count() - 1)
         self.combo_lang.setStyleSheet(
-            f"QComboBox {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"QComboBox {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
             f"border-radius: 4px; padding: 3px 8px; color: {get_theme_color('TEXT_SECONDARY')}; font-size: 11px; }} "
             f"QComboBox:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
         )
@@ -132,8 +142,8 @@ class CommandSnippetCard(GlassPanel):
         self.btn_delete.setFixedSize(26, 24)
         self.btn_delete.setToolTip(t("report.delete", "Snippet löschen"))
         self.btn_delete.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: {rgba_str(qc_err, 0.1)}; border: 1px solid {rgba_str(qc_err, 0.3)}; border-radius: 3px; }} "
+            f"QPushButton:hover {{ background: {rgba_str(qc_err, 0.25)}; }}"
         )
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self))
         top_row.addWidget(self.btn_delete)
@@ -144,8 +154,9 @@ class CommandSnippetCard(GlassPanel):
         self.edit_code = QPlainTextEdit()
         self.edit_code.setPlaceholderText(t("report.appendix_cmd_code_placeholder", "# Befehl oder PoC-Code eingeben..."))
         self.edit_code.setPlainText(self.item.content)
+        qc_code_bg = QColor(get_theme_color("BG_PRIMARY"))
         self.edit_code.setStyleSheet(
-            f"QPlainTextEdit {{ background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"QPlainTextEdit {{ background: {rgba_str(qc_code_bg, 0.85)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
             f"border-radius: 4px; padding: 6px; color: {get_theme_color('TEXT_CODE')}; font-family: 'Consolas', 'Cascadia Code', monospace; "
             f"font-size: 11px; }} "
             f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
@@ -193,12 +204,21 @@ class ScreenshotCard(GlassPanel):
         layout.setContentsMargins(8, 6, 8, 6)
         layout.setSpacing(8)
 
+        qc_border = QColor(get_theme_color("BORDER_DEFAULT"))
+        qc_card = QColor(get_theme_color("BG_SURFACE"))
+        qc_bg = QColor(get_theme_color("BG_DARK"))
+        qc_err = QColor(get_theme_color("STATUS_ERROR"))
+        btn_nav_style = (
+            f"QPushButton {{ background: {rgba_str(qc_card, 0.5)}; border: 1px solid {rgba_str(qc_border, 0.4)}; border-radius: 3px; }} "
+            f"QPushButton:hover {{ background: {rgba_str(qc_border, 0.3)}; }}"
+        )
+
         # 1. Thumbnail preview
         self.lbl_thumb = QLabel()
         self.lbl_thumb.setFixedSize(110, 75)
         self.lbl_thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_thumb.setStyleSheet(
-            "QLabel { background: rgba(13, 17, 23, 0.8); border: 1px solid rgba(255, 255, 255, 0.15); "
+            f"QLabel {{ background: {rgba_str(qc_bg, 0.8)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
             "border-radius: 4px; }"
         )
         self._load_thumbnail()
@@ -213,7 +233,7 @@ class ScreenshotCard(GlassPanel):
         self.edit_caption.setText(self.item.caption)
         self.edit_caption.setMinimumWidth(60)
         self.edit_caption.setStyleSheet(
-            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.7)}; "
             f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
             f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; }}"
         )
@@ -231,7 +251,7 @@ class ScreenshotCard(GlassPanel):
         self.edit_path.setText(self.item.content)
         self.edit_path.setMinimumWidth(60)
         self.edit_path.setStyleSheet(
-            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"QLineEdit {{ background: {rgba_str(qc_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
             f"border-radius: 4px; padding: 3px 6px; color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-family: monospace; }} "
             f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; color: {get_theme_color('TEXT_PRIMARY')}; }}"
         )
@@ -250,7 +270,7 @@ class ScreenshotCard(GlassPanel):
         self.btn_up.setIcon(icon("fa5s.chevron-up", color=get_theme_color("TEXT_MUTED")))
         self.btn_up.setFixedSize(24, 22)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
-        self.btn_up.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
+        self.btn_up.setStyleSheet(btn_nav_style)
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self))
         btn_layout.addWidget(self.btn_up)
 
@@ -258,7 +278,7 @@ class ScreenshotCard(GlassPanel):
         self.btn_down.setIcon(icon("fa5s.chevron-down", color=get_theme_color("TEXT_MUTED")))
         self.btn_down.setFixedSize(24, 22)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
-        self.btn_down.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
+        self.btn_down.setStyleSheet(btn_nav_style)
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self))
         btn_layout.addWidget(self.btn_down)
 
@@ -267,8 +287,8 @@ class ScreenshotCard(GlassPanel):
         self.btn_delete.setFixedSize(24, 22)
         self.btn_delete.setToolTip(t("report.delete", "Screenshot entfernen"))
         self.btn_delete.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: {rgba_str(qc_err, 0.1)}; border: 1px solid {rgba_str(qc_err, 0.3)}; border-radius: 3px; }} "
+            f"QPushButton:hover {{ background: {rgba_str(qc_err, 0.25)}; }}"
         )
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self))
         btn_layout.addWidget(self.btn_delete)
@@ -591,8 +611,10 @@ class ReportAppendixInspector(QWidget):
 
         self.edit_notes = QPlainTextEdit()
         self.edit_notes.setPlaceholderText(t("report.appendix_notes_placeholder", "Zusätzliche Rohdaten, Auszüge oder Referenzen einfügen..."))
+        qc_code_bg = QColor(get_theme_color("BG_PRIMARY"))
+        qc_border = QColor(get_theme_color("BORDER_DEFAULT"))
         self.edit_notes.setStyleSheet(
-            f"QPlainTextEdit {{ background: rgba(13, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"QPlainTextEdit {{ background: {rgba_str(qc_code_bg, 0.7)}; border: 1px solid {rgba_str(qc_border, 0.6)}; "
             f"border-radius: 4px; padding: 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-family: monospace; font-size: 11px; }} "
             f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('WARNING')}; }}"
         )

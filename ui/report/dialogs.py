@@ -372,7 +372,7 @@ class LootImagePickerDialog(QDialog):
         preview_panel = QVBoxLayout()
         self.info_label = QLabel()
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        self.info_label.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')};")
         preview_panel.addWidget(self.info_label)
 
         self.preview_label = QLabel()
@@ -553,7 +553,7 @@ class LootEntryPickerDialog(QDialog):
         preview_panel = QVBoxLayout()
         self.info_label = QLabel()
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        self.info_label.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')};")
         preview_panel.addWidget(self.info_label)
 
         self.txt_preview = QPlainTextEdit()
@@ -866,7 +866,7 @@ class ClipboardHistoryPickerDialog(QDialog):
         preview_panel = QVBoxLayout()
         self.info_label = QLabel()
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet("font-size: 11px; color: #888;")
+        self.info_label.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')};")
         preview_panel.addWidget(self.info_label)
 
         self.txt_preview = QPlainTextEdit()

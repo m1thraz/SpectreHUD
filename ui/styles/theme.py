@@ -14,7 +14,17 @@ from ui.styles.cards import CARDS_QSS_TEMPLATE
 from ui.styles.dialogs import DIALOGS_QSS_TEMPLATE
 from core.fonts import get_code_font_stack, get_ui_font_stack
 from ui.styles.palette import CYBER_DARK_PALETTE
+from ui.styles.icons import get_theme_color
 from core.config import clamp_transparency
+
+__all__ = [
+    "build_app_theme",
+    "get_app_icon",
+    "get_app_icon_path",
+    "get_theme_color",
+    "rgba_str",
+    "with_alpha",
+]
 
 _TOKEN_PATTERN = re.compile(r"\{([A-Z][A-Z0-9_]*|ui_font|code_font)\}")
 
@@ -27,6 +37,13 @@ def with_alpha(base_color: str, opacity_percent: int) -> str:
     opacity = max(0, min(100, int(opacity_percent)))
     alpha = f"{opacity / 100:.2f}".rstrip("0").rstrip(".")
     return f"rgba({color.red()}, {color.green()}, {color.blue()}, {alpha})"
+
+
+def rgba_str(color: object, alpha: float) -> str:
+    """Format a QColor or hex string with float alpha into a CSS rgba string."""
+    c = color if isinstance(color, QColor) else QColor(str(color))
+    a = f"{float(alpha):.2f}".rstrip("0").rstrip(".")
+    return f"rgba({c.red()}, {c.green()}, {c.blue()}, {a})"
 
 
 def build_app_theme(

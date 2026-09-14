@@ -145,11 +145,11 @@ class AddLootDialog(BaseHudDialog):
 
         self.combo_severity = QComboBox()
         severities = [
-            ("Info", "info"),
-            ("Low", "low"),
-            ("Medium", "medium"),
-            ("High", "high"),
-            ("Critical", "critical"),
+            (t("severity.info", "Info"), "info"),
+            (t("severity.low", "Low"), "low"),
+            (t("severity.medium", "Medium"), "medium"),
+            (t("severity.high", "High"), "high"),
+            (t("severity.critical", "Critical"), "critical"),
         ]
         for i, (s_label, s_id) in enumerate(severities):
             sev_icon = icon("fa5s.circle", color=get_severity_color(s_id))

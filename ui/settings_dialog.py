@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
 )
 from PyQt6.QtCore import QObject, QRunnable, QThreadPool, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices, QFontDatabase, QStandardItemModel
+from PyQt6.QtGui import QColor, QDesktopServices, QFontDatabase, QStandardItemModel
 from core.cli import APP_VERSION
 from core.config import ConfigManager, clamp_transparency
 from core.platform import (
@@ -32,6 +32,7 @@ from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_u
 from ui.base_dialog import BaseHudDialog
 from ui.message_boxes import show_error_dialog, show_warning_dialog
 from ui.styles.icons import get_theme_color
+from ui.styles.theme import rgba_str
 from core.fonts import (
     UI_FONT_OPTIONS,
     CODE_FONT_OPTIONS,
@@ -149,9 +150,10 @@ class HotkeySettingsPage(QWidget):
 
         if not self.capabilities.global_hotkeys:
             card_notice = QFrame()
+            warn_color = QColor(get_theme_color("WARNING"))
             card_notice.setStyleSheet(
-                "background-color: rgba(234, 179, 8, 0.10); "
-                "border: 1px solid rgba(234, 179, 8, 0.30); "
+                f"background-color: {rgba_str(warn_color, 0.10)}; "
+                f"border: 1px solid {rgba_str(warn_color, 0.30)}; "
                 "border-radius: 4px; padding: 6px 10px;"
             )
             notice_layout = QVBoxLayout(card_notice)

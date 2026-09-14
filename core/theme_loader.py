@@ -11,15 +11,16 @@ from core.platform import user_themes_dir
 logger = get_logger(__name__)
 
 
-SEMANTIC_ALIAS_KEYS: Set[str] = {
-    "ACCENT_PRIMARY",
-    "ACCENT_BRAND",
-    "ACCENT_HIGHLIGHT",
-    "SUCCESS",
-    "SUCCESS_BG",
-    "WARNING",
-    "ERROR",
+SEMANTIC_TOKEN_ALIASES: Dict[str, str] = {
+    "ACCENT_PRIMARY": "CYBER_BLUE",
+    "ACCENT_BRAND": "CYBER_CYAN",
+    "ACCENT_HIGHLIGHT": "STATUS_PURPLE",
+    "SUCCESS": "STATUS_SUCCESS",
+    "SUCCESS_BG": "STATUS_SUCCESS_BG",
+    "WARNING": "STATUS_WARNING",
+    "ERROR": "STATUS_ERROR",
 }
+SEMANTIC_ALIAS_KEYS: Set[str] = set(SEMANTIC_TOKEN_ALIASES)
 
 
 class ThemeLoader:
@@ -129,11 +130,7 @@ class ThemeLoader:
     @staticmethod
     def _apply_semantic_aliases(palette: Dict[str, str]) -> Dict[str, str]:
         """Inject semantic role aliases mapped from canonical tokens at load time."""
-        palette["ACCENT_PRIMARY"] = palette["CYBER_BLUE"]
-        palette["ACCENT_BRAND"] = palette["CYBER_CYAN"]
-        palette["ACCENT_HIGHLIGHT"] = palette["STATUS_PURPLE"]
-        palette["SUCCESS"] = palette["STATUS_SUCCESS"]
-        palette["SUCCESS_BG"] = palette["STATUS_SUCCESS_BG"]
-        palette["WARNING"] = palette["STATUS_WARNING"]
-        palette["ERROR"] = palette["STATUS_ERROR"]
+        for alias, source_key in SEMANTIC_TOKEN_ALIASES.items():
+            if source_key in palette:
+                palette[alias] = palette[source_key]
         return palette

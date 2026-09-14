@@ -8,11 +8,12 @@ the active pentest phase on the screen where the mouse cursor resides.
 from typing import Optional
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCursor, QGuiApplication
+from PyQt6.QtGui import QColor, QCursor, QGuiApplication
 
 from core.phases import get_phase, Phase
 from core.i18n import t
 from ui.styles.icons import get_theme_color
+from ui.styles.theme import rgba_str
 
 
 class PhaseToastHUD(QWidget):
@@ -49,13 +50,15 @@ class PhaseToastHUD(QWidget):
 
         self.card = QFrame(self)
         self.card.setObjectName("PhaseHUDCard")
+        bg_col = QColor(get_theme_color("BG_PRIMARY"))
+        accent_col = QColor(get_theme_color("ACCENT_BRAND"))
         self.card.setStyleSheet(
-            """
-            QFrame#PhaseHUDCard {
-                background-color: rgba(13, 17, 23, 0.94);
-                border: 1px solid rgba(0, 229, 255, 0.65);
+            f"""
+            QFrame#PhaseHUDCard {{
+                background-color: {rgba_str(bg_col, 0.94)};
+                border: 1px solid {rgba_str(accent_col, 0.65)};
                 border-radius: 8px;
-            }
+            }}
             """
         )
         card_layout = QHBoxLayout(self.card)
