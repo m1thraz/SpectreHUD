@@ -87,6 +87,7 @@ class ReportPreviewController:
         prepared = prepare_preview_markdown(markdown)
         self.preview.setMarkdown(prepared.markdown)
         self._decorate_layout_markers()
+        self._decorate_heading_margins()
         self._index_landmarks(prepared.landmarks)
         if self.active_target is not None:
             self.focus(*self.active_target, remember=False)
@@ -226,6 +227,32 @@ class ReportPreviewController:
                 block_format.setBottomMargin(margin)
                 cursor.setBlockFormat(block_format)
                 cursor = self.document.find(token, cursor)
+
+    def _decorate_heading_margins(self) -> None:
+        block = self.document.firstBlock()
+        is_first = True
+        while block.isValid():
+            fmt = block.blockFormat()
+            level = fmt.headingLevel()
+            if level > 0:
+                cursor = QTextCursor(block)
+                top_margin = 4 if is_first else {
+                    1: 22,
+                    2: 26,
+                    3: 18,
+                    4: 12,
+                }.get(level, 10)
+                bottom_margin = {
+                    1: 10,
+                    2: 8,
+                    3: 6,
+                    4: 4,
+                }.get(level, 4)
+                fmt.setTopMargin(top_margin)
+                fmt.setBottomMargin(bottom_margin)
+                cursor.setBlockFormat(fmt)
+            is_first = False
+            block = block.next()
 
     def _preview_palette(self) -> dict[str, str]:
         if self._light_mode_provider():
