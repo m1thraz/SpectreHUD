@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="data/icon.svg" alt="SpectreHUD logo" width="128" height="128">
-</p>
-
 # SpectreHUD
+
+![SpectreHUD logo](data/icon.svg)
 
 [![CI](https://github.com/m1thraz/SpectreHUD/actions/workflows/ci.yml/badge.svg)](https://github.com/m1thraz/SpectreHUD/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)
@@ -71,51 +69,15 @@ The core idea is not just to keep notes in one place, but to reduce interruption
 - **Keep manual edits intact instead of regenerating everything**
 - **Capture live in Spectre, refine later in Obsidian, CherryTree, HTML, or Markdown**
 - **Finish in editable HTML before creating the final PDF**
+
 ## From capture to report
 
 Spectre keeps the documentation workflow connected from structured findings to the final deliverable.
 
-<table>
-  <tr>
-    <td width="33%" align="center">
-      <strong>1. Capture & structure</strong>
-    </td>
-    <td width="33%" align="center">
-      <strong>2. Build & refine</strong>
-    </td>
-    <td width="33%" align="center">
-      <strong>3. Finalize</strong>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <a href="assets/loot.png">
-        <img src="assets/loot.png" alt="Loot organized by pentest phase" width="100%">
-      </a>
-    </td>
-    <td>
-      <a href="assets/report_editor.png">
-        <img src="assets/report_editor.png" alt="Report editor with generated findings" width="100%">
-      </a>
-    </td>
-    <td>
-      <a href="assets/professional_report.png">
-        <img src="assets/professional_report.png" alt="Professional print-oriented report output" width="100%">
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      Notes and captured evidence become structured Loot.
-    </td>
-    <td align="center">
-      Generate the report and keep editing it as the engagement evolves.
-    </td>
-    <td align="center">
-      Let Spectre clean up the structure, make final edits, then print to PDF.
-    </td>
-  </tr>
-</table>
+| 1. Capture & structure | 2. Build & refine | 3. Finalize |
+| :---: | :---: | :---: |
+| [![Loot organized by pentest phase](assets/loot.png)](assets/loot.png) | [![Report editor with generated findings](assets/report_editor.png)](assets/report_editor.png) | [![Professional print-oriented report output](assets/professional_report.png)](assets/professional_report.png) |
+| Notes and captured evidence become structured Loot. | Generate the report and keep editing it as the engagement evolves. | Let Spectre clean up the structure, make final edits, then print to PDF. |
 
 ## Engineering focus
 
@@ -140,7 +102,6 @@ More details:
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
 
-
 ## Installation
 
 ### Windows executable
@@ -153,26 +114,26 @@ No Python installation is required.
 
 Requirements: Python 3.10+ and standard Qt6/XCB desktop runtime dependencies.
 
-**Ubuntu / Debian / Kali Linux**
+#### Ubuntu / Debian / Kali Linux
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
 ```
 
-**Fedora / RHEL**
+#### Fedora / RHEL
 
 ```bash
 sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
 ```
 
-**Arch Linux**
+#### Arch Linux
 
 ```bash
 sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
 ```
 
-**Install and run**
+#### Install and run
 
 ```bash
 git clone https://github.com/m1thraz/SpectreHUD.git
