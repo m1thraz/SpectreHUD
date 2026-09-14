@@ -119,6 +119,11 @@ from core.reporting.workspace_model import (
     ScopeExclusionItem,
     ScopeTargetItem,
 )
+from core.reporting.finding_conversion import (
+    duplicate_report_finding,
+    evidence_from_loot_entry,
+    finding_from_loot_entry,
+)
 
 __all__ = [
     "ExportArtifact",
@@ -211,4 +216,7 @@ __all__ = [
     "ReportWorkspaceDocument",
     "ScopeExclusionItem",
     "ScopeTargetItem",
+    "duplicate_report_finding",
+    "evidence_from_loot_entry",
+    "finding_from_loot_entry",
 ]

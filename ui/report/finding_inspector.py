@@ -9,7 +9,8 @@ Evidence & Proof-of-Concept drawer (Loot screenshots, terminal outputs, credenti
 from typing import Optional
 import uuid
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QLocale, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QDoubleValidator
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -297,6 +298,22 @@ class ReportFindingInspector(QWidget):
         sev_row.addWidget(self.cmb_status)
         form.addRow(self._make_label(t("report.finding_severity", "Severity:")), sev_row)
 
+        cvss_row = QHBoxLayout()
+        self.txt_cvss_score = QLineEdit()
+        cvss_validator = QDoubleValidator(0.0, 10.0, 1, self)
+        cvss_validator.setLocale(QLocale.c())
+        self.txt_cvss_score.setValidator(cvss_validator)
+        self.txt_cvss_score.setPlaceholderText("0.0–10.0")
+        self.txt_cvss_score.setMaximumWidth(90)
+        self.txt_cvss_score.textChanged.connect(self._on_field_changed)
+        cvss_row.addWidget(self.txt_cvss_score)
+
+        self.txt_cvss_vector = QLineEdit()
+        self.txt_cvss_vector.setPlaceholderText("CVSS:3.1/AV:N/AC:L/PR:N/...")
+        self.txt_cvss_vector.textChanged.connect(self._on_field_changed)
+        cvss_row.addWidget(self.txt_cvss_vector, stretch=1)
+        form.addRow(self._make_label("CVSS:"), cvss_row)
+
         # Phase & Target
         phase_row = QHBoxLayout()
         self.cmb_phase = QComboBox()
@@ -467,6 +484,10 @@ class ReportFindingInspector(QWidget):
                 self.cmb_phase.setCurrentIndex(phase_idx)
 
             self.txt_target.setText(", ".join(finding.targets))
+            self.txt_cvss_score.setText(
+                f"{finding.cvss_score:.1f}" if finding.cvss_score is not None else ""
+            )
+            self.txt_cvss_vector.setText(finding.cvss_vector or "")
             self.txt_desc.setPlainText(finding.description)
             self.txt_rec.setPlainText(finding.recommendation)
             self.txt_refs.setPlainText("\n".join(finding.references))
@@ -515,7 +536,7 @@ class ReportFindingInspector(QWidget):
         ev = next((i for i in self._finding.evidence_items if i.id == item_id), None)
         if not ev:
             return
-        md = ev.to_markdown()
+        md = ev.to_persisted_markdown()
         cur = self.txt_desc.textCursor()
         cur.insertText(f"\n\n{md}\n")
         self.txt_desc.setTextCursor(cur)
@@ -576,10 +597,19 @@ class ReportFindingInspector(QWidget):
         targets = [t.strip() for t in self.txt_target.text().split(",") if t.strip()]
         refs = [r.strip().lstrip("-* ").strip() for r in self.txt_refs.toPlainText().splitlines() if r.strip()]
 
+        cvss_score = None
+        if self.txt_cvss_score.text().strip():
+            try:
+                cvss_score = float(self.txt_cvss_score.text())
+            except ValueError:
+                cvss_score = None
+
         updated = ReportFindingItem(
             id=self._finding.id,
             title=self.txt_title.text().strip(),
             severity=str(self.cmb_severity.currentData()),
+            cvss_score=cvss_score,
+            cvss_vector=self.txt_cvss_vector.text().strip() or None,
             status=str(self.cmb_status.currentData()),
             phase=str(self.cmb_phase.currentData()),
             targets=targets,

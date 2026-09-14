@@ -6,6 +6,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Added optional remediation guidance while capturing new Loot.
+
+### Fixed
+
+* Preserved CVSS data and evidence provenance when Loot becomes a report finding.
+
 ## [2.1.7] - 2026-09-14
 
 ### Added

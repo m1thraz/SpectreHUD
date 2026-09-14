@@ -376,6 +376,7 @@ KNOWN_PURE_CORE_TEST_FILES = {
     "test_quick_note_manager.py",
     "test_report_builder.py",
     "test_report_draft_manager.py",
+    "test_report_finding_conversion.py",
     "test_report_mutation_service.py",
     "test_report_navigation.py",
     "test_report_note_formatter.py",

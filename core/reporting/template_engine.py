@@ -20,6 +20,7 @@ from core.reporting.section_markers import (
     wrap_section_markdown,
 )
 from core.reporting.findings import finding_end_marker, finding_start_marker
+from core.reporting.finding_conversion import evidence_from_loot_entry
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -280,13 +281,9 @@ def _render_loot_entry_block(
         lines.append("#### Beschreibung" if lang == "de" else "#### Description")
         lines.append("")
 
-    if content and entry_type == "screenshot":
-        if content.startswith("![") and content.endswith(")"):
-            lines.append(content)
-        else:
-            lines.append(f"![{title}]({content})")
-    elif content and entry_type in ("credentials", "hash", "flag"):
-        lines.extend(_wrap_code_fence(content))
+    evidence = evidence_from_loot_entry(entry)
+    if content and evidence is not None:
+        lines.append(evidence.to_persisted_markdown())
     elif content and entry_type == "directory":
         lines.append(_wrap_inline_code(content))
     elif content:

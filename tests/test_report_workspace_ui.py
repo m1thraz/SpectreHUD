@@ -291,6 +291,8 @@ class TestReportWorkspaceUI(unittest.TestCase):
             id="f-42",
             title="Broken Auth",
             severity="high",
+            cvss_score=8.7,
+            cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
             phase="access",
             status="open",
             description="JWT not verified",
@@ -299,6 +301,8 @@ class TestReportWorkspaceUI(unittest.TestCase):
         insp.load_finding(finding)
         self.assertEqual(insp.txt_title.text(), "Broken Auth")
         self.assertEqual(insp.cmb_severity.currentData(), "high")
+        self.assertEqual(insp.txt_cvss_score.text(), "8.7")
+        self.assertTrue(insp.txt_cvss_vector.text().startswith("CVSS:3.1/"))
 
         changed = []
         deleted = []
@@ -308,9 +312,12 @@ class TestReportWorkspaceUI(unittest.TestCase):
         insp.finding_duplicated.connect(lambda fid: duplicated.append(fid))
 
         insp.txt_title.setText("Broken JWT Auth")
+        insp.txt_cvss_score.setText("9.0")
         insp._debounce_timer.timeout.emit()
         self.assertEqual(len(changed), 1)
         self.assertEqual(changed[0].title, "Broken JWT Auth")
+        self.assertEqual(changed[0].cvss_score, 9.0)
+        self.assertEqual(changed[0].cvss_vector, finding.cvss_vector)
 
         insp.btn_duplicate.click()
         self.assertEqual(duplicated, ["f-42"])

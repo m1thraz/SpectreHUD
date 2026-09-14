@@ -21,6 +21,12 @@ from core.reporting.findings import (
     finding_end_marker,
     finding_start_marker,
 )
+from core.reporting.evidence_markers import (
+    format_evidence_block,
+    parse_evidence_blocks,
+    remove_evidence_block,
+    replace_evidence_block,
+)
 from core.reporting.section_markers import (
     segment_report_markdown,
     wrap_section_markdown,
@@ -32,7 +38,10 @@ _LOOT_MARKER_RE = re.compile(
 )
 _SEVERITY_CLEAN_RE = re.compile(r"\[?(CRITICAL|HIGH|MEDIUM|LOW|INFO)\]?", re.IGNORECASE)
 _IMAGE_MD_RE = re.compile(r"^!\[(.*?)\]\((.*?)\)$", re.MULTILINE)
-_CODE_BLOCK_RE = re.compile(r"^```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", re.DOTALL | re.MULTILINE)
+_CODE_BLOCK_RE = re.compile(
+    r"^(`{3,})([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n\1$",
+    re.DOTALL | re.MULTILINE,
+)
 
 _CLIENT_ALIASES = (
     "auftraggeber / client",
@@ -235,9 +244,34 @@ class ReportEvidenceItem:
             caption = self.caption or "Screenshot"
             return f"![{caption}]({self.content})"
         if self.type in ("terminal", "credential", "code"):
-            lang = self.language or ("bash" if self.type == "terminal" else ("text" if self.type == "credential" else ""))
-            return f"```{lang}\n{self.content}\n```"
+            if self.type == "credential" and self.language in {
+                "credential",
+                "credentials",
+                "hash",
+                "flag",
+            }:
+                # The subtype is persistence metadata, not a Markdown language.
+                lang = ""
+            else:
+                lang = self.language or ("bash" if self.type == "terminal" else ("text" if self.type == "credential" else ""))
+            backtick_runs = re.findall(r"`+", self.content)
+            fence_length = max(3, max((len(run) for run in backtick_runs), default=0) + 1)
+            fence = "`" * fence_length
+            return f"{fence}{lang}\n{self.content}\n{fence}"
         return self.content
+
+    def to_persisted_markdown(self) -> str:
+        """Keep provenance invisible while leaving the rendered evidence unchanged."""
+        return format_evidence_block(
+            {
+                "id": self.id,
+                "type": self.type,
+                "caption": self.caption,
+                "source_loot_id": self.source_loot_id,
+                "language": self.language,
+            },
+            self.to_markdown(),
+        )
 
 
 @dataclass
@@ -277,6 +311,24 @@ class ReportFindingItem:
             clean_sev = _SEVERITY_CLEAN_RE.search(sev_match.group(1))
             if clean_sev:
                 severity = clean_sev.group(1).lower()
+
+        cvss_score = None
+        score_match = re.search(
+            r"\*\*CVSS Score:\*\*\s*`?([0-9]+(?:\.[0-9]+)?)`?",
+            markdown,
+            re.IGNORECASE,
+        )
+        if score_match:
+            candidate = float(score_match.group(1))
+            if 0.0 <= candidate <= 10.0:
+                cvss_score = candidate
+
+        vector_match = re.search(
+            r"\*\*CVSS Vector:\*\*\s*`([^`]+)`",
+            markdown,
+            re.IGNORECASE,
+        )
+        cvss_vector = vector_match.group(1).strip() if vector_match else None
 
         targets: List[str] = []
         target_match = re.search(r"\*\*Target:\*\*\s*(.*?)(?:  |$)", markdown, re.MULTILINE)
@@ -350,10 +402,46 @@ class ReportFindingItem:
                 if line_str and not line_str.startswith("<!--"):
                     references.append(line_str)
 
-        # Extract embedded evidence items (screenshots, code fences)
+        # Versioned envelopes preserve exact evidence identity and provenance.
+        # Legacy reports still use the visible image/code heuristics below.
         evidence_items: List[ReportEvidenceItem] = []
         ev_idx = 1
-        for img_match in _IMAGE_MD_RE.finditer(description):
+        evidence_blocks = parse_evidence_blocks(description)
+        for block in evidence_blocks:
+            metadata = block.metadata
+            evidence_type = metadata["type"]
+            content = block.body.strip()
+            caption = metadata["caption"]
+            language_value = metadata["language"]
+            if evidence_type == "screenshot":
+                image_match = _IMAGE_MD_RE.search(block.body)
+                if image_match:
+                    caption = caption or image_match.group(1)
+                    content = image_match.group(2)
+            elif evidence_type in ("terminal", "credential", "code"):
+                code_match = _CODE_BLOCK_RE.search(block.body)
+                if code_match:
+                    language_value = language_value or code_match.group(2)
+                    content = code_match.group(3)
+            evidence_items.append(
+                ReportEvidenceItem(
+                    id=metadata["id"],
+                    type=evidence_type,
+                    caption=caption,
+                    content=content,
+                    source_loot_id=metadata["source_loot_id"] or None,
+                    language=language_value,
+                )
+            )
+
+        legacy_description = list(description)
+        for block in evidence_blocks:
+            for index in range(block.start, block.end):
+                if legacy_description[index] not in "\r\n":
+                    legacy_description[index] = " "
+        legacy_markdown = "".join(legacy_description)
+
+        for img_match in _IMAGE_MD_RE.finditer(legacy_markdown):
             evidence_items.append(
                 ReportEvidenceItem(
                     id=f"{entry_id}-img-{ev_idx}",
@@ -365,8 +453,8 @@ class ReportFindingItem:
             )
             ev_idx += 1
 
-        for code_match in _CODE_BLOCK_RE.finditer(description):
-            lang = (code_match.group(1) or "").strip().lower()
+        for code_match in _CODE_BLOCK_RE.finditer(legacy_markdown):
+            lang = (code_match.group(2) or "").strip().lower()
             ev_type = (
                 "terminal"
                 if lang in ("bash", "sh", "terminal", "console")
@@ -376,7 +464,7 @@ class ReportFindingItem:
                 ReportEvidenceItem(
                     id=f"{entry_id}-code-{ev_idx}",
                     type=ev_type,
-                    content=code_match.group(2),
+                    content=code_match.group(3),
                     source_loot_id=entry_id,
                 )
             )
@@ -386,6 +474,8 @@ class ReportFindingItem:
             id=entry_id,
             title=title,
             severity=severity,
+            cvss_score=cvss_score,
+            cvss_vector=cvss_vector,
             status=status,
             phase=phase,
             targets=targets,
@@ -410,7 +500,7 @@ class ReportFindingItem:
             self.evidence_items.append(item)
 
         if insert_into_description:
-            md = item.to_markdown()
+            md = item.to_persisted_markdown()
             clean_content = item.content.strip()
             if clean_content and clean_content not in self.description:
                 if self.description and not self.description.endswith("\n\n"):
@@ -430,6 +520,13 @@ class ReportFindingItem:
         if found_idx == -1:
             return None
         removed = self.evidence_items.pop(found_idx)
+        if remove_from_description:
+            self.description, removed_block = remove_evidence_block(
+                self.description,
+                evidence_id,
+            )
+            if removed_block:
+                return removed
         if remove_from_description and removed.content:
             if removed.type == "screenshot":
                 pattern = rf"!\[.*?\]\({re.escape(removed.content)}\)\r?\n?"
@@ -458,6 +555,15 @@ class ReportFindingItem:
         if content is not None:
             found.content = content
 
+        replacement = found.to_persisted_markdown()
+        self.description, replaced_block = replace_evidence_block(
+            self.description,
+            evidence_id,
+            replacement,
+        )
+        if replaced_block:
+            return True
+
         if found.type == "screenshot":
             old_tag = f"![{old_caption}]({old_content})"
             new_tag = f"![{found.caption}]({found.content})"
@@ -481,6 +587,10 @@ class ReportFindingItem:
         lines.append("")
 
         meta_parts = [f"**Severity:** {render_severity_badge(self.severity, include_emoji=False)}"]
+        if self.cvss_score is not None:
+            meta_parts.append(f"**CVSS Score:** `{self.cvss_score:.1f}`")
+        if self.cvss_vector:
+            meta_parts.append(f"**CVSS Vector:** `{self.cvss_vector}`")
         if self.targets:
             meta_parts.append(f"**Target:** `{', '.join(self.targets)}`")
         if include_phase and self.phase:

@@ -32,3 +32,10 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - `ReportPreviewController` owns preview-only rendering, typography, semantic landmark focus, and proportional scroll synchronization; the tab still owns explicit rich-preview commit because that changes canonical Markdown and participates in save/export semantics.
 - `ReportSessionService` owns headless `report.md` loading, persistence outcomes, and recovery-draft storage; `ReportSessionController` owns recovery prompts and persistence feedback, while the tab retains dirty indicators, timers, and the explicit rich-preview commit before a save.
 - `ReportMutationService` translates fail-closed regeneration and additive Loot-sync operations into typed outcomes; `ReportMutationActions` owns their confirmations and feedback. Both operations save pending editor changes first, but regeneration replaces the document while Loot sync only appends missing entries and preserves the cursor.
+
+## Loot to Report Findings
+
+- `core.reporting.finding_conversion` is the canonical boundary for turning a Loot entry into a structured finding; UI creation and template regeneration must use it instead of maintaining separate field mappings.
+- Evidence embedded in editable `report.md` uses versioned invisible envelopes to retain its evidence ID, type, caption, source Loot ID, and language. Rich-preview commits restore those envelopes when the visible evidence body still exists, while export cleanup removes only the envelopes and preserves the client-facing proof.
+- A Loot synchronization marker records source identity and the last rendered Loot hash; it does not imply semantic equality after report-side edits. Additive sync therefore reports changed entries but does not overwrite report-authored content.
+- Duplicating a finding intentionally removes its Loot synchronization marker and re-keys embedded evidence, while retaining evidence provenance for traceability.

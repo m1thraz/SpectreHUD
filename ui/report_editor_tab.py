@@ -45,12 +45,13 @@ from core.reporting import (
     TemplateRepository,
     assess_report_readiness,
     build_report_navigation,
+    duplicate_report_finding,
+    finding_from_loot_entry,
 )
 from core.config import ConfigManager
 from ui.coordinators.export_coordinator import ExportCoordinator
 from core.i18n import t
 from core.logger import get_logger
-from core.phases import normalize_phase_key
 from core.fonts import get_report_font_stack
 from core.theme_loader import ThemeLoader
 from ui.report.dialogs import (
@@ -1154,23 +1155,12 @@ class ReportEditorTab(QWidget):
                 chosen_entry = dialog.selected_entry
 
         import uuid
-        from core.reporting import format_loot_marker, loot_content_hash
 
         if chosen_entry:
             new_id = chosen_entry["id"]
-            new_finding = ReportFindingItem(
-                id=new_id,
-                title=chosen_entry.get("title")
-                or t("report.new_finding_default_title", "New Finding"),
-                severity=chosen_entry.get("severity", "medium"),
-                status="open",
-                phase=normalize_phase_key(
-                    chosen_entry.get("phase") or chosen_entry.get("category") or "recon"
-                ),
-                targets=[str(chosen_entry["target_ip"])] if chosen_entry.get("target_ip") else [],
-                description=chosen_entry.get("content", ""),
-                recommendation=chosen_entry.get("recommendation", ""),
-                loot_marker=format_loot_marker(new_id, loot_content_hash(chosen_entry)),
+            new_finding = finding_from_loot_entry(
+                chosen_entry,
+                fallback_title=t("report.new_finding_default_title", "New Finding"),
             )
         else:
             new_id = f"finding-{uuid.uuid4().hex[:6]}"
@@ -1241,16 +1231,10 @@ class ReportEditorTab(QWidget):
         if not orig:
             return
         new_id = f"finding-{uuid.uuid4().hex[:6]}"
-        dup = ReportFindingItem(
-            id=new_id,
+        dup = duplicate_report_finding(
+            orig,
+            new_id=new_id,
             title=f"{orig.title} (Kopie)",
-            severity=orig.severity,
-            status=orig.status,
-            phase=orig.phase,
-            targets=list(orig.targets),
-            description=orig.description,
-            recommendation=orig.recommendation,
-            references=list(orig.references),
         )
         self._workspace_doc.add_finding(dup)
         self.apply_workspace_document()

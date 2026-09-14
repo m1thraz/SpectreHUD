@@ -55,7 +55,7 @@ class AddLootDialog(BaseHudDialog):
 
         super().__init__(title=dialog_title, parent=parent)
         self.setMinimumWidth(540)
-        self.resize(560, 600 if self.is_edit else 460)
+        self.resize(560, 600)
 
         self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
         self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
@@ -196,25 +196,23 @@ class AddLootDialog(BaseHudDialog):
         self.txt_content.setFixedHeight(100)
         layout.addWidget(self.txt_content)
 
-        self.txt_recommendation = None
-        if self.is_edit:
-            lbl_recommendation = QLabel(
-                t("loot_dialog.lbl_recommendation", "Recommendation (optional):")
-            )
-            lbl_recommendation.setProperty("class", "FormLabel")
-            layout.addWidget(lbl_recommendation)
+        lbl_recommendation = QLabel(
+            t("loot_dialog.lbl_recommendation", "Recommendation (optional):")
+        )
+        lbl_recommendation.setProperty("class", "FormLabel")
+        layout.addWidget(lbl_recommendation)
 
-            self.txt_recommendation = QPlainTextEdit()
-            self.txt_recommendation.setObjectName("CommandBox")
-            self.txt_recommendation.setPlainText(self.initial_recommendation)
-            self.txt_recommendation.setPlaceholderText(
-                t(
-                    "loot_dialog.ph_recommendation",
-                    "Describe the concrete action required to remediate this finding.",
-                )
+        self.txt_recommendation = QPlainTextEdit()
+        self.txt_recommendation.setObjectName("CommandBox")
+        self.txt_recommendation.setPlainText(self.initial_recommendation)
+        self.txt_recommendation.setPlaceholderText(
+            t(
+                "loot_dialog.ph_recommendation",
+                "Describe the concrete action required to remediate this finding.",
             )
-            self.txt_recommendation.setFixedHeight(100)
-            layout.addWidget(self.txt_recommendation)
+        )
+        self.txt_recommendation.setFixedHeight(100)
+        layout.addWidget(self.txt_recommendation)
 
         # 4. Target IP
         lbl_target = QLabel(t("loot_dialog.lbl_target", "Associated Target (optional):"))
@@ -288,11 +286,7 @@ class AddLootDialog(BaseHudDialog):
             "category": self.combo_category.currentData(),
             "title": self.txt_title.text().strip(),
             "content": self.txt_content.toPlainText().strip(),
-            "recommendation": (
-                self.txt_recommendation.toPlainText().strip()
-                if self.txt_recommendation is not None
-                else ""
-            ),
+            "recommendation": self.txt_recommendation.toPlainText().strip(),
             "target_ip": self.txt_target.text().strip(),
         }
         if self.entry_id:

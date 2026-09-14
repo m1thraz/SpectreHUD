@@ -65,6 +65,8 @@ REQUIRED_FILES = [
     "core/reporting/mutation_service.py",
     "core/reporting/readiness.py",
     "core/reporting/session.py",
+    "core/reporting/evidence_markers.py",
+    "core/reporting/finding_conversion.py",
     "core/reporting/workspace_model.py",
     # ReportTemplate, TemplateSection, and ReportContext live here.  The
     # former reporting/models.py module was removed during the refactor.

@@ -10,6 +10,8 @@ from core.reporting import (
     FALLBACK_SECTION_TITLE,
     LootReportState,
     ReportContext,
+    ReportEvidenceItem,
+    ReportFindingItem,
     ReportTemplate,
     TemplateRenderer,
     TemplateSection,
@@ -157,6 +159,13 @@ Details
         self.assertEqual(markers.get("loot_dup"), "222222222222")
 
     def test_strip_report_markers_preserves_external_and_user_comments(self):
+        evidence = ReportEvidenceItem(
+            id="loot_1-evidence",
+            type="credential",
+            caption="Proof",
+            content="secret proof",
+            source_loot_id="loot_1",
+        ).to_persisted_markdown()
         text = (
             "<!-- spectrehud-entry:keep_this -->\n"
             "<!-- spectre:finding:start:loot_1 -->\n"
@@ -165,15 +174,39 @@ Details
             "### Title\n"
             "<!-- spectre:loot:loot_2:cafebabe5678 -->\n"
             "<!-- spectre:finding:end:loot_1 -->\n"
-            "Content\n"
+            f"{evidence}\nContent\n"
         )
         stripped = strip_report_markers(text)
         self.assertIn("<!-- spectrehud-entry:keep_this -->", stripped)
         self.assertIn("<!-- user: note -->", stripped)
         self.assertNotIn("spectre:loot", stripped)
         self.assertNotIn("spectre:finding", stripped)
+        self.assertNotIn("spectre:evidence", stripped)
+        self.assertIn("secret proof", stripped)
         self.assertIn("### Title", stripped)
         self.assertIn("Content", stripped)
+
+    def test_preview_roundtrip_restores_evidence_provenance_marker(self):
+        evidence = ReportEvidenceItem(
+            id="loot_1-evidence",
+            type="credential",
+            caption="Captured credential",
+            content="admin:secret",
+            source_loot_id="loot_1",
+            language="credentials",
+        ).to_persisted_markdown()
+        original = f"# Report\n\n{evidence}\n"
+        converted = "# Report\n\n```\nadmin:secret\n```\n"
+
+        restored = preserve_markers_in_preview_roundtrip(original, converted)
+
+        self.assertIn("spectre:evidence:start:v1", restored)
+        finding = ReportFindingItem.from_markdown(
+            f"### Finding\n\n#### Description\n\n{restored}",
+            entry_id="finding-1",
+        )
+        self.assertEqual(finding.evidence_items[0].id, "loot_1-evidence")
+        self.assertEqual(finding.evidence_items[0].source_loot_id, "loot_1")
 
     # ------------------------------------------------------------------ #
     # Ticket 30: Status Classification
