@@ -225,9 +225,14 @@ def build_professional_cover_data(
     )
 
 
+def strip_generator_footer(markdown: str) -> str:
+    """Remove only TemplateRenderer's generated signature from the markdown."""
+    return _GENERATED_FOOTER_RE.sub("", markdown).rstrip()
+
+
 def strip_professional_generator_footer(markdown: str) -> str:
     """Remove only TemplateRenderer's generated signature from the print projection."""
-    return _GENERATED_FOOTER_RE.sub("", markdown).rstrip()
+    return strip_generator_footer(markdown)
 
 
 def render_professional_cover(data: ProfessionalCoverData) -> str:

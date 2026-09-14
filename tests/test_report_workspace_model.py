@@ -738,8 +738,16 @@ def test_appendix_parsing_and_serialization():
     assert "#### Whoami Check" in doc_md
 
 
-
-
-
-
-
+def test_legacy_branding_footer_is_stripped_and_not_emitted():
+    markdown_with_footer = (
+        "<!-- spectre:section:start:header_metadata -->\n\n"
+        "# Pentest Report\n\n"
+        "<!-- spectre:section:end:header_metadata -->\n\n"
+        "---\n\n"
+        "_Erstellt mit SpectreHUD Pentest & CTF Companion am 2026-09-13 um 11:41:39 Uhr_"
+    )
+    doc = ReportWorkspaceDocument.from_markdown(markdown_with_footer)
+    assert doc.footer == ""
+    serialized = doc.to_markdown()
+    assert "Erstellt mit SpectreHUD" not in serialized
+    assert "Generated with SpectreHUD" not in serialized

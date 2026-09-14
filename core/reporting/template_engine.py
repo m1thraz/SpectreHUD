@@ -603,16 +603,7 @@ class TemplateRenderer:
                     parts.append(wrap_section_markdown(sec_text, identity))
 
         body = "\n\n---\n\n".join(parts)
-
-        now = datetime.now()
-        date_str = now.strftime("%Y-%m-%d")
-        time_str = now.strftime("%H:%M:%S")
-        footer = (
-            f"\n\n---\n\n_Erstellt mit SpectreHUD Pentest & CTF Companion am {date_str} um {time_str} Uhr_"
-            if lang == "de"
-            else f"\n\n---\n\n_Generated with SpectreHUD Pentest & CTF Companion on {date_str} at {time_str}_"
-        )
-        return body + footer
+        return body
 
 
 # Built-in Default / Legacy Pentest Template

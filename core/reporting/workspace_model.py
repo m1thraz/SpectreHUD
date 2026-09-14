@@ -13,7 +13,6 @@ all public symbols for backward compatibility.
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from core.phases import normalize_phase_key
@@ -161,15 +160,14 @@ class ReportWorkspaceDocument:
         unstructured: List[str] = []
         footer = ""
 
-        # Check for footer
+        # Check for legacy generated branding footer and strip it
         footer_match = re.search(
             r"\n*---\s*\n+_(?:Generated with|Erstellt mit) "
             r"SpectreHUD Pentest & CTF Companion\b[^_\n]*_\s*$",
             markdown_text,
             re.IGNORECASE,
         )
-        if footer_match:
-            footer = footer_match.group(0).strip()
+        branding_footer = footer_match.group(0).strip() if footer_match else ""
 
         for seg in segments:
             if seg.section_type == "header_metadata":
@@ -237,7 +235,7 @@ class ReportWorkspaceDocument:
                     )
                 )
             else:
-                if seg.markdown.strip() and seg.markdown.strip() != footer:
+                if seg.markdown.strip() and seg.markdown.strip() != branding_footer:
                     unstructured.append(seg.markdown)
 
         return cls(
@@ -524,16 +522,9 @@ class ReportWorkspaceDocument:
 
         # Footer
         footer = self.footer
-        if not footer:
-            now = datetime.now()
-            date_str = now.strftime("%Y-%m-%d")
-            time_str = now.strftime("%H:%M:%S")
-            footer = (
-                f"\n\n---\n\n_Erstellt mit SpectreHUD Pentest & CTF Companion am {date_str} um {time_str} Uhr_"
-                if self.language == "de"
-                else f"\n\n---\n\n_Generated with SpectreHUD Pentest & CTF Companion on {date_str} at {time_str}_"
-            )
-        elif not footer.startswith("\n"):
-            footer = f"\n\n---\n\n{footer}"
+        if footer:
+            if not footer.startswith("\n"):
+                footer = f"\n\n---\n\n{footer}"
+            return body + footer
 
-        return body + footer
+        return body

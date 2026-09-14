@@ -47,6 +47,7 @@ from core.reporting import (
     build_report_navigation,
     duplicate_report_finding,
     finding_from_loot_entry,
+    strip_generator_footer,
     supporting_evidence_from_loot_entry,
 )
 from core.config import ConfigManager
@@ -522,14 +523,14 @@ class ReportEditorTab(QWidget):
         self.current_project = project_name
         loaded = self.session_controller.load_project(project_name)
         self.workspace_shell.preview_document.set_project_dir(loaded.project_dir)
-        content = loaded.markdown
+        content = strip_generator_footer(loaded.markdown)
 
         # setPlainText löst textChanged aus -> _dirty würde faelschlich True
         # werden, deshalb Signal kurz blocken.
         self.workspace_shell.editor.blockSignals(True)
         self.workspace_shell.editor.setPlainText(content)
         self.workspace_shell.editor.blockSignals(False)
-        self._set_dirty(loaded.restored_draft)
+        self._set_dirty(loaded.restored_draft or content != loaded.markdown)
         self._workspace_doc = ReportWorkspaceDocument.from_markdown(content)
         self._refresh_workspace_navigator(preserve_selection=False)
         if self._view_mode == ViewMode.WORKSPACE:

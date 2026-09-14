@@ -307,7 +307,7 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertIn("## 3. Privilege Escalation", output)
         self.assertIn("## Empfehlungen (Remediation-Plan)", output)
         self.assertIn("## Anhang A: Chronologischer Befehlsverlauf", output)
-        self.assertIn("Erstellt mit SpectreHUD Pentest & CTF Companion", output)
+        self.assertNotIn("Erstellt mit SpectreHUD Pentest & CTF Companion", output)
 
 
 if __name__ == "__main__":

@@ -126,8 +126,14 @@ from core.reporting.finding_conversion import (
     finding_from_loot_entry,
     supporting_evidence_from_loot_entry,
 )
+from core.reporting.professional import (
+    strip_generator_footer,
+    strip_professional_generator_footer,
+)
 
 __all__ = [
+    "strip_generator_footer",
+    "strip_professional_generator_footer",
     "ExportArtifact",
     "ExportError",
     "ExportErrorCode",

@@ -44,7 +44,7 @@ class TestReportBuilder(unittest.TestCase):
         self.assertIn("*Keine Einträge in dieser Phase.*", report)
         self.assertIn("*Keine Clipboard-Historie aufgezeichnet.*", report)
         self.assertIn("*Keine Screenshots in diesem Projekt vorhanden.*", report)
-        self.assertIn("Erstellt mit SpectreHUD Pentest & CTF Companion", report)
+        self.assertNotIn("Erstellt mit SpectreHUD Pentest & CTF Companion", report)
 
     def test_categorized_loot_rendering(self):
         """Loot is correctly rendered into its respective category sections in order."""
