@@ -31,6 +31,7 @@ from core.theme_loader import ThemeLoader
 from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
 from ui.message_boxes import show_error_dialog, show_warning_dialog
+from ui.styles.icons import get_theme_color
 from core.fonts import (
     UI_FONT_OPTIONS,
     CODE_FONT_OPTIONS,
@@ -163,7 +164,7 @@ class HotkeySettingsPage(QWidget):
                 )
             )
             lbl_notice.setWordWrap(True)
-            lbl_notice.setStyleSheet("color: #fde047; font-size: 11px;")
+            lbl_notice.setStyleSheet(f"color: {get_theme_color('WARNING')}; font-size: 11px;")
             notice_layout.addWidget(lbl_notice)
             layout.addWidget(card_notice)
 
@@ -299,7 +300,7 @@ class HotkeySettingsPage(QWidget):
             row = QHBoxLayout()
             row.setContentsMargins(0, 1, 0, 1)
             lbl_desc = QLabel(desc_text)
-            lbl_desc.setStyleSheet("color: #e6edf3; font-size: 12px;")
+            lbl_desc.setStyleSheet(f"color: {get_theme_color('TEXT_PRIMARY')}; font-size: 12px;")
             row.addWidget(lbl_desc, stretch=1)
 
             lbl_key = QLabel(key_text)
@@ -1110,7 +1111,7 @@ class SettingsDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel(t("snippet_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
-        lbl_hint.setStyleSheet("color: #8b949e; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 

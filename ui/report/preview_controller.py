@@ -15,7 +15,9 @@ from ui.report.preview_transforms import (
     PREVIEW_SPACER_TOKENS,
     prepare_preview_markdown,
 )
+from ui.report.report_light_palette import REPORT_LIGHT_PALETTE
 from ui.report.source_editor import ReportSourceEditor
+from ui.styles.icons import get_theme_color
 
 PreviewTarget = tuple[str, str]
 
@@ -105,7 +107,11 @@ class ReportPreviewController:
         selection = QTextEdit.ExtraSelection()
         selection.cursor = QTextCursor(cursor)
         selection.cursor.clearSelection()
-        highlight = QColor("#0969da" if self._light_mode_provider() else "#00e5ff")
+        highlight = QColor(
+            REPORT_LIGHT_PALETTE["focus_highlight"]
+            if self._light_mode_provider()
+            else get_theme_color("ACCENT_BRAND")
+        )
         highlight.setAlpha(34 if self._light_mode_provider() else 28)
         selection.format.setBackground(highlight)
         selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
@@ -187,7 +193,11 @@ class ReportPreviewController:
         while not cursor.isNull():
             char_format = QTextCharFormat()
             char_format.setForeground(
-                QColor("#57606a" if self._light_mode_provider() else "#8b949e")
+                QColor(
+                    REPORT_LIGHT_PALETTE["pagebreak_marker"]
+                    if self._light_mode_provider()
+                    else get_theme_color("TEXT_MUTED")
+                )
             )
             char_format.setFontWeight(QFont.Weight.DemiBold)
             cursor.insertText(PREVIEW_PAGEBREAK_LABEL, char_format)
@@ -202,7 +212,11 @@ class ReportPreviewController:
             while not cursor.isNull():
                 char_format = QTextCharFormat()
                 char_format.setForeground(
-                    QColor("#6e7781" if self._light_mode_provider() else "#6e7681")
+                    QColor(
+                        REPORT_LIGHT_PALETTE["spacer_marker"]
+                        if self._light_mode_provider()
+                        else get_theme_color("TEXT_DIMMED")
+                    )
                 )
                 cursor.insertText(PREVIEW_SPACER_LABELS[size], char_format)
                 block_format = cursor.blockFormat()
@@ -216,24 +230,24 @@ class ReportPreviewController:
     def _preview_palette(self) -> dict[str, str]:
         if self._light_mode_provider():
             return {
-                "text": "#1f2328",
-                "heading": "#0550ae",
-                "heading_2": "#0969da",
-                "heading_3": "#0550ae",
-                "border": "#d0d7de",
-                "code_bg": "#f6f8fa",
-                "code": "#1a7f37",
-                "quote": "#57606a",
-                "link": "#0969da",
+                "text": REPORT_LIGHT_PALETTE["text"],
+                "heading": REPORT_LIGHT_PALETTE["heading"],
+                "heading_2": REPORT_LIGHT_PALETTE["heading_2"],
+                "heading_3": REPORT_LIGHT_PALETTE["heading_3"],
+                "border": REPORT_LIGHT_PALETTE["border"],
+                "code_bg": REPORT_LIGHT_PALETTE["code_bg"],
+                "code": REPORT_LIGHT_PALETTE["code"],
+                "quote": REPORT_LIGHT_PALETTE["quote"],
+                "link": REPORT_LIGHT_PALETTE["link"],
             }
         return {
-            "text": "#f0f6fc",
-            "heading": "#58a6ff",
-            "heading_2": "#79c0ff",
-            "heading_3": "#a5d6ff",
-            "border": "#30363d",
-            "code_bg": "#161b22",
-            "code": "#7ee787",
-            "quote": "#8b949e",
-            "link": "#58a6ff",
+            "text": get_theme_color("TEXT_PRIMARY"),
+            "heading": get_theme_color("ACCENT_PRIMARY"),
+            "heading_2": get_theme_color("ACCENT_BRAND"),
+            "heading_3": get_theme_color("CYBER_BLUE_LIGHT"),
+            "border": get_theme_color("BORDER_DEFAULT"),
+            "code_bg": get_theme_color("BG_CODE"),
+            "code": get_theme_color("TEXT_CODE"),
+            "quote": get_theme_color("TEXT_MUTED"),
+            "link": get_theme_color("ACCENT_BRAND"),
         }

@@ -204,9 +204,9 @@ QPushButton.VarBadgeBtnActive:hover {
 }
 
 QPushButton.MiniPrimaryBtn {
-    background-color: {STATUS_SUCCESS_BG};
+    background-color: {ACCENT_PRIMARY};
     color: {TEXT_WHITE};
-    border: 1px solid {STATUS_SUCCESS_HOVER};
+    border: 1px solid {CYBER_BLUE_ACTIVE};
     border-radius: 5px;
     padding: 3px 10px;
     font-size: 11px;
@@ -214,7 +214,7 @@ QPushButton.MiniPrimaryBtn {
 }
 
 QPushButton.MiniPrimaryBtn:hover {
-    background-color: {STATUS_SUCCESS_HOVER};
+    background-color: {CYBER_BLUE_ACTIVE};
 }
 
 QPushButton.VarPassToggleBtn {
@@ -414,16 +414,16 @@ QPushButton.TweakBtnActive {
 
 /* Primary & Secondary Buttons */
 QPushButton.PrimaryBtn {
-    background-color: {STATUS_SUCCESS_BG};
+    background-color: {ACCENT_PRIMARY};
     color: {TEXT_WHITE};
-    border: 1px solid {STATUS_SUCCESS_HOVER};
+    border: 1px solid {CYBER_BLUE_ACTIVE};
     border-radius: 6px;
     padding: 6px 14px;
     font-weight: 600;
 }
 
 QPushButton.PrimaryBtn:hover {
-    background-color: {STATUS_SUCCESS_HOVER};
+    background-color: {CYBER_BLUE_ACTIVE};
 }
 
 QPushButton.SecondaryBtn,

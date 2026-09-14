@@ -6,6 +6,7 @@ Provides strategic hardening guidance, in-place action editing, and status workf
 from typing import List, Optional
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -35,7 +36,7 @@ from ui.report.inspector_style import (
     style_inspector_scroll,
     style_inspector_section,
 )
-from ui.styles.icons import get_theme_color, icon
+from ui.styles.icons import get_severity_color, get_theme_color, icon
 
 SEVERITY_ORDER = {
     "critical": 0,
@@ -45,13 +46,7 @@ SEVERITY_ORDER = {
     "info": 4,
 }
 
-SEV_COLORS = {
-    "critical": "#f85149",
-    "high": "#e3b341",
-    "medium": "#d29922",
-    "low": "#39d353",
-    "info": "#58a6ff",
-}
+
 
 SEV_ICONS = {
     "critical": "fa5s.exclamation-circle",
@@ -62,10 +57,10 @@ SEV_ICONS = {
 }
 
 STATUS_ITEMS = [
-    ("open", "Offen / Open", "#f85149"),
-    ("in_progress", "In Arbeit / In Progress", "#d29922"),
-    ("resolved", "Behoben / Resolved", "#39d353"),
-    ("accepted_risk", "Akzeptiert / Accepted Risk", "#8b949e"),
+    ("open", "Offen / Open", "ERROR"),
+    ("in_progress", "In Arbeit / In Progress", "WARNING"),
+    ("resolved", "Behoben / Resolved", "SUCCESS"),
+    ("accepted_risk", "Akzeptiert / Accepted Risk", "TEXT_MUTED"),
 ]
 
 
@@ -118,9 +113,11 @@ class ReportRemediationInspector(QWidget):
         h_layout.addStretch()
 
         self.lbl_progress_badge = QLabel()
+        succ_col = get_theme_color("SUCCESS")
+        qc_succ = QColor(succ_col)
         self.lbl_progress_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
-            "background: rgba(57, 211, 83, 0.15); color: #39d353; border: 1px solid rgba(57, 211, 83, 0.35);"
+            f"font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
+            f"background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.15); color: {succ_col}; border: 1px solid rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.35);"
         )
         h_layout.addWidget(self.lbl_progress_badge)
 
@@ -233,27 +230,35 @@ class ReportRemediationInspector(QWidget):
         main_layout.addWidget(scroll, stretch=1)
 
     def _style_filter_btn(self, btn: QPushButton) -> None:
+        bg_card = get_theme_color("BG_CARD")
+        qc_card = QColor(bg_card)
+        text_muted = get_theme_color("TEXT_MUTED")
+        border_def = get_theme_color("BORDER_DEFAULT")
+        bg_hover = get_theme_color("BG_SURFACE")
+        text_hover = get_theme_color("TEXT_PRIMARY")
+        accent_primary = get_theme_color("ACCENT_PRIMARY")
+        qc_acc = QColor(accent_primary)
         btn.setStyleSheet(
-            """
-            QPushButton {
-                background: rgba(22, 27, 34, 0.8);
-                color: #8b949e;
-                border: 1px solid #30363d;
+            f"""
+            QPushButton {{
+                background: rgba({qc_card.red()}, {qc_card.green()}, {qc_card.blue()}, 0.8);
+                color: {text_muted};
+                border: 1px solid {border_def};
                 border-radius: 4px;
                 padding: 3px 10px;
                 font-size: 11px;
                 font-weight: 500;
-            }
-            QPushButton:hover {
-                background: #21262d;
-                color: #c9d1d9;
-            }
-            QPushButton:checked {
-                background: rgba(0, 229, 255, 0.15);
-                color: #00e5ff;
-                border-color: rgba(0, 229, 255, 0.4);
+            }}
+            QPushButton:hover {{
+                background: {bg_hover};
+                color: {text_hover};
+            }}
+            QPushButton:checked {{
+                background: rgba({qc_acc.red()}, {qc_acc.green()}, {qc_acc.blue()}, 0.15);
+                color: {accent_primary};
+                border-color: rgba({qc_acc.red()}, {qc_acc.green()}, {qc_acc.blue()}, 0.4);
                 font-weight: bold;
-            }
+            }}
             """
         )
 
@@ -309,7 +314,7 @@ class ReportRemediationInspector(QWidget):
             sev = (f.severity or "medium").strip().lower()
             it_sev = QTableWidgetItem(sev.upper())
             it_sev.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            it_sev.setIcon(icon(SEV_ICONS.get(sev, "fa5s.circle"), color=SEV_COLORS.get(sev, "#d29922")))
+            it_sev.setIcon(icon(SEV_ICONS.get(sev, "fa5s.circle"), color=get_severity_color(sev)))
             it_sev.setData(Qt.ItemDataRole.UserRole, fid)
             it_sev.setForeground(Qt.GlobalColor.white)
             self.tbl_actions.setItem(row, 0, it_sev)
@@ -326,8 +331,8 @@ class ReportRemediationInspector(QWidget):
             edit_action.setText(f.recommendation or "")
             edit_action.setPlaceholderText(t("report.recommendation_placeholder", "Define concrete remediation steps..."))
             edit_action.setStyleSheet(
-                "QLineEdit { background: #0d1117; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; padding: 3px 6px; } "
-                "QLineEdit:focus { border-color: #00e5ff; }"
+                f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 3px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 3px 6px; }} "
+                f"QLineEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
             )
             edit_action.editingFinished.connect(
                 lambda target_id=fid, edit_w=edit_action: self._on_action_text_changed(target_id, edit_w.text())
@@ -337,8 +342,8 @@ class ReportRemediationInspector(QWidget):
             # Col 3: Status Combo
             cmb_status = QComboBox()
             cmb_status.setStyleSheet(
-                "QComboBox { background: #0d1117; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; padding: 2px 6px; } "
-                "QComboBox:focus { border-color: #00e5ff; }"
+                f"QComboBox {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 3px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 2px 6px; }} "
+                f"QComboBox:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
             )
             current_status = (f.status or "open").strip().lower()
             current_idx = 0
@@ -355,11 +360,13 @@ class ReportRemediationInspector(QWidget):
 
             # Col 4: Jump button [>]
             btn_jump = QPushButton()
-            btn_jump.setIcon(icon("fa5s.arrow-right", color="#00e5ff"))
+            accent_brand = get_theme_color("ACCENT_BRAND")
+            qc_brand = QColor(accent_brand)
+            btn_jump.setIcon(icon("fa5s.arrow-right", color=accent_brand))
             btn_jump.setToolTip(t("report.jump_to_finding_tip", "Inspect finding details"))
             btn_jump.setStyleSheet(
-                "QPushButton { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 3px; padding: 2px 6px; } "
-                "QPushButton:hover { background: rgba(0, 229, 255, 0.25); }"
+                f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.1); border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+                f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
             )
             btn_jump.clicked.connect(lambda checked=False, target_id=fid: self.finding_selected.emit(target_id))
             self.tbl_actions.setCellWidget(row, 4, btn_jump)

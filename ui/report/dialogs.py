@@ -210,7 +210,7 @@ class ReportGenerationDialog(BaseHudDialog):
                 )
             )
             warning.setWordWrap(True)
-            warning.setStyleSheet("color: #f0b429; margin-top: 6px;")
+            warning.setStyleSheet(f"color: {get_theme_color('WARNING')}; margin-top: 6px;")
             layout.addWidget(warning)
         form = QFormLayout()
         self.combo_templates = QComboBox()
@@ -378,7 +378,7 @@ class LootImagePickerDialog(QDialog):
         self.preview_label = QLabel()
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(
-            "border: 1px dashed #444; border-radius: 4px; background: #1a1a1a;"
+            f"border: 1px dashed {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; background: {get_theme_color('BG_DARK')};"
         )
         self.preview_label.setMinimumSize(220, 160)
         preview_panel.addWidget(self.preview_label, stretch=1)
@@ -560,7 +560,7 @@ class LootEntryPickerDialog(QDialog):
         self.txt_preview.setReadOnly(True)
         self.txt_preview.setStyleSheet(
             "font-family: Consolas, 'Courier New', monospace; font-size: 11px; "
-            "background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px;"
+            f"background: {get_theme_color('BG_SURFACE')}; color: {get_theme_color('TEXT_PRIMARY')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px;"
         )
         preview_panel.addWidget(self.txt_preview, stretch=1)
 
@@ -572,13 +572,13 @@ class LootEntryPickerDialog(QDialog):
 
         self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
-        self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
+        self.btn_cancel.setIcon(icon("fa5s.times", color=get_theme_color("ERROR")))
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
         self.btn_insert = QPushButton(t("report.loot_attach_evidence", "Attach as Evidence"))
         self.btn_insert.setProperty("class", "PrimaryBtn")
-        self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
+        self.btn_insert.setIcon(icon("fa5s.check", color=get_theme_color("SUCCESS")))
         self.btn_insert.setEnabled(False)
         self.btn_insert.clicked.connect(self.accept)
         btn_layout.addWidget(self.btn_insert)
@@ -622,17 +622,17 @@ class LootEntryPickerDialog(QDialog):
             item.setText(title or t("report.unnamed_entry", "Untitled Entry"))
 
             if e_type in ("credential", "credentials", "creds"):
-                item.setIcon(icon("fa5s.key", color="#d29922"))
+                item.setIcon(icon("fa5s.key", color=get_theme_color("WARNING")))
             elif e_type == "hash":
-                item.setIcon(icon("fa5s.hashtag", color="#d29922"))
+                item.setIcon(icon("fa5s.hashtag", color=get_theme_color("WARNING")))
             elif e_type == "flag":
-                item.setIcon(icon("fa5s.flag", color="#f85149"))
+                item.setIcon(icon("fa5s.flag", color=get_theme_color("ERROR")))
             elif e_type in ("command", "terminal", "output"):
-                item.setIcon(icon("fa5s.terminal", color="#7ee787"))
+                item.setIcon(icon("fa5s.terminal", color=get_theme_color("SUCCESS")))
             elif e_type in ("screenshot", "image"):
-                item.setIcon(icon("fa5s.camera", color="#79c0ff"))
+                item.setIcon(icon("fa5s.camera", color=get_theme_color("ACCENT_BRAND")))
             else:
-                item.setIcon(icon("fa5s.sticky-note", color="#79c0ff"))
+                item.setIcon(icon("fa5s.sticky-note", color=get_theme_color("ACCENT_BRAND")))
 
             self.list_widget.addItem(item)
 
@@ -759,7 +759,7 @@ class LootFindingPromotionDialog(QDialog):
             t("report.promote_loot_action", "Create Finding")
         )
         self.btn_promote.setProperty("class", "PrimaryBtn")
-        self.btn_promote.setIcon(icon("fa5s.file-medical", color="#7ee787"))
+        self.btn_promote.setIcon(icon("fa5s.file-medical", color=get_theme_color("SUCCESS")))
         self.btn_promote.setEnabled(False)
         self.btn_promote.clicked.connect(self.accept)
         buttons.addWidget(self.btn_promote)
@@ -873,7 +873,7 @@ class ClipboardHistoryPickerDialog(QDialog):
         self.txt_preview.setReadOnly(True)
         self.txt_preview.setStyleSheet(
             "font-family: Consolas, 'Courier New', monospace; font-size: 11px; "
-            "background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px;"
+            f"background: {get_theme_color('BG_SURFACE')}; color: {get_theme_color('TEXT_PRIMARY')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px;"
         )
         preview_panel.addWidget(self.txt_preview, stretch=1)
 
@@ -885,13 +885,13 @@ class ClipboardHistoryPickerDialog(QDialog):
 
         self.btn_cancel = QPushButton(t("dialog.cancel", "Cancel"))
         self.btn_cancel.setProperty("class", "SecondaryBtn")
-        self.btn_cancel.setIcon(icon("fa5s.times", color="#f85149"))
+        self.btn_cancel.setIcon(icon("fa5s.times", color=get_theme_color("ERROR")))
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
         self.btn_insert = QPushButton(t("report.clipboard_attach_evidence", "Attach as Terminal PoC"))
         self.btn_insert.setProperty("class", "PrimaryBtn")
-        self.btn_insert.setIcon(icon("fa5s.check", color="#7ee787"))
+        self.btn_insert.setIcon(icon("fa5s.check", color=get_theme_color("SUCCESS")))
         self.btn_insert.setEnabled(False)
         self.btn_insert.clicked.connect(self.accept)
         btn_layout.addWidget(self.btn_insert)
@@ -928,7 +928,7 @@ class ClipboardHistoryPickerDialog(QDialog):
 
             item = QListWidgetItem()
             item.setText(f"{prefix}{first_line}")
-            item.setIcon(icon("fa5s.star" if is_report_marked else "fa5s.terminal", color="#7ee787"))
+            item.setIcon(icon("fa5s.star" if is_report_marked else "fa5s.terminal", color=get_theme_color("SUCCESS")))
             self.list_widget.addItem(item)
 
         if self._filtered_entries:

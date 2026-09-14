@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget, Q
 from PyQt6.QtCore import pyqtSignal, Qt, QSize, QPoint
 from PyQt6.QtGui import QResizeEvent
 from core.i18n import t
-from ui.styles.icons import icon
+from ui.styles.icons import icon, get_theme_color
 
 
 class HeaderPanel(QFrame):
@@ -38,7 +38,7 @@ class HeaderPanel(QFrame):
         self.lbl_brand = QLabel("SPECTRE // HUD")
         self.lbl_brand.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_brand.setStyleSheet(
-            "color: #00e5ff; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 4px;"
+            f"color: {get_theme_color('ACCENT_BRAND')}; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-right: 4px;"
         )
         layout.addWidget(self.lbl_brand)
 
@@ -138,7 +138,7 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator = QPushButton("REC: Off")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
         self.btn_rec_indicator.setProperty("paused", "true")
-        self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#8b949e", color_active="#8b949e"))
+        self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED")))
         self.btn_rec_indicator.setIconSize(QSize(10, 10))
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_rec_indicator.setToolTip(
@@ -281,7 +281,7 @@ class HeaderPanel(QFrame):
         is_active = getattr(self, "_rec_active", False)
         rec_in_overflow = self.btn_rec_indicator.isHidden()
         if is_active and rec_in_overflow:
-            self.btn_overflow.setIcon(icon("fa5s.ellipsis-h", color="#ef4444", color_active="#ef4444"))
+            self.btn_overflow.setIcon(icon("fa5s.ellipsis-h", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR")))
             self.btn_overflow.setToolTip(
                 t(
                     "header.overflow_tip_rec_active",
@@ -335,10 +335,10 @@ class HeaderPanel(QFrame):
             is_rec_active = getattr(self, "_rec_active", False)
             if is_rec_active:
                 rec_text = t("header.rec_pause_action", "REC: ON (Pause)")
-                rec_icon = icon("fa5s.circle", color="#ef4444", color_active="#ef4444")
+                rec_icon = icon("fa5s.circle", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR"))
             else:
                 rec_text = t("header.rec_resume_action", "REC: Off (Start)")
-                rec_icon = icon("fa5s.circle", color="#8b949e", color_active="#8b949e")
+                rec_icon = icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED"))
             act_rec = menu.addAction(rec_icon, rec_text)
             act_rec.triggered.connect(self.toggle_rec_requested.emit)
 
@@ -399,7 +399,7 @@ class HeaderPanel(QFrame):
         self._rec_active = is_active
         if is_active:
             self.btn_rec_indicator.setText("REC: ON")
-            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#ef4444", color_active="#ef4444"))
+            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR")))
             self.btn_rec_indicator.setProperty("paused", "false")
             self.btn_rec_indicator.setToolTip(
                 t(
@@ -409,7 +409,7 @@ class HeaderPanel(QFrame):
             )
         else:
             self.btn_rec_indicator.setText("REC: Off")
-            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color="#8b949e", color_active="#8b949e"))
+            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED")))
             self.btn_rec_indicator.setProperty("paused", "true")
             self.btn_rec_indicator.setToolTip(
                 t(

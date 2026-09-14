@@ -10,7 +10,7 @@ from typing import Any, Optional
 import uuid
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap, QResizeEvent
+from PyQt6.QtGui import QColor, QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -79,7 +79,7 @@ class CommandSnippetCard(GlassPanel):
         top_row.setSpacing(6)
 
         self.btn_up = QPushButton()
-        self.btn_up.setIcon(icon("fa5s.chevron-up", color="#8b949e"))
+        self.btn_up.setIcon(icon("fa5s.chevron-up", color=get_theme_color("TEXT_MUTED")))
         self.btn_up.setFixedSize(26, 24)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
         self.btn_up.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
@@ -87,7 +87,7 @@ class CommandSnippetCard(GlassPanel):
         top_row.addWidget(self.btn_up)
 
         self.btn_down = QPushButton()
-        self.btn_down.setIcon(icon("fa5s.chevron-down", color="#8b949e"))
+        self.btn_down.setIcon(icon("fa5s.chevron-down", color=get_theme_color("TEXT_MUTED")))
         self.btn_down.setFixedSize(26, 24)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
         self.btn_down.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
@@ -98,9 +98,9 @@ class CommandSnippetCard(GlassPanel):
         self.edit_caption.setPlaceholderText(t("report.appendix_cmd_caption_placeholder", "Beschreibung / Titel (z.B. Portscan Enumeration)"))
         self.edit_caption.setText(self.item.caption)
         self.edit_caption.setStyleSheet(
-            "QLineEdit { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
-            "border-radius: 4px; padding: 4px 8px; color: #f0f6fc; font-weight: bold; font-size: 12px; } "
-            "QLineEdit:focus { border: 1px solid #7ee787; }"
+            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
+            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
         )
         self.edit_caption.textChanged.connect(self._on_data_changed)
         self.edit_caption.setMinimumWidth(60)
@@ -120,15 +120,15 @@ class CommandSnippetCard(GlassPanel):
             self.combo_lang.addItem(curr_lang, curr_lang)
             self.combo_lang.setCurrentIndex(self.combo_lang.count() - 1)
         self.combo_lang.setStyleSheet(
-            "QComboBox { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
-            "border-radius: 4px; padding: 3px 8px; color: #c9d1d9; font-size: 11px; } "
-            "QComboBox:focus { border: 1px solid #7ee787; }"
+            f"QComboBox {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"border-radius: 4px; padding: 3px 8px; color: {get_theme_color('TEXT_SECONDARY')}; font-size: 11px; }} "
+            f"QComboBox:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
         )
         self.combo_lang.currentIndexChanged.connect(self._on_data_changed)
         top_row.addWidget(self.combo_lang)
 
         self.btn_delete = QPushButton()
-        self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        self.btn_delete.setIcon(icon("fa5s.trash-alt", color=get_theme_color("ERROR")))
         self.btn_delete.setFixedSize(26, 24)
         self.btn_delete.setToolTip(t("report.delete", "Snippet löschen"))
         self.btn_delete.setStyleSheet(
@@ -145,10 +145,10 @@ class CommandSnippetCard(GlassPanel):
         self.edit_code.setPlaceholderText(t("report.appendix_cmd_code_placeholder", "# Befehl oder PoC-Code eingeben..."))
         self.edit_code.setPlainText(self.item.content)
         self.edit_code.setStyleSheet(
-            "QPlainTextEdit { background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); "
-            "border-radius: 4px; padding: 6px; color: #7ee787; font-family: 'Consolas', 'Cascadia Code', monospace; "
-            "font-size: 11px; } "
-            "QPlainTextEdit:focus { border: 1px solid #7ee787; }"
+            f"QPlainTextEdit {{ background: rgba(13, 17, 23, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"border-radius: 4px; padding: 6px; color: {get_theme_color('TEXT_CODE')}; font-family: 'Consolas', 'Cascadia Code', monospace; "
+            f"font-size: 11px; }} "
+            f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('SUCCESS')}; }}"
         )
         # Adapt height based on line count
         lines_count = max(3, min(15, len(self.item.content.splitlines()) + 1))
@@ -213,9 +213,9 @@ class ScreenshotCard(GlassPanel):
         self.edit_caption.setText(self.item.caption)
         self.edit_caption.setMinimumWidth(60)
         self.edit_caption.setStyleSheet(
-            "QLineEdit { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
-            "border-radius: 4px; padding: 4px 8px; color: #f0f6fc; font-weight: bold; font-size: 12px; } "
-            "QLineEdit:focus { border: 1px solid #00e5ff; }"
+            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); "
+            f"border-radius: 4px; padding: 4px 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; font-size: 12px; }} "
+            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.edit_caption.textChanged.connect(self._on_data_changed)
         field_layout.addWidget(self.edit_caption)
@@ -223,7 +223,7 @@ class ScreenshotCard(GlassPanel):
         path_row = QHBoxLayout()
         path_row.setSpacing(6)
         lbl_path_icon = QLabel()
-        lbl_path_icon.setPixmap(icon("fa5s.folder", color="#8b949e").pixmap(14, 14))
+        lbl_path_icon.setPixmap(icon("fa5s.folder", color=get_theme_color("TEXT_MUTED")).pixmap(14, 14))
         path_row.addWidget(lbl_path_icon)
 
         self.edit_path = QLineEdit()
@@ -231,9 +231,9 @@ class ScreenshotCard(GlassPanel):
         self.edit_path.setText(self.item.content)
         self.edit_path.setMinimumWidth(60)
         self.edit_path.setStyleSheet(
-            "QLineEdit { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); "
-            "border-radius: 4px; padding: 3px 6px; color: #8b949e; font-size: 11px; font-family: monospace; } "
-            "QLineEdit:focus { border: 1px solid #00e5ff; color: #c9d1d9; }"
+            f"QLineEdit {{ background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"border-radius: 4px; padding: 3px 6px; color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-family: monospace; }} "
+            f"QLineEdit:focus {{ border: 1px solid {get_theme_color('ACCENT_BRAND')}; color: {get_theme_color('TEXT_PRIMARY')}; }}"
         )
         self.edit_path.textChanged.connect(self._on_path_changed)
         path_row.addWidget(self.edit_path, stretch=1)
@@ -247,7 +247,7 @@ class ScreenshotCard(GlassPanel):
         btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.btn_up = QPushButton()
-        self.btn_up.setIcon(icon("fa5s.chevron-up", color="#8b949e"))
+        self.btn_up.setIcon(icon("fa5s.chevron-up", color=get_theme_color("TEXT_MUTED")))
         self.btn_up.setFixedSize(24, 22)
         self.btn_up.setToolTip(t("report.move_up", "Nach oben verschieben"))
         self.btn_up.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
@@ -255,7 +255,7 @@ class ScreenshotCard(GlassPanel):
         btn_layout.addWidget(self.btn_up)
 
         self.btn_down = QPushButton()
-        self.btn_down.setIcon(icon("fa5s.chevron-down", color="#8b949e"))
+        self.btn_down.setIcon(icon("fa5s.chevron-down", color=get_theme_color("TEXT_MUTED")))
         self.btn_down.setFixedSize(24, 22)
         self.btn_down.setToolTip(t("report.move_down", "Nach unten verschieben"))
         self.btn_down.setStyleSheet("QPushButton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 3px; } QPushButton:hover { background: rgba(255,255,255,0.15); }")
@@ -263,7 +263,7 @@ class ScreenshotCard(GlassPanel):
         btn_layout.addWidget(self.btn_down)
 
         self.btn_delete = QPushButton()
-        self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        self.btn_delete.setIcon(icon("fa5s.trash-alt", color=get_theme_color("ERROR")))
         self.btn_delete.setFixedSize(24, 22)
         self.btn_delete.setToolTip(t("report.delete", "Screenshot entfernen"))
         self.btn_delete.setStyleSheet(
@@ -306,7 +306,7 @@ class ScreenshotCard(GlassPanel):
 
         # Fallback icon
         icon_sz = 20 if self.lbl_thumb.width() < 80 else 32
-        self.lbl_thumb.setPixmap(icon("fa5s.image", color="#484f58").pixmap(icon_sz, icon_sz))
+        self.lbl_thumb.setPixmap(icon("fa5s.image", color=get_theme_color("TEXT_DIMMED")).pixmap(icon_sz, icon_sz))
 
     def _on_path_changed(self) -> None:
         self.item.content = self.edit_path.text().strip()
@@ -380,9 +380,11 @@ class ReportAppendixInspector(QWidget):
         top_row.addStretch()
 
         self.lbl_badge = QLabel()
+        accent_brand = get_theme_color("ACCENT_BRAND")
+        qc_brand = QColor(accent_brand)
         self.lbl_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
-            "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
+            f"font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
+            f"background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.15); color: {accent_brand}; border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.35);"
         )
         top_row.addWidget(self.lbl_badge)
         v_header.addLayout(top_row)
@@ -391,11 +393,13 @@ class ReportAppendixInspector(QWidget):
         actions_row.setSpacing(8)
 
         self.btn_quick_history = QPushButton(t("report.appendix_quick_history", "Snippet aus History..."))
-        self.btn_quick_history.setIcon(icon("fa5s.history", color="#79c0ff"))
+        accent_pri = get_theme_color("ACCENT_PRIMARY")
+        qc_pri = QColor(accent_pri)
+        self.btn_quick_history.setIcon(icon("fa5s.history", color=accent_pri))
         self.btn_quick_history.setStyleSheet(
-            "QPushButton { background: rgba(121, 192, 255, 0.12); border: 1px solid rgba(121, 192, 255, 0.35); "
-            "border-radius: 4px; color: #79c0ff; font-weight: bold; padding: 4px 10px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(121, 192, 255, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.12); border: 1px solid rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.35); "
+            f"border-radius: 4px; color: {accent_pri}; font-weight: bold; padding: 4px 10px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.25); }}"
         )
         self.btn_quick_history.clicked.connect(self._on_pick_history_clicked)
         actions_row.addWidget(self.btn_quick_history)
@@ -426,7 +430,7 @@ class ReportAppendixInspector(QWidget):
         title_a_row = QHBoxLayout()
         title_a_row.setSpacing(8)
         lbl_icon_a = QLabel()
-        lbl_icon_a.setPixmap(icon("fa5s.terminal", color="#7ee787").pixmap(16, 16))
+        lbl_icon_a.setPixmap(icon("fa5s.terminal", color=get_theme_color("SUCCESS")).pixmap(16, 16))
         title_a_row.addWidget(lbl_icon_a)
 
         self.lbl_title_a = QLabel(t("report.appendix_section_a_title", "Anhang A: Ausgeführte Befehle & PoCs"))
@@ -440,31 +444,35 @@ class ReportAppendixInspector(QWidget):
         actions_a_row.setSpacing(6)
 
         self.btn_pick_history = QPushButton(t("report.appendix_btn_history", "Aus History wählen..."))
-        self.btn_pick_history.setIcon(icon("fa5s.history", color="#79c0ff"))
+        self.btn_pick_history.setIcon(icon("fa5s.history", color=accent_pri))
         self.btn_pick_history.setStyleSheet(
-            "QPushButton { background: rgba(121, 192, 255, 0.1); border: 1px solid rgba(121, 192, 255, 0.25); "
-            "border-radius: 4px; color: #79c0ff; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(121, 192, 255, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.1); border: 1px solid rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.25); "
+            f"border-radius: 4px; color: {accent_pri}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_pri.red()}, {qc_pri.green()}, {qc_pri.blue()}, 0.2); }}"
         )
         self.btn_pick_history.clicked.connect(self._on_pick_history_clicked)
         actions_a_row.addWidget(self.btn_pick_history)
 
         self.btn_import_all_history = QPushButton(t("report.appendix_btn_import_all", "Alle Befehle übernehmen"))
-        self.btn_import_all_history.setIcon(icon("fa5s.layer-group", color="#d2a8ff"))
+        accent_hl = get_theme_color("ACCENT_HIGHLIGHT")
+        qc_hl = QColor(accent_hl)
+        self.btn_import_all_history.setIcon(icon("fa5s.layer-group", color=accent_hl))
         self.btn_import_all_history.setStyleSheet(
-            "QPushButton { background: rgba(210, 168, 255, 0.1); border: 1px solid rgba(210, 168, 255, 0.25); "
-            "border-radius: 4px; color: #d2a8ff; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(210, 168, 255, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_hl.red()}, {qc_hl.green()}, {qc_hl.blue()}, 0.1); border: 1px solid rgba({qc_hl.red()}, {qc_hl.green()}, {qc_hl.blue()}, 0.25); "
+            f"border-radius: 4px; color: {accent_hl}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_hl.red()}, {qc_hl.green()}, {qc_hl.blue()}, 0.2); }}"
         )
         self.btn_import_all_history.clicked.connect(self._on_import_all_history_clicked)
         actions_a_row.addWidget(self.btn_import_all_history)
 
         self.btn_add_cmd = QPushButton(t("report.appendix_btn_add_cmd", "+ Manuelles Snippet"))
-        self.btn_add_cmd.setIcon(icon("fa5s.plus", color="#7ee787"))
+        succ_col = get_theme_color("SUCCESS")
+        qc_succ = QColor(succ_col)
+        self.btn_add_cmd.setIcon(icon("fa5s.plus", color=succ_col))
         self.btn_add_cmd.setStyleSheet(
-            "QPushButton { background: rgba(126, 231, 135, 0.1); border: 1px solid rgba(126, 231, 135, 0.25); "
-            "border-radius: 4px; color: #7ee787; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(126, 231, 135, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.1); border: 1px solid rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.25); "
+            f"border-radius: 4px; color: {succ_col}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.2); }}"
         )
         self.btn_add_cmd.clicked.connect(self._on_add_cmd_clicked)
         actions_a_row.addWidget(self.btn_add_cmd)
@@ -481,7 +489,7 @@ class ReportAppendixInspector(QWidget):
 
         self.lbl_empty_cmd = QLabel(t("report.appendix_empty_cmd", "Noch keine Befehle hinterlegt. Klicken Sie auf '+ Manuelles Snippet' oder wählen Sie Befehle aus der History."))
         self.lbl_empty_cmd.setWordWrap(True)
-        self.lbl_empty_cmd.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 6px;")
+        self.lbl_empty_cmd.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-style: italic; font-size: 11px; padding: 6px;")
         card_a_layout.addWidget(self.lbl_empty_cmd)
 
         scroll_layout.addWidget(self.card_a)
@@ -495,7 +503,7 @@ class ReportAppendixInspector(QWidget):
         title_b_row = QHBoxLayout()
         title_b_row.setSpacing(8)
         lbl_icon_b = QLabel()
-        lbl_icon_b.setPixmap(icon("fa5s.camera", color="#00e5ff").pixmap(16, 16))
+        lbl_icon_b.setPixmap(icon("fa5s.camera", color=accent_brand).pixmap(16, 16))
         title_b_row.addWidget(lbl_icon_b)
 
         self.lbl_title_b = QLabel(t("report.appendix_section_b_title", "Anhang B: Screenshots & Bildnachweise"))
@@ -509,31 +517,33 @@ class ReportAppendixInspector(QWidget):
         actions_b_row.setSpacing(6)
 
         self.btn_pick_loot = QPushButton(t("report.appendix_btn_loot", "Aus Projekt-Loot wählen..."))
-        self.btn_pick_loot.setIcon(icon("fa5s.gem", color="#00e5ff"))
+        self.btn_pick_loot.setIcon(icon("fa5s.gem", color=accent_brand))
         self.btn_pick_loot.setStyleSheet(
-            "QPushButton { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.25); "
-            "border-radius: 4px; color: #00e5ff; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(0, 229, 255, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.1); border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); "
+            f"border-radius: 4px; color: {accent_brand}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.2); }}"
         )
         self.btn_pick_loot.clicked.connect(self._on_pick_loot_clicked)
         actions_b_row.addWidget(self.btn_pick_loot)
 
         self.btn_pick_file = QPushButton(t("report.appendix_btn_disk", "Datei von Festplatte..."))
-        self.btn_pick_file.setIcon(icon("fa5s.folder-open", color="#f2cc60"))
+        warn_col = get_theme_color("WARNING")
+        qc_warn = QColor(warn_col)
+        self.btn_pick_file.setIcon(icon("fa5s.folder-open", color=warn_col))
         self.btn_pick_file.setStyleSheet(
-            "QPushButton { background: rgba(242, 204, 96, 0.1); border: 1px solid rgba(242, 204, 96, 0.25); "
-            "border-radius: 4px; color: #f2cc60; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(242, 204, 96, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_warn.red()}, {qc_warn.green()}, {qc_warn.blue()}, 0.1); border: 1px solid rgba({qc_warn.red()}, {qc_warn.green()}, {qc_warn.blue()}, 0.25); "
+            f"border-radius: 4px; color: {warn_col}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_warn.red()}, {qc_warn.green()}, {qc_warn.blue()}, 0.2); }}"
         )
         self.btn_pick_file.clicked.connect(self._on_pick_file_clicked)
         actions_b_row.addWidget(self.btn_pick_file)
 
         self.btn_add_img = QPushButton(t("report.appendix_btn_add_img", "+ Bildpfad"))
-        self.btn_add_img.setIcon(icon("fa5s.plus", color="#7ee787"))
+        self.btn_add_img.setIcon(icon("fa5s.plus", color=succ_col))
         self.btn_add_img.setStyleSheet(
-            "QPushButton { background: rgba(126, 231, 135, 0.1); border: 1px solid rgba(126, 231, 135, 0.25); "
-            "border-radius: 4px; color: #7ee787; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(126, 231, 135, 0.2); }"
+            f"QPushButton {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.1); border: 1px solid rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.25); "
+            f"border-radius: 4px; color: {succ_col}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.2); }}"
         )
         self.btn_add_img.clicked.connect(self._on_add_img_clicked)
         actions_b_row.addWidget(self.btn_add_img)
@@ -550,7 +560,7 @@ class ReportAppendixInspector(QWidget):
 
         self.lbl_empty_sc = QLabel(t("report.appendix_empty_sc", "Noch keine Screenshots hinterlegt. Fügen Sie Nachweise aus dem Loot oder von der Festplatte hinzu."))
         self.lbl_empty_sc.setWordWrap(True)
-        self.lbl_empty_sc.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 6px;")
+        self.lbl_empty_sc.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-style: italic; font-size: 11px; padding: 6px;")
         card_b_layout.addWidget(self.lbl_empty_sc)
 
         scroll_layout.addWidget(self.card_b)
@@ -564,7 +574,7 @@ class ReportAppendixInspector(QWidget):
         header_c = QHBoxLayout()
         header_c.setSpacing(8)
         lbl_icon_c = QLabel()
-        lbl_icon_c.setPixmap(icon("fa5s.sticky-note", color="#f2cc60").pixmap(16, 16))
+        lbl_icon_c.setPixmap(icon("fa5s.sticky-note", color=get_theme_color("WARNING")).pixmap(16, 16))
         header_c.addWidget(lbl_icon_c)
 
         self.lbl_title_c = QLabel(t("report.appendix_section_c_title", "Anhang C: Ergänzende Rohdaten & Notizen"))
@@ -576,15 +586,15 @@ class ReportAppendixInspector(QWidget):
 
         lbl_desc_c = QLabel(t("report.appendix_notes_desc", "Freitext für vollständige Portscan-Dumps, Banner-Ausgaben, Hash-Listen oder ergänzende Rohdaten."))
         lbl_desc_c.setWordWrap(True)
-        lbl_desc_c.setStyleSheet("font-size: 11px; color: #8b949e;")
+        lbl_desc_c.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')};")
         card_c_layout.addWidget(lbl_desc_c)
 
         self.edit_notes = QPlainTextEdit()
         self.edit_notes.setPlaceholderText(t("report.appendix_notes_placeholder", "Zusätzliche Rohdaten, Auszüge oder Referenzen einfügen..."))
         self.edit_notes.setStyleSheet(
-            "QPlainTextEdit { background: rgba(13, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); "
-            "border-radius: 4px; padding: 8px; color: #c9d1d9; font-family: monospace; font-size: 11px; } "
-            "QPlainTextEdit:focus { border: 1px solid #f2cc60; }"
+            f"QPlainTextEdit {{ background: rgba(13, 17, 23, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); "
+            f"border-radius: 4px; padding: 8px; color: {get_theme_color('TEXT_PRIMARY')}; font-family: monospace; font-size: 11px; }} "
+            f"QPlainTextEdit:focus {{ border: 1px solid {get_theme_color('WARNING')}; }}"
         )
         self.edit_notes.setMinimumHeight(150)
         self.edit_notes.textChanged.connect(self._on_notes_changed)

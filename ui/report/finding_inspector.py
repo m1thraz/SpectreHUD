@@ -55,8 +55,8 @@ class ReportEvidenceCard(QFrame):
         self.item = item
         self.setObjectName("ReportEvidenceCard")
         self.setStyleSheet(
-            "#ReportEvidenceCard { background: #161b22; border: 1px solid #30363d; border-radius: 6px; } "
-            "#ReportEvidenceCard:hover { border-color: #58a6ff; }"
+            f"#ReportEvidenceCard {{ background: {get_theme_color('BG_SURFACE')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 6px; }} "
+            f"#ReportEvidenceCard:hover {{ border-color: {get_theme_color('ACCENT_PRIMARY')}; }}"
         )
 
         layout = QHBoxLayout(self)
@@ -65,13 +65,13 @@ class ReportEvidenceCard(QFrame):
 
         lbl_icon = QLabel()
         if item.type == "screenshot":
-            ic = icon("fa5s.camera", color="#79c0ff")
+            ic = icon("fa5s.camera", color=get_theme_color("ACCENT_BRAND"))
         elif item.type == "terminal":
-            ic = icon("fa5s.terminal", color="#7ee787")
+            ic = icon("fa5s.terminal", color=get_theme_color("SUCCESS"))
         elif item.type == "credential":
-            ic = icon("fa5s.key", color="#d29922")
+            ic = icon("fa5s.key", color=get_theme_color("WARNING"))
         else:
-            ic = icon("fa5s.code", color="#bc8cff")
+            ic = icon("fa5s.code", color=get_theme_color("ACCENT_HIGHLIGHT"))
         lbl_icon.setPixmap(ic.pixmap(18, 18))
         layout.addWidget(lbl_icon)
 
@@ -82,7 +82,7 @@ class ReportEvidenceCard(QFrame):
         self.txt_caption.setText(item.caption or item.type.capitalize())
         self.txt_caption.setPlaceholderText(t("report.evidence_caption_placeholder", "Caption / label..."))
         self.txt_caption.setStyleSheet(
-            "background: #0d1117; color: #f0f6fc; border: 1px solid #21262d; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 4px;"
+            f"background: {get_theme_color('BG_DARK')}; color: {get_theme_color('TEXT_PRIMARY')}; border: 1px solid {get_theme_color('BORDER_DARK')}; border-radius: 3px; font-size: 11px; font-weight: bold; padding: 2px 4px;"
         )
         self.txt_caption.textChanged.connect(self._on_caption_edited)
         center_layout.addWidget(self.txt_caption)
@@ -91,7 +91,7 @@ class ReportEvidenceCard(QFrame):
         if len(preview_text) > 80:
             preview_text = preview_text[:77] + "..."
         lbl_preview = QLabel(preview_text or f"[{item.type}]")
-        lbl_preview.setStyleSheet("color: #8b949e; font-size: 10px; font-family: Consolas, monospace;")
+        lbl_preview.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 10px; font-family: Consolas, monospace;")
         center_layout.addWidget(lbl_preview)
 
         layout.addLayout(center_layout, stretch=1)
@@ -99,14 +99,14 @@ class ReportEvidenceCard(QFrame):
         self.btn_insert = QPushButton()
         self.btn_insert.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_insert.setToolTip(t("report.insert_in_desc", "Insert into description"))
-        self.btn_insert.setIcon(icon("fa5s.arrow-up", color="#79c0ff"))
+        self.btn_insert.setIcon(icon("fa5s.arrow-up", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_insert.clicked.connect(lambda: self.insert_requested.emit(self.item.id))
         layout.addWidget(self.btn_insert)
 
         self.btn_delete = QPushButton()
         self.btn_delete.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_delete.setToolTip(t("report.delete_evidence", "Remove evidence"))
-        self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        self.btn_delete.setIcon(icon("fa5s.trash-alt", color=get_theme_color("ERROR")))
         self.btn_delete.clicked.connect(lambda: self.delete_requested.emit(self.item.id))
         layout.addWidget(self.btn_delete)
 
@@ -191,7 +191,7 @@ class ReportFindingInspector(QWidget):
 
         self.btn_empty_create = QPushButton(t("report.empty_add_finding_btn", "Neues Finding anlegen"))
         self.btn_empty_create.setProperty("class", "PrimaryBtn")
-        self.btn_empty_create.setIcon(icon("fa5s.plus", color="#ffffff"))
+        self.btn_empty_create.setIcon(icon("fa5s.plus", color=get_theme_color("TEXT_PRIMARY")))
         self.btn_empty_create.clicked.connect(self.request_create_finding.emit)
         btn_row.addWidget(self.btn_empty_create)
 
@@ -199,7 +199,7 @@ class ReportFindingInspector(QWidget):
             t("report.empty_promote_loot_btn", "Finding aus Loot erstellen")
         )
         self.btn_empty_promote.setProperty("class", "SecondaryBtn")
-        self.btn_empty_promote.setIcon(icon("fa5s.file-medical", color="#7ee787"))
+        self.btn_empty_promote.setIcon(icon("fa5s.file-medical", color=get_theme_color("SUCCESS")))
         self.btn_empty_promote.clicked.connect(self.request_promote_loot.emit)
         self.btn_empty_sync = self.btn_empty_promote
         btn_row.addWidget(self.btn_empty_promote)
@@ -249,7 +249,7 @@ class ReportFindingInspector(QWidget):
         self.btn_duplicate.setObjectName("btn_duplicate_finding")
         self.btn_duplicate.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_duplicate.setToolTip(t("report.duplicate_finding", "Duplicate finding"))
-        self.btn_duplicate.setIcon(icon("fa5s.copy", color="#79c0ff"))
+        self.btn_duplicate.setIcon(icon("fa5s.copy", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_duplicate.clicked.connect(self._on_duplicate_clicked)
         h_layout.addWidget(self.btn_duplicate)
 
@@ -257,7 +257,7 @@ class ReportFindingInspector(QWidget):
         self.btn_delete.setObjectName("btn_delete_finding")
         self.btn_delete.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_delete.setToolTip(t("report.delete_finding", "Delete finding"))
-        self.btn_delete.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        self.btn_delete.setIcon(icon("fa5s.trash-alt", color=get_theme_color("ERROR")))
         self.btn_delete.clicked.connect(self._on_delete_clicked)
         h_layout.addWidget(self.btn_delete)
 
@@ -338,7 +338,7 @@ class ReportFindingInspector(QWidget):
         self.btn_apply_target.setObjectName("btn_apply_target")
         self.btn_apply_target.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_apply_target.setToolTip(t("report.apply_project_target", "Apply project target IP"))
-        self.btn_apply_target.setIcon(icon("fa5s.crosshairs", color="#79c0ff"))
+        self.btn_apply_target.setIcon(icon("fa5s.crosshairs", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_apply_target.clicked.connect(self._on_apply_project_target)
         phase_row.addWidget(self.btn_apply_target)
 
@@ -368,7 +368,7 @@ class ReportFindingInspector(QWidget):
         ev_header_layout.addWidget(lbl_ev)
 
         self.lbl_evidence_count = QLabel("(0)")
-        self.lbl_evidence_count.setStyleSheet("color: #8b949e; font-size: 11px;")
+        self.lbl_evidence_count.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         ev_header_layout.addWidget(self.lbl_evidence_count)
         ev_header_layout.addStretch()
 
@@ -377,7 +377,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_loot_screenshot.setObjectName("btn_add_loot_screenshot")
         self.btn_add_loot_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_add_loot_screenshot.setToolTip(t("report.add_loot_screenshot", "Insert screenshot from Loot"))
-        self.btn_add_loot_screenshot.setIcon(icon("fa5s.camera", color="#79c0ff"))
+        self.btn_add_loot_screenshot.setIcon(icon("fa5s.camera", color=get_theme_color("ACCENT_BRAND")))
         self.btn_add_loot_screenshot.clicked.connect(self.request_loot_screenshot.emit)
         ev_header_layout.addWidget(self.btn_add_loot_screenshot)
 
@@ -385,7 +385,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_file_screenshot.setObjectName("btn_add_file_screenshot")
         self.btn_add_file_screenshot.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_add_file_screenshot.setToolTip(t("report.browse_screenshot", "Import image from disk"))
-        self.btn_add_file_screenshot.setIcon(icon("fa5s.folder-open", color="#d29922"))
+        self.btn_add_file_screenshot.setIcon(icon("fa5s.folder-open", color=get_theme_color("WARNING")))
         self.btn_add_file_screenshot.clicked.connect(self.request_image_file.emit)
         ev_header_layout.addWidget(self.btn_add_file_screenshot)
 
@@ -395,7 +395,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_terminal.setToolTip(
             t("report.add_terminal_evidence", "From Clipboard History (Terminal/PoC)")
         )
-        self.btn_add_terminal.setIcon(icon("fa5s.terminal", color="#7ee787"))
+        self.btn_add_terminal.setIcon(icon("fa5s.terminal", color=get_theme_color("SUCCESS")))
         self.btn_add_terminal.clicked.connect(self.request_clipboard_history.emit)
         ev_header_layout.addWidget(self.btn_add_terminal)
 
@@ -403,7 +403,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_loot.setObjectName("btn_add_loot")
         self.btn_add_loot.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_add_loot.setToolTip(t("report.add_loot_entry", "From Session Loot (Creds/Hashes/Flags)"))
-        self.btn_add_loot.setIcon(icon("fa5s.key", color="#bc8cff"))
+        self.btn_add_loot.setIcon(icon("fa5s.key", color=get_theme_color("ACCENT_HIGHLIGHT")))
         self.btn_add_loot.clicked.connect(self.request_loot_entry.emit)
         ev_header_layout.addWidget(self.btn_add_loot)
 
@@ -411,7 +411,7 @@ class ReportFindingInspector(QWidget):
         self.btn_add_code.setObjectName("btn_add_code")
         self.btn_add_code.setProperty("class", "SecondaryBtn FormatToolBtn")
         self.btn_add_code.setToolTip(t("report.add_code_evidence", "Insert Code Snippet / Exploit"))
-        self.btn_add_code.setIcon(icon("fa5s.code", color="#58a6ff"))
+        self.btn_add_code.setIcon(icon("fa5s.code", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_add_code.clicked.connect(self._on_add_code_clicked)
         ev_header_layout.addWidget(self.btn_add_code)
 
@@ -511,7 +511,7 @@ class ReportFindingInspector(QWidget):
 
         if not items:
             lbl_empty = QLabel(t("report.no_evidence_yet", "No evidence linked yet."))
-            lbl_empty.setStyleSheet("color: #8b949e; font-style: italic; font-size: 11px; padding: 4px;")
+            lbl_empty.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-style: italic; font-size: 11px; padding: 4px;")
             self.evidence_cards_layout.addWidget(lbl_empty)
             return
 

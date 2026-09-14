@@ -19,6 +19,7 @@ from PyQt6.QtGui import QCursor, QGuiApplication, QKeyEvent
 
 from core.loot import VALID_CATEGORY_IDS
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 PHASE_PILLS = [
@@ -96,7 +97,7 @@ class QuickNotePopup(QWidget):
         header_layout = QHBoxLayout()
         lbl_title = QLabel(t("quick_note.popup_title", "QUICK NOTE"))
         lbl_title.setStyleSheet(
-            "color: #00e5ff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
+            f"color: {get_theme_color('ACCENT_BRAND')}; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
         )
         header_layout.addWidget(lbl_title)
 
@@ -108,7 +109,7 @@ class QuickNotePopup(QWidget):
                 "Enter: Save · Shift+Enter: New line · Alt+1–6: Phase",
             )
         )
-        lbl_hint.setStyleSheet("color: #8b949e; font-size: 10px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 10px;")
         header_layout.addWidget(lbl_hint)
         card_layout.addLayout(header_layout)
 
@@ -129,18 +130,18 @@ class QuickNotePopup(QWidget):
             t("quick_note.placeholder", "Schnellnotiz eingeben (Enter = Speichern, Shift+Enter = Zeilenumbruch)...")
         )
         self.text_edit.setStyleSheet(
-            """
-            QPlainTextEdit {
-                background-color: rgba(22, 27, 34, 0.9);
-                color: #e6edf3;
-                border: 1px solid rgba(48, 54, 61, 0.8);
+            f"""
+            QPlainTextEdit {{
+                background-color: {get_theme_color('BG_INPUT')};
+                color: {get_theme_color('TEXT_PRIMARY')};
+                border: 1px solid {get_theme_color('BORDER_A80')};
                 border-radius: 4px;
                 font-size: 12px;
                 padding: 4px;
-            }
-            QPlainTextEdit:focus {
-                border: 1px solid #00e5ff;
-            }
+            }}
+            QPlainTextEdit:focus {{
+                border: 1px solid {get_theme_color('ACCENT_BRAND')};
+            }}
             """
         )
         self.text_edit.installEventFilter(self)
@@ -157,12 +158,12 @@ class QuickNotePopup(QWidget):
 
     def _update_pill_styles(self) -> None:
         active_style = (
-            "background-color: rgba(0, 229, 255, 0.2); color: #00e5ff; "
-            "border: 1px solid #00e5ff; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px;"
+            f"background-color: {get_theme_color('CYAN_A20')}; color: {get_theme_color('ACCENT_BRAND')}; "
+            f"border: 1px solid {get_theme_color('ACCENT_BRAND')}; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 2px 5px;"
         )
         inactive_style = (
-            "background-color: rgba(33, 38, 45, 0.6); color: #8b949e; "
-            "border: 1px solid rgba(48, 54, 61, 0.8); border-radius: 3px; font-size: 10px; padding: 2px 5px;"
+            f"background-color: {get_theme_color('CONTROL_A70')}; color: {get_theme_color('TEXT_MUTED')}; "
+            f"border: 1px solid {get_theme_color('BORDER_A80')}; border-radius: 3px; font-size: 10px; padding: 2px 5px;"
         )
         for cat_id, btn in self.pill_buttons.items():
             btn.setStyleSheet(active_style if cat_id == self.current_category else inactive_style)

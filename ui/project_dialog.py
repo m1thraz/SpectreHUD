@@ -14,6 +14,7 @@ from core.project import get_default_projects_dir
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
+from ui.styles.icons import get_theme_color
 
 
 class NewProjectDialog(BaseHudDialog):
@@ -130,7 +131,7 @@ class NewProjectDialog(BaseHudDialog):
         )
         self.lbl_path_preview.setTextFormat(Qt.TextFormat.PlainText)
         self.lbl_path_preview.setStyleSheet(
-            "color: #6e7681; font-size: 11px; font-family: monospace;"
+            f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-family: monospace;"
         )
         layout.addWidget(self.lbl_path_preview)
 
@@ -139,7 +140,7 @@ class NewProjectDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel(t("project_dialog.btn_hint", "↵ Enter: Create | Esc: Cancel"))
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 
@@ -196,14 +197,14 @@ class NewProjectDialog(BaseHudDialog):
                 )
             )
             self.lbl_path_preview.setStyleSheet(
-                "color: #ff5555; font-size: 11px; font-family: monospace;"
+                f"color: {get_theme_color('ERROR')}; font-size: 11px; font-family: monospace;"
             )
         else:
             self.lbl_path_preview.setText(
                 t("project_dialog.preview_path", "Destination path: {path}", path=target_path)
             )
             self.lbl_path_preview.setStyleSheet(
-                "color: #6e7681; font-size: 11px; font-family: monospace;"
+                f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-family: monospace;"
             )
 
     def _on_create(self) -> None:

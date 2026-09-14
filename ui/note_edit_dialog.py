@@ -18,6 +18,7 @@ from PyQt6.QtGui import QKeySequence, QShortcut
 from ui.base_dialog import BaseHudDialog
 from core.loot import VALID_CATEGORY_IDS
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 NOTE_PHASES = [
     ("recon", "1. Recon"),
@@ -121,7 +122,7 @@ class EditNoteDialog(BaseHudDialog):
         btn_layout.setContentsMargins(0, 8, 0, 0)
 
         lbl_hint = QLabel(t("note_dialog.edit_hint", "Ctrl+Enter: Save | Esc: Cancel"))
-        lbl_hint.setStyleSheet("color: #8b949e; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
 
         btn_layout.addStretch()

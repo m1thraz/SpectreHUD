@@ -11,6 +11,17 @@ from core.platform import user_themes_dir
 logger = get_logger(__name__)
 
 
+SEMANTIC_ALIAS_KEYS: Set[str] = {
+    "ACCENT_PRIMARY",
+    "ACCENT_BRAND",
+    "ACCENT_HIGHLIGHT",
+    "SUCCESS",
+    "SUCCESS_BG",
+    "WARNING",
+    "ERROR",
+}
+
+
 class ThemeLoader:
     """Loads complete theme palettes and falls back safely to Cyber Dark."""
 
@@ -19,7 +30,7 @@ class ThemeLoader:
     FALLBACK_THEME_ID = "cyber_dark"
 
     def get_required_tokens(self) -> Set[str]:
-        return set(CYBER_DARK_PALETTE)
+        return set(CYBER_DARK_PALETTE) - SEMANTIC_ALIAS_KEYS
 
     def validate_palette(self, palette: Optional[Mapping[str, Any]]) -> List[str]:
         """Return required tokens that are absent or do not contain string values."""

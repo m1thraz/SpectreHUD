@@ -21,6 +21,7 @@ from PyQt6.QtGui import QCursor, QGuiApplication, QKeyEvent
 from core.i18n import t
 from core.net_detector import NetDetector
 from ui.copyable_line_edit import CopyableLineEdit
+from ui.styles.icons import get_theme_color
 
 
 class QuickIpPopup(QWidget):
@@ -85,14 +86,14 @@ class QuickIpPopup(QWidget):
             t("quick_ip.purpose_tip", "View or update Target and LHOST without opening the main window")
         )
         lbl_title.setStyleSheet(
-            "color: #00e5ff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
+            f"color: {get_theme_color('ACCENT_BRAND')}; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"
         )
         header_layout.addWidget(lbl_title)
 
         header_layout.addStretch()
 
         lbl_hint = QLabel("Esc: Close")
-        lbl_hint.setStyleSheet("color: #8b949e; font-size: 10px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 10px;")
         header_layout.addWidget(lbl_hint)
         card_layout.addLayout(header_layout)
 

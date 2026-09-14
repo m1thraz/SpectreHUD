@@ -11,6 +11,8 @@ import qtawesome as qta
 
 from ui.styles.palette import CYBER_CYAN, CYBER_DARK_PALETTE, TEXT_PRIMARY
 
+from core.theme_palette import SEVERITY_COLOR_TOKENS
+
 _active_palette: dict[str, str] = dict(CYBER_DARK_PALETTE)
 _active_icon_color = CYBER_CYAN
 _active_icon_color_active = TEXT_PRIMARY
@@ -28,6 +30,12 @@ def set_icon_palette(palette: Mapping[str, str]) -> None:
 def get_theme_color(token: str, default: Optional[str] = None) -> str:
     """Return the active theme's hex/rgba value for the requested palette token."""
     return _active_palette.get(token, default or _active_icon_color)
+
+
+def get_severity_color(severity: str, default: Optional[str] = None) -> str:
+    """Return the active theme color for the requested severity level."""
+    token = SEVERITY_COLOR_TOKENS.get(str(severity or "").lower(), "ACCENT_BRAND")
+    return get_theme_color(token, default=default)
 
 
 def get_active_palette() -> dict[str, str]:

@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
+from ui.styles.icons import get_theme_color
 
 
 class AddSnippetDialog(BaseHudDialog):
@@ -118,7 +119,7 @@ class AddSnippetDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel(t("snippet_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 

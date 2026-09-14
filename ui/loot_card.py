@@ -21,7 +21,7 @@ from core.logger import get_logger
 from core.i18n import t
 from ui.message_boxes import show_error_dialog
 from core.platform import open_path
-from ui.styles.icons import icon
+from ui.styles.icons import icon, get_theme_color
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
 from ui.elided_label import ElidedLabel, configure_badge_label
 from ui.wrapped_value_view import WrappedValueView
@@ -136,7 +136,7 @@ class LootCard(QFrame):
 
         # Shared grip handle & phase badge
         self.lbl_grip = QLabel()
-        grip_pix = icon("fa5s.grip-vertical", color="#6e7681").pixmap(QSize(12, 14))
+        grip_pix = icon("fa5s.grip-vertical", color=get_theme_color("TEXT_DIMMED")).pixmap(QSize(12, 14))
         if not grip_pix.isNull():
             self.lbl_grip.setPixmap(grip_pix)
         self.lbl_grip.setFixedWidth(12)
@@ -221,7 +221,7 @@ class LootCard(QFrame):
             if target_ip:
                 self.lbl_target = QLabel(target_ip)
                 self.lbl_target.setTextFormat(Qt.TextFormat.PlainText)
-                self.lbl_target.setStyleSheet("color: #58a6ff; font-size: 11px; font-weight: 500;")
+                self.lbl_target.setStyleSheet(f"color: {get_theme_color('ACCENT_PRIMARY')}; font-size: 11px; font-weight: 500;")
                 if self.board_mode:
                     self.lbl_target.setWordWrap(True)
                     self.lbl_target.setMinimumWidth(0)
@@ -234,7 +234,7 @@ class LootCard(QFrame):
                 time_part = timestamp.split(" ")[-1] if " " in timestamp else timestamp
                 self.lbl_time = QLabel(time_part)
                 self.lbl_time.setTextFormat(Qt.TextFormat.PlainText)
-                self.lbl_time.setStyleSheet("color: #6e7681; font-size: 10px;")
+                self.lbl_time.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 10px;")
                 configure_badge_label(self.lbl_time, time_part, padding=6)
                 header_layout.addWidget(self.lbl_time)
 
@@ -268,7 +268,7 @@ class LootCard(QFrame):
                 if not pix.isNull():
                     scaled = pix.scaledToHeight(75, Qt.TransformationMode.SmoothTransformation)
                     lbl_thumb.setPixmap(scaled)
-                    lbl_thumb.setStyleSheet("border: 1px solid #30363d; border-radius: 4px;")
+                    lbl_thumb.setStyleSheet(f"border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px;")
                     thumb_row.addWidget(lbl_thumb)
 
                 btn_open_img = QPushButton("Open")

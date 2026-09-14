@@ -1,3 +1,4 @@
+from ui.styles.icons import get_theme_color
 """Popover flyout dialogs for secondary variables (Auth & Scope)."""
 
 from typing import Dict, Any, Optional
@@ -27,54 +28,58 @@ class BaseVarPopover(QFrame):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         self.setObjectName("VarPopoverFrame")
-        self.setStyleSheet("""
-            QFrame#VarPopoverFrame {
-                background-color: #161b22;
-                border: 1px solid #30363d;
+        self._apply_theme_style()
+
+    def _apply_theme_style(self) -> None:
+        self.setStyleSheet(f"""
+            QFrame#VarPopoverFrame {{
+                background-color: {get_theme_color("BG_SURFACE")};
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 border-radius: 8px;
-            }
-            QLabel.VarPopoverTitle {
-                color: #58a6ff;
+            }}
+            QLabel.VarPopoverTitle {{
+                color: {get_theme_color("ACCENT_PRIMARY")};
                 font-size: 11px;
                 font-weight: 600;
                 padding-bottom: 2px;
-                border-bottom: 1px solid #21262d;
-            }
-            QLabel.VarPopoverLabel {
-                color: #8b949e;
+                border-bottom: 1px solid {get_theme_color("BORDER_DEFAULT")};
+            }}
+            QLabel.VarPopoverLabel {{
+                color: {get_theme_color("TEXT_MUTED")};
                 font-size: 11px;
                 font-weight: 500;
                 min-width: 60px;
-            }
-            QLineEdit.VarPopoverInput {
-                background-color: #0d1117;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
+            }}
+            QLineEdit.VarPopoverInput {{
+                background-color: {get_theme_color("BG_DARK")};
+                color: {get_theme_color("TEXT_SECONDARY")};
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 border-radius: 4px;
                 padding: 4px 8px;
                 font-size: 11px;
                 font-family: monospace;
-            }
-            QLineEdit.VarPopoverInput:focus {
-                border-color: #58a6ff;
-            }
-            QPushButton.VarPopoverBtn {
-                background-color: #21262d;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
+            }}
+            QLineEdit.VarPopoverInput:focus {{
+                border-color: {get_theme_color("ACCENT_PRIMARY")};
+            }}
+            QPushButton.VarPopoverBtn {{
+                background-color: {get_theme_color("BG_SURFACE")};
+                color: {get_theme_color("TEXT_SECONDARY")};
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 border-radius: 4px;
                 padding: 4px 8px;
                 font-size: 11px;
-            }
-            QPushButton.VarPopoverBtn:hover {
-                background-color: #30363d;
-                color: #f0f6fc;
-                border-color: #58a6ff;
-            }
+            }}
+            QPushButton.VarPopoverBtn:hover {{
+                background-color: {get_theme_color("BORDER_DEFAULT")};
+                color: {get_theme_color("TEXT_PRIMARY")};
+                border-color: {get_theme_color("ACCENT_PRIMARY")};
+            }}
         """)
 
     def show_below(self, anchor: QWidget) -> None:
         """Positions and displays the popover directly beneath the anchor widget."""
+        self._apply_theme_style()
         self.adjustSize()
         global_pos = anchor.mapToGlobal(QPoint(0, anchor.height() + 4))
 

@@ -10,7 +10,7 @@ Provides an interactive executive dashboard for the Executive Summary section:
 from typing import List, Optional
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QResizeEvent
+from PyQt6.QtGui import QColor, QResizeEvent
 from PyQt6.QtWidgets import (
     QFormLayout,
     QFrame,
@@ -40,15 +40,8 @@ from ui.report.inspector_style import (
     style_inspector_scroll,
     style_inspector_section,
 )
-from ui.styles.icons import get_theme_color, icon
+from ui.styles.icons import get_severity_color, get_theme_color, icon
 
-SEV_COLORS = {
-    "critical": "#f85149",
-    "high": "#e3b341",
-    "medium": "#d29922",
-    "low": "#39d353",
-    "info": "#58a6ff",
-}
 
 SEV_ICONS = {
     "critical": "fa5s.exclamation-circle",
@@ -215,9 +208,11 @@ class ReportSummaryInspector(QWidget):
         h_layout.addWidget(self.lbl_title, stretch=1)
 
         self.lbl_posture_badge = QLabel()
+        badge_color = get_severity_color("critical")
+        bc = QColor(badge_color)
         self.lbl_posture_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
-            "background: rgba(248, 81, 73, 0.2); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.4);"
+            f"font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
+            f"background: rgba({bc.red()}, {bc.green()}, {bc.blue()}, 0.2); color: {badge_color}; border: 1px solid rgba({bc.red()}, {bc.green()}, {bc.blue()}, 0.4);"
         )
         h_layout.addWidget(self.lbl_posture_badge)
 
@@ -250,7 +245,7 @@ class ReportSummaryInspector(QWidget):
         lbl_posture_title = QLabel(t("report.summary_posture_label", "OVERALL POSTURE"))
         lbl_posture_title.setProperty("class", "ReportMetricLabel")
         self.lbl_posture_val = QLabel("NO FINDINGS")
-        self.lbl_posture_val.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff;")
+        self.lbl_posture_val.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {get_theme_color('ACCENT_PRIMARY')};")
         self.lbl_posture_val.setWordWrap(True)
         v_posture.addWidget(lbl_posture_title)
         v_posture.addWidget(self.lbl_posture_val)
@@ -265,11 +260,11 @@ class ReportSummaryInspector(QWidget):
         lbl_breakdown_title.setProperty("class", "ReportMetricLabel")
         v_breakdown.addWidget(lbl_breakdown_title)
 
-        self.pill_crit = self._create_pill_label("CRITICAL", "#f85149")
-        self.pill_high = self._create_pill_label("HIGH", "#e3b341")
-        self.pill_med = self._create_pill_label("MEDIUM", "#d29922")
-        self.pill_low = self._create_pill_label("LOW", "#39d353")
-        self.pill_info = self._create_pill_label("INFO", "#58a6ff")
+        self.pill_crit = self._create_pill_label("CRITICAL", get_severity_color("critical"))
+        self.pill_high = self._create_pill_label("HIGH", get_severity_color("high"))
+        self.pill_med = self._create_pill_label("MEDIUM", get_severity_color("medium"))
+        self.pill_low = self._create_pill_label("LOW", get_severity_color("low"))
+        self.pill_info = self._create_pill_label("INFO", get_severity_color("info"))
 
         self.pills_container = QWidget()
         self.pills_container_layout = QVBoxLayout(self.pills_container)
@@ -424,17 +419,18 @@ class ReportSummaryInspector(QWidget):
 
     def _create_pill_label(self, name: str, color: str) -> QLabel:
         lbl = QLabel(f"{name}: 0")
+        qc = QColor(color)
         lbl.setStyleSheet(
             f"font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 3px; "
-            f"background: rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.15); "
-            f"color: {color}; border: 1px solid rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.35);"
+            f"background: rgba({qc.red()}, {qc.green()}, {qc.blue()}, 0.15); "
+            f"color: {color}; border: 1px solid rgba({qc.red()}, {qc.green()}, {qc.blue()}, 0.35);"
         )
         return lbl
 
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
         lbl.setWordWrap(True)
-        lbl.setStyleSheet("font-size: 11px; font-weight: bold; color: #8b949e;")
+        lbl.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {get_theme_color('TEXT_MUTED')};")
         return lbl
 
     def load_summary(self, doc: ReportWorkspaceDocument) -> None:
@@ -488,30 +484,31 @@ class ReportSummaryInspector(QWidget):
         # Overall Posture
         if counts["critical"] > 0:
             posture_text = "CRITICAL RISK"
-            posture_color = "#f85149"
+            posture_color = get_severity_color("critical")
         elif counts["high"] > 0:
             posture_text = "HIGH RISK"
-            posture_color = "#e3b341"
+            posture_color = get_severity_color("high")
         elif counts["medium"] > 0:
             posture_text = "MEDIUM RISK"
-            posture_color = "#d29922"
+            posture_color = get_severity_color("medium")
         elif counts["low"] > 0:
             posture_text = "LOW RISK"
-            posture_color = "#39d353"
+            posture_color = get_severity_color("low")
         elif counts["info"] > 0:
             posture_text = "INFORMATIONAL"
-            posture_color = "#58a6ff"
+            posture_color = get_severity_color("info")
         else:
             posture_text = "NO FINDINGS"
-            posture_color = "#8b949e"
+            posture_color = get_theme_color("TEXT_MUTED")
 
         self.lbl_posture_val.setText(posture_text)
         self.lbl_posture_val.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {posture_color};")
         self.lbl_posture_badge.setText(posture_text)
+        qc = QColor(posture_color)
         self.lbl_posture_badge.setStyleSheet(
             f"font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
-            f"background: rgba({int(posture_color[1:3], 16)}, {int(posture_color[3:5], 16)}, {int(posture_color[5:7], 16)}, 0.18); "
-            f"color: {posture_color}; border: 1px solid rgba({int(posture_color[1:3], 16)}, {int(posture_color[3:5], 16)}, {int(posture_color[5:7], 16)}, 0.4);"
+            f"background: rgba({qc.red()}, {qc.green()}, {qc.blue()}, 0.18); "
+            f"color: {posture_color}; border: 1px solid rgba({qc.red()}, {qc.green()}, {qc.blue()}, 0.4);"
         )
 
         total_findings = len(findings)
@@ -534,7 +531,7 @@ class ReportSummaryInspector(QWidget):
             sev = (f.severity or "medium").lower()
             it_sev = QTableWidgetItem(sev.upper())
             it_sev.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            it_sev.setIcon(icon(SEV_ICONS.get(sev, "fa5s.circle"), color=SEV_COLORS.get(sev, "#d29922")))
+            it_sev.setIcon(icon(SEV_ICONS.get(sev, "fa5s.circle"), color=get_severity_color(sev)))
             it_sev.setForeground(Qt.GlobalColor.white)
             self.tbl_matrix.setItem(row, 1, it_sev)
 
@@ -563,11 +560,14 @@ class ReportSummaryInspector(QWidget):
 
             # Col 5: Action button
             btn_jump = QPushButton()
-            btn_jump.setIcon(icon("fa5s.arrow-right", color="#00e5ff"))
+            accent_brand = get_theme_color("ACCENT_BRAND")
+            qc_brand = QColor(accent_brand)
+            btn_jump.setIcon(icon("fa5s.arrow-right", color=accent_brand))
             btn_jump.setToolTip(t("report.jump_to_finding_tip", "Inspect this finding"))
             btn_jump.setStyleSheet(
-                "QPushButton { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 3px; padding: 2px 6px; } "
-                "QPushButton:hover { background: rgba(0, 229, 255, 0.25); }"
+                f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.1); "
+                f"border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+                f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
             )
             fid = f.id
             btn_jump.clicked.connect(lambda checked=False, target_id=fid: self.finding_selected.emit(target_id))

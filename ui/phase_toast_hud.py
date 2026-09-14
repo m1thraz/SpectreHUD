@@ -12,6 +12,7 @@ from PyQt6.QtGui import QCursor, QGuiApplication
 
 from core.phases import get_phase, Phase
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 class PhaseToastHUD(QWidget):
@@ -66,17 +67,17 @@ class PhaseToastHUD(QWidget):
         self.badge.setObjectName("PhaseBadge")
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.badge.setStyleSheet(
-            """
-            QLabel#PhaseBadge {
-                background-color: rgba(0, 229, 255, 0.15);
-                color: #00e5ff;
-                border: 1px solid rgba(0, 229, 255, 0.4);
+            f"""
+            QLabel#PhaseBadge {{
+                background-color: {get_theme_color('CYAN_A15')};
+                color: {get_theme_color('ACCENT_BRAND')};
+                border: 1px solid {get_theme_color('BORDER_GLOW')};
                 border-radius: 4px;
                 font-size: 11px;
                 font-weight: 800;
                 padding: 4px 8px;
                 min-width: 58px;
-            }
+            }}
             """
         )
         card_layout.addWidget(self.badge)
@@ -88,13 +89,13 @@ class PhaseToastHUD(QWidget):
 
         self.lbl_category = QLabel("ACTIVE PENTEST PHASE", self.card)
         self.lbl_category.setStyleSheet(
-            "color: #8b949e; font-size: 9px; font-weight: 700; letter-spacing: 0.8px;"
+            f"color: {get_theme_color('TEXT_MUTED')}; font-size: 9px; font-weight: 700; letter-spacing: 0.8px;"
         )
         info_layout.addWidget(self.lbl_category)
 
         self.lbl_phase_name = QLabel("Reconnaissance & Enumeration", self.card)
         self.lbl_phase_name.setStyleSheet(
-            "color: #f0f6fc; font-size: 13px; font-weight: 700;"
+            f"color: {get_theme_color('TEXT_PRIMARY')}; font-size: 13px; font-weight: 700;"
         )
         info_layout.addWidget(self.lbl_phase_name)
 
@@ -110,17 +111,17 @@ class PhaseToastHUD(QWidget):
         if not phase_or_key:
             self.badge.setText("NONE")
             self.badge.setStyleSheet(
-                """
-                QLabel#PhaseBadge {
-                    background-color: rgba(139, 148, 158, 0.15);
-                    color: #8b949e;
-                    border: 1px solid rgba(139, 148, 158, 0.4);
+                f"""
+                QLabel#PhaseBadge {{
+                    background-color: {get_theme_color('MUTED_A20')};
+                    color: {get_theme_color('TEXT_MUTED')};
+                    border: 1px solid {get_theme_color('BORDER_MUTED')};
                     border-radius: 4px;
                     font-size: 11px;
                     font-weight: 800;
                     padding: 4px 8px;
                     min-width: 58px;
-                }
+                }}
                 """
             )
             self.lbl_phase_name.setText(t("phases.unassigned", default="Unassigned"))
@@ -128,17 +129,17 @@ class PhaseToastHUD(QWidget):
             phase: Phase = get_phase(phase_or_key)
             self.badge.setText(phase.short)
             self.badge.setStyleSheet(
-                """
-                QLabel#PhaseBadge {
-                    background-color: rgba(0, 229, 255, 0.15);
-                    color: #00e5ff;
-                    border: 1px solid rgba(0, 229, 255, 0.4);
+                f"""
+                QLabel#PhaseBadge {{
+                    background-color: {get_theme_color('CYAN_A15')};
+                    color: {get_theme_color('ACCENT_BRAND')};
+                    border: 1px solid {get_theme_color('BORDER_GLOW')};
                     border-radius: 4px;
                     font-size: 11px;
                     font-weight: 800;
                     padding: 4px 8px;
                     min-width: 58px;
-                }
+                }}
                 """
             )
             self.lbl_phase_name.setText(f"{phase.order}. {phase.long}")

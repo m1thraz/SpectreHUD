@@ -6,6 +6,7 @@ Provides visual attack chain timelines, finding linkage, and auto-chain generati
 from typing import List, Optional
 
 from PyQt6.QtCore import QSize, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -42,13 +43,13 @@ from ui.report.inspector_style import (
 )
 from ui.styles.icons import get_theme_color, icon
 
-PHASE_COLORS = {
-    "recon": "#58a6ff",
-    "access": "#d29922",
-    "privesc": "#f85149",
-    "postex": "#bc8cff",
-    "scripts": "#39d353",
-    "misc": "#8b949e",
+PHASE_COLOR_TOKENS = {
+    "recon": "ACCENT_BRAND",
+    "access": "WARNING",
+    "privesc": "ERROR",
+    "postex": "ACCENT_HIGHLIGHT",
+    "scripts": "SUCCESS",
+    "misc": "TEXT_MUTED",
 }
 
 PHASE_ORDER = {
@@ -99,21 +100,23 @@ class AttackStepCard(GlassPanel):
         top_row.setSpacing(8)
 
         self.lbl_step_num = QLabel(f"#{self.step_index + 1}")
+        accent_brand = get_theme_color("ACCENT_BRAND")
+        qc_brand = QColor(accent_brand)
         self.lbl_step_num.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; "
-            "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
+            f"font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 4px; "
+            f"background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.15); color: {accent_brand}; border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.35);"
         )
         top_row.addWidget(self.lbl_step_num)
 
         # Phase selector
         self.cmb_phase = QComboBox()
         self.cmb_phase.setStyleSheet(
-            "QComboBox { background: #161b22; border: 1px solid #30363d; border-radius: 4px; color: #f0f6fc; padding: 2px 6px; font-weight: 500; } "
-            "QComboBox:focus { border-color: #00e5ff; }"
+            f"QComboBox {{ background: {get_theme_color('BG_SURFACE')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 2px 6px; font-weight: 500; }} "
+            f"QComboBox:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         for phase_obj in PHASES:
             self.cmb_phase.addItem(
-                icon(phase_obj.icon, color=PHASE_COLORS.get(phase_obj.key, "#8b949e")),
+                icon(phase_obj.icon, color=get_theme_color(PHASE_COLOR_TOKENS.get(phase_obj.key, "TEXT_MUTED"))),
                 phase_obj.long,
                 phase_obj.key,
             )
@@ -129,35 +132,38 @@ class AttackStepCard(GlassPanel):
         self.edit_title.setText(self.step.title)
         self.edit_title.setPlaceholderText(t("report.step_title_placeholder", "Step title / attack technique..."))
         self.edit_title.setStyleSheet(
-            "QLineEdit { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #f0f6fc; padding: 4px 8px; font-weight: bold; } "
-            "QLineEdit:focus { border-color: #00e5ff; }"
+            f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 4px 8px; font-weight: bold; }} "
+            f"QLineEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.edit_title.textChanged.connect(self._on_title_changed)
         top_row.addWidget(self.edit_title, stretch=1)
 
         # Reorder & Delete tools
+        border_col = get_theme_color("BORDER_DEFAULT")
+        err_col = get_theme_color("ERROR")
+        qc_err = QColor(err_col)
         self.btn_up = QPushButton()
-        self.btn_up.setIcon(icon("fa5s.arrow-up", color="#79c0ff"))
+        self.btn_up.setIcon(icon("fa5s.arrow-up", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_up.setToolTip(t("report.move_up", "Move step up"))
         self.btn_up.setEnabled(self.step_index > 0)
-        self.btn_up.setStyleSheet("QPushButton { background: transparent; border: 1px solid #30363d; border-radius: 3px; padding: 2px 6px; }")
+        self.btn_up.setStyleSheet(f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}")
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self.step_index))
         top_row.addWidget(self.btn_up)
 
         self.btn_down = QPushButton()
-        self.btn_down.setIcon(icon("fa5s.arrow-down", color="#79c0ff"))
+        self.btn_down.setIcon(icon("fa5s.arrow-down", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_down.setToolTip(t("report.move_down", "Move step down"))
         self.btn_down.setEnabled(self.step_index < self.total_steps - 1)
-        self.btn_down.setStyleSheet("QPushButton { background: transparent; border: 1px solid #30363d; border-radius: 3px; padding: 2px 6px; }")
+        self.btn_down.setStyleSheet(f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}")
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self.step_index))
         top_row.addWidget(self.btn_down)
 
         self.btn_del = QPushButton()
-        self.btn_del.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        self.btn_del.setIcon(icon("fa5s.trash-alt", color=err_col))
         self.btn_del.setToolTip(t("report.delete_step", "Delete step"))
         self.btn_del.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; padding: 2px 6px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.1); border: 1px solid rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.25); }}"
         )
         self.btn_del.clicked.connect(lambda: self.delete_requested.emit(self.step_index))
         top_row.addWidget(self.btn_del)
@@ -172,8 +178,8 @@ class AttackStepCard(GlassPanel):
         )
         self.txt_desc.setMaximumHeight(65)
         self.txt_desc.setStyleSheet(
-            "QPlainTextEdit { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #c9d1d9; padding: 4px; } "
-            "QPlainTextEdit:focus { border-color: #00e5ff; }"
+            f"QPlainTextEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_SECONDARY')}; padding: 4px; }} "
+            f"QPlainTextEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.txt_desc.textChanged.connect(self._on_desc_changed)
         layout.addWidget(self.txt_desc)
@@ -183,15 +189,15 @@ class AttackStepCard(GlassPanel):
         bottom_row.setSpacing(6)
 
         lbl_link = QLabel(t("report.linked_finding_label", "Linked Finding:"))
-        lbl_link.setStyleSheet("font-size: 11px; color: #8b949e; font-weight: 500;")
+        lbl_link.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500;")
         bottom_row.addWidget(lbl_link)
 
         self.cmb_finding = ResponsiveComboBox()
         self.cmb_finding.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.cmb_finding.setMinimumContentsLength(10)
         self.cmb_finding.setStyleSheet(
-            "QComboBox { background: #161b22; border: 1px solid #30363d; border-radius: 3px; color: #c9d1d9; padding: 2px 6px; font-size: 11px; } "
-            "QComboBox:focus { border-color: #00e5ff; }"
+            f"QComboBox {{ background: {get_theme_color('BG_SURFACE')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 3px; color: {get_theme_color('TEXT_SECONDARY')}; padding: 2px 6px; font-size: 11px; }} "
+            f"QComboBox:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.cmb_finding.addItem(t("report.no_linked_finding", "— None —"), "")
         cur_find_idx = 0
@@ -207,12 +213,12 @@ class AttackStepCard(GlassPanel):
         bottom_row.addWidget(self.cmb_finding, stretch=1)
 
         self.btn_jump = QPushButton()
-        self.btn_jump.setIcon(icon("fa5s.arrow-right", color="#00e5ff"))
+        self.btn_jump.setIcon(icon("fa5s.arrow-right", color=accent_brand))
         self.btn_jump.setToolTip(t("report.jump_to_finding_tip", "Inspect linked finding details"))
         self.btn_jump.setEnabled(bool(self.step.finding_id))
         self.btn_jump.setStyleSheet(
-            "QPushButton { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 3px; padding: 2px 6px; } "
-            "QPushButton:hover { background: rgba(0, 229, 255, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.1); border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
         )
         self.btn_jump.clicked.connect(self._on_jump_clicked)
         bottom_row.addWidget(self.btn_jump)
@@ -292,9 +298,11 @@ class ReportAttackPathInspector(QWidget):
         top_row.addStretch()
 
         self.lbl_steps_badge = QLabel()
+        accent_brand = get_theme_color("ACCENT_BRAND")
+        qc_brand = QColor(accent_brand)
         self.lbl_steps_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
-            "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
+            f"font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; "
+            f"background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.15); color: {accent_brand}; border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.35);"
         )
         top_row.addWidget(self.lbl_steps_badge)
         v_header.addLayout(top_row)

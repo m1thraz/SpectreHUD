@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 from core.snippets import TemplateEngine, SMART_PRESETS
 from ui.base_dialog import BaseHudDialog
 from core.i18n import t
+from ui.styles.icons import get_theme_color
 
 
 class ParamPromptDialog(BaseHudDialog):
@@ -91,7 +92,7 @@ class ParamPromptDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel(t("param_prompt.hint", "↵ Enter: Kopieren | Esc: Abbrechen"))
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
         btn_layout.addStretch()
 

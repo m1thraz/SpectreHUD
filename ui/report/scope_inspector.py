@@ -7,6 +7,7 @@ Out-of-Scope exclusions, assessment approach (Black/Grey/Whitebox), and Rules of
 from typing import List, Optional
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -39,49 +40,68 @@ from ui.report.inspector_style import (
 from ui.styles.icons import get_theme_color, icon
 
 
-_SCOPE_INPUT_STYLE = (
-    "QLineEdit { "
-    "background: rgba(13, 17, 23, 0.7); "
-    "border: 1px solid rgba(48, 54, 61, 0.7); "
-    "border-radius: 4px; "
-    "color: #f0f6fc; "
-    "padding: 3px 6px; "
-    "font-size: 11px; "
-    "} "
-    "QLineEdit:focus { "
-    "background: rgba(13, 17, 23, 0.95); "
-    "border: 1px solid #00e5ff; "
-    "color: #ffffff; "
-    "} "
-    "QLineEdit::placeholder { "
-    "color: #6e7681; "
-    "}"
-)
+def _get_scope_input_style() -> str:
+    bg_dark = get_theme_color("BG_DARK")
+    qc_bg = QColor(bg_dark)
+    border_def = get_theme_color("BORDER_DEFAULT")
+    qc_border = QColor(border_def)
+    accent_brand = get_theme_color("ACCENT_BRAND")
+    text_primary = get_theme_color("TEXT_PRIMARY")
+    text_muted = get_theme_color("TEXT_MUTED")
+    return (
+        "QLineEdit { "
+        f"background: rgba({qc_bg.red()}, {qc_bg.green()}, {qc_bg.blue()}, 0.7); "
+        f"border: 1px solid rgba({qc_border.red()}, {qc_border.green()}, {qc_border.blue()}, 0.7); "
+        "border-radius: 4px; "
+        f"color: {text_primary}; "
+        "padding: 3px 6px; "
+        "font-size: 11px; "
+        "} "
+        "QLineEdit:focus { "
+        f"background: rgba({qc_bg.red()}, {qc_bg.green()}, {qc_bg.blue()}, 0.95); "
+        f"border: 1px solid {accent_brand}; "
+        f"color: {text_primary}; "
+        "} "
+        "QLineEdit::placeholder { "
+        f"color: {text_muted}; "
+        "}"
+    )
 
-_SCOPE_COMBO_STYLE = (
-    "QComboBox { "
-    "background: rgba(13, 17, 23, 0.7); "
-    "border: 1px solid rgba(48, 54, 61, 0.7); "
-    "border-radius: 4px; "
-    "color: #c9d1d9; "
-    "padding: 3px 6px; "
-    "font-size: 11px; "
-    "} "
-    "QComboBox:hover, QComboBox:focus { "
-    "border-color: #00e5ff; "
-    "color: #f0f6fc; "
-    "} "
-    "QComboBox::drop-down { "
-    "border: none; "
-    "width: 18px; "
-    "} "
-    "QComboBox QAbstractItemView { "
-    "background: #161b22; "
-    "color: #f0f6fc; "
-    "selection-background-color: #1f293d; "
-    "selection-color: #00e5ff; "
-    "}"
-)
+
+def _get_scope_combo_style() -> str:
+    bg_dark = get_theme_color("BG_DARK")
+    qc_bg = QColor(bg_dark)
+    border_def = get_theme_color("BORDER_DEFAULT")
+    qc_border = QColor(border_def)
+    accent_brand = get_theme_color("ACCENT_BRAND")
+    text_primary = get_theme_color("TEXT_PRIMARY")
+    text_sec = get_theme_color("TEXT_SECONDARY")
+    bg_surf = get_theme_color("BG_SURFACE")
+    bg_card = get_theme_color("BG_CARD")
+    return (
+        "QComboBox { "
+        f"background: rgba({qc_bg.red()}, {qc_bg.green()}, {qc_bg.blue()}, 0.7); "
+        f"border: 1px solid rgba({qc_border.red()}, {qc_border.green()}, {qc_border.blue()}, 0.7); "
+        "border-radius: 4px; "
+        f"color: {text_sec}; "
+        "padding: 3px 6px; "
+        "font-size: 11px; "
+        "} "
+        "QComboBox:hover, QComboBox:focus { "
+        f"border-color: {accent_brand}; "
+        f"color: {text_primary}; "
+        "} "
+        "QComboBox::drop-down { "
+        "border: none; "
+        "width: 18px; "
+        "} "
+        "QComboBox QAbstractItemView { "
+        f"background: {bg_surf}; "
+        f"color: {text_primary}; "
+        f"selection-background-color: {bg_card}; "
+        f"selection-color: {accent_brand}; "
+        "}"
+    )
 
 
 class ReportScopeInspector(QWidget):
@@ -137,9 +157,11 @@ class ReportScopeInspector(QWidget):
         top_row.addStretch()
 
         self.lbl_badge = QLabel()
+        accent_brand = get_theme_color("ACCENT_BRAND")
+        qc_brand = QColor(accent_brand)
         self.lbl_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
-            "background: rgba(0, 229, 255, 0.15); color: #00e5ff; border: 1px solid rgba(0, 229, 255, 0.35);"
+            f"font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 4px; "
+            f"background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.15); color: {accent_brand}; border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.35);"
         )
         top_row.addWidget(self.lbl_badge)
         v_header.addLayout(top_row)
@@ -148,11 +170,13 @@ class ReportScopeInspector(QWidget):
         actions_row.setSpacing(8)
 
         self.btn_import_target = QPushButton(t("report.scope_import_project_ip", "Projekt-IP übernehmen"))
-        self.btn_import_target.setIcon(icon("fa5s.download", color="#7ee787"))
+        succ_col = get_theme_color("SUCCESS")
+        qc_succ = QColor(succ_col)
+        self.btn_import_target.setIcon(icon("fa5s.download", color=succ_col))
         self.btn_import_target.setStyleSheet(
-            "QPushButton { background: rgba(126, 231, 135, 0.12); border: 1px solid rgba(126, 231, 135, 0.35); "
-            "border-radius: 4px; color: #7ee787; font-weight: bold; padding: 4px 10px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(126, 231, 135, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.12); border: 1px solid rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.35); "
+            f"border-radius: 4px; color: {succ_col}; font-weight: bold; padding: 4px 10px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_succ.red()}, {qc_succ.green()}, {qc_succ.blue()}, 0.25); }}"
         )
         self.btn_import_target.clicked.connect(self._on_import_target_clicked)
         actions_row.addWidget(self.btn_import_target)
@@ -189,23 +213,23 @@ class ReportScopeInspector(QWidget):
         self.appr_group = QButtonGroup(self)
 
         self.btn_blackbox = QPushButton(t("report.approach_blackbox", "Blackbox"))
-        self.btn_blackbox.setIcon(icon("fa5s.user-secret", color="#f85149"))
+        self.btn_blackbox.setIcon(icon("fa5s.user-secret", color=get_theme_color("ERROR")))
         self.btn_blackbox.setCheckable(True)
-        self._style_approach_btn(self.btn_blackbox, "#f85149")
+        self._style_approach_btn(self.btn_blackbox, get_theme_color("ERROR"))
         self.appr_group.addButton(self.btn_blackbox)
         btn_row.addWidget(self.btn_blackbox)
 
         self.btn_greybox = QPushButton(t("report.approach_greybox", "Greybox"))
-        self.btn_greybox.setIcon(icon("fa5s.user-shield", color="#d29922"))
+        self.btn_greybox.setIcon(icon("fa5s.user-shield", color=get_theme_color("WARNING")))
         self.btn_greybox.setCheckable(True)
-        self._style_approach_btn(self.btn_greybox, "#d29922")
+        self._style_approach_btn(self.btn_greybox, get_theme_color("WARNING"))
         self.appr_group.addButton(self.btn_greybox)
         btn_row.addWidget(self.btn_greybox)
 
         self.btn_whitebox = QPushButton(t("report.approach_whitebox", "Whitebox"))
-        self.btn_whitebox.setIcon(icon("fa5s.file-code", color="#58a6ff"))
+        self.btn_whitebox.setIcon(icon("fa5s.file-code", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_whitebox.setCheckable(True)
-        self._style_approach_btn(self.btn_whitebox, "#58a6ff")
+        self._style_approach_btn(self.btn_whitebox, get_theme_color("ACCENT_PRIMARY"))
         self.appr_group.addButton(self.btn_whitebox)
         btn_row.addWidget(self.btn_whitebox)
 
@@ -217,7 +241,7 @@ class ReportScopeInspector(QWidget):
         self.btn_whitebox.clicked.connect(lambda: self._set_approach("whitebox"))
 
         self.lbl_appr_desc = QLabel()
-        self.lbl_appr_desc.setStyleSheet("font-size: 11px; color: #8b949e; font-style: italic;")
+        self.lbl_appr_desc.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-style: italic;")
         appr_layout.addWidget(self.lbl_appr_desc)
 
         self.txt_appr_details = QLineEdit()
@@ -225,8 +249,8 @@ class ReportScopeInspector(QWidget):
             t("report.approach_details_placeholder", "Zusätzliche Methodik-Details / Berechtigungsstufen (optional)...")
         )
         self.txt_appr_details.setStyleSheet(
-            "QLineEdit { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #c9d1d9; padding: 4px 8px; } "
-            "QLineEdit:focus { border-color: #00e5ff; }"
+            f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 4px 8px; }} "
+            f"QLineEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.txt_appr_details.textChanged.connect(self._on_field_changed)
         appr_layout.addWidget(self.txt_appr_details)
@@ -246,11 +270,11 @@ class ReportScopeInspector(QWidget):
         in_header_row.addStretch()
 
         self.btn_add_in = QPushButton(t("report.scope_add_target", "Ziel hinzufügen"))
-        self.btn_add_in.setIcon(icon("fa5s.plus", color="#00e5ff"))
+        self.btn_add_in.setIcon(icon("fa5s.plus", color=accent_brand))
         self.btn_add_in.setStyleSheet(
-            "QPushButton { background: rgba(0, 229, 255, 0.12); border: 1px solid rgba(0, 229, 255, 0.35); "
-            "border-radius: 4px; color: #00e5ff; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(0, 229, 255, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.12); border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.35); "
+            f"border-radius: 4px; color: {accent_brand}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
         )
         self.btn_add_in.clicked.connect(self._on_add_in_target_clicked)
         in_header_row.addWidget(self.btn_add_in)
@@ -289,11 +313,13 @@ class ReportScopeInspector(QWidget):
         out_header_row.addStretch()
 
         self.btn_add_out = QPushButton(t("report.scope_add_exclusion", "Ausschluss hinzufügen"))
-        self.btn_add_out.setIcon(icon("fa5s.plus", color="#f85149"))
+        err_col = get_theme_color("ERROR")
+        qc_err = QColor(err_col)
+        self.btn_add_out.setIcon(icon("fa5s.plus", color=err_col))
         self.btn_add_out.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.35); "
-            "border-radius: 4px; color: #f85149; font-weight: bold; padding: 3px 8px; font-size: 11px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.12); border: 1px solid rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.35); "
+            f"border-radius: 4px; color: {err_col}; font-weight: bold; padding: 3px 8px; font-size: 11px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.25); }}"
         )
         self.btn_add_out.clicked.connect(self._on_add_out_target_clicked)
         out_header_row.addWidget(self.btn_add_out)
@@ -355,7 +381,7 @@ class ReportScopeInspector(QWidget):
         roe_layout.addWidget(self.chk_service_window)
 
         lbl_custom = QLabel(t("report.scope_custom_rules_label", "Individuelle Absprachen / Notfallkontakte:"))
-        lbl_custom.setStyleSheet("font-size: 11px; color: #8b949e; font-weight: 500; margin-top: 4px;")
+        lbl_custom.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500; margin-top: 4px;")
         roe_layout.addWidget(lbl_custom)
 
         self.txt_custom_rules = QPlainTextEdit()
@@ -364,8 +390,8 @@ class ReportScopeInspector(QWidget):
         )
         self.txt_custom_rules.setMaximumHeight(75)
         self.txt_custom_rules.setStyleSheet(
-            "QPlainTextEdit { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #c9d1d9; padding: 4px; } "
-            "QPlainTextEdit:focus { border-color: #00e5ff; }"
+            f"QPlainTextEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 4px; }} "
+            f"QPlainTextEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
         )
         self.txt_custom_rules.textChanged.connect(self._on_field_changed)
         roe_layout.addWidget(self.txt_custom_rules)
@@ -379,20 +405,20 @@ class ReportScopeInspector(QWidget):
         btn.setStyleSheet(
             f"""
             QPushButton {{
-                background: #161b22;
-                border: 1px solid #30363d;
+                background: {get_theme_color("BG_CARD")};
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 border-radius: 4px;
-                color: #8b949e;
+                color: {get_theme_color("TEXT_MUTED")};
                 font-weight: 600;
                 font-size: 11px;
                 padding: 5px 12px;
             }}
             QPushButton:hover {{
                 border-color: {active_color};
-                color: #f0f6fc;
+                color: {get_theme_color("TEXT_PRIMARY")};
             }}
             QPushButton:checked {{
-                background: rgba(48, 54, 61, 0.4);
+                background: {get_theme_color("BG_SURFACE")};
                 border-color: {active_color};
                 color: {active_color};
             }}
@@ -406,59 +432,60 @@ class ReportScopeInspector(QWidget):
         table.setMinimumWidth(0)
         table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         table.setStyleSheet(
-            """
-            QTableWidget {
-                background: #161b22;
-                border: 1px solid #30363d;
+            f"""
+            QTableWidget {{
+                background: {get_theme_color("BG_SURFACE")};
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 border-radius: 4px;
-                gridline-color: #21262d;
-                color: #f0f6fc;
+                gridline-color: {get_theme_color("BORDER_DARK")};
+                color: {get_theme_color("TEXT_PRIMARY")};
                 font-size: 11px;
                 selection-background-color: transparent;
-                selection-color: #f0f6fc;
-            }
-            QTableWidget::item {
+                selection-color: {get_theme_color("TEXT_PRIMARY")};
+            }}
+            QTableWidget::item {{
                 background: transparent;
-            }
-            QTableWidget::item:selected {
+            }}
+            QTableWidget::item:selected {{
                 background: transparent;
-            }
-            QTableWidget::item:focus {
+            }}
+            QTableWidget::item:focus {{
                 background: transparent;
                 border: none;
                 outline: none;
-            }
-            QHeaderView::section {
-                background: #0d1117;
-                color: #8b949e;
+            }}
+            QHeaderView::section {{
+                background: {get_theme_color("BG_DARK")};
+                color: {get_theme_color("TEXT_MUTED")};
                 font-weight: bold;
                 font-size: 11px;
                 border: none;
-                border-bottom: 1px solid #30363d;
+                border-bottom: 1px solid {get_theme_color("BORDER_DEFAULT")};
                 padding: 5px 8px;
-            }
+            }}
             """
         )
 
     def _style_checkbox(self, chk: QCheckBox) -> None:
+        accent_brand = get_theme_color("ACCENT_BRAND")
         chk.setStyleSheet(
-            """
-            QCheckBox {
-                color: #c9d1d9;
+            f"""
+            QCheckBox {{
+                color: {get_theme_color("TEXT_SECONDARY")};
                 font-size: 11px;
                 spacing: 6px;
-            }
-            QCheckBox::indicator {
+            }}
+            QCheckBox::indicator {{
                 width: 14px;
                 height: 14px;
                 border-radius: 3px;
-                border: 1px solid #30363d;
-                background: #0d1117;
-            }
-            QCheckBox::indicator:checked {
-                background: #00e5ff;
-                border-color: #00e5ff;
-            }
+                border: 1px solid {get_theme_color("BORDER_DEFAULT")};
+                background: {get_theme_color("BG_DARK")};
+            }}
+            QCheckBox::indicator:checked {{
+                background: {accent_brand};
+                border-color: {accent_brand};
+            }}
             """
         )
 
@@ -530,7 +557,7 @@ class ReportScopeInspector(QWidget):
         # Col 0: Target input
         edit_tgt = QLineEdit(item.target)
         edit_tgt.setPlaceholderText("z. B. 10.10.10.0/24")
-        edit_tgt.setStyleSheet(_SCOPE_INPUT_STYLE)
+        edit_tgt.setStyleSheet(_get_scope_input_style())
         edit_tgt.textChanged.connect(lambda t, idx=row: self._on_in_target_changed(idx, t))
         self.tbl_in_targets.setCellWidget(row, 0, edit_tgt)
 
@@ -550,7 +577,7 @@ class ReportScopeInspector(QWidget):
             if item.target_type == k:
                 cur_type_idx = idx
         cmb_type.setCurrentIndex(cur_type_idx)
-        cmb_type.setStyleSheet(_SCOPE_COMBO_STYLE)
+        cmb_type.setStyleSheet(_get_scope_combo_style())
         cmb_type.currentIndexChanged.connect(lambda _, c=cmb_type, idx=row: self._on_in_type_changed(idx, str(c.currentData())))
         self.tbl_in_targets.setCellWidget(row, 1, cmb_type)
 
@@ -568,24 +595,26 @@ class ReportScopeInspector(QWidget):
             if item.environment == k:
                 cur_env_idx = idx
         cmb_env.setCurrentIndex(cur_env_idx)
-        cmb_env.setStyleSheet(_SCOPE_COMBO_STYLE)
+        cmb_env.setStyleSheet(_get_scope_combo_style())
         cmb_env.currentIndexChanged.connect(lambda _, c=cmb_env, idx=row: self._on_in_env_changed(idx, str(c.currentData())))
         self.tbl_in_targets.setCellWidget(row, 2, cmb_env)
 
         # Col 3: Description input
         edit_desc = QLineEdit(item.description)
         edit_desc.setPlaceholderText(t("report.scope_desc_placeholder", "Zweck / Notiz..."))
-        edit_desc.setStyleSheet(_SCOPE_INPUT_STYLE)
+        edit_desc.setStyleSheet(_get_scope_input_style())
         edit_desc.textChanged.connect(lambda d, idx=row: self._on_in_desc_changed(idx, d))
         self.tbl_in_targets.setCellWidget(row, 3, edit_desc)
 
         # Col 4: Delete button
         btn_del = QPushButton()
-        btn_del.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        err_col = get_theme_color("ERROR")
+        qc_err = QColor(err_col)
+        btn_del.setIcon(icon("fa5s.trash-alt", color=err_col))
         btn_del.setToolTip(t("report.delete_row", "Zeile löschen"))
         btn_del.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; padding: 2px 6px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.1); border: 1px solid rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.25); }}"
         )
         btn_del.clicked.connect(lambda _, idx=row: self._on_delete_in_target(idx))
         self.tbl_in_targets.setCellWidget(row, 4, btn_del)
@@ -599,24 +628,26 @@ class ReportScopeInspector(QWidget):
         # Col 0: Excluded target
         edit_tgt = QLineEdit(item.target)
         edit_tgt.setPlaceholderText("z. B. 10.10.10.1 Gateway")
-        edit_tgt.setStyleSheet(_SCOPE_INPUT_STYLE)
+        edit_tgt.setStyleSheet(_get_scope_input_style())
         edit_tgt.textChanged.connect(lambda t, idx=row: self._on_out_target_changed(idx, t))
         self.tbl_out_targets.setCellWidget(row, 0, edit_tgt)
 
         # Col 1: Reason input
         edit_rsn = QLineEdit(item.reason)
         edit_rsn.setPlaceholderText(t("report.scope_reason_placeholder", "Ausschlussgrund (z. B. Produktives Routing, Fremdhosting)..."))
-        edit_rsn.setStyleSheet(_SCOPE_INPUT_STYLE)
+        edit_rsn.setStyleSheet(_get_scope_input_style())
         edit_rsn.textChanged.connect(lambda r, idx=row: self._on_out_reason_changed(idx, r))
         self.tbl_out_targets.setCellWidget(row, 1, edit_rsn)
 
         # Col 2: Delete button
         btn_del = QPushButton()
-        btn_del.setIcon(icon("fa5s.trash-alt", color="#f85149"))
+        err_col = get_theme_color("ERROR")
+        qc_err = QColor(err_col)
+        btn_del.setIcon(icon("fa5s.trash-alt", color=err_col))
         btn_del.setToolTip(t("report.delete_row", "Zeile löschen"))
         btn_del.setStyleSheet(
-            "QPushButton { background: rgba(248, 81, 73, 0.1); border: 1px solid rgba(248, 81, 73, 0.3); border-radius: 3px; padding: 2px 6px; } "
-            "QPushButton:hover { background: rgba(248, 81, 73, 0.25); }"
+            f"QPushButton {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.1); border: 1px solid rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
+            f"QPushButton:hover {{ background: rgba({qc_err.red()}, {qc_err.green()}, {qc_err.blue()}, 0.25); }}"
         )
         btn_del.clicked.connect(lambda _, idx=row: self._on_delete_out_target(idx))
         self.tbl_out_targets.setCellWidget(row, 2, btn_del)

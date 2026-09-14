@@ -24,15 +24,7 @@ from core.phases import normalize_phase_key
 from core.reporting import ReportWorkspaceDocument, assess_report_readiness
 from ui.glass_panel import GlassPanel
 from ui.report.navigation import ReportLocation
-from ui.styles.icons import get_theme_color, icon
-
-SEV_COLORS = {
-    "critical": "#f85149",
-    "high": "#e3b341",
-    "medium": "#d29922",
-    "low": "#39d353",
-    "info": "#58a6ff",
-}
+from ui.styles.icons import get_severity_color, get_theme_color, icon
 
 SEV_ICONS = {
     "critical": "fa5s.exclamation-circle",
@@ -43,12 +35,12 @@ SEV_ICONS = {
 }
 
 PHASE_META = {
-    "recon": ("Reconnaissance", "fa5s.search", "#79c0ff"),
-    "access": ("Initial Access", "fa5s.door-open", "#f85149"),
-    "privesc": ("Privilege Escalation", "fa5s.key", "#d29922"),
-    "postex": ("Post-Exploitation", "fa5s.network-wired", "#bc8cff"),
-    "scripts": ("Scripts & Automation", "fa5s.code", "#7ee787"),
-    "misc": ("Miscellaneous", "fa5s.folder", "#8b949e"),
+    "recon": ("Reconnaissance", "fa5s.search", "ACCENT_BRAND"),
+    "access": ("Initial Access", "fa5s.door-open", "ERROR"),
+    "privesc": ("Privilege Escalation", "fa5s.key", "WARNING"),
+    "postex": ("Post-Exploitation", "fa5s.network-wired", "ACCENT_HIGHLIGHT"),
+    "scripts": ("Scripts & Automation", "fa5s.code", "SUCCESS"),
+    "misc": ("Miscellaneous", "fa5s.folder", "TEXT_MUTED"),
 }
 
 
@@ -248,7 +240,7 @@ class ReportWorkspaceNavigator(QWidget):
             localized_phase_name = t(f"phases.{phase_key}", phase_name)
             item_phase = QTreeWidgetItem(item_findings_root)
             item_phase.setText(0, f"{localized_phase_name} ({len(phase_findings)})")
-            item_phase.setIcon(0, icon(phase_icon, color=phase_color))
+            item_phase.setIcon(0, icon(phase_icon, color=get_theme_color(phase_color)))
             item_phase.setData(0, Qt.ItemDataRole.UserRole, ("phase_group", phase_key))
 
             for f in phase_findings:
@@ -256,7 +248,7 @@ class ReportWorkspaceNavigator(QWidget):
                 item_f.setText(0, f.title or t("report.finding_unnamed", "Untitled Finding"))
                 sev = (f.severity or "medium").lower()
                 ic_name = SEV_ICONS.get(sev, "fa5s.circle")
-                color = SEV_COLORS.get(sev, "#d29922")
+                color = get_severity_color(sev)
                 item_f.setIcon(0, icon(ic_name, color=color))
                 tooltip = f"[{sev.upper()}] {f.title}\nStatus: {f.status}\nPhase: {f.phase}"
                 item_f.setToolTip(0, tooltip)
@@ -270,13 +262,13 @@ class ReportWorkspaceNavigator(QWidget):
         if other_findings:
             item_other = QTreeWidgetItem(item_findings_root)
             item_other.setText(0, t("report.phase_other", "Other ({count})", count=len(other_findings)))
-            item_other.setIcon(0, icon("fa5s.folder", color="#8b949e"))
+            item_other.setIcon(0, icon("fa5s.folder", color=get_theme_color("TEXT_MUTED")))
             item_other.setData(0, Qt.ItemDataRole.UserRole, ("phase_group", "misc"))
             for f in other_findings:
                 item_f = QTreeWidgetItem(item_other)
                 item_f.setText(0, f.title or t("report.finding_unnamed", "Untitled Finding"))
                 sev = (f.severity or "medium").lower()
-                item_f.setIcon(0, icon(SEV_ICONS.get(sev, "fa5s.circle"), color=SEV_COLORS.get(sev, "#d29922")))
+                item_f.setIcon(0, icon(SEV_ICONS.get(sev, "fa5s.circle"), color=get_severity_color(sev)))
                 item_f.setData(0, Qt.ItemDataRole.UserRole, ("finding", f.id))
             item_other.setExpanded(False)
 

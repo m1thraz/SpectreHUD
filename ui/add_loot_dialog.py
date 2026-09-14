@@ -14,6 +14,7 @@ from core.loot import LOOT_TYPES, CATEGORIES
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
+from ui.styles.icons import get_severity_color, get_theme_color, icon
 
 
 class AddLootDialog(BaseHudDialog):
@@ -144,14 +145,15 @@ class AddLootDialog(BaseHudDialog):
 
         self.combo_severity = QComboBox()
         severities = [
-            ("🔵 Info", "info"),
-            ("🟢 Low", "low"),
-            ("🟡 Medium", "medium"),
-            ("🟠 High", "high"),
-            ("🔴 Critical", "critical"),
+            (t("severity.info", "Info"), "info"),
+            (t("severity.low", "Low"), "low"),
+            (t("severity.medium", "Medium"), "medium"),
+            (t("severity.high", "High"), "high"),
+            (t("severity.critical", "Critical"), "critical"),
         ]
         for i, (s_label, s_id) in enumerate(severities):
-            self.combo_severity.addItem(s_label, s_id)
+            sev_icon = icon("fa5s.circle", color=get_severity_color(s_id))
+            self.combo_severity.addItem(sev_icon, s_label, s_id)
             if s_id == self.initial_severity.lower():
                 self.combo_severity.setCurrentIndex(i)
         sev_col.addWidget(self.combo_severity)
@@ -245,7 +247,7 @@ class AddLootDialog(BaseHudDialog):
         btn_layout.setSpacing(8)
 
         lbl_hint = QLabel(t("loot_dialog.btn_hint", "↵ Enter: Save | Esc: Cancel"))
-        lbl_hint.setStyleSheet("color: #6e7681; font-size: 11px;")
+        lbl_hint.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         btn_layout.addWidget(lbl_hint)
 
         if self.is_edit and self.entry_id:

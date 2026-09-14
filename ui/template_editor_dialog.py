@@ -28,6 +28,7 @@ from core.loot import CATEGORIES
 from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
+from ui.styles.icons import get_theme_color
 SECTION_TYPE_KEYS = {
     "header_metadata": ("template_editor.sec_header", "Header & Metadaten"),
     "executive_summary": ("template_editor.sec_summary", "Executive Summary & Findings-Matrix"),
@@ -114,7 +115,7 @@ class SectionEditDialog(BaseHudDialog):
         self.lbl_type_desc = QLabel()
         self.lbl_type_desc.setWordWrap(True)
         self.lbl_type_desc.setStyleSheet(
-            "color: #8b949e; font-size: 11px; font-style: italic; margin-top: 1px; margin-bottom: 4px;"
+            f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; font-style: italic; margin-top: 1px; margin-bottom: 4px;"
         )
         form.addRow("", self.lbl_type_desc)
 
@@ -257,7 +258,7 @@ class TemplateEditorDialog(BaseHudDialog):
                 "Sektionen (Reihenfolge von oben nach unten):",
             )
         )
-        lbl_sec.setStyleSheet("color: #f0f6fc; font-weight: bold; margin-top: 8px;")
+        lbl_sec.setStyleSheet(f"color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; margin-top: 8px;")
         layout.addWidget(lbl_sec)
 
         # Section List + Buttons
