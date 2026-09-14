@@ -1,6 +1,6 @@
 """Central light/print export palette for Report Workspace (re-exported from core)."""
 
-from core.reporting.report_palette import (
+from core.reporting import (
     PRINT_MARGIN_HEADER_COLOR,
     REPORT_ICON_COLORS,
     REPORT_LIGHT_PALETTE,
