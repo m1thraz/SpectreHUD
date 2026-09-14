@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QDialog, QFileDialog, QWidget
 
 from core.i18n import t
 from core.logger import get_logger
-from core.reporting import ReportEvidenceItem
+from core.reporting import ReportEvidenceItem, supporting_evidence_from_loot_entry
 from ui.message_boxes import show_warning_dialog
 from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
@@ -196,21 +196,9 @@ class ReportEvidenceActions:
             return
 
         entry = dialog.selected_entry
-        entry_type = entry.get("type", "note")
-        evidence_type = (
-            "credential"
-            if entry_type in ("credential", "credentials", "hash", "flag")
-            else "code"
-        )
-        self._attach_evidence(
-            ReportEvidenceItem(
-                id=self._new_id(),
-                type=evidence_type,
-                caption=entry.get("title", "Loot"),
-                content=(entry.get("content") or "").strip(),
-                source_loot_id=entry.get("id"),
-            )
-        )
+        evidence = supporting_evidence_from_loot_entry(entry)
+        if evidence is not None:
+            self._attach_evidence(evidence)
 
     def _resolve_project_dir(self) -> Optional[Path]:
         report_file_manager = self.report_file_manager

@@ -104,25 +104,27 @@ from core.reporting.loot_sync import (
     strip_report_markers,
 )
 from core.reporting.outline import HeadingItem, extract_headings
-from core.reporting.workspace_model import (
-    AttackPathStep,
-    ReportAppendix,
-    ReportAttackPath,
-    ReportEvidenceItem,
-    ReportExecutiveSummary,
-    ReportFindingItem,
-    ReportMetadata,
-    ReportNarrativeSection,
-    ReportRemediationPlan,
+from core.reporting.report_metadata import ReportMetadata
+from core.reporting.report_evidence import ReportEvidenceItem
+from core.reporting.report_finding import ReportFindingItem
+from core.reporting.report_appendix import ReportAppendix
+from core.reporting.report_executive_summary import ReportExecutiveSummary
+from core.reporting.report_remediation import ReportRemediationPlan
+from core.reporting.report_attack_path import AttackPathStep, ReportAttackPath
+from core.reporting.report_scope import (
     ReportScopeMethodology,
-    ReportWorkspaceDocument,
     ScopeExclusionItem,
     ScopeTargetItem,
+)
+from core.reporting.workspace_model import (
+    ReportNarrativeSection,
+    ReportWorkspaceDocument,
 )
 from core.reporting.finding_conversion import (
     duplicate_report_finding,
     evidence_from_loot_entry,
     finding_from_loot_entry,
+    supporting_evidence_from_loot_entry,
 )
 
 __all__ = [
@@ -219,4 +221,5 @@ __all__ = [
     "duplicate_report_finding",
     "evidence_from_loot_entry",
     "finding_from_loot_entry",
+    "supporting_evidence_from_loot_entry",
 ]

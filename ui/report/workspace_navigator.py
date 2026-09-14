@@ -57,6 +57,7 @@ class ReportWorkspaceNavigator(QWidget):
 
     navigate_requested = pyqtSignal(object)  # ReportLocation
     add_finding_requested = pyqtSignal()
+    promote_finding_requested = pyqtSignal()
     sync_loot_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None):
@@ -114,6 +115,23 @@ class ReportWorkspaceNavigator(QWidget):
         self.btn_add_finding.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
         self.btn_add_finding.clicked.connect(self.add_finding_requested.emit)
         action_row.addWidget(self.btn_add_finding, stretch=1)
+
+        self.btn_promote_finding = QPushButton(
+            t("report.promote_loot_short", "Loot → Finding")
+        )
+        self.btn_promote_finding.setObjectName("btn_nav_promote_finding")
+        self.btn_promote_finding.setProperty("class", "SecondaryBtn")
+        self.btn_promote_finding.setToolTip(
+            t(
+                "report.promote_loot_tip",
+                "Create a finding from one Loot entry and attach additional Loot as evidence",
+            )
+        )
+        self.btn_promote_finding.setIcon(
+            icon("fa5s.file-medical", color=get_theme_color("STATUS_SUCCESS"))
+        )
+        self.btn_promote_finding.clicked.connect(self.promote_finding_requested.emit)
+        action_row.addWidget(self.btn_promote_finding, stretch=1)
 
         h_layout.addLayout(action_row)
 

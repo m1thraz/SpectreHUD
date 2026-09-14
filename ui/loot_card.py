@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent, QPoint
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QContextMenuEvent, QCursor
 from typing import Dict, Any, Optional
-from core.loot import LOOT_TYPES
+from core.loot import LOOT_TYPES, is_report_finding_entry
 from core.phases import get_phase
 from core.project import get_default_projects_dir
 from core.logger import get_logger
@@ -149,6 +149,22 @@ class LootCard(QFrame):
         self.lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=phase.long))
         configure_badge_label(self.lbl_cat, phase.short, padding=14)
 
+        self.lbl_report_role = QLabel(t("loot.report_finding_badge", "REPORT"))
+        self.lbl_report_role.setTextFormat(Qt.TextFormat.PlainText)
+        self.lbl_report_role.setProperty("class", "CategoryBadge")
+        self.lbl_report_role.setToolTip(
+            t(
+                "loot.report_finding_tip",
+                "This Loot entry participates as a standalone report finding.",
+            )
+        )
+        configure_badge_label(
+            self.lbl_report_role,
+            self.lbl_report_role.text(),
+            padding=14,
+        )
+        self.lbl_report_role.setVisible(is_report_finding_entry(self.entry))
+
         if self.density == "compact":
             layout = QVBoxLayout(self)
             layout.setContentsMargins(8, 5, 8, 5)
@@ -167,6 +183,7 @@ class LootCard(QFrame):
             compact_row.addWidget(self.lbl_title, stretch=1)
 
             compact_row.addWidget(self.lbl_cat)
+            compact_row.addWidget(self.lbl_report_role)
             compact_row.addWidget(self.btn_copy)
 
             layout.addLayout(compact_row)
@@ -237,6 +254,7 @@ class LootCard(QFrame):
             title_row.addWidget(self.lbl_title, stretch=1)
 
             title_row.addWidget(self.lbl_cat)
+            title_row.addWidget(self.lbl_report_role)
             layout.addLayout(title_row)
 
             # If Screenshot: Show image thumbnail & open button

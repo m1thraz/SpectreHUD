@@ -47,6 +47,7 @@ class ResponsiveStackedWidget(QStackedWidget):
 class ReportWorkspaceCallbacks:
     navigate: Callable[[ReportLocation], None]
     add_finding: Callable[[], None]
+    promote_finding: Callable[[], None]
     sync_loot: Callable[[], None]
     text_changed: Callable[[], None]
     metadata_changed: Callable[[Any], None]
@@ -123,6 +124,7 @@ def build_report_workspace_shell(
     navigator = ReportWorkspaceNavigator(parent)
     navigator.navigate_requested.connect(callbacks.navigate)
     navigator.add_finding_requested.connect(callbacks.add_finding)
+    navigator.promote_finding_requested.connect(callbacks.promote_finding)
     navigator.sync_loot_requested.connect(callbacks.sync_loot)
     navigator_glass = wrap_glass_surface(navigator)
     navigator_glass.setMinimumWidth(180)
@@ -166,7 +168,7 @@ def build_report_workspace_shell(
     finding.request_clipboard_history.connect(evidence_actions.attach_clipboard_history)
     finding.request_loot_entry.connect(evidence_actions.attach_loot_entry)
     finding.request_create_finding.connect(callbacks.add_finding)
-    finding.request_loot_sync.connect(callbacks.sync_loot)
+    finding.request_promote_loot.connect(callbacks.promote_finding)
     finding_glass = wrap_glass_surface(finding)
     center_stack.addWidget(finding_glass)
 

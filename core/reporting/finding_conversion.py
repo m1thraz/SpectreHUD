@@ -44,6 +44,28 @@ def evidence_from_loot_entry(entry: Mapping[str, Any]) -> Optional[ReportEvidenc
     return None
 
 
+def supporting_evidence_from_loot_entry(
+    entry: Mapping[str, Any],
+) -> Optional[ReportEvidenceItem]:
+    """Convert any content-bearing Loot entry into evidence for an existing finding."""
+    evidence = evidence_from_loot_entry(entry)
+    if evidence is not None:
+        return evidence
+
+    entry_id = str(entry.get("id", "") or "")
+    content = str(entry.get("content", "") or "").strip()
+    if not content:
+        return None
+    return ReportEvidenceItem(
+        id=f"{entry_id}-evidence" if entry_id else "loot-evidence",
+        type="text",
+        caption=str(entry.get("title", "") or "Loot evidence"),
+        content=content,
+        source_loot_id=entry_id or None,
+        language=str(entry.get("type", "note") or "note").lower(),
+    )
+
+
 def finding_from_loot_entry(
     entry: Mapping[str, Any],
     *,

@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QComboBox,
+    QCheckBox,
     QWidget,
 )
 from typing import Dict, Any, Optional, Callable
@@ -38,6 +39,7 @@ class AddLootDialog(BaseHudDialog):
         default_recommendation: str = "",
         initial_recommendation: str = "",
         recommendation: str = "",
+        default_report_role: str = "evidence",
         entry_id: Optional[str] = None,
         is_edit: bool = False,
         on_export_file: Optional[Callable[[str], None]] = None,
@@ -77,6 +79,9 @@ class AddLootDialog(BaseHudDialog):
             or initial_recommendation
             or recommendation
             or kwargs.get("remediation", "")
+        )
+        self.initial_report_role = str(
+            kwargs.get("report_role", default_report_role) or "evidence"
         )
 
         # When opened non-modally (Quick Loot), set to True after first activation
@@ -214,6 +219,18 @@ class AddLootDialog(BaseHudDialog):
         self.txt_recommendation.setFixedHeight(100)
         layout.addWidget(self.txt_recommendation)
 
+        self.chk_report_finding = QCheckBox(
+            t("loot_dialog.report_finding", "Use as a standalone report finding")
+        )
+        self.chk_report_finding.setToolTip(
+            t(
+                "loot_dialog.report_finding_tip",
+                "Finding Loot appears in generated reports; other Loot remains available as supporting evidence.",
+            )
+        )
+        self.chk_report_finding.setChecked(self.initial_report_role in {"finding", "legacy"})
+        layout.addWidget(self.chk_report_finding)
+
         # 4. Target IP
         lbl_target = QLabel(t("loot_dialog.lbl_target", "Associated Target (optional):"))
         lbl_target.setProperty("class", "FormLabel")
@@ -287,6 +304,9 @@ class AddLootDialog(BaseHudDialog):
             "title": self.txt_title.text().strip(),
             "content": self.txt_content.toPlainText().strip(),
             "recommendation": self.txt_recommendation.toPlainText().strip(),
+            "report_role": (
+                "finding" if self.chk_report_finding.isChecked() else "evidence"
+            ),
             "target_ip": self.txt_target.text().strip(),
         }
         if self.entry_id:

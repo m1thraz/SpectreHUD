@@ -89,6 +89,41 @@ class TestLootManager(unittest.TestCase):
         )
         self.assertEqual(recommendations["No recommendation"], "")
 
+    def test_report_roles_are_persisted_and_assigned_atomically(self):
+        primary = self.loot_mgr.add_entry(
+            "note", "Authentication bypass", "Unsigned token accepted", report_role="evidence"
+        )
+        proof = self.loot_mgr.add_entry(
+            "screenshot", "Bypass proof", "loot/proof.png", report_role="finding"
+        )
+
+        promoted = self.loot_mgr.assign_report_roles(primary["id"], [proof["id"]])
+
+        self.assertIsNotNone(promoted)
+        roles = {
+            entry["id"]: entry["report_role"]
+            for entry in self.loot_mgr.get_all_entries()
+        }
+        self.assertEqual(roles[primary["id"]], "finding")
+        self.assertEqual(roles[proof["id"]], "evidence")
+        reloaded = LootManager(storage_file=self.storage_file)
+        self.assertEqual(
+            {entry["id"]: entry["report_role"] for entry in reloaded.get_all_entries()},
+            roles,
+        )
+
+    def test_report_role_assignment_rolls_back_on_persistence_failure(self):
+        primary = self.loot_mgr.add_entry(
+            "note", "Primary", "Details", report_role="evidence"
+        )
+        before = self.loot_mgr.get_all_entries()
+
+        with patch.object(self.loot_mgr.storage, "save_json", return_value=False):
+            with self.assertRaises(PersistenceError):
+                self.loot_mgr.assign_report_roles(primary["id"], [])
+
+        self.assertEqual(self.loot_mgr.get_all_entries(), before)
+
     def test_add_rejects_entry_beyond_persisted_limit(self):
         """The 1001st live entry must not create state that a session save truncates."""
         self.loot_mgr.entries = [
@@ -183,6 +218,8 @@ class TestLootManager(unittest.TestCase):
         self.assertEqual(len(mgr.entries), 2)
         self.assertEqual(mgr.entries[0]["category"], "misc")
         self.assertEqual(mgr.entries[1]["category"], "misc")
+        self.assertEqual(mgr.entries[0]["report_role"], "legacy")
+        self.assertEqual(mgr.entries[1]["report_role"], "legacy")
 
         # Check that file on disk was IMMEDIATELY updated without needing manual save
         with open(legacy_file, "r", encoding="utf-8") as f:

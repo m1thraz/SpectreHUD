@@ -101,6 +101,7 @@ class LootController(QObject):
         category: str = "misc",
         severity: str = "info",
         recommendation: str = "",
+        report_role: str = "evidence",
     ) -> Dict[str, Any]:
         try:
             entry = self.loot_manager.add_entry(
@@ -111,6 +112,7 @@ class LootController(QObject):
                 category=category,
                 severity=severity,
                 recommendation=recommendation,
+                report_role=report_role,
             )
             self.loot_updated.emit()
             return entry
@@ -128,6 +130,7 @@ class LootController(QObject):
         entry_type: Optional[str] = None,
         severity: Optional[str] = None,
         recommendation: Optional[str] = None,
+        report_role: Optional[str] = None,
     ) -> bool:
         try:
             fields: Dict[str, Any] = {
@@ -143,6 +146,8 @@ class LootController(QObject):
                 fields["severity"] = severity
             if recommendation is not None:
                 fields["recommendation"] = recommendation
+            if report_role is not None:
+                fields["report_role"] = report_role
             success = self.loot_manager.update_entry(**fields)
             if success:
                 self.loot_updated.emit()
@@ -621,6 +626,7 @@ class LootController(QObject):
                     category=data.get("category", "misc"),
                     severity=data.get("severity", "info"),
                     recommendation=data.get("recommendation", ""),
+                    report_role=data.get("report_role", "evidence"),
                 )
                 if on_accepted:
                     on_accepted(data)
@@ -662,6 +668,7 @@ class LootController(QObject):
                 category=data.get("category", "misc"),
                 severity=data.get("severity", "info"),
                 recommendation=data.get("recommendation", ""),
+                report_role=data.get("report_role", "evidence"),
             )
             if on_accepted:
                 on_accepted(data)
@@ -685,6 +692,7 @@ class LootController(QObject):
             default_title=entry.get("title", ""),
             default_content=entry.get("content", ""),
             default_recommendation=entry.get("recommendation", ""),
+            default_report_role=entry.get("report_role", "legacy"),
             default_severity=entry.get("severity", "info"),
             on_export_file=on_export_file,
             on_export_obsidian=on_export_obsidian,
@@ -700,6 +708,7 @@ class LootController(QObject):
                 entry_type=data.get("type"),
                 severity=data.get("severity"),
                 recommendation=data.get("recommendation", ""),
+                report_role=data.get("report_role", "evidence"),
             )
             return True
         return False

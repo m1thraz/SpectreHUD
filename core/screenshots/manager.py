@@ -307,6 +307,7 @@ class ScreenshotManager(QObject):
                 content=markdown_content,
                 target_ip=target_ip,
                 category=phase_id or "misc",
+                report_role="evidence",
             )
             loot_entry["file_path"] = str(filepath)
 

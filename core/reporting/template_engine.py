@@ -11,7 +11,7 @@ from collections import Counter
 from typing import Dict, Any, List, Optional, Callable
 import re
 
-from core.loot import CATEGORIES
+from core.loot import CATEGORIES, is_report_finding_entry
 from core.reporting.charts import render_severity_badge, render_severity_counts
 from core.reporting.loot_sync import format_loot_marker, loot_content_hash
 from core.reporting.section_markers import (
@@ -134,7 +134,7 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
     Only canonical finding severities contribute to summary totals. Pipes and newlines in
     titles/categories cannot alter table structure; an empty row preserves its shape.
     """
-    all_entries = context.loot_entries
+    all_entries = [e for e in context.loot_entries if is_report_finding_entry(e)]
     critical = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "critical")
     high = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "high")
     medium = sum(1 for e in all_entries if str(e.get("severity", "")).lower() == "medium")
@@ -315,7 +315,11 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
     cat_name = _category_name(category_id)
     sec_title = section.title or cat_name
 
-    entries = [e for e in context.loot_entries if e.get("category") == category_id]
+    entries = [
+        e
+        for e in context.loot_entries
+        if e.get("category") == category_id and is_report_finding_entry(e)
+    ]
 
     lines = [f"## {sec_title}", ""]
     if not entries:
@@ -364,7 +368,9 @@ def _render_attack_path(section: TemplateSection, context: ReportContext, lang: 
     step = 0
     for category_id in _section_categories(section):
         entries = [
-            entry for entry in context.loot_entries if entry.get("category") == category_id
+            entry
+            for entry in context.loot_entries
+            if entry.get("category") == category_id and is_report_finding_entry(entry)
         ]
         if not entries:
             continue
@@ -392,7 +398,9 @@ def _render_finding_section(section: TemplateSection, context: ReportContext, la
     finding_count = 0
     for category_id in categories:
         entries = [
-            entry for entry in context.loot_entries if entry.get("category") == category_id
+            entry
+            for entry in context.loot_entries
+            if entry.get("category") == category_id and is_report_finding_entry(entry)
         ]
         for entry in reversed(entries):
             finding_count += 1
@@ -416,7 +424,7 @@ def _render_remediation_table(section: TemplateSection, context: ReportContext, 
         "Empfehlungen (Remediation-Plan)" if lang == "de" else "Remediation & Action Plan"
     )
 
-    all_entries = context.loot_entries
+    all_entries = [e for e in context.loot_entries if is_report_finding_entry(e)]
     remed_rows = []
     num = 0
     for source_index, entry in enumerate(all_entries):

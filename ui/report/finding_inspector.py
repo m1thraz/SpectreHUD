@@ -128,7 +128,7 @@ class ReportFindingInspector(QWidget):
     request_clipboard_history = pyqtSignal()
     request_loot_entry = pyqtSignal()
     request_create_finding = pyqtSignal()
-    request_loot_sync = pyqtSignal()
+    request_promote_loot = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -194,11 +194,13 @@ class ReportFindingInspector(QWidget):
         self.btn_empty_create.clicked.connect(self.request_create_finding.emit)
         btn_row.addWidget(self.btn_empty_create)
 
-        self.btn_empty_sync = QPushButton(t("report.empty_sync_loot_btn", "Aus Loot synchronisieren"))
-        self.btn_empty_sync.setProperty("class", "SecondaryBtn")
-        self.btn_empty_sync.setIcon(icon("fa5s.sync-alt", color="#7ee787"))
-        self.btn_empty_sync.clicked.connect(self.request_loot_sync.emit)
-        btn_row.addWidget(self.btn_empty_sync)
+        self.btn_empty_promote = QPushButton(
+            t("report.empty_promote_loot_btn", "Finding aus Loot erstellen")
+        )
+        self.btn_empty_promote.setProperty("class", "SecondaryBtn")
+        self.btn_empty_promote.setIcon(icon("fa5s.file-medical", color="#7ee787"))
+        self.btn_empty_promote.clicked.connect(self.request_promote_loot.emit)
+        btn_row.addWidget(self.btn_empty_promote)
 
         panel_layout.addLayout(btn_row)
 

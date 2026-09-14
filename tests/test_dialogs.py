@@ -46,9 +46,12 @@ class TestHudDialogs(unittest.TestCase):
         self.assertEqual(data["type"], "credentials")
         self.assertEqual(data["category"], "access")
         self.assertEqual(data["recommendation"], "")
+        self.assertEqual(data["report_role"], "evidence")
         self.assertIsNotNone(dlg.txt_recommendation)
         dlg.txt_recommendation.setPlainText("Rotate the password")
         self.assertEqual(dlg.get_data()["recommendation"], "Rotate the password")
+        dlg.chk_report_finding.setChecked(True)
+        self.assertEqual(dlg.get_data()["report_role"], "finding")
         dlg.close()
 
     def test_edit_loot_dialog_exposes_multiline_recommendation(self):

@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
-from core.loot import CATEGORIES
+from core.loot import CATEGORIES, is_report_finding_entry
 from core.reporting.section_markers import reconcile_section_markers
 
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")
@@ -125,7 +125,7 @@ def classify_loot_report_state(
     and identifies orphaned markers in the report that no longer correspond to active loot.
     """
     markers = extract_report_markers(report_text)
-    entry_dict_list = [dict(e) for e in loot_entries]
+    entry_dict_list = [dict(e) for e in loot_entries if is_report_finding_entry(e)]
     active_ids = {str(e.get("id", "")).strip() for e in entry_dict_list if e.get("id")}
 
     missing: List[Dict[str, Any]] = []

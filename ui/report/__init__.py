@@ -3,6 +3,7 @@
 from ui.report.dialogs import (
     ClipboardHistoryPickerDialog,
     LootEntryPickerDialog,
+    LootFindingPromotionDialog,
     LootImagePickerDialog,
     ReportExportTypeDialog,
     select_html_export_options,
@@ -22,6 +23,7 @@ from ui.report.appendix_inspector import ReportAppendixInspector
 __all__ = [
     "ClipboardHistoryPickerDialog",
     "LootEntryPickerDialog",
+    "LootFindingPromotionDialog",
     "LootImagePickerDialog",
     "ReportAppendixInspector",
     "ReportAttackPathInspector",

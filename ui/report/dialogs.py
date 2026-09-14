@@ -3,6 +3,7 @@ from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -673,6 +674,150 @@ class LootEntryPickerDialog(QDialog):
     def _on_double_clicked(self, item: QListWidgetItem) -> None:
         if self.selected_entry:
             self.accept()
+
+
+class LootFindingPromotionDialog(QDialog):
+    """Select one primary Loot source and zero or more supporting evidence entries."""
+
+    def __init__(
+        self,
+        primary_entries: list[dict],
+        evidence_entries: Optional[list[dict]] = None,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.primary_entries = [entry for entry in primary_entries if isinstance(entry, dict)]
+        self.evidence_entries = [
+            entry
+            for entry in (evidence_entries if evidence_entries is not None else primary_entries)
+            if isinstance(entry, dict)
+        ]
+        self.selected_entry: Optional[dict] = None
+        self.selected_evidence_entries: list[dict] = []
+
+        self.setWindowTitle(
+            t("report.promote_loot_title", "Create Finding from Loot")
+        )
+        self.resize(880, 500)
+        self.setMinimumSize(680, 400)
+
+        layout = QVBoxLayout(self)
+        hint = QLabel(
+            t(
+                "report.promote_loot_hint",
+                "Choose the Loot entry that defines the finding, then select any additional Loot to attach as supporting evidence.",
+            )
+        )
+        hint.setWordWrap(True)
+        hint.setProperty("class", "ReportInspectorHint")
+        layout.addWidget(hint)
+
+        lists = QHBoxLayout()
+        primary_column = QVBoxLayout()
+        primary_column.addWidget(
+            QLabel(t("report.promote_primary", "1. Finding source"))
+        )
+        self.primary_list = QListWidget()
+        self.primary_list.currentRowChanged.connect(self._on_primary_changed)
+        primary_column.addWidget(self.primary_list, stretch=1)
+        lists.addLayout(primary_column, stretch=1)
+
+        evidence_column = QVBoxLayout()
+        self.lbl_evidence = QLabel(
+            t("report.promote_evidence", "2. Supporting evidence (optional)")
+        )
+        evidence_column.addWidget(self.lbl_evidence)
+        self.evidence_list = QListWidget()
+        self.evidence_list.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
+        self.evidence_list.itemSelectionChanged.connect(
+            self._on_evidence_selection_changed
+        )
+        evidence_column.addWidget(self.evidence_list, stretch=1)
+        lists.addLayout(evidence_column, stretch=1)
+        layout.addLayout(lists, stretch=1)
+
+        self.txt_preview = QPlainTextEdit()
+        self.txt_preview.setReadOnly(True)
+        self.txt_preview.setMaximumHeight(110)
+        self.txt_preview.setPlaceholderText(
+            t("report.promote_preview", "Primary Loot preview")
+        )
+        layout.addWidget(self.txt_preview)
+
+        buttons = QHBoxLayout()
+        self.lbl_selection = QLabel("")
+        self.lbl_selection.setProperty("class", "ReportInspectorHint")
+        buttons.addWidget(self.lbl_selection)
+        buttons.addStretch()
+        cancel = QPushButton(t("dialog.cancel", "Cancel"))
+        cancel.setProperty("class", "SecondaryBtn")
+        cancel.clicked.connect(self.reject)
+        buttons.addWidget(cancel)
+        self.btn_promote = QPushButton(
+            t("report.promote_loot_action", "Create Finding")
+        )
+        self.btn_promote.setProperty("class", "PrimaryBtn")
+        self.btn_promote.setIcon(icon("fa5s.file-medical", color="#7ee787"))
+        self.btn_promote.setEnabled(False)
+        self.btn_promote.clicked.connect(self.accept)
+        buttons.addWidget(self.btn_promote)
+        layout.addLayout(buttons)
+
+        self._populate_primary_entries()
+
+    @staticmethod
+    def _entry_label(entry: dict) -> str:
+        entry_type = str(entry.get("type", "note") or "note").upper()
+        title = str(entry.get("title", "") or t("report.unnamed_entry", "Untitled Entry"))
+        target = str(entry.get("target_ip", "") or "")
+        suffix = f" · {target}" if target else ""
+        return f"[{entry_type}] {title}{suffix}"
+
+    def _populate_primary_entries(self) -> None:
+        self.primary_list.clear()
+        for entry in self.primary_entries:
+            item = QListWidgetItem(self._entry_label(entry))
+            item.setData(Qt.ItemDataRole.UserRole, entry)
+            self.primary_list.addItem(item)
+        if self.primary_list.count():
+            self.primary_list.setCurrentRow(0)
+
+    def _on_primary_changed(self, row: int) -> None:
+        item = self.primary_list.item(row) if row >= 0 else None
+        self.selected_entry = (
+            item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        )
+        self.btn_promote.setEnabled(self.selected_entry is not None)
+        self.txt_preview.setPlainText(
+            str(self.selected_entry.get("content", "")) if self.selected_entry else ""
+        )
+        self._populate_evidence_entries()
+
+    def _populate_evidence_entries(self) -> None:
+        primary_id = str(self.selected_entry.get("id", "")) if self.selected_entry else ""
+        self.evidence_list.clear()
+        for entry in self.evidence_entries:
+            if str(entry.get("id", "")) == primary_id:
+                continue
+            item = QListWidgetItem(self._entry_label(entry))
+            item.setData(Qt.ItemDataRole.UserRole, entry)
+            self.evidence_list.addItem(item)
+        self._on_evidence_selection_changed()
+
+    def _on_evidence_selection_changed(self) -> None:
+        self.selected_evidence_entries = [
+            item.data(Qt.ItemDataRole.UserRole)
+            for item in self.evidence_list.selectedItems()
+        ]
+        self.lbl_selection.setText(
+            t(
+                "report.promote_selected_evidence",
+                "{count} supporting entries selected",
+                count=len(self.selected_evidence_entries),
+            )
+        )
 
 
 class ClipboardHistoryPickerDialog(QDialog):

@@ -203,6 +203,7 @@ class LootManager:
         category: str = "misc",
         severity: str = "info",
         recommendation: str = "",
+        report_role: str = "finding",
         **kwargs,
     ) -> Dict[str, Any]:
         """Creates and stores a new loot entry with category and severity classification."""
@@ -224,6 +225,7 @@ class LootManager:
         clean_target_ip = self._validate_user_text(target_ip, "Target IP", MAX_TARGET_IP_LENGTH)
 
         from core.validators import format_timestamp
+        from core.loot.report_roles import normalize_report_role
 
         time_format = kwargs.get("time_format", self.time_format)
         entry = {
@@ -234,6 +236,7 @@ class LootManager:
             "title": clean_title or "Unbenannter Eintrag",
             "content": clean_content,
             "recommendation": clean_recommendation,
+            "report_role": normalize_report_role(report_role),
             "target_ip": clean_target_ip,
             "timestamp": format_timestamp(time_format=time_format),
             "position": 0,
@@ -295,6 +298,10 @@ class LootManager:
                         "Loot recommendation",
                         MAX_RECOMMENDATION_LENGTH,
                     )
+                if "report_role" in fields:
+                    from core.loot.report_roles import normalize_report_role
+
+                    entry["report_role"] = normalize_report_role(fields["report_role"])
                 if "target_ip" in fields:
                     entry["target_ip"] = self._validate_user_text(
                         fields["target_ip"], "Target IP", MAX_TARGET_IP_LENGTH
@@ -312,6 +319,36 @@ class LootManager:
             self.entries = new_entries
             self._publish_updated("update", updated_entry)
         return updated_entry
+
+    def assign_report_roles(
+        self,
+        finding_entry_id: str,
+        evidence_entry_ids: List[str],
+    ) -> Optional[Dict[str, Any]]:
+        """Atomically promote one Loot entry and classify selected supporting evidence."""
+        from core.loot.report_roles import REPORT_ROLE_EVIDENCE, REPORT_ROLE_FINDING
+
+        evidence_ids = {str(entry_id) for entry_id in evidence_entry_ids}
+        evidence_ids.discard(finding_entry_id)
+        new_entries = [dict(entry) for entry in self.entries]
+        promoted = None
+        for entry in new_entries:
+            entry_id = str(entry.get("id", ""))
+            if entry_id == finding_entry_id:
+                entry["report_role"] = REPORT_ROLE_FINDING
+                promoted = entry
+            elif entry_id in evidence_ids:
+                entry["report_role"] = REPORT_ROLE_EVIDENCE
+
+        if promoted is None:
+            return None
+        if not self.storage.save_json("loot", new_entries):
+            raise PersistenceError(
+                f"Could not persist report-role assignment for loot entry {finding_entry_id}."
+            )
+        self.entries = new_entries
+        self._publish_updated("assign_report_roles", promoted)
+        return dict(promoted)
 
     def reorder_entry(
         self, entry_id: str, category: str, target_index: int

@@ -19,6 +19,14 @@ from core.loot.filter import (
     count_loot_by_type,
     filter_loot_entries,
 )
+from core.loot.report_roles import (
+    REPORT_ROLE_EVIDENCE,
+    REPORT_ROLE_FINDING,
+    REPORT_ROLE_LEGACY,
+    VALID_REPORT_ROLES,
+    is_report_finding_entry,
+    normalize_report_role,
+)
 
 __all__ = [
     "CATEGORIES",
@@ -28,7 +36,13 @@ __all__ = [
     "LootManager",
     "LootMigrator",
     "LootValidationError",
+    "REPORT_ROLE_EVIDENCE",
+    "REPORT_ROLE_FINDING",
+    "REPORT_ROLE_LEGACY",
+    "VALID_REPORT_ROLES",
     "count_loot_by_category",
     "count_loot_by_type",
     "filter_loot_entries",
+    "is_report_finding_entry",
+    "normalize_report_role",
 ]
