@@ -31,8 +31,18 @@ STATUS_SUCCESS_HOVER = "#2ea043"
 STATUS_ERROR = "#f85149"
 STATUS_ERROR_BG = "#da3633"
 STATUS_WARNING = "#e3b341"
+STATUS_HIGH = "#ff9940"
 STATUS_PURPLE = "#bc8cff"
 STATUS_GREEN_LIGHT = "#56d364"
+
+# Severity color token mapping for uniform severity styling
+SEVERITY_COLOR_TOKENS: dict[str, str] = {
+    "info": "ACCENT_BRAND",
+    "low": "STATUS_SUCCESS",
+    "medium": "STATUS_WARNING",
+    "high": "STATUS_HIGH",
+    "critical": "STATUS_ERROR",
+}
 
 # Text Colors
 TEXT_PRIMARY = "#f0f6fc"
@@ -73,6 +83,7 @@ CYBER_DARK_PALETTE = {
     "STATUS_ERROR": STATUS_ERROR,
     "STATUS_ERROR_BG": STATUS_ERROR_BG,
     "STATUS_WARNING": STATUS_WARNING,
+    "STATUS_HIGH": STATUS_HIGH,
     "STATUS_PURPLE": STATUS_PURPLE,
     "STATUS_GREEN_LIGHT": STATUS_GREEN_LIGHT,
     "TEXT_PRIMARY": TEXT_PRIMARY,

@@ -25,6 +25,7 @@
     "STATUS_ERROR": "#d13438",
     "STATUS_ERROR_BG": "#c1272a",
     "STATUS_WARNING": "#b5850a",
+    "STATUS_HIGH": "#ca5010",
     "STATUS_PURPLE": "#7c4fd1",
     "STATUS_GREEN_LIGHT": "#2fbf6f",
     "TEXT_PRIMARY": "#1a1f26",

@@ -105,11 +105,24 @@ class ThemeLoader:
                 break
             missing = self.validate_palette(palette)
             if not missing:
-                return {token: str(palette[token]) for token in self.get_required_tokens()}
+                loaded = {token: str(palette[token]) for token in self.get_required_tokens()}
+                return self._apply_semantic_aliases(loaded)
             logger.warning(
                 "Theme '%s' is missing required tokens: %s", selected_id, ", ".join(missing)
             )
             break
         if selected_id != self.FALLBACK_THEME_ID:
             logger.warning("Theme '%s' could not be loaded; using Cyber Dark.", selected_id)
-        return dict(CYBER_DARK_PALETTE)
+        return self._apply_semantic_aliases(dict(CYBER_DARK_PALETTE))
+
+    @staticmethod
+    def _apply_semantic_aliases(palette: Dict[str, str]) -> Dict[str, str]:
+        """Inject semantic role aliases mapped from canonical tokens at load time."""
+        palette["ACCENT_PRIMARY"] = palette["CYBER_BLUE"]
+        palette["ACCENT_BRAND"] = palette["CYBER_CYAN"]
+        palette["ACCENT_HIGHLIGHT"] = palette["STATUS_PURPLE"]
+        palette["SUCCESS"] = palette["STATUS_SUCCESS"]
+        palette["SUCCESS_BG"] = palette["STATUS_SUCCESS_BG"]
+        palette["WARNING"] = palette["STATUS_WARNING"]
+        palette["ERROR"] = palette["STATUS_ERROR"]
+        return palette

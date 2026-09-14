@@ -350,10 +350,13 @@ def _render_phase_section(section: TemplateSection, context: ReportContext, lang
 
 def _section_categories(section: TemplateSection) -> List[str]:
     configured = section.options.get("categories", [])
+    # pyrefly: ignore [unnecessary-type-conversion]
     valid_ids = {str(category["id"]) for category in CATEGORIES}
     if not isinstance(configured, list):
+        # pyrefly: ignore [unnecessary-type-conversion]
         return [str(category["id"]) for category in CATEGORIES]
     categories = [str(category) for category in configured if str(category) in valid_ids]
+    # pyrefly: ignore [unnecessary-type-conversion]
     return categories or [str(category["id"]) for category in CATEGORIES]
 
 
