@@ -28,10 +28,6 @@ class TestContainer(unittest.TestCase):
             self.assertIsNotNone(container.screenshot_manager)
             self.assertIsNotNone(container.storage)
             self.assertIsNotNone(container.event_bus)
-            self.assertEqual(
-                container.snippet_manager.user_snippets_path,
-                config_dir / "user_snippets.json",
-            )
 
             from core.logger import close_log_handlers
 

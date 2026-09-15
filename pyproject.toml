@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spectrehud"
-version = "2.1.9"
+version = "2.1.8"
 description = "Fast, transparent desktop cheatsheet HUD and pentest companion for CTFs and assessments"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,7 +31,8 @@ dev = [
     "wheel>=0.41.0",
     "pyinstaller>=6.0.0",
     "ruff>=0.1.0",
-    "mypy>=1.11.0",
+    "mypy>=1.10.0",
+    "import-linter>=2.0",
 ]
 
 [project.urls]
@@ -64,6 +65,10 @@ timeout = 60
 markers = [
     "integration: cross-component, real Qt window, subprocess, or OS-boundary tests",
     "release: distribution, wheel, installer, and release-artifact tests",
+    "ui: tests requiring PyQt6 widgets, windows, or GUI event loops",
+    "unit: fast, isolated unit tests for pure domain and business logic",
+    "architecture: import boundary, dependency cycle, and layer isolation tests",
+    "slow: tests with long-running timeouts or intensive processing",
 ]
 
 [tool.ruff]
@@ -74,12 +79,13 @@ exclude = [
     ".wheel-venv",
     "build",
     "dist",
+    "tmp",
     ".git",
     "__pycache__",
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "B", "C4"]
 ignore = [
     # E402: Module level import not at top of file
     # Required for headless Qt env (QT_QPA_PLATFORM) and CLI dispatch before PyQt6 imports.
@@ -88,10 +94,14 @@ ignore = [
     "E501",
     # E203: Whitespace before ':' in slices
     "E203",
+    # B008: Function call in argument defaults (standard PyQt QModelIndex() defaults)
+    "B008",
+    # B905: zip() without an explicit strict= parameter
+    "B905",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["F841"]
+"tests/*" = ["F841", "B017"]
 
 [tool.deptry]
 extend_exclude = [".wheel-venv"]
@@ -108,4 +118,60 @@ DEP002 = [
     "coverage",
     "wheel",
     "ruff",
+    "mypy",
+    "import-linter",
+]
+
+[tool.coverage.run]
+source = ["core", "ui"]
+omit = [
+    "tests/*",
+    "scripts/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "."
+explicit_package_bases = true
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_configs = true
+files = ["core", "ui", "main.py"]
+
+exclude = [
+    "^build/",
+    "^dist/",
+    "^\\.venv/",
+    "^tmp/",
+    "^\\.test-.*",
+]
+
+# Strict checking for headless core contracts, domain models, and services
+[[tool.mypy.overrides]]
+module = "core.*"
+check_untyped_defs = true
+
+# PyQt6 stubs in ui/ contain known C++ wrapper overrides and missing event nullability
+[[tool.mypy.overrides]]
+module = "ui.*"
+disable_error_code = [
+    "override",
+    "call-overload",
+    "union-attr",
+    "attr-defined",
+    "arg-type",
+    "assignment",
+    "misc",
+    "no-redef",
+    "method-assign",
 ]

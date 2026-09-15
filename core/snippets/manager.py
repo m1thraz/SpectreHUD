@@ -59,7 +59,6 @@ class SnippetManager:
         default_snippets_path: Optional[Path] = None,
         user_snippets_path: Optional[Path] = None,
         favorites_path: Optional[Path] = None,
-        community_snippets_paths: Optional[List[Path]] = None,
         language: str = "en",
         event_bus: Optional[Any] = None,
     ):
@@ -71,22 +70,11 @@ class SnippetManager:
             user_snippets_path = get_default_config_dir() / "user_snippets.json"
         if favorites_path is None:
             favorites_path = get_default_config_dir() / "user_favorites.json"
-        if community_snippets_paths is None:
-            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
-            community_snippets_paths = sorted(
-                {
-                    path
-                    for pattern in ("community_snippets.json", "community_*.json", "offensive_*.json")
-                    for path in data_dir.glob(pattern)
-                    if path.is_file()
-                }
-            )
 
         self.event_bus = event_bus
         self.default_snippets_path = Path(default_snippets_path)
         self.user_snippets_path = Path(user_snippets_path)
         self.favorites_path = Path(favorites_path)
-        self.community_snippets_paths = [Path(path) for path in community_snippets_paths]
         self.favorite_ids: set = set()
         self.categories: List[Dict[str, Any]] = []
         self.snippets: List[Dict[str, Any]] = []
@@ -120,9 +108,9 @@ class SnippetManager:
                 with open(self.favorites_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
-                        self.favorite_ids = set(
+                        self.favorite_ids = {
                             str(item) for item in data if isinstance(item, (str, int))
-                        )
+                        }
             except (json.JSONDecodeError, RecursionError) as e:
                 logger.error(f"Corrupted favorites JSON at {self.favorites_path}: {e}")
             except (OSError, UnicodeDecodeError) as e:
@@ -134,7 +122,7 @@ class SnippetManager:
 
         try:
             atomic_write_json(
-                self.favorites_path, sorted(list(self.favorite_ids)), indent=2, ensure_ascii=False
+                self.favorites_path, sorted(self.favorite_ids), indent=2, ensure_ascii=False
             )
         except Exception as e:
             logger.error(f"Error saving favorites to {self.favorites_path}: {e}", exc_info=True)
@@ -235,69 +223,12 @@ class SnippetManager:
 
         return user_snippets
 
-    def _load_community_snippets(self) -> None:
-        """Load optional external snippet packs without making them user-owned data."""
-        for pack_path in self.community_snippets_paths:
-            if not pack_path.exists():
-                continue
-            try:
-                with open(pack_path, "r", encoding="utf-8") as handle:
-                    data = json.load(handle)
-            except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as exc:
-                logger.error("Error reading community snippets from %s: %s", pack_path, exc)
-                continue
-
-            if isinstance(data, dict):
-                categories = data.get("categories", [])
-            elif isinstance(data, list):
-                categories = [
-                    {
-                        "id": "community_snippets",
-                        "name": "Community Snippets",
-                        "snippets": data,
-                    }
-                ]
-            else:
-                logger.warning(
-                    "Expected a list or category dictionary in community snippets at %s",
-                    pack_path,
-                )
-                continue
-
-            if not isinstance(categories, list):
-                logger.warning("Invalid categories in community snippets at %s", pack_path)
-                continue
-
-            for category in categories:
-                if not isinstance(category, dict):
-                    continue
-                category_id = category.get("id", category.get("name", "community_snippets"))
-                category_name = category.get("name", "Community Snippets")
-                if not any(item.get("id") == category_id for item in self.categories):
-                    self.categories.append(
-                        {
-                            "id": category_id,
-                            "name": category_name,
-                            "icon": category.get("icon", ""),
-                        }
-                    )
-                for snippet in category.get("snippets", []):
-                    if not isinstance(snippet, dict) or not snippet.get("id"):
-                        continue
-                    loaded = dict(snippet)
-                    loaded["is_custom"] = False
-                    loaded["category_id"] = category_id
-                    loaded["category"] = loaded.get("category", category_name)
-                    loaded["is_favorite"] = loaded["id"] in self.favorite_ids
-                    self.snippets.append(loaded)
-
     def load_all(self) -> None:
         """Loads both default bundled snippets and user-added custom snippets."""
         self.categories = []
         self.snippets = []
 
         self._load_default_snippets()
-        self._load_community_snippets()
 
         custom_category = {"id": "custom_snippets", "name": "Custom Notes & Snippets", "icon": ""}
         user_snippets = self._load_user_snippets()
@@ -436,7 +367,7 @@ class SnippetManager:
             try:
                 atomic_write_json(
                     self.favorites_path,
-                    sorted(list(self.favorite_ids)),
+                    sorted(self.favorite_ids),
                     indent=2,
                     ensure_ascii=False,
                 )
