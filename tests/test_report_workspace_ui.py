@@ -728,7 +728,7 @@ Appendix body
             },
             {
                 "id": "clip-2",
-                "text": "cat /etc/passwd\nroot:x:0:0:root:/root:/bin/bash",
+                "text": "cat /etc/hosts\n127.0.0.1 localhost",
                 "target_ip": "10.10.10.5",
                 "timestamp": "2026-09-12 10:30",
             },
@@ -742,7 +742,7 @@ Appendix body
         self.assertIn("Starting Nmap", dialog.txt_preview.toPlainText())
 
         # Filter by search
-        dialog.search_edit.setText("passwd")
+        dialog.search_edit.setText("hosts")
         self.assertEqual(dialog.list_widget.count(), 1)
         self.assertEqual(dialog.selected_entry["id"], "clip-2")
 
