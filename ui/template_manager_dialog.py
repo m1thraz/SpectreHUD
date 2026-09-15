@@ -181,7 +181,11 @@ class TemplateManagerDialog(BaseHudDialog):
         new_id, ok = QInputDialog.getText(
             self,
             t("template_manager.duplicate_title", "Template duplizieren"),
-            t("template_manager.duplicate_prompt", "Neue ID für Kopie von '{name}':", name=tmpl.name),
+            t(
+                "template_manager.duplicate_prompt",
+                "Neue ID für Kopie von '{name}':",
+                name=tmpl.name,
+            ),
             text=f"{tmpl.id}_copy",
         )
         if not ok or not new_id.strip():

@@ -133,9 +133,7 @@ def reconcile_evidence_markers(original_markdown: str, current_markdown: str) ->
     if not original_blocks:
         return current_markdown
 
-    present_ids = {
-        block.metadata["id"] for block in parse_evidence_blocks(current_markdown)
-    }
+    present_ids = {block.metadata["id"] for block in parse_evidence_blocks(current_markdown)}
     result = current_markdown
     search_start = 0
     for block in original_blocks:

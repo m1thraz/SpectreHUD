@@ -24,9 +24,7 @@ class ReportLocation:
     identity: Optional[str] = None
 
     @classmethod
-    def from_legacy(
-        cls, view_type: str, item_id: Optional[str] = None
-    ) -> "ReportLocation":
+    def from_legacy(cls, view_type: str, item_id: Optional[str] = None) -> "ReportLocation":
         return cls(ReportLocationKind(view_type), item_id)
 
     @classmethod

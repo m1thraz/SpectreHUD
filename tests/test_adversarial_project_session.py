@@ -45,7 +45,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_dir = self.temp_path / "config"
         self.projects_dir = self.temp_path / "projects"
 
-
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()
@@ -236,9 +235,7 @@ class TestWorkflowRobustness(unittest.TestCase):
         workspace.write_text("workspace is unavailable", encoding="utf-8")
 
         self.assertFalse(
-            self.project_mgr.save_project_state(
-                "BoxWorkspaceLoss", target_ip="10.10.10.10"
-            ).success
+            self.project_mgr.save_project_state("BoxWorkspaceLoss", target_ip="10.10.10.10").success
         )
 
     def test_project_switch_rolls_back_when_report_load_fails(self):

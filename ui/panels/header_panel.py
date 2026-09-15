@@ -60,7 +60,10 @@ class HeaderPanel(QFrame):
         self.btn_mode_cheatsheet.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_cheatsheet.setProperty("class", "ModeSwitchBtnActive")
         self.btn_mode_cheatsheet.setToolTip(
-            t("header.cheatsheet_tip", "Browse reusable commands; current variables are filled when you copy")
+            t(
+                "header.cheatsheet_tip",
+                "Browse reusable commands; current variables are filled when you copy",
+            )
         )
         self.btn_mode_cheatsheet.clicked.connect(lambda: self.mode_changed.emit("cheatsheet"))
         layout.addWidget(self.btn_mode_cheatsheet)
@@ -69,7 +72,10 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_history.setProperty("class", "ModeSwitchBtn")
         self.btn_mode_history.setToolTip(
-            t("header.history_tip", "Review commands and output captured while clipboard REC is active")
+            t(
+                "header.history_tip",
+                "Review commands and output captured while clipboard REC is active",
+            )
         )
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
         layout.addWidget(self.btn_mode_history)
@@ -138,7 +144,13 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator = QPushButton("REC: Off")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
         self.btn_rec_indicator.setProperty("paused", "true")
-        self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED")))
+        self.btn_rec_indicator.setIcon(
+            icon(
+                "fa5s.circle",
+                color=get_theme_color("TEXT_DIMMED"),
+                color_active=get_theme_color("TEXT_DIMMED"),
+            )
+        )
         self.btn_rec_indicator.setIconSize(QSize(10, 10))
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_rec_indicator.setToolTip(
@@ -251,7 +263,14 @@ class HeaderPanel(QFrame):
         for k in (2, 1):
             total_items_k = num_fixed + k + 1
             gaps_k = max(0, total_items_k - 1)
-            wk = fixed_w + sum(action_widths[:k]) + overflow_w + margin_w + (gaps_k * spacing) + buffer
+            wk = (
+                fixed_w
+                + sum(action_widths[:k])
+                + overflow_w
+                + margin_w
+                + (gaps_k * spacing)
+                + buffer
+            )
             if width >= wk:
                 return k
 
@@ -281,7 +300,13 @@ class HeaderPanel(QFrame):
         is_active = getattr(self, "_rec_active", False)
         rec_in_overflow = self.btn_rec_indicator.isHidden()
         if is_active and rec_in_overflow:
-            self.btn_overflow.setIcon(icon("fa5s.ellipsis-h", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR")))
+            self.btn_overflow.setIcon(
+                icon(
+                    "fa5s.ellipsis-h",
+                    color=get_theme_color("ERROR"),
+                    color_active=get_theme_color("ERROR"),
+                )
+            )
             self.btn_overflow.setToolTip(
                 t(
                     "header.overflow_tip_rec_active",
@@ -335,10 +360,18 @@ class HeaderPanel(QFrame):
             is_rec_active = getattr(self, "_rec_active", False)
             if is_rec_active:
                 rec_text = t("header.rec_pause_action", "REC: ON (Pause)")
-                rec_icon = icon("fa5s.circle", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR"))
+                rec_icon = icon(
+                    "fa5s.circle",
+                    color=get_theme_color("ERROR"),
+                    color_active=get_theme_color("ERROR"),
+                )
             else:
                 rec_text = t("header.rec_resume_action", "REC: Off (Start)")
-                rec_icon = icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED"))
+                rec_icon = icon(
+                    "fa5s.circle",
+                    color=get_theme_color("TEXT_DIMMED"),
+                    color_active=get_theme_color("TEXT_DIMMED"),
+                )
             act_rec = menu.addAction(rec_icon, rec_text)
             act_rec.triggered.connect(self.toggle_rec_requested.emit)
 
@@ -391,6 +424,7 @@ class HeaderPanel(QFrame):
                 self.btn_phase.setText(t("header.phase_unassigned", "Phase: Unassigned ▾"))
             else:
                 from core.phases import get_phase
+
                 phase = get_phase(phase_key)
                 self.btn_phase.setText(f"{phase.short} ▾")
 
@@ -399,7 +433,13 @@ class HeaderPanel(QFrame):
         self._rec_active = is_active
         if is_active:
             self.btn_rec_indicator.setText("REC: ON")
-            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("ERROR"), color_active=get_theme_color("ERROR")))
+            self.btn_rec_indicator.setIcon(
+                icon(
+                    "fa5s.circle",
+                    color=get_theme_color("ERROR"),
+                    color_active=get_theme_color("ERROR"),
+                )
+            )
             self.btn_rec_indicator.setProperty("paused", "false")
             self.btn_rec_indicator.setToolTip(
                 t(
@@ -409,7 +449,13 @@ class HeaderPanel(QFrame):
             )
         else:
             self.btn_rec_indicator.setText("REC: Off")
-            self.btn_rec_indicator.setIcon(icon("fa5s.circle", color=get_theme_color("TEXT_DIMMED"), color_active=get_theme_color("TEXT_DIMMED")))
+            self.btn_rec_indicator.setIcon(
+                icon(
+                    "fa5s.circle",
+                    color=get_theme_color("TEXT_DIMMED"),
+                    color_active=get_theme_color("TEXT_DIMMED"),
+                )
+            )
             self.btn_rec_indicator.setProperty("paused", "true")
             self.btn_rec_indicator.setToolTip(
                 t(
@@ -441,10 +487,16 @@ class HeaderPanel(QFrame):
         self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
         self.btn_mode_report.setText(t("header.mode_report", "Report"))
         self.btn_mode_cheatsheet.setToolTip(
-            t("header.cheatsheet_tip", "Browse reusable commands; current variables are filled when you copy")
+            t(
+                "header.cheatsheet_tip",
+                "Browse reusable commands; current variables are filled when you copy",
+            )
         )
         self.btn_mode_history.setToolTip(
-            t("header.history_tip", "Review commands and output captured while clipboard REC is active")
+            t(
+                "header.history_tip",
+                "Review commands and output captured while clipboard REC is active",
+            )
         )
         self.btn_mode_notes.setToolTip(
             t("header.notes_tip", "Open the Quick Notes capture and triage inbox")

@@ -60,8 +60,8 @@ class TestReportOutline(unittest.TestCase):
 
     def test_extract_headings_strips_html_badges(self):
         doc = (
-            "### <span class=\"severity-pill severity-high\">🟠 HIGH</span> SQL Injection\n"
-            "#### <span class=\"severity-pill severity-critical\">🔴 CRITICAL</span> RCE Exploit\n"
+            '### <span class="severity-pill severity-high">🟠 HIGH</span> SQL Injection\n'
+            '#### <span class="severity-pill severity-critical">🔴 CRITICAL</span> RCE Exploit\n'
         )
         items = extract_headings(doc)
         self.assertEqual(items[0].title, "🟠 HIGH SQL Injection")

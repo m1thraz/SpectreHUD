@@ -75,10 +75,7 @@ class ReportFindingPromotionActions:
         result = self._service.promote(
             loot_store=loot_manager,
             primary_id=str(dialog.selected_entry["id"]),
-            evidence_ids=[
-                str(entry.get("id", ""))
-                for entry in dialog.selected_evidence_entries
-            ],
+            evidence_ids=[str(entry.get("id", "")) for entry in dialog.selected_evidence_entries],
             fallback_title=t("report.new_finding_default_title", "New Finding"),
         )
         if not result.success or result.finding is None:

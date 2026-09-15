@@ -96,9 +96,7 @@ class SettingsCoordinator:
         ):
             self.update_footer_status()
             payload = HotkeySettingsChangedPayload(
-                hotkey=new_settings.get(
-                    "hotkey", self.config.get("hotkey", "<ctrl>+<alt>+h")
-                ),
+                hotkey=new_settings.get("hotkey", self.config.get("hotkey", "<ctrl>+<alt>+h")),
                 snip_hotkey=new_settings.get(
                     "snip_hotkey",
                     self.config.get("snip_hotkey", "<ctrl>+<alt>+x"),

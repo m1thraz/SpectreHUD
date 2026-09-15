@@ -19,7 +19,9 @@ class TestQuickNoteManager(unittest.TestCase):
         bus_events = []
         self.event_bus.subscribe(EventType.QUICK_NOTES_UPDATED, bus_events.append)
 
-        entry = self.manager.add_entry("Found open port 8080", category="recon", target_ip="10.10.10.20")
+        entry = self.manager.add_entry(
+            "Found open port 8080", category="recon", target_ip="10.10.10.20"
+        )
         self.assertIsNotNone(entry)
         self.assertEqual(entry["text"], "Found open port 8080")
         self.assertEqual(entry["category"], "recon")
@@ -81,8 +83,20 @@ class TestQuickNoteManager(unittest.TestCase):
 
     def test_replace_entries_and_persistence(self):
         raw_list = [
-            {"id": "note_1", "text": "First Note", "category": "recon", "target_ip": "10.10.10.5", "timestamp": "2026-09-03 12:00:00"},
-            {"id": "note_2", "text": "Second Note", "category": "privesc", "target_ip": "", "timestamp": "2026-09-03 12:01:00"},
+            {
+                "id": "note_1",
+                "text": "First Note",
+                "category": "recon",
+                "target_ip": "10.10.10.5",
+                "timestamp": "2026-09-03 12:00:00",
+            },
+            {
+                "id": "note_2",
+                "text": "Second Note",
+                "category": "privesc",
+                "target_ip": "",
+                "timestamp": "2026-09-03 12:01:00",
+            },
         ]
         self.manager.replace_entries(raw_list)
         self.assertEqual(len(self.manager.get_all_entries()), 2)
@@ -107,9 +121,7 @@ class TestQuickNoteManager(unittest.TestCase):
 
         # With explicit values
         src = {"type": "history", "id": "hist_123"}
-        custom = self.manager.add_entry(
-            "Custom note", status="followup", pinned=True, source=src
-        )
+        custom = self.manager.add_entry("Custom note", status="followup", pinned=True, source=src)
         self.assertEqual(custom["status"], "followup")
         self.assertTrue(custom["pinned"])
         self.assertEqual(custom["source"], src)

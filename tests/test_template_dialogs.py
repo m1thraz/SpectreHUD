@@ -15,6 +15,7 @@ from ui.template_manager_dialog import TemplateManagerDialog
 from ui.styles import APP_THEME
 from ui.base_dialog import BaseHudDialog
 
+
 class TestTemplateDialogs(unittest.TestCase):
     """Unit tests for TemplateEditorDialog, SectionEditDialog, and TemplateManagerDialog."""
 
@@ -150,6 +151,7 @@ class TestTemplateDialogs(unittest.TestCase):
         # Check that duplicated template is in repository
         saved_t = self.repo.get_template("dup_test_1")
         from core.i18n import t
+
         copy_suffix = t("template_manager.copy_suffix", " (Kopie)").strip()
         self.assertTrue(saved_t.name.endswith(copy_suffix))
 

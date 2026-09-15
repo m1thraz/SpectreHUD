@@ -84,7 +84,9 @@ class VariableBar(QFrame):
         # 2. Attacker IP / LHOST Input
         self.lbl_attacker = QLabel(t("varbar.attacker", "LHOST:"))
         self.lbl_attacker.setProperty("class", "VarTagLabel")
-        self.txt_attacker = CopyableLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
+        self.txt_attacker = CopyableLineEdit(
+            str(self.initial_vars.get("attacker_ip", "10.10.14.5"))
+        )
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
         self.txt_attacker.setFixedWidth(138)
@@ -121,7 +123,10 @@ class VariableBar(QFrame):
         self.btn_scope.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_scope.setProperty("class", "VarBadgeBtn")
         self.btn_scope.setToolTip(
-            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+            t(
+                "varbar.scope_tip",
+                "Set scope and environment variables used in copied Cheatsheet commands",
+            )
         )
         self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
         layout.addWidget(self.btn_scope)
@@ -238,7 +243,10 @@ class VariableBar(QFrame):
             t("varbar.auth_tip", "Set authentication variables used in copied Cheatsheet commands")
         )
         self.btn_scope.setToolTip(
-            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+            t(
+                "varbar.scope_tip",
+                "Set scope and environment variables used in copied Cheatsheet commands",
+            )
         )
         self.btn_add.setText(t("varbar.add_btn", "Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
@@ -310,7 +318,8 @@ class VariableBar(QFrame):
             "ntlm_hash": auth_vals.get("ntlm_hash", ""),
             "hash": auth_vals.get("hash", ""),
             "hash_file": auth_vals.get("hash_file", ""),
-            "wordlist": scope_vals.get("wordlist", "") or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+            "wordlist": scope_vals.get("wordlist", "")
+            or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
             "url": scope_vals.get("url", ""),
             "subnet": scope_vals.get("subnet", ""),
             "dns_server": scope_vals.get("dns_server", ""),

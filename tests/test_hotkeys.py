@@ -128,9 +128,7 @@ class TestHotkeys(unittest.TestCase):
 
         mapping = fake_keyboard.GlobalHotKeys.call_args.args[0]
         self.assertIs(mapping["<ctrl>+<alt>+r"].__self__, listener)
-        self.assertIs(
-            mapping["<ctrl>+<alt>+r"].__func__, HotkeyListener._fire_recorder_trigger
-        )
+        self.assertIs(mapping["<ctrl>+<alt>+r"].__func__, HotkeyListener._fire_recorder_trigger)
         listener.stop()
 
     def test_hotkey_listener_respects_wayland_capability_restriction(self):

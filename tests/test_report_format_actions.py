@@ -106,7 +106,9 @@ class TestReportFormatActions(unittest.TestCase):
 
         # Pre-formatted markdown image
         self.editor.clear()
-        self.actions.insert_loot_entry_image({"title": "Proof", "content": "![Existing](loot/img.png)"})
+        self.actions.insert_loot_entry_image(
+            {"title": "Proof", "content": "![Existing](loot/img.png)"}
+        )
         self.assertEqual(self.editor.toPlainText(), "![Existing](loot/img.png)")
 
     def test_open_loot_image_picker(self):
@@ -122,11 +124,15 @@ class TestReportFormatActions(unittest.TestCase):
 
     def test_browse_and_insert_image(self, tmp_path=None):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             img_path = Path(tmp_dir) / "test.png"
             img_path.write_bytes(b"dummy")
 
-            with patch("ui.report.format_actions.QFileDialog.getOpenFileName", return_value=(str(img_path), "Images (*.png)")):
+            with patch(
+                "ui.report.format_actions.QFileDialog.getOpenFileName",
+                return_value=(str(img_path), "Images (*.png)"),
+            ):
                 self.rfm.import_image.return_value = "screenshots/test.png"
                 self.editor.clear()
                 self.actions.browse_and_insert_image()
@@ -154,7 +160,10 @@ class TestReportFormatActions(unittest.TestCase):
     def test_format_icon_error(self):
         with (
             patch("ui.report.format_actions.ReportIconPickerDialog") as mock_icon_picker,
-            patch("ui.report.format_actions.render_report_icon", side_effect=RuntimeError("Font missing")),
+            patch(
+                "ui.report.format_actions.render_report_icon",
+                side_effect=RuntimeError("Font missing"),
+            ),
             patch("ui.report.format_actions.show_error_dialog") as mock_err,
         ):
             mock_dlg = MagicMock()

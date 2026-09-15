@@ -363,17 +363,13 @@ def main():
             new_snip = data.snip_hotkey
             new_note = data.quick_note_hotkey
             if new_note is None:
-                new_note = container.config_manager.get(
-                    "quick_note_hotkey", "<ctrl>+<alt>+n"
-                )
+                new_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
             new_ip = data.quick_ip_hotkey
             if new_ip is None:
                 new_ip = container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
             new_loot = data.quick_loot_hotkey
             if new_loot is None:
-                new_loot = container.config_manager.get(
-                    "quick_loot_hotkey", "<ctrl>+<alt>+l"
-                )
+                new_loot = container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
             new_quit = data.quit_hotkey
             new_cfg = HotkeyConfig(
                 toggle=new_toggle,
@@ -396,9 +392,7 @@ def main():
             act_ip.setText(
                 t("tray.quick_ip", "Quick-IP (Target / LHOST) ({hotkey})", hotkey=new_ip)
             )
-            act_loot.setText(
-                t("tray.quick_loot", "Loot erfassen ({hotkey})", hotkey=new_loot)
-            )
+            act_loot.setText(t("tray.quick_loot", "Loot erfassen ({hotkey})", hotkey=new_loot))
             act_quit.setText(t("tray.quit", "Beenden ({hotkey})", hotkey=new_quit))
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)

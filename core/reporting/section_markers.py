@@ -46,9 +46,7 @@ class RenderedSection:
 def section_base_identity(section_type: str, category_id: Optional[str] = None) -> str:
     identity = re.sub(r"[^a-z0-9_-]+", "-", str(section_type).strip().lower()).strip("-")
     if identity == "phase_section" and category_id:
-        category = re.sub(
-            r"[^a-z0-9_-]+", "-", str(category_id).strip().lower()
-        ).strip("-")
+        category = re.sub(r"[^a-z0-9_-]+", "-", str(category_id).strip().lower()).strip("-")
         if category:
             identity += f":{category}"
     return identity
@@ -84,7 +82,9 @@ def _next_content_line(markdown: str) -> str:
     return ""
 
 
-def _insert_marker_before_line(markdown: str, marker: str, anchor: str, start: int) -> tuple[str, int]:
+def _insert_marker_before_line(
+    markdown: str, marker: str, anchor: str, start: int
+) -> tuple[str, int]:
     index = markdown.find(anchor, start)
     if index < 0:
         return markdown, start
@@ -97,7 +97,11 @@ def _insert_marker_before_line(markdown: str, marker: str, anchor: str, start: i
 
 def reconcile_section_markers(original_markdown: str, converted_markdown: str) -> str:
     """Restore valid section pairs that Qt drops while retaining their edited content."""
-    if not original_markdown or not converted_markdown or "spectre:section:start:" not in original_markdown:
+    if (
+        not original_markdown
+        or not converted_markdown
+        or "spectre:section:start:" not in original_markdown
+    ):
         return converted_markdown
 
     pairs: list[tuple[str, str, str]] = []
@@ -115,10 +119,8 @@ def reconcile_section_markers(original_markdown: str, converted_markdown: str) -
         next_start = SECTION_START_RE.search(original_markdown, start_match.end())
         if end_match is None or (next_start and next_start.start() < end_match.start()):
             break
-        start_anchor = _next_content_line(
-            original_markdown[start_match.end():end_match.start()]
-        )
-        end_anchor = _next_content_line(original_markdown[end_match.end():])
+        start_anchor = _next_content_line(original_markdown[start_match.end() : end_match.start()])
+        end_anchor = _next_content_line(original_markdown[end_match.end() :])
         if start_anchor:
             pairs.append((identity, start_anchor, end_anchor))
         cursor = end_match.end()
@@ -165,7 +167,7 @@ def segment_report_markdown(markdown: str) -> list[RenderedSection]:
     cursor = 0
     while start := SECTION_START_RE.search(markdown, cursor):
         if start.start() > cursor:
-            segments.append(RenderedSection("unstructured", markdown[cursor:start.start()]))
+            segments.append(RenderedSection("unstructured", markdown[cursor : start.start()]))
 
         identity = start.group(1).lower()
         next_start = SECTION_START_RE.search(markdown, start.end())
@@ -178,16 +180,16 @@ def segment_report_markdown(markdown: str) -> list[RenderedSection]:
             None,
         )
         if matching_end is None or (next_start and next_start.start() < matching_end.start()):
-            segments.append(RenderedSection("unstructured", markdown[start.start():]))
+            segments.append(RenderedSection("unstructured", markdown[start.start() :]))
             cursor = len(markdown)
             break
 
         section_type, category_id = _identity_parts(identity)
         block_end = matching_end.end()
         if section_type not in KNOWN_SECTION_TYPES:
-            segments.append(RenderedSection("unstructured", markdown[start.start():block_end]))
+            segments.append(RenderedSection("unstructured", markdown[start.start() : block_end]))
         else:
-            content = markdown[start.end():matching_end.start()]
+            content = markdown[start.end() : matching_end.start()]
             content = re.sub(r"^(?:\r?\n){1,2}", "", content, count=1)
             content = re.sub(r"(?:\r?\n){1,2}$", "", content, count=1)
             segments.append(RenderedSection(section_type, content, category_id, identity))

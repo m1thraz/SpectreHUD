@@ -129,9 +129,7 @@ class ReportMutationService:
         *,
         project_name: str,
         loot_manager: Any,
-        decisions: dict[
-            str, LootReconciliationAction | LootReconciliationSelection | str
-        ],
+        decisions: dict[str, LootReconciliationAction | LootReconciliationSelection | str],
         append_missing: bool = False,
         template: Any = None,
     ) -> ReportMutationResult:

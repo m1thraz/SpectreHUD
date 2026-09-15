@@ -51,9 +51,7 @@ class ParamPromptDialog(BaseHudDialog):
             row = QVBoxLayout()
             row.setSpacing(2)
 
-            lbl = QLabel(
-                t("param_prompt.value_for", "Wert für {{{param}}}:", param=param)
-            )
+            lbl = QLabel(t("param_prompt.value_for", "Wert für {{{param}}}:", param=param))
             lbl.setProperty("class", "FormLabel")
             row.addWidget(lbl)
 
@@ -61,9 +59,7 @@ class ParamPromptDialog(BaseHudDialog):
             default_val = self.cached_params.get(param, SMART_PRESETS.get(param, ""))
 
             txt = QLineEdit(default_val)
-            txt.setPlaceholderText(
-                t("param_prompt.ph_value", "Wert für {param}...", param=param)
-            )
+            txt.setPlaceholderText(t("param_prompt.ph_value", "Wert für {param}...", param=param))
             txt.textChanged.connect(self._update_preview)
             self.param_inputs[param] = txt
             row.addWidget(txt)

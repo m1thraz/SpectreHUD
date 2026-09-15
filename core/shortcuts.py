@@ -78,13 +78,9 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
     if config_manager is not None:
         toggle_seq = format_hotkey_sequence(config_manager.get("hotkey", "<ctrl>+<alt>+h"))
         snip_seq = format_hotkey_sequence(config_manager.get("snip_hotkey", "<ctrl>+<alt>+x"))
-        note_seq = format_hotkey_sequence(
-            config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
-        )
+        note_seq = format_hotkey_sequence(config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n"))
         ip_seq = format_hotkey_sequence(config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i"))
-        loot_seq = format_hotkey_sequence(
-            config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
-        )
+        loot_seq = format_hotkey_sequence(config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l"))
         quit_seq = format_hotkey_sequence(config_manager.get("quit_hotkey", "<ctrl>+<alt>+q"))
     else:
         toggle_seq = "Ctrl+Alt+H"

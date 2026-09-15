@@ -6,6 +6,9 @@ import re
 from typing import Callable, Dict, List, Optional
 
 from core.reporting.section_markers import segment_report_markdown
+from core.reporting.findings import FINDING_END_RE, FINDING_START_RE
+from core.reporting.report_finding import ReportFindingItem
+from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
 
 
 _METADATA_ROW_RE = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$")
@@ -113,9 +116,7 @@ def _header_title(markdown: str) -> str:
     return ""
 
 
-def _first_metadata_value(
-    values: dict[str, str], *labels: str | tuple[str, ...]
-) -> str:
+def _first_metadata_value(values: dict[str, str], *labels: str | tuple[str, ...]) -> str:
     aliases: list[str] = []
     for item in labels:
         if isinstance(item, (tuple, list)):
@@ -197,8 +198,7 @@ def build_professional_cover_data(
         ),
         (
             labels["target"],
-            target_ip
-            or _first_metadata_value(values, _TARGET_ALIASES),
+            target_ip or _first_metadata_value(values, _TARGET_ALIASES),
         ),
         (
             labels["date"],
@@ -297,6 +297,107 @@ def normalize_professional_timestamps(body_html: str) -> str:
     )
 
 
+_GENERATED_MATRIX_ROW_RE = re.compile(
+    r"^\|\s*(\d+)\s*\|\s*(.*?)\s*\|\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)"
+    r"\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$",
+    re.IGNORECASE,
+)
+
+
+def _structured_findings(markdown: str) -> list[ReportFindingItem]:
+    findings: list[ReportFindingItem] = []
+    cursor = 0
+    while start := FINDING_START_RE.search(markdown, cursor):
+        next_start = FINDING_START_RE.search(markdown, start.end())
+        end = next(
+            (
+                candidate
+                for candidate in FINDING_END_RE.finditer(markdown, start.end())
+                if candidate.group(1) == start.group(1)
+            ),
+            None,
+        )
+        if end is None or (next_start and next_start.start() < end.start()):
+            cursor = start.end()
+            continue
+        findings.append(
+            ReportFindingItem.from_markdown(markdown[start.start() : end.end()], start.group(1))
+        )
+        cursor = end.end()
+    return findings
+
+
+def synchronize_professional_findings_matrix(
+    summary_markdown: str, report_markdown: str, language: str
+) -> str:
+    """Correct only a recognizable generated matrix in the print projection."""
+    lines = summary_markdown.splitlines(keepends=True)
+    matrix_start = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.strip().lower() in {"### findings matrix", "### findings-übersicht"}
+        ),
+        None,
+    )
+    if matrix_start is None:
+        return summary_markdown
+
+    header_index = next(
+        (
+            index
+            for index in range(matrix_start + 1, len(lines))
+            if lines[index].strip() == "| # | Finding | Severity | Phase | Status |"
+        ),
+        None,
+    )
+    if header_index is None or header_index + 1 >= len(lines):
+        return summary_markdown
+    if not re.fullmatch(r"\|[\s\-:|]+\|", lines[header_index + 1].strip()):
+        return summary_markdown
+
+    rows: list[tuple[int, re.Match[str]]] = []
+    for index in range(header_index + 2, len(lines)):
+        line = lines[index].strip()
+        if not line.startswith("|"):
+            break
+        match = _GENERATED_MATRIX_ROW_RE.fullmatch(line)
+        if match is None:
+            return summary_markdown
+        rows.append((index, match))
+    if not rows:
+        return summary_markdown
+
+    findings = _structured_findings(report_markdown)
+    candidates = (findings, [finding for finding in findings if finding.severity != "info"])
+    matching = next(
+        (
+            candidate
+            for candidate in candidates
+            if len(candidate) == len(rows)
+            and all(
+                int(match.group(1)) == position
+                and match.group(2).strip()
+                == (finding.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
+                and match.group(3).upper() == finding.severity.upper()
+                for position, ((_, match), finding) in enumerate(zip(rows, candidate), start=1)
+            )
+        ),
+        None,
+    )
+    if matching is None:
+        return summary_markdown
+
+    labels = STATUS_LABELS_DE if language.lower().startswith("de") else STATUS_LABELS_EN
+    for (index, match), finding in zip(rows, matching):
+        status = labels.get((finding.status or "open").lower(), labels["open"])
+        line = lines[index]
+        previous = match.group(5).strip()
+        if previous != status:
+            lines[index] = line.replace(f"| {previous} |", f"| {status} |", 1)
+    return "".join(lines)
+
+
 def _content_lines(markdown: str) -> list[str]:
     return [
         line.strip()
@@ -352,8 +453,7 @@ def _has_executive_summary_content(lines: List[str]) -> bool:
 
 def _has_scope_limitations_content(lines: List[str]) -> bool:
     return any(
-        not line.startswith("## ") and not re.match(r"^- \*\*.+:\*\*$", line)
-        for line in lines
+        not line.startswith("## ") and not re.match(r"^- \*\*.+:\*\*$", line) for line in lines
     )
 
 
@@ -429,10 +529,7 @@ def renumber_professional_heading(markdown: str, number: int) -> tuple[str, bool
     if match:
         prefix, title = match.group(1), match.group(2).strip()
         renumbered = (
-            markdown[: match.start()]
-            + f"{prefix}{number}. {title}"
-            + markdown[match.end() :]
+            markdown[: match.start()] + f"{prefix}{number}. {title}" + markdown[match.end() :]
         )
         return renumbered, True
     return markdown, False
-

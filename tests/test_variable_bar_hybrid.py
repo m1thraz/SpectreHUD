@@ -1,6 +1,7 @@
 """Unit and integration tests for hybrid VariableBar and popovers."""
 
 import os
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
@@ -88,7 +89,9 @@ def test_variable_bar_live_signal_from_popovers(var_bar):
 
 
 def test_variable_bar_badge_button_styling(qapp):
-    empty_bar = VariableBar({"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5", "port": "4444"})
+    empty_bar = VariableBar(
+        {"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5", "port": "4444"}
+    )
 
     # Initially empty auth and default scope
     assert empty_bar.btn_auth.property("class") == "VarBadgeBtn"

@@ -100,4 +100,3 @@ def test_render_applies_heading_margins_to_chapters_and_findings(qapp):
     for b in h3_blocks:
         assert b[2] >= 16
         assert b[3] >= 4
-

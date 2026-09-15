@@ -51,12 +51,8 @@ def detect_platform_capabilities(
     session_type = environment.get("XDG_SESSION_TYPE", "").strip().lower()
 
     is_linux = system == "linux"
-    wayland = is_linux and (
-        session_type == "wayland" or bool(environment.get("WAYLAND_DISPLAY"))
-    )
-    x11 = is_linux and not wayland and (
-        session_type == "x11" or bool(environment.get("DISPLAY"))
-    )
+    wayland = is_linux and (session_type == "wayland" or bool(environment.get("WAYLAND_DISPLAY")))
+    x11 = is_linux and not wayland and (session_type == "x11" or bool(environment.get("DISPLAY")))
 
     # Detect compositor presence
     compositor = True

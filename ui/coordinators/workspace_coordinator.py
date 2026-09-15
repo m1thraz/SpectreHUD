@@ -222,10 +222,7 @@ class WorkspaceCoordinator(QObject):
                     project=current_proj,
                 )
                 save_reason = getattr(self, "_last_save_failure_reason", None)
-                message = (
-                    f"{base_message}\n\n"
-                    f"({self._failure_reason_label(save_reason)})"
-                )
+                message = f"{base_message}\n\n({self._failure_reason_label(save_reason)})"
             reply = ask_confirmation(
                 window,
                 t("general.save_failed", "Speichern fehlgeschlagen"),

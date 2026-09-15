@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 from ui.history_card import HistoryCard
 from ui.coordinators.clipboard_coordinator import ClipboardCoordinator
 
+
 class TestHistoryCardPromoteButton(unittest.TestCase):
     def setUp(self):
         self.entry = {
@@ -67,6 +68,7 @@ class TestHistoryCardPromoteButton(unittest.TestCase):
 
     def test_promote_note_feedback_label_contains_expected_text(self):
         from core.i18n import t
+
         self.card._on_promote_note()
         # Text should be the promoted feedback, not the original label.
         promoted_text = t("history.promoted_as_note", "Note ✓")
@@ -106,7 +108,9 @@ class TestHistoryCardPromoteButton(unittest.TestCase):
         self.assertEqual(len(menus_created), 1)
         actions = [a for a in menus_created[0].actions() if not a.isSeparator()]
         self.assertEqual(
-            len(actions), 3, f"Expected 3 context actions (report, edit, delete), got {len(actions)}"
+            len(actions),
+            3,
+            f"Expected 3 context actions (report, edit, delete), got {len(actions)}",
         )
 
     def test_report_checkbox_initial_state_and_toggle(self):
@@ -281,7 +285,6 @@ class TestClipboardCoordinatorCapture(unittest.TestCase):
         success = self.coordinator.add_history_to_note(window, item_empty)
         self.assertFalse(success)
         self.quick_note_ctrl.add_entry.assert_not_called()
-
 
 
 class TestHistoryControllerFilterPills(unittest.TestCase):

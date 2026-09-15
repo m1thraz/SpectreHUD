@@ -1,4 +1,5 @@
 from ui.styles.icons import get_theme_color
+
 """Popover flyout dialogs for secondary variables (Auth & Scope)."""
 
 from typing import Dict, Any, Optional
@@ -226,9 +227,12 @@ class AuthPopover(BaseVarPopover):
             self.txt_domain.setText(str(vals.get("domain", "")))
 
         hash_input = (
-            vals.get("ntlm_hash") if "ntlm_hash" in vals
-            else vals.get("hash_file") if "hash_file" in vals
-            else vals.get("hash") if "hash" in vals
+            vals.get("ntlm_hash")
+            if "ntlm_hash" in vals
+            else vals.get("hash_file")
+            if "hash_file" in vals
+            else vals.get("hash")
+            if "hash" in vals
             else None
         )
         if hash_input is not None:
@@ -341,6 +345,7 @@ class ScopePopover(BaseVarPopover):
 
     def _browse_wordlist(self) -> None:
         import os
+
         start_dir = "/usr/share/wordlists" if os.name != "nt" else "C:\\"
         file_path, _ = QFileDialog.getOpenFileName(
             self,

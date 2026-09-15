@@ -27,6 +27,7 @@ class ResponsiveComboBox(QComboBox):
         sz = super().minimumSizeHint()
         return QSize(80, sz.height())
 
+
 from core.i18n import t
 from core.phases import PHASES, get_phase
 from core.reporting import (
@@ -116,7 +117,10 @@ class AttackStepCard(GlassPanel):
         )
         for phase_obj in PHASES:
             self.cmb_phase.addItem(
-                icon(phase_obj.icon, color=get_theme_color(PHASE_COLOR_TOKENS.get(phase_obj.key, "TEXT_MUTED"))),
+                icon(
+                    phase_obj.icon,
+                    color=get_theme_color(PHASE_COLOR_TOKENS.get(phase_obj.key, "TEXT_MUTED")),
+                ),
                 phase_obj.long,
                 phase_obj.key,
             )
@@ -130,7 +134,9 @@ class AttackStepCard(GlassPanel):
         # Title input
         self.edit_title = QLineEdit()
         self.edit_title.setText(self.step.title)
-        self.edit_title.setPlaceholderText(t("report.step_title_placeholder", "Step title / attack technique..."))
+        self.edit_title.setPlaceholderText(
+            t("report.step_title_placeholder", "Step title / attack technique...")
+        )
         self.edit_title.setStyleSheet(
             f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 4px 8px; font-weight: bold; }} "
             f"QLineEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
@@ -146,7 +152,9 @@ class AttackStepCard(GlassPanel):
         self.btn_up.setIcon(icon("fa5s.arrow-up", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_up.setToolTip(t("report.move_up", "Move step up"))
         self.btn_up.setEnabled(self.step_index > 0)
-        self.btn_up.setStyleSheet(f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}")
+        self.btn_up.setStyleSheet(
+            f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}"
+        )
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self.step_index))
         top_row.addWidget(self.btn_up)
 
@@ -154,7 +162,9 @@ class AttackStepCard(GlassPanel):
         self.btn_down.setIcon(icon("fa5s.arrow-down", color=get_theme_color("ACCENT_PRIMARY")))
         self.btn_down.setToolTip(t("report.move_down", "Move step down"))
         self.btn_down.setEnabled(self.step_index < self.total_steps - 1)
-        self.btn_down.setStyleSheet(f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}")
+        self.btn_down.setStyleSheet(
+            f"QPushButton {{ background: transparent; border: 1px solid {border_col}; border-radius: 3px; padding: 2px 6px; }}"
+        )
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self.step_index))
         top_row.addWidget(self.btn_down)
 
@@ -174,7 +184,10 @@ class AttackStepCard(GlassPanel):
         self.txt_desc = QPlainTextEdit()
         self.txt_desc.setPlainText(self.step.description)
         self.txt_desc.setPlaceholderText(
-            t("report.step_desc_placeholder", "Execution narrative: how this step was executed, tools utilized, and outcome...")
+            t(
+                "report.step_desc_placeholder",
+                "Execution narrative: how this step was executed, tools utilized, and outcome...",
+            )
         )
         self.txt_desc.setMaximumHeight(65)
         self.txt_desc.setStyleSheet(
@@ -189,11 +202,15 @@ class AttackStepCard(GlassPanel):
         bottom_row.setSpacing(6)
 
         lbl_link = QLabel(t("report.linked_finding_label", "Linked Finding:"))
-        lbl_link.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500;")
+        lbl_link.setStyleSheet(
+            f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500;"
+        )
         bottom_row.addWidget(lbl_link)
 
         self.cmb_finding = ResponsiveComboBox()
-        self.cmb_finding.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.cmb_finding.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
         self.cmb_finding.setMinimumContentsLength(10)
         self.cmb_finding.setStyleSheet(
             f"QComboBox {{ background: {get_theme_color('BG_SURFACE')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 3px; color: {get_theme_color('TEXT_SECONDARY')}; padding: 2px 6px; font-size: 11px; }} "
@@ -204,7 +221,10 @@ class AttackStepCard(GlassPanel):
         for idx, f in enumerate(self.findings, start=1):
             title = f.title or f.id
             self.cmb_finding.addItem(f"[{f.severity.upper()}] {title}", f.id)
-            if self.step.finding_id == f.id or (self.step.finding_id and self.step.finding_id.strip().lower() == (f.title or "").strip().lower()):
+            if self.step.finding_id == f.id or (
+                self.step.finding_id
+                and self.step.finding_id.strip().lower() == (f.title or "").strip().lower()
+            ):
                 cur_find_idx = idx
                 self.step.finding_id = f.id
 
@@ -287,12 +307,12 @@ class ReportAttackPathInspector(QWidget):
         top_row.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(
-            icon("fa5s.route", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
-        )
+        lbl_icon.setPixmap(icon("fa5s.route", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20))
         top_row.addWidget(lbl_icon)
 
-        self.lbl_title = QLabel(t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative"))
+        self.lbl_title = QLabel(
+            t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative")
+        )
         style_inspector_header(self.header_card, self.lbl_title)
         top_row.addWidget(self.lbl_title)
         top_row.addStretch()
@@ -310,7 +330,9 @@ class ReportAttackPathInspector(QWidget):
         actions_row = QHBoxLayout()
         actions_row.setSpacing(8)
 
-        self.btn_auto_generate = QPushButton(t("report.auto_generate_chain", "Generate Chain from Findings"))
+        self.btn_auto_generate = QPushButton(
+            t("report.auto_generate_chain", "Generate Chain from Findings")
+        )
         self.btn_auto_generate.setProperty("class", "SecondaryBtn")
         self.btn_auto_generate.setIcon(
             icon("fa5s.magic", color=get_theme_color("CYBER_BLUE_LIGHT"))
@@ -320,9 +342,7 @@ class ReportAttackPathInspector(QWidget):
 
         self.btn_add_step = QPushButton(t("report.add_attack_step", "+ Add Step"))
         self.btn_add_step.setProperty("class", "SecondaryBtn AppendLootBtn")
-        self.btn_add_step.setIcon(
-            icon("fa5s.plus", color=get_theme_color("CYBER_CYAN"))
-        )
+        self.btn_add_step.setIcon(icon("fa5s.plus", color=get_theme_color("CYBER_CYAN")))
         self.btn_add_step.clicked.connect(self._on_add_step_clicked)
         actions_row.addWidget(self.btn_add_step)
         actions_row.addStretch()
@@ -348,13 +368,18 @@ class ReportAttackPathInspector(QWidget):
         intro_layout.setContentsMargins(12, 10, 12, 10)
         intro_layout.setSpacing(6)
 
-        lbl_intro_title = QLabel(t("report.attack_storyline_title", "Assessment Narrative & Storyline"))
+        lbl_intro_title = QLabel(
+            t("report.attack_storyline_title", "Assessment Narrative & Storyline")
+        )
         style_inspector_section(intro_card, lbl_intro_title)
         intro_layout.addWidget(lbl_intro_title)
 
         self.txt_intro = QPlainTextEdit()
         self.txt_intro.setPlaceholderText(
-            t("report.attack_storyline_placeholder", "High-level penetration testing storyline describing the attacker's progression, pivot points, and impact...")
+            t(
+                "report.attack_storyline_placeholder",
+                "High-level penetration testing storyline describing the attacker's progression, pivot points, and impact...",
+            )
         )
         self.txt_intro.setMaximumHeight(75)
         self.txt_intro.textChanged.connect(self._on_field_changed)
@@ -363,7 +388,9 @@ class ReportAttackPathInspector(QWidget):
         self.content_layout.addWidget(intro_card)
 
         # Steps Timeline Header
-        lbl_timeline_title = QLabel(t("report.attack_chain_timeline_title", "Attack Chain Timeline"))
+        lbl_timeline_title = QLabel(
+            t("report.attack_chain_timeline_title", "Attack Chain Timeline")
+        )
         lbl_timeline_title.setProperty("class", "ReportInspectorSectionTitle")
         self.content_layout.addWidget(lbl_timeline_title)
 
@@ -390,13 +417,20 @@ class ReportAttackPathInspector(QWidget):
             for s in self._path.steps:
                 if s.finding_id and s.finding_id not in [f.id for f in self._findings]:
                     matched = next(
-                        (f for f in self._findings if (f.title or "").strip().lower() == s.finding_id.strip().lower()),
+                        (
+                            f
+                            for f in self._findings
+                            if (f.title or "").strip().lower() == s.finding_id.strip().lower()
+                        ),
                         None,
                     )
                     if matched:
                         s.finding_id = matched.id
 
-            self.lbl_title.setText(self._path.title or t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative"))
+            self.lbl_title.setText(
+                self._path.title
+                or t("report.inspector_attack_path_title", "Attack Path / Assessment Narrative")
+            )
             self.txt_intro.setPlainText(self._path.narrative_intro)
 
             self._refresh_step_cards()
@@ -412,7 +446,9 @@ class ReportAttackPathInspector(QWidget):
 
         total = len(self._path.steps)
         self.lbl_steps_badge.setText(
-            t("report.steps_count", "{count} Steps", count=total) if self._language != "de" else f"{total} Schritte"
+            t("report.steps_count", "{count} Steps", count=total)
+            if self._language != "de"
+            else f"{total} Schritte"
         )
 
         for idx, step in enumerate(self._path.steps):
@@ -434,13 +470,19 @@ class ReportAttackPathInspector(QWidget):
 
     def _on_move_up(self, index: int) -> None:
         if index > 0 and index < len(self._path.steps):
-            self._path.steps[index - 1], self._path.steps[index] = self._path.steps[index], self._path.steps[index - 1]
+            self._path.steps[index - 1], self._path.steps[index] = (
+                self._path.steps[index],
+                self._path.steps[index - 1],
+            )
             self._refresh_step_cards()
             self._on_field_changed()
 
     def _on_move_down(self, index: int) -> None:
         if index >= 0 and index < len(self._path.steps) - 1:
-            self._path.steps[index], self._path.steps[index + 1] = self._path.steps[index + 1], self._path.steps[index]
+            self._path.steps[index], self._path.steps[index + 1] = (
+                self._path.steps[index + 1],
+                self._path.steps[index],
+            )
             self._refresh_step_cards()
             self._on_field_changed()
 

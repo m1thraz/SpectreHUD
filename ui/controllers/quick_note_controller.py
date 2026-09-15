@@ -250,9 +250,7 @@ class QuickNoteController(QObject):
             logger.error(f"Failed to update text for note {entry_id}: {e}")
             return False
 
-    def open_edit_dialog(
-        self, parent_widget: Optional[QWidget], entry: Dict[str, Any]
-    ) -> bool:
+    def open_edit_dialog(self, parent_widget: Optional[QWidget], entry: Dict[str, Any]) -> bool:
         """Opens modal dialog to edit a quick note."""
         from ui.note_edit_dialog import EditNoteDialog
 
@@ -391,7 +389,11 @@ class QuickNoteController(QObject):
 
     def begin_completion(self, entry_id: str, card: QuickNoteCard) -> bool:
         entry = next(
-            (note for note in self.quick_note_manager.get_all_entries() if note.get("id") == entry_id),
+            (
+                note
+                for note in self.quick_note_manager.get_all_entries()
+                if note.get("id") == entry_id
+            ),
             None,
         )
         if entry is None or entry.get("status", "inbox") == "resolved":
@@ -480,9 +482,7 @@ class QuickNoteController(QObject):
         )
         self.btn_phase.setText(f"{cat_display} ▾")
         is_cat_active = self.current_category_filter != "all"
-        self.btn_phase.setProperty(
-            "class", "FilterPillActive" if is_cat_active else "FilterPill"
-        )
+        self.btn_phase.setProperty("class", "FilterPillActive" if is_cat_active else "FilterPill")
         self.btn_phase.style().unpolish(self.btn_phase)
         self.btn_phase.style().polish(self.btn_phase)
 
@@ -540,7 +540,11 @@ class QuickNoteController(QObject):
                 f"{t('quick_note.status_resolved', 'Resolved')} ({counts['resolved']})",
                 None,
             ),
-            ("pinned", f"{t('quick_note.pinned', 'Pinned')} ({counts['pinned']})", "fa5s.thumbtack"),
+            (
+                "pinned",
+                f"{t('quick_note.pinned', 'Pinned')} ({counts['pinned']})",
+                "fa5s.thumbtack",
+            ),
         ]
 
         for pid, ptext, icon_name in status_pills:
@@ -571,9 +575,7 @@ class QuickNoteController(QObject):
         self.btn_phase = QPushButton(f"{cat_display} ▾")
         self.btn_phase.setCursor(Qt.CursorShape.PointingHandCursor)
         is_cat_active = self.current_category_filter != "all"
-        self.btn_phase.setProperty(
-            "class", "FilterPillActive" if is_cat_active else "FilterPill"
-        )
+        self.btn_phase.setProperty("class", "FilterPillActive" if is_cat_active else "FilterPill")
         self.btn_phase.setToolTip(t("quick_note.phase_filter_tip", "Filter by pentest phase"))
 
         phase_menu = QMenu(self.btn_phase)
@@ -607,7 +609,10 @@ class QuickNoteController(QObject):
             "class", "FilterPillActive" if self.selection_mode else "FilterPill"
         )
         self.btn_select_mode.setToolTip(
-            t("quick_note.select_mode_tip", "Select several notes for bulk status changes or deletion")
+            t(
+                "quick_note.select_mode_tip",
+                "Select several notes for bulk status changes or deletion",
+            )
         )
         self.btn_select_mode.clicked.connect(self.set_selection_mode)
         pills_layout.addWidget(self.btn_select_mode)
@@ -621,7 +626,10 @@ class QuickNoteController(QObject):
             "class", "FilterPillActive" if self.review_mode else "FilterPill"
         )
         self.btn_review_mode.setToolTip(
-            t("quick_note.review_mode_tip", "Review open notes one at a time without list distractions")
+            t(
+                "quick_note.review_mode_tip",
+                "Review open notes one at a time without list distractions",
+            )
         )
         self.btn_review_mode.clicked.connect(self.set_review_mode)
         pills_layout.addWidget(self.btn_review_mode)
@@ -680,9 +688,7 @@ class QuickNoteController(QObject):
         """Creates the horizontal bulk triage action bar."""
         bulk_bar = QuickNoteBulkBar(parent_widget)
         bulk_bar.status_requested.connect(self.bulk_set_status)
-        bulk_bar.delete_requested.connect(
-            lambda: self.bulk_delete_notes(parent_widget)
-        )
+        bulk_bar.delete_requested.connect(lambda: self.bulk_delete_notes(parent_widget))
         bulk_bar.deselect_requested.connect(self.clear_selection)
         self.selection_count_changed.connect(bulk_bar.set_selected_count)
         bulk_bar.set_selected_count(len(self.selection_model))
@@ -818,9 +824,7 @@ class QuickNoteController(QObject):
         review.promote_requested.connect(
             lambda note, p=parent_widget: self._review_promote(note, p)
         )
-        review.edit_requested.connect(
-            lambda note, p=parent_widget: self.open_edit_dialog(p, note)
-        )
+        review.edit_requested.connect(lambda note, p=parent_widget: self.open_edit_dialog(p, note))
         review.text_save_requested.connect(self.update_note_text)
         review.complete_requested.connect(self._review_complete)
         review.delete_requested.connect(self._review_delete)

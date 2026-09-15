@@ -71,9 +71,7 @@ class ReportSessionController:
         return LoadedReport(state.markdown, state.project_dir, False)
 
     def save(self, project_name: str, markdown: str) -> bool:
-        result = self._service.save_document(
-            project_name, markdown, clear_recovery_draft=True
-        )
+        result = self._service.save_document(project_name, markdown, clear_recovery_draft=True)
         if result.success:
             return True
         logger.error(
@@ -93,9 +91,7 @@ class ReportSessionController:
         return False
 
     def autosave(self, project_name: str, markdown: str) -> bool:
-        result = self._service.save_document(
-            project_name, markdown, clear_recovery_draft=False
-        )
+        result = self._service.save_document(project_name, markdown, clear_recovery_draft=False)
         if result.success:
             return True
         logger.error(
@@ -104,9 +100,7 @@ class ReportSessionController:
             result.failure_reason,
             result.detail,
         )
-        self._set_status(
-            t("report.autosave_failed", "Autosave failed — please save manually")
-        )
+        self._set_status(t("report.autosave_failed", "Autosave failed — please save manually"))
         return False
 
     def save_draft(self, project_name: str, markdown: str) -> None:

@@ -226,9 +226,7 @@ class AppController(QObject):
                 self._build_cheatsheet_pills, self._render_cheatsheet
             ),
             "loot": CallbackContentRenderer(self._build_loot_pills, self._render_loot),
-            "history": CallbackContentRenderer(
-                self._build_history_pills, self._render_history
-            ),
+            "history": CallbackContentRenderer(self._build_history_pills, self._render_history),
             "notes": CallbackContentRenderer(self._build_notes_pills, self._render_notes),
             "report": CallbackContentRenderer(lambda: None, self._render_report),
         }
@@ -302,7 +300,8 @@ class AppController(QObject):
         # Clipboard callbacks may originate outside the GUI thread.  Always
         # cross the Qt boundary before the coordinator touches UI state.
         self.clipboard_monitor.entry_added.connect(
-            self._on_clipboard_entry_added, Qt.ConnectionType.QueuedConnection  # type: ignore[call-arg]
+            self._on_clipboard_entry_added,
+            Qt.ConnectionType.QueuedConnection,  # type: ignore[call-arg]
         )
         if self.quick_note_manager and hasattr(self.quick_note_manager, "entry_added"):
             self.quick_note_manager.entry_added.connect(
@@ -369,9 +368,7 @@ class AppController(QObject):
         act_none = menu.addAction(t("phases.unassigned", "Unassigned"))
         act_none.setCheckable(True)
         act_none.setChecked(active_id is None)
-        act_none.triggered.connect(
-            lambda: self.activate_phase(None, source="phase_menu")
-        )
+        act_none.triggered.connect(lambda: self.activate_phase(None, source="phase_menu"))
 
         size = menu.sizeHint()
         pos = button.mapToGlobal(QPoint(0, -size.height() - 4))
@@ -390,9 +387,7 @@ class AppController(QObject):
 
         from ui.shortcuts_dialog import ShortcutHelpDialog
 
-        self._shortcuts_dialog = ShortcutHelpDialog(
-            config_manager=self.config, parent=self.window
-        )
+        self._shortcuts_dialog = ShortcutHelpDialog(config_manager=self.config, parent=self.window)
         self._shortcuts_dialog.show()
 
     def trigger_quick_note(self) -> None:
@@ -473,14 +468,9 @@ class AppController(QObject):
 
     def _on_pills_width_changed(self, width: int) -> None:
         if self.active_mode == "cheatsheet":
-
             self.cheatsheet_ctrl.update_pills_width(
-
                 width, self._select_category, self.search.get_pills_layout()
-
             )
-
-
 
     def _on_mode_switched(self, mode: str) -> None:
 
@@ -489,8 +479,6 @@ class AppController(QObject):
         self.refresh_filter_pills()
 
         self.refresh_content()
-
-
 
     def refresh_filter_pills(self) -> None:
 
@@ -580,9 +568,7 @@ class AppController(QObject):
     def _render_cheatsheet(self) -> RenderResult:
         signature = self._current_cheatsheet_signature()
         if self.cheatsheet_ctrl.can_restore_cache(signature):
-            cached_widgets, cached_cards, cached_scroll = (
-                self.cheatsheet_ctrl.pop_cached_view()
-            )
+            cached_widgets, cached_cards, cached_scroll = self.cheatsheet_ctrl.pop_cached_view()
             self._prepare_card_content()
             self.content.restore_cards(cached_widgets)
             self.content.restore_scroll_value(cached_scroll)
@@ -632,9 +618,7 @@ class AppController(QObject):
         self.cheatsheet_ctrl.discard_cache(self.content.discard_detached_cards)
 
     def _on_cheatsheet_batch_loaded(self) -> None:
-        self.footer.set_count(
-            self._format_entry_count(self.cheatsheet_ctrl.total_result_count)
-        )
+        self.footer.set_count(self._format_entry_count(self.cheatsheet_ctrl.total_result_count))
         self.content.refresh_content_geometry()
         self.content.schedule_content_geometry_refresh()
         self.content_refreshed.emit()
@@ -707,9 +691,7 @@ class AppController(QObject):
             self.window,
             self.content.show_empty_state,
             self._on_content_copied,
-            on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(
-                self.window, item
-            ),
+            on_add_to_note=lambda item: self.clipboard_coord.add_history_to_note(self.window, item),
             on_edit_history=self._on_edit_history_requested,
         )
         return RenderResult(cards, self._format_entry_count(len(cards)))
@@ -912,8 +894,13 @@ class AppController(QObject):
                     "Bereichs-Screenshot ist auf dieser Plattform nicht verfügbar.",
                 )
             logger.warning(msg)
-            if hasattr(self, "header") and hasattr(self.header, "btn_screenshot") and self.header.btn_screenshot:
+            if (
+                hasattr(self, "header")
+                and hasattr(self.header, "btn_screenshot")
+                and self.header.btn_screenshot
+            ):
                 from PyQt6.QtWidgets import QToolTip
+
                 btn = self.header.btn_screenshot
                 QToolTip.showText(btn.mapToGlobal(btn.rect().bottomLeft()), msg, btn)
             return

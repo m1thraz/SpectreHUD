@@ -56,7 +56,9 @@ class ReportFindingItem:
         self.phase = normalize_phase_key(self.phase)
 
     @classmethod
-    def from_markdown(cls, markdown: str, entry_id: str, language: str = "de") -> "ReportFindingItem":
+    def from_markdown(
+        cls, markdown: str, entry_id: str, language: str = "de"
+    ) -> "ReportFindingItem":
         loot_match = _LOOT_MARKER_RE.search(markdown)
         loot_marker = loot_match.group(0) if loot_match else None
 
@@ -103,7 +105,9 @@ class ReportFindingItem:
             phase = normalize_phase_key(_clean_md_val(phase_match.group(1)))
 
         timestamp = None
-        time_match = re.search(r"\*\*(?:Observed|Beobachtet):\*\*\s*(.*?)(?:  |$)", markdown, re.MULTILINE)
+        time_match = re.search(
+            r"\*\*(?:Observed|Beobachtet):\*\*\s*(.*?)(?:  |$)", markdown, re.MULTILINE
+        )
         if time_match:
             timestamp = _clean_md_val(time_match.group(1))
 
@@ -115,15 +119,21 @@ class ReportFindingItem:
                 status = "open"
             elif raw_status in ("behoben", "resolved", "closed"):
                 status = "resolved"
-            elif raw_status in ("in arbeit", "in_progress", "progress"):
+            elif raw_status in ("in arbeit", "in_progress", "in progress", "progress"):
                 status = "in_progress"
-            elif raw_status in ("akzeptiert", "accepted_risk", "accepted"):
+            elif raw_status in ("akzeptiert", "accepted_risk", "accepted risk", "accepted"):
                 status = "accepted_risk"
 
         # Split description and recommendation sections
-        desc_header = re.search(r"^####\s+(?:Beschreibung|Description)\s*$", markdown, re.MULTILINE | re.IGNORECASE)
-        rec_header = re.search(r"^####\s+(?:Empfehlung|Recommendation)\s*$", markdown, re.MULTILINE | re.IGNORECASE)
-        ref_header = re.search(r"^####\s+(?:Referenzen|References)\s*$", markdown, re.MULTILINE | re.IGNORECASE)
+        desc_header = re.search(
+            r"^####\s+(?:Beschreibung|Description)\s*$", markdown, re.MULTILINE | re.IGNORECASE
+        )
+        rec_header = re.search(
+            r"^####\s+(?:Empfehlung|Recommendation)\s*$", markdown, re.MULTILINE | re.IGNORECASE
+        )
+        ref_header = re.search(
+            r"^####\s+(?:Referenzen|References)\s*$", markdown, re.MULTILINE | re.IGNORECASE
+        )
 
         description = ""
         recommendation = ""
@@ -138,7 +148,7 @@ class ReportFindingItem:
             desc_text = markdown[desc_start:desc_end]
             end_m = FINDING_END_RE.search(desc_text)
             if end_m:
-                desc_text = desc_text[:end_m.start()]
+                desc_text = desc_text[: end_m.start()]
             description = desc_text.strip()
 
         if rec_header:
@@ -149,14 +159,14 @@ class ReportFindingItem:
             rec_text = markdown[rec_start:rec_end]
             end_m = FINDING_END_RE.search(rec_text)
             if end_m:
-                rec_text = rec_text[:end_m.start()]
+                rec_text = rec_text[: end_m.start()]
             recommendation = rec_text.strip()
 
         if ref_header:
-            ref_block = markdown[ref_header.end():]
+            ref_block = markdown[ref_header.end() :]
             end_m = FINDING_END_RE.search(ref_block)
             if end_m:
-                ref_block = ref_block[:end_m.start()]
+                ref_block = ref_block[: end_m.start()]
             for line in ref_block.strip().splitlines():
                 line_str = line.strip().lstrip("-* ").strip()
                 if line_str and not line_str.startswith("<!--"):
@@ -218,7 +228,11 @@ class ReportFindingItem:
             ev_type = (
                 "terminal"
                 if lang in ("bash", "sh", "terminal", "console")
-                else ("credential" if lang in ("credential", "credentials", "loot", "creds") else "code")
+                else (
+                    "credential"
+                    if lang in ("credential", "credentials", "loot", "creds")
+                    else "code"
+                )
             )
             evidence_items.append(
                 ReportEvidenceItem(
@@ -276,7 +290,9 @@ class ReportFindingItem:
         remove_from_description: bool = True,
     ) -> Optional[ReportEvidenceItem]:
         """Removes an evidence item and optionally strips its Markdown from the description."""
-        found_idx = next((i for i, ev in enumerate(self.evidence_items) if ev.id == evidence_id), -1)
+        found_idx = next(
+            (i for i, ev in enumerate(self.evidence_items) if ev.id == evidence_id), -1
+        )
         if found_idx == -1:
             return None
         removed = self.evidence_items.pop(found_idx)
@@ -360,15 +376,23 @@ class ReportFindingItem:
             time_label = "**Beobachtet:**" if language == "de" else "**Observed:**"
             meta_parts.append(f"{time_label} `{self.timestamp}`")
 
-        status_text = "Offen" if self.status == "open" else (
-            "Behoben" if self.status == "resolved" else (
-                "In Arbeit" if self.status == "in_progress" else "Akzeptiert"
+        status_text = (
+            "Offen"
+            if self.status == "open"
+            else (
+                "Behoben"
+                if self.status == "resolved"
+                else ("In Arbeit" if self.status == "in_progress" else "Akzeptiert")
             )
         )
         if language != "de":
-            status_text = "Open" if self.status == "open" else (
-                "Resolved" if self.status == "resolved" else (
-                    "In Progress" if self.status == "in_progress" else "Accepted Risk"
+            status_text = (
+                "Open"
+                if self.status == "open"
+                else (
+                    "Resolved"
+                    if self.status == "resolved"
+                    else ("In Progress" if self.status == "in_progress" else "Accepted Risk")
                 )
             )
         meta_parts.append(f"**Status:** {status_text}")

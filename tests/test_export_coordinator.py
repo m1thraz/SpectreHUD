@@ -215,4 +215,3 @@ def test_present_export_result_success_shows_info_dialog_with_warnings(tmp_path)
         assert args[1] == "Done"
         assert "report.html" in args[2]
         assert "Some images could not be copied" in args[2]
-

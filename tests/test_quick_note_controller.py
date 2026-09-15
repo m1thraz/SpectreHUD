@@ -11,6 +11,7 @@ from core.event_bus import EventBus
 from ui.controllers.quick_note_controller import QuickNoteController
 from ui.quick_note_popup import QuickNotePopup
 
+
 class TestQuickNoteController(unittest.TestCase):
     def setUp(self):
         self.storage = InMemoryStorageBackend()
@@ -287,7 +288,6 @@ class TestQuickNoteController(unittest.TestCase):
         container.close()
 
 
-
 class TestQuickNotePopup(unittest.TestCase):
     def setUp(self):
         self.popup = QuickNotePopup(default_category="recon")
@@ -341,9 +341,7 @@ class TestAppControllerAddButtonAndNotesIntegration(unittest.TestCase):
         self.controller._on_add_button_clicked = AppController._on_add_button_clicked.__get__(
             self.controller
         )
-        self.controller._on_notes_updated = AppController._on_notes_updated.__get__(
-            self.controller
-        )
+        self.controller._on_notes_updated = AppController._on_notes_updated.__get__(self.controller)
         self.controller._update_notes_badge = AppController._update_notes_badge.__get__(
             self.controller
         )

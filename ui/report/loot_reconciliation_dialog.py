@@ -138,9 +138,7 @@ class LootReconciliationDialog(BaseHudDialog):
 
         button_row = QHBoxLayout()
         button_row.addStretch()
-        self.btn_apply = QPushButton(
-            t("report.reconcile.apply", "Apply selected changes")
-        )
+        self.btn_apply = QPushButton(t("report.reconcile.apply", "Apply selected changes"))
         self.btn_apply.setObjectName("btn_reconcile_apply")
         self.btn_apply.setProperty("class", "PrimaryBtn")
         self.btn_apply.clicked.connect(self.accept)
@@ -155,9 +153,7 @@ class LootReconciliationDialog(BaseHudDialog):
         combo = QComboBox()
         combo.setObjectName(f"reconcile_action_{item.entry_id}")
         if not item.resolvable:
-            combo.addItem(
-                t("report.reconcile.raw_required", "Raw Markdown required"), None
-            )
+            combo.addItem(t("report.reconcile.raw_required", "Raw Markdown required"), None)
             combo.setEnabled(False)
             combo.setToolTip(
                 t(

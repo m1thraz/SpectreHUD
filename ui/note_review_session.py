@@ -40,9 +40,7 @@ class QuickNoteReviewSession:
             return True
         return False
 
-    def prepare_step(
-        self, eligible: List[Dict[str, Any]]
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+    def prepare_step(self, eligible: List[Dict[str, Any]]) -> Tuple[Optional[Dict[str, Any]], bool]:
         """Synchronizes queue against currently eligible notes and returns (active_entry, show_cycle_notice)."""
         entries_by_id = {n["id"]: n for n in eligible if n.get("id")}
 

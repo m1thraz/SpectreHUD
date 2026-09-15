@@ -12,6 +12,7 @@ from ui.history_card import HistoryCard
 from ui.quick_note_card import QuickNoteCard
 from ui.loot_card import LootCard
 
+
 class TestEditDialogsAndCards(unittest.TestCase):
     def test_history_edit_dialog(self):
         entry = {

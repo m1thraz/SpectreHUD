@@ -35,7 +35,22 @@ class TestMarkdownHtmlParser(unittest.TestCase):
     def test_unclosed_code_block_flushes_at_eof(self) -> None:
         md = "```bash\necho 'hello world'"
         html = self.parser.parse(md)
-        self.assertIn('<pre><code class="language-bash">echo &#x27;hello world&#x27;</code></pre>', html)
+        self.assertIn(
+            '<pre><code class="language-bash">echo &#x27;hello world&#x27;</code></pre>', html
+        )
+
+    def test_adaptive_fence_keeps_nested_triple_backticks_in_one_code_box(self) -> None:
+        md = "````text\nbefore\n```\ninside\n```\nafter\n````\n\nPlain explanation."
+        result = self.parser.parse(md)
+        self.assertEqual(result.count("<pre>"), 1)
+        self.assertIn("before\n```\ninside\n```\nafter", result)
+        self.assertIn("<p>Plain explanation.</p>", result)
+
+    def test_long_evidence_can_paginate_but_short_evidence_stays_together(self) -> None:
+        short = self.parser.parse("```bash\nid\n```")
+        long = self.parser.parse("```bash\n" + "\n".join(["id"] * 36) + "\n```")
+        self.assertIn("<pre><code", short)
+        self.assertIn('<pre class="report-code-long"><code', long)
 
     def test_unordered_list_flushing(self) -> None:
         md = "- Alpha\n* Beta\n- Gamma\n\nParagraph after list."

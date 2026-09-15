@@ -14,8 +14,7 @@ def _interface(name: str, *addresses: str) -> dict:
     return {
         "ifname": name,
         "addr_info": [
-            {"family": "inet", "local": address, "prefixlen": 24}
-            for address in addresses
+            {"family": "inet", "local": address, "prefixlen": 24} for address in addresses
         ],
     }
 

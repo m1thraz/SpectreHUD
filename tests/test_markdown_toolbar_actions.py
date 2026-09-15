@@ -172,6 +172,3 @@ def test_align_text_no_selection(qapp):
     # Align left unwraps back to normal
     align_text(edit, "left")
     assert edit.toPlainText() == "Sample Line"
-
-
-

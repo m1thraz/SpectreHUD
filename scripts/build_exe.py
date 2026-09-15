@@ -118,7 +118,6 @@ def build_standalone_exe() -> bool:
             print("[-] Failed to install PyInstaller.")
             return False
 
-
     # Run PyInstaller build
     cmd = [
         sys.executable,

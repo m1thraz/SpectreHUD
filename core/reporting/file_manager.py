@@ -237,9 +237,7 @@ class ReportFileManager:
     def reconcile_loot(
         self,
         loot_manager: Any,
-        decisions: dict[
-            str, LootReconciliationAction | LootReconciliationSelection | str
-        ],
+        decisions: dict[str, LootReconciliationAction | LootReconciliationSelection | str],
         *,
         append_missing: bool = False,
         project_name: Optional[str] = None,
@@ -296,5 +294,3 @@ class ReportFileManager:
 
             shutil.copy2(src, dest)
             return dest.relative_to(proj_dir).as_posix()
-
-

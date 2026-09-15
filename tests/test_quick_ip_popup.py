@@ -11,6 +11,7 @@ from PyQt6.QtGui import QKeyEvent
 from ui.quick_ip_popup import QuickIpPopup
 from ui.variable_bar import VariableBar
 
+
 class TestQuickIpPopup(unittest.TestCase):
     def setUp(self):
         self.popup = QuickIpPopup(target_ip="10.10.10.10", attacker_ip="10.10.14.5")
@@ -78,7 +79,9 @@ class TestQuickIpPopup(unittest.TestCase):
         self.assertTrue(self.popup.isVisible())
 
         # Simulate Escape on txt_target through eventFilter
-        esc_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+        esc_event = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier
+        )
         handled = self.popup.eventFilter(self.popup.txt_target, esc_event)
         self.assertTrue(handled)
         self.assertFalse(self.popup.isVisible())
@@ -103,7 +106,9 @@ class TestQuickIpPopup(unittest.TestCase):
 
     def test_variable_bar_live_synchronization(self):
         """Verify that changes in QuickIpPopup immediately propagate to VariableBar."""
-        var_bar = VariableBar(initial_vars={"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5"})
+        var_bar = VariableBar(
+            initial_vars={"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5"}
+        )
         popup = QuickIpPopup(parent=None)
 
         popup.target_changed.connect(var_bar.txt_target.setText)
@@ -129,15 +134,21 @@ class TestAppControllerQuickIp(unittest.TestCase):
         from ui.app_controller import AppController
 
         controller = MagicMock(spec=AppController)
-        var_bar = VariableBar(initial_vars={"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5"})
+        var_bar = VariableBar(
+            initial_vars={"target_ip": "10.10.10.10", "attacker_ip": "10.10.14.5"}
+        )
         controller.var_bar = var_bar
         controller._quick_ip_popup = None
 
         # Bind the real methods
         controller.trigger_quick_ip = AppController.trigger_quick_ip.__get__(controller)
         controller._open_quick_ip_popup = AppController._open_quick_ip_popup.__get__(controller)
-        controller._on_quick_ip_target_changed = AppController._on_quick_ip_target_changed.__get__(controller)
-        controller._on_quick_ip_attacker_changed = AppController._on_quick_ip_attacker_changed.__get__(controller)
+        controller._on_quick_ip_target_changed = AppController._on_quick_ip_target_changed.__get__(
+            controller
+        )
+        controller._on_quick_ip_attacker_changed = (
+            AppController._on_quick_ip_attacker_changed.__get__(controller)
+        )
 
         controller.trigger_quick_ip()
 

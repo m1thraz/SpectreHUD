@@ -20,7 +20,9 @@ class FindReplaceBar(QWidget):
         self.find_input.textChanged.connect(self.update_count)
         self.find_input.returnPressed.connect(self.find_next)
         self.replace_input = QLineEdit(self)
-        self.replace_input.setPlaceholderText(t("find_replace.replace_placeholder", "Ersetzen durch …"))
+        self.replace_input.setPlaceholderText(
+            t("find_replace.replace_placeholder", "Ersetzen durch …")
+        )
         self.count_label = QLabel(t("find_replace.matches_count", "{count} Treffer", count=0), self)
         previous = QPushButton("↑", self)
         previous.setToolTip(t("find_replace.previous_match", "Vorheriger Treffer"))

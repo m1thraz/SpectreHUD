@@ -43,7 +43,9 @@ def test_start_and_stop_are_idempotent(qapp):
     clipboard = FakeClipboard()
     monitor = ClipboardMonitor(ClipboardHistory(storage=InMemoryStorageBackend()))
 
-    with patch("ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)):
+    with patch(
+        "ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)
+    ):
         assert monitor.start_listening()
         assert monitor.start_listening()
         assert len(clipboard.dataChanged.callbacks) == 1
@@ -60,7 +62,9 @@ def test_capture_uses_target_and_emits_only_for_new_entries(qapp):
     monitor.entry_added.connect(emitted.append)
     monitor.set_target_provider(lambda: "10.10.10.8")
 
-    with patch("ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)):
+    with patch(
+        "ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)
+    ):
         monitor.start_listening()
         monitor.set_paused(False)
         clipboard.value = " whoami "
@@ -78,7 +82,9 @@ def test_paused_monitor_ignores_clipboard_changes(qapp):
     history = ClipboardHistory(storage=InMemoryStorageBackend())
     monitor = ClipboardMonitor(history)
 
-    with patch("ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)):
+    with patch(
+        "ui.clipboard_monitor.QApplication.instance", return_value=FakeApplication(clipboard)
+    ):
         monitor.start_listening()
         clipboard.value = "id"
         clipboard.dataChanged.emit()

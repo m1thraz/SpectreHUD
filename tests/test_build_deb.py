@@ -28,9 +28,7 @@ def test_linux_bundle_includes_dynamic_xorg_backends(tmp_path):
         assert build_pyinstaller_bundle(tmp_path, tmp_path / "dist" / "spectrehud")
 
     cmd = run.call_args.args[0]
-    hidden_imports = {
-        cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--hidden-import"
-    }
+    hidden_imports = {cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--hidden-import"}
     assert {"pynput.keyboard._xorg", "pynput.mouse._xorg"} <= hidden_imports
     assert not any(name.endswith("._win32") for name in hidden_imports)
 

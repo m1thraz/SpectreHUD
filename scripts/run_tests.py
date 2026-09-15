@@ -488,7 +488,9 @@ def execute_tier(
     if not effective_no_parallel and TIER_CONFIGS[tier].parallel and not is_xdist_available():
         effective_no_parallel = True
         if not json_output:
-            print("note: pytest-xdist not found; falling back to serial execution (install with: pip install -e \".[dev]\")")
+            print(
+                'note: pytest-xdist not found; falling back to serial execution (install with: pip install -e ".[dev]")'
+            )
     command = build_pytest_command(
         tier,
         junit_path,
@@ -612,7 +614,9 @@ def execute_tier(
         label = "FAIL" if kind == "test-failure" else "ERROR"
         print(f"{label} tier={tier} kind={kind} exit={exit_code} duration={elapsed:.2f}s")
         if kind == "missing-xdist":
-            print("hint: pytest-xdist is not installed. Run tests serially with --no-parallel or install with: pip install -e \".[dev]\"")
+            print(
+                'hint: pytest-xdist is not installed. Run tests serially with --no-parallel or install with: pip install -e ".[dev]"'
+            )
         if failed_tests:
             print("failed:")
             for test_id in failed_tests:

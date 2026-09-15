@@ -17,15 +17,33 @@ def test_linux_uses_explicit_xdg_roots(tmp_path):
         "XDG_CACHE_HOME": str(tmp_path / "xdg-cache"),
     }
 
-    assert config_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "xdg-config" / "spectrehud"
-    assert data_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "xdg-data" / "spectrehud"
-    assert cache_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "xdg-cache" / "spectrehud"
+    assert (
+        config_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "xdg-config" / "spectrehud"
+    )
+    assert (
+        data_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "xdg-data" / "spectrehud"
+    )
+    assert (
+        cache_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "xdg-cache" / "spectrehud"
+    )
 
 
 def test_linux_uses_xdg_fallbacks_when_environment_is_absent(tmp_path):
-    assert config_dir(system_name="Linux", environ={}, home=tmp_path) == tmp_path / ".config" / "spectrehud"
-    assert data_dir(system_name="Linux", environ={}, home=tmp_path) == tmp_path / ".local" / "share" / "spectrehud"
-    assert cache_dir(system_name="Linux", environ={}, home=tmp_path) == tmp_path / ".cache" / "spectrehud"
+    assert (
+        config_dir(system_name="Linux", environ={}, home=tmp_path)
+        == tmp_path / ".config" / "spectrehud"
+    )
+    assert (
+        data_dir(system_name="Linux", environ={}, home=tmp_path)
+        == tmp_path / ".local" / "share" / "spectrehud"
+    )
+    assert (
+        cache_dir(system_name="Linux", environ={}, home=tmp_path)
+        == tmp_path / ".cache" / "spectrehud"
+    )
 
 
 def test_windows_uses_roaming_config_and_local_data(tmp_path):
@@ -34,10 +52,22 @@ def test_windows_uses_roaming_config_and_local_data(tmp_path):
         "LOCALAPPDATA": str(tmp_path / "Local"),
     }
 
-    assert config_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Roaming" / "SpectreHUD"
-    assert data_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD"
-    assert logs_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD" / "Logs"
-    assert cache_dir(system_name="Windows", environ=environment, home=tmp_path) == tmp_path / "Local" / "SpectreHUD" / "Cache"
+    assert (
+        config_dir(system_name="Windows", environ=environment, home=tmp_path)
+        == tmp_path / "Roaming" / "SpectreHUD"
+    )
+    assert (
+        data_dir(system_name="Windows", environ=environment, home=tmp_path)
+        == tmp_path / "Local" / "SpectreHUD"
+    )
+    assert (
+        logs_dir(system_name="Windows", environ=environment, home=tmp_path)
+        == tmp_path / "Local" / "SpectreHUD" / "Logs"
+    )
+    assert (
+        cache_dir(system_name="Windows", environ=environment, home=tmp_path)
+        == tmp_path / "Local" / "SpectreHUD" / "Cache"
+    )
 
 
 def test_explicit_spectre_overrides_have_highest_priority(tmp_path):
@@ -49,12 +79,24 @@ def test_explicit_spectre_overrides_have_highest_priority(tmp_path):
         "SPECTRE_LOG_DIR": str(tmp_path / "logs-override"),
     }
 
-    assert config_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "config-override"
-    assert data_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "data-override"
-    assert cache_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "cache-override"
+    assert (
+        config_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "config-override"
+    )
+    assert (
+        data_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "data-override"
+    )
+    assert (
+        cache_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "cache-override"
+    )
     assert projects_dir(environ=environment, home=tmp_path) == tmp_path / "projects-override"
     assert logs_dir(environ=environment, home=tmp_path) == tmp_path / "logs-override"
-    assert user_themes_dir(system_name="Linux", environ=environment, home=tmp_path) == tmp_path / "config-override" / "themes"
+    assert (
+        user_themes_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "config-override" / "themes"
+    )
 
 
 def test_windows_user_themes_retain_old_cross_platform_location(tmp_path):

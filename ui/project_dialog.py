@@ -247,7 +247,10 @@ class NewProjectDialog(BaseHudDialog):
                 show_warning_dialog(
                     self,
                     t("project_dialog.err_mismatch_password_title", "Passwords Do Not Match"),
-                    t("project_dialog.err_mismatch_password_msg", "Please confirm the same password."),
+                    t(
+                        "project_dialog.err_mismatch_password_msg",
+                        "Please confirm the same password.",
+                    ),
                 )
                 return
 

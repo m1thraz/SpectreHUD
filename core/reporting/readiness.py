@@ -29,19 +29,11 @@ class ReportReadinessAssessment:
 
     @property
     def blockers(self) -> tuple[ReportReadinessIssue, ...]:
-        return tuple(
-            issue
-            for issue in self.issues
-            if issue.level is ReportReadinessLevel.BLOCKER
-        )
+        return tuple(issue for issue in self.issues if issue.level is ReportReadinessLevel.BLOCKER)
 
     @property
     def review_items(self) -> tuple[ReportReadinessIssue, ...]:
-        return tuple(
-            issue
-            for issue in self.issues
-            if issue.level is ReportReadinessLevel.REVIEW
-        )
+        return tuple(issue for issue in self.issues if issue.level is ReportReadinessLevel.REVIEW)
 
     @property
     def status(self) -> str:
@@ -124,8 +116,7 @@ def assess_report_readiness(
         issues=tuple(issues),
         total_findings=len(document.findings),
         open_findings=sum(
-            finding.status.lower() in {"open", "in_progress"}
-            for finding in document.findings
+            finding.status.lower() in {"open", "in_progress"} for finding in document.findings
         ),
         evidence_items=sum(len(finding.evidence_items) for finding in document.findings),
     )

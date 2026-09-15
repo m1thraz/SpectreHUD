@@ -54,7 +54,9 @@ class TestProjectSessionService(unittest.TestCase):
             target_ip="10.10.10.10",
         )
         self.clipboard_watcher.add_entry("ssh root@10.10.10.10", target_ip="10.10.10.10")
-        self.quick_note_manager.add_entry("Investigate SMB share", category="recon", target_ip="10.10.10.10")
+        self.quick_note_manager.add_entry(
+            "Investigate SMB share", category="recon", target_ip="10.10.10.10"
+        )
 
         variables = {
             "target_ip": "10.10.10.10",
@@ -84,7 +86,9 @@ class TestProjectSessionService(unittest.TestCase):
         self.assertEqual(len(self.clipboard_watcher.get_all_history()), 1)
         self.assertIn("ssh root@10.10.10.10", self.clipboard_watcher.get_all_history()[0]["text"])
         self.assertEqual(len(self.quick_note_manager.get_all_entries()), 1)
-        self.assertEqual(self.quick_note_manager.get_all_entries()[0]["text"], "Investigate SMB share")
+        self.assertEqual(
+            self.quick_note_manager.get_all_entries()[0]["text"], "Investigate SMB share"
+        )
 
     def test_session_isolation_across_projects(self):
         """Tests that loading an empty/new project cleans up loot and clipboard in memory."""

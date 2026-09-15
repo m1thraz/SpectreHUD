@@ -33,9 +33,7 @@ def test_readiness_distinguishes_blockers_from_review_items():
         "finding.evidence",
         "summary.incomplete",
     }
-    assert all(
-        issue.level is ReportReadinessLevel.BLOCKER for issue in result.blockers
-    )
+    assert all(issue.level is ReportReadinessLevel.BLOCKER for issue in result.blockers)
     assert result.total_findings == 1
     assert result.open_findings == 1
     assert result.evidence_items == 0

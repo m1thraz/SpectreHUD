@@ -174,7 +174,9 @@ def test_kanban_cards_preserve_full_wrapped_values_without_inner_scrollbars(qapp
                 assert surface.verticalScrollBar().maximum() == 0
                 assert surface.horizontalScrollBar().maximum() == 0
             assert card.lbl_content.text() == full_content
-            assert card.lbl_content.height() >= card.lbl_content.heightForWidth(card.lbl_content.width())
+            assert card.lbl_content.height() >= card.lbl_content.heightForWidth(
+                card.lbl_content.width()
+            )
             assert card.lbl_content.maximumHeight() == 16777215
             assert card.width() <= recon_column.width()
 
@@ -182,7 +184,9 @@ def test_kanban_cards_preserve_full_wrapped_values_without_inner_scrollbars(qapp
         column_scrolls = recon_column.findChildren(QScrollArea)
         assert len(column_scrolls) == 1
         assert column_scrolls[0].verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        assert column_scrolls[0].horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        assert (
+            column_scrolls[0].horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
 
         cards[0].btn_edit.click()
         assert edited == [entries[0]]
@@ -293,4 +297,3 @@ def test_columns_fill_viewport_height_and_follow_board_resize(qapp, tmp_path):
 
         board.hide()
         board.deleteLater()
-

@@ -430,7 +430,8 @@ tr:nth-child(even) {
 }
 
 .finding-description h4,
-.finding-recommendation h4 {
+.finding-recommendation h4,
+.finding-references h4 {
     margin-top: 12px;
 }
 
@@ -1062,8 +1063,13 @@ body[data-report-profile="professional_print"] .finding-meta-value {
     overflow-wrap: anywhere;
 }
 
+body[data-report-profile="professional_print"] .finding-meta-cvss-vector {
+    flex-basis: 100%;
+}
+
 body[data-report-profile="professional_print"] .finding-description h4,
-body[data-report-profile="professional_print"] .finding-recommendation h4 {
+body[data-report-profile="professional_print"] .finding-recommendation h4,
+body[data-report-profile="professional_print"] .finding-references h4 {
     margin: 0 0 3mm;
     color: #7d878e !important;
     font-size: 7.25pt;
@@ -1141,8 +1147,8 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
     }
 
     body[data-report-profile="professional_print"] .report-finding {
-        break-inside: avoid;
-        page-break-inside: avoid;
+        break-inside: auto;
+        page-break-inside: auto;
     }
 
     body[data-report-profile="professional_print"] .finding-header,
@@ -1154,7 +1160,8 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
     }
 
     body[data-report-profile="professional_print"] .finding-description h4,
-    body[data-report-profile="professional_print"] .finding-recommendation h4 {
+    body[data-report-profile="professional_print"] .finding-recommendation h4,
+    body[data-report-profile="professional_print"] .finding-references h4 {
         break-after: avoid;
         page-break-after: avoid;
     }
@@ -1166,6 +1173,11 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         word-break: break-word;
         break-inside: avoid;
         page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] pre.report-code-long {
+        break-inside: auto;
+        page-break-inside: auto;
     }
 
     body[data-report-profile="professional_print"] table {
@@ -1228,11 +1240,7 @@ def get_report_css(
     profile: str = "interactive",
 ) -> str:
     """Returns report CSS for the selected standalone export theme with print overrides."""
-    base = REPORT_BASE_CSS.replace(
-        "__REPORT_FONT_STACK__", get_report_font_stack(report_font_key)
-    )
+    base = REPORT_BASE_CSS.replace("__REPORT_FONT_STACK__", get_report_font_stack(report_font_key))
     theme_css = ("\n" + REPORT_LIGHT_CSS) if theme.lower() == "light" else ""
-    professional_css = (
-        "\n" + REPORT_PROFESSIONAL_CSS if profile == "professional_print" else ""
-    )
+    professional_css = "\n" + REPORT_PROFESSIONAL_CSS if profile == "professional_print" else ""
     return f"{base}{theme_css}\n{REPORT_PRINT_CSS}{professional_css}"

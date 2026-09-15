@@ -49,12 +49,12 @@ class ProjectSessionService:
         try:
             state = self.project_manager.load_project_state(name=pname)
         except ProjectStateLoadError:
-            logger.error("Refusing to replace the live session with corrupted state for '%s'.", pname)
+            logger.error(
+                "Refusing to replace the live session with corrupted state for '%s'.", pname
+            )
             raise
 
-        staged_loot = self._validate_list_component(
-            "loot", state.loot, validate_loot_list
-        )
+        staged_loot = self._validate_list_component("loot", state.loot, validate_loot_list)
         staged_history = self._validate_list_component(
             "clipboard_history", state.clipboard_history, validate_clipboard_list
         )
@@ -77,7 +77,9 @@ class ProjectSessionService:
                 self.quick_note_manager.replace_entries(staged_notes)
             self._replace_phase(staged_phase)
         except Exception as exc:
-            logger.exception("Session apply failed for '%s'; restoring previous runtime state.", pname)
+            logger.exception(
+                "Session apply failed for '%s'; restoring previous runtime state.", pname
+            )
             self._restore_runtime_state(
                 previous_loot,
                 previous_history,
@@ -142,7 +144,9 @@ class ProjectSessionService:
             try:
                 restore()
             except Exception:
-                logger.exception("Failed to restore one runtime component after session apply failure.")
+                logger.exception(
+                    "Failed to restore one runtime component after session apply failure."
+                )
 
     def save_project_session(
         self, variables: Dict[str, str], project_name: Optional[str] = None

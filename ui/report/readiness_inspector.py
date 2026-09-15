@@ -50,9 +50,7 @@ class ReportReadinessInspector(QWidget):
 
         header_icon = QLabel()
         header_icon.setPixmap(
-            icon("fa5s.clipboard-check", color=get_theme_color("CYBER_CYAN")).pixmap(
-                20, 20
-            )
+            icon("fa5s.clipboard-check", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
         )
         header_layout.addWidget(header_icon)
 
@@ -78,23 +76,17 @@ class ReportReadinessInspector(QWidget):
         overview_layout = QVBoxLayout(overview)
         overview_layout.setContentsMargins(12, 10, 12, 10)
         overview_layout.setSpacing(10)
-        overview_title = QLabel(
-            t("report.readiness_overview", "Completion Overview")
-        )
+        overview_title = QLabel(t("report.readiness_overview", "Completion Overview"))
         style_inspector_section(overview, overview_title)
         overview_layout.addWidget(overview_title)
 
         metrics = QGridLayout()
         metrics.setSpacing(8)
-        self.lbl_findings = self._add_metric(
-            metrics, 0, t("report.readiness_findings", "FINDINGS")
-        )
+        self.lbl_findings = self._add_metric(metrics, 0, t("report.readiness_findings", "FINDINGS"))
         self.lbl_open = self._add_metric(
             metrics, 1, t("report.readiness_open", "OPEN / IN PROGRESS")
         )
-        self.lbl_evidence = self._add_metric(
-            metrics, 2, t("report.readiness_evidence", "EVIDENCE")
-        )
+        self.lbl_evidence = self._add_metric(metrics, 2, t("report.readiness_evidence", "EVIDENCE"))
         overview_layout.addLayout(metrics)
 
         self.lbl_summary = QLabel()
@@ -234,27 +226,21 @@ class ReportReadinessInspector(QWidget):
             "metadata.client": t(
                 "report.readiness_issue_client", "Client / organization is missing"
             ),
-            "metadata.tester": t(
-                "report.readiness_issue_tester", "Lead tester is missing"
-            ),
+            "metadata.tester": t("report.readiness_issue_tester", "Lead tester is missing"),
             "metadata.target_scope": t(
                 "report.readiness_issue_target", "Target / scope is missing"
             ),
             "metadata.timeframe": t(
                 "report.readiness_issue_timeframe", "Assessment period is missing"
             ),
-            "finding.title": t(
-                "report.readiness_issue_finding_title", "Finding title is missing"
-            ),
+            "finding.title": t("report.readiness_issue_finding_title", "Finding title is missing"),
             "finding.description": t(
                 "report.readiness_issue_description", "Description is missing"
             ),
             "finding.recommendation": t(
                 "report.readiness_issue_recommendation", "Recommendation is missing"
             ),
-            "finding.evidence": t(
-                "report.readiness_issue_evidence", "No evidence is linked"
-            ),
+            "finding.evidence": t("report.readiness_issue_evidence", "No evidence is linked"),
             "summary.incomplete": t(
                 "report.readiness_issue_summary",
                 "Executive summary or key highlights are incomplete",

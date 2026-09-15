@@ -155,10 +155,7 @@ def analyze_loot_reconciliation(
         report_title = entry_id
         if block is not None:
             report_title = (
-                ReportFindingItem.from_markdown(
-                    block.markdown, block.finding_id
-                ).title
-                or entry_id
+                ReportFindingItem.from_markdown(block.markdown, block.finding_id).title or entry_id
             )
         items.append(
             LootReconciliationItem(
@@ -177,10 +174,7 @@ def analyze_loot_reconciliation(
         report_title = entry_id
         if block is not None:
             report_title = (
-                ReportFindingItem.from_markdown(
-                    block.markdown, block.finding_id
-                ).title
-                or entry_id
+                ReportFindingItem.from_markdown(block.markdown, block.finding_id).title or entry_id
             )
         items.append(
             LootReconciliationItem(
@@ -195,9 +189,7 @@ def analyze_loot_reconciliation(
 
 
 def _replace_marker(block: str, entry_id: str, replacement: str) -> str:
-    marker = re.compile(
-        rf"<!--\s*spectre:loot:{re.escape(entry_id)}:[a-fA-F0-9]+\s*-->"
-    )
+    marker = re.compile(rf"<!--\s*spectre:loot:{re.escape(entry_id)}:[a-fA-F0-9]+\s*-->")
     updated, count = marker.subn(replacement, block, count=1)
     if count != 1:
         raise LootReconciliationError(f"Loot marker '{entry_id}' is not unique in its finding")
@@ -235,9 +227,7 @@ def _unique_report_id(entry_id: str, existing_ids: set[str]) -> str:
 def reconcile_loot_report(
     report_text: str,
     loot_entries: Iterable[Mapping[str, Any]],
-    decisions: Mapping[
-        str, LootReconciliationAction | LootReconciliationSelection | str
-    ],
+    decisions: Mapping[str, LootReconciliationAction | LootReconciliationSelection | str],
     *,
     append_missing: bool = False,
     template: Any = None,
@@ -245,24 +235,16 @@ def reconcile_loot_report(
 ) -> LootReconciliationResult:
     """Apply explicit per-finding decisions and optionally append missing Loot atomically."""
     entries = [dict(entry) for entry in loot_entries]
-    entry_map = {
-        str(entry.get("id", "") or ""): entry
-        for entry in entries
-        if entry.get("id")
-    }
+    entry_map = {str(entry.get("id", "") or ""): entry for entry in entries if entry.get("id")}
     items = {item.entry_id: item for item in analyze_loot_reconciliation(report_text, entries)}
     blocks = _blocks_by_loot_id(report_text)
     normalized: dict[str, LootReconciliationAction] = {}
 
     for entry_id, raw_action in decisions.items():
-        selection = (
-            raw_action if isinstance(raw_action, LootReconciliationSelection) else None
-        )
+        selection = raw_action if isinstance(raw_action, LootReconciliationSelection) else None
         try:
             action = (
-                selection.action
-                if selection is not None
-                else LootReconciliationAction(raw_action)
+                selection.action if selection is not None else LootReconciliationAction(raw_action)
             )
         except ValueError as exc:
             raise LootReconciliationError(
@@ -272,9 +254,7 @@ def reconcile_loot_report(
         if item is None:
             raise LootReconciliationError(f"Loot difference '{entry_id}' is no longer current")
         if not item.resolvable or entry_id not in blocks:
-            raise LootReconciliationError(
-                f"Finding '{entry_id}' has no safe structured boundary"
-            )
+            raise LootReconciliationError(f"Finding '{entry_id}' has no safe structured boundary")
         if action not in _ALLOWED_ACTIONS[item.kind]:
             raise LootReconciliationError(
                 f"Action '{action.value}' is invalid for '{item.kind.value}'"
@@ -341,12 +321,16 @@ def reconcile_loot_report(
             language=language,
         ).text
 
-    append_result = append_missing_loot_to_text(
-        reconciled,
-        entries,
-        template=template,
-        language=language,
-    ) if append_missing else None
+    append_result = (
+        append_missing_loot_to_text(
+            reconciled,
+            entries,
+            template=template,
+            language=language,
+        )
+        if append_missing
+        else None
+    )
     final_text = append_result.text if append_result is not None else reconciled
     resolved = accepted + replaced + duplicated + detached + deleted
     return LootReconciliationResult(

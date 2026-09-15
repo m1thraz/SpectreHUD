@@ -168,32 +168,38 @@ class ReportMetadata:
 
     def to_markdown_table(self, language: str = "de") -> str:
         date_str = self.date or datetime.now().strftime("%Y-%m-%d")
-        title = self.title or ("Security Assessment Report" if language != "de" else "Sicherheitsbericht")
+        title = self.title or (
+            "Security Assessment Report" if language != "de" else "Sicherheitsbericht"
+        )
         lines = [f"# {title}", ""]
         if language == "de":
-            lines.extend([
-                "| Eigenschaft | Wert |",
-                "|---|---|",
-                f"| **Auftraggeber / Client** | `{self.client}` |",
-                f"| **Tester** | `{self.tester}` |",
-                f"| **Ziel(e) / Scope** | `{self.target_scope}` |",
-                f"| **Testzeitraum** | `{self.timeframe}` |",
-                f"| **Berichtsdatum** | `{date_str}` |",
-                f"| **Klassifizierung** | `{self.classification or 'Vertraulich – Nur für internen Gebrauch'}` |",
-                f"| **Report-Version** | `{self.version or 'v1.0'}` |",
-            ])
+            lines.extend(
+                [
+                    "| Eigenschaft | Wert |",
+                    "|---|---|",
+                    f"| **Auftraggeber / Client** | `{self.client}` |",
+                    f"| **Tester** | `{self.tester}` |",
+                    f"| **Ziel(e) / Scope** | `{self.target_scope}` |",
+                    f"| **Testzeitraum** | `{self.timeframe}` |",
+                    f"| **Berichtsdatum** | `{date_str}` |",
+                    f"| **Klassifizierung** | `{self.classification or 'Vertraulich – Nur für internen Gebrauch'}` |",
+                    f"| **Report-Version** | `{self.version or 'v1.0'}` |",
+                ]
+            )
         else:
-            lines.extend([
-                "| Property | Value |",
-                "|---|---|",
-                f"| **Client / Organization** | `{self.client}` |",
-                f"| **Lead Tester** | `{self.tester}` |",
-                f"| **Scope / Target** | `{self.target_scope}` |",
-                f"| **Assessment Period** | `{self.timeframe}` |",
-                f"| **Report Date** | `{date_str}` |",
-                f"| **Classification** | `{self.classification or 'Confidential – Internal Use Only'}` |",
-                f"| **Report Version** | `{self.version or 'v1.0'}` |",
-            ])
+            lines.extend(
+                [
+                    "| Property | Value |",
+                    "|---|---|",
+                    f"| **Client / Organization** | `{self.client}` |",
+                    f"| **Lead Tester** | `{self.tester}` |",
+                    f"| **Scope / Target** | `{self.target_scope}` |",
+                    f"| **Assessment Period** | `{self.timeframe}` |",
+                    f"| **Report Date** | `{date_str}` |",
+                    f"| **Classification** | `{self.classification or 'Confidential – Internal Use Only'}` |",
+                    f"| **Report Version** | `{self.version or 'v1.0'}` |",
+                ]
+            )
         for k, v in self.custom_fields.items():
             lines.append(f"| **{k.capitalize()}** | `{v}` |")
         lines.append("")

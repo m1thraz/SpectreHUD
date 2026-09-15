@@ -131,7 +131,9 @@ class TestProjectDialogs(unittest.TestCase):
         from ui.controllers.project_controller import ProjectController
         from unittest.mock import Mock
 
-        cfg = ConfigManager(storage=InMemoryStorageBackend(initial_data={"config": {"bleed_through": 22}}))
+        cfg = ConfigManager(
+            storage=InMemoryStorageBackend(initial_data={"config": {"bleed_through": 22}})
+        )
         self.assertEqual(cfg.get("bleed_through"), 22)
 
         ctrl = ProjectController(self.project_mgr, config_manager=cfg)

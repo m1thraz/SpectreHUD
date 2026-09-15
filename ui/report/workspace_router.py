@@ -85,9 +85,7 @@ class ReportWorkspaceRouter:
                 structured=True,
             )
         if kind is ReportLocationKind.READINESS:
-            self._surfaces.readiness.inspector.load_assessment(
-                assess_report_readiness(document)
-            )
+            self._surfaces.readiness.inspector.load_assessment(assess_report_readiness(document))
             return ReportRoute(self._surfaces.readiness.surface, structured=True)
         if kind is ReportLocationKind.FINDING:
             return self._route_finding(location.identity, document, context)
@@ -143,9 +141,7 @@ class ReportWorkspaceRouter:
         inspector.set_project_target_ip(context.target_ip)
         inspector.load_finding(finding)
         preview_target = (
-            ("finding", finding.id)
-            if finding is not None
-            else ("section", "finding_section")
+            ("finding", finding.id) if finding is not None else ("section", "finding_section")
         )
         return ReportRoute(
             self._surfaces.finding.surface,
@@ -193,8 +189,7 @@ class ReportWorkspaceRouter:
                 (
                     candidate
                     for candidate in document.narratives
-                    if candidate.identity == identity
-                    or candidate.section_type == identity
+                    if candidate.identity == identity or candidate.section_type == identity
                 ),
                 None,
             )

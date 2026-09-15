@@ -144,13 +144,27 @@ class ReportWorkspaceDocument:
     # --- Bidirectional Markdown Synchronisation ---
 
     @classmethod
-    def from_markdown(cls, markdown_text: str, default_language: str = "de") -> "ReportWorkspaceDocument":
+    def from_markdown(
+        cls, markdown_text: str, default_language: str = "de"
+    ) -> "ReportWorkspaceDocument":
         if not markdown_text:
             return cls(language=default_language)
 
         # Detect language
-        is_de = "auftraggeber" in markdown_text.lower() or "beschreibung" in markdown_text.lower() or "erstellt mit" in markdown_text.lower()
-        language = "de" if is_de else ("en" if "client" in markdown_text.lower() or "description" in markdown_text.lower() else default_language)
+        is_de = (
+            "auftraggeber" in markdown_text.lower()
+            or "beschreibung" in markdown_text.lower()
+            or "erstellt mit" in markdown_text.lower()
+        )
+        language = (
+            "de"
+            if is_de
+            else (
+                "en"
+                if "client" in markdown_text.lower() or "description" in markdown_text.lower()
+                else default_language
+            )
+        )
 
         segments = segment_report_markdown(markdown_text)
         metadata = ReportMetadata()
@@ -187,7 +201,7 @@ class ReportWorkspaceDocument:
                     )
                     if end is None:
                         break
-                    block = seg.markdown[start.start():end.end()]
+                    block = seg.markdown[start.start() : end.end()]
                     finding = ReportFindingItem.from_markdown(block, entry_id, language=language)
                     if seg.category_id:
                         finding.phase = normalize_phase_key(seg.category_id)
@@ -250,7 +264,11 @@ class ReportWorkspaceDocument:
 
     def get_executive_summary(self) -> ReportExecutiveSummary:
         narr = next(
-            (n for n in self.narratives if n.identity == "executive_summary" or n.section_type == "executive_summary"),
+            (
+                n
+                for n in self.narratives
+                if n.identity == "executive_summary" or n.section_type == "executive_summary"
+            ),
             None,
         )
         content = narr.content if narr else ""
@@ -278,7 +296,11 @@ class ReportWorkspaceDocument:
 
     def get_remediation_plan(self) -> ReportRemediationPlan:
         narrative = next(
-            (n for n in self.narratives if n.identity == "remediation_table" or n.section_type == "remediation_table"),
+            (
+                n
+                for n in self.narratives
+                if n.identity == "remediation_table" or n.section_type == "remediation_table"
+            ),
             None,
         )
         content = narrative.content if narrative else ""
@@ -302,7 +324,12 @@ class ReportWorkspaceDocument:
 
     def get_attack_path(self) -> ReportAttackPath:
         narrative = next(
-            (n for n in self.narratives if n.identity == "attack_path" or n.section_type in ("attack_path", "attack_narrative")),
+            (
+                n
+                for n in self.narratives
+                if n.identity == "attack_path"
+                or n.section_type in ("attack_path", "attack_narrative")
+            ),
             None,
         )
         content = narrative.content if narrative else ""
@@ -326,7 +353,12 @@ class ReportWorkspaceDocument:
 
     def get_scope_methodology(self) -> ReportScopeMethodology:
         narrative = next(
-            (n for n in self.narratives if n.identity == "scope_limitations" or n.section_type in ("scope_limitations", "scope")),
+            (
+                n
+                for n in self.narratives
+                if n.identity == "scope_limitations"
+                or n.section_type in ("scope_limitations", "scope")
+            ),
             None,
         )
         content = narrative.content if narrative else ""
@@ -335,7 +367,10 @@ class ReportWorkspaceDocument:
     def set_scope_methodology(self, scope: ReportScopeMethodology) -> None:
         md = scope.to_markdown(language=self.language)
         for n in self.narratives:
-            if n.identity == "scope_limitations" or n.section_type in ("scope_limitations", "scope"):
+            if n.identity == "scope_limitations" or n.section_type in (
+                "scope_limitations",
+                "scope",
+            ):
                 n.title = scope.title
                 n.content = md
                 return
@@ -350,7 +385,11 @@ class ReportWorkspaceDocument:
 
     def get_appendix(self) -> ReportAppendix:
         narrative = next(
-            (n for n in self.narratives if n.identity == "appendix" or n.section_type == "appendix"),
+            (
+                n
+                for n in self.narratives
+                if n.identity == "appendix" or n.section_type == "appendix"
+            ),
             None,
         )
         content = narrative.content if narrative else ""
@@ -443,13 +482,14 @@ class ReportWorkspaceDocument:
 
             elif narr.section_type in ("attack_path", "attack_narrative"):
                 content = (
-                    self._render_attack_path_content(narr)
-                    if regenerate_matrices
-                    else narr.content
+                    self._render_attack_path_content(narr) if regenerate_matrices else narr.content
                 )
                 parts.append(wrap_section_markdown(content.strip(), narr.identity))
 
-            elif narr.identity == "scope_limitations" or narr.section_type in ("scope_limitations", "scope"):
+            elif narr.identity == "scope_limitations" or narr.section_type in (
+                "scope_limitations",
+                "scope",
+            ):
                 content = (
                     self._render_scope_methodology_content(narr)
                     if regenerate_matrices
@@ -486,8 +526,10 @@ class ReportWorkspaceDocument:
 
                 # Keep any user notes from narrative
                 notes_lines = [
-                    line for line in narr.content.splitlines()
-                    if not line.strip().startswith("## ") and not line.strip().startswith("*Keine Einträge")
+                    line
+                    for line in narr.content.splitlines()
+                    if not line.strip().startswith("## ")
+                    and not line.strip().startswith("*Keine Einträge")
                 ]
                 if notes_lines:
                     sec_lines.append("\n".join(notes_lines).strip())
@@ -506,7 +548,9 @@ class ReportWorkspaceDocument:
 
         # Check if there are unassigned findings not yet emitted
         remaining_findings = [f for f in self.findings if f.id not in phase_findings_emitted]
-        if remaining_findings and not any(n.section_type == "finding_section" for n in self.narratives):
+        if remaining_findings and not any(
+            n.section_type == "finding_section" for n in self.narratives
+        ):
             extra_lines = ["## Technische Findings", ""]
             for f in remaining_findings:
                 extra_lines.append(f.to_markdown(language=self.language, include_phase=True))

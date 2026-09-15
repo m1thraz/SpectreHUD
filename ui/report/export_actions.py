@@ -16,7 +16,6 @@ from ui.report.dialogs import ReportExportTypeDialog, select_html_export_options
 logger = get_logger(__name__)
 
 
-
 class ReportExportActions:
     """Encapsulates report export workflows, file pickers, coordinator delegation, and outcome UI."""
 
@@ -31,6 +30,7 @@ class ReportExportActions:
         report_font_key_provider: Callable[[], str],
         select_export_type_override: Optional[Callable[[], Optional[str]]] = None,
         select_html_options_override: Optional[Callable[[], Optional[tuple[str, str]]]] = None,
+        prepare_export: Optional[Callable[[], bool]] = None,
     ):
         self.parent_widget = parent_widget
         self._editor_provider = editor if callable(editor) else (lambda: editor)
@@ -41,6 +41,10 @@ class ReportExportActions:
         self._report_font_key_provider = report_font_key_provider
         self._select_export_type_override = select_export_type_override
         self._select_html_options_override = select_html_options_override
+        self._prepare_export = prepare_export
+
+    def _ready_to_export(self) -> bool:
+        return self._prepare_export is None or self._prepare_export()
 
     @property
     def editor(self) -> QPlainTextEdit:
@@ -135,6 +139,8 @@ class ReportExportActions:
         coordinator = self.require_export_coordinator()
         if coordinator is None:
             return
+        if not self._ready_to_export():
+            return
         try:
             result = coordinator.export_report_markdown(target, self.editor.toPlainText())
             self.present_export_result(
@@ -186,6 +192,8 @@ class ReportExportActions:
         coordinator = self.require_export_coordinator()
         if coordinator is None:
             return
+        if not self._ready_to_export():
+            return
         try:
             tpl = self.active_template
             doc_lang = tpl.language if tpl else "en"
@@ -225,6 +233,8 @@ class ReportExportActions:
         coordinator = self.require_export_coordinator()
         if coordinator is None:
             return
+        if not self._ready_to_export():
+            return
         coordinator.export_report_to_obsidian(
             self.parent_widget,
             self.current_project,
@@ -249,6 +259,8 @@ class ReportExportActions:
             return
         coordinator = self.require_export_coordinator()
         if coordinator is None:
+            return
+        if not self._ready_to_export():
             return
         try:
             result = coordinator.export_report_to_cherrytree(

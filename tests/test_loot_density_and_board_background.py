@@ -49,7 +49,9 @@ def test_loot_board_autofill_background_and_qss_rule(qapp):
         assert recon_col.scroll.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
 
         v_bar = recon_col.scroll.verticalScrollBar()
-        assert v_bar.maximum() > 0, "Vertical scrollbar maximum should be > 0 when cards exceed column height"
+        assert v_bar.maximum() > 0, (
+            "Vertical scrollbar maximum should be > 0 when cards exceed column height"
+        )
 
         # Verify mouse wheel scrolling
         initial_val = v_bar.value()
@@ -113,7 +115,9 @@ def test_loot_card_comfortable_mode_resting_actions_and_context_menu(qapp):
         menu_triggered = {}
         card.edit_requested.connect(lambda e: menu_triggered.setdefault("edit", True))
         card.export_requested.connect(lambda eid: menu_triggered.setdefault("export", True))
-        card.obsidian_export_requested.connect(lambda eid: menu_triggered.setdefault("obsidian", True))
+        card.obsidian_export_requested.connect(
+            lambda eid: menu_triggered.setdefault("obsidian", True)
+        )
         card.deleted.connect(lambda eid: menu_triggered.setdefault("delete", True))
 
         menu = card._create_context_menu()

@@ -50,9 +50,7 @@ def test_regenerate_maps_failures(dependencies, error, reason) -> None:
     service, file_manager = dependencies
     file_manager.regenerate.side_effect = error
 
-    result = service.regenerate(
-        project_name="Box", loot_manager=None, clipboard_history=None
-    )
+    result = service.regenerate(project_name="Box", loot_manager=None, clipboard_history=None)
 
     assert not result.success
     assert result.failure_reason is reason
@@ -145,9 +143,7 @@ def test_reconcile_loot_maps_changed_review_state(dependencies) -> None:
     service, file_manager = dependencies
     file_manager.reconcile_loot.side_effect = LootReconciliationError("changed")
 
-    result = service.reconcile_loot(
-        project_name="Box", loot_manager="loot", decisions={}
-    )
+    result = service.reconcile_loot(project_name="Box", loot_manager="loot", decisions={})
 
     assert not result.success
     assert result.failure_reason is ReportMutationFailureReason.RECONCILIATION_CHANGED

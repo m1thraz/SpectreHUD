@@ -76,9 +76,7 @@ class FindingPromotionService:
                 if str(entry_id) and str(entry_id) != str(primary_id)
             )
         )
-        missing_ids = [
-            entry_id for entry_id in normalized_evidence_ids if entry_id not in entries
-        ]
+        missing_ids = [entry_id for entry_id in normalized_evidence_ids if entry_id not in entries]
         if missing_ids:
             return FindingPromotionResult.failed(
                 FindingPromotionFailureReason.EVIDENCE_NOT_FOUND,
@@ -106,9 +104,7 @@ class FindingPromotionService:
             )
 
         finding = finding_from_loot_entry(promoted, fallback_title=fallback_title)
-        existing_sources = {
-            evidence.source_loot_id for evidence in finding.evidence_items
-        }
+        existing_sources = {evidence.source_loot_id for evidence in finding.evidence_items}
         for entry_id in normalized_evidence_ids:
             evidence = supporting_evidence_from_loot_entry(entries[entry_id])
             if evidence is None or evidence.source_loot_id in existing_sources:
@@ -121,8 +117,4 @@ class FindingPromotionService:
     def _index_entries(
         entries: Sequence[Mapping[str, Any]],
     ) -> dict[str, dict[str, Any]]:
-        return {
-            str(entry["id"]): dict(entry)
-            for entry in entries
-            if entry.get("id")
-        }
+        return {str(entry["id"]): dict(entry) for entry in entries if entry.get("id")}

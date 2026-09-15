@@ -65,9 +65,7 @@ def test_release_and_all_commands_are_serial(tmp_path):
 
 
 def test_no_parallel_removes_xdist_without_changing_marker(tmp_path):
-    command = run_tests.build_pytest_command(
-        "fast", tmp_path / "results.xml", no_parallel=True
-    )
+    command = run_tests.build_pytest_command("fast", tmp_path / "results.xml", no_parallel=True)
 
     assert "-n" not in command
     assert "--dist=loadscope" not in command
@@ -76,9 +74,7 @@ def test_no_parallel_removes_xdist_without_changing_marker(tmp_path):
 
 def test_targeted_command_uses_only_supplied_node_ids(tmp_path):
     targets = ("tests/test_core.py", "tests/test_storage.py::test_missing")
-    command = run_tests.build_pytest_command(
-        "targeted", tmp_path / "results.xml", targets=targets
-    )
+    command = run_tests.build_pytest_command("targeted", tmp_path / "results.xml", targets=targets)
 
     assert command[-2:] == list(targets)
     assert str(run_tests.TESTS_DIR) not in command
@@ -97,9 +93,7 @@ def test_last_failed_uses_recorded_node_ids_without_the_whole_suite(tmp_path):
 
 
 def test_collect_only_omits_junit_and_quiet_mode(tmp_path):
-    command = run_tests.build_pytest_command(
-        "fast", tmp_path / "results.xml", collect_only=True
-    )
+    command = run_tests.build_pytest_command("fast", tmp_path / "results.xml", collect_only=True)
 
     assert "--collect-only" in command
     assert "-q" not in command
@@ -159,21 +153,15 @@ def test_junit_parser_reports_counts_xfails_and_failure_ids(tmp_path):
 def test_failure_helpers_prefer_terminal_node_ids_and_classify_infrastructure():
     log = "FAILED tests/test_sample.py::test_case[param] - assert False\n"
 
-    assert run_tests.extract_failed_tests(log) == (
-        "tests/test_sample.py::test_case[param]",
-    )
+    assert run_tests.extract_failed_tests(log) == ("tests/test_sample.py::test_case[param]",)
     assert run_tests.failure_kind(1, "node down: Not properly terminated", False) == (
         "worker-crash"
     )
-    assert run_tests.failure_kind(1, "ERROR collecting tests/test_bad.py", True) == (
-        "collection"
-    )
+    assert run_tests.failure_kind(1, "ERROR collecting tests/test_bad.py", True) == ("collection")
     assert run_tests.failure_kind(2, "", False) == "interrupted"
     assert run_tests.failure_kind(130, "", False) == "interrupted"
     assert run_tests.failure_kind(5, "", False) == "no-tests-collected"
-    assert run_tests.failure_kind(3, "maximum crashed workers reached", True) == (
-        "worker-crash"
-    )
+    assert run_tests.failure_kind(3, "maximum crashed workers reached", True) == ("worker-crash")
 
 
 def test_process_group_configuration_is_cross_platform():
@@ -295,10 +283,7 @@ def test_json_success_is_one_machine_readable_result(tmp_path, monkeypatch, caps
     monkeypatch.setattr(run_tests, "run_process", fake_run)
 
     assert (
-        run_tests.execute_tier(
-            "targeted", targets=("tests/test_sample.py",), json_output=True
-        )
-        == 0
+        run_tests.execute_tier("targeted", targets=("tests/test_sample.py",), json_output=True) == 0
     )
 
     result = json.loads(capsys.readouterr().out)
@@ -309,9 +294,7 @@ def test_json_success_is_one_machine_readable_result(tmp_path, monkeypatch, caps
     assert result["artifacts"] == {"junit": None, "log": None}
 
 
-def test_json_failure_contains_node_ids_tail_and_retained_artifacts(
-    tmp_path, monkeypatch, capsys
-):
+def test_json_failure_contains_node_ids_tail_and_retained_artifacts(tmp_path, monkeypatch, capsys):
     log_path = tmp_path / "run.log"
     junit_path = tmp_path / "run.xml"
     monkeypatch.setattr(run_tests, "create_artifact_paths", lambda _tier: (log_path, junit_path))
@@ -332,10 +315,7 @@ def test_json_failure_contains_node_ids_tail_and_retained_artifacts(
     monkeypatch.setattr(run_tests, "run_process", fake_run)
 
     assert (
-        run_tests.execute_tier(
-            "targeted", targets=("tests/test_sample.py",), json_output=True
-        )
-        == 1
+        run_tests.execute_tier("targeted", targets=("tests/test_sample.py",), json_output=True) == 1
     )
 
     result = json.loads(capsys.readouterr().out)
@@ -355,9 +335,7 @@ def test_last_failed_without_cached_failures_is_success(tmp_path, monkeypatch, c
     assert result["exit_code"] == 0
 
 
-def test_last_failed_state_is_deduplicated_and_cleared_after_success(
-    tmp_path, monkeypatch, capsys
-):
+def test_last_failed_state_is_deduplicated_and_cleared_after_success(tmp_path, monkeypatch, capsys):
     node_id = "tests/test_sample.py::test_failure"
     run_tests.save_last_failed((node_id, node_id))
     assert run_tests.load_last_failed() == (node_id,)
@@ -463,8 +441,7 @@ def test_execute_tier_falls_back_to_serial_when_xdist_is_missing(monkeypatch, tm
 
 def test_failure_kind_detects_missing_xdist():
     log_text = (
-        "ERROR: usage: python -m pytest\n"
-        "pytest: error: unrecognized arguments: -n --dist=loadscope"
+        "ERROR: usage: python -m pytest\npytest: error: unrecognized arguments: -n --dist=loadscope"
     )
     assert run_tests.failure_kind(4, log_text, False) == "missing-xdist"
 

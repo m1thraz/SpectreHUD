@@ -6,6 +6,7 @@ from core.platform import detect_platform_capabilities
 from ui.glass_panel import GlassPanel
 from tests.window_factory import create_main_window
 
+
 class TestCompositorMode(unittest.TestCase):
     """Tests adaptive window layout and transparency depending on compositor presence."""
 
@@ -43,7 +44,9 @@ class TestCompositorMode(unittest.TestCase):
             win_no_comp = create_main_window()
             try:
                 self.assertFalse(win_no_comp.has_compositor)
-                self.assertFalse(win_no_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
+                self.assertFalse(
+                    win_no_comp.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                )
                 self.assertIsInstance(win_no_comp.hud_frame, GlassPanel)
             finally:
                 win_no_comp.close()

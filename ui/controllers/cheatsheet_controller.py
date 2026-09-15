@@ -616,9 +616,7 @@ class CheatsheetController(QObject):
         self._cache_cards = list(cards)
         self._cache_widgets = list(detached_widgets)
 
-    def discard_cache(
-        self, discard_fn: Optional[Callable[[List[QWidget]], None]] = None
-    ) -> None:
+    def discard_cache(self, discard_fn: Optional[Callable[[List[QWidget]], None]] = None) -> None:
         """Discards stashed widgets safely, invoking discard_fn on detached widgets if provided."""
         if self._cache_widgets and discard_fn is not None:
             discard_fn(self._cache_widgets)

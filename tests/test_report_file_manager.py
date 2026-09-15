@@ -322,9 +322,7 @@ class TestReportFileManager(unittest.TestCase):
         manager = MagicMock()
         manager.get_all_entries.return_value = []
 
-        result = self.report_mgr.reconcile_loot(
-            manager, {}, project_name="ReconcileNoop"
-        )
+        result = self.report_mgr.reconcile_loot(manager, {}, project_name="ReconcileNoop")
 
         self.assertFalse(result.changed)
         self.assertFalse(self.report_mgr.get_backup_path("ReconcileNoop").exists())

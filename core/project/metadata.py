@@ -84,7 +84,11 @@ def create_initial_notes(
     from core.validators import format_timestamp
 
     ts = created_at or format_timestamp()
-    tmpl = DEFAULT_NOTES_TEMPLATE_DE if (lang or "").lower().startswith("de") else DEFAULT_NOTES_TEMPLATE_EN
+    tmpl = (
+        DEFAULT_NOTES_TEMPLATE_DE
+        if (lang or "").lower().startswith("de")
+        else DEFAULT_NOTES_TEMPLATE_EN
+    )
     return tmpl.format(
         project_name=project_name,
         target_ip=target_ip or "TBD",

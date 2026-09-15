@@ -192,6 +192,7 @@ class HotkeyListener(QObject):
                 (self.config.phase_5, 5),
                 (self.config.phase_6, 6),
             ]
+
             def _make_phase_callback(target_order: int) -> Callable[[], None]:
                 return lambda: self._fire_phase_trigger(target_order)
 
@@ -200,7 +201,6 @@ class HotkeyListener(QObject):
                     norm = normalize_hotkey_for_pynput(hk)
                     if norm:
                         hotkey_mapping[norm] = _make_phase_callback(order)
-
 
             listener = keyboard.GlobalHotKeys(hotkey_mapping)
             listener.daemon = True

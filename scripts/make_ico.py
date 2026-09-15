@@ -1,6 +1,7 @@
 """Generates a proper multi-resolution Windows ICO file containing
 16x16, 24x24, 32x32, 48x48, 64x64, 128x128, and 256x256 resolutions.
 """
+
 import struct
 from pathlib import Path
 from PyQt6.QtCore import QBuffer, QIODevice
@@ -38,14 +39,14 @@ def create_multires_ico(svg_path: Path, output_ico_path: Path) -> None:
     for s, png_data in zip(sizes, images_png_bytes):
         w = 0 if s == 256 else s
         h = 0 if s == 256 else s
-        entries.append(
-            struct.pack("<BBBBHHII", w, h, 0, 0, 1, 32, len(png_data), offset)
-        )
+        entries.append(struct.pack("<BBBBHHII", w, h, 0, 0, 1, 32, len(png_data), offset))
         offset += len(png_data)
 
     ico_bytes = header + b"".join(entries) + b"".join(images_png_bytes)
     output_ico_path.write_bytes(ico_bytes)
-    print(f"[+] Multi-resolution ICO successfully written to {output_ico_path} ({len(ico_bytes)} bytes, {count} sizes: {sizes})")
+    print(
+        f"[+] Multi-resolution ICO successfully written to {output_ico_path} ({len(ico_bytes)} bytes, {count} sizes: {sizes})"
+    )
 
 
 if __name__ == "__main__":

@@ -102,9 +102,9 @@ class TestClipboardHistory(unittest.TestCase):
         )
 
         report_path = self.temp_path / "ctf_report.md"
-        result = ReportBuilder(
-            loot_manager=loot_mgr, clipboard_watcher=self.watcher
-        ).export(report_path, target_ip="10.10.10.77")
+        result = ReportBuilder(loot_manager=loot_mgr, clipboard_watcher=self.watcher).export(
+            report_path, target_ip="10.10.10.77"
+        )
 
         self.assertTrue(report_path.exists())
         content = report_path.read_text(encoding="utf-8")

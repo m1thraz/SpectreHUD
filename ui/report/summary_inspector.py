@@ -92,8 +92,16 @@ class ReportSummaryInspector(QWidget):
         self._reflow_scorecards(width)
 
         if hasattr(self, "form"):
-            wrap_policy = QFormLayout.RowWrapPolicy.WrapAllRows if width < 580 else QFormLayout.RowWrapPolicy.DontWrapRows
-            align = (Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop) if width < 580 else (Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+            wrap_policy = (
+                QFormLayout.RowWrapPolicy.WrapAllRows
+                if width < 580
+                else QFormLayout.RowWrapPolicy.DontWrapRows
+            )
+            align = (
+                (Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+                if width < 580
+                else (Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+            )
             if self.form.rowWrapPolicy() != wrap_policy:
                 self.form.setRowWrapPolicy(wrap_policy)
                 self.form.setLabelAlignment(align)
@@ -107,7 +115,7 @@ class ReportSummaryInspector(QWidget):
                 self.tbl_matrix.setColumnHidden(4, True)  # Status
             elif width < 560:
                 self.tbl_matrix.setColumnHidden(3, True)  # Phase
-                self.tbl_matrix.setColumnHidden(4, False) # Status
+                self.tbl_matrix.setColumnHidden(4, False)  # Status
             else:
                 self.tbl_matrix.setColumnHidden(3, False)
                 self.tbl_matrix.setColumnHidden(4, False)
@@ -202,7 +210,9 @@ class ReportSummaryInspector(QWidget):
         )
         h_layout.addWidget(lbl_icon)
 
-        self.lbl_title = QLabel(t("report.inspector_summary_title", "Executive Summary & Management Overview"))
+        self.lbl_title = QLabel(
+            t("report.inspector_summary_title", "Executive Summary & Management Overview")
+        )
         style_inspector_header(self.header_card, self.lbl_title)
         self.lbl_title.setWordWrap(True)
         h_layout.addWidget(self.lbl_title, stretch=1)
@@ -245,7 +255,9 @@ class ReportSummaryInspector(QWidget):
         lbl_posture_title = QLabel(t("report.summary_posture_label", "OVERALL POSTURE"))
         lbl_posture_title.setProperty("class", "ReportMetricLabel")
         self.lbl_posture_val = QLabel("NO FINDINGS")
-        self.lbl_posture_val.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {get_theme_color('ACCENT_PRIMARY')};")
+        self.lbl_posture_val.setStyleSheet(
+            f"font-size: 14px; font-weight: bold; color: {get_theme_color('ACCENT_PRIMARY')};"
+        )
         self.lbl_posture_val.setWordWrap(True)
         v_posture.addWidget(lbl_posture_title)
         v_posture.addWidget(self.lbl_posture_val)
@@ -299,14 +311,19 @@ class ReportSummaryInspector(QWidget):
         intro_layout.setContentsMargins(12, 10, 12, 10)
         intro_layout.setSpacing(6)
 
-        lbl_intro_header = QLabel(t("report.summary_intro_title", "Management Summary / Executive Narrative"))
+        lbl_intro_header = QLabel(
+            t("report.summary_intro_title", "Management Summary / Executive Narrative")
+        )
         style_inspector_section(intro_card, lbl_intro_header)
         lbl_intro_header.setWordWrap(True)
         intro_layout.addWidget(lbl_intro_header)
 
         self.txt_intro = QPlainTextEdit()
         self.txt_intro.setPlaceholderText(
-            t("report.summary_intro_placeholder", "High-level summary of the assessment, key results, and general risk posture for management...")
+            t(
+                "report.summary_intro_placeholder",
+                "High-level summary of the assessment, key results, and general risk posture for management...",
+            )
         )
         self.txt_intro.setMaximumHeight(90)
         self.txt_intro.textChanged.connect(self._on_field_changed)
@@ -321,13 +338,17 @@ class ReportSummaryInspector(QWidget):
         matrix_layout.setSpacing(6)
 
         matrix_hdr = QHBoxLayout()
-        self.lbl_matrix_title = QLabel(t("report.summary_matrix_title", "Findings Matrix (Overview)"))
+        self.lbl_matrix_title = QLabel(
+            t("report.summary_matrix_title", "Findings Matrix (Overview)")
+        )
         style_inspector_section(matrix_card, self.lbl_matrix_title)
         self.lbl_matrix_title.setWordWrap(True)
         matrix_hdr.addWidget(self.lbl_matrix_title)
         matrix_hdr.addStretch()
 
-        self.lbl_matrix_hint = QLabel(t("report.summary_matrix_hint", "Double-click or click [>] to inspect finding"))
+        self.lbl_matrix_hint = QLabel(
+            t("report.summary_matrix_hint", "Double-click or click [>] to inspect finding")
+        )
         self.lbl_matrix_hint.setProperty("class", "ReportInspectorHint")
         self.lbl_matrix_hint.setWordWrap(True)
         matrix_hdr.addWidget(self.lbl_matrix_hint)
@@ -335,20 +356,32 @@ class ReportSummaryInspector(QWidget):
 
         self.tbl_matrix = QTableWidget()
         self.tbl_matrix.setColumnCount(6)
-        self.tbl_matrix.setHorizontalHeaderLabels([
-            "#",
-            t("report.col_severity", "Severity"),
-            t("report.col_finding", "Finding"),
-            t("report.col_phase", "Phase"),
-            t("report.col_status", "Status"),
-            t("report.col_action", "Action"),
-        ])
-        self.tbl_matrix.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_matrix.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_matrix.setHorizontalHeaderLabels(
+            [
+                "#",
+                t("report.col_severity", "Severity"),
+                t("report.col_finding", "Finding"),
+                t("report.col_phase", "Phase"),
+                t("report.col_status", "Status"),
+                t("report.col_action", "Action"),
+            ]
+        )
+        self.tbl_matrix.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_matrix.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_matrix.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.tbl_matrix.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_matrix.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_matrix.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_matrix.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_matrix.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_matrix.horizontalHeader().setSectionResizeMode(
+            5, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_matrix.verticalHeader().setVisible(False)
         self.tbl_matrix.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tbl_matrix.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -369,7 +402,9 @@ class ReportSummaryInspector(QWidget):
         hl_layout.setContentsMargins(12, 10, 12, 10)
         hl_layout.setSpacing(8)
 
-        lbl_hl_header = QLabel(t("report.summary_highlights_title", "Key Assessment Highlights & Vectors"))
+        lbl_hl_header = QLabel(
+            t("report.summary_highlights_title", "Key Assessment Highlights & Vectors")
+        )
         style_inspector_section(highlights_card, lbl_hl_header)
         lbl_hl_header.setWordWrap(True)
         hl_layout.addWidget(lbl_hl_header)
@@ -381,35 +416,58 @@ class ReportSummaryInspector(QWidget):
 
         self.txt_initial_access = QPlainTextEdit()
         self.txt_initial_access.setPlaceholderText(
-            t("report.summary_initial_access_placeholder", "e.g. Exposed anonymous FTP service, unauthenticated upload...")
+            t(
+                "report.summary_initial_access_placeholder",
+                "e.g. Exposed anonymous FTP service, unauthenticated upload...",
+            )
         )
         self.txt_initial_access.setMaximumHeight(50)
         self.txt_initial_access.textChanged.connect(self._on_field_changed)
-        self.form.addRow(self._make_label(t("report.summary_initial_access", "Initial Access:")), self.txt_initial_access)
+        self.form.addRow(
+            self._make_label(t("report.summary_initial_access", "Initial Access:")),
+            self.txt_initial_access,
+        )
 
         self.txt_privesc = QPlainTextEdit()
         self.txt_privesc.setPlaceholderText(
-            t("report.summary_privesc_placeholder", "e.g. Sudo NOPASSWD /usr/bin/less, unquoted service path...")
+            t(
+                "report.summary_privesc_placeholder",
+                "e.g. Sudo NOPASSWD /usr/bin/less, unquoted service path...",
+            )
         )
         self.txt_privesc.setMaximumHeight(50)
         self.txt_privesc.textChanged.connect(self._on_field_changed)
-        self.form.addRow(self._make_label(t("report.summary_privesc", "Privilege Escalation:")), self.txt_privesc)
+        self.form.addRow(
+            self._make_label(t("report.summary_privesc", "Privilege Escalation:")), self.txt_privesc
+        )
 
         self.txt_business_impact = QPlainTextEdit()
         self.txt_business_impact.setPlaceholderText(
-            t("report.summary_business_impact_placeholder", "e.g. Complete takeover of infrastructure, domain controller compromise...")
+            t(
+                "report.summary_business_impact_placeholder",
+                "e.g. Complete takeover of infrastructure, domain controller compromise...",
+            )
         )
         self.txt_business_impact.setMaximumHeight(50)
         self.txt_business_impact.textChanged.connect(self._on_field_changed)
-        self.form.addRow(self._make_label(t("report.summary_business_impact", "Business Impact & Risk:")), self.txt_business_impact)
+        self.form.addRow(
+            self._make_label(t("report.summary_business_impact", "Business Impact & Risk:")),
+            self.txt_business_impact,
+        )
 
         self.txt_remediation = QPlainTextEdit()
         self.txt_remediation.setPlaceholderText(
-            t("report.summary_remediation_placeholder", "e.g. Disable anonymous FTP, remove sudo NOPASSWD rules, enforce least-privilege...")
+            t(
+                "report.summary_remediation_placeholder",
+                "e.g. Disable anonymous FTP, remove sudo NOPASSWD rules, enforce least-privilege...",
+            )
         )
         self.txt_remediation.setMaximumHeight(50)
         self.txt_remediation.textChanged.connect(self._on_field_changed)
-        self.form.addRow(self._make_label(t("report.summary_remediation", "Key Recommendations:")), self.txt_remediation)
+        self.form.addRow(
+            self._make_label(t("report.summary_remediation", "Key Recommendations:")),
+            self.txt_remediation,
+        )
 
         hl_layout.addLayout(self.form)
         self.content_layout.addWidget(highlights_card)
@@ -430,7 +488,9 @@ class ReportSummaryInspector(QWidget):
     def _make_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
         lbl.setWordWrap(True)
-        lbl.setStyleSheet(f"font-size: 11px; font-weight: bold; color: {get_theme_color('TEXT_MUTED')};")
+        lbl.setStyleSheet(
+            f"font-size: 11px; font-weight: bold; color: {get_theme_color('TEXT_MUTED')};"
+        )
         return lbl
 
     def load_summary(self, doc: ReportWorkspaceDocument) -> None:
@@ -441,7 +501,10 @@ class ReportSummaryInspector(QWidget):
             self._summary = doc.get_executive_summary()
 
             # 1. Update text fields
-            self.lbl_title.setText(self._summary.title or t("report.inspector_summary_title", "Executive Summary & Management Overview"))
+            self.lbl_title.setText(
+                self._summary.title
+                or t("report.inspector_summary_title", "Executive Summary & Management Overview")
+            )
             self.txt_intro.setPlainText(self._summary.intro_text)
             self.txt_initial_access.setPlainText(self._summary.initial_access)
             self.txt_privesc.setPlainText(self._summary.privilege_escalation)
@@ -502,7 +565,9 @@ class ReportSummaryInspector(QWidget):
             posture_color = get_theme_color("TEXT_MUTED")
 
         self.lbl_posture_val.setText(posture_text)
-        self.lbl_posture_val.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {posture_color};")
+        self.lbl_posture_val.setStyleSheet(
+            f"font-size: 14px; font-weight: bold; color: {posture_color};"
+        )
         self.lbl_posture_badge.setText(posture_text)
         qc = QColor(posture_color)
         self.lbl_posture_badge.setStyleSheet(
@@ -516,7 +581,9 @@ class ReportSummaryInspector(QWidget):
             f"{total_findings} {t('report.status_total', 'Total')} · {open_count} {t('report.status_open', 'Open')} · {resolved_count} {t('report.status_resolved', 'Resolved')}"
         )
 
-    def _refresh_matrix_table(self, findings: List[ReportFindingItem], language: str = "de") -> None:
+    def _refresh_matrix_table(
+        self, findings: List[ReportFindingItem], language: str = "de"
+    ) -> None:
         self.tbl_matrix.setRowCount(len(findings))
         use_short_phase = self.width() < 680
 
@@ -551,7 +618,11 @@ class ReportSummaryInspector(QWidget):
             self.tbl_matrix.setItem(row, 3, it_phase)
 
             # Col 4: Status
-            status_text = "Offen" if f.status == "open" else ("Behoben" if f.status in ("resolved", "closed") else f.status.capitalize())
+            status_text = (
+                "Offen"
+                if f.status == "open"
+                else ("Behoben" if f.status in ("resolved", "closed") else f.status.capitalize())
+            )
             if language != "de":
                 status_text = f.status.capitalize()
             it_status = QTableWidgetItem(status_text)
@@ -570,7 +641,9 @@ class ReportSummaryInspector(QWidget):
                 f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
             )
             fid = f.id
-            btn_jump.clicked.connect(lambda checked=False, target_id=fid: self.finding_selected.emit(target_id))
+            btn_jump.clicked.connect(
+                lambda checked=False, target_id=fid: self.finding_selected.emit(target_id)
+            )
             self.tbl_matrix.setCellWidget(row, 5, btn_jump)
 
     def _on_table_double_clicked(self, row: int, _col: int) -> None:

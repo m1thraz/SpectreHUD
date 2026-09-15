@@ -129,7 +129,9 @@ curl -i http://10.10.10.10/admin
 
         self.assertIn("--bg-color: #f6f8fa", light_html)
         self.assertIn("Light export theme", light_html)
-        self.assertIn(".brand-title, h1, h2, h3, h4, h5, h6 { color: #000000 !important; }", light_html)
+        self.assertIn(
+            ".brand-title, h1, h2, h3, h4, h5, h6 { color: #000000 !important; }", light_html
+        )
         self.assertNotIn("Light export theme", dark_html)
 
     def test_xss_prevention_in_images_and_links(self):
@@ -239,8 +241,8 @@ curl -i http://10.10.10.10/admin
     def test_severity_pill_spans_are_rendered_as_elements_not_escaped(self):
         """Severity pill spans in markdown must be preserved as real HTML elements, not escaped as &lt;span..."""
         md = (
-            "### <span class=\"severity-pill severity-high\">🟠 HIGH</span> SQL Injection in Login\n"
-            "Paragraph with <span class=\"severity-pill severity-critical\">🔴 CRITICAL</span> finding."
+            '### <span class="severity-pill severity-high">🟠 HIGH</span> SQL Injection in Login\n'
+            'Paragraph with <span class="severity-pill severity-critical">🔴 CRITICAL</span> finding.'
         )
         html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
         self.assertNotIn("&lt;span", html_out)
@@ -277,8 +279,12 @@ curl -i http://10.10.10.10/admin
 
     def test_print_css_included_in_both_dark_and_light_themes(self):
         """Both dark and light themes must include print overrides at the end of the stylesheet."""
-        dark_html = HtmlReportExporter.build_full_html("# Dark", project_dir=self.proj_dir, theme="dark")
-        light_html = HtmlReportExporter.build_full_html("# Light", project_dir=self.proj_dir, theme="light")
+        dark_html = HtmlReportExporter.build_full_html(
+            "# Dark", project_dir=self.proj_dir, theme="dark"
+        )
+        light_html = HtmlReportExporter.build_full_html(
+            "# Light", project_dir=self.proj_dir, theme="light"
+        )
 
         for doc in (dark_html, light_html):
             self.assertIn("@media print", doc)

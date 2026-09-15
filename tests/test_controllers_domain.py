@@ -105,42 +105,75 @@ class TestControllersDomain(unittest.TestCase):
         self.project_mgr.active_project = "ArchiveBox"
 
         # 1. User cancels file dialog
-        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=("", "")):
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=("", "")
+        ):
             with patch.object(self.project_ctrl, "archive_project") as mock_arch:
                 self.project_ctrl._on_archive_project(parent)
                 mock_arch.assert_not_called()
 
         # 2. Successful archive & open explorer
         zip_dest = self.temp_path / "ArchiveBox_test.zip"
-        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
-            with patch.object(self.project_ctrl, "archive_project", return_value={
-                "success": True,
-                "zip_path": zip_dest,
-                "file_count": 5,
-                "compressed_bytes": 1048576,
-            }):
-                with patch("ui.controllers.project_controller.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
-                    with patch("ui.controllers.project_controller.open_path", return_value=True) as mock_open:
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getSaveFileName",
+            return_value=(str(zip_dest), "ZIP"),
+        ):
+            with patch.object(
+                self.project_ctrl,
+                "archive_project",
+                return_value={
+                    "success": True,
+                    "zip_path": zip_dest,
+                    "file_count": 5,
+                    "compressed_bytes": 1048576,
+                },
+            ):
+                with patch(
+                    "ui.controllers.project_controller.QMessageBox.exec",
+                    return_value=QMessageBox.StandardButton.Yes,
+                ):
+                    with patch(
+                        "ui.controllers.project_controller.open_path", return_value=True
+                    ) as mock_open:
                         self.project_ctrl._on_archive_project(parent)
                         mock_open.assert_called_with(zip_dest.parent)
 
         # 3. Successful archive but open explorer fails
-        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
-            with patch.object(self.project_ctrl, "archive_project", return_value={
-                "success": True,
-                "zip_path": zip_dest,
-                "file_count": 2,
-                "compressed_bytes": 500,
-            }):
-                with patch("ui.controllers.project_controller.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getSaveFileName",
+            return_value=(str(zip_dest), "ZIP"),
+        ):
+            with patch.object(
+                self.project_ctrl,
+                "archive_project",
+                return_value={
+                    "success": True,
+                    "zip_path": zip_dest,
+                    "file_count": 2,
+                    "compressed_bytes": 500,
+                },
+            ):
+                with patch(
+                    "ui.controllers.project_controller.QMessageBox.exec",
+                    return_value=QMessageBox.StandardButton.Yes,
+                ):
                     with patch("ui.controllers.project_controller.open_path", return_value=False):
-                        with patch("ui.controllers.project_controller.show_error_dialog") as mock_warn:
+                        with patch(
+                            "ui.controllers.project_controller.show_error_dialog"
+                        ) as mock_warn:
                             self.project_ctrl._on_archive_project(parent)
                             mock_warn.assert_called_once()
 
         # 4. Archive failure dialog
-        with patch("ui.controllers.project_controller.QFileDialog.getSaveFileName", return_value=(str(zip_dest), "ZIP")):
-            with patch.object(self.project_ctrl, "archive_project", return_value={"success": False, "error": "Disk full"}):
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getSaveFileName",
+            return_value=(str(zip_dest), "ZIP"),
+        ):
+            with patch.object(
+                self.project_ctrl,
+                "archive_project",
+                return_value={"success": False, "error": "Disk full"},
+            ):
                 with patch("ui.controllers.project_controller.QMessageBox.exec"):
                     self.project_ctrl._on_archive_project(parent)
 
@@ -149,7 +182,9 @@ class TestControllersDomain(unittest.TestCase):
         parent = QWidget()
 
         # 1. Cancelled
-        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=""):
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=""
+        ):
             with patch.object(self.project_ctrl, "import_project_folder") as mock_imp:
                 self.project_ctrl._on_import_project(parent, lambda p: None)
                 mock_imp.assert_not_called()
@@ -158,7 +193,10 @@ class TestControllersDomain(unittest.TestCase):
         switched = []
         import_dir = self.temp_path / "ImportedBox"
         import_dir.mkdir()
-        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getExistingDirectory",
+            return_value=str(import_dir),
+        ):
             with patch.object(
                 self.project_ctrl,
                 "import_project_folder",
@@ -176,16 +214,22 @@ class TestControllersDomain(unittest.TestCase):
                 "import_project_folder",
                 return_value=PersistResult.failed(PersistFailureReason.PERMISSION_DENIED),
             ):
-                with patch(
-                    "ui.controllers.project_controller.show_error_dialog"
-                ) as mock_crit:
+                with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
                     self.project_ctrl._on_import_project(parent, lambda p: None)
                     self.assertIn("permission_denied", mock_crit.call_args.args[2])
 
         # 3. Error
         from core.project import ProjectError
-        with patch("ui.controllers.project_controller.QFileDialog.getExistingDirectory", return_value=str(import_dir)):
-            with patch.object(self.project_ctrl, "import_project_folder", side_effect=ProjectError("Invalid project")):
+
+        with patch(
+            "ui.controllers.project_controller.QFileDialog.getExistingDirectory",
+            return_value=str(import_dir),
+        ):
+            with patch.object(
+                self.project_ctrl,
+                "import_project_folder",
+                side_effect=ProjectError("Invalid project"),
+            ):
                 with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
                     self.project_ctrl._on_import_project(parent, lambda p: None)
                     mock_crit.assert_called_once()
@@ -227,12 +271,15 @@ class TestControllersDomain(unittest.TestCase):
 
         # 3. ProjectExistsError warning
         from core.project import ProjectExistsError
+
         with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = 1
             mock_dlg.get_data.return_value = {"name": "ExistingBox"}
             MockDlg.return_value = mock_dlg
-            with patch.object(self.project_ctrl, "create_project", side_effect=ProjectExistsError("exists")):
+            with patch.object(
+                self.project_ctrl, "create_project", side_effect=ProjectExistsError("exists")
+            ):
                 with patch("ui.controllers.project_controller.show_warning_dialog") as mock_warn:
                     res = self.project_ctrl.open_new_project_dialog(
                         parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
@@ -242,12 +289,15 @@ class TestControllersDomain(unittest.TestCase):
 
         # 4. ProjectError critical
         from core.project import ProjectError
+
         with patch("ui.controllers.project_controller.NewProjectDialog") as MockDlg:
             mock_dlg = MagicMock()
             mock_dlg.exec.return_value = 1
             mock_dlg.get_data.return_value = {"name": "BadBox"}
             MockDlg.return_value = mock_dlg
-            with patch.object(self.project_ctrl, "create_project", side_effect=ProjectError("bad name")):
+            with patch.object(
+                self.project_ctrl, "create_project", side_effect=ProjectError("bad name")
+            ):
                 with patch("ui.controllers.project_controller.show_error_dialog") as mock_crit:
                     res = self.project_ctrl.open_new_project_dialog(
                         parent, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
@@ -263,7 +313,10 @@ class TestControllersDomain(unittest.TestCase):
             mock_menu = MagicMock()
             mock_build.return_value = mock_menu
             self.project_ctrl.show_project_menu(
-                btn, on_switch_project=lambda p: None, on_open_new_project=lambda: None, parent_widget=QWidget()
+                btn,
+                on_switch_project=lambda p: None,
+                on_open_new_project=lambda: None,
+                parent_widget=QWidget(),
             )
             mock_menu.exec.assert_called_once()
 
@@ -538,7 +591,9 @@ class TestControllersDomain(unittest.TestCase):
 
     def test_loot_controller_export_loot_uses_report_builder_directly(self):
         """LootController.export_loot must invoke ReportBuilder directly without using deprecated LootManager.export_loot."""
-        self.loot_ctrl.add_entry("credentials", "DB User", "db:secret", target_ip="10.10.10.55", category="access")
+        self.loot_ctrl.add_entry(
+            "credentials", "DB User", "db:secret", target_ip="10.10.10.55", category="access"
+        )
         out_file = self.temp_path / "controller_loot_export.md"
 
         self.assertFalse(hasattr(self.loot_mgr, "export_loot"))
@@ -604,7 +659,9 @@ class TestControllersDomain(unittest.TestCase):
                 mock_notify.assert_called_once()
 
         # update_entry error
-        with patch.object(self.loot_mgr, "update_entry", side_effect=LootValidationError("invalid")):
+        with patch.object(
+            self.loot_mgr, "update_entry", side_effect=LootValidationError("invalid")
+        ):
             with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
                 result = self.loot_ctrl.update_entry("id1", "Title", "Content")
                 self.assertFalse(result)
@@ -625,7 +682,9 @@ class TestControllersDomain(unittest.TestCase):
                 mock_notify.assert_called_once()
 
         # clear_entries error
-        with patch.object(self.loot_mgr, "clear_session", side_effect=PersistenceError("cannot clear")):
+        with patch.object(
+            self.loot_mgr, "clear_session", side_effect=PersistenceError("cannot clear")
+        ):
             with patch.object(self.loot_ctrl, "_notify_persistence_error") as mock_notify:
                 self.loot_ctrl.clear_entries()
                 mock_notify.assert_called_once()
@@ -668,14 +727,18 @@ class TestControllersDomain(unittest.TestCase):
 
         # Success case
         with patch("ui.controllers.loot_controller.show_information_dialog") as mock_info:
-            out_path = self.loot_ctrl.export_entry_to_file_with_feedback(entry["id"], parent_widget=parent)
+            out_path = self.loot_ctrl.export_entry_to_file_with_feedback(
+                entry["id"], parent_widget=parent
+            )
             self.assertIsNotNone(out_path)
             self.assertTrue(out_path.is_file())
             mock_info.assert_called_once()
 
         # Failure case
         with patch("ui.controllers.loot_controller.show_error_dialog") as mock_warn:
-            out_path = self.loot_ctrl.export_entry_to_file_with_feedback("non-existent-id", parent_widget=parent)
+            out_path = self.loot_ctrl.export_entry_to_file_with_feedback(
+                "non-existent-id", parent_widget=parent
+            )
             self.assertIsNone(out_path)
             mock_warn.assert_called_once()
 
@@ -710,7 +773,9 @@ class TestControllersDomain(unittest.TestCase):
         self.loot_ctrl.select_loot_type("credentials")
         self.assertEqual(self.loot_ctrl.current_loot_type, "credentials")
         self.assertEqual(emitted_types, ["credentials"])
-        self.assertEqual(self.loot_ctrl.filter_buttons["credentials"].property("class"), "FilterPillActive")
+        self.assertEqual(
+            self.loot_ctrl.filter_buttons["credentials"].property("class"), "FilterPillActive"
+        )
         self.assertEqual(self.loot_ctrl.filter_buttons["all"].property("class"), "FilterPill")
 
         # Test clicking buttons triggers callbacks
@@ -870,9 +935,7 @@ class TestControllersDomain(unittest.TestCase):
             updated = self.loot_ctrl.get_entries()[0]
             self.assertEqual(updated["title"], "Edited Title")
             self.assertEqual(updated["type"], "credentials")
-            self.assertEqual(
-                updated["recommendation"], "Rotate the exposed credentials."
-            )
+            self.assertEqual(updated["recommendation"], "Rotate the exposed credentials.")
 
             # 2. Rejected
             mock_dlg.exec.return_value = False

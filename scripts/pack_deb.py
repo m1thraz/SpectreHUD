@@ -162,7 +162,9 @@ def create_data_tar(project_dir: Path) -> bytes:
     def add_tree(tar, src_dir: Path, arc_prefix: str):
         for root, _dirs, files in os.walk(src_dir):
             rel_root = Path(root).relative_to(src_dir)
-            target_dir = f"{arc_prefix}/{rel_root.as_posix()}" if str(rel_root) != "." else arc_prefix
+            target_dir = (
+                f"{arc_prefix}/{rel_root.as_posix()}" if str(rel_root) != "." else arc_prefix
+            )
             if "__pycache__" in target_dir:
                 continue
             add_dir(tar, target_dir)
@@ -222,7 +224,12 @@ if __name__ == "__main__":
         # 3. Desktop shortcut in /usr/share/applications/spectrehud.desktop
         desktop_file = project_dir / "resources" / "linux" / "spectrehud.desktop"
         if desktop_file.exists():
-            add_bytes(tar, "./usr/share/applications/spectrehud.desktop", desktop_file.read_bytes(), mode=0o644)
+            add_bytes(
+                tar,
+                "./usr/share/applications/spectrehud.desktop",
+                desktop_file.read_bytes(),
+                mode=0o644,
+            )
 
         # 4. Hicolor icons
         icons_src = project_dir / "resources" / "linux" / "icons"
@@ -232,18 +239,30 @@ if __name__ == "__main__":
                 if png_file.exists():
                     add_dir(tar, f"./usr/share/icons/hicolor/{size}")
                     add_dir(tar, f"./usr/share/icons/hicolor/{size}/apps")
-                    add_bytes(tar, f"./usr/share/icons/hicolor/{size}/apps/spectrehud.png", png_file.read_bytes(), mode=0o644)
+                    add_bytes(
+                        tar,
+                        f"./usr/share/icons/hicolor/{size}/apps/spectrehud.png",
+                        png_file.read_bytes(),
+                        mode=0o644,
+                    )
 
             svg_file = icons_src / "scalable" / "spectrehud.svg"
             if svg_file.exists():
                 add_dir(tar, "./usr/share/icons/hicolor/scalable")
                 add_dir(tar, "./usr/share/icons/hicolor/scalable/apps")
-                add_bytes(tar, "./usr/share/icons/hicolor/scalable/apps/spectrehud.svg", svg_file.read_bytes(), mode=0o644)
+                add_bytes(
+                    tar,
+                    "./usr/share/icons/hicolor/scalable/apps/spectrehud.svg",
+                    svg_file.read_bytes(),
+                    mode=0o644,
+                )
 
     return tar_buffer.getvalue()
 
 
-def build_deb(project_dir: Optional[Path] = None, output_path: Optional[Path] = None, arch: str = "all") -> Path:
+def build_deb(
+    project_dir: Optional[Path] = None, output_path: Optional[Path] = None, arch: str = "all"
+) -> Path:
     """Builds a complete, valid .deb package file."""
     if project_dir is None:
         project_dir = Path(__file__).resolve().parent.parent

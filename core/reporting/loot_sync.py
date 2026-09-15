@@ -20,16 +20,12 @@ from core.loot import CATEGORIES, is_report_finding_entry
 from core.reporting.section_markers import reconcile_section_markers
 
 MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:([A-Za-z0-9_-]+):([a-fA-F0-9]+)\s*-->")
-STRIP_MARKER_REGEX = re.compile(
-    r"<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\r?\n?"
-)
+STRIP_MARKER_REGEX = re.compile(r"<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\r?\n?")
 
 PAGEBREAK_MARKER = "<!-- spectre:pagebreak -->"
 PAGEBREAK_HTML = '<div class="spectre-page-break" contenteditable="false"></div>'
 PAGEBREAK_REGEX = re.compile(r"<!--\s*spectre:pagebreak\s*-->", re.IGNORECASE)
-SPACER_REGEX = re.compile(
-    r"<!--\s*spectre:spacer:(small|medium|large)\s*-->", re.IGNORECASE
-)
+SPACER_REGEX = re.compile(r"<!--\s*spectre:spacer:(small|medium|large)\s*-->", re.IGNORECASE)
 
 
 def format_spacer_marker(size: str) -> str:
@@ -37,6 +33,7 @@ def format_spacer_marker(size: str) -> str:
     if normalized not in {"small", "medium", "large"}:
         raise ValueError(f"Unsupported report spacer size: {size!r}")
     return f"<!-- spectre:spacer:{normalized} -->"
+
 
 SECTION_NOTES_PLACEHOLDER_DE = "_Eigene Anmerkungen zu dieser Phase:_"
 SECTION_NOTES_PLACEHOLDER_EN = "_Notes & observations for this phase:_"
@@ -230,9 +227,7 @@ def _get_category_heading_map(template: Optional[Any] = None) -> Dict[str, str]:
                     else "Technical Findings"
                 )
                 for cat_id in _grouped_section_categories(sec):
-                    heading_map[str(cat_id)] = str(
-                        getattr(sec, "title", None) or default_title
-                    )
+                    heading_map[str(cat_id)] = str(getattr(sec, "title", None) or default_title)
             elif section_type == "phase_section":
                 cat_id = str(getattr(sec, "category_id", None) or "misc")
                 cat_obj = next((c for c in CATEGORIES if str(c.get("id")) == cat_id), None)
@@ -281,15 +276,12 @@ def _includes_recommendation(template: Optional[Any], category_id: str) -> bool:
         return True
     for section in template.sections:
         section_type = getattr(section, "type", None)
-        if (
-            section_type == "finding_section"
-            and category_id in _grouped_section_categories(section)
+        if section_type == "finding_section" and category_id in _grouped_section_categories(
+            section
         ):
             return True
         if section_type == "phase_section" and getattr(section, "category_id", None) == category_id:
-            return bool(
-                getattr(section, "options", {}).get("include_recommendations", True)
-            )
+            return bool(getattr(section, "options", {}).get("include_recommendations", True))
     return str(getattr(template, "category", "")).lower() != "ctf"
 
 
@@ -386,10 +378,13 @@ def _apply_fallback_section(
     fallback_title = FALLBACK_SECTION_TITLE_DE if is_de else FALLBACK_SECTION_TITLE_EN
     fallback_header = f"## {fallback_title}"
     existing_fb_sections = [
-        s for s in _find_h2_sections(updated_text)
+        s
+        for s in _find_h2_sections(updated_text)
         if s[0] in (FALLBACK_SECTION_TITLE_DE, FALLBACK_SECTION_TITLE_EN, fallback_title)
     ]
-    rendered_fb_blocks = "".join(_render_loot_block_text(e, lang=language) for e in reversed(fallback_entries))
+    rendered_fb_blocks = "".join(
+        _render_loot_block_text(e, lang=language) for e in reversed(fallback_entries)
+    )
 
     if existing_fb_sections:
         all_s = _find_h2_sections(updated_text)
@@ -473,9 +468,7 @@ def append_missing_loot_to_text(
 
     for (c_start, s_end), (sec_text, blocks) in matched_blocks.items():
         insertions.append(
-            _compute_section_insertion(
-                sec_text, c_start, s_end, "".join(blocks), report_text
-            )
+            _compute_section_insertion(sec_text, c_start, s_end, "".join(blocks), report_text)
         )
 
     # Bottom-up application keeps offsets calculated from the original text valid.
@@ -483,9 +476,7 @@ def append_missing_loot_to_text(
     updated_text = report_text
     for insert_pos, replace_len, insert_content in insertions:
         updated_text = (
-            updated_text[:insert_pos]
-            + insert_content
-            + updated_text[insert_pos + replace_len :]
+            updated_text[:insert_pos] + insert_content + updated_text[insert_pos + replace_len :]
         )
 
     used_fallback = bool(fallback_entries)
@@ -513,7 +504,7 @@ def _reconcile_pagebreaks(original_markdown: str, current_markdown: str) -> str:
     # Extract anchor lines following each page break in original markdown
     pb_anchors: List[str] = []
     for match in PAGEBREAK_REGEX.finditer(original_markdown):
-        remaining = original_markdown[match.end():].lstrip("\r\n")
+        remaining = original_markdown[match.end() :].lstrip("\r\n")
         first_line = remaining.split("\n", 1)[0].strip() if remaining else ""
         pb_anchors.append(first_line)
 
@@ -556,11 +547,11 @@ def _reconcile_spacers(original_markdown: str, current_markdown: str) -> str:
     search_start = 0
     for match in SPACER_REGEX.finditer(original_markdown):
         marker = format_spacer_marker(match.group(1))
-        remaining = original_markdown[match.end():].lstrip("\r\n")
+        remaining = original_markdown[match.end() :].lstrip("\r\n")
         anchor = remaining.split("\n", 1)[0].strip() if remaining else ""
         if anchor:
             idx = result.find(anchor, search_start)
-            if idx != -1 and marker not in result[max(0, idx - 100):idx]:
+            if idx != -1 and marker not in result[max(0, idx - 100) : idx]:
                 separator = "" if idx == 0 or result[:idx].endswith("\n\n") else "\n\n"
                 insertion = f"{separator}{marker}\n\n"
                 result = result[:idx] + insertion + result[idx:]
@@ -570,9 +561,7 @@ def _reconcile_spacers(original_markdown: str, current_markdown: str) -> str:
     return result
 
 
-def preserve_markers_in_preview_roundtrip(
-    original_markdown: str, converted_markdown: str
-) -> str:
+def preserve_markers_in_preview_roundtrip(original_markdown: str, converted_markdown: str) -> str:
     """Reconciles SpectreHUD loot markers and manual pagebreaks dropped by Qt's QTextDocument.toMarkdown().
 
     Identifies markers and their anchor headings from original_markdown, and inserts them
@@ -586,8 +575,12 @@ def preserve_markers_in_preview_roundtrip(
     # 1. Reconcile loot markers
     original_markers = extract_report_markers(original_markdown)
     converted_markers = extract_report_markers(result_markdown)
-    if original_markers and not set(original_markers.keys()).issubset(set(converted_markers.keys())):
-        marker_anchors: List[Tuple[str, str, str]] = []  # (entry_id, content_hash, anchor_line_clean)
+    if original_markers and not set(original_markers.keys()).issubset(
+        set(converted_markers.keys())
+    ):
+        marker_anchors: List[
+            Tuple[str, str, str]
+        ] = []  # (entry_id, content_hash, anchor_line_clean)
         for match in MARKER_REGEX.finditer(original_markdown):
             entry_id = match.group(1)
             content_hash = match.group(2).lower()
@@ -611,7 +604,9 @@ def preserve_markers_in_preview_roundtrip(
                 prefix = result_markdown[:idx]
                 if marker_str not in prefix[-150:]:
                     # Insert marker right before the anchor line
-                    result_markdown = result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+                    result_markdown = (
+                        result_markdown[:idx] + marker_str + "\n" + result_markdown[idx:]
+                    )
 
     from core.reporting.findings import reconcile_finding_markers
     from core.reporting.evidence_markers import reconcile_evidence_markers

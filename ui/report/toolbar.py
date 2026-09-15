@@ -157,8 +157,18 @@ def build_format_toolbar(
     # Zone 4: Ausrichtung (Align Left, Align Center, Align Right)
     align_buttons = (
         ("fa5s.align-left", "report.format_align_left", "Align Left (Ctrl+Shift+L)", "align_left"),
-        ("fa5s.align-center", "report.format_align_center", "Align Center (Ctrl+Shift+E)", "align_center"),
-        ("fa5s.align-right", "report.format_align_right", "Align Right (Ctrl+Shift+R)", "align_right"),
+        (
+            "fa5s.align-center",
+            "report.format_align_center",
+            "Align Center (Ctrl+Shift+E)",
+            "align_center",
+        ),
+        (
+            "fa5s.align-right",
+            "report.format_align_right",
+            "Align Right (Ctrl+Shift+R)",
+            "align_right",
+        ),
     )
     for icon_name, key, fallback, callback_key in align_buttons:
         btn = QPushButton(tools_container)
@@ -199,9 +209,7 @@ def build_format_toolbar(
     _apply_icon_button(btn_spacer, "fa5s.arrows-alt-v", spacer_tip, icon_color, icon_active_color)
     spacer_menu = QMenu(btn_spacer)
     for size in ("small", "medium", "large"):
-        action = spacer_menu.addAction(
-            t(f"report.format_spacer_{size}", size.title())
-        )
+        action = spacer_menu.addAction(t(f"report.format_spacer_{size}", size.title()))
         action.triggered.connect(
             lambda _=False, spacer_size=size: callbacks[f"spacer_{spacer_size}"]()
         )
@@ -227,9 +235,7 @@ def build_format_toolbar(
     # -------------------------------------------------------------
     btn_toggle = QPushButton(toolbar_widget)
     btn_toggle.setObjectName("btn_toggle_toolbar")
-    btn_toggle.setProperty(
-        "class", "SecondaryBtn FormatToolBtn ReportIconBtn ToolbarToggleBtn"
-    )
+    btn_toggle.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn ToolbarToggleBtn")
     btn_toggle.setFixedSize(22, 22)
 
     _collapsed = False

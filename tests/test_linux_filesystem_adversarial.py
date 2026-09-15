@@ -100,7 +100,10 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         atomic_write_text(target, "initial content")
 
         # When replace fails with PermissionError (e.g. read-only target lock or restricted destination)
-        with patch("core.atomic_write._replace_file_with_retry", side_effect=PermissionError("Permission denied")):
+        with patch(
+            "core.atomic_write._replace_file_with_retry",
+            side_effect=PermissionError("Permission denied"),
+        ):
             with self.assertRaises(OSError):
                 atomic_write_text(target, "modified content")
 
@@ -128,14 +131,18 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         report_file = rfm.get_report_path("PermBox")
         atomic_write_text(report_file, "# Original Report")
 
-        with patch("core.atomic_write.atomic_write_text", side_effect=PermissionError("Access denied")):
+        with patch(
+            "core.atomic_write.atomic_write_text", side_effect=PermissionError("Access denied")
+        ):
             self.assertFalse(rfm.save("# New Report", "PermBox"))
 
         # When backup succeeds but save fails, ReportSaveError must be raised
         with patch.object(rfm, "backup", return_value=True):
             with patch.object(rfm, "save", return_value=False):
                 with self.assertRaises(ReportSaveError):
-                    rfm.regenerate(loot_manager=None, clipboard_watcher=None, project_name="PermBox")
+                    rfm.regenerate(
+                        loot_manager=None, clipboard_watcher=None, project_name="PermBox"
+                    )
 
         self.assertEqual(report_file.read_text(encoding="utf-8"), "# Original Report")
 
@@ -148,10 +155,15 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         report_file = rfm.get_report_path("BackupPermBox")
         atomic_write_text(report_file, "# Content")
 
-        with patch("core.atomic_write.atomic_write_text", side_effect=PermissionError("Cannot write backup")):
+        with patch(
+            "core.atomic_write.atomic_write_text",
+            side_effect=PermissionError("Cannot write backup"),
+        ):
             self.assertFalse(rfm.backup("BackupPermBox"))
             with self.assertRaises(ReportBackupError):
-                rfm.regenerate(loot_manager=None, clipboard_watcher=None, project_name="BackupPermBox")
+                rfm.regenerate(
+                    loot_manager=None, clipboard_watcher=None, project_name="BackupPermBox"
+                )
 
     def test_workspace_validation_fails_closed_on_readonly_directory(self):
         """Ticket 26: validate_workspace_directory() rejects non-writable directory."""
@@ -174,7 +186,9 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         try:
             symlink_file.symlink_to(real_file)
         except (OSError, NotImplementedError):
-            self.skipTest("Symlink creation not supported or permitted on this platform environment.")
+            self.skipTest(
+                "Symlink creation not supported or permitted on this platform environment."
+            )
 
         atomic_write_text(symlink_file.resolve(), "updated through link")
         self.assertEqual(real_file.read_text(encoding="utf-8"), "updated through link")
@@ -186,7 +200,9 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         try:
             broken_link.symlink_to(non_existent)
         except (OSError, NotImplementedError):
-            self.skipTest("Symlink creation not supported or permitted on this platform environment.")
+            self.skipTest(
+                "Symlink creation not supported or permitted on this platform environment."
+            )
 
         self.assertTrue(broken_link.is_symlink())
         self.assertFalse(broken_link.exists())
@@ -209,7 +225,9 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         try:
             internal_symlink.symlink_to(external_target)
         except (OSError, NotImplementedError):
-            self.skipTest("Symlink creation not supported or permitted on this platform environment.")
+            self.skipTest(
+                "Symlink creation not supported or permitted on this platform environment."
+            )
 
         self.assertTrue(internal_symlink.is_symlink())
         # Reading through symlink returns target data
@@ -271,7 +289,9 @@ class TestLinuxFilesystemAdversarial(unittest.TestCase):
         target = self.temp_path / "existing_doc.txt"
         atomic_write_text(target, "original durable content")
 
-        with patch("core.atomic_write._replace_file_with_retry", side_effect=OSError("Replace lock failed")):
+        with patch(
+            "core.atomic_write._replace_file_with_retry", side_effect=OSError("Replace lock failed")
+        ):
             with self.assertRaises(OSError):
                 atomic_write_text(target, "corrupted content")
 

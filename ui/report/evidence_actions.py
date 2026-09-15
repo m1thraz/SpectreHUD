@@ -125,9 +125,7 @@ class ReportEvidenceActions:
         relative_path = file_path
         if report_file_manager:
             try:
-                relative_path = report_file_manager.import_image(
-                    file_path, self.current_project
-                )
+                relative_path = report_file_manager.import_image(file_path, self.current_project)
             except Exception as error:
                 logger.warning("Could not copy image to project directory: %s", error)
                 relative_path = self._portable_image_path(file_path, project_dir)
@@ -202,14 +200,10 @@ class ReportEvidenceActions:
 
     def _resolve_project_dir(self) -> Optional[Path]:
         report_file_manager = self.report_file_manager
-        if not report_file_manager or not getattr(
-            report_file_manager, "project_manager", None
-        ):
+        if not report_file_manager or not getattr(report_file_manager, "project_manager", None):
             return None
         try:
-            project_name = report_file_manager.resolve_project_name(
-                self.current_project
-            )
+            project_name = report_file_manager.resolve_project_name(self.current_project)
             return report_file_manager.project_manager.get_project_dir(project_name)
         except Exception as error:
             logger.debug("Failed to resolve report project directory: %s", error)
@@ -219,12 +213,7 @@ class ReportEvidenceActions:
     def _portable_image_path(file_path: str, project_dir: Optional[Path]) -> str:
         if project_dir is not None:
             try:
-                return (
-                    Path(file_path)
-                    .resolve()
-                    .relative_to(project_dir.resolve())
-                    .as_posix()
-                )
+                return Path(file_path).resolve().relative_to(project_dir.resolve()).as_posix()
             except ValueError:
                 pass
         return file_path.replace("\\", "/")

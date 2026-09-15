@@ -56,9 +56,7 @@ class QuickNoteFocusReview(QFrame):
         self.editor = NoteEditor()
         self.editor.setObjectName("QuickNoteReviewEditor")
         self.editor.setPlainText(self._saved_text)
-        self.editor.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.editor.setMinimumHeight(150)
         self.editor.save_requested.connect(self._save_text)
         self.editor.cancel_requested.connect(self._reset_text)
@@ -66,9 +64,7 @@ class QuickNoteFocusReview(QFrame):
         layout.addWidget(self.editor, stretch=1)
 
         edit_actions = QHBoxLayout()
-        edit_hint = QLabel(
-            t("quick_note.edit_shortcut_hint", "Ctrl+Enter: Save | Esc: Cancel")
-        )
+        edit_hint = QLabel(t("quick_note.edit_shortcut_hint", "Ctrl+Enter: Save | Esc: Cancel"))
         edit_hint.setObjectName("QuickNoteMeta")
         edit_actions.addWidget(edit_hint)
         edit_actions.addStretch()
@@ -81,9 +77,7 @@ class QuickNoteFocusReview(QFrame):
         phase = get_phase(self.entry.get("category", "misc"))
         metadata = QLabel(
             "  ·  ".join(
-                part
-                for part in (str(self.entry.get("timestamp", "")).strip(), phase.short)
-                if part
+                part for part in (str(self.entry.get("timestamp", "")).strip(), phase.short) if part
             )
         )
         metadata.setObjectName("QuickNoteMeta")
@@ -92,9 +86,7 @@ class QuickNoteFocusReview(QFrame):
 
         actions = QHBoxLayout()
         actions.setSpacing(8)
-        self.btn_edit = self._button(
-            t("quick_note.edit_details", "Edit details"), "fa5s.pen"
-        )
+        self.btn_edit = self._button(t("quick_note.edit_details", "Edit details"), "fa5s.pen")
         self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
         actions.addWidget(self.btn_edit)
         loot = self._button(t("quick_note.send_loot", "Send to Loot"), "fa5s.archive")
@@ -102,9 +94,7 @@ class QuickNoteFocusReview(QFrame):
         actions.addWidget(loot)
         complete = self._button(t("quick_note.review_complete", "Done"), "fa5s.check-circle")
         complete.setProperty("class", "PrimaryBtn")
-        complete.clicked.connect(
-            lambda: self.complete_requested.emit(self.entry.get("id", ""))
-        )
+        complete.clicked.connect(lambda: self.complete_requested.emit(self.entry.get("id", "")))
         actions.addWidget(complete)
         delete = self._button(t("quick_note.review_delete", "Delete"), "fa5s.trash")
         delete.setProperty("class", "DangerBtn")

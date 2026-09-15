@@ -45,9 +45,7 @@ def normalize_finding_targets(
         candidates = value
     else:
         candidates = ()
-    normalized = _normalize_string_list(
-        candidates, MAX_FINDING_TARGETS, MAX_FINDING_TARGET_LENGTH
-    )
+    normalized = _normalize_string_list(candidates, MAX_FINDING_TARGETS, MAX_FINDING_TARGET_LENGTH)
     fallback = str(fallback_target or "").strip()[:MAX_FINDING_TARGET_LENGTH]
     if not normalized and fallback:
         normalized = [fallback]
@@ -61,9 +59,7 @@ def normalize_finding_references(value: Any) -> list[str]:
         candidates = value
     else:
         candidates = ()
-    return _normalize_string_list(
-        candidates, MAX_FINDING_REFERENCES, MAX_FINDING_REFERENCE_LENGTH
-    )
+    return _normalize_string_list(candidates, MAX_FINDING_REFERENCES, MAX_FINDING_REFERENCE_LENGTH)
 
 
 def normalize_cvss_vector(value: Any) -> str:
@@ -76,9 +72,7 @@ def normalize_finding_metadata(
     fallback_target: str = "",
 ) -> dict[str, Any]:
     return {
-        "targets": normalize_finding_targets(
-            value.get("targets"), fallback_target=fallback_target
-        ),
+        "targets": normalize_finding_targets(value.get("targets"), fallback_target=fallback_target),
         "cvss_score": normalize_cvss_score(value.get("cvss_score")),
         "cvss_vector": normalize_cvss_vector(value.get("cvss_vector")),
         "finding_status": normalize_finding_status(value.get("finding_status")),
@@ -86,9 +80,7 @@ def normalize_finding_metadata(
     }
 
 
-def _normalize_string_list(
-    values: Iterable[Any], limit: int, item_length: int
-) -> list[str]:
+def _normalize_string_list(values: Iterable[Any], limit: int, item_length: int) -> list[str]:
     normalized: list[str] = []
     seen: set[str] = set()
     for value in values:

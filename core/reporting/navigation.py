@@ -95,9 +95,7 @@ def _section_entries(markdown: str) -> tuple[ReportNavigationEntry, ...]:
             ReportNavigationEntry(
                 kind="section",
                 identity=segment.identity,
-                title=_title_from_markdown(
-                    segment.markdown, _display_identity(segment.identity)
-                ),
+                title=_title_from_markdown(segment.markdown, _display_identity(segment.identity)),
                 line_number=_first_visible_line(markdown, start.end(), end.start()),
             )
         )
@@ -114,7 +112,7 @@ def _finding_entries(markdown: str) -> tuple[ReportNavigationEntry, ...]:
         if end is None:
             break
         identity = start.group(1)
-        body = markdown[start.end():end.start()]
+        body = markdown[start.end() : end.start()]
         entries.append(
             ReportNavigationEntry(
                 kind="finding",

@@ -130,20 +130,23 @@ class QuickNotePopup(QWidget):
         # Text Editor
         self.text_edit = QPlainTextEdit(self.card)
         self.text_edit.setPlaceholderText(
-            t("quick_note.placeholder", "Schnellnotiz eingeben (Enter = Speichern, Shift+Enter = Zeilenumbruch)...")
+            t(
+                "quick_note.placeholder",
+                "Schnellnotiz eingeben (Enter = Speichern, Shift+Enter = Zeilenumbruch)...",
+            )
         )
         self.text_edit.setStyleSheet(
             f"""
             QPlainTextEdit {{
-                background-color: {get_theme_color('BG_INPUT')};
-                color: {get_theme_color('TEXT_PRIMARY')};
-                border: 1px solid {get_theme_color('BORDER_A80')};
+                background-color: {get_theme_color("BG_INPUT")};
+                color: {get_theme_color("TEXT_PRIMARY")};
+                border: 1px solid {get_theme_color("BORDER_A80")};
                 border-radius: 4px;
                 font-size: 12px;
                 padding: 4px;
             }}
             QPlainTextEdit:focus {{
-                border: 1px solid {get_theme_color('ACCENT_BRAND')};
+                border: 1px solid {get_theme_color("ACCENT_BRAND")};
             }}
             """
         )
@@ -192,7 +195,9 @@ class QuickNotePopup(QWidget):
             # Number keys 1-6:
             # If Alt is held OR text edit is currently empty -> switch category
             if key in KEY_TO_CATEGORY:
-                if (modifiers & Qt.KeyboardModifier.AltModifier) or not self.text_edit.toPlainText().strip():
+                if (
+                    modifiers & Qt.KeyboardModifier.AltModifier
+                ) or not self.text_edit.toPlainText().strip():
                     self.select_category(KEY_TO_CATEGORY[key])
                     return True
 
@@ -261,4 +266,3 @@ class QuickNotePopup(QWidget):
         self.activateWindow()
         # Give keyboard focus once on open — no repeated timer so click-outside still dismisses
         self.text_edit.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
-

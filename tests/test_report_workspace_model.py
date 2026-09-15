@@ -48,10 +48,26 @@ def test_evidence_and_narrative_sections():
     assert "<!-- spectre:section:end:scope_limitations -->" in md
 
 
+def test_english_finding_status_roundtrip_and_workspace_matrix():
+    finding = ReportFindingItem(
+        id="finding_1", title="Auth bypass", severity="high", status="accepted_risk"
+    )
+    reparsed = ReportFindingItem.from_markdown(finding.to_markdown("en"), finding.id)
+    assert reparsed.status == "accepted_risk"
+    summary = ReportExecutiveSummary()
+    assert "| Accepted Risk |" in summary.to_markdown([finding], language="en")
+
+    finding.status = "in_progress"
+    reparsed = ReportFindingItem.from_markdown(finding.to_markdown("en"), finding.id)
+    assert reparsed.status == "in_progress"
+    assert "| In Progress |" in summary.to_markdown([finding], language="en")
+
+
 def test_core_isolation():
     """Ensure workspace_model remains pure core headless Python."""
     assert "core.reporting.workspace_model" in sys.modules
     import core.reporting.workspace_model as wm
+
     source = Path(wm.__file__).read_text(encoding="utf-8")
     assert "PyQt6" not in source
     assert "ui." not in source
@@ -105,7 +121,7 @@ def test_report_finding_item_parsing_and_serialization():
         "#### Beschreibung\n\n"
         "Unauthenticated command execution via crafted payload.\n\n"
         "```bash\n"
-        "curl -X POST http://10.10.10.5/api -d '{\"cmd\": \"id\"}'\n"
+        'curl -X POST http://10.10.10.5/api -d \'{"cmd": "id"}\'\n'
         "```\n\n"
         "![PoC Screenshot](images/poc.png)\n\n"
         "#### Empfehlung\n\n"
@@ -407,7 +423,7 @@ def test_executive_summary_parsing_and_serialization():
         "| # | Finding | Severity | Phase | Status |\n"
         "|---|---------|----------|-------|--------|\n"
         "| 1 | FTP Anonymous Access | MEDIUM | recon | Offen |\n\n"
-        "**Total:** <span class=\"severity-pill severity-medium\">MEDIUM</span> 1\n\n"
+        '**Total:** <span class="severity-pill severity-medium">MEDIUM</span> 1\n\n'
         "### Key Highlights\n\n"
         "- **Initial Access Vector:** Anonymous FTP upload\n"
         "- **Privilege Escalation:** Sudo NOPASSWD less\n"
@@ -444,7 +460,7 @@ def test_remediation_plan_parsing_and_serialization():
         "Folgende strategische Maßnahmen sollten priorisiert umgesetzt werden.\n\n"
         "| Priority | Vulnerability | Recommended Action | Status |\n"
         "|----------|---------------|--------------------|--------|\n"
-        "| <span class=\"severity-pill severity-medium\">MEDIUM</span> | FTP Anonymous Access | Disable anonymous access | Offen |\n"
+        '| <span class="severity-pill severity-medium">MEDIUM</span> | FTP Anonymous Access | Disable anonymous access | Offen |\n'
     )
 
     plan = ReportRemediationPlan.from_markdown(raw_md, language="de")
@@ -540,8 +556,12 @@ def test_attack_path_parsing_and_serialization():
 
     # 3. Test serialization & doc integration
     findings = [
-        ReportFindingItem(id="f-ftp", title="FTP Anonymous Access", severity="medium", phase="recon"),
-        ReportFindingItem(id="f-root", title="Sudo NOPASSWD less", severity="critical", phase="privesc"),
+        ReportFindingItem(
+            id="f-ftp", title="FTP Anonymous Access", severity="medium", phase="recon"
+        ),
+        ReportFindingItem(
+            id="f-root", title="Sudo NOPASSWD less", severity="critical", phase="privesc"
+        ),
     ]
     doc = ReportWorkspaceDocument(findings=findings, language="de")
 
@@ -549,8 +569,12 @@ def test_attack_path_parsing_and_serialization():
         title="3. Angriffspfad",
         narrative_intro="Chronologische Angriffskette durch das Netzwerk.",
         steps=[
-            AttackPathStep(step_number=1, phase="recon", title="Portscan & Banner Grabbing", finding_id="f-ftp"),
-            AttackPathStep(step_number=2, phase="privesc", title="Root Shell via Sudoers", finding_id="f-root"),
+            AttackPathStep(
+                step_number=1, phase="recon", title="Portscan & Banner Grabbing", finding_id="f-ftp"
+            ),
+            AttackPathStep(
+                step_number=2, phase="privesc", title="Root Shell via Sudoers", finding_id="f-root"
+            ),
         ],
     )
     doc.set_attack_path(custom_path)
@@ -604,8 +628,14 @@ def test_scope_methodology_parsing_and_serialization():
     assert "### Pentest-Ansatz & Methodik" in md
     assert "Whitebox" in md
     assert "### In-Scope Ziele & Netzwerke" in md
-    assert "| `10.10.10.0/24` | Netzwerk / Subnetz | Produktion | Internes Segment & Domain Controller |" in md
-    assert "| `https://app.targetcorp.local` | Web-Anwendung | Staging | Kundenportal Webapplikation |" in md
+    assert (
+        "| `10.10.10.0/24` | Netzwerk / Subnetz | Produktion | Internes Segment & Domain Controller |"
+        in md
+    )
+    assert (
+        "| `https://app.targetcorp.local` | Web-Anwendung | Staging | Kundenportal Webapplikation |"
+        in md
+    )
     assert "### Out-of-Scope & Ausschlusskriterien" in md
     assert "| `10.10.10.1` | Default Gateway / Produktiv-Routing |" in md
     assert "### Testeinschränkungen & Rules of Engagement" in md
@@ -729,7 +759,9 @@ def test_appendix_parsing_and_serialization():
 
     # Update through set_appendix
     retrieved.command_snippets.append(
-        ReportEvidenceItem(id="cmd_3", type="terminal", caption="Whoami Check", content="whoami", language="bash")
+        ReportEvidenceItem(
+            id="cmd_3", type="terminal", caption="Whoami Check", content="whoami", language="bash"
+        )
     )
     doc.set_appendix(retrieved)
 

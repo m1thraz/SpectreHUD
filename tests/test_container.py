@@ -7,6 +7,7 @@ from core.container import ServiceContainer
 from ui.main_window import MainWindow
 from ui.clipboard_monitor import ClipboardMonitor
 
+
 class TestContainer(unittest.TestCase):
     """Unit tests verifying ServiceContainer and Dependency Injection."""
 

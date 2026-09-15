@@ -48,9 +48,7 @@ def test_visible_metadata_can_be_edited_and_hidden_again(qapp):
     editor.set_metadata_visible(False)
 
     assert "cafebabe5678" in editor.toPlainText()
-    assert not next(
-        visible for text, visible in _blocks(editor) if "spectre:loot" in text
-    )
+    assert not next(visible for text, visible in _blocks(editor) if "spectre:loot" in text)
 
 
 def test_hidden_metadata_rejects_edits_that_would_remove_markers(qapp):

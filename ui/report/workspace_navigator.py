@@ -108,9 +108,7 @@ class ReportWorkspaceNavigator(QWidget):
         self.btn_add_finding.clicked.connect(self.add_finding_requested.emit)
         action_row.addWidget(self.btn_add_finding, stretch=1)
 
-        self.btn_promote_finding = QPushButton(
-            t("report.promote_loot_short", "Loot → Finding")
-        )
+        self.btn_promote_finding = QPushButton(t("report.promote_loot_short", "Loot → Finding"))
         self.btn_promote_finding.setObjectName("btn_nav_promote_finding")
         self.btn_promote_finding.setProperty("class", "SecondaryBtn")
         self.btn_promote_finding.setToolTip(
@@ -226,7 +224,9 @@ class ReportWorkspaceNavigator(QWidget):
         # 3. Findings (Gruppiert nach Loot-Phasen)
         findings_count = len(doc.findings)
         item_findings_root = QTreeWidgetItem(self.tree)
-        item_findings_root.setText(0, f"{t('report.group_findings', 'Findings (Loot / Findings)')} ({findings_count})")
+        item_findings_root.setText(
+            0, f"{t('report.group_findings', 'Findings (Loot / Findings)')} ({findings_count})"
+        )
         item_findings_root.setIcon(0, icon("fa5s.shield-alt", color=accent_cyan))
         item_findings_root.setData(0, Qt.ItemDataRole.UserRole, ("findings_overview", None))
 
@@ -258,17 +258,23 @@ class ReportWorkspaceNavigator(QWidget):
 
         # Catch any findings with unknown phase
         known_phases = set(PHASE_META.keys())
-        other_findings = [f for f in doc.findings if normalize_phase_key(f.phase) not in known_phases]
+        other_findings = [
+            f for f in doc.findings if normalize_phase_key(f.phase) not in known_phases
+        ]
         if other_findings:
             item_other = QTreeWidgetItem(item_findings_root)
-            item_other.setText(0, t("report.phase_other", "Other ({count})", count=len(other_findings)))
+            item_other.setText(
+                0, t("report.phase_other", "Other ({count})", count=len(other_findings))
+            )
             item_other.setIcon(0, icon("fa5s.folder", color=get_theme_color("TEXT_MUTED")))
             item_other.setData(0, Qt.ItemDataRole.UserRole, ("phase_group", "misc"))
             for f in other_findings:
                 item_f = QTreeWidgetItem(item_other)
                 item_f.setText(0, f.title or t("report.finding_unnamed", "Untitled Finding"))
                 sev = (f.severity or "medium").lower()
-                item_f.setIcon(0, icon(SEV_ICONS.get(sev, "fa5s.circle"), color=get_severity_color(sev)))
+                item_f.setIcon(
+                    0, icon(SEV_ICONS.get(sev, "fa5s.circle"), color=get_severity_color(sev))
+                )
                 item_f.setData(0, Qt.ItemDataRole.UserRole, ("finding", f.id))
             item_other.setExpanded(False)
 
@@ -389,6 +395,8 @@ class ReportWorkspaceNavigator(QWidget):
 
     def changeEvent(self, event: Optional[QEvent]) -> None:
         super().changeEvent(event)
-        if event is not None and event.type() in (QEvent.Type.PaletteChange, QEvent.Type.StyleChange):
+        if event is not None and event.type() in (
+            QEvent.Type.PaletteChange,
+            QEvent.Type.StyleChange,
+        ):
             self.refresh_theme()
-
