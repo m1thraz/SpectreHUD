@@ -12,12 +12,12 @@ import tempfile
 from core.storage import StorageBackend, InMemoryStorageBackend, FileStorageBackend
 from core.event_bus import EventBus
 from core.config import ConfigManager, get_default_config_dir
-from core.snippets import SnippetManager
-from core.loot import LootManager
+from core.snippets.manager import SnippetManager
+from core.loot.manager import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectManager
-from core.screenshots import ScreenshotManager
+from core.screenshots.manager import ScreenshotManager
 from core.phase_context import PhaseContext
 from core.logger import get_logger
 
@@ -119,7 +119,7 @@ class ServiceContainer:
         resolved_config_dir = Path(config_dir) if config_dir else get_default_config_dir()
         from core.logger import configure_file_logging
 
-        configure_file_logging()
+        configure_file_logging(config_dir=resolved_config_dir)
         storage = FileStorageBackend(base_dir=resolved_config_dir)
         event_bus = EventBus()
 
@@ -132,7 +132,12 @@ class ServiceContainer:
 
         set_locale(active_lang)
 
-        snippet_manager = SnippetManager(language=active_lang)
+        snippet_manager = SnippetManager(
+            language=active_lang,
+            user_snippets_path=config_manager.user_snippets_file,
+            favorites_path=resolved_config_dir / "user_favorites.json",
+            event_bus=event_bus,
+        )
         workspace_setting = config_manager.get("workspace_dir")
         base_projects_dir = Path(workspace_setting) if workspace_setting else None
         project_manager = ProjectManager(

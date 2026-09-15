@@ -4,119 +4,14 @@ Notable user-facing changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and releases use
 semantic versioning.
 
+## [2.1.9] - 2026-09-15
+
+### Fixed
+
+* Load optional community and external snippet packs in the Cheatsheet.
+* Keep user snippet and favorite paths aligned with the configured application directory.
+
 ## [Unreleased]
-
-## [2.1.8] - 2026-09-14
-
-### Added
-
-* Added optional remediation guidance while capturing new Loot.
-* Added an explicit Loot-to-Finding workflow that can bundle multiple Loot entries as supporting evidence for one finding.
-* Added CVSS, finding status, references, and multiple targets to report-ready Loot capture.
-* Added a per-finding review for changed and report-only Loot differences, with choices to keep the report, use Loot, preserve both versions, detach, or delete.
-
-### Changed
-
-* Distinguished standalone report findings from evidence-only Loot during report generation and synchronization.
-* Unified missing Loot additions and explicit Finding conflict resolution in one synchronization workflow.
-* Harmonized UI components, dialogs, and filter pills to strictly derive colors from the active theme palette.
-* Centralized report light and print export palette tokens into headless `core.reporting.report_palette`.
-* Hardened theme architecture guardrails against unlisted Hex and CSS `rgb()`/`rgba()` literals across UI and reporting logic.
-* Decoupled Report Workspace navigator sidebar styling from the report document light mode toggle.
-* Standardized Appendix Inspector input fields and code editors to themed `CommandBox` styling for optimal contrast.
-
-### Fixed
-
-* Preserved CVSS data and evidence provenance when Loot becomes a report finding.
-* Restored localized severity dropdown labels in the session loot dialog.
-* Removed degrading opacity fade effect on quick notes and clipboard history cards.
-* Hidden internal evidence metadata tags in the finding description inspector and reconciled on save.
-* Resolved contrast blowout in appendix code editor and notes by providing robust theme background resolution.
-
-## [2.1.7] - 2026-09-14
-
-### Added
-
-* Added live Loot/report sync status for new, changed, and report-only entries.
-* Added an integrated Report Readiness review with actionable handoff and export checks.
-
-### Changed
-
-* Made the structured Report Workspace the default view with contextual Markdown tools and preview navigation.
-* Grouped workspace-level Loot sync and regeneration under compact Report Actions.
-* Aligned report export, generation, and regeneration dialogs with the active HUD theme.
-* Unified Report Workspace inspector headers, sections, forms, tables, and scroll surfaces around shared theme-aware styles.
-* Kept navigator selections semantically aligned and highlighted in the live report preview.
-
-### Fixed
-
-* Prevented metadata aliases from appearing as duplicate custom report fields.
-* Kept restored drafts, navigator state, inspectors, and preview content synchronized.
-
-## [2.1.6] - 2026-09-13
-
-### Added
-
-* Modular Report Workspace featuring a tri-pane environment with a semantic navigator, dedicated section and finding inspectors, and live Markdown preview.
-* Interactive inspectors for assessment metadata, executive summary scorecards, scope methodology, attack path narratives, technical findings, remediation plans, and appendix evidence.
-* Bidirectional live synchronization between the structured workspace document model and the underlying Markdown editor.
-* Responsive workspace layout with free-form splitter resizing across Editor, Split, and Workspace view modes.
-* Clipboard History curation allowing individual terminal snippets to be marked (`[x] Report`) for exclusive inclusion in Appendix A during report generation.
-
-### Security
-
-* Pinned all GitHub Actions across workflows to immutable 40-character commit SHAs with version comments and automated test enforcement.
-
-### Changed
-
-* Fall back to serial test execution in `scripts/run_tests.py` when `pytest-xdist` is not installed in the active environment.
-* Enforced bit-deterministic wheel builds across CI and release workflows via `--no-build-isolation` against pinned `setuptools` and `wheel` build backend constraints.
-
-### Removed
-
-* Removed redundant Checkmarx scan workflow in favor of consolidated native GitHub CodeQL analysis.
-
-## [2.1.5] - 2026-09-09
-
-### Changed
-
-* Clarified core capture and report workflows with context-aware empty states, concise action tooltips, and purpose-driven export descriptions in English and German.
-* Reduced Cheatsheet view latency with incremental card rendering and reuse of an unchanged rendered view when switching back from another workspace.
-* Consolidated project persistence writes around typed outcomes and atomic all-or-nothing session loading.
-* Added a localized copy action to error dialogs so complete diagnostic messages can be shared without manual transcription.
-* Moved runtime logs to a discoverable machine-local Diagnostics folder, exposed its path in Settings and error details, and added an explicit `SPECTRE_LOG_DIR` override.
-* Centralized standard error, warning, information, and confirmation dialogs so failures consistently expose copyable diagnostics and the active log location.
-
-### Fixed
-
-* Warn instead of silently treating corrupted, unreadable, or oversized project state as an empty session.
-* Roll back only workspace files created by a failed `allow_existing` project setup while preserving pre-existing user content.
-* Keep header navigation buttons responsive where they overlap the frameless window's top resize zone.
-* Keep the test runner's simulated Windows process-group check portable on Linux CI hosts.
-* Assign new screenshot Loot to the active pentest phase instead of always falling back to Misc.
-* Distinguish History's generated Markdown draft from the editable Report and default it to `report-draft.md`.
-* Reject unsupported project and Pentest-security schemas explicitly, and sync parent directories after atomic file replacement for stronger crash durability.
-* Migrate versionless legacy project and Pentest-security state to schema 1 with exact pre-migration backups instead of blocking otherwise valid existing projects.
-
-## [2.1.4] - 2026-09-08
-
-### Added
-
-* Manual, non-blocking GitHub release checks in Settings with platform-package detection for Windows and Linux.
-* Compact semantic Report Navigator for jumping to marked sections and findings without leaving the existing editor.
-* Global `Ctrl+Alt+R` clipboard recorder toggle with monitor-local recording state feedback.
-
-### Changed
-
-* Prioritized Quick Capture & Controls ahead of phase switching in the shortcut overview.
-* Report toolbar icons now use the active theme's primary control accent instead of the legacy Cyber Cyan accent.
-* Removed the redundant heading-based Sections dropdown now that the semantic Report Navigator covers section and finding navigation.
-
-### Fixed
-
-* Unified report-generation, template-management, template-editor, section-editor, and regeneration-confirmation windows on the opaque frameless HUD dialog shell.
-* Use the active report template language when Add Missing Loot creates its fallback section.
-* Reset frameless-window resize cursors when leaving an edge for nested content instead of keeping a stale resize pointer.
 
 ## [2.1.3] - 2026-09-08
 
@@ -366,12 +261,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...HEAD
-[2.1.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...v2.1.8
-[2.1.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...v2.1.7
-[2.1.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...v2.1.6
-[2.1.5]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.4...v2.1.5
-[2.1.4]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.4
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...HEAD
+[2.1.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.3...v2.1.9
 [2.1.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.0...v2.1.1

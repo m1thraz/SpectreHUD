@@ -1,8 +1,8 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.snippets import TemplateEngine
-from core.snippets import SnippetManager
+from core.snippets.interpolator import TemplateEngine
+from core.snippets.manager import SnippetManager
 
 
 class TestCoreModules(unittest.TestCase):
@@ -49,6 +49,22 @@ class TestCoreModules(unittest.TestCase):
         self.assertIn("all", cat_ids)
         self.assertIn("web_http", cat_ids)
         self.assertIn("linux_shell", cat_ids)
+
+    def test_community_snippet_pack_is_loaded(self):
+        pack = self.temp_path / "community_snippets.json"
+        pack.write_text(
+            '{"categories": [{"id": "community_web", "name": "Community Web", '
+            '"snippets": [{"id": "community_curl", "title": "Community Curl", '
+            '"template": "curl {{TARGET_IP}}"}]}]}',
+            encoding="utf-8",
+        )
+        sm = SnippetManager(
+            user_snippets_path=self.temp_snippets_file,
+            community_snippets_paths=[pack],
+        )
+
+        self.assertIn("community_curl", {snippet["id"] for snippet in sm.snippets})
+        self.assertIn("community_web", {category["id"] for category in sm.get_categories()})
 
     def test_snippet_manager_favorites_lifecycle(self):
         fav_file = self.temp_path / "custom_favorites.json"
