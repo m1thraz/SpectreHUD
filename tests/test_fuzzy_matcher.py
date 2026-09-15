@@ -25,7 +25,7 @@ class TestFuzzyMatcher(unittest.TestCase):
                 "id": "3",
                 "title": "Remote Code Execution via Web Shell",
                 "template": "curl http://{{TARGET_IP}}/shell.php?cmd={{COMMAND}}",
-                "description": "Execute arbitrary bash commands via PHP web shell backdoor",
+                "description": "Execute arbitrary bash commands via PHP web interface",
                 "category": "Web Exploitation",
                 "tags": ["web", "rce", "webshell", "exploit"],
             },

