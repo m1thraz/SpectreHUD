@@ -55,9 +55,10 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
 
     layout = window.content_panel.content_layout
     container = window.content_panel.content_container
-    last_card = cards[-1]
+    last_item = layout.itemAt(layout.count() - 1)
+    last_widget = last_item.widget() if last_item else cards[-1]
     bottom_margin = layout.contentsMargins().bottom()
-    expected_bottom = last_card.geometry().bottom() + 1 + bottom_margin
+    expected_bottom = last_widget.geometry().bottom() + 1 + bottom_margin
 
     normal_layout_slack = max(48, 2 * (bottom_margin + layout.spacing()) + 20)
     scroll = window.content_panel.scroll_area
@@ -69,24 +70,29 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
         assert container.height() <= scroll.viewport().height()
         return
 
-    assert abs(container.sizeHint().height() - expected_bottom) <= normal_layout_slack
+    assert abs(container.height() - expected_bottom) <= normal_layout_slack
 
     scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum())
     QApplication.processEvents()
-    last_bottom_in_viewport = last_card.mapTo(scroll.viewport(), QPoint(0, last_card.height())).y()
+    last_bottom_in_viewport = last_widget.mapTo(
+        scroll.viewport(), QPoint(0, last_widget.height())
+    ).y()
     trailing_space = scroll.viewport().height() - last_bottom_in_viewport
     assert -4 <= trailing_space <= bottom_margin + (3 * layout.spacing()) + 12, (
         f"trailing={trailing_space}, hint={container.sizeHint().height()}, "
         f"minimum_hint={container.minimumSizeHint().height()}, "
         f"layout_minimum={layout.minimumSize().height()}, "
         f"height_for_width={layout.heightForWidth(container.width())}, "
-        f"container={container.height()}, last_bottom={last_card.geometry().bottom() + 1}, "
+        f"container={container.height()}, last_bottom={last_widget.geometry().bottom() + 1}, "
         f"viewport={scroll.viewport().height()}, maximum={scroll.verticalScrollBar().maximum()}, "
         f"value={scroll.verticalScrollBar().value()}"
     )
 
 
-def test_full_cheatsheet_has_no_large_empty_scroll_area(cheatsheet_window):
+def test_full_cheatsheet_has_no_large_empty_scroll_area(cheatsheet_window, qapp):
+    while cheatsheet_window.app.cheatsheet_ctrl.load_more():
+        for _ in range(3):
+            qapp.processEvents()
     command_policy = cheatsheet_window.cards[0].lbl_command.sizePolicy()
     assert command_policy.horizontalPolicy() == QSizePolicy.Policy.Expanding
     assert cheatsheet_window.content_panel.scroll_area.verticalScrollBar().maximum() > 0
