@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.1.9] - 2026-09-16
+
 ### Added
 
 * Added an Import Snippets button to the Cheatsheet view, enabling users to load external snippet JSON files directly into their database (essential for standalone portable `.exe` and Debian packages without requiring Python or manual CLI execution).
@@ -384,7 +386,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...HEAD
+[2.1.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...v2.1.9
 [2.1.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...v2.1.8
 [2.1.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.5...v2.1.6
