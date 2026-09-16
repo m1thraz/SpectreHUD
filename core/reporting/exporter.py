@@ -7,19 +7,14 @@ from typing import Optional
 
 from core.logger import get_logger
 from core.atomic_write import atomic_write_text
-from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE, encode_image_base64
+from core.reporting.assets import MAX_EMBED_IMAGE_FILE_SIZE
 from core.reporting.export_result import (
     ExportArtifact,
     ExportError,
     ExportErrorCode,
     ExportResult,
 )
-from core.reporting.markdown import (
-    sanitize_url,
-    format_inline,
-    resolve_and_embed_images,
-    convert_markdown_to_html,
-)
+from core.reporting.markdown import resolve_and_embed_images
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
@@ -47,31 +42,6 @@ class HtmlReportExporter:
     """Exports markdown reports to standalone, professionally styled HTML with base64 embedded images."""
 
     MAX_EMBED_IMAGE_FILE_SIZE = MAX_EMBED_IMAGE_FILE_SIZE
-
-    @staticmethod
-    def _encode_image_base64(image_path: Path) -> Optional[str]:
-        """Encodes an image file to a base64 data URI."""
-        return encode_image_base64(image_path)
-
-    @classmethod
-    def _resolve_and_embed_images(cls, md_text: str, project_dir: Optional[Path]) -> str:
-        """Finds all ![alt](src) in markdown and embeds local images as base64 data URIs."""
-        return resolve_and_embed_images(md_text, project_dir)
-
-    @staticmethod
-    def _sanitize_url(url: str, is_image: bool = False) -> str:
-        """Sanitizes URLs for href or src attributes."""
-        return sanitize_url(url, is_image=is_image)
-
-    @classmethod
-    def _format_inline(cls, text: str) -> str:
-        """Formats inline markdown: bold, italic, inline code, links, images."""
-        return format_inline(text)
-
-    @classmethod
-    def markdown_to_html(cls, md_text: str, project_dir: Optional[Path] = None) -> str:
-        """Converts Markdown text to HTML body structure."""
-        return convert_markdown_to_html(md_text, project_dir=project_dir)
 
     @classmethod
     def _professional_body_html(

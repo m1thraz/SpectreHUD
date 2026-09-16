@@ -30,98 +30,27 @@ class ProfessionalCoverData:
     header_label: str = ""
 
 
-def _plain_markdown_value(value: str) -> str:
-    cleaned = value.strip().strip("`").strip()
-    cleaned = re.sub(r"[*_]", "", cleaned).strip()
-    if cleaned in ("-", "–", "—", "n/a", "N/A"):
-        return ""
-    return html.unescape(cleaned).strip()
-
-
-_CLIENT_ALIASES = (
-    "auftraggeber / client",
-    "client / organization",
-    "client",
-    "auftraggeber",
-    "kunde",
-    "customer",
-    "organisation",
-    "organization",
-    "company",
-    "unternehmen",
-)
-_TARGET_ALIASES = (
-    "ziel(e) / scope",
-    "scope / target",
-    "target",
-    "scope",
-    "ziel",
-    "ziele",
-    "ziel(e)",
-    "target_ip",
-    "ip",
-    "domain",
-    "netzwerk",
-    "network",
-)
-_TESTER_ALIASES = (
-    "lead tester / analyst",
-    "lead tester",
-    "tester",
-    "prüfer",
-    "auditor",
-    "analyst",
-    "author",
-    "autor",
-    "erstellt von",
-    "created by",
-)
-_TIMEFRAME_ALIASES = (
-    "assessment period",
-    "testzeitraum",
-    "zeitraum",
-    "period",
-    "timeframe",
-    "testing period",
-)
-_DATE_ALIASES = (
-    "berichtsdatum",
-    "report date",
-    "datum",
-    "date",
-    "stand",
-    "zeitraum",
-    "assessment date",
-    "erstellungsdatum",
-)
-_CLASSIFICATION_ALIASES = (
-    "klassifizierung",
-    "classification",
-    "vertraulichkeit",
-    "confidentiality",
-    "tlp",
-    "traffic light protocol",
-)
-_VERSION_ALIASES = (
-    "report-version",
-    "report version",
-    "version",
-    "revision",
+from core.reporting.report_metadata import (
+    ALL_METADATA_ALIASES,
+    CLASSIFICATION_ALIASES,
+    CLIENT_ALIASES,
+    DATE_ALIASES,
+    TARGET_ALIASES,
+    TESTER_ALIASES,
+    TIMEFRAME_ALIASES,
+    VERSION_ALIASES,
+    clean_metadata_value,
 )
 
-_ALL_METADATA_ALIASES = frozenset(
-    alias.strip().lower()
-    for group in (
-        _CLIENT_ALIASES,
-        _TARGET_ALIASES,
-        _TESTER_ALIASES,
-        _TIMEFRAME_ALIASES,
-        _DATE_ALIASES,
-        _CLASSIFICATION_ALIASES,
-        _VERSION_ALIASES,
-    )
-    for alias in group
-)
+_plain_markdown_value = clean_metadata_value
+_CLIENT_ALIASES = CLIENT_ALIASES
+_TARGET_ALIASES = TARGET_ALIASES
+_TESTER_ALIASES = TESTER_ALIASES
+_TIMEFRAME_ALIASES = TIMEFRAME_ALIASES
+_DATE_ALIASES = DATE_ALIASES
+_CLASSIFICATION_ALIASES = CLASSIFICATION_ALIASES
+_VERSION_ALIASES = VERSION_ALIASES
+_ALL_METADATA_ALIASES = ALL_METADATA_ALIASES
 
 
 def _parse_metadata_rows(lines: List[str]) -> dict[str, str]:

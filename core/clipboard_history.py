@@ -118,15 +118,6 @@ class ClipboardHistory:
         self._last_copied_text = self.history[0]["text"] if self.history else None
         self._publish_updated("replace")
 
-    def replace_history_and_persist(self, history: List[Dict[str, Any]]) -> None:
-        """Replace history and persist the validated result atomically."""
-        validated = validate_clipboard_list(history)
-        if not self.storage.save_json("clipboard", validated):
-            raise PersistenceError("Could not persist replacement clipboard history to storage.")
-        self.history = validated
-        self._last_copied_text = self.history[0]["text"] if self.history else None
-        self._publish_updated("replace")
-
     def get_all_history(self) -> List[Dict[str, Any]]:
         """Return defensive copies of all history entries."""
         return [dict(entry) for entry in self.history]

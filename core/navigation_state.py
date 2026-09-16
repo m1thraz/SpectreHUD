@@ -5,7 +5,7 @@ Tracks mode transitions, cycling sequence, history stack, and dirty-state guards
 completely independent of Qt UI widgets.
 """
 
-from typing import List, Optional, Set
+from typing import List, Set
 
 
 VALID_MODES: Set[str] = {"cheatsheet", "history", "notes", "loot", "report"}
@@ -66,10 +66,3 @@ class NavigationStateMachine:
             next_idx = (current_idx + 1) % len(TAB_CYCLE_MODES)
             return TAB_CYCLE_MODES[next_idx]
         return TAB_CYCLE_MODES[0]
-
-    def cycle_tab_mode(self, report_is_dirty: bool = False) -> Optional[str]:
-        """Cycles to the next Tab mode and updates active state if allowed."""
-        next_mode = self.get_next_tab_mode()
-        if self.switch_mode(next_mode, report_is_dirty=report_is_dirty):
-            return next_mode
-        return None

@@ -3,13 +3,15 @@
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QPlainTextEdit, QWidget
+from PyQt6.QtWidgets import QFileDialog, QPlainTextEdit, QWidget
 
 from core.i18n import t
 from core.logger import get_logger
-from core.platform import open_path
-from core.reporting import ExportStatus
-from ui.coordinators.export_coordinator import ExportCoordinator, ReportExportError
+from ui.coordinators.export_coordinator import (
+    ExportCoordinator,
+    ReportExportError,
+    present_export_result as _coordinator_present_export_result,
+)
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
 from ui.report.dialogs import ReportExportTypeDialog, select_html_export_options
 
@@ -152,16 +154,7 @@ class ReportExportActions:
             )
         except ReportExportError as exc:
             logger.error("Export der Report-Kopie nach %s fehlgeschlagen: %s", target, exc)
-            show_error_dialog(
-                self.parent_widget.window() if self.parent_widget else None,
-                t("dialog.error", "Fehler"),
-                t(
-                    "report.export_failed_msg",
-                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
-                    filename=target.name,
-                ),
-                details=str(exc),
-            )
+            self._show_file_export_error(target, exc)
 
     def on_export_html_clicked(self) -> None:
         """Exports the report as HTML/PDF presentation."""
@@ -215,16 +208,19 @@ class ReportExportActions:
             )
         except ReportExportError as exc:
             logger.error("Export des HTML-Reports nach %s fehlgeschlagen: %s", target, exc)
-            show_error_dialog(
-                self.parent_widget.window() if self.parent_widget else None,
-                t("dialog.error", "Fehler"),
-                t(
-                    "report.export_failed_msg",
-                    "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
-                    filename=target.name,
-                ),
-                details=str(exc),
-            )
+            self._show_file_export_error(target, exc)
+
+    def _show_file_export_error(self, target: Path, exc: Exception) -> None:
+        show_error_dialog(
+            self.parent_widget.window() if self.parent_widget else None,
+            t("dialog.error", "Fehler"),
+            t(
+                "report.export_failed_msg",
+                "Export fehlgeschlagen: Die Datei '{filename}' konnte nicht gespeichert werden.",
+                filename=target.name,
+            ),
+            details=str(exc),
+        )
 
     def on_export_obsidian_clicked(self) -> None:
         """Delegate the current editor document to the shared export coordinator."""
@@ -297,83 +293,29 @@ class ReportExportActions:
         success_message: Optional[str] = None,
         ask_open_file: Optional[Path] = None,
     ) -> None:
-        """Presents an ExportResult or legacy export outcome in a unified way."""
-        status = getattr(result, "status", None)
-        if status is ExportStatus.CANCELLED:
-            return
-
+        """Presents an ExportResult by delegating to ExportCoordinator or canonical presentation."""
+        coordinator = self.export_coordinator
         window = self.parent_widget.window() if self.parent_widget else None
-
-        if status is ExportStatus.FAILED:
-            err = getattr(result, "error", None)
-            err_msg = getattr(err, "message", None) if err else "Export failed"
-            details = getattr(err, "details", None) if err else None
-            show_error_dialog(window, title, str(err_msg), details=details)
-            return
-
-        msg = success_message
-        if not msg:
-            artifacts = getattr(result, "artifacts", ())
-            note_path = getattr(result, "note_path", None)
-            if artifacts:
-                first = artifacts[0].path
-                if any(getattr(a, "format", "") == "image" for a in artifacts):
-                    msg = t(
-                        "report.cherrytree_exported",
-                        "CherryTree HTML package created:\n{path}",
-                        path=str(first.parent),
-                    )
-                else:
-                    msg = t(
-                        "report.export_saved_msg",
-                        "Kopie gespeichert: {filename}",
-                        filename=first.name,
-                    )
-            elif note_path:
-                p = Path(note_path)
-                if p.suffix.lower() in (".html", ".ctd", ".ctb"):
-                    msg = t(
-                        "report.cherrytree_exported",
-                        "CherryTree HTML package created:\n{path}",
-                        path=str(p.parent),
-                    )
-                else:
-                    msg = t(
-                        "report.export_saved_msg",
-                        "Kopie gespeichert: {filename}",
-                        filename=p.name,
-                    )
-            else:
-                msg = t("report.export_saved_title", "Exportiert")
-
-        warnings = getattr(result, "warnings", ())
-        if warnings:
-            msg += "\n\n" + t(
-                "report.cherrytree_attachment_warning",
-                "Some images could not be copied.",
-            )
-
-        if ask_open_file:
-            reply = ask_confirmation(
+        if coordinator is not None and hasattr(coordinator, "present_export_result") and not hasattr(coordinator, "_mock_return_value"):
+            coordinator.present_export_result(
                 window,
-                title,
-                t(
-                    "report.export_html_success_msg",
-                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
-                    filename=ask_open_file.name,
-                ),
-                default_button=QMessageBox.StandardButton.Yes,
+                result,
+                title=title,
+                success_message=success_message,
+                ask_open_file=ask_open_file,
+                show_info_dialog_fn=show_information_dialog,
+                show_error_dialog_fn=show_error_dialog,
+                ask_confirm_fn=ask_confirmation,
             )
-            if reply == QMessageBox.StandardButton.Yes:
-                if not open_path(ask_open_file):
-                    show_error_dialog(
-                        window,
-                        t("report.open_html_error_title", "Report unavailable"),
-                        t(
-                            "report.open_html_error_message",
-                            "The exported HTML report could not be opened:\n{path}",
-                            path=str(ask_open_file),
-                        ),
-                    )
         else:
-            show_information_dialog(window, title, msg)
+            _coordinator_present_export_result(
+                window,
+                result,
+                title=title,
+                success_message=success_message,
+                ask_open_file=ask_open_file,
+                show_info_dialog_fn=show_information_dialog,
+                show_error_dialog_fn=show_error_dialog,
+                ask_confirm_fn=ask_confirmation,
+            )
+

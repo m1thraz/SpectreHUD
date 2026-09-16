@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from core.reporting import HtmlReportExporter
+from core.reporting import HtmlReportExporter, convert_markdown_to_html
 from core.reporting import ImageEmbeddingBudget
 
 
@@ -37,7 +37,7 @@ curl -i http://10.10.10.10/admin
 
 ---
 """
-        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md, project_dir=self.proj_dir)
         self.assertIn("<h1>Box Writeup</h1>", html_out)
         self.assertIn("<h2>Reconnaissance</h2>", html_out)
         self.assertIn("<strong>bold text</strong>", html_out)
@@ -65,7 +65,7 @@ curl -i http://10.10.10.10/admin
         img_file.write_bytes(png_bytes)
 
         md = "### Screenshot Evidence\n![Proof Screenshot](screenshot_test.png)"
-        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md, project_dir=self.proj_dir)
         self.assertIn("data:image/png;base64,", html_out)
         self.assertIn('alt="Proof Screenshot"', html_out)
 
@@ -92,7 +92,7 @@ curl -i http://10.10.10.10/admin
         outside_file.write_bytes(b"\x89PNG\r\n\x1a\nfake")
 
         md = "![Hacked](../secret.png)"
-        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md, project_dir=self.proj_dir)
         # Should not be base64 embedded since it's outside project sandbox
         self.assertNotIn("data:image/png;base64,", html_out)
 
@@ -138,13 +138,13 @@ curl -i http://10.10.10.10/admin
         """Target-derived Markdown stays inert when a customer opens the HTML report."""
         # 1. Block Image attribute breakout PoC
         md_img_block = '![pwned](x" onerror=alert(document.cookie) x=")'
-        html_out = HtmlReportExporter.markdown_to_html(md_img_block, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md_img_block, project_dir=self.proj_dir)
         self.assertNotIn('" onerror=', html_out)
         self.assertIn('src="x&quot; onerror=alert(document.cookie) x=&quot;"', html_out)
 
         # 2. Inline Image attribute breakout PoC
         md_img_inline = 'Inline screenshot: ![pwned](x" onfocus=alert(1) autofocus x=")'
-        html_out_inline = HtmlReportExporter.markdown_to_html(
+        html_out_inline = convert_markdown_to_html(
             md_img_inline, project_dir=self.proj_dir
         )
         self.assertNotIn('" onfocus=', html_out_inline)
@@ -153,25 +153,25 @@ curl -i http://10.10.10.10/admin
 
         # 3. JavaScript URI Scheme in Markdown Links
         md_link_js = "[Exploit](javascript:alert(1))"
-        html_out_link = HtmlReportExporter.markdown_to_html(md_link_js, project_dir=self.proj_dir)
+        html_out_link = convert_markdown_to_html(md_link_js, project_dir=self.proj_dir)
         self.assertNotIn('href="javascript:', html_out_link)
         self.assertIn('href="#unsafe-scheme-blocked"', html_out_link)
 
         # 4. Obfuscated whitespace javascript URI Scheme
         md_link_obf = "[Exploit](   javascript:alert(1)   )"
-        html_out_obf = HtmlReportExporter.markdown_to_html(md_link_obf, project_dir=self.proj_dir)
+        html_out_obf = convert_markdown_to_html(md_link_obf, project_dir=self.proj_dir)
         self.assertNotIn('href="javascript', html_out_obf)
         self.assertIn('href="#unsafe-scheme-blocked"', html_out_obf)
 
         # 5. Data:text/html URI Scheme in Images
         md_img_data = "![XSS](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)"
-        html_out_data = HtmlReportExporter.markdown_to_html(md_img_data, project_dir=self.proj_dir)
+        html_out_data = convert_markdown_to_html(md_img_data, project_dir=self.proj_dir)
         self.assertNotIn('src="data:text/html', html_out_data)
         self.assertIn('src="#unsafe-data-uri-blocked"', html_out_data)
 
         # 6. Valid Safe Links and Images are preserved
         md_safe = "[Docs](https://example.com/docs) and [Mail](mailto:test@example.com)"
-        html_safe = HtmlReportExporter.markdown_to_html(md_safe, project_dir=self.proj_dir)
+        html_safe = convert_markdown_to_html(md_safe, project_dir=self.proj_dir)
         self.assertIn('href="https://example.com/docs"', html_safe)
         self.assertIn('href="mailto:test@example.com"', html_safe)
 
@@ -189,11 +189,11 @@ curl -i http://10.10.10.10/admin
     def test_protocol_relative_urls_blocked(self):
         """Protocol-relative target content is blocked in exported links and images."""
         md_link_pr = "[Evil](//attacker.com/evil.js)"
-        html_out_link = HtmlReportExporter.markdown_to_html(md_link_pr, project_dir=self.proj_dir)
+        html_out_link = convert_markdown_to_html(md_link_pr, project_dir=self.proj_dir)
         self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
 
         md_img_pr = "![Evil](//attacker.com/evil.png)"
-        html_out_img = HtmlReportExporter.markdown_to_html(md_img_pr, project_dir=self.proj_dir)
+        html_out_img = convert_markdown_to_html(md_img_pr, project_dir=self.proj_dir)
         self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
 
     def test_image_embedding_respects_product_size_limit(self):
@@ -212,19 +212,19 @@ curl -i http://10.10.10.10/admin
         """Target-derived code-fence metadata stays inert in customer-facing HTML."""
         # 1. Attribute injection attempt via double quote and mouse handler
         md_attr = '```" onmouseover="alert(1)\nhello\n```'
-        html_out = HtmlReportExporter.markdown_to_html(md_attr, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md_attr, project_dir=self.proj_dir)
         self.assertNotIn('onmouseover="', html_out)
         self.assertNotIn("onmouseover=", html_out)
         self.assertNotIn("<script", html_out)
 
         # 2. Tag injection attempt
         md_tag = "```><script>alert(1)</script>\nevil\n```"
-        html_out_tag = HtmlReportExporter.markdown_to_html(md_tag, project_dir=self.proj_dir)
+        html_out_tag = convert_markdown_to_html(md_tag, project_dir=self.proj_dir)
         self.assertNotIn("<script>alert(1)</script>", html_out_tag)
 
         # 3. Legitimate language identifier is preserved
         md_valid = '```python\nprint("secure")\n```'
-        html_out_valid = HtmlReportExporter.markdown_to_html(md_valid, project_dir=self.proj_dir)
+        html_out_valid = convert_markdown_to_html(md_valid, project_dir=self.proj_dir)
         self.assertIn(
             '<code class="language-python">print(&quot;secure&quot;)</code>', html_out_valid
         )
@@ -232,7 +232,7 @@ curl -i http://10.10.10.10/admin
     def test_spectre_loot_markers_are_stripped_from_html_export(self):
         """Ticket 6: Markers must not be visible or rendered as escaped HTML comments in output."""
         md = "<!-- spectre:loot:loot_12345:deadbeef1234 -->\n### Finding Title\nFinding description text."
-        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md, project_dir=self.proj_dir)
         self.assertNotIn("spectre:loot", html_out)
         self.assertNotIn("&lt;!--", html_out)
         self.assertIn("Finding Title", html_out)
@@ -244,7 +244,7 @@ curl -i http://10.10.10.10/admin
             '### <span class="severity-pill severity-high">🟠 HIGH</span> SQL Injection in Login\n'
             'Paragraph with <span class="severity-pill severity-critical">🔴 CRITICAL</span> finding.'
         )
-        html_out = HtmlReportExporter.markdown_to_html(md, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md, project_dir=self.proj_dir)
         self.assertNotIn("&lt;span", html_out)
         self.assertNotIn("&gt;", html_out.split("</h3>")[0])  # ensure tag is not escaped
         self.assertIn('<span class="severity-pill severity-high">', html_out)
@@ -254,12 +254,12 @@ curl -i http://10.10.10.10/admin
     def test_malicious_spans_are_safely_escaped(self):
         """Spans with event handlers or non-severity classes are escaped to prevent XSS."""
         md_onclick = '<span class="severity-pill severity-high" onclick="alert(1)">Exploit</span>'
-        html_out = HtmlReportExporter.markdown_to_html(md_onclick, project_dir=self.proj_dir)
+        html_out = convert_markdown_to_html(md_onclick, project_dir=self.proj_dir)
         self.assertNotIn('onclick="alert(1)"', html_out)
         self.assertIn("&lt;span", html_out)
 
         md_script = '<span class="severity-pill severity-high"><script>alert(1)</script></span>'
-        html_out_script = HtmlReportExporter.markdown_to_html(md_script, project_dir=self.proj_dir)
+        html_out_script = convert_markdown_to_html(md_script, project_dir=self.proj_dir)
         self.assertNotIn("<script>", html_out_script)
         self.assertIn("&lt;script&gt;", html_out_script)
 

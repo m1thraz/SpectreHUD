@@ -309,76 +309,132 @@ class ExportCoordinator(QObject):
     def present_export_result(
         self,
         window: Optional[QWidget],
-        result: ExportResult,
+        result: Any,
         *,
         title: str,
         success_message: Optional[str] = None,
         ask_open_file: Optional[Path] = None,
+        show_info_dialog_fn: Optional[Callable] = None,
+        show_error_dialog_fn: Optional[Callable] = None,
+        ask_confirm_fn: Optional[Callable] = None,
     ) -> None:
         """Present any ExportResult to the user in a consistent, UI-standard way."""
-        status = getattr(result, "status", None)
-        if status is ExportStatus.CANCELLED:
-            return
+        auto_open = (
+            bool(self.config.get("obsidian_open_after_export", False))
+            if hasattr(self, "config") and self.config
+            else False
+        )
+        present_export_result(
+            window,
+            result,
+            title=title,
+            success_message=success_message,
+            ask_open_file=ask_open_file,
+            auto_open_obsidian=auto_open,
+            show_info_dialog_fn=show_info_dialog_fn,
+            show_error_dialog_fn=show_error_dialog_fn,
+            ask_confirm_fn=ask_confirm_fn,
+        )
 
-        if status is ExportStatus.FAILED:
-            err = getattr(result, "error", None)
-            err_msg = getattr(err, "message", None) if err else "Export failed"
-            details = getattr(err, "details", None) if err else None
-            show_error_dialog(window, title, str(err_msg), details=details)
-            return
 
-        msg = success_message
-        if not msg:
-            if result.artifacts:
-                first = result.artifacts[0].path
-                if any(a.format == "image" for a in result.artifacts):
-                    msg = t(
-                        "report.cherrytree_exported",
-                        "CherryTree HTML package created:\n{path}",
-                        path=str(first.parent),
-                    )
-                else:
-                    msg = t(
-                        "report.export_saved_msg",
-                        "Kopie gespeichert: {filename}",
-                        filename=first.name,
-                    )
+def present_export_result(
+    window: Optional[QWidget],
+    result: Any,
+    *,
+    title: str,
+    success_message: Optional[str] = None,
+    ask_open_file: Optional[Path] = None,
+    auto_open_obsidian: bool = False,
+    show_info_dialog_fn: Optional[Callable] = None,
+    show_error_dialog_fn: Optional[Callable] = None,
+    ask_confirm_fn: Optional[Callable] = None,
+) -> None:
+    """Present any ExportResult to the user in a consistent, UI-standard way."""
+    status = getattr(result, "status", None)
+    if status is ExportStatus.CANCELLED:
+        return
+
+    _show_info = show_info_dialog_fn or show_information_dialog
+    _show_err = show_error_dialog_fn or show_error_dialog
+    _ask_confirm = ask_confirm_fn or ask_confirmation
+
+    if status is ExportStatus.FAILED:
+        err = getattr(result, "error", None)
+        err_msg = getattr(err, "message", None) if err else "Export failed"
+        details = getattr(err, "details", None) if err else None
+        _show_err(window, title, str(err_msg), details=details)
+        return
+
+    msg = success_message
+    if not msg:
+        artifacts = getattr(result, "artifacts", ())
+        note_path = getattr(result, "note_path", None)
+        if artifacts:
+            first = artifacts[0].path
+            if any(getattr(a, "format", "") == "image" for a in artifacts):
+                msg = t(
+                    "report.cherrytree_exported",
+                    "CherryTree HTML package created:\n{path}",
+                    path=str(first.parent),
+                )
             else:
-                msg = t("report.export_saved_title", "Exportiert")
-
-        if result.warnings:
-            msg += "\n\n" + t(
-                "report.cherrytree_attachment_warning",
-                "Some images could not be copied.",
-            )
-
-        if ask_open_file:
-            from PyQt6.QtWidgets import QMessageBox
-
-            reply = ask_confirmation(
-                window,
-                title,
-                t(
-                    "report.export_html_success_msg",
-                    "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
-                    filename=ask_open_file.name,
-                ),
-                default_button=QMessageBox.StandardButton.Yes,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                if not open_path(ask_open_file):
-                    show_error_dialog(
-                        window,
-                        t("report.open_html_error_title", "Report unavailable"),
-                        t(
-                            "report.open_html_error_message",
-                            "The exported HTML report could not be opened:\n{path}",
-                            path=str(ask_open_file),
-                        ),
-                    )
+                msg = t(
+                    "report.export_saved_msg",
+                    "Kopie gespeichert: {filename}",
+                    filename=first.name,
+                )
+        elif note_path:
+            p = Path(note_path)
+            if p.suffix.lower() in (".html", ".ctd", ".ctb"):
+                msg = t(
+                    "report.cherrytree_exported",
+                    "CherryTree HTML package created:\n{path}",
+                    path=str(p.parent),
+                )
+            else:
+                msg = t(
+                    "report.export_saved_msg",
+                    "Kopie gespeichert: {filename}",
+                    filename=p.name,
+                )
         else:
-            show_information_dialog(window, title, msg)
+            msg = t("report.export_saved_title", "Exportiert")
 
-        if result.obsidian_uri and self.config.get("obsidian_open_after_export", False):
-            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
-                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)
+    warnings = getattr(result, "warnings", ())
+    if warnings:
+        msg += "\n\n" + t(
+            "report.cherrytree_attachment_warning",
+            "Some images could not be copied.",
+        )
+
+    if ask_open_file:
+        from PyQt6.QtWidgets import QMessageBox
+
+        reply = _ask_confirm(
+            window,
+            title,
+            t(
+                "report.export_html_success_msg",
+                "HTML-Report gespeichert:\n{filename}\n\nIm Standard-Browser öffnen?",
+                filename=ask_open_file.name,
+            ),
+            default_button=QMessageBox.StandardButton.Yes,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            if not open_path(ask_open_file):
+                _show_err(
+                    window,
+                    t("report.open_html_error_title", "Report unavailable"),
+                    t(
+                        "report.open_html_error_message",
+                        "The exported HTML report could not be opened:\n{path}",
+                        path=str(ask_open_file),
+                    ),
+                )
+    else:
+        _show_info(window, title, msg)
+
+    obsidian_uri = getattr(result, "obsidian_uri", None)
+    if obsidian_uri and auto_open_obsidian:
+        if not QDesktopServices.openUrl(QUrl(obsidian_uri)):
+            logger.warning("Obsidian could not open export URI: %s", obsidian_uri)

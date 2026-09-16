@@ -42,15 +42,17 @@ class TestClipboardHistory(unittest.TestCase):
         self.assertEqual(len(self.watcher.history), 1)
         self.assertFalse(self.storage_file.exists())
 
-    def test_replace_history_and_persist_is_explicit(self):
-        """Persistent replacement uses the explicit domain API."""
+    def test_replace_history_and_save(self):
+        """Persistent replacement uses replace_history followed by save_history."""
         history = [{"id": "clip_test", "text": "whoami", "timestamp": "2026-08-28 12:00:00"}]
 
-        self.watcher.replace_history_and_persist(history)
+        self.watcher.replace_history(history)
+        self.watcher.save_history()
         self.assertTrue(self.storage_file.exists())
         self.assertEqual(self.watcher.get_all_history()[0]["text"], "whoami")
 
-        self.watcher.replace_history_and_persist([])
+        self.watcher.replace_history([])
+        self.watcher.save_history()
         self.assertEqual(self.watcher.get_all_history(), [])
 
     def test_filter_and_search(self):

@@ -13,7 +13,7 @@ from typing import Dict
 
 _METADATA_ROW_RE = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$")
 
-_CLIENT_ALIASES = (
+CLIENT_ALIASES: tuple[str, ...] = (
     "auftraggeber / client",
     "client / organization",
     "client",
@@ -25,16 +25,20 @@ _CLIENT_ALIASES = (
     "company",
     "unternehmen",
 )
-_TESTER_ALIASES = (
-    "tester",
+TESTER_ALIASES: tuple[str, ...] = (
+    "lead tester / analyst",
     "lead tester",
+    "tester",
     "prüfer",
     "pentester",
+    "auditor",
     "analyst",
     "author",
     "autor",
+    "erstellt von",
+    "created by",
 )
-_TARGET_ALIASES = (
+TARGET_ALIASES: tuple[str, ...] = (
     "ziel(e) / scope",
     "scope / target",
     "target",
@@ -48,14 +52,15 @@ _TARGET_ALIASES = (
     "netzwerk",
     "network",
 )
-_TIMEFRAME_ALIASES = (
-    "testzeitraum",
+TIMEFRAME_ALIASES: tuple[str, ...] = (
     "assessment period",
+    "testzeitraum",
     "zeitraum",
-    "timeframe",
     "period",
+    "timeframe",
+    "testing period",
 )
-_DATE_ALIASES = (
+DATE_ALIASES: tuple[str, ...] = (
     "berichtsdatum",
     "report date",
     "datum",
@@ -64,7 +69,7 @@ _DATE_ALIASES = (
     "assessment date",
     "erstellungsdatum",
 )
-_CLASSIFICATION_ALIASES = (
+CLASSIFICATION_ALIASES: tuple[str, ...] = (
     "klassifizierung",
     "classification",
     "vertraulichkeit",
@@ -72,18 +77,46 @@ _CLASSIFICATION_ALIASES = (
     "tlp",
     "traffic light protocol",
 )
-_VERSION_ALIASES = (
+VERSION_ALIASES: tuple[str, ...] = (
     "report-version",
     "report version",
     "version",
     "revision",
 )
 
+ALL_METADATA_ALIASES: frozenset[str] = frozenset(
+    alias.strip().lower()
+    for group in (
+        CLIENT_ALIASES,
+        TARGET_ALIASES,
+        TESTER_ALIASES,
+        TIMEFRAME_ALIASES,
+        DATE_ALIASES,
+        CLASSIFICATION_ALIASES,
+        VERSION_ALIASES,
+    )
+    for alias in group
+)
 
-def _clean_md_val(val: str) -> str:
+_CLIENT_ALIASES = CLIENT_ALIASES
+_TESTER_ALIASES = TESTER_ALIASES
+_TARGET_ALIASES = TARGET_ALIASES
+_TIMEFRAME_ALIASES = TIMEFRAME_ALIASES
+_DATE_ALIASES = DATE_ALIASES
+_CLASSIFICATION_ALIASES = CLASSIFICATION_ALIASES
+_VERSION_ALIASES = VERSION_ALIASES
+_ALL_METADATA_ALIASES = ALL_METADATA_ALIASES
+
+
+def clean_metadata_value(val: str) -> str:
     cleaned = val.strip().strip("`").strip()
-    cleaned = re.sub(r"[*_]", "", cleaned)
+    cleaned = re.sub(r"[*_]", "", cleaned).strip()
+    if cleaned in ("-", "–", "—", "n/a", "N/A"):
+        return ""
     return html.unescape(cleaned).strip()
+
+
+_clean_md_val = clean_metadata_value
 
 
 def _first_match(data: Dict[str, str], aliases: tuple[str, ...]) -> str:
@@ -135,15 +168,7 @@ class ReportMetadata:
         version = _first_match(kv, _VERSION_ALIASES) or "v1.0"
 
         # Capture any unmapped custom keys
-        standard_keys = {
-            *_CLIENT_ALIASES,
-            *_TESTER_ALIASES,
-            *_TARGET_ALIASES,
-            *_TIMEFRAME_ALIASES,
-            *_DATE_ALIASES,
-            *_CLASSIFICATION_ALIASES,
-            *_VERSION_ALIASES,
-        }
+        standard_keys = ALL_METADATA_ALIASES
         normalized_standard_keys = {
             re.sub(r"[\s/()_-]+", " ", key).strip() for key in standard_keys
         }

@@ -52,26 +52,31 @@ def test_tab_cycling():
     """Tab shortcut cycles in order cheatsheet -> history -> notes -> loot -> cheatsheet."""
     sm = NavigationStateMachine(initial_mode="cheatsheet")
 
-    assert sm.get_next_tab_mode() == "history"
-    assert sm.cycle_tab_mode() == "history"
+    next_mode = sm.get_next_tab_mode()
+    assert next_mode == "history"
+    assert sm.switch_mode(next_mode) is True
     assert sm.active_mode == "history"
 
-    assert sm.get_next_tab_mode() == "notes"
-    assert sm.cycle_tab_mode() == "notes"
+    next_mode = sm.get_next_tab_mode()
+    assert next_mode == "notes"
+    assert sm.switch_mode(next_mode) is True
     assert sm.active_mode == "notes"
 
-    assert sm.get_next_tab_mode() == "loot"
-    assert sm.cycle_tab_mode() == "loot"
+    next_mode = sm.get_next_tab_mode()
+    assert next_mode == "loot"
+    assert sm.switch_mode(next_mode) is True
     assert sm.active_mode == "loot"
 
-    assert sm.get_next_tab_mode() == "cheatsheet"
-    assert sm.cycle_tab_mode() == "cheatsheet"
+    next_mode = sm.get_next_tab_mode()
+    assert next_mode == "cheatsheet"
+    assert sm.switch_mode(next_mode) is True
     assert sm.active_mode == "cheatsheet"
 
 
 def test_tab_cycling_from_report_mode():
     """Cycling tab while in report mode jumps to standard first tab."""
     sm = NavigationStateMachine(initial_mode="report")
-    assert sm.get_next_tab_mode() == "cheatsheet"
-    assert sm.cycle_tab_mode() == "cheatsheet"
+    next_mode = sm.get_next_tab_mode()
+    assert next_mode == "cheatsheet"
+    assert sm.switch_mode(next_mode) is True
     assert sm.active_mode == "cheatsheet"
