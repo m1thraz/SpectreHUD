@@ -6,6 +6,24 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Added an Import Snippets button to the Cheatsheet view, enabling users to load external snippet JSON files directly into their database (essential for standalone portable `.exe` and Debian packages without requiring Python or manual CLI execution).
+* Published optional Community Snippets as an external release asset containing advanced, strict, and payload-heavy commands.
+* Added Lead Tester and Assessment Period metadata fields with localized labels (`Lead Tester` / `Tester`, `Assessment Period` / `Testzeitraum`) to the executive cover page of Professional Print exports.
+
+### Changed
+
+* Partitioned the default Cheatsheet database into bundled, antivirus-safe default snippets and externally distributed Community Snippets to prevent antivirus false positives on packaged binaries (`.exe`, `.deb`).
+
+### Fixed
+
+* Prevented raw metadata HTML tables from leaking into the body of Professional Print exports, cleanly projecting attributes onto the cover page while removing duplicate tables and headers.
+* Added intelligent fallback extraction for markerless or unstructured reports, ensuring titles and metadata are rendered on the cover page even when HTML section comments are absent.
+* Preserved manual evaluator notes and custom narrative text below metadata tables in the report body while still stripping redundant table markup.
+* Hardened metadata table row parsing against unbolded keys, optional colons, and placeholder values (`-`, `n/a`).
+* Resolved report cover title resolution to fall back to the Markdown document's H1 heading instead of defaulting to generic "Target".
+
 ## [2.1.8] - 2026-09-14
 
 ### Added

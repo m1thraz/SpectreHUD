@@ -95,7 +95,7 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertIn("CRITICAL", out)
 
     def test_generated_matrix_uses_loot_finding_status(self):
-        entry = dict(self.sample_loot[1], finding_status="in_progress")
+        entry = dict(self.sample_loot[0], finding_status="in_progress")
         context = ReportContext(loot_entries=[entry], clipboard_history=[])
         summary = _render_executive_summary(
             TemplateSection(type="executive_summary"), context, "en"

@@ -24,10 +24,12 @@ from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
     build_professional_cover_data,
+    extract_report_title,
     normalize_professional_severity,
     normalize_professional_timestamps,
     professional_section_has_meaningful_content,
     prune_professional_section_html,
+    prune_unstructured_header_metadata_html,
     renumber_professional_heading,
     render_professional_cover,
     strip_professional_generator_footer,
@@ -89,6 +91,10 @@ class HtmlReportExporter:
         }
         html_segments = []
         segments = segment_report_markdown(embedded_markdown)
+        has_structured_header = any(
+            segment.is_structured and segment.section_type == "header_metadata"
+            for segment in segments
+        )
         uses_phase_narrative = any(
             segment.is_structured and segment.section_type == "phase_section"
             for segment in segments
@@ -115,9 +121,14 @@ class HtmlReportExporter:
                 strip_section_markers(segment_markdown), project_dir=None
             )
             if not segment.is_structured:
-                html_segments.append(body)
+                if not has_structured_header:
+                    body = prune_unstructured_header_metadata_html(body)
+                if body.strip():
+                    html_segments.append(body)
                 continue
             body = prune_professional_section_html(segment.section_type, body)
+            if not body.strip():
+                continue
             table_class = {
                 "executive_summary": "findings-matrix",
                 "remediation_table": "action-plan",
@@ -152,7 +163,13 @@ class HtmlReportExporter:
             if active_profile is ReportExportProfile.PROFESSIONAL_PRINT
             else convert_markdown_with_findings(markdown_content, project_dir=project_dir)
         )
-        pname = project_name or (project_dir.name if project_dir else "Target")
+        title_from_md = extract_report_title(markdown_content)
+        pname = (
+            project_name
+            or (project_dir.name if project_dir else None)
+            or title_from_md
+            or "Target"
+        )
         cover_data = None
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
             cover_data = build_professional_cover_data(

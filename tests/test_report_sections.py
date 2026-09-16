@@ -1042,3 +1042,102 @@ def test_professional_heading_renumbering_consistent():
     assert "<h2>2. Scope &amp; Limitations</h2>" in html
     assert "<h2>3. Technical Findings</h2>" in html
     assert "<h2>4. Remediation Plan</h2>" in html
+
+
+def test_professional_unstructured_metadata_cover_projection_and_pruning():
+    raw_md = """# Penetration Test Report: Acquirer Core
+
+| Parameter | Value |
+|---|---|
+| **Client** | CyberDyne Systems |
+| **Target** | 10.10.10.5 |
+| **Date** | 2026-09-15 |
+| **Lead Tester** | Agent Smith |
+
+## Executive Summary
+
+This is the summary of testing conducted without explicit section markers.
+"""
+    html = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    # Metadata must be on the cover page
+    assert '<h1 class="report-cover-title">Penetration Test Report: Acquirer Core</h1>' in html
+    assert "CyberDyne Systems" in html
+    assert "10.10.10.5" in html
+    assert "Agent Smith" in html
+
+    # The raw metadata table and duplicate H1 must NOT appear in the body
+    assert '<section class="report-cover"' in html
+    body_part = html.split('</section>', 1)[1]
+    assert "<table" not in body_part
+    assert "<h1" not in body_part
+    assert "<h2>Executive Summary</h2>" in body_part
+    assert "This is the summary of testing conducted without explicit section markers." in body_part
+
+
+def test_professional_structured_header_metadata_with_notes_pruning():
+    sec_meta = wrap_section_markdown(
+        """# Penetration Test Report
+
+| | |
+|---|---|
+| **Client** | Wayne Enterprises |
+| **Target** | 192.168.0.1 |
+
+Note: Testing was conducted strictly during out-of-office hours.
+""",
+        "header_metadata",
+    )
+    sec_body = wrap_section_markdown("## Scope\n\nScope details.", "scope_limitations")
+    combined = f"{sec_meta}\n\n{sec_body}"
+
+    html = HtmlReportExporter.build_full_html(
+        combined, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    # Cover should have Wayne Enterprises
+    assert "Wayne Enterprises" in html
+
+    # Body must not duplicate table or H1, but MUST preserve the manual note!
+    assert '<section class="report-cover"' in html
+    body_part = html.split('</section>', 1)[1]
+    assert "<table" not in body_part
+    assert "<h1" not in body_part
+    assert "Note: Testing was conducted strictly during out-of-office hours." in body_part
+    assert "<h2>1. Scope</h2>" in body_part
+
+
+def test_professional_metadata_lead_tester_and_unbolded_colons():
+    raw_md = """# Web Application Assessment
+
+| Key | Value |
+|---|---|
+| Client: | Umbrella Corp |
+| Lead Tester: | Alice Smith |
+| Timeframe: | 2026-09-01 to 2026-09-05 |
+| Classification: | Confidential |
+
+## Findings
+
+Summary of vulnerabilities found.
+"""
+    html = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    assert "Umbrella Corp" in html
+    assert "Alice Smith" in html
+    assert "2026-09-01 to 2026-09-05" in html
+    assert "Confidential" in html
+    assert '<span class="report-cover-meta-label">Lead Tester</span>' in html
+    assert '<span class="report-cover-meta-label">Assessment Period</span>' in html
+
+    html_de = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
+    )
+    assert '<span class="report-cover-meta-label">Testzeitraum</span>' in html_de
+    assert '<span class="report-cover-meta-label">Tester</span>' in html_de
+
+

@@ -11,7 +11,7 @@ from core.reporting.report_finding import ReportFindingItem
 from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
 
 
-_METADATA_ROW_RE = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$")
+_METADATA_ROW_RE = re.compile(r"^\|\s*(?:\*\*)?([^|*]+?)(?:\*\*)?\s*\|\s*([^|]*?)\s*\|$")
 _SEVERITY_EMOJI_RE = re.compile("[🔴🟠🟡🟢🔵]\ufe0f?\\s*")
 _GENERATED_FOOTER_RE = re.compile(
     r"\n*---\s*\n+_(?:Generated with|Erstellt mit) "
@@ -32,7 +32,9 @@ class ProfessionalCoverData:
 
 def _plain_markdown_value(value: str) -> str:
     cleaned = value.strip().strip("`").strip()
-    cleaned = re.sub(r"[*_]", "", cleaned)
+    cleaned = re.sub(r"[*_]", "", cleaned).strip()
+    if cleaned in ("-", "–", "—", "n/a", "N/A"):
+        return ""
     return html.unescape(cleaned).strip()
 
 
@@ -62,6 +64,26 @@ _TARGET_ALIASES = (
     "netzwerk",
     "network",
 )
+_TESTER_ALIASES = (
+    "lead tester / analyst",
+    "lead tester",
+    "tester",
+    "prüfer",
+    "auditor",
+    "analyst",
+    "author",
+    "autor",
+    "erstellt von",
+    "created by",
+)
+_TIMEFRAME_ALIASES = (
+    "assessment period",
+    "testzeitraum",
+    "zeitraum",
+    "period",
+    "timeframe",
+    "testing period",
+)
 _DATE_ALIASES = (
     "berichtsdatum",
     "report date",
@@ -87,32 +109,65 @@ _VERSION_ALIASES = (
     "revision",
 )
 
+_ALL_METADATA_ALIASES = frozenset(
+    alias.strip().lower()
+    for group in (
+        _CLIENT_ALIASES,
+        _TARGET_ALIASES,
+        _TESTER_ALIASES,
+        _TIMEFRAME_ALIASES,
+        _DATE_ALIASES,
+        _CLASSIFICATION_ALIASES,
+        _VERSION_ALIASES,
+    )
+    for alias in group
+)
+
+
+def _parse_metadata_rows(lines: List[str]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in lines:
+        match = _METADATA_ROW_RE.match(line.strip())
+        if match:
+            raw_key = match.group(1).strip().rstrip(":").strip()
+            if not raw_key or re.match(r"^:?-+:?$", raw_key):
+                continue
+            lower_k = raw_key.lower()
+            if lower_k in ("eigenschaft", "property", "key", "attribute"):
+                continue
+            clean_val = _plain_markdown_value(match.group(2))
+            values[lower_k] = clean_val
+            normalized_key = re.sub(r"[\s/()_-]+", " ", lower_k).strip()
+            values[normalized_key] = clean_val
+    return values
+
 
 def _header_metadata(markdown: str) -> dict[str, str]:
     for segment in segment_report_markdown(markdown):
-        if segment.section_type != "header_metadata":
-            continue
-        values: dict[str, str] = {}
-        for line in segment.markdown.splitlines():
-            match = _METADATA_ROW_RE.match(line.strip())
-            if match:
-                raw_key = match.group(1).strip().lower()
-                clean_val = _plain_markdown_value(match.group(2))
-                values[raw_key] = clean_val
-                normalized_key = re.sub(r"[\s/()_-]+", " ", raw_key).strip()
-                values[normalized_key] = clean_val
-        return values
+        if segment.section_type == "header_metadata":
+            vals = _parse_metadata_rows(segment.markdown.splitlines())
+            if vals:
+                return vals
+    # Fallback for reports without section markers: inspect leading lines before any H2
+    head = markdown.split("\n## ", 1)[0]
+    vals = _parse_metadata_rows(head.splitlines())
+    if any(k in _ALL_METADATA_ALIASES for k in vals):
+        return vals
     return {}
 
 
 def _header_title(markdown: str) -> str:
     for segment in segment_report_markdown(markdown):
-        if segment.section_type != "header_metadata":
-            continue
-        for line in segment.markdown.splitlines():
-            line_str = line.strip()
-            if line_str.startswith("# "):
-                return line_str[2:].strip()
+        if segment.section_type == "header_metadata":
+            for line in segment.markdown.splitlines():
+                line_str = line.strip()
+                if line_str.startswith("# "):
+                    return line_str[2:].strip()
+    head = markdown.split("\n## ", 1)[0]
+    for line in head.splitlines():
+        line_str = line.strip()
+        if line_str.startswith("# "):
+            return line_str[2:].strip()
     return ""
 
 
@@ -185,7 +240,9 @@ def build_professional_cover_data(
     is_de = language.lower().startswith("de")
     labels = {
         "client": "Auftraggeber" if is_de else "Client",
+        "tester": "Tester" if is_de else "Lead Tester",
         "target": "Ziel / Scope" if is_de else "Target / Scope",
+        "timeframe": "Testzeitraum" if is_de else "Assessment Period",
         "date": "Berichtsdatum" if is_de else "Report Date",
         "classification": "Klassifizierung" if is_de else "Classification",
         "version": "Report-Version" if is_de else "Report Version",
@@ -197,8 +254,16 @@ def build_professional_cover_data(
             _first_metadata_value(values, _CLIENT_ALIASES),
         ),
         (
+            labels["tester"],
+            _first_metadata_value(values, _TESTER_ALIASES),
+        ),
+        (
             labels["target"],
             target_ip or _first_metadata_value(values, _TARGET_ALIASES),
+        ),
+        (
+            labels["timeframe"],
+            _first_metadata_value(values, _TIMEFRAME_ALIASES),
         ),
         (
             labels["date"],
@@ -215,14 +280,24 @@ def build_professional_cover_data(
     )
     title = _header_title(markdown)
     kicker, header_label = _determine_report_labels(category, title, is_de)
+    cover_project_name = (
+        project_name
+        if (project_name and project_name != "Target")
+        else (title or project_name or "Target")
+    )
     return ProfessionalCoverData(
-        project_name=project_name or "Target",
+        project_name=cover_project_name,
         report_label=kicker,
         severity=_highest_severity(body_html),
         classification=classification or None,
         metadata=tuple((label, value) for label, value in raw_fields if value),
         header_label=header_label,
     )
+
+
+def extract_report_title(markdown: str) -> str:
+    """Extract report title from header_metadata section or leading H1."""
+    return _header_title(markdown)
 
 
 def strip_generator_footer(markdown: str) -> str:
@@ -499,6 +574,18 @@ def professional_section_has_meaningful_content(section_type: str, markdown: str
 
 
 def prune_professional_section_html(section_type: str, body_html: str) -> str:
+    if section_type == "header_metadata":
+        body_html = re.sub(r"<h1>[^<]*</h1>\s*", "", body_html)
+        body_html = re.sub(
+            r"(?:<div class=\"table-container\">\s*)?<table>.*?</table>(?:\s*</div>)?\s*",
+            "",
+            body_html,
+            flags=re.DOTALL,
+        )
+        body_html = re.sub(r"<div class=\"table-container\">\s*</div>\s*", "", body_html)
+        if not re.search(r"\S", re.sub(r"<[^>]+>", "", body_html)):
+            return ""
+        return body_html.strip()
     if section_type in {"executive_summary", "scope_limitations"}:
         body_html = re.sub(r"<li><strong>[^<]+:</strong></li>", "", body_html)
         body_html = re.sub(
@@ -521,6 +608,29 @@ def prune_professional_section_html(section_type: str, body_html: str) -> str:
             body_html,
         )
     return body_html
+
+
+def prune_unstructured_header_metadata_html(body_html: str) -> str:
+    """Removes a leading H1 title and metadata table from unstructured body HTML if present."""
+    first_h2 = body_html.find("<h2")
+    prefix = body_html[:first_h2] if first_h2 != -1 else body_html
+    rest = body_html[first_h2:] if first_h2 != -1 else ""
+
+    table_match = re.search(
+        r"(?:<div class=\"table-container\">\s*)?<table>.*?</table>(?:\s*</div>)?",
+        prefix,
+        flags=re.DOTALL,
+    )
+    if table_match:
+        table_content = table_match.group(0).lower()
+        if any(alias in table_content for alias in _ALL_METADATA_ALIASES):
+            prefix = prefix[: table_match.start()] + prefix[table_match.end() :]
+            prefix = re.sub(r"<h1>[^<]*</h1>\s*", "", prefix, count=1)
+
+    result = prefix.strip()
+    if rest:
+        result = f"{result}\n{rest}" if result else rest
+    return result
 
 
 def renumber_professional_heading(markdown: str, number: int) -> tuple[str, bool]:

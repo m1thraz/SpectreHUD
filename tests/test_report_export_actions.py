@@ -183,3 +183,30 @@ class TestReportExportActions(unittest.TestCase):
         with patch("ui.report.export_actions.show_error_dialog") as mock_err:
             self.actions.present_export_result(failed_res, title="Error")
             mock_err.assert_called_once()
+
+    def test_prepare_export_hook_can_abort_or_allow_export(self):
+        mock_prepare = MagicMock(return_value=False)
+        actions = ReportExportActions(
+            parent_widget=self.parent,
+            editor=self.editor,
+            report_file_manager_provider=lambda: self.rfm,
+            export_coordinator_provider=lambda: self.coordinator,
+            current_project_provider=lambda: self.current_project,
+            active_template_provider=lambda: self.template,
+            report_font_key_provider=lambda: "default",
+            prepare_export=mock_prepare,
+        )
+        self.assertFalse(actions._ready_to_export())
+        mock_prepare.reset_mock()
+
+        with (
+            patch.object(actions, "select_html_export_options", return_value=("light", "professional_print")),
+            patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=("/fake/report.html", "HTML (*.html)")),
+        ):
+            actions.on_export_html_clicked()
+            self.coordinator.export_report_html.assert_not_called()
+            mock_prepare.assert_called_once()
+
+        mock_prepare.return_value = True
+        self.assertTrue(actions._ready_to_export())
+
