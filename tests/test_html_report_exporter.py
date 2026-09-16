@@ -189,11 +189,11 @@ curl -i http://10.10.10.10/admin
     def test_protocol_relative_urls_blocked(self):
         """Protocol-relative target content is blocked in exported links and images."""
         md_link_pr = "[Evil](//attacker.com/evil.js)"
-        html_out_link = convert_markdown_to_html(md_link_pr, project_dir=self.proj_dir)
+        html_out_link = convert_markdown_to_html(md_link_pr)
         self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
 
         md_img_pr = "![Evil](//attacker.com/evil.png)"
-        html_out_img = convert_markdown_to_html(md_img_pr, project_dir=self.proj_dir)
+        html_out_img = convert_markdown_to_html(md_img_pr)
         self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
 
     def test_image_embedding_respects_product_size_limit(self):

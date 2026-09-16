@@ -91,8 +91,9 @@ def _assert_last_card_matches_content_bottom(window: MainWindow) -> None:
 
 def test_full_cheatsheet_has_no_large_empty_scroll_area(cheatsheet_window, qapp):
     while cheatsheet_window.app.cheatsheet_ctrl.load_more():
-        for _ in range(3):
-            qapp.processEvents()
+        pass
+    for _ in range(3):
+        qapp.processEvents()
     command_policy = cheatsheet_window.cards[0].lbl_command.sizePolicy()
     assert command_policy.horizontalPolicy() == QSizePolicy.Policy.Expanding
     assert cheatsheet_window.content_panel.scroll_area.verticalScrollBar().maximum() > 0
@@ -140,6 +141,7 @@ def test_cheatsheet_renders_incrementally_and_reuses_cards_after_view_switch(
 
 
 def test_search_reduces_scroll_range_without_stale_content_height(cheatsheet_window):
+    initial_card_count = len(cheatsheet_window.cards)
     scroll = cheatsheet_window.content_panel.scroll_area
     scroll.verticalScrollBar().setValue(scroll.verticalScrollBar().maximum())
     assert scroll.verticalScrollBar().value() > 0
@@ -149,7 +151,12 @@ def test_search_reduces_scroll_range_without_stale_content_height(cheatsheet_win
     for _ in range(3):
         QApplication.processEvents()
 
-    assert 2 <= len(cheatsheet_window.cards) <= 3
+    assert 0 < len(cheatsheet_window.cards) < initial_card_count
+    assert all(
+        "hashcat" in (card.snippet["title"] + card.snippet["template"]).lower()
+        for card in cheatsheet_window.cards
+        if isinstance(card, SnippetCard)
+    )
     assert scroll.verticalScrollBar().maximum() == 0
     assert scroll.verticalScrollBar().value() == 0
     _assert_last_card_matches_content_bottom(cheatsheet_window)
