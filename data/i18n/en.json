@@ -173,6 +173,7 @@
     "dialog.create": "Create Project",
     "dialog.browse": "Browse...",
     "dialog.error": "Error",
+    "dialog.success": "Success",
     "dialog.copy_error": "Copy Error",
     "dialog.log_file_detail": "Log file: {path}",
     "dialog.log_file_unavailable_detail": "File logging is unavailable. Expected log file: {path}",

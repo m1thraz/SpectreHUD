@@ -173,6 +173,7 @@
     "dialog.create": "Projekt erstellen",
     "dialog.browse": "Durchsuchen...",
     "dialog.error": "Fehler",
+    "dialog.success": "Erfolg",
     "dialog.copy_error": "Fehler kopieren",
     "dialog.log_file_detail": "Logdatei: {path}",
     "dialog.log_file_unavailable_detail": "Dateiprotokollierung ist nicht verfügbar. Erwartete Logdatei: {path}",
