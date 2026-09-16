@@ -160,9 +160,7 @@ class ReportIconPickerDialog(QDialog):
             self.btn_insert.setEnabled(False)
 
     def _on_selection_changed(self, current: QListWidgetItem, _previous) -> None:
-        self.selected_icon = (
-            current.data(Qt.ItemDataRole.UserRole) if current is not None else None
-        )
+        self.selected_icon = current.data(Qt.ItemDataRole.UserRole) if current is not None else None
         self.btn_insert.setEnabled(self.selected_icon is not None)
 
     def _on_double_clicked(self, item: QListWidgetItem) -> None:
@@ -321,9 +319,7 @@ class ReportRegenerationConfirmDialog(BaseHudDialog):
         cancel.setProperty("class", "SecondaryBtn")
         cancel.clicked.connect(self.reject)
         buttons.addWidget(cancel)
-        overwrite = QPushButton(
-            t("report.regenerate_overwrite_button", "Regenerate & Overwrite")
-        )
+        overwrite = QPushButton(t("report.regenerate_overwrite_button", "Regenerate & Overwrite"))
         overwrite.setProperty("class", "DangerBtn")
         overwrite.clicked.connect(self.accept)
         buttons.addWidget(overwrite)
@@ -468,13 +464,9 @@ class LootImagePickerDialog(QDialog):
                 )
                 self.preview_label.setPixmap(scaled)
             else:
-                self.preview_label.setText(
-                    t("report.preview_unavailable", "No preview available")
-                )
+                self.preview_label.setText(t("report.preview_unavailable", "No preview available"))
         else:
-            self.preview_label.setText(
-                t("report.preview_unavailable", "No preview available")
-            )
+            self.preview_label.setText(t("report.preview_unavailable", "No preview available"))
 
     def _resolve_entry_path(self, entry: dict) -> Optional[Path]:
         raw = entry.get("file_path") or ""
@@ -526,7 +518,10 @@ class LootEntryPickerDialog(QDialog):
         search_lbl = QLabel(t("report.search_label", "Search:"))
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText(
-            t("report.loot_entry_search_placeholder", "Filter by title, content, target IP, type...")
+            t(
+                "report.loot_entry_search_placeholder",
+                "Filter by title, content, target IP, type...",
+            )
         )
         self.search_edit.textChanged.connect(self._filter_list)
         top_row.addWidget(search_lbl)
@@ -602,7 +597,12 @@ class LootEntryPickerDialog(QDialog):
             ip = str(entry.get("target_ip") or "")
 
             if cat_filter != "all":
-                if cat_filter == "creds" and e_type not in ("credential", "credentials", "hash", "creds"):
+                if cat_filter == "creds" and e_type not in (
+                    "credential",
+                    "credentials",
+                    "hash",
+                    "creds",
+                ):
                     continue
                 elif cat_filter == "flag" and e_type != "flag":
                     continue
@@ -661,7 +661,10 @@ class LootEntryPickerDialog(QDialog):
 
         type_label = t("report.dialog_type", "Type:")
         sev_label = t("report.dialog_severity", "Severity:")
-        info_lines = [f"<b>{title}</b>", f"{type_label} <code>{e_type}</code> | {sev_label} <code>{sev}</code>"]
+        info_lines = [
+            f"<b>{title}</b>",
+            f"{type_label} <code>{e_type}</code> | {sev_label} <code>{sev}</code>",
+        ]
         if ip:
             info_lines.append(f"Target: {ip}")
         if ts:
@@ -695,9 +698,7 @@ class LootFindingPromotionDialog(QDialog):
         self.selected_entry: Optional[dict] = None
         self.selected_evidence_entries: list[dict] = []
 
-        self.setWindowTitle(
-            t("report.promote_loot_title", "Create Finding from Loot")
-        )
+        self.setWindowTitle(t("report.promote_loot_title", "Create Finding from Loot"))
         self.resize(880, 500)
         self.setMinimumSize(680, 400)
 
@@ -714,9 +715,7 @@ class LootFindingPromotionDialog(QDialog):
 
         lists = QHBoxLayout()
         primary_column = QVBoxLayout()
-        primary_column.addWidget(
-            QLabel(t("report.promote_primary", "1. Finding source"))
-        )
+        primary_column.addWidget(QLabel(t("report.promote_primary", "1. Finding source")))
         self.primary_list = QListWidget()
         self.primary_list.currentRowChanged.connect(self._on_primary_changed)
         primary_column.addWidget(self.primary_list, stretch=1)
@@ -728,12 +727,8 @@ class LootFindingPromotionDialog(QDialog):
         )
         evidence_column.addWidget(self.lbl_evidence)
         self.evidence_list = QListWidget()
-        self.evidence_list.setSelectionMode(
-            QAbstractItemView.SelectionMode.ExtendedSelection
-        )
-        self.evidence_list.itemSelectionChanged.connect(
-            self._on_evidence_selection_changed
-        )
+        self.evidence_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.evidence_list.itemSelectionChanged.connect(self._on_evidence_selection_changed)
         evidence_column.addWidget(self.evidence_list, stretch=1)
         lists.addLayout(evidence_column, stretch=1)
         layout.addLayout(lists, stretch=1)
@@ -741,9 +736,7 @@ class LootFindingPromotionDialog(QDialog):
         self.txt_preview = QPlainTextEdit()
         self.txt_preview.setReadOnly(True)
         self.txt_preview.setMaximumHeight(110)
-        self.txt_preview.setPlaceholderText(
-            t("report.promote_preview", "Primary Loot preview")
-        )
+        self.txt_preview.setPlaceholderText(t("report.promote_preview", "Primary Loot preview"))
         layout.addWidget(self.txt_preview)
 
         buttons = QHBoxLayout()
@@ -755,9 +748,7 @@ class LootFindingPromotionDialog(QDialog):
         cancel.setProperty("class", "SecondaryBtn")
         cancel.clicked.connect(self.reject)
         buttons.addWidget(cancel)
-        self.btn_promote = QPushButton(
-            t("report.promote_loot_action", "Create Finding")
-        )
+        self.btn_promote = QPushButton(t("report.promote_loot_action", "Create Finding"))
         self.btn_promote.setProperty("class", "PrimaryBtn")
         self.btn_promote.setIcon(icon("fa5s.file-medical", color=get_theme_color("SUCCESS")))
         self.btn_promote.setEnabled(False)
@@ -786,9 +777,7 @@ class LootFindingPromotionDialog(QDialog):
 
     def _on_primary_changed(self, row: int) -> None:
         item = self.primary_list.item(row) if row >= 0 else None
-        self.selected_entry = (
-            item.data(Qt.ItemDataRole.UserRole) if item is not None else None
-        )
+        self.selected_entry = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
         self.btn_promote.setEnabled(self.selected_entry is not None)
         self.txt_preview.setPlainText(
             str(self.selected_entry.get("content", "")) if self.selected_entry else ""
@@ -808,8 +797,7 @@ class LootFindingPromotionDialog(QDialog):
 
     def _on_evidence_selection_changed(self) -> None:
         self.selected_evidence_entries = [
-            item.data(Qt.ItemDataRole.UserRole)
-            for item in self.evidence_list.selectedItems()
+            item.data(Qt.ItemDataRole.UserRole) for item in self.evidence_list.selectedItems()
         ]
         self.lbl_selection.setText(
             t(
@@ -833,7 +821,9 @@ class ClipboardHistoryPickerDialog(QDialog):
         self.selected_entry: Optional[dict] = None
         self._filtered_entries: list[dict] = []
 
-        self.setWindowTitle(t("report.clipboard_picker_title", "Select Terminal / PoC from Clipboard History"))
+        self.setWindowTitle(
+            t("report.clipboard_picker_title", "Select Terminal / PoC from Clipboard History")
+        )
         self.resize(720, 460)
         self.setMinimumSize(540, 340)
 
@@ -889,7 +879,9 @@ class ClipboardHistoryPickerDialog(QDialog):
         self.btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancel)
 
-        self.btn_insert = QPushButton(t("report.clipboard_attach_evidence", "Attach as Terminal PoC"))
+        self.btn_insert = QPushButton(
+            t("report.clipboard_attach_evidence", "Attach as Terminal PoC")
+        )
         self.btn_insert.setProperty("class", "PrimaryBtn")
         self.btn_insert.setIcon(icon("fa5s.check", color=get_theme_color("SUCCESS")))
         self.btn_insert.setEnabled(False)
@@ -928,7 +920,12 @@ class ClipboardHistoryPickerDialog(QDialog):
 
             item = QListWidgetItem()
             item.setText(f"{prefix}{first_line}")
-            item.setIcon(icon("fa5s.star" if is_report_marked else "fa5s.terminal", color=get_theme_color("SUCCESS")))
+            item.setIcon(
+                icon(
+                    "fa5s.star" if is_report_marked else "fa5s.terminal",
+                    color=get_theme_color("SUCCESS"),
+                )
+            )
             self.list_widget.addItem(item)
 
         if self._filtered_entries:
@@ -1191,7 +1188,10 @@ def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[tup
     professional_button.setMinimumWidth(170)
     classic_web_button.setMinimumWidth(210)
     professional_button.setToolTip(
-        t("report.html_profile_professional_tip", "Print-ready A4 presentation for browser PDF generation")
+        t(
+            "report.html_profile_professional_tip",
+            "Print-ready A4 presentation for browser PDF generation",
+        )
     )
     classic_web_button.setToolTip(
         t("report.html_profile_classic_web_tip", "Editable responsive web report for browser use")

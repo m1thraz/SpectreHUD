@@ -68,9 +68,7 @@ class ReportActionToolbar(QWidget):
 
         self.btn_change_view = QPushButton(t("report.change_view", "Change View"))
         self.btn_change_view.setProperty("class", "SecondaryBtn")
-        self.btn_change_view.setToolTip(
-            t("report.change_view_tip", "Choose report editor layout")
-        )
+        self.btn_change_view.setToolTip(t("report.change_view_tip", "Choose report editor layout"))
         self.btn_change_view.setIcon(self._icon("fa5s.columns"))
         self.btn_change_view.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self._build_view_menu(view_options)
@@ -95,9 +93,7 @@ class ReportActionToolbar(QWidget):
 
         self.btn_toggle_raw = QPushButton()
         self.btn_toggle_raw.setObjectName("btn_toggle_raw")
-        self.btn_toggle_raw.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
-        )
+        self.btn_toggle_raw.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
         self.btn_toggle_raw.setToolTip(
             t(
                 "report.toggle_raw_tip",
@@ -111,9 +107,7 @@ class ReportActionToolbar(QWidget):
 
         self.btn_report_actions = QPushButton(t("report.actions", "Report Actions"))
         self.btn_report_actions.setObjectName("btn_report_actions")
-        self.btn_report_actions.setProperty(
-            "class", "SecondaryBtn OutlineDropdownBtn"
-        )
+        self.btn_report_actions.setProperty("class", "SecondaryBtn OutlineDropdownBtn")
         self.btn_report_actions.setToolTip(
             t(
                 "report.actions_tip",
@@ -149,9 +143,7 @@ class ReportActionToolbar(QWidget):
         self.btn_report_actions.setMenu(self.report_actions_menu)
         toolbar.addWidget(self.btn_report_actions)
 
-        self.btn_append_loot = QPushButton(
-            t("report.sync_loot", "Sync Loot & Findings")
-        )
+        self.btn_append_loot = QPushButton(t("report.sync_loot", "Sync Loot & Findings"))
         self.btn_append_loot.setProperty("class", "SecondaryBtn AppendLootBtn")
         self.btn_append_loot.setToolTip(
             t(
@@ -164,9 +156,7 @@ class ReportActionToolbar(QWidget):
         self.btn_append_loot.clicked.connect(self._callbacks.append_loot)
         toolbar.addWidget(self.btn_append_loot)
 
-        self.btn_regenerate = QPushButton(
-            t("report.regenerate", "Regenerate from Loot")
-        )
+        self.btn_regenerate = QPushButton(t("report.regenerate", "Regenerate from Loot"))
         self.btn_regenerate.setProperty("class", "SecondaryBtn RegenerateBtn")
         self.btn_regenerate.setToolTip(
             t(
@@ -191,9 +181,7 @@ class ReportActionToolbar(QWidget):
 
         self.btn_report_metadata = QPushButton()
         self.btn_report_metadata.setObjectName("btn_report_metadata")
-        self.btn_report_metadata.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
-        )
+        self.btn_report_metadata.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
         self.btn_report_metadata.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_report_metadata.setCheckable(True)
         self.btn_report_metadata.toggled.connect(self._callbacks.toggle_metadata)
@@ -201,9 +189,7 @@ class ReportActionToolbar(QWidget):
 
         self.btn_report_theme = QPushButton()
         self.btn_report_theme.setObjectName("btn_report_theme")
-        self.btn_report_theme.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn"
-        )
+        self.btn_report_theme.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn")
         self.btn_report_theme.setIconSize(REPORT_TOOLBAR_ICON_SIZE)
         self.btn_report_theme.clicked.connect(self._callbacks.toggle_theme)
         toolbar.addWidget(self.btn_report_theme)
@@ -211,19 +197,13 @@ class ReportActionToolbar(QWidget):
         toolbar.addStretch()
         self.lbl_status = QLabel("")
         self.lbl_status.setProperty("class", "ReportStatusLabel")
-        self.lbl_status.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
+        self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         toolbar.addWidget(self.lbl_status)
 
         self.btn_save = QPushButton()
         self.btn_save.setObjectName("btn_save_report")
-        self.btn_save.setProperty(
-            "class", "SecondaryBtn FormatToolBtn ReportIconBtn SaveIconBtn"
-        )
-        save_tooltip = t(
-            "report.save_tip", "Save changes to active box report.md (Ctrl+S)"
-        )
+        self.btn_save.setProperty("class", "SecondaryBtn FormatToolBtn ReportIconBtn SaveIconBtn")
+        save_tooltip = t("report.save_tip", "Save changes to active box report.md (Ctrl+S)")
         self.btn_save.setToolTip(save_tooltip)
         self.btn_save.setAccessibleName(save_tooltip)
         self.btn_save.setIcon(self._icon("fa5s.save"))
@@ -231,18 +211,14 @@ class ReportActionToolbar(QWidget):
         self.btn_save.clicked.connect(self._callbacks.save)
         toolbar.addWidget(self.btn_save)
 
-    def _build_view_menu(
-        self, view_options: tuple[ReportViewOption, ...]
-    ) -> None:
+    def _build_view_menu(self, view_options: tuple[ReportViewOption, ...]) -> None:
         self.view_menu = QMenu(self.btn_change_view)
         for option in view_options:
             action = QAction(t(option.translation_key, option.fallback), self.view_menu)
             action.setIcon(self._icon(option.icon_name))
             action.setCheckable(True)
             action.triggered.connect(
-                lambda _checked=False, mode=option.mode: self._callbacks.change_view(
-                    mode
-                )
+                lambda _checked=False, mode=option.mode: self._callbacks.change_view(mode)
             )
             self.view_menu.addAction(action)
             self.view_actions[option.mode] = action

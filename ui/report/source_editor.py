@@ -30,11 +30,7 @@ def _metadata_block_numbers(text: str) -> set[int]:
 
 def _metadata_lines(text: str) -> tuple[str, ...]:
     block_numbers = _metadata_block_numbers(text)
-    return tuple(
-        line
-        for number, line in enumerate(text.splitlines())
-        if number in block_numbers
-    )
+    return tuple(line for number, line in enumerate(text.splitlines()) if number in block_numbers)
 
 
 class ReportSourceEditor(QPlainTextEdit):

@@ -25,9 +25,7 @@ TYPE_ALIASES: Dict[str, str] = {
 def _entry_targets(entry: Mapping[str, Any]) -> list[str]:
     values = entry.get("targets")
     targets = (
-        [str(value) for value in values if str(value)]
-        if isinstance(values, (list, tuple))
-        else []
+        [str(value) for value in values if str(value)] if isinstance(values, (list, tuple)) else []
     )
     primary = str(entry.get("target_ip", "") or "")
     if primary and primary not in targets:
@@ -52,11 +50,7 @@ def filter_loot_entries(
     results = entries
 
     if target_ip and target_ip != "all":
-        results = [
-            e
-            for e in results
-            if target_ip in _entry_targets(e) or not _entry_targets(e)
-        ]
+        results = [e for e in results if target_ip in _entry_targets(e) or not _entry_targets(e)]
 
     if entry_type and entry_type != "all":
         norm_type = TYPE_ALIASES.get(entry_type.lower(), entry_type)
@@ -82,9 +76,7 @@ def filter_loot_entries(
             reference_values = e.get("references")
             if not isinstance(reference_values, (list, tuple)):
                 reference_values = []
-            references = " ".join(
-                str(value) for value in reference_values
-            ).lower()
+            references = " ".join(str(value) for value in reference_values).lower()
             if (
                 q in title
                 or q in content

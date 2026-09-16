@@ -14,7 +14,7 @@ def _css_string(value: str) -> str:
     """Quote untrusted report metadata for use in a generated CSS string."""
     escaped = []
     for char in value.replace("\r", " ").replace("\n", " "):
-        if char in {'\\', '"', "<", ">", "&"} or ord(char) < 0x20:
+        if char in {"\\", '"', "<", ">", "&"} or ord(char) < 0x20:
             escaped.append(f"\\{ord(char):x} ")
         else:
             escaped.append(char)

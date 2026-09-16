@@ -140,9 +140,7 @@ img.inline-img {{ max-width: 100%; height: auto; }}
             raise ExternalExportError("The active project directory is unavailable.")
         package_dir = self._package_directory(project_name)
         clean_markdown = strip_report_markers(str(report_markdown))
-        rewritten, copied, warnings = self._copy_images(
-            clean_markdown, source_dir, package_dir
-        )
+        rewritten, copied, warnings = self._copy_images(clean_markdown, source_dir, package_dir)
         report_html = self._document(
             f"{project_name} – Report", convert_markdown_to_html(rewritten), report_font
         )

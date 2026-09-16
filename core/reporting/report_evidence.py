@@ -45,7 +45,11 @@ class ReportEvidenceItem:
                 # The subtype is persistence metadata, not a Markdown language.
                 lang = ""
             else:
-                lang = self.language or ("bash" if self.type == "terminal" else ("text" if self.type == "credential" else ""))
+                lang = self.language or (
+                    "bash"
+                    if self.type == "terminal"
+                    else ("text" if self.type == "credential" else "")
+                )
             backtick_runs = re.findall(r"`+", self.content)
             fence_length = max(3, max((len(run) for run in backtick_runs), default=0) + 1)
             fence = "`" * fence_length

@@ -142,6 +142,7 @@ class TestReportBuilder(unittest.TestCase):
 
     def test_build_uses_project_manager_when_name_omitted(self):
         """ReportBuilder pulls project name from project_manager when project_name is None."""
+
         class DummyPM:
             def get_active_project(self):
                 return "AutoDiscoveredProject"

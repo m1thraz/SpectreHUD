@@ -145,8 +145,10 @@ def validate_and_parse_project_state(
         raise ProjectStateCorruptedError("Project state contains an invalid text field.")
     if any(field in raw and not isinstance(raw[field], list) for field in list_fields):
         raise ProjectStateCorruptedError("Project state contains an invalid collection field.")
-    if "active_phase" in raw and raw["active_phase"] is not None and not isinstance(
-        raw["active_phase"], str
+    if (
+        "active_phase" in raw
+        and raw["active_phase"] is not None
+        and not isinstance(raw["active_phase"], str)
     ):
         raise ProjectStateCorruptedError("Project state contains an invalid active phase.")
 
@@ -274,9 +276,7 @@ class ProjectStateStore:
                 "Security metadata contains unsafe encryption parameters."
             )
 
-    def save_security_meta(
-        self, project_dir: Path, metadata: SecurityMeta
-    ) -> PersistResult[None]:
+    def save_security_meta(self, project_dir: Path, metadata: SecurityMeta) -> PersistResult[None]:
         try:
             self.validate_security_meta(metadata)
             written = atomic_write_json(
@@ -299,9 +299,7 @@ class ProjectStateStore:
     def serialize(state: ProjectState) -> bytes:
         return json.dumps(state.to_dict(), indent=2, ensure_ascii=False).encode("utf-8")
 
-    def write(
-        self, path: Path, state: ProjectState, key: Optional[bytes]
-    ) -> PersistResult[None]:
+    def write(self, path: Path, state: ProjectState, key: Optional[bytes]) -> PersistResult[None]:
         try:
             serialized = self.serialize(state)
             written = (
@@ -490,9 +488,7 @@ class ProjectStateStore:
         final_data["schema_version"] = PROJECT_STATE_SCHEMA_VERSION
         final_data["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
-            valid_state = validate_and_parse_project_state(
-                final_data, fallback_name=project_name
-            )
+            valid_state = validate_and_parse_project_state(final_data, fallback_name=project_name)
         except ProjectStateLoadError as exc:
             return PersistResult.failed(exc.failure_reason)
         except (OSError, TypeError, ValueError) as exc:

@@ -54,30 +54,44 @@ class TestReportExportActions(unittest.TestCase):
 
     def test_on_export_copy_clicked(self, tmp_path=None):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_file = Path(tmp_dir) / "copy.md"
 
             # 1. Cancelled file dialog
-            with patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=("", "")):
+            with patch(
+                "ui.report.export_actions.QFileDialog.getSaveFileName", return_value=("", "")
+            ):
                 self.actions.on_export_copy_clicked()
                 self.coordinator.export_report_markdown.assert_not_called()
 
             # 2. Successful export
             self.editor.setPlainText("# Content")
             with (
-                patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=(str(out_file), "Markdown (*.md)")),
+                patch(
+                    "ui.report.export_actions.QFileDialog.getSaveFileName",
+                    return_value=(str(out_file), "Markdown (*.md)"),
+                ),
                 patch("ui.report.export_actions.show_information_dialog") as mock_info,
             ):
-                mock_res = ExportResult(status=ExportStatus.SUCCESS, artifacts=[MagicMock(path=out_file, format="markdown")])
+                mock_res = ExportResult(
+                    status=ExportStatus.SUCCESS,
+                    artifacts=[MagicMock(path=out_file, format="markdown")],
+                )
                 self.coordinator.export_report_markdown.return_value = mock_res
                 self.actions.on_export_copy_clicked()
-                self.coordinator.export_report_markdown.assert_called_once_with(out_file, "# Content")
+                self.coordinator.export_report_markdown.assert_called_once_with(
+                    out_file, "# Content"
+                )
                 mock_info.assert_called_once()
 
             # 3. Export error
             self.coordinator.export_report_markdown.side_effect = ReportExportError("Write error")
             with (
-                patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=(str(out_file), "Markdown (*.md)")),
+                patch(
+                    "ui.report.export_actions.QFileDialog.getSaveFileName",
+                    return_value=(str(out_file), "Markdown (*.md)"),
+                ),
                 patch("ui.report.export_actions.show_error_dialog") as mock_err,
             ):
                 self.actions.on_export_copy_clicked()
@@ -85,6 +99,7 @@ class TestReportExportActions(unittest.TestCase):
 
     def test_on_export_html_clicked(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_html = Path(tmp_dir) / "report.html"
 
@@ -102,9 +117,19 @@ class TestReportExportActions(unittest.TestCase):
             self.coordinator.export_report_html.return_value = mock_res
 
             with (
-                patch.object(self.actions, "select_html_export_options", return_value=("light", "professional_print")),
-                patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=(str(out_html), "HTML (*.html)")),
-                patch("ui.report.export_actions.ask_confirmation", return_value=QMessageBox.StandardButton.No),
+                patch.object(
+                    self.actions,
+                    "select_html_export_options",
+                    return_value=("light", "professional_print"),
+                ),
+                patch(
+                    "ui.report.export_actions.QFileDialog.getSaveFileName",
+                    return_value=(str(out_html), "HTML (*.html)"),
+                ),
+                patch(
+                    "ui.report.export_actions.ask_confirmation",
+                    return_value=QMessageBox.StandardButton.No,
+                ),
             ):
                 self.actions.on_export_html_clicked()
                 self.coordinator.export_report_html.assert_called_once()
@@ -120,17 +145,24 @@ class TestReportExportActions(unittest.TestCase):
 
     def test_on_export_cherrytree_clicked(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             dest_dir = Path(tmp_dir) / "ct_export"
             dest_dir.mkdir()
 
             self.rfm.project_manager.get_project_dir.return_value = Path(tmp_dir)
             self.editor.setPlainText("# CT Content")
-            mock_res = ExportResult(status=ExportStatus.SUCCESS, artifacts=[MagicMock(path=dest_dir / "report.html", format="html")])
+            mock_res = ExportResult(
+                status=ExportStatus.SUCCESS,
+                artifacts=[MagicMock(path=dest_dir / "report.html", format="html")],
+            )
             self.coordinator.export_report_to_cherrytree.return_value = mock_res
 
             with (
-                patch("ui.report.export_actions.QFileDialog.getExistingDirectory", return_value=str(dest_dir)),
+                patch(
+                    "ui.report.export_actions.QFileDialog.getExistingDirectory",
+                    return_value=str(dest_dir),
+                ),
                 patch("ui.report.export_actions.show_information_dialog") as mock_info,
             ):
                 self.actions.on_export_cherrytree_clicked()
@@ -145,7 +177,36 @@ class TestReportExportActions(unittest.TestCase):
             mock_info.assert_not_called()
 
         # Failed
-        failed_res = ExportResult(status=ExportStatus.FAILED, error=MagicMock(message="Failed", details="Disk full"))
+        failed_res = ExportResult(
+            status=ExportStatus.FAILED, error=MagicMock(message="Failed", details="Disk full")
+        )
         with patch("ui.report.export_actions.show_error_dialog") as mock_err:
             self.actions.present_export_result(failed_res, title="Error")
             mock_err.assert_called_once()
+
+    def test_prepare_export_hook_can_abort_or_allow_export(self):
+        mock_prepare = MagicMock(return_value=False)
+        actions = ReportExportActions(
+            parent_widget=self.parent,
+            editor=self.editor,
+            report_file_manager_provider=lambda: self.rfm,
+            export_coordinator_provider=lambda: self.coordinator,
+            current_project_provider=lambda: self.current_project,
+            active_template_provider=lambda: self.template,
+            report_font_key_provider=lambda: "default",
+            prepare_export=mock_prepare,
+        )
+        self.assertFalse(actions._ready_to_export())
+        mock_prepare.reset_mock()
+
+        with (
+            patch.object(actions, "select_html_export_options", return_value=("light", "professional_print")),
+            patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=("/fake/report.html", "HTML (*.html)")),
+        ):
+            actions.on_export_html_clicked()
+            self.coordinator.export_report_html.assert_not_called()
+            mock_prepare.assert_called_once()
+
+        mock_prepare.return_value = True
+        self.assertTrue(actions._ready_to_export())
+

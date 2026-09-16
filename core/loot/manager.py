@@ -40,8 +40,7 @@ LOOT_TYPES = [
 ]
 
 CATEGORIES = [
-    {"id": p.key, "name": f"{p.order}. {p.long}", "order": p.order, "icon": p.icon}
-    for p in PHASES
+    {"id": p.key, "name": f"{p.order}. {p.long}", "order": p.order, "icon": p.icon} for p in PHASES
 ]
 
 VALID_CATEGORY_IDS: Set[str] = {p.key for p in PHASES}
@@ -137,13 +136,8 @@ class LootManager:
         if values is None:
             return []
         if len(values) > max_items:
-            raise LootValidationError(
-                f"{field_name} exceeds the maximum of {max_items} entries."
-            )
-        return [
-            cls._validate_user_text(value, field_name, max_length)
-            for value in values
-        ]
+            raise LootValidationError(f"{field_name} exceeds the maximum of {max_items} entries.")
+        return [cls._validate_user_text(value, field_name, max_length) for value in values]
 
     @staticmethod
     def _migrate_entries(
@@ -196,9 +190,7 @@ class LootManager:
         # Automatic migration of legacy entries lacking category or with invalid category
         self.entries, migrated = self._migrate_entries(self.entries)
         if migrated or schema_migration_needed:
-            logger.info(
-                "Migrated legacy Loot entries to the current persisted schema."
-            )
+            logger.info("Migrated legacy Loot entries to the current persisted schema.")
             self.save_entries()
 
     def replace_entries(self, entries: List[Dict[str, Any]]) -> None:
@@ -282,9 +274,7 @@ class LootManager:
             ),
             fallback_target=clean_target_ip,
         )
-        clean_target_ip = (
-            clean_targets[0][:MAX_TARGET_IP_LENGTH] if clean_targets else ""
-        )
+        clean_target_ip = clean_targets[0][:MAX_TARGET_IP_LENGTH] if clean_targets else ""
         finding_metadata = normalize_finding_metadata(
             {
                 "targets": clean_targets,
@@ -394,39 +384,27 @@ class LootManager:
                         entry.get("targets"), fallback_target=previous_target
                     )
                     extras = existing_targets[1:] if existing_targets else []
-                    raw_targets = (
-                        [entry["target_ip"], *extras]
-                        if entry["target_ip"]
-                        else extras
-                    )
+                    raw_targets = [entry["target_ip"], *extras] if entry["target_ip"] else extras
                 else:
                     raw_targets = entry.get("targets")
                 normalized_targets = normalize_finding_targets(
                     raw_targets,
                     fallback_target=(
-                        ""
-                        if "targets" in fields
-                        else str(entry.get("target_ip", "") or "")
+                        "" if "targets" in fields else str(entry.get("target_ip", "") or "")
                     ),
                 )
                 entry["targets"] = normalized_targets
                 entry["target_ip"] = (
-                    normalized_targets[0][:MAX_TARGET_IP_LENGTH]
-                    if normalized_targets
-                    else ""
+                    normalized_targets[0][:MAX_TARGET_IP_LENGTH] if normalized_targets else ""
                 )
                 metadata_source = {
                     "targets": normalized_targets,
                     "cvss_score": fields.get("cvss_score", entry.get("cvss_score")),
-                    "cvss_vector": fields.get(
-                        "cvss_vector", entry.get("cvss_vector", "")
-                    ),
+                    "cvss_vector": fields.get("cvss_vector", entry.get("cvss_vector", "")),
                     "finding_status": fields.get(
                         "finding_status", entry.get("finding_status", "open")
                     ),
-                    "references": fields.get(
-                        "references", entry.get("references", [])
-                    ),
+                    "references": fields.get("references", entry.get("references", [])),
                 }
                 if "cvss_vector" in fields:
                     metadata_source["cvss_vector"] = self._validate_user_text(
@@ -447,9 +425,7 @@ class LootManager:
 
         if updated_entry is not None:
             new_entries, _ = self._migrate_entries(new_entries)
-            updated_entry = next(
-                entry for entry in new_entries if entry.get("id") == entry_id
-            )
+            updated_entry = next(entry for entry in new_entries if entry.get("id") == entry_id)
             if not self.storage.save_json("loot", new_entries):
                 raise PersistenceError(f"Could not persist update for loot entry {entry_id}.")
             self.entries = new_entries

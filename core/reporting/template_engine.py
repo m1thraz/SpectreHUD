@@ -24,6 +24,7 @@ from core.reporting.finding_conversion import (
     evidence_from_loot_entry,
     finding_from_loot_entry,
 )
+from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
 from core.logger import get_logger
 
 logger = get_logger("template_engine")
@@ -90,7 +91,9 @@ def _render_header_metadata(section: TemplateSection, context: ReportContext, la
     pname = context.project_name or "Default"
     target_ip = context.target_ip or (context.metadata.get("target_ip") if context.metadata else "")
     target_display = (
-        target_ip if target_ip and target_ip != "all" else ("Alle Targets" if lang == "de" else "All Targets")
+        target_ip
+        if target_ip and target_ip != "all"
+        else ("Alle Targets" if lang == "de" else "All Targets")
     )
 
     default_title = (
@@ -147,14 +150,18 @@ def _render_executive_summary(section: TemplateSection, context: ReportContext, 
     finding_rows = []
     findings_count = 0
     t_fallback = "Unbenannt" if lang == "de" else "Unnamed"
-    status_text = "Offen" if lang == "de" else "Open"
+    status_labels = STATUS_LABELS_DE if lang == "de" else STATUS_LABELS_EN
     for entry in all_entries:
         sev = str(entry.get("severity", "info")).lower()
         if sev != "info":
             findings_count += 1
             t = str(entry.get("title") or t_fallback).replace("|", "\\|").replace("\n", " ")
             cat = str(entry.get("category", "misc")).replace("|", "\\|").replace("\n", " ")
-            finding_rows.append(f"| {findings_count} | {t} | {sev.upper()} | {cat} | {status_text} |")
+            status = finding_from_loot_entry(entry).status
+            status_text = status_labels.get(status, status_labels["open"])
+            finding_rows.append(
+                f"| {findings_count} | {t} | {sev.upper()} | {cat} | {status_text} |"
+            )
 
     if not finding_rows:
         finding_rows = ["| | | | | |"]
@@ -404,9 +411,7 @@ def _render_attack_path(section: TemplateSection, context: ReportContext, lang: 
         if not entries:
             continue
         step += 1
-        titles = ", ".join(
-            str(entry.get("title") or unnamed) for entry in reversed(entries)
-        )
+        titles = ", ".join(str(entry.get("title") or unnamed) for entry in reversed(entries))
         lines.append(f"{step}. **{_category_label(category_id)}** — {titles}")
     if step == 0:
         lines.append(
@@ -419,9 +424,7 @@ def _render_attack_path(section: TemplateSection, context: ReportContext, lang: 
 
 
 def _render_finding_section(section: TemplateSection, context: ReportContext, lang: str) -> str:
-    title = section.title or (
-        "Technische Findings" if lang == "de" else "Technical Findings"
-    )
+    title = section.title or ("Technische Findings" if lang == "de" else "Technical Findings")
     categories = _section_categories(section)
     lines = [f"## {title}", ""]
     finding_count = 0
@@ -537,7 +540,9 @@ def _render_appendix_a_history(
     return lines
 
 
-def _render_appendix_b_screenshots(screenshot_entries: List[Dict[str, Any]], lang: str) -> List[str]:
+def _render_appendix_b_screenshots(
+    screenshot_entries: List[Dict[str, Any]], lang: str
+) -> List[str]:
     """Renders Appendix B: Screenshots lines."""
     heading = "## Anhang B: Screenshots" if lang == "de" else "## Appendix B: Screenshots"
     lines = [heading, ""]
@@ -626,9 +631,7 @@ class TemplateRenderer:
                         if identity_counts[base_identity] > 1
                         else None
                     )
-                    identity = section_identity(
-                        section.type, section.category_id, ordinal=ordinal
-                    )
+                    identity = section_identity(section.type, section.category_id, ordinal=ordinal)
                     parts.append(wrap_section_markdown(sec_text, identity))
 
         body = "\n\n---\n\n".join(parts)

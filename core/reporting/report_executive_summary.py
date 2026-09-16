@@ -13,6 +13,7 @@ from typing import Dict, List
 from core.phases import get_phase
 from core.reporting.charts import render_severity_counts
 from core.reporting.report_finding import ReportFindingItem
+from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
 
 PHASE_NAMES_DE: Dict[str, str] = {
     "recon": "Aufklärung & Enumeration",
@@ -50,10 +51,10 @@ class ReportExecutiveSummary:
         first_h3 = re.search(r"^###\s+", markdown, re.MULTILINE)
         if first_h3:
             h2_end = h2.end() if h2 else 0
-            intro_raw = markdown[h2_end:first_h3.start()].strip()
+            intro_raw = markdown[h2_end : first_h3.start()].strip()
             intro_text = intro_raw
         elif h2:
-            intro_text = markdown[h2.end():].strip()
+            intro_text = markdown[h2.end() :].strip()
 
         # Helper to extract bullet value
         def _extract_bullet(patterns: List[str]) -> str:
@@ -67,30 +68,38 @@ class ReportExecutiveSummary:
                     return m.group(1).strip()
             return ""
 
-        initial_access = _extract_bullet([
-            "Initial Access Vector",
-            "Initial Access / Schwachstelle",
-            "Initial Access",
-            "Initialer Zugriff",
-        ])
-        privilege_escalation = _extract_bullet([
-            "Privilege Escalation",
-            "Rechteausweitung",
-            "PrivEsc",
-        ])
-        business_impact = _extract_bullet([
-            "Business Impact & Risk",
-            "Business Impact / Risiko",
-            "Business Impact",
-            "Geschäftsauswirkung",
-            "Risiko",
-        ])
-        remediation_summary = _extract_bullet([
-            "Recommended Remediation",
-            "Empfohlene Remediation",
-            "Empfohlene Maßnahmen",
-            "Remediation",
-        ])
+        initial_access = _extract_bullet(
+            [
+                "Initial Access Vector",
+                "Initial Access / Schwachstelle",
+                "Initial Access",
+                "Initialer Zugriff",
+            ]
+        )
+        privilege_escalation = _extract_bullet(
+            [
+                "Privilege Escalation",
+                "Rechteausweitung",
+                "PrivEsc",
+            ]
+        )
+        business_impact = _extract_bullet(
+            [
+                "Business Impact & Risk",
+                "Business Impact / Risiko",
+                "Business Impact",
+                "Geschäftsauswirkung",
+                "Risiko",
+            ]
+        )
+        remediation_summary = _extract_bullet(
+            [
+                "Recommended Remediation",
+                "Empfohlene Remediation",
+                "Empfohlene Maßnahmen",
+                "Remediation",
+            ]
+        )
 
         return cls(
             title=title,
@@ -125,7 +134,11 @@ class ReportExecutiveSummary:
             p_obj = get_phase(f.phase)
             ph_name = PHASE_NAMES_DE.get(p_obj.key, p_obj.long) if language == "de" else p_obj.long
             ph = ph_name.replace("|", "\\|").replace("\n", " ")
-            st = "Offen" if f.status == "open" else ("Open" if language != "de" else "Offen")
+            status_key = (f.status or "open").strip().lower()
+            status_labels = STATUS_LABELS_DE if language == "de" else STATUS_LABELS_EN
+            st = status_labels.get(
+                status_key, f.status.capitalize() if f.status else status_labels["open"]
+            )
             lines.append(f"| {idx} | {t} | {f.severity.upper()} | {ph} | {st} |")
 
         if not findings:

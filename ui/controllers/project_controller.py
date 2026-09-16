@@ -183,6 +183,7 @@ class ProjectController(QObject):
     def _on_archive_project(self, parent_widget: QWidget) -> None:
         """Prompts user to select output zip path and creates a compressed project archive."""
         from datetime import datetime
+
         active_proj = self.get_active_project()
         proj_dir = self.project_manager.get_project_dir(active_proj)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -321,7 +322,9 @@ class ProjectController(QObject):
                     if data.get("pentest_mode") or data.get("pentest_password"):
                         if self.config is not None:
                             self.config.set("bleed_through", 0)
-                        if parent_widget is not None and hasattr(parent_widget, "set_bleed_through"):
+                        if parent_widget is not None and hasattr(
+                            parent_widget, "set_bleed_through"
+                        ):
                             parent_widget.set_bleed_through(0)
                     on_project_created(clean_name)
                     return True

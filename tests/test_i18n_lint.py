@@ -108,11 +108,19 @@ class TestI18nLint(unittest.TestCase):
                         and node.func.value.id == "QMessageBox"
                         and node.func.attr in methods
                     ):
-                        if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and isinstance(node.args[1].value, str):
+                        if (
+                            len(node.args) >= 2
+                            and isinstance(node.args[1], ast.Constant)
+                            and isinstance(node.args[1].value, str)
+                        ):
                             violations.append(
                                 f"{rel_str}:{node.lineno} QMessageBox.{node.func.attr} has hardcoded title literal: {node.args[1].value!r}"
                             )
-                        if len(node.args) >= 3 and isinstance(node.args[2], ast.Constant) and isinstance(node.args[2].value, str):
+                        if (
+                            len(node.args) >= 3
+                            and isinstance(node.args[2], ast.Constant)
+                            and isinstance(node.args[2].value, str)
+                        ):
                             violations.append(
                                 f"{rel_str}:{node.lineno} QMessageBox.{node.func.attr} has hardcoded message literal: {node.args[2].value!r}"
                             )

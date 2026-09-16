@@ -58,8 +58,10 @@ class _BadgeMetricsGuard(QObject):
 
     def refresh(self):
         label = self.label
-        width = max(label.fontMetrics().horizontalAdvance(label.text()) + self.padding,
-                    label.sizeHint().width())
+        width = max(
+            label.fontMetrics().horizontalAdvance(label.text()) + self.padding,
+            label.sizeHint().width(),
+        )
         label.setMinimumWidth(width)
 
     def eventFilter(self, watched, event):

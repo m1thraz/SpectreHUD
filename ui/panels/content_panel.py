@@ -83,7 +83,7 @@ class ContentPanel(QWidget):
         self.scroll_area.setStyleSheet(
             "QScrollArea#MainScrollArea, QWidget#MainScrollViewport, "
             "QFrame#SnippetCard, QFrame#SnippetCard QWidget, "
-            "QFrame#lootCard[boardCard=\"false\"], QFrame#lootCard[boardCard=\"false\"] QWidget, "
+            'QFrame#lootCard[boardCard="false"], QFrame#lootCard[boardCard="false"] QWidget, '
             "ReportEditorTab, ReportEditorTab QWidget "
             "{ background: transparent; border: none; }"
         )

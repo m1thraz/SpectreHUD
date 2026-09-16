@@ -1,4 +1,3 @@
-
 from core.shortcuts import (
     VALID_CATEGORIES,
     VALID_SCOPES,
@@ -7,6 +6,7 @@ from core.shortcuts import (
     get_shortcuts,
 )
 from ui.shortcuts_dialog import ShortcutHelpDialog
+
 
 class DummyConfigManager:
     """Mock ConfigManager for testing shortcut configuration loading."""
@@ -43,10 +43,12 @@ def test_core_shortcuts_definitions():
 
 
 def test_core_shortcuts_config_reflection():
-    cfg = DummyConfigManager({
-        "hotkey": "<ctrl>+<alt>+x",
-        "quick_loot_hotkey": "<ctrl>+<alt>+l",
-    })
+    cfg = DummyConfigManager(
+        {
+            "hotkey": "<ctrl>+<alt>+x",
+            "quick_loot_hotkey": "<ctrl>+<alt>+l",
+        }
+    )
     shortcuts = get_shortcuts(cfg)
     shortcut_map = {s.id: s for s in shortcuts}
 
@@ -126,7 +128,6 @@ def test_shortcuts_dialog_uses_active_theme_tokens():
     assert "#00e5ff" not in qss
 
 
-
 def test_footer_panel_shortcuts_integration():
     from ui.panels.footer_panel import FooterPanel
 
@@ -177,5 +178,3 @@ def test_main_window_shortcuts_integration():
 
     window.app.shortcuts_dialog.close()
     window.close()
-
-

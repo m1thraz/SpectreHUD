@@ -1,6 +1,7 @@
 "Unit and integration tests for responsive cheatsheet category pills and adaptive overflow."
 
 import os
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
@@ -105,7 +106,9 @@ def test_build_filter_pills_creates_overflow_button_when_needed(controller, qapp
     assert total == len(all_cats)
 
     # The last widget in layout is btn_more
-    widgets = [layout.itemAt(i).widget() for i in range(layout.count()) if layout.itemAt(i).widget()]
+    widgets = [
+        layout.itemAt(i).widget() for i in range(layout.count()) if layout.itemAt(i).widget()
+    ]
     assert widgets[-1] == controller.btn_more
 
 

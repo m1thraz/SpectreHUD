@@ -75,9 +75,7 @@ class ClipboardHistory:
         if not text or not text.strip():
             return None
         if len(text) > MAX_CLIPBOARD_TEXT_SIZE:
-            logger.debug(
-                "Ignored clipboard item larger than %s bytes.", MAX_CLIPBOARD_TEXT_SIZE
-            )
+            logger.debug("Ignored clipboard item larger than %s bytes.", MAX_CLIPBOARD_TEXT_SIZE)
             return None
 
         clean_text = text.strip()
@@ -140,9 +138,7 @@ class ClipboardHistory:
 
     def delete_entry(self, entry_id: str) -> bool:
         """Remove an entry by ID."""
-        deleted_entry = next(
-            (entry for entry in self.history if entry.get("id") == entry_id), None
-        )
+        deleted_entry = next((entry for entry in self.history if entry.get("id") == entry_id), None)
         new_history = [entry for entry in self.history if entry.get("id") != entry_id]
         if len(new_history) == len(self.history):
             return False
@@ -211,9 +207,7 @@ class ClipboardHistory:
         if index == -1:
             return None
         current_state = bool(self.history[index].get("include_in_report", False))
-        return self.update_entry(
-            entry_id, include_in_report=not current_state, persist=persist
-        )
+        return self.update_entry(entry_id, include_in_report=not current_state, persist=persist)
 
     def clear_history(self) -> int:
         """Clear all clipboard history and return the removed entry count."""
@@ -256,6 +250,5 @@ class ClipboardHistory:
         return [
             dict(entry)
             for entry in results
-            if query in entry.get("text", "").lower()
-            or query in entry.get("target_ip", "").lower()
+            if query in entry.get("text", "").lower() or query in entry.get("target_ip", "").lower()
         ]

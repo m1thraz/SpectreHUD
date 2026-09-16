@@ -210,9 +210,7 @@ class TestWorkflowInvariants(unittest.TestCase):
         new_manager.save_project_state(
             "BoxNewSession",
             target_ip="10.10.10.20",
-            loot=[
-                {"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}
-            ],
+            loot=[{"id": "loot_new", "type": "note", "title": "New loot", "content": "user.txt"}],
             clipboard_history=[{"id": "clip_new", "text": "id", "target_ip": "10.10.10.20"}],
         )
 

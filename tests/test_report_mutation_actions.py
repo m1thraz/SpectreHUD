@@ -24,9 +24,7 @@ def _actions(qapp):
         save_pending=lambda: True,
         active_template=lambda: None,
         set_active_template=lambda _template: None,
-        apply_content=lambda content, preserve_cursor: applied.append(
-            (content, preserve_cursor)
-        ),
+        apply_content=lambda content, preserve_cursor: applied.append((content, preserve_cursor)),
         set_loot_sync_state=lambda _missing, _stale, _orphaned: None,
         set_status=statuses.append,
     )

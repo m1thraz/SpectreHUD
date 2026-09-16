@@ -45,11 +45,7 @@ class LootMigrator:
 
         for category_id in valid_category_ids:
             category_entries = sorted(
-                (
-                    entry
-                    for entry in normalized_entries
-                    if entry.get("category") == category_id
-                ),
+                (entry for entry in normalized_entries if entry.get("category") == category_id),
                 key=lambda item: item.get("position", 0),
             )
             for position, entry in enumerate(category_entries):

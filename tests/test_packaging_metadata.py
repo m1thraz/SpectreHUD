@@ -20,6 +20,7 @@ def test_project_metadata_uses_pep_621_compatible_license_table():
     content = pyproject.read_text(encoding="utf-8")
 
     from core.cli import APP_VERSION
+
     assert f'version = "{APP_VERSION}"' in content
     assert 'spectrehud = "spectrehud_launcher:main"' in content
     assert 'license = { text = "MIT" }' in content
@@ -74,7 +75,9 @@ def test_release_workflow_actions_are_pinned_to_commit_shas():
     uses_lines = [line.strip() for line in lines if line.strip().startswith("uses:")]
     assert len(uses_lines) >= 10, "Expected at least 10 action invocations in release.yml"
 
-    sha_pattern = re.compile(r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$")
+    sha_pattern = re.compile(
+        r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$"
+    )
     for line in uses_lines:
         match = sha_pattern.match(line)
         assert match is not None, f"Action is not pinned to a 40-character commit SHA: {line}"
@@ -88,9 +91,13 @@ def test_all_workflow_actions_are_pinned_to_commit_shas():
 
     workflows_dir = Path(__file__).parent.parent / ".github" / "workflows"
     workflow_files = sorted(list(workflows_dir.glob("*.yml")) + list(workflows_dir.glob("*.yaml")))
-    assert len(workflow_files) >= 3, f"Expected at least 3 workflow files, found {len(workflow_files)}"
+    assert len(workflow_files) >= 3, (
+        f"Expected at least 3 workflow files, found {len(workflow_files)}"
+    )
 
-    sha_pattern = re.compile(r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$")
+    sha_pattern = re.compile(
+        r"^uses:\s+([a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+)+)@([a-f0-9]{40})(\s+#\s+.+)?$"
+    )
     total_actions = 0
     for wf in workflow_files:
         lines = wf.read_text(encoding="utf-8").splitlines()
@@ -99,10 +106,16 @@ def test_all_workflow_actions_are_pinned_to_commit_shas():
         for line in uses_lines:
             total_actions += 1
             match = sha_pattern.match(line)
-            assert match is not None, f"Action in {wf.name} is not pinned to a 40-character commit SHA: {line}"
-            assert match.group(3) is not None, f"Action in {wf.name} commit SHA lacks version comment: {line}"
+            assert match is not None, (
+                f"Action in {wf.name} is not pinned to a 40-character commit SHA: {line}"
+            )
+            assert match.group(3) is not None, (
+                f"Action in {wf.name} commit SHA lacks version comment: {line}"
+            )
 
-    assert total_actions >= 20, f"Expected at least 20 action invocations across workflows, found {total_actions}"
+    assert total_actions >= 20, (
+        f"Expected at least 20 action invocations across workflows, found {total_actions}"
+    )
 
 
 def test_release_workflow_includes_supply_chain_artifacts():
@@ -123,7 +136,9 @@ def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds
     pyproject_path = repo_root / "pyproject.toml"
     constraints_path = repo_root / "constraints-release.txt"
 
-    assert constraints_path.exists(), "constraints-release.txt must exist for reproducible release builds"
+    assert constraints_path.exists(), (
+        "constraints-release.txt must exist for reproducible release builds"
+    )
 
     # 1. pyproject.toml maintains open bounds
     pyproject_data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
@@ -153,7 +168,9 @@ def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds
 def test_workflows_install_against_release_constraints():
     """Release workflow and packaging CI jobs must install dependencies against constraints-release.txt."""
     repo_root = Path(__file__).parent.parent
-    release_workflow = (repo_root / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    release_workflow = (repo_root / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
     ci_workflow = (repo_root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     # In release.yml, build jobs must use -c constraints-release.txt
@@ -163,8 +180,12 @@ def test_workflows_install_against_release_constraints():
     assert "-c constraints-release.txt" in ci_workflow
 
     # Wheel builds must enforce pinned build backend via --no-build-isolation
-    assert "--no-build-isolation" in release_workflow, "release.yml must build wheel with --no-build-isolation"
-    assert "--no-build-isolation" in ci_workflow, "ci.yml must build wheel with --no-build-isolation"
+    assert "--no-build-isolation" in release_workflow, (
+        "release.yml must build wheel with --no-build-isolation"
+    )
+    assert "--no-build-isolation" in ci_workflow, (
+        "ci.yml must build wheel with --no-build-isolation"
+    )
 
 
 def test_coverage_gate_configuration():
@@ -197,7 +218,13 @@ def test_ruff_and_mypy_quality_gates():
     assert ui_override is not None, "Mypy overrides for ui.* must exist"
     disabled = ui_override.get("disable_error_code", [])
 
-    prohibited_disabled = ["call-arg", "func-returns-value", "has-type", "truthy-function", "return-value", "index"]
+    prohibited_disabled = [
+        "call-arg",
+        "func-returns-value",
+        "has-type",
+        "truthy-function",
+        "return-value",
+        "index",
+    ]
     for code in prohibited_disabled:
         assert code not in disabled, f"Mypy ui.* must not disable {code}"
-

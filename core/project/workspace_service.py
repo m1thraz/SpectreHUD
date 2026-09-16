@@ -153,10 +153,9 @@ class WorkspaceApplicationService:
 
         # 4. Check if target requires Pentest-Mode unlock
         try:
-            needs_unlock = (
-                self.project_manager.is_pentest_mode(clean_name)
-                and not self.project_manager.is_project_unlocked(clean_name)
-            )
+            needs_unlock = self.project_manager.is_pentest_mode(
+                clean_name
+            ) and not self.project_manager.is_project_unlocked(clean_name)
         except Exception as exc:
             logger.error("Error inspecting security metadata for '%s': %s", clean_name, exc)
             self._rollback(current_project, previous_key)
@@ -171,7 +170,9 @@ class WorkspaceApplicationService:
 
         if needs_unlock:
             if unlock_callback is None:
-                logger.warning("Target '%s' needs unlock but no unlock_callback was provided.", clean_name)
+                logger.warning(
+                    "Target '%s' needs unlock but no unlock_callback was provided.", clean_name
+                )
                 self._rollback(current_project, previous_key)
                 return WorkspaceSwitchResult(
                     success=False,
@@ -251,7 +252,9 @@ class WorkspaceApplicationService:
                 error_message=str(exc),
             )
         except Exception as exc:
-            logger.exception("Unexpected error loading session for '%s', rolling back: %s", clean_name, exc)
+            logger.exception(
+                "Unexpected error loading session for '%s', rolling back: %s", clean_name, exc
+            )
             self._rollback(current_project, previous_key, report_loaded=report_loaded)
             return WorkspaceSwitchResult(
                 success=False,
@@ -297,11 +300,15 @@ class WorkspaceApplicationService:
                 try:
                     self.report_loader(previous_project)
                 except Exception:
-                    logger.exception("Failed to restore report for '%s' during rollback", previous_project)
+                    logger.exception(
+                        "Failed to restore report for '%s' during rollback", previous_project
+                    )
 
             try:
                 self.session_service.load_project_session(previous_project)
             except Exception:
-                logger.exception("Failed to restore session for '%s' during rollback", previous_project)
+                logger.exception(
+                    "Failed to restore session for '%s' during rollback", previous_project
+                )
         except Exception:
             logger.exception("Critical error during rollback to '%s'", previous_project)

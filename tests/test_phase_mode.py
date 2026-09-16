@@ -159,9 +159,7 @@ def test_project_session_service_active_phase_persistence(tmp_path):
     session_service.load_project_session("test_box")
     assert ctx.active_phase_id == "postex"
     # Event should have source="project_load"
-    assert events[-1] == ActivePhaseChangedPayload(
-        phase_id="postex", source="project_load"
-    )
+    assert events[-1] == ActivePhaseChangedPayload(phase_id="postex", source="project_load")
 
 
 def test_phase_toast_hud_properties(qapp):

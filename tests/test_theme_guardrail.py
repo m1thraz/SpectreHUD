@@ -53,7 +53,9 @@ def is_dialogs_light_block(line_num: int, lines: List[str]) -> bool:
     return False
 
 
-def scan_file_for_color_violations(file_path: Path, root: Path = PROJECT_ROOT) -> List[Tuple[int, str, str, str]]:
+def scan_file_for_color_violations(
+    file_path: Path, root: Path = PROJECT_ROOT
+) -> List[Tuple[int, str, str, str]]:
     """Return a list of (line_number, violation_type, match, line_content) for forbidden color literals."""
     rel_path = file_path.relative_to(root).as_posix()
     if rel_path in FULLY_ALLOWED_FILES:
@@ -101,7 +103,9 @@ def scan_target_directories(root: Path = PROJECT_ROOT) -> List[str]:
         v = scan_file_for_color_violations(file_path, root=root)
         rel_path = file_path.relative_to(root).as_posix()
         for line_num, vtype, match, line_content in v:
-            all_violations.append(f"{rel_path}:{line_num}: found {vtype} literal '{match}' in: {line_content}")
+            all_violations.append(
+                f"{rel_path}:{line_num}: found {vtype} literal '{match}' in: {line_content}"
+            )
 
     return all_violations
 

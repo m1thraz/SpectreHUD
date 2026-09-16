@@ -48,9 +48,7 @@ def test_promotion_actions_filter_reported_loot_and_deliver_finding(monkeypatch)
         service=service,
         loot_manager=lambda: loot_manager,
         callbacks=FindingPromotionCallbacks(
-            current_markdown=lambda: (
-                "<!-- spectre:loot:represented:0123456789ab -->"
-            ),
+            current_markdown=lambda: "<!-- spectre:loot:represented:0123456789ab -->",
             add_finding=delivered.append,
         ),
     )

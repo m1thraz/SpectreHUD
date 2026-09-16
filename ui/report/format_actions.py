@@ -39,7 +39,6 @@ from ui.report.icon_assets import ReportIconError, render_report_icon
 logger = get_logger(__name__)
 
 
-
 class ReportFormatActions:
     """Encapsulates all cursor formatting, structure creation, and media insertion operations."""
 
@@ -121,9 +120,7 @@ class ReportFormatActions:
     def format_image(self) -> None:
         """Offers screenshot insertion from Loot or local filesystem browse."""
         screenshot_entries = (
-            self.loot_manager.get_entries(entry_type="screenshot")
-            if self.loot_manager
-            else []
+            self.loot_manager.get_entries(entry_type="screenshot") if self.loot_manager else []
         )
 
         if not screenshot_entries:

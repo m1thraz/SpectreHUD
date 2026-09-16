@@ -571,6 +571,7 @@ Appendix body
 
     def test_finding_inspector_hides_evidence_metadata_tags_and_preserves_on_save(self):
         from core.reporting import parse_evidence_blocks
+
         insp = ReportFindingInspector()
 
         ev = ReportEvidenceItem(
@@ -699,18 +700,12 @@ Appendix body
         self.assertTrue(dialog.append_missing)
         self.assertTrue(dialog.btn_apply.isEnabled())
         changed_combo = dialog.table.cellWidget(0, 3)
-        changed_combo.setCurrentIndex(
-            changed_combo.findData(LootReconciliationAction.KEEP_BOTH)
-        )
+        changed_combo.setCurrentIndex(changed_combo.findData(LootReconciliationAction.KEEP_BOTH))
         orphan_combo = dialog.table.cellWidget(1, 3)
-        orphan_combo.setCurrentIndex(
-            orphan_combo.findData(LootReconciliationAction.DETACH_REPORT)
-        )
+        orphan_combo.setCurrentIndex(orphan_combo.findData(LootReconciliationAction.DETACH_REPORT))
 
         decisions = dialog.decisions
-        self.assertEqual(
-            decisions["loot-1"].action, LootReconciliationAction.KEEP_BOTH
-        )
+        self.assertEqual(decisions["loot-1"].action, LootReconciliationAction.KEEP_BOTH)
         self.assertEqual(decisions["loot-1"].expected_loot_hash, "newhash")
         self.assertEqual(
             decisions["loot-deleted"].action,

@@ -7,6 +7,7 @@ from ui.project_dialog import NewProjectDialog
 from ui.param_prompt_dialog import ParamPromptDialog
 from ui.command_edit_dialog import CommandEditDialog
 
+
 class TestHudDialogs(unittest.TestCase):
     def test_base_hud_dialog_attributes(self):
         dlg = BaseHudDialog(title="SPECTRE // TEST DIALOG")
@@ -55,9 +56,7 @@ class TestHudDialogs(unittest.TestCase):
         dlg.txt_target.setText("10.10.10.50, /api/v1/auth")
         dlg.txt_cvss_score.setText("8.8")
         dlg.txt_cvss_vector.setText("CVSS:3.1/AV:N/AC:L")
-        dlg.combo_finding_status.setCurrentIndex(
-            dlg.combo_finding_status.findData("in_progress")
-        )
+        dlg.combo_finding_status.setCurrentIndex(dlg.combo_finding_status.findData("in_progress"))
         dlg.txt_references.setPlainText("CVE-2026-1234\nhttps://example.test")
         enriched = dlg.get_data()
         self.assertEqual(enriched["targets"], ["10.10.10.50", "/api/v1/auth"])
@@ -76,12 +75,8 @@ class TestHudDialogs(unittest.TestCase):
         )
 
         self.assertIsNotNone(dlg.txt_recommendation)
-        self.assertEqual(
-            dlg.txt_recommendation.toPlainText(), "First action\nSecond action"
-        )
-        self.assertEqual(
-            dlg.get_data()["recommendation"], "First action\nSecond action"
-        )
+        self.assertEqual(dlg.txt_recommendation.toPlainText(), "First action\nSecond action")
+        self.assertEqual(dlg.get_data()["recommendation"], "First action\nSecond action")
         dlg.close()
 
     def test_finding_details_are_progressive_and_restore_existing_values(self):

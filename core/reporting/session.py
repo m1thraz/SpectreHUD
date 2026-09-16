@@ -85,9 +85,7 @@ class ReportSessionService:
     ) -> ReportPersistResult:
         try:
             if not self._file_manager.save(markdown, project_name=project_name):
-                return ReportPersistResult.failed(
-                    ReportPersistFailureReason.WRITE_REJECTED
-                )
+                return ReportPersistResult.failed(ReportPersistFailureReason.WRITE_REJECTED)
             if clear_recovery_draft:
                 project_dir = self._file_manager.project_manager.get_project_dir(project_name)
                 discard_recovery_draft(project_dir)
@@ -102,9 +100,7 @@ class ReportSessionService:
         try:
             project_dir = self._file_manager.project_manager.get_project_dir(project_name)
             if not save_recovery_draft(project_dir, markdown):
-                return ReportPersistResult.failed(
-                    ReportPersistFailureReason.WRITE_REJECTED
-                )
+                return ReportPersistResult.failed(ReportPersistFailureReason.WRITE_REJECTED)
         except Exception as exc:
             return ReportPersistResult.failed(
                 ReportPersistFailureReason.UNEXPECTED_ERROR,

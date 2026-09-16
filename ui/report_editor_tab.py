@@ -179,6 +179,7 @@ class ReportEditorTab(QWidget):
             current_project_provider=lambda: self.current_project,
             active_template_provider=lambda: self.active_template,
             report_font_key_provider=lambda: self._report_font_key(),
+            prepare_export=self._commit_preview_if_active,
         )
         self.evidence_actions = ReportEvidenceActions(
             parent_widget=self,
@@ -633,7 +634,7 @@ class ReportEditorTab(QWidget):
         self.workspace_shell.preview.setReadOnly(False)
         self.workspace_shell.preview.setFocus()
 
-    def _commit_preview_to_markdown(self) -> None:
+    def _commit_preview_to_markdown(self) -> bool:
         """Commits rich-text edits from the preview document back to the markdown editor."""
         from core.reporting import preserve_markers_in_preview_roundtrip
 
@@ -660,8 +661,8 @@ class ReportEditorTab(QWidget):
             if reply != QMessageBox.StandardButton.Yes:
                 # Discard: reset preview to previous markdown
                 self.refresh_preview()
-                self._preview_markdown_snapshot = None
-                return
+                self._preview_markdown_snapshot = self.workspace_shell.editor.toPlainText()
+                return False
 
         if new_markdown != self._preview_markdown_snapshot:
             self.workspace_shell.editor.blockSignals(True)
@@ -669,7 +670,10 @@ class ReportEditorTab(QWidget):
             self.workspace_shell.editor.blockSignals(False)
             self._set_dirty(True)
 
-        self._preview_markdown_snapshot = None
+        self._preview_markdown_snapshot = (
+            new_markdown if self._view_mode == ViewMode.PREVIEW else None
+        )
+        return True
 
     def set_view_mode(self, mode: ViewMode) -> None:
         """Switches the view mode and handles preview commit / readonly transitions."""
@@ -678,7 +682,8 @@ class ReportEditorTab(QWidget):
 
         # Leaving PREVIEW mode -> commit edits and make preview read-only
         if self._view_mode == ViewMode.PREVIEW:
-            self._commit_preview_to_markdown()
+            if not self._commit_preview_to_markdown():
+                return
             self.workspace_shell.preview.setReadOnly(True)
 
         # Entering PREVIEW mode -> make editable and take snapshot
@@ -858,7 +863,8 @@ class ReportEditorTab(QWidget):
             return False
 
         if self._view_mode == ViewMode.PREVIEW:
-            self._commit_preview_to_markdown()
+            if not self._commit_preview_to_markdown():
+                return False
 
         saved = self.session_controller.save(
             self.current_project, self.workspace_shell.editor.toPlainText()
@@ -874,7 +880,8 @@ class ReportEditorTab(QWidget):
         if not self.is_dirty() or not self.current_project:
             return
         if self._view_mode == ViewMode.PREVIEW:
-            self._commit_preview_to_markdown()
+            if not self._commit_preview_to_markdown():
+                return
         if self.session_controller.autosave(
             self.current_project, self.workspace_shell.editor.toPlainText()
         ):
@@ -884,9 +891,8 @@ class ReportEditorTab(QWidget):
         self._autosave_timer.stop()
         super().closeEvent(event)
 
-    def _commit_preview_if_active(self) -> None:
-        if self._view_mode == ViewMode.PREVIEW:
-            self._commit_preview_to_markdown()
+    def _commit_preview_if_active(self) -> bool:
+        return self._view_mode != ViewMode.PREVIEW or self._commit_preview_to_markdown()
 
     def _set_active_template(self, template: ReportTemplate) -> None:
         self.active_template = template
@@ -1051,9 +1057,7 @@ class ReportEditorTab(QWidget):
 
     def _set_loot_sync_state(self, missing: int, stale: int, orphaned: int) -> None:
         self.workspace_shell.navigator.set_loot_sync_state(missing, stale, orphaned)
-        self.action_toolbar.action_sync_loot.setEnabled(
-            bool(missing or stale or orphaned)
-        )
+        self.action_toolbar.action_sync_loot.setEnabled(bool(missing or stale or orphaned))
 
     def _refresh_workspace_navigator(self, *, preserve_selection: bool = True) -> None:
         """Reload navigator content while retaining the active report context."""

@@ -15,6 +15,7 @@ from core.reporting import (
     TemplateSection,
 )
 from core.reporting import preserve_markers_in_preview_roundtrip
+from core.reporting import ReportEvidenceItem, ReportFindingItem
 
 
 def _all_sections_template() -> ReportTemplate:
@@ -396,9 +397,7 @@ def test_professional_keeps_manual_notes_in_otherwise_empty_sections():
             "> Manual finding note.",
             "finding_section",
         ),
-        wrap_section_markdown(
-            "## Appendix\n\nManual supporting material.", "appendix"
-        ),
+        wrap_section_markdown("## Appendix\n\nManual supporting material.", "appendix"),
         wrap_section_markdown(
             "# Security Assessment Report\n\nManual distribution note.",
             "header_metadata",
@@ -425,9 +424,7 @@ def test_professional_renumbers_only_visible_pentest_sections():
                 "## 2. Scope & Methodology\n\n- **In Scope:**",
                 "scope_limitations",
             ),
-            wrap_section_markdown(
-                "## 3. Attack Path\n\n1. Initial access", "attack_path"
-            ),
+            wrap_section_markdown("## 3. Attack Path\n\n1. Initial access", "attack_path"),
             wrap_section_markdown(
                 "## 4. Technical Findings\n\nManual finding context.",
                 "finding_section",
@@ -479,9 +476,7 @@ def test_professional_numbering_closes_multiple_suppressed_gaps():
             wrap_section_markdown(
                 "## 1. Executive Summary\n\nSummary content.", "executive_summary"
             ),
-            wrap_section_markdown(
-                "## 2. Scope\n\n- **In Scope:**", "scope_limitations"
-            ),
+            wrap_section_markdown("## 2. Scope\n\n- **In Scope:**", "scope_limitations"),
             wrap_section_markdown(
                 "## 3. Attack Path\n\n*No documented attack path is available.*",
                 "attack_path",
@@ -510,9 +505,9 @@ def test_professional_numbering_closes_multiple_suppressed_gaps():
 
 
 def test_executive_priority_actions_use_only_real_recommendations(tmp_path):
-    template = TemplateRepository(
-        user_templates_dir=tmp_path / "templates"
-    ).get_template("pentest_executive_en")
+    template = TemplateRepository(user_templates_dir=tmp_path / "templates").get_template(
+        "pentest_executive_en"
+    )
     context = ReportContext(
         loot_entries=[
             {
@@ -548,9 +543,9 @@ def test_executive_priority_actions_use_only_real_recommendations(tmp_path):
     professional = HtmlReportExporter.build_full_html(
         markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
-    action_plan = professional.split(
-        '<section class="report-section report-remediation">', 1
-    )[1].split("</section>", 1)[0]
+    action_plan = professional.split('<section class="report-section report-remediation">', 1)[
+        1
+    ].split("</section>", 1)[0]
 
     assert "Writable privileged service" in professional
     assert "Authentication bypass" in professional
@@ -715,8 +710,7 @@ def test_professional_print_shell_uses_paged_media_without_duplicate_branding():
         "header_metadata",
     )
     markdown += (
-        "\n\n---\n\n_Generated with SpectreHUD Pentest & CTF Companion "
-        "on 2026-09-07 at 16:44:00_"
+        "\n\n---\n\n_Generated with SpectreHUD Pentest & CTF Companion on 2026-09-07 at 16:44:00_"
     )
 
     professional = HtmlReportExporter.build_full_html(
@@ -772,10 +766,7 @@ def test_professional_finding_metadata_is_compact_and_drops_only_visible_seconds
     )
     interactive = HtmlReportExporter.build_full_html(markdown)
 
-    assert (
-        '<span class="finding-meta-value"><code>2026-09-07 16:44</code></span>'
-        in professional
-    )
+    assert '<span class="finding-meta-value"><code>2026-09-07 16:44</code></span>' in professional
     assert "2026-09-07 16:44:37" not in professional
     assert "2026-09-07 16:44:37" in interactive
     assert ".finding-meta-item:not(:last-child)::after" in professional
@@ -829,20 +820,111 @@ def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_br
     assert 'class="spectre-page-break"' in professional
     assert 'class="spectre-page-break"' in interactive
     assert 'body[data-report-profile="professional_print"] .report-finding {' in professional
-    assert 'body[data-report-profile="professional_print"] .finding-recommendation h4 {' in professional
+    assert (
+        'body[data-report-profile="professional_print"] .finding-recommendation h4,' in professional
+    )
     assert 'body[data-report-profile="professional_print"] .report-appendix {' in professional
-    assert 'body[data-report-profile="professional_print"] .report-appendix::before {' in professional
+    assert (
+        'body[data-report-profile="professional_print"] .report-appendix::before {' in professional
+    )
     assert 'content: "APPENDIX";' in professional
     assert 'font: 7.25pt "Segoe UI", sans-serif;' in professional
     assert 'body[data-report-profile="professional_print"] .report-finding {' not in interactive
 
 
+def test_professional_long_code_can_flow_across_pages_without_splitting_short_code():
+    markdown = wrap_section_markdown(
+        "## Findings\n\n" + "```bash\n" + "\n".join(["id"] * 36) + "\n```",
+        "finding_section",
+    )
+    html = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert '<pre class="report-code-long"><code class="language-bash">' in html
+    assert 'body[data-report-profile="professional_print"] pre.report-code-long {' in html
+    assert "break-inside: auto;" in html
+
+
+def test_professional_projects_current_status_into_only_recognizable_generated_matrix():
+    finding = ReportFindingItem(
+        id="finding_1", title="Authentication bypass", severity="high", status="resolved"
+    )
+    summary = wrap_section_markdown(
+        "## 1. Executive Summary\n\n### Findings Matrix\n\n"
+        "| # | Finding | Severity | Phase | Status |\n"
+        "|---|---|---|---|---|\n"
+        "| 1 | Authentication bypass | HIGH | access | Open |",
+        "executive_summary",
+    )
+    source = (
+        summary
+        + "\n\n"
+        + wrap_section_markdown(
+            "## 2. Technical Findings\n\n" + finding.to_markdown("en"),
+            "finding_section",
+        )
+    )
+    professional = HtmlReportExporter.build_full_html(
+        source, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(source)
+    assert "<td>Resolved</td>" in professional
+    assert "<td>Open</td>" in interactive
+    assert "| access | Open |" in source
+
+    manual = source.replace("Authentication bypass | HIGH", "Manual note | HIGH")
+    untouched = HtmlReportExporter.build_full_html(
+        manual, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert "<td>Open</td>" in untouched
+
+
+def test_professional_finding_metadata_references_and_nested_code_evidence():
+    evidence = ReportEvidenceItem(
+        id="ev_1",
+        type="terminal",
+        language="bash",
+        content="echo before\n```\necho after",
+    )
+    finding = ReportFindingItem(
+        id="finding_2",
+        title="Privileged shell",
+        severity="critical",
+        cvss_score=9.8,
+        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        status="accepted_risk",
+        targets=["192.0.2.1", "192.0.2.2"],
+        description="Technical evidence:\n\n" + evidence.to_persisted_markdown(),
+        references=["CVE-2026-1234"],
+    )
+    source = wrap_section_markdown(
+        "## 4. Technical Findings\n\n" + finding.to_markdown("en"),
+        "finding_section",
+    )
+    html = HtmlReportExporter.build_full_html(
+        source, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert 'class="finding-meta-item finding-meta-cvss-vector"' in html
+    assert "192.0.2.1, 192.0.2.2" in html
+    assert "Accepted Risk" in html
+    assert 'class="finding-references"' in html
+    assert "CVE-2026-1234" in html
+    assert html.count("<pre>") == 1
+    assert "echo before\n```\necho after" in html
+    assert "spectre:evidence" not in html
+    assert "spectre:finding" not in html
+
+
 def test_professional_cover_and_header_category_awareness():
     # 1. Standard Pentest (default)
-    pentest_md = wrap_section_markdown(
-        "# Security Assessment Report\n\n| | |\n|---|---|\n| **Client / Organization** | `Acme` |\n",
-        "header_metadata",
-    ) + "\n\n" + wrap_section_markdown("## 1. Technical Findings\n\nFinding text", "finding_section")
+    pentest_md = (
+        wrap_section_markdown(
+            "# Security Assessment Report\n\n| | |\n|---|---|\n| **Client / Organization** | `Acme` |\n",
+            "header_metadata",
+        )
+        + "\n\n"
+        + wrap_section_markdown("## 1. Technical Findings\n\nFinding text", "finding_section")
+    )
 
     html_pentest = HtmlReportExporter.build_full_html(
         pentest_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
@@ -868,10 +950,14 @@ def test_professional_cover_and_header_category_awareness():
     assert 'content: "CTF Writeup";' in html_ctf
 
     # 3. CTF auto-detected from title
-    ctf_walkthrough_md = wrap_section_markdown(
-        "# CTF Walkthrough Report\n\n| | |\n|---|---|\n| **Client / Organization** | `HTB` |\n",
-        "header_metadata",
-    ) + "\n\n" + wrap_section_markdown("## Initial Foothold\n\nFoothold notes", "phase_section:access")
+    ctf_walkthrough_md = (
+        wrap_section_markdown(
+            "# CTF Walkthrough Report\n\n| | |\n|---|---|\n| **Client / Organization** | `HTB` |\n",
+            "header_metadata",
+        )
+        + "\n\n"
+        + wrap_section_markdown("## Initial Foothold\n\nFoothold notes", "phase_section:access")
+    )
 
     html_ctf_auto = HtmlReportExporter.build_full_html(
         ctf_walkthrough_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
@@ -909,8 +995,9 @@ def test_professional_print_css_hardening():
 
 
 def test_professional_metadata_extraction_aliases():
-    md = wrap_section_markdown(
-        """# Assessment Report
+    md = (
+        wrap_section_markdown(
+            """# Assessment Report
 
 | | |
 |---|---|
@@ -920,8 +1007,11 @@ def test_professional_metadata_extraction_aliases():
 | **Vertraulichkeit** | Streng vertraulich |
 | **Version** | v2.3 |
 """,
-        "header_metadata",
-    ) + "\n\n" + wrap_section_markdown("## Findings\n\nSome finding", "finding_section")
+            "header_metadata",
+        )
+        + "\n\n"
+        + wrap_section_markdown("## Findings\n\nSome finding", "finding_section")
+    )
 
     html = HtmlReportExporter.build_full_html(
         md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
@@ -952,5 +1042,102 @@ def test_professional_heading_renumbering_consistent():
     assert "<h2>2. Scope &amp; Limitations</h2>" in html
     assert "<h2>3. Technical Findings</h2>" in html
     assert "<h2>4. Remediation Plan</h2>" in html
+
+
+def test_professional_unstructured_metadata_cover_projection_and_pruning():
+    raw_md = """# Penetration Test Report: Acquirer Core
+
+| Parameter | Value |
+|---|---|
+| **Client** | CyberDyne Systems |
+| **Target** | 10.10.10.5 |
+| **Date** | 2026-09-15 |
+| **Lead Tester** | Agent Smith |
+
+## Executive Summary
+
+This is the summary of testing conducted without explicit section markers.
+"""
+    html = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    # Metadata must be on the cover page
+    assert '<h1 class="report-cover-title">Penetration Test Report: Acquirer Core</h1>' in html
+    assert "CyberDyne Systems" in html
+    assert "10.10.10.5" in html
+    assert "Agent Smith" in html
+
+    # The raw metadata table and duplicate H1 must NOT appear in the body
+    assert '<section class="report-cover"' in html
+    body_part = html.split('</section>', 1)[1]
+    assert "<table" not in body_part
+    assert "<h1" not in body_part
+    assert "<h2>Executive Summary</h2>" in body_part
+    assert "This is the summary of testing conducted without explicit section markers." in body_part
+
+
+def test_professional_structured_header_metadata_with_notes_pruning():
+    sec_meta = wrap_section_markdown(
+        """# Penetration Test Report
+
+| | |
+|---|---|
+| **Client** | Wayne Enterprises |
+| **Target** | 192.168.0.1 |
+
+Note: Testing was conducted strictly during out-of-office hours.
+""",
+        "header_metadata",
+    )
+    sec_body = wrap_section_markdown("## Scope\n\nScope details.", "scope_limitations")
+    combined = f"{sec_meta}\n\n{sec_body}"
+
+    html = HtmlReportExporter.build_full_html(
+        combined, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    # Cover should have Wayne Enterprises
+    assert "Wayne Enterprises" in html
+
+    # Body must not duplicate table or H1, but MUST preserve the manual note!
+    assert '<section class="report-cover"' in html
+    body_part = html.split('</section>', 1)[1]
+    assert "<table" not in body_part
+    assert "<h1" not in body_part
+    assert "Note: Testing was conducted strictly during out-of-office hours." in body_part
+    assert "<h2>1. Scope</h2>" in body_part
+
+
+def test_professional_metadata_lead_tester_and_unbolded_colons():
+    raw_md = """# Web Application Assessment
+
+| Key | Value |
+|---|---|
+| Client: | Umbrella Corp |
+| Lead Tester: | Alice Smith |
+| Timeframe: | 2026-09-01 to 2026-09-05 |
+| Classification: | Confidential |
+
+## Findings
+
+Summary of vulnerabilities found.
+"""
+    html = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="en"
+    )
+
+    assert "Umbrella Corp" in html
+    assert "Alice Smith" in html
+    assert "2026-09-01 to 2026-09-05" in html
+    assert "Confidential" in html
+    assert '<span class="report-cover-meta-label">Lead Tester</span>' in html
+    assert '<span class="report-cover-meta-label">Assessment Period</span>' in html
+
+    html_de = HtmlReportExporter.build_full_html(
+        raw_md, profile=ReportExportProfile.PROFESSIONAL_PRINT, language="de"
+    )
+    assert '<span class="report-cover-meta-label">Testzeitraum</span>' in html_de
+    assert '<span class="report-cover-meta-label">Tester</span>' in html_de
 
 

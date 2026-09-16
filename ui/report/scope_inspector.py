@@ -169,7 +169,9 @@ class ReportScopeInspector(QWidget):
         actions_row = QHBoxLayout()
         actions_row.setSpacing(8)
 
-        self.btn_import_target = QPushButton(t("report.scope_import_project_ip", "Projekt-IP übernehmen"))
+        self.btn_import_target = QPushButton(
+            t("report.scope_import_project_ip", "Projekt-IP übernehmen")
+        )
         succ_col = get_theme_color("SUCCESS")
         qc_succ = QColor(succ_col)
         self.btn_import_target.setIcon(icon("fa5s.download", color=succ_col))
@@ -241,12 +243,17 @@ class ReportScopeInspector(QWidget):
         self.btn_whitebox.clicked.connect(lambda: self._set_approach("whitebox"))
 
         self.lbl_appr_desc = QLabel()
-        self.lbl_appr_desc.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-style: italic;")
+        self.lbl_appr_desc.setStyleSheet(
+            f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-style: italic;"
+        )
         appr_layout.addWidget(self.lbl_appr_desc)
 
         self.txt_appr_details = QLineEdit()
         self.txt_appr_details.setPlaceholderText(
-            t("report.approach_details_placeholder", "Zusätzliche Methodik-Details / Berechtigungsstufen (optional)...")
+            t(
+                "report.approach_details_placeholder",
+                "Zusätzliche Methodik-Details / Berechtigungsstufen (optional)...",
+            )
         )
         self.txt_appr_details.setStyleSheet(
             f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 4px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 4px 8px; }} "
@@ -282,19 +289,31 @@ class ReportScopeInspector(QWidget):
 
         self.tbl_in_targets = QTableWidget()
         self.tbl_in_targets.setColumnCount(5)
-        self.tbl_in_targets.setHorizontalHeaderLabels([
-            t("report.col_target", "Ziel / Host / Subnetz"),
-            t("report.col_target_type", "Typ"),
-            t("report.col_target_env", "Umgebung"),
-            t("report.col_description", "Beschreibung"),
-            t("report.col_action", "Aktion"),
-        ])
+        self.tbl_in_targets.setHorizontalHeaderLabels(
+            [
+                t("report.col_target", "Ziel / Host / Subnetz"),
+                t("report.col_target_type", "Typ"),
+                t("report.col_target_env", "Umgebung"),
+                t("report.col_description", "Beschreibung"),
+                t("report.col_action", "Aktion"),
+            ]
+        )
         self._style_table(self.tbl_in_targets)
-        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeMode.Stretch
+        )
+        self.tbl_in_targets.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_in_targets.setMinimumHeight(150)
         in_layout.addWidget(self.tbl_in_targets)
 
@@ -307,7 +326,9 @@ class ReportScopeInspector(QWidget):
         out_layout.setSpacing(8)
 
         out_header_row = QHBoxLayout()
-        lbl_out_header = QLabel(t("report.scope_out_targets_header", "Out-of-Scope & Ausschlusskriterien"))
+        lbl_out_header = QLabel(
+            t("report.scope_out_targets_header", "Out-of-Scope & Ausschlusskriterien")
+        )
         style_inspector_section(out_card, lbl_out_header)
         out_header_row.addWidget(lbl_out_header)
         out_header_row.addStretch()
@@ -327,15 +348,23 @@ class ReportScopeInspector(QWidget):
 
         self.tbl_out_targets = QTableWidget()
         self.tbl_out_targets.setColumnCount(3)
-        self.tbl_out_targets.setHorizontalHeaderLabels([
-            t("report.col_excluded_target", "Ausgeschlossenes Ziel / Komponente"),
-            t("report.col_exclusion_reason", "Grund / Kriterium"),
-            t("report.col_action", "Aktion"),
-        ])
+        self.tbl_out_targets.setHorizontalHeaderLabels(
+            [
+                t("report.col_excluded_target", "Ausgeschlossenes Ziel / Komponente"),
+                t("report.col_exclusion_reason", "Grund / Kriterium"),
+                t("report.col_action", "Aktion"),
+            ]
+        )
         self._style_table(self.tbl_out_targets)
-        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.Stretch
+        )
+        self.tbl_out_targets.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_out_targets.setMinimumHeight(120)
         out_layout.addWidget(self.tbl_out_targets)
 
@@ -347,46 +376,67 @@ class ReportScopeInspector(QWidget):
         roe_layout.setContentsMargins(12, 10, 12, 10)
         roe_layout.setSpacing(8)
 
-        lbl_roe_header = QLabel(t("report.scope_roe_header", "Testeinschränkungen & Rules of Engagement"))
+        lbl_roe_header = QLabel(
+            t("report.scope_roe_header", "Testeinschränkungen & Rules of Engagement")
+        )
         style_inspector_section(roe_card, lbl_roe_header)
         roe_layout.addWidget(lbl_roe_header)
 
         # Standard checkboxes
         self.chk_no_dos = QCheckBox(
-            t("report.roe_no_dos", "Keine Denial-of-Service-Angriffe (DoS/DDoS) oder Beeinträchtigung der Verfügbarkeit")
+            t(
+                "report.roe_no_dos",
+                "Keine Denial-of-Service-Angriffe (DoS/DDoS) oder Beeinträchtigung der Verfügbarkeit",
+            )
         )
         self._style_checkbox(self.chk_no_dos)
         self.chk_no_dos.toggled.connect(self._on_field_changed)
         roe_layout.addWidget(self.chk_no_dos)
 
         self.chk_no_social = QCheckBox(
-            t("report.roe_no_social", "Kein Social Engineering / Phishing gegen Mitarbeiter oder Dritte")
+            t(
+                "report.roe_no_social",
+                "Kein Social Engineering / Phishing gegen Mitarbeiter oder Dritte",
+            )
         )
         self._style_checkbox(self.chk_no_social)
         self.chk_no_social.toggled.connect(self._on_field_changed)
         roe_layout.addWidget(self.chk_no_social)
 
         self.chk_no_data = QCheckBox(
-            t("report.roe_no_data", "Keine dauerhafte Veränderung oder Zerstörung von Geschäfts- und Produktivdaten")
+            t(
+                "report.roe_no_data",
+                "Keine dauerhafte Veränderung oder Zerstörung von Geschäfts- und Produktivdaten",
+            )
         )
         self._style_checkbox(self.chk_no_data)
         self.chk_no_data.toggled.connect(self._on_field_changed)
         roe_layout.addWidget(self.chk_no_data)
 
         self.chk_service_window = QCheckBox(
-            t("report.roe_service_window", "Prüfaktivitäten ausschließlich innerhalb vereinbarter Testfenster")
+            t(
+                "report.roe_service_window",
+                "Prüfaktivitäten ausschließlich innerhalb vereinbarter Testfenster",
+            )
         )
         self._style_checkbox(self.chk_service_window)
         self.chk_service_window.toggled.connect(self._on_field_changed)
         roe_layout.addWidget(self.chk_service_window)
 
-        lbl_custom = QLabel(t("report.scope_custom_rules_label", "Individuelle Absprachen / Notfallkontakte:"))
-        lbl_custom.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500; margin-top: 4px;")
+        lbl_custom = QLabel(
+            t("report.scope_custom_rules_label", "Individuelle Absprachen / Notfallkontakte:")
+        )
+        lbl_custom.setStyleSheet(
+            f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')}; font-weight: 500; margin-top: 4px;"
+        )
         roe_layout.addWidget(lbl_custom)
 
         self.txt_custom_rules = QPlainTextEdit()
         self.txt_custom_rules.setPlaceholderText(
-            t("report.scope_custom_rules_placeholder", "Z. B. Notfall-Hotline des SOC, Eskalations-Ansprechpartner, besondere Whitelists...")
+            t(
+                "report.scope_custom_rules_placeholder",
+                "Z. B. Notfall-Hotline des SOC, Eskalations-Ansprechpartner, besondere Whitelists...",
+            )
         )
         self.txt_custom_rules.setMaximumHeight(75)
         self.txt_custom_rules.setStyleSheet(
@@ -502,7 +552,9 @@ class ReportScopeInspector(QWidget):
             if meta_scope and not self._project_target_ip:
                 self._project_target_ip = meta_scope
 
-            self.lbl_title.setText(self._scope.title or t("report.inspector_scope_title", "Scope & Methodik"))
+            self.lbl_title.setText(
+                self._scope.title or t("report.inspector_scope_title", "Scope & Methodik")
+            )
             self.txt_appr_details.setText(self._scope.approach_details)
 
             self._set_approach(self._scope.approach)
@@ -526,18 +578,27 @@ class ReportScopeInspector(QWidget):
         if norm == "blackbox":
             self.btn_blackbox.setChecked(True)
             self.lbl_appr_desc.setText(
-                t("report.desc_blackbox", "Blackbox: Keine Vorkenntnisse über interne Systeme / externer Angreiferperspektive.")
+                t(
+                    "report.desc_blackbox",
+                    "Blackbox: Keine Vorkenntnisse über interne Systeme / externer Angreiferperspektive.",
+                )
             )
         elif norm == "whitebox":
             self.btn_whitebox.setChecked(True)
             self.lbl_appr_desc.setText(
-                t("report.desc_whitebox", "Whitebox: Vollständige Vorkenntnisse, Quellcode-Einsicht und Architekturmodelle.")
+                t(
+                    "report.desc_whitebox",
+                    "Whitebox: Vollständige Vorkenntnisse, Quellcode-Einsicht und Architekturmodelle.",
+                )
             )
         else:
             norm = "greybox"
             self.btn_greybox.setChecked(True)
             self.lbl_appr_desc.setText(
-                t("report.desc_greybox", "Greybox: Teilweise Vorkenntnisse, Standard-Benutzerrollen und Systemzugänge.")
+                t(
+                    "report.desc_greybox",
+                    "Greybox: Teilweise Vorkenntnisse, Standard-Benutzerrollen und Systemzugänge.",
+                )
             )
         self._scope.approach = norm
         self._on_field_changed()
@@ -578,7 +639,9 @@ class ReportScopeInspector(QWidget):
                 cur_type_idx = idx
         cmb_type.setCurrentIndex(cur_type_idx)
         cmb_type.setStyleSheet(_get_scope_combo_style())
-        cmb_type.currentIndexChanged.connect(lambda _, c=cmb_type, idx=row: self._on_in_type_changed(idx, str(c.currentData())))
+        cmb_type.currentIndexChanged.connect(
+            lambda _, c=cmb_type, idx=row: self._on_in_type_changed(idx, str(c.currentData()))
+        )
         self.tbl_in_targets.setCellWidget(row, 1, cmb_type)
 
         # Col 2: Environment Combo
@@ -596,7 +659,9 @@ class ReportScopeInspector(QWidget):
                 cur_env_idx = idx
         cmb_env.setCurrentIndex(cur_env_idx)
         cmb_env.setStyleSheet(_get_scope_combo_style())
-        cmb_env.currentIndexChanged.connect(lambda _, c=cmb_env, idx=row: self._on_in_env_changed(idx, str(c.currentData())))
+        cmb_env.currentIndexChanged.connect(
+            lambda _, c=cmb_env, idx=row: self._on_in_env_changed(idx, str(c.currentData()))
+        )
         self.tbl_in_targets.setCellWidget(row, 2, cmb_env)
 
         # Col 3: Description input
@@ -634,7 +699,12 @@ class ReportScopeInspector(QWidget):
 
         # Col 1: Reason input
         edit_rsn = QLineEdit(item.reason)
-        edit_rsn.setPlaceholderText(t("report.scope_reason_placeholder", "Ausschlussgrund (z. B. Produktives Routing, Fremdhosting)..."))
+        edit_rsn.setPlaceholderText(
+            t(
+                "report.scope_reason_placeholder",
+                "Ausschlussgrund (z. B. Produktives Routing, Fremdhosting)...",
+            )
+        )
         edit_rsn.setStyleSheet(_get_scope_input_style())
         edit_rsn.textChanged.connect(lambda r, idx=row: self._on_out_reason_changed(idx, r))
         self.tbl_out_targets.setCellWidget(row, 1, edit_rsn)
@@ -681,7 +751,9 @@ class ReportScopeInspector(QWidget):
             self._on_field_changed()
 
     def _on_add_in_target_clicked(self) -> None:
-        new_item = ScopeTargetItem(target="", target_type="network", environment="production", description="")
+        new_item = ScopeTargetItem(
+            target="", target_type="network", environment="production", description=""
+        )
         self._scope.in_scope_targets.append(new_item)
         self._populate_in_table()
         self._update_badge()
@@ -721,7 +793,12 @@ class ReportScopeInspector(QWidget):
         exists = any(item.target.strip() == tgt for item in self._scope.in_scope_targets)
         if not exists:
             t_type = "network" if "/" in tgt else "host"
-            new_item = ScopeTargetItem(target=tgt, target_type=t_type, environment="production", description="Primäres Assessment-Ziel")
+            new_item = ScopeTargetItem(
+                target=tgt,
+                target_type=t_type,
+                environment="production",
+                description="Primäres Assessment-Ziel",
+            )
             self._scope.in_scope_targets.append(new_item)
             self._populate_in_table()
             self._update_badge()

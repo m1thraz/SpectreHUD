@@ -64,7 +64,9 @@ class ReportScopeMethodology:
     approach_details: str = ""
     in_scope_targets: List[ScopeTargetItem] = field(default_factory=list)
     out_of_scope_targets: List[ScopeExclusionItem] = field(default_factory=list)
-    restrictions: List[str] = field(default_factory=lambda: ["no_dos", "no_social_engineering", "no_data_destruction"])
+    restrictions: List[str] = field(
+        default_factory=lambda: ["no_dos", "no_social_engineering", "no_data_destruction"]
+    )
     custom_rules: str = ""
 
     @classmethod
@@ -116,13 +118,22 @@ class ReportScopeMethodology:
                         cl = line.strip()
                         if not cl:
                             continue
-                        m_det = re.search(r"^[ \t]*[-*]\s*[*_]*(?:Details|Beschreibung)[:*_ \t]*\s*(.*)$", cl, re.IGNORECASE)
+                        m_det = re.search(
+                            r"^[ \t]*[-*]\s*[*_]*(?:Details|Beschreibung)[:*_ \t]*\s*(.*)$",
+                            cl,
+                            re.IGNORECASE,
+                        )
                         if m_det:
                             approach_details = m_det.group(1).strip()
                         elif not cl.startswith(("-", "*", "|")) and not approach_details:
                             approach_details = cl
 
-                elif "in-scope" in sec_header or "in scope" in sec_header or "ziel" in sec_header or "target" in sec_header:
+                elif (
+                    "in-scope" in sec_header
+                    or "in scope" in sec_header
+                    or "ziel" in sec_header
+                    or "target" in sec_header
+                ):
                     for line in sec_lines[1:]:
                         cl = line.strip()
                         if not cl.startswith("|") or cl.startswith("|---"):
@@ -131,14 +142,33 @@ class ReportScopeMethodology:
                         if len(cols) >= 2:
                             raw_tgt = cols[0].strip().strip("`").strip()
                             low_tgt = raw_tgt.lower()
-                            if not raw_tgt or low_tgt in ("ziel", "target", "keine ziele definiert", "no targets defined") or low_tgt.startswith(("ziel /", "target /")):
+                            if (
+                                not raw_tgt
+                                or low_tgt
+                                in ("ziel", "target", "keine ziele definiert", "no targets defined")
+                                or low_tgt.startswith(("ziel /", "target /"))
+                            ):
                                 continue
                             t_type = normalize_target_type(cols[1]) if len(cols) > 1 else "network"
-                            t_env = normalize_environment(cols[2]) if len(cols) > 2 else "production"
+                            t_env = (
+                                normalize_environment(cols[2]) if len(cols) > 2 else "production"
+                            )
                             t_desc = cols[3] if len(cols) > 3 else ""
-                            in_targets.append(ScopeTargetItem(target=raw_tgt, target_type=t_type, environment=t_env, description=t_desc))
+                            in_targets.append(
+                                ScopeTargetItem(
+                                    target=raw_tgt,
+                                    target_type=t_type,
+                                    environment=t_env,
+                                    description=t_desc,
+                                )
+                            )
 
-                elif "out-of-scope" in sec_header or "out of scope" in sec_header or "ausschluss" in sec_header or "exclusion" in sec_header:
+                elif (
+                    "out-of-scope" in sec_header
+                    or "out of scope" in sec_header
+                    or "ausschluss" in sec_header
+                    or "exclusion" in sec_header
+                ):
                     for line in sec_lines[1:]:
                         cl = line.strip()
                         if not cl.startswith("|") or cl.startswith("|---"):
@@ -147,12 +177,24 @@ class ReportScopeMethodology:
                         if len(cols) >= 1:
                             raw_tgt = cols[0].strip().strip("`").strip()
                             low_tgt = raw_tgt.lower()
-                            if not raw_tgt or low_tgt in ("ausgeschlossen", "excluded", "keine ausschlüsse definiert", "no exclusions defined") or low_tgt.startswith(("ausgeschlossenes", "excluded target")):
+                            if (
+                                not raw_tgt
+                                or low_tgt
+                                in (
+                                    "ausgeschlossen",
+                                    "excluded",
+                                    "keine ausschlüsse definiert",
+                                    "no exclusions defined",
+                                )
+                                or low_tgt.startswith(("ausgeschlossenes", "excluded target"))
+                            ):
                                 continue
                             reason = cols[1] if len(cols) > 1 else ""
                             out_targets.append(ScopeExclusionItem(target=raw_tgt, reason=reason))
 
-                elif any(k in sec_header for k in ("einschränkung", "limitation", "rule", "engagement")):
+                elif any(
+                    k in sec_header for k in ("einschränkung", "limitation", "rule", "engagement")
+                ):
                     for line in sec_lines[1:]:
                         cl = line.strip()
                         if not cl or cl.startswith("|"):
@@ -169,7 +211,12 @@ class ReportScopeMethodology:
                             if "no_social_engineering" not in restrictions:
                                 restrictions.append("no_social_engineering")
                             matched_std = True
-                        if "zerstörung" in low or "alteration" in low or "veränderung" in low or "löschung" in low:
+                        if (
+                            "zerstörung" in low
+                            or "alteration" in low
+                            or "veränderung" in low
+                            or "löschung" in low
+                        ):
                             if "no_data_destruction" not in restrictions:
                                 restrictions.append("no_data_destruction")
                             matched_std = True
@@ -177,32 +224,52 @@ class ReportScopeMethodology:
                             if "business_hours_only" not in restrictions:
                                 restrictions.append("business_hours_only")
                             matched_std = True
-                        if not matched_std and not any(ign in low for ign in ("keine besonderen", "no specific")):
+                        if not matched_std and not any(
+                            ign in low for ign in ("keine besonderen", "no specific")
+                        ):
                             custom_rules_lines.append(item_text)
 
         # Legacy fallback if no tables were parsed
         if not in_targets:
-            m_in = re.search(r"^[ \t]*[-*]\s*[*_]*In[ -]?Scope[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            m_in = re.search(
+                r"^[ \t]*[-*]\s*[*_]*In[ -]?Scope[:*_ \t]*\s*(.*)$",
+                markdown,
+                re.IGNORECASE | re.MULTILINE,
+            )
             if m_in:
                 val = m_in.group(1).strip()
                 if val:
                     for t_part in re.split(r"[,;\n]+", val):
                         clean_t = t_part.strip().strip("*_`").strip()
                         if clean_t:
-                            in_targets.append(ScopeTargetItem(target=clean_t, target_type="network", environment="production"))
+                            in_targets.append(
+                                ScopeTargetItem(
+                                    target=clean_t, target_type="network", environment="production"
+                                )
+                            )
 
         if not out_targets:
-            m_out = re.search(r"^[ \t]*[-*]\s*[*_]*Out[ -]?of[ -]?Scope[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            m_out = re.search(
+                r"^[ \t]*[-*]\s*[*_]*Out[ -]?of[ -]?Scope[:*_ \t]*\s*(.*)$",
+                markdown,
+                re.IGNORECASE | re.MULTILINE,
+            )
             if m_out:
                 val = m_out.group(1).strip()
                 if val:
                     for o_part in re.split(r"[,;\n]+", val):
                         clean_o = o_part.strip().strip("*_`").strip()
                         if clean_o:
-                            out_targets.append(ScopeExclusionItem(target=clean_o, reason="Out of Scope"))
+                            out_targets.append(
+                                ScopeExclusionItem(target=clean_o, reason="Out of Scope")
+                            )
 
         if not restrictions and not custom_rules_lines:
-            m_lim = re.search(r"^[ \t]*[-*]\s*[*_]*(?:Einschränkungen|Limitations)[:*_ \t]*\s*(.*)$", markdown, re.IGNORECASE | re.MULTILINE)
+            m_lim = re.search(
+                r"^[ \t]*[-*]\s*[*_]*(?:Einschränkungen|Limitations)[:*_ \t]*\s*(.*)$",
+                markdown,
+                re.IGNORECASE | re.MULTILINE,
+            )
             if m_lim:
                 lim_text = m_lim.group(1).strip()
                 low_lim = lim_text.lower()
@@ -210,7 +277,12 @@ class ReportScopeMethodology:
                     restrictions.append("no_dos")
                 if "social engineering" in low_lim or "phishing" in low_lim:
                     restrictions.append("no_social_engineering")
-                if "zerstörung" in low_lim or "alteration" in low_lim or "veränderung" in low_lim or "löschung" in low_lim:
+                if (
+                    "zerstörung" in low_lim
+                    or "alteration" in low_lim
+                    or "veränderung" in low_lim
+                    or "löschung" in low_lim
+                ):
                     restrictions.append("no_data_destruction")
                 if "testfenster" in low_lim or "business hours" in low_lim:
                     restrictions.append("business_hours_only")
@@ -228,11 +300,17 @@ class ReportScopeMethodology:
         )
 
     def to_markdown(self, language: str = "de") -> str:
-        sec_title = self.title or ("Scope & Methodik" if language == "de" else "Scope & Methodology")
+        sec_title = self.title or (
+            "Scope & Methodik" if language == "de" else "Scope & Methodology"
+        )
         lines: List[str] = [f"## {sec_title}", ""]
 
         # Approach subsection
-        appr_title = "### Pentest-Ansatz & Methodik" if language == "de" else "### Pentest Approach & Methodology"
+        appr_title = (
+            "### Pentest-Ansatz & Methodik"
+            if language == "de"
+            else "### Pentest Approach & Methodology"
+        )
         lines.append(appr_title)
         lines.append("")
 
@@ -255,7 +333,11 @@ class ReportScopeMethodology:
         lines.append("")
 
         # In-Scope Table
-        in_title = "### In-Scope Ziele & Netzwerke" if language == "de" else "### In-Scope Targets & Networks"
+        in_title = (
+            "### In-Scope Ziele & Netzwerke"
+            if language == "de"
+            else "### In-Scope Targets & Networks"
+        )
         lines.append(in_title)
         lines.append("")
         if language == "de":
@@ -283,8 +365,16 @@ class ReportScopeMethodology:
         if self.in_scope_targets:
             for item in self.in_scope_targets:
                 tgt = (item.target or "–").replace("|", "\\|").replace("\n", " ")
-                t_lbl = type_map_de.get(item.target_type, item.target_type.capitalize()) if language == "de" else item.target_type.capitalize()
-                e_lbl = env_map_de.get(item.environment, item.environment.capitalize()) if language == "de" else item.environment.capitalize()
+                t_lbl = (
+                    type_map_de.get(item.target_type, item.target_type.capitalize())
+                    if language == "de"
+                    else item.target_type.capitalize()
+                )
+                e_lbl = (
+                    env_map_de.get(item.environment, item.environment.capitalize())
+                    if language == "de"
+                    else item.environment.capitalize()
+                )
                 desc = (item.description or "–").replace("|", "\\|").replace("\n", " ")
                 lines.append(f"| `{tgt}` | {t_lbl} | {e_lbl} | {desc} |")
         else:
@@ -293,7 +383,11 @@ class ReportScopeMethodology:
         lines.append("")
 
         # Out-of-Scope Table
-        out_title = "### Out-of-Scope & Ausschlusskriterien" if language == "de" else "### Out-of-Scope & Exclusions"
+        out_title = (
+            "### Out-of-Scope & Ausschlusskriterien"
+            if language == "de"
+            else "### Out-of-Scope & Exclusions"
+        )
         lines.append(out_title)
         lines.append("")
         if language == "de":
@@ -309,12 +403,18 @@ class ReportScopeMethodology:
                 reason = (ex_item.reason or "–").replace("|", "\\|").replace("\n", " ")
                 lines.append(f"| `{tgt}` | {reason} |")
         else:
-            empty_msg = "*Keine Ausschlüsse definiert*" if language == "de" else "*No exclusions defined*"
+            empty_msg = (
+                "*Keine Ausschlüsse definiert*" if language == "de" else "*No exclusions defined*"
+            )
             lines.append(f"| {empty_msg} | |")
         lines.append("")
 
         # Rules of Engagement / Restrictions
-        roe_title = "### Testeinschränkungen & Rules of Engagement" if language == "de" else "### Limitations & Rules of Engagement"
+        roe_title = (
+            "### Testeinschränkungen & Rules of Engagement"
+            if language == "de"
+            else "### Limitations & Rules of Engagement"
+        )
         lines.append(roe_title)
         lines.append("")
 
@@ -347,7 +447,11 @@ class ReportScopeMethodology:
                     lines.append(f"- {cl}")
 
         if not self.restrictions and not self.custom_rules.strip():
-            no_roe = "*Keine besonderen Einschränkungen vereinbart.*" if language == "de" else "*No specific restrictions agreed.*"
+            no_roe = (
+                "*Keine besonderen Einschränkungen vereinbart.*"
+                if language == "de"
+                else "*No specific restrictions agreed.*"
+            )
             lines.append(no_roe)
 
         lines.append("")

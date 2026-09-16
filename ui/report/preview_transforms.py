@@ -12,8 +12,7 @@ from core.reporting import (
 PREVIEW_PAGEBREAK_TOKEN = "SPECTRE_PAGEBREAK_PREVIEW_TOKEN"
 PREVIEW_PAGEBREAK_LABEL = "──────── PAGE BREAK ────────"
 PREVIEW_SPACER_TOKENS = {
-    size: f"SPECTRE_SPACER_PREVIEW_{size.upper()}"
-    for size in ("small", "medium", "large")
+    size: f"SPECTRE_SPACER_PREVIEW_{size.upper()}" for size in ("small", "medium", "large")
 }
 PREVIEW_SPACER_LABELS = {
     "small": "──── SPACER · SMALL ────",

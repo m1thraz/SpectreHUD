@@ -24,7 +24,6 @@ from core.reporting import (
 )
 
 
-
 class TestLootReportSync(unittest.TestCase):
     """Test suite covering Phase A through G requirements for additive loot synchronization."""
 
@@ -88,9 +87,7 @@ class TestLootReportSync(unittest.TestCase):
 
     def test_hash_preserves_legacy_empty_value_and_tracks_recommendation(self):
         legacy_hash = loot_content_hash(self.entry_a)
-        self.assertEqual(
-            loot_content_hash(dict(self.entry_a, recommendation="")), legacy_hash
-        )
+        self.assertEqual(loot_content_hash(dict(self.entry_a, recommendation="")), legacy_hash)
         with_recommendation = dict(
             self.entry_a,
             recommendation="Restrict the exposed service to the management network.",
@@ -151,9 +148,7 @@ class TestLootReportSync(unittest.TestCase):
         evidence = dict(self.entry_a, report_role="evidence")
 
         state = classify_loot_report_state("# Report", [evidence])
-        result = append_missing_loot_to_text(
-            "# Report", [evidence], language="en"
-        )
+        result = append_missing_loot_to_text("# Report", [evidence], language="en")
 
         self.assertFalse(state.missing)
         self.assertFalse(state.current)
@@ -162,10 +157,7 @@ class TestLootReportSync(unittest.TestCase):
         self.assertEqual(result.text, "# Report")
 
     def test_demoted_finding_marker_is_reported_as_orphaned(self):
-        marker = (
-            f"<!-- spectre:loot:{self.entry_a['id']}:"
-            f"{loot_content_hash(self.entry_a)} -->"
-        )
+        marker = f"<!-- spectre:loot:{self.entry_a['id']}:{loot_content_hash(self.entry_a)} -->"
         evidence = dict(self.entry_a, report_role="evidence")
 
         state = classify_loot_report_state(marker, [evidence])
@@ -286,9 +278,7 @@ Details
             "severity": "critical",
         }
 
-        state = classify_loot_report_state(
-            report_text, [self.entry_a, self.entry_b, entry_c]
-        )
+        state = classify_loot_report_state(report_text, [self.entry_a, self.entry_b, entry_c])
         self.assertIsInstance(state, LootReportState)
         self.assertEqual(len(state.current), 1)
         self.assertEqual(state.current[0]["id"], "loot_11111111")
@@ -403,9 +393,7 @@ _Eigene Anmerkungen zu dieser Phase:_
 
 _Eigene Anmerkungen zu dieser Phase:_
 """
-        result = append_missing_loot_to_text(
-            report_without_recon, [self.entry_a, self.entry_b]
-        )
+        result = append_missing_loot_to_text(report_without_recon, [self.entry_a, self.entry_b])
         self.assertEqual(result.added_count, 2)
         self.assertTrue(result.used_fallback)
         self.assertIn("recon", result.fallback_categories)
@@ -608,9 +596,7 @@ Port 80, 22, 443 open
         report = TemplateRenderer().render(template, ReportContext())
         entry = dict(self.entry_a, recommendation="Enterprise remediation text")
 
-        result = append_missing_loot_to_text(
-            report, [entry], template=template, language="en"
-        )
+        result = append_missing_loot_to_text(report, [entry], template=template, language="en")
 
         self.assertIn("### Nmap Port Scan", result.text)
         self.assertNotIn("#### Recommendation", result.text)

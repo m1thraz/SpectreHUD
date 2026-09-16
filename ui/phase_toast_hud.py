@@ -72,9 +72,9 @@ class PhaseToastHUD(QWidget):
         self.badge.setStyleSheet(
             f"""
             QLabel#PhaseBadge {{
-                background-color: {get_theme_color('CYAN_A15')};
-                color: {get_theme_color('ACCENT_BRAND')};
-                border: 1px solid {get_theme_color('BORDER_GLOW')};
+                background-color: {get_theme_color("CYAN_A15")};
+                color: {get_theme_color("ACCENT_BRAND")};
+                border: 1px solid {get_theme_color("BORDER_GLOW")};
                 border-radius: 4px;
                 font-size: 11px;
                 font-weight: 800;
@@ -116,9 +116,9 @@ class PhaseToastHUD(QWidget):
             self.badge.setStyleSheet(
                 f"""
                 QLabel#PhaseBadge {{
-                    background-color: {get_theme_color('MUTED_A20')};
-                    color: {get_theme_color('TEXT_MUTED')};
-                    border: 1px solid {get_theme_color('BORDER_MUTED')};
+                    background-color: {get_theme_color("MUTED_A20")};
+                    color: {get_theme_color("TEXT_MUTED")};
+                    border: 1px solid {get_theme_color("BORDER_MUTED")};
                     border-radius: 4px;
                     font-size: 11px;
                     font-weight: 800;
@@ -134,9 +134,9 @@ class PhaseToastHUD(QWidget):
             self.badge.setStyleSheet(
                 f"""
                 QLabel#PhaseBadge {{
-                    background-color: {get_theme_color('CYAN_A15')};
-                    color: {get_theme_color('ACCENT_BRAND')};
-                    border: 1px solid {get_theme_color('BORDER_GLOW')};
+                    background-color: {get_theme_color("CYAN_A15")};
+                    color: {get_theme_color("ACCENT_BRAND")};
+                    border: 1px solid {get_theme_color("BORDER_GLOW")};
                     border-radius: 4px;
                     font-size: 11px;
                     font-weight: 800;

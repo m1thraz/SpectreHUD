@@ -78,9 +78,7 @@ class ShutdownCoordinator:
                 }
             )
         except PersistenceError as exc:
-            self._logger.warning(
-                "Could not persist window geometry during shutdown: %s", exc
-            )
+            self._logger.warning("Could not persist window geometry during shutdown: %s", exc)
         except Exception:
             self._logger.exception(
                 "Unexpected error while persisting window geometry during shutdown"

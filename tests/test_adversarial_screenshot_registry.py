@@ -36,7 +36,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_dir = self.temp_path / "config"
         self.projects_dir = self.temp_path / "projects"
 
-
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()

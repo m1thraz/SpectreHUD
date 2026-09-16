@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt
 
 from ui.models import LootTableModel, SnippetListModel, HistoryTableModel
 
+
 # Ensure a headless QApplication exists
 class TestQtModels(unittest.TestCase):
     """Unit tests verifying Qt Model-View implementations."""

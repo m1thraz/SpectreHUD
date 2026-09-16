@@ -124,4 +124,3 @@ def test_cards_render_standardized_phase_badges(qapp, tmp_path):
     }
     note_card = QuickNoteCard(note_entry)
     assert "POSTEX" in note_card.lbl_meta.text()
-

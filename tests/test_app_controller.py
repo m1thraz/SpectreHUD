@@ -168,7 +168,9 @@ class TestAppController(unittest.TestCase):
 
         # 2. Cheatsheet mode
         self.controller.active_mode = "cheatsheet"
-        with patch.object(self.controller.cheatsheet_ctrl, "render_content", return_value=[QWidget(), QWidget()]):
+        with patch.object(
+            self.controller.cheatsheet_ctrl, "render_content", return_value=[QWidget(), QWidget()]
+        ):
             self.controller.refresh_content()
             self.footer.set_count.assert_called_with("2 entries")
 
@@ -181,7 +183,9 @@ class TestAppController(unittest.TestCase):
 
         # 4. Loot mode (board)
         self.config.set("loot_view_mode", "board")
-        with patch.object(self.controller.loot_ctrl, "render_board_content", return_value=[QWidget()]):
+        with patch.object(
+            self.controller.loot_ctrl, "render_board_content", return_value=[QWidget()]
+        ):
             self.controller.refresh_content()
             self.footer.set_count.assert_called_with("1 entry")
 
@@ -230,7 +234,9 @@ class TestAppController(unittest.TestCase):
         """_on_add_button_clicked routes based on active_mode."""
         # 1. Cheatsheet
         self.controller.active_mode = "cheatsheet"
-        with patch.object(self.controller.cheatsheet_ctrl, "open_add_dialog", return_value=True) as mock_add:
+        with patch.object(
+            self.controller.cheatsheet_ctrl, "open_add_dialog", return_value=True
+        ) as mock_add:
             with patch.object(self.controller, "_on_data_updated") as mock_update:
                 self.controller._on_add_button_clicked()
                 mock_add.assert_called_once()
@@ -238,7 +244,9 @@ class TestAppController(unittest.TestCase):
 
         # 2. Loot
         self.controller.active_mode = "loot"
-        with patch.object(self.controller.loot_ctrl, "open_add_dialog", return_value=True) as mock_add:
+        with patch.object(
+            self.controller.loot_ctrl, "open_add_dialog", return_value=True
+        ) as mock_add:
             with patch.object(self.controller, "_on_loot_data_updated") as mock_update:
                 self.controller._on_add_button_clicked()
                 mock_add.assert_called_once()
@@ -292,7 +300,9 @@ class TestAppController(unittest.TestCase):
                 mock_clr.assert_called_once()
                 mock_up.assert_called_once()
 
-        with patch.object(self.controller.quick_note_ctrl, "clear_all_notes", return_value=True) as mock_clr:
+        with patch.object(
+            self.controller.quick_note_ctrl, "clear_all_notes", return_value=True
+        ) as mock_clr:
             with patch.object(self.controller, "_update_notes_badge"):
                 with patch.object(self.controller, "refresh_filter_pills") as mock_rfp:
                     with patch.object(self.controller, "refresh_content") as mock_rfc:
@@ -357,7 +367,9 @@ class TestAppController(unittest.TestCase):
             self.controller.load_active_project_state()
             self.var_bar.set_variables.assert_not_called()
 
-        with patch.object(self.controller.workspace_coord, "save_current_project_session", return_value=True) as mock_save:
+        with patch.object(
+            self.controller.workspace_coord, "save_current_project_session", return_value=True
+        ) as mock_save:
             res = self.controller.save_current_project_state()
             self.assertTrue(res)
             mock_save.assert_called_once()
@@ -404,7 +416,9 @@ class TestAppController(unittest.TestCase):
 
         # Screenshot saved commit
         loot_entry = {"id": "loot_sc_1", "type": "screenshot", "title": "Sc"}
-        with patch.object(self.controller.screenshot_transaction, "commit", return_value=MagicMock(ok=True)):
+        with patch.object(
+            self.controller.screenshot_transaction, "commit", return_value=MagicMock(ok=True)
+        ):
             with patch.object(self.controller, "switch_mode") as mock_sw:
                 self.controller._on_screenshot_saved(loot_entry)
                 mock_sw.assert_called_with("loot")
@@ -439,7 +453,9 @@ class TestAppController(unittest.TestCase):
     def test_retranslate_ui_and_footer(self):
         """retranslate_ui updates header, search, footer, and publishes event."""
         languages = []
-        self.event_bus.subscribe(EventType.LANGUAGE_CHANGED, lambda d: languages.append(d["locale"]))
+        self.event_bus.subscribe(
+            EventType.LANGUAGE_CHANGED, lambda d: languages.append(d["locale"])
+        )
 
         self.controller.retranslate_ui("de")
         self.header.retranslate.assert_called()
@@ -487,11 +503,15 @@ class TestAppController(unittest.TestCase):
             mock_uv.assert_called_once()
 
         # 4. Export loot & move loot category
-        with patch.object(self.controller.loot_ctrl, "export_entry_to_file_with_feedback") as mock_exp:
+        with patch.object(
+            self.controller.loot_ctrl, "export_entry_to_file_with_feedback"
+        ) as mock_exp:
             self.controller._on_export_loot_entry("loot_abc")
             mock_exp.assert_called_with("loot_abc", self.window)
 
-        with patch.object(self.controller.loot_ctrl, "move_entry_to_category", return_value=True) as mock_mov:
+        with patch.object(
+            self.controller.loot_ctrl, "move_entry_to_category", return_value=True
+        ) as mock_mov:
             res = self.controller._on_move_loot_category("loot_abc", "recon", 1)
             self.assertTrue(res)
             mock_mov.assert_called_with("loot_abc", "recon", 1, self.window)
@@ -528,12 +548,16 @@ class TestAppController(unittest.TestCase):
             self.controller._show_project_menu(btn_anchor)
             mock_menu.assert_called_once()
 
-        with patch.object(self.controller.workspace_coord, "open_new_project_dialog") as mock_new_proj:
+        with patch.object(
+            self.controller.workspace_coord, "open_new_project_dialog"
+        ) as mock_new_proj:
             self.controller._open_new_project_dialog()
             mock_new_proj.assert_called_once()
 
         # 8. Failed screenshot transaction commit
-        with patch.object(self.controller.screenshot_transaction, "commit", return_value=MagicMock(ok=False)):
+        with patch.object(
+            self.controller.screenshot_transaction, "commit", return_value=MagicMock(ok=False)
+        ):
             with patch.object(self.controller, "switch_mode") as mock_sw:
                 self.controller._on_screenshot_saved({"id": "sc"})
                 mock_sw.assert_not_called()
@@ -564,6 +588,14 @@ class TestAppController(unittest.TestCase):
                 mock_act.assert_called_once()
 
         first_instance.close()
+
+    def test_on_import_snippets_clicked(self):
+        with patch.object(
+            self.controller.cheatsheet_ctrl, "import_snippets_dialog", return_value=True
+        ) as mock_import, patch.object(self.controller, "_on_data_updated") as mock_update:
+            self.controller.on_import_snippets_clicked()
+            mock_import.assert_called_once_with(self.controller.window)
+            mock_update.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -46,7 +46,6 @@ def test_qapplication_is_only_constructed_by_central_test_infrastructure():
     )
 
 
-
 def test_platform_package_does_not_eagerly_import_qt():
     """Importing core.platform or core.platform.paths must not eagerly load PyQt6 into memory."""
     import subprocess
@@ -158,7 +157,6 @@ def test_app_controller_receives_resolved_application_services():
 
     assert "container" not in parameter_names
     assert constructed.isdisjoint(forbidden_calls)
-
 
 
 def test_core_packages_have_no_dependency_cycles():

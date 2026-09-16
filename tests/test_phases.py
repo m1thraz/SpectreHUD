@@ -115,11 +115,35 @@ def test_loot_manager_backward_compatibility():
 def test_loot_migrator_preserves_legacy_and_aliases():
     """Verify LootMigrator normalizes legacy and alias category strings to canonical keys."""
     entries = [
-        {"id": "e1", "title": "Scan", "category": "1. Reconnaissance & Enumeration", "severity": "info", "type": "note"},
-        {"id": "e2", "title": "Shell", "category": "initial", "severity": "high", "type": "credentials"},
-        {"id": "e3", "title": "Passwd", "category": "lateral", "severity": "medium", "type": "hash"},
+        {
+            "id": "e1",
+            "title": "Scan",
+            "category": "1. Reconnaissance & Enumeration",
+            "severity": "info",
+            "type": "note",
+        },
+        {
+            "id": "e2",
+            "title": "Shell",
+            "category": "initial",
+            "severity": "high",
+            "type": "credentials",
+        },
+        {
+            "id": "e3",
+            "title": "Passwd",
+            "category": "lateral",
+            "severity": "medium",
+            "type": "hash",
+        },
         {"id": "e4", "title": "Exploit", "category": "poc", "severity": "info", "type": "note"},
-        {"id": "e5", "title": "Unknown", "category": "bogus_cat", "severity": "info", "type": "note"},
+        {
+            "id": "e5",
+            "title": "Unknown",
+            "category": "bogus_cat",
+            "severity": "info",
+            "type": "note",
+        },
     ]
 
     normalized, changed = LootMigrator.migrate(
@@ -143,7 +167,9 @@ def test_validators_quick_note_normalization():
     assert res_alias is not None
     assert res_alias["category"] == "access"
 
-    res_legacy = validate_quick_note_entry({"text": "Test note", "category": "1. Reconnaissance & Enumeration"})
+    res_legacy = validate_quick_note_entry(
+        {"text": "Test note", "category": "1. Reconnaissance & Enumeration"}
+    )
     assert res_legacy is not None
     assert res_legacy["category"] == "recon"
 

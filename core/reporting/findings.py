@@ -19,9 +19,7 @@ FINDING_MARKER_RE = re.compile(
     r"^<!--\s*spectre:finding:(?:start|end):[A-Za-z0-9_-]+\s*-->\s*\r?\n?",
     re.MULTILINE,
 )
-_LOOT_MARKER_LINE_RE = re.compile(
-    r"^<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\s*$"
-)
+_LOOT_MARKER_LINE_RE = re.compile(r"^<!--\s*spectre:loot:[A-Za-z0-9_-]+:[a-fA-F0-9]+\s*-->\s*$")
 
 
 def finding_start_marker(entry_id: str) -> str:
@@ -40,26 +38,31 @@ def _semantic_finding_html(body_html: str) -> str:
     heading = re.search(r"<h3>(.*?)</h3>", body_html, re.DOTALL)
     description = re.search(r"<h4>(Description|Beschreibung)</h4>", body_html)
     recommendation = re.search(r"<h4>(Recommendation|Empfehlung)</h4>", body_html)
+    references = re.search(r"<h4>(References|Referenzen)</h4>", body_html)
     if heading is None:
         return body_html
 
-    severity_match = re.search(
-        r"<p><strong>Severity:</strong>\s*(.*?)</p>", body_html, re.DOTALL
-    )
+    severity_match = re.search(r"<p><strong>Severity:</strong>\s*(.*?)</p>", body_html, re.DOTALL)
     severity_html = severity_match.group(1) if severity_match else ""
     severity_class_match = re.search(r"severity-(critical|high|medium|low|info)", severity_html)
-    severity_class = (
-        f" severity-{severity_class_match.group(1)}" if severity_class_match else ""
-    )
+    severity_class = f" severity-{severity_class_match.group(1)}" if severity_class_match else ""
 
     meta_items = []
-    for label in ("Target", "Phase", "Observed", "Beobachtet"):
-        match = re.search(
-            rf"<p><strong>{label}:</strong>\s*(.*?)</p>", body_html, re.DOTALL
-        )
+    for label in (
+        "Target",
+        "Phase",
+        "Observed",
+        "Beobachtet",
+        "CVSS Score",
+        "CVSS Vector",
+        "Status",
+    ):
+        match = re.search(rf"<p><strong>{label}:</strong>\s*(.*?)</p>", body_html, re.DOTALL)
         if match:
             meta_items.append(
-                '<div class="finding-meta-item">'
+                '<div class="finding-meta-item'
+                + (" finding-meta-cvss-vector" if label == "CVSS Vector" else "")
+                + '">'
                 f'<span class="finding-meta-label">{label}</span>'
                 f'<span class="finding-meta-value">{match.group(1)}</span>'
                 "</div>"
@@ -80,23 +83,24 @@ def _semantic_finding_html(body_html: str) -> str:
             "</section>" if description else ""
         ) + f'<section class="finding-recommendation"><h4>{recommendation.group(1)}</h4>'
         body_html = body_html.replace(recommendation.group(0), recommendation_open, 1)
+    if references:
+        references_open = (
+            "</section>" if description or recommendation else ""
+        ) + f'<section class="finding-references"><h4>{references.group(1)}</h4>'
+        body_html = body_html.replace(references.group(0), references_open, 1)
     header_severity = (
         f'<div class="finding-severity">{severity_html}</div>' if severity_html else ""
     )
-    metadata = (
-        f'<div class="finding-meta">{"".join(meta_items)}</div>' if meta_items else ""
-    )
+    metadata = f'<div class="finding-meta">{"".join(meta_items)}</div>' if meta_items else ""
     return (
         f'<article class="report-finding{severity_class}">'
         '<header class="finding-header">'
         f"{heading.group(0)}{header_severity}</header>"
-        f"{metadata}{body_html}{'</section>' if description or recommendation else ''}</article>"
+        f"{metadata}{body_html}{'</section>' if description or recommendation or references else ''}</article>"
     )
 
 
-def convert_markdown_with_findings(
-    markdown: str, project_dir: Optional[Path] = None
-) -> str:
+def convert_markdown_with_findings(markdown: str, project_dir: Optional[Path] = None) -> str:
     """Convert only explicitly marked v1 findings into semantic report articles."""
     if not FINDING_START_RE.search(markdown):
         return convert_markdown_to_html(markdown, project_dir=project_dir)
@@ -106,7 +110,7 @@ def convert_markdown_with_findings(
     cursor = 0
     while start := FINDING_START_RE.search(embedded, cursor):
         if start.start() > cursor:
-            html_parts.append(convert_markdown_to_html(embedded[cursor:start.start()]))
+            html_parts.append(convert_markdown_to_html(embedded[cursor : start.start()]))
         entry_id = start.group(1)
         end = next(
             (
@@ -118,10 +122,10 @@ def convert_markdown_with_findings(
         )
         next_start = FINDING_START_RE.search(embedded, start.end())
         if end is None or (next_start and next_start.start() < end.start()):
-            html_parts.append(convert_markdown_to_html(embedded[start.start():]))
+            html_parts.append(convert_markdown_to_html(embedded[start.start() :]))
             cursor = len(embedded)
             break
-        finding_markdown = embedded[start.end():end.start()]
+        finding_markdown = embedded[start.end() : end.start()]
         finding_html = convert_markdown_to_html(finding_markdown)
         html_parts.append(_semantic_finding_html(finding_html))
         cursor = end.end()
@@ -208,8 +212,8 @@ def reconcile_finding_markers(original: str, converted: str) -> str:
         )
         if end is None:
             continue
-        heading_anchor = _next_visible_line(original[start.end():end.start()])
-        after_anchor = _next_visible_line(original[end.end():])
+        heading_anchor = _next_visible_line(original[start.end() : end.start()])
+        after_anchor = _next_visible_line(original[end.end() :])
         if not heading_anchor:
             continue
         start_marker = finding_start_marker(entry_id)

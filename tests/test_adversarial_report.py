@@ -37,7 +37,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_dir = self.temp_path / "config"
         self.projects_dir = self.temp_path / "projects"
 
-
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()
@@ -79,9 +78,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         # Add clipboard item with quadruple backticks
         malicious_clip = "echo 'pwned'\n````\n## INJECTED FOOTER\n````"
-        self.clip_watcher.add_entry(
-            malicious_clip, target_ip="10.10.10.55", include_in_report=True
-        )
+        self.clip_watcher.add_entry(malicious_clip, target_ip="10.10.10.55", include_in_report=True)
 
         builder = ReportBuilder(
             loot_manager=self.loot_mgr,

@@ -36,9 +36,7 @@ def test_error_dialog_includes_expected_log_path_when_file_logging_is_unavailabl
     )
     with (
         patch.object(QMessageBox, "exec"),
-        patch(
-            "ui.message_boxes.get_log_diagnostics", return_value=diagnostics
-        ),
+        patch("ui.message_boxes.get_log_diagnostics", return_value=diagnostics),
         patch.object(
             QMessageBox,
             "setDetailedText",

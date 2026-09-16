@@ -47,7 +47,6 @@ SEVERITY_ORDER = {
 }
 
 
-
 SEV_ICONS = {
     "critical": "fa5s.exclamation-circle",
     "high": "fa5s.exclamation-triangle",
@@ -102,12 +101,12 @@ class ReportRemediationInspector(QWidget):
         h_layout.setSpacing(8)
 
         lbl_icon = QLabel()
-        lbl_icon.setPixmap(
-            icon("fa5s.tasks", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
-        )
+        lbl_icon.setPixmap(icon("fa5s.tasks", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20))
         h_layout.addWidget(lbl_icon)
 
-        self.lbl_title = QLabel(t("report.inspector_remediation_title", "Remediation & Action Plan"))
+        self.lbl_title = QLabel(
+            t("report.inspector_remediation_title", "Remediation & Action Plan")
+        )
         style_inspector_header(self.header_card, self.lbl_title)
         h_layout.addWidget(self.lbl_title)
         h_layout.addStretch()
@@ -140,7 +139,9 @@ class ReportRemediationInspector(QWidget):
         g_layout.setContentsMargins(12, 10, 12, 10)
         g_layout.setSpacing(6)
 
-        lbl_g_header = QLabel(t("report.remediation_guidance_title", "Strategic Guidance & Hardening Roadmap"))
+        lbl_g_header = QLabel(
+            t("report.remediation_guidance_title", "Strategic Guidance & Hardening Roadmap")
+        )
         style_inspector_section(guidance_card, lbl_g_header)
         g_layout.addWidget(lbl_g_header)
 
@@ -165,7 +166,9 @@ class ReportRemediationInspector(QWidget):
 
         # Toolbar above table: Title + Filter Toggle Buttons
         tbl_top_bar = QHBoxLayout()
-        lbl_matrix_title = QLabel(t("report.remediation_matrix_title", "Remediation & Action Matrix"))
+        lbl_matrix_title = QLabel(
+            t("report.remediation_matrix_title", "Remediation & Action Matrix")
+        )
         style_inspector_section(matrix_card, lbl_matrix_title)
         tbl_top_bar.addWidget(lbl_matrix_title)
         tbl_top_bar.addStretch()
@@ -201,18 +204,28 @@ class ReportRemediationInspector(QWidget):
         # Table Widget
         self.tbl_actions = QTableWidget()
         self.tbl_actions.setColumnCount(5)
-        self.tbl_actions.setHorizontalHeaderLabels([
-            t("report.col_priority", "Priority"),
-            t("report.col_vulnerability", "Vulnerability"),
-            t("report.col_recommended_action", "Recommended Action"),
-            t("report.col_status", "Status"),
-            t("report.col_action", "Action"),
-        ])
-        self.tbl_actions.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_actions.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_actions.setHorizontalHeaderLabels(
+            [
+                t("report.col_priority", "Priority"),
+                t("report.col_vulnerability", "Vulnerability"),
+                t("report.col_recommended_action", "Recommended Action"),
+                t("report.col_status", "Status"),
+                t("report.col_action", "Action"),
+            ]
+        )
+        self.tbl_actions.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_actions.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_actions.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.tbl_actions.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.tbl_actions.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.tbl_actions.horizontalHeader().setSectionResizeMode(
+            3, QHeaderView.ResizeMode.ResizeToContents
+        )
+        self.tbl_actions.horizontalHeader().setSectionResizeMode(
+            4, QHeaderView.ResizeMode.ResizeToContents
+        )
         self.tbl_actions.verticalHeader().setVisible(False)
         self.tbl_actions.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.tbl_actions.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -270,7 +283,10 @@ class ReportRemediationInspector(QWidget):
             self._plan = doc.get_remediation_plan()
             self._language = doc.language
 
-            self.lbl_title.setText(self._plan.title or t("report.inspector_remediation_title", "Remediation & Action Plan"))
+            self.lbl_title.setText(
+                self._plan.title
+                or t("report.inspector_remediation_title", "Remediation & Action Plan")
+            )
             self.txt_guidance.setPlainText(self._plan.strategic_guidance)
 
             self._refresh_table()
@@ -284,7 +300,11 @@ class ReportRemediationInspector(QWidget):
 
     def _refresh_progress(self) -> None:
         total = len(self._findings)
-        resolved = sum(1 for f in self._findings if (f.status or "").strip().lower() in ("resolved", "closed", "behoben"))
+        resolved = sum(
+            1
+            for f in self._findings
+            if (f.status or "").strip().lower() in ("resolved", "closed", "behoben")
+        )
         pct = int((resolved / total) * 100) if total > 0 else 0
         self.lbl_progress_badge.setText(f"Remediation: {resolved} / {total} Resolved ({pct}%)")
 
@@ -329,13 +349,17 @@ class ReportRemediationInspector(QWidget):
             # Col 2: Recommended Action (In-place editable LineEdit)
             edit_action = QLineEdit()
             edit_action.setText(f.recommendation or "")
-            edit_action.setPlaceholderText(t("report.recommendation_placeholder", "Define concrete remediation steps..."))
+            edit_action.setPlaceholderText(
+                t("report.recommendation_placeholder", "Define concrete remediation steps...")
+            )
             edit_action.setStyleSheet(
                 f"QLineEdit {{ background: {get_theme_color('BG_DARK')}; border: 1px solid {get_theme_color('BORDER_DEFAULT')}; border-radius: 3px; color: {get_theme_color('TEXT_PRIMARY')}; padding: 3px 6px; }} "
                 f"QLineEdit:focus {{ border-color: {get_theme_color('ACCENT_BRAND')}; }}"
             )
             edit_action.editingFinished.connect(
-                lambda target_id=fid, edit_w=edit_action: self._on_action_text_changed(target_id, edit_w.text())
+                lambda target_id=fid, edit_w=edit_action: self._on_action_text_changed(
+                    target_id, edit_w.text()
+                )
             )
             self.tbl_actions.setCellWidget(row, 2, edit_action)
 
@@ -349,12 +373,16 @@ class ReportRemediationInspector(QWidget):
             current_idx = 0
             for idx, (st_val, st_lbl, _st_col) in enumerate(STATUS_ITEMS):
                 cmb_status.addItem(st_lbl, st_val)
-                if current_status == st_val or (current_status in ("closed", "behoben") and st_val == "resolved"):
+                if current_status == st_val or (
+                    current_status in ("closed", "behoben") and st_val == "resolved"
+                ):
                     current_idx = idx
 
             cmb_status.setCurrentIndex(current_idx)
             cmb_status.currentIndexChanged.connect(
-                lambda idx, target_id=fid, cmb=cmb_status: self._on_status_changed(target_id, cmb.currentData())
+                lambda idx, target_id=fid, cmb=cmb_status: self._on_status_changed(
+                    target_id, cmb.currentData()
+                )
             )
             self.tbl_actions.setCellWidget(row, 3, cmb_status)
 
@@ -368,7 +396,9 @@ class ReportRemediationInspector(QWidget):
                 f"QPushButton {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.1); border: 1px solid rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.3); border-radius: 3px; padding: 2px 6px; }} "
                 f"QPushButton:hover {{ background: rgba({qc_brand.red()}, {qc_brand.green()}, {qc_brand.blue()}, 0.25); }}"
             )
-            btn_jump.clicked.connect(lambda checked=False, target_id=fid: self.finding_selected.emit(target_id))
+            btn_jump.clicked.connect(
+                lambda checked=False, target_id=fid: self.finding_selected.emit(target_id)
+            )
             self.tbl_actions.setCellWidget(row, 4, btn_jump)
 
     def _on_action_text_changed(self, finding_id: str, new_text: str) -> None:

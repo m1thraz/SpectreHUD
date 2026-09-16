@@ -29,6 +29,7 @@ from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 from ui.styles.icons import get_theme_color
+
 SECTION_TYPE_KEYS = {
     "header_metadata": ("template_editor.sec_header", "Header & Metadaten"),
     "executive_summary": ("template_editor.sec_summary", "Executive Summary & Findings-Matrix"),
@@ -258,7 +259,9 @@ class TemplateEditorDialog(BaseHudDialog):
                 "Sektionen (Reihenfolge von oben nach unten):",
             )
         )
-        lbl_sec.setStyleSheet(f"color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; margin-top: 8px;")
+        lbl_sec.setStyleSheet(
+            f"color: {get_theme_color('TEXT_PRIMARY')}; font-weight: bold; margin-top: 8px;"
+        )
         layout.addWidget(lbl_sec)
 
         # Section List + Buttons
@@ -312,12 +315,14 @@ class TemplateEditorDialog(BaseHudDialog):
         details = []
         if section.category_id:
             details.append(
-                t("template_editor.item_category", "Kategorie: {category}", category=section.category_id)
+                t(
+                    "template_editor.item_category",
+                    "Kategorie: {category}",
+                    category=section.category_id,
+                )
             )
         if section.title:
-            details.append(
-                t("template_editor.item_title", "Titel: '{title}'", title=section.title)
-            )
+            details.append(t("template_editor.item_title", "Titel: '{title}'", title=section.title))
         detail_str = f" ({', '.join(details)})" if details else ""
         badge = (
             f" [{t('template_editor.page_break_badge', 'Seitenumbruch')}]"

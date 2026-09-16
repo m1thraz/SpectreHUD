@@ -186,13 +186,26 @@ def try_normalize_phase_key(val: Optional[str]) -> Optional[str]:
 
     # Token-based heuristic resolution for descriptive/compound phrases
     tokens = set(re.findall(r"[a-z0-9äöüß]+", clean))
-    if any(t in tokens for t in ("enum", "enumeration", "recon", "reconnaissance", "aufklärung", "aufklaerung")):
+    if any(
+        t in tokens
+        for t in ("enum", "enumeration", "recon", "reconnaissance", "aufklärung", "aufklaerung")
+    ):
         return "recon"
-    if any(t in tokens for t in ("privesc", "rechteausweitung", "lpe")) or ("privilege" in tokens and "escalation" in tokens):
+    if any(t in tokens for t in ("privesc", "rechteausweitung", "lpe")) or (
+        "privilege" in tokens and "escalation" in tokens
+    ):
         return "privesc"
-    if any(t in tokens for t in ("postex", "persistence", "latmove")) or ("lateral" in tokens and "movement" in tokens) or ("post" in tokens and "exploitation" in tokens):
+    if (
+        any(t in tokens for t in ("postex", "persistence", "latmove"))
+        or ("lateral" in tokens and "movement" in tokens)
+        or ("post" in tokens and "exploitation" in tokens)
+    ):
         return "postex"
-    if any(t in tokens for t in ("zugriff", "foothold")) or ("initial" in tokens and "access" in tokens) or "exploitation" in tokens:
+    if (
+        any(t in tokens for t in ("zugriff", "foothold"))
+        or ("initial" in tokens and "access" in tokens)
+        or "exploitation" in tokens
+    ):
         return "access"
     if any(t in tokens for t in ("poc", "pocs", "skripte", "skript", "scripts", "script")):
         return "scripts"
@@ -208,7 +221,6 @@ def normalize_phase_key(val: Optional[str]) -> str:
     """
     norm = try_normalize_phase_key(val)
     return norm if norm is not None else DEFAULT_PHASE_KEY
-
 
 
 def get_phase(name_or_key: Optional[str]) -> Phase:

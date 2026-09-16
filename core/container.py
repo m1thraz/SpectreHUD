@@ -55,9 +55,7 @@ class ServiceContainer:
             else QuickNoteManager(event_bus=event_bus)
         )
         self.phase_context = (
-            phase_context
-            if phase_context is not None
-            else PhaseContext(event_bus=event_bus)
+            phase_context if phase_context is not None else PhaseContext(event_bus=event_bus)
         )
         self.screenshot_manager = screenshot_manager
         self.storage = storage

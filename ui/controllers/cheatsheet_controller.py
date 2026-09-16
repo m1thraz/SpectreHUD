@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 from PyQt6.QtCore import QObject, Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QFontMetrics
@@ -7,6 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QMenu,
+    QFileDialog,
 )
 
 from core.snippets import SnippetManager
@@ -20,7 +22,7 @@ from ui.add_snippet_dialog import AddSnippetDialog
 from ui.menu_builder import build_qmenu
 from ui.styles.icons import icon
 from ui.styles.palette import STATUS_WARNING
-from ui.message_boxes import show_error_dialog
+from ui.message_boxes import show_error_dialog, show_information_dialog
 
 logger = get_logger("cheatsheet_controller")
 
@@ -590,6 +592,70 @@ class CheatsheetController(QObject):
             return True
         return False
 
+    def import_snippets_dialog(self, parent_widget: Optional[QWidget] = None) -> bool:
+        """Opens a file dialog to import snippet packs or files (.json, .md) into the database."""
+        target_parent = parent_widget
+        if target_parent is None:
+            from PyQt6.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app:
+                target_parent = app.activeWindow()
+
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            target_parent,
+            t("cheatsheet.import_dialog_title", "Import Snippets"),
+            "",
+            t(
+                "cheatsheet.import_filter",
+                "Snippet Files (*.json *.md);;JSON Files (*.json);;Markdown Files (*.md);;All Files (*)",
+            ),
+        )
+        if not file_paths:
+            return False
+
+        total_imported = 0
+        errors: List[str] = []
+
+        for fpath_str in file_paths:
+            fpath = Path(fpath_str)
+            try:
+                count = self.snippet_manager.import_snippets_file(fpath)
+                total_imported += count
+            except Exception as e:
+                logger.error(f"Error importing snippets from {fpath}: {e}", exc_info=True)
+                errors.append(f"{fpath.name}: {e}")
+
+        if errors:
+            show_error_dialog(
+                target_parent,
+                t("dialog.error", "Error"),
+                t(
+                    "cheatsheet.import_error",
+                    "Failed to import snippets:\n{error}",
+                    error="\n".join(errors),
+                ),
+            )
+
+        if total_imported > 0 or not errors:
+            self.snippets_updated.emit()
+            self.event_bus.publish(
+                EventType.SNIPPETS_UPDATED,
+                {"action": "import", "count": total_imported},
+            )
+            show_information_dialog(
+                target_parent,
+                t("dialog.success", "Success"),
+                t(
+                    "cheatsheet.import_success",
+                    "{count} snippet(s) imported successfully.",
+                    count=total_imported,
+                ),
+            )
+            return True
+
+        return False
+
     # ------------------------------------------------------------------ #
     # Cache & View Stash Management
     # ------------------------------------------------------------------ #
@@ -616,9 +682,7 @@ class CheatsheetController(QObject):
         self._cache_cards = list(cards)
         self._cache_widgets = list(detached_widgets)
 
-    def discard_cache(
-        self, discard_fn: Optional[Callable[[List[QWidget]], None]] = None
-    ) -> None:
+    def discard_cache(self, discard_fn: Optional[Callable[[List[QWidget]], None]] = None) -> None:
         """Discards stashed widgets safely, invoking discard_fn on detached widgets if provided."""
         if self._cache_widgets and discard_fn is not None:
             discard_fn(self._cache_widgets)

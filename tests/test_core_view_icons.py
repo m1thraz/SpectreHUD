@@ -60,9 +60,7 @@ def test_snippet_copy_feedback_timer_is_owned_by_card(qapp):
 
 
 def test_loot_card_uses_icons_for_card_actions(qapp):
-    card = LootCard(
-        {"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"}
-    )
+    card = LootCard({"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"})
 
     for button in (
         card.btn_edit,
@@ -82,15 +80,15 @@ def test_quick_note_card_keeps_only_primary_and_copy_actions_visible(qapp):
     for button in (card.btn_complete, card.btn_copy):
         _assert_icon_only(button)
 
-    context_actions = [action for action in card._build_context_menu().actions() if not action.isSeparator()]
+    context_actions = [
+        action for action in card._build_context_menu().actions() if not action.isSeparator()
+    ]
     assert context_actions
     assert all(not action.icon().isNull() for action in context_actions)
 
 
 def test_history_card_uses_icons_and_keeps_capture_text(qapp):
-    card = HistoryCard(
-        {"id": "history-1", "text": "id", "timestamp": "12:00", "char_count": 2}
-    )
+    card = HistoryCard({"id": "history-1", "text": "id", "timestamp": "12:00", "char_count": 2})
 
     _assert_icon_only(card.btn_copy)
     assert card.btn_promote.text()
@@ -117,7 +115,9 @@ def test_contextual_core_view_actions_use_icon_plus_text(qapp):
     )
     pills_host = QWidget()
     pills_layout = QHBoxLayout(pills_host)
-    history.build_filter_pills(pills_layout, lambda _filter: None, lambda: None, lambda: None, "Export")
+    history.build_filter_pills(
+        pills_layout, lambda _filter: None, lambda: None, lambda: None, "Export"
+    )
     contextual = [
         button
         for button in pills_host.findChildren(QPushButton)

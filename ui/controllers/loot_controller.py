@@ -390,9 +390,7 @@ class LootController(QObject):
     ) -> None:
         self.filter_buttons.clear()
         counts = self.loot_manager.get_type_counts(target_ip=None)
-        all_btn = QPushButton(
-            t("filter.all_loot", "All ({count})", count=counts.get("all", 0))
-        )
+        all_btn = QPushButton(t("filter.all_loot", "All ({count})", count=counts.get("all", 0)))
         all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         all_btn.setProperty(
             "class", "FilterPillActive" if self.current_loot_type == "all" else "FilterPill"
@@ -679,7 +677,6 @@ class LootController(QObject):
             # Enable click-outside-to-close now that initial focus is set
             dlg.dismiss_on_deactivate = True
             return True
-
 
         dlg = AddLootDialog(
             parent=parent_widget,

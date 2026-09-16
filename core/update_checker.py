@@ -42,9 +42,10 @@ def _version_tuple(version: str) -> tuple[int, int, int]:
     return (int(match.group("major")), int(match.group("minor")), int(match.group("patch")))
 
 
-
 def _preferred_asset_url(release: Mapping[str, Any], platform_name: str) -> Optional[str]:
-    suffix = ".exe" if platform_name == "win32" else ".deb" if platform_name.startswith("linux") else ""
+    suffix = (
+        ".exe" if platform_name == "win32" else ".deb" if platform_name.startswith("linux") else ""
+    )
     if not suffix:
         return None
     for asset in release.get("assets", []):

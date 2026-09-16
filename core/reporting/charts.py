@@ -15,9 +15,7 @@ def render_severity_badge(severity: str, *, include_emoji: bool = False) -> str:
         "low": ("🟢", "LOW", "severity-low"),
         "info": ("🔵", "INFO", "severity-info"),
     }
-    emoji, label, css_class = mapping.get(
-        sev_clean, ("", severity.upper(), "severity-medium")
-    )
+    emoji, label, css_class = mapping.get(sev_clean, ("", severity.upper(), "severity-medium"))
     if include_emoji and emoji:
         label = f"{emoji} {label}"
     return f'<span class="severity-pill {css_class}">{html.escape(label)}</span>'
@@ -26,12 +24,7 @@ def render_severity_badge(severity: str, *, include_emoji: bool = False) -> str:
 def render_metrics_summary(critical: int = 0, high: int = 0, medium: int = 0, low: int = 0) -> str:
     """Renders a formatted metrics summary row."""
     counts = render_severity_counts(critical, high, medium, low)
-    return (
-        f'<div class="meta-item">'
-        f"<strong>Findings:</strong> "
-        f"{counts}"
-        f"</div>"
-    )
+    return f'<div class="meta-item"><strong>Findings:</strong> {counts}</div>'
 
 
 def render_severity_counts(critical: int, high: int, medium: int, low: int) -> str:

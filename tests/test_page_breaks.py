@@ -29,6 +29,7 @@ from ui.report.preview_transforms import (
     strip_preview_surrogates,
 )
 
+
 class TestPageBreakConversion(unittest.TestCase):
     """Test markdown conversion of pagebreak markers."""
 

@@ -11,6 +11,7 @@ from ui.settings_dialog import (
     AppearanceSettingsPage,
 )
 
+
 class TestSettingsDialog(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
@@ -219,7 +220,9 @@ class TestSettingsDialog(unittest.TestCase):
         )
         page = HotkeySettingsPage(self.config_manager, capabilities=wayland_caps)
         labels = [lbl.text() for lbl in page.findChildren(QLabel)]
-        self.assertTrue(any("Wayland" in text or "Globale" in text or "Global" in text for text in labels))
+        self.assertTrue(
+            any("Wayland" in text or "Globale" in text or "Global" in text for text in labels)
+        )
 
     def test_settings_dialog_applies_transparency_only_on_save(self):
         """Transparency sliders update settings applied only upon saving."""

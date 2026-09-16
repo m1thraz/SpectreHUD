@@ -24,13 +24,16 @@ from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
     build_professional_cover_data,
+    extract_report_title,
     normalize_professional_severity,
     normalize_professional_timestamps,
     professional_section_has_meaningful_content,
     prune_professional_section_html,
+    prune_unstructured_header_metadata_html,
     renumber_professional_heading,
     render_professional_cover,
     strip_professional_generator_footer,
+    synchronize_professional_findings_matrix,
 )
 from core.reporting.findings import (
     convert_markdown_with_findings,
@@ -72,7 +75,7 @@ class HtmlReportExporter:
 
     @classmethod
     def _professional_body_html(
-        cls, markdown_content: str, project_dir: Optional[Path]
+        cls, markdown_content: str, project_dir: Optional[Path], language: str
     ) -> str:
         markdown_content = strip_professional_generator_footer(markdown_content)
         embedded_markdown = resolve_and_embed_images(markdown_content, project_dir)
@@ -88,6 +91,10 @@ class HtmlReportExporter:
         }
         html_segments = []
         segments = segment_report_markdown(embedded_markdown)
+        has_structured_header = any(
+            segment.is_structured and segment.section_type == "header_metadata"
+            for segment in segments
+        )
         uses_phase_narrative = any(
             segment.is_structured and segment.section_type == "phase_section"
             for segment in segments
@@ -99,6 +106,10 @@ class HtmlReportExporter:
             ):
                 continue
             segment_markdown = segment.markdown
+            if segment.section_type == "executive_summary":
+                segment_markdown = synchronize_professional_findings_matrix(
+                    segment_markdown, markdown_content, language
+                )
             if segment.is_structured and not uses_phase_narrative:
                 renumbered, changed = renumber_professional_heading(
                     segment_markdown, visible_number + 1
@@ -110,18 +121,21 @@ class HtmlReportExporter:
                 strip_section_markers(segment_markdown), project_dir=None
             )
             if not segment.is_structured:
-                html_segments.append(body)
+                if not has_structured_header:
+                    body = prune_unstructured_header_metadata_html(body)
+                if body.strip():
+                    html_segments.append(body)
                 continue
             body = prune_professional_section_html(segment.section_type, body)
+            if not body.strip():
+                continue
             table_class = {
                 "executive_summary": "findings-matrix",
                 "remediation_table": "action-plan",
             }.get(segment.section_type)
             if table_class:
                 body = body.replace("<table>", f'<table class="{table_class}">', 1)
-            phase_attr = (
-                f' data-phase="{segment.category_id}"' if segment.category_id else ""
-            )
+            phase_attr = f' data-phase="{segment.category_id}"' if segment.category_id else ""
             html_segments.append(
                 f'<section class="report-section {class_names[segment.section_type]}"'
                 f"{phase_attr}>{body}</section>"
@@ -145,11 +159,17 @@ class HtmlReportExporter:
         """Generates the full, styled HTML document ready for export."""
         active_profile = ReportExportProfile(profile)
         body_html = (
-            cls._professional_body_html(markdown_content, project_dir)
+            cls._professional_body_html(markdown_content, project_dir, language)
             if active_profile is ReportExportProfile.PROFESSIONAL_PRINT
             else convert_markdown_with_findings(markdown_content, project_dir=project_dir)
         )
-        pname = project_name or (project_dir.name if project_dir else "Target")
+        title_from_md = extract_report_title(markdown_content)
+        pname = (
+            project_name
+            or (project_dir.name if project_dir else None)
+            or title_from_md
+            or "Target"
+        )
         cover_data = None
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
             cover_data = build_professional_cover_data(
@@ -214,9 +234,7 @@ class HtmlReportExporter:
                 )
             bytes_written = out.stat().st_size if out.exists() else len(full_html.encode("utf-8"))
             return ExportResult.success(
-                artifacts=(
-                    ExportArtifact(path=out, format="html", bytes_written=bytes_written),
-                )
+                artifacts=(ExportArtifact(path=out, format="html", bytes_written=bytes_written),)
             )
         except OSError as e:
             logger.error(f"Failed to write HTML report to {out}: {e}", exc_info=True)

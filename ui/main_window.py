@@ -396,7 +396,11 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         try:
-            if hasattr(self, "app") and hasattr(self.app, "shortcuts_dialog") and self.app.shortcuts_dialog:
+            if (
+                hasattr(self, "app")
+                and hasattr(self.app, "shortcuts_dialog")
+                and self.app.shortcuts_dialog
+            ):
                 self.app.shortcuts_dialog.close()
         except Exception:
             pass

@@ -246,17 +246,13 @@ class ObsidianExporter:
         except OSError as exc:
             raise ExternalExportError(f"Could not write Obsidian report: {note_path}") from exc
 
-        note_size = (
-            note_path.stat().st_size if note_path.exists() else len(content.encode("utf-8"))
-        )
+        note_size = note_path.stat().st_size if note_path.exists() else len(content.encode("utf-8"))
         artifacts = [
             ExportArtifact(path=note_path, format="markdown", bytes_written=note_size),
         ]
         for att in attachments:
             att_size = att.stat().st_size if att.exists() else 0
-            artifacts.append(
-                ExportArtifact(path=att, format="attachment", bytes_written=att_size)
-            )
+            artifacts.append(ExportArtifact(path=att, format="attachment", bytes_written=att_size))
 
         return ExportResult.success(
             artifacts=tuple(artifacts),
@@ -349,9 +345,7 @@ class ObsidianExporter:
                 raise ExternalExportError("Could not append loot to the Obsidian note.") from exc
         target_size = target.stat().st_size if target.exists() else 0
         return ExportResult.success(
-            artifacts=(
-                ExportArtifact(path=target, format="markdown", bytes_written=target_size),
-            ),
+            artifacts=(ExportArtifact(path=target, format="markdown", bytes_written=target_size),),
             skipped_entry_ids=skipped,
             metadata={"obsidian_uri": self.build_open_uri(target)},
         )

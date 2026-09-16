@@ -17,7 +17,6 @@ from core.reporting.template_engine import (
 )
 
 
-
 class TestTemplateEngine(unittest.TestCase):
     """Unit tests for the modular Report Template Engine and section renderers."""
 
@@ -89,13 +88,19 @@ class TestTemplateEngine(unittest.TestCase):
     def test_render_executive_summary_metrics(self):
         sec = TemplateSection(type="executive_summary")
         out = _render_executive_summary(sec, self.context, "de")
-        self.assertIn(
-            '<span class="severity-pill severity-critical">CRITICAL</span> 1', out
-        )
+        self.assertIn('<span class="severity-pill severity-critical">CRITICAL</span> 1', out)
         self.assertIn('<span class="severity-pill severity-high">HIGH</span> 1', out)
         self.assertNotRegex(out, "[🔴🟠🟡🟢🔵]")
         self.assertIn("Domain Admin Credentials", out)
         self.assertIn("CRITICAL", out)
+
+    def test_generated_matrix_uses_loot_finding_status(self):
+        entry = dict(self.sample_loot[0], finding_status="in_progress")
+        context = ReportContext(loot_entries=[entry], clipboard_history=[])
+        summary = _render_executive_summary(
+            TemplateSection(type="executive_summary"), context, "en"
+        )
+        self.assertIn("| In Progress |", summary)
 
     def test_evidence_only_loot_is_not_rendered_as_a_standalone_finding(self):
         evidence_only = dict(
@@ -111,12 +116,8 @@ class TestTemplateEngine(unittest.TestCase):
         summary = _render_executive_summary(
             TemplateSection(type="executive_summary"), context, "en"
         )
-        findings = _render_finding_section(
-            TemplateSection(type="finding_section"), context, "en"
-        )
-        appendix = _render_appendix(
-            TemplateSection(type="appendix"), context, "en"
-        )
+        findings = _render_finding_section(TemplateSection(type="finding_section"), context, "en")
+        appendix = _render_appendix(TemplateSection(type="appendix"), context, "en")
 
         self.assertNotIn("Supporting screenshot only", summary)
         self.assertNotIn("Supporting screenshot only", findings)
@@ -140,9 +141,7 @@ class TestTemplateEngine(unittest.TestCase):
             options={"include_recommendations": False},
         )
         context = ReportContext(
-            loot_entries=[
-                dict(self.sample_loot[0], recommendation="Rotate these credentials.")
-            ]
+            loot_entries=[dict(self.sample_loot[0], recommendation="Rotate these credentials.")]
         )
 
         rendered = _render_phase_section(section, context, "en")
@@ -256,8 +255,7 @@ class TestTemplateEngine(unittest.TestCase):
         entry = dict(
             self.sample_loot[0],
             recommendation=(
-                "Rotate the exposed credentials.\n\n"
-                "```bash\npasswd administrator\n```"
+                "Rotate the exposed credentials.\n\n```bash\npasswd administrator\n```"
             ),
         )
 

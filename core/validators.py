@@ -119,9 +119,7 @@ def validate_loot_entry(entry: Any) -> Optional[Dict[str, Any]]:
     severity = raw_sev if raw_sev in VALID_SEVERITIES else "info"
     title = str(entry.get("title") or "Unbenannter Eintrag").strip()[:MAX_TITLE_LENGTH]
     content = str(entry.get("content") or "").strip()[:MAX_CONTENT_LENGTH]
-    recommendation = str(entry.get("recommendation") or "").strip()[
-        :MAX_RECOMMENDATION_LENGTH
-    ]
+    recommendation = str(entry.get("recommendation") or "").strip()[:MAX_RECOMMENDATION_LENGTH]
     from core.loot import (
         normalize_finding_metadata,
         normalize_report_role,
@@ -333,9 +331,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
         "clipboard_history": validate_clipboard_list(data.get("clipboard_history")),
         "quick_notes": validate_quick_notes_list(data.get("quick_notes")),
         "active_phase": (
-            str(data.get("active_phase")).strip().lower()
-            if data.get("active_phase")
-            else None
+            str(data.get("active_phase")).strip().lower() if data.get("active_phase") else None
         ),
     }
 

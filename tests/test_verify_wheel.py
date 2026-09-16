@@ -24,6 +24,7 @@ def test_clipboard_history_and_monitor_are_required_instead_of_legacy_watcher():
 def test_wheel_verifier_uses_the_current_release_version():
     """Stale wheels must not be selected from a reused dist directory."""
     from core.cli import APP_VERSION
+
     assert get_project_version() == APP_VERSION
 
 

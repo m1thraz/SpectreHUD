@@ -106,7 +106,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
                 self.assertFalse(self.coord._unlock_project_if_needed("Box1", None))
 
         # 3. Security meta error -> critical messagebox
-        with patch.object(self.project_mgr, "is_pentest_mode", side_effect=ProjectSecurityMetaError("corrupted")):
+        with patch.object(
+            self.project_mgr, "is_pentest_mode", side_effect=ProjectSecurityMetaError("corrupted")
+        ):
             with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
                 res = self.coord._unlock_project_if_needed("Box1", self.window)
                 self.assertFalse(res)
@@ -137,23 +139,21 @@ class TestWorkspaceCoordinator(unittest.TestCase):
                         return attempts.pop(0)
 
                     with patch.object(self.project_mgr, "unlock_project", side_effect=fake_unlock):
-                        with patch("ui.coordinators.workspace_coordinator.show_warning_dialog") as mock_warn:
+                        with patch(
+                            "ui.coordinators.workspace_coordinator.show_warning_dialog"
+                        ) as mock_warn:
                             res = self.coord._unlock_project_if_needed("Box1", self.window)
                             self.assertTrue(res)
                             mock_warn.assert_called_once()
 
     def test_switch_to_project_same_project_no_op(self):
         """switch_to_project returns False if switching to currently active project."""
-        self.assertFalse(
-            self.coord.switch_to_project("Box1", self.window, lambda: {})
-        )
+        self.assertFalse(self.coord.switch_to_project("Box1", self.window, lambda: {}))
 
     def test_switch_to_project_dirty_report_rejected(self):
         """switch_to_project returns False if user declines discarding dirty report."""
         self.report_ctrl.confirm_discard_if_dirty.return_value = False
-        self.assertFalse(
-            self.coord.switch_to_project("Box2", self.window, lambda: {})
-        )
+        self.assertFalse(self.coord.switch_to_project("Box2", self.window, lambda: {}))
 
     def test_switch_to_project_save_failure_dialog(self):
         """switch_to_project prompts user when saving previous project state fails."""
@@ -162,13 +162,19 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         )
 
         # User cancels switch
-        with patch("ui.coordinators.workspace_coordinator.QMessageBox.exec", return_value=QMessageBox.StandardButton.Cancel):
+        with patch(
+            "ui.coordinators.workspace_coordinator.QMessageBox.exec",
+            return_value=QMessageBox.StandardButton.Cancel,
+        ):
             res = self.coord.switch_to_project("Box2", self.window, lambda: {})
             self.assertFalse(res)
             self.project_ctrl.update_project_combo.assert_called_once()
 
         # User confirms switch (Yes)
-        with patch("ui.coordinators.workspace_coordinator.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes):
+        with patch(
+            "ui.coordinators.workspace_coordinator.QMessageBox.exec",
+            return_value=QMessageBox.StandardButton.Yes,
+        ):
             res = self.coord.switch_to_project("Box2", self.window, lambda: {})
             self.assertTrue(res)
             self.assertEqual(self.project_mgr.active_project, "Box2")
@@ -212,16 +218,22 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         self.assertEqual(callbacks, ["Box2"])
         self.assertEqual(signal_projects, ["Box2"])
         self.assertEqual(len(events), 1)
-        self.assertEqual(
-            events[0], ProjectChangedPayload(project_name="Box2", phase="loaded")
-        )
+        self.assertEqual(events[0], ProjectChangedPayload(project_name="Box2", phase="loaded"))
 
     def test_apply_workspace_setting_invalid_path(self):
         """apply_workspace_setting shows warning on invalid workspace path."""
-        with patch("ui.coordinators.workspace_coordinator.validate_workspace_directory", side_effect=WorkspaceError("invalid")):
+        with patch(
+            "ui.coordinators.workspace_coordinator.validate_workspace_directory",
+            side_effect=WorkspaceError("invalid"),
+        ):
             with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_warn:
                 res = self.coord.apply_workspace_setting(
-                    "/invalid/path", self.config, self.window, lambda: None, lambda: None, lambda: None
+                    "/invalid/path",
+                    self.config,
+                    self.window,
+                    lambda: None,
+                    lambda: None,
+                    lambda: None,
                 )
                 self.assertFalse(res)
                 mock_warn.assert_called_once()
@@ -286,7 +298,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         self.coord.show_project_menu(btn, self.window, lambda p: None, lambda: None)
         self.project_ctrl.show_project_menu.assert_called_once()
 
-        self.coord.open_new_project_dialog(self.window, "10.10.10.1", "10.10.14.2", "4444", lambda p: None)
+        self.coord.open_new_project_dialog(
+            self.window, "10.10.10.1", "10.10.14.2", "4444", lambda p: None
+        )
         self.project_ctrl.open_new_project_dialog.assert_called_once()
 
     def test_switch_to_project_missing_folder_prompt(self):
@@ -295,7 +309,10 @@ class TestWorkspaceCoordinator(unittest.TestCase):
             PersistFailureReason.IO_ERROR
         )
         with patch.object(self.project_mgr, "project_exists", return_value=False):
-            with patch("ui.coordinators.workspace_coordinator.QMessageBox.exec", return_value=QMessageBox.StandardButton.Cancel):
+            with patch(
+                "ui.coordinators.workspace_coordinator.QMessageBox.exec",
+                return_value=QMessageBox.StandardButton.Cancel,
+            ):
                 res = self.coord.switch_to_project("Box2", self.window, lambda: {})
                 self.assertFalse(res)
 
@@ -319,11 +336,15 @@ class TestWorkspaceCoordinator(unittest.TestCase):
                     mock_dlg.exec.return_value = 0
                     MockDlg.return_value = mock_dlg
 
-                    with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_err:
+                    with patch(
+                        "ui.coordinators.workspace_coordinator.show_error_dialog"
+                    ) as mock_err:
                         res = self.coord.switch_to_project("Box2", self.window, lambda: {})
 
                     self.assertFalse(res)
-                    self.assertEqual(res.failure_reason, WorkspaceSwitchFailureReason.UNLOCK_CANCELLED)
+                    self.assertEqual(
+                        res.failure_reason, WorkspaceSwitchFailureReason.UNLOCK_CANCELLED
+                    )
                     self.assertTrue(res.rollback_performed)
                     self.assertEqual(self.project_mgr.active_project, "Box1")
                     self.project_ctrl.update_project_combo.assert_called()
@@ -335,7 +356,9 @@ class TestWorkspaceCoordinator(unittest.TestCase):
         new_dir.mkdir()
 
         with patch.object(self.config, "set", side_effect=Exception("switch error")):
-            with patch.object(self.project_mgr, "activate_project", side_effect=Exception("restore error")):
+            with patch.object(
+                self.project_mgr, "activate_project", side_effect=Exception("restore error")
+            ):
                 with patch("ui.coordinators.workspace_coordinator.show_error_dialog") as mock_crit:
                     res = self.coord.apply_workspace_setting(
                         str(new_dir),

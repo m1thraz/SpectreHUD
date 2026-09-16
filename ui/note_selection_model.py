@@ -19,7 +19,6 @@ class NoteSelectionModel:
     def __contains__(self, entry_id: object) -> bool:
         return entry_id in self._selected_ids
 
-
     def set_selected(self, entry_id: str, selected: bool) -> None:
         if selected:
             self._selected_ids.add(entry_id)

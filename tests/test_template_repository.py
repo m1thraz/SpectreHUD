@@ -90,12 +90,8 @@ class TestTemplateRepository(unittest.TestCase):
 
     def test_pentest_and_ctf_templates_have_distinct_narratives(self):
         builtins = {template.id: template for template in self.repo.get_builtin_templates()}
-        standard_types = [
-            section.type for section in builtins["pentest_standard_en"].sections
-        ]
-        executive_types = [
-            section.type for section in builtins["pentest_executive_en"].sections
-        ]
+        standard_types = [section.type for section in builtins["pentest_standard_en"].sections]
+        executive_types = [section.type for section in builtins["pentest_executive_en"].sections]
 
         self.assertEqual(
             standard_types,

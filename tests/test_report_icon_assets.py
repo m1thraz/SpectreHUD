@@ -18,7 +18,6 @@ def test_render_report_icon_creates_valid_project_png(tmp_path):
     assert image.width() == image.height() == 32
 
 
-
 @pytest.mark.parametrize(
     ("icon_name", "variant"),
     (("missing-dot", None), ("fa5s.definitely-not-an-icon", None), ("fa5s.key", "theme")),

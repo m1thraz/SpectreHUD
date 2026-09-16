@@ -44,7 +44,9 @@ class ReportAppendix:
         if has_subsections:
             sections = re.split(r"^###\s+", markdown, flags=re.MULTILINE)
             preamble = sections[0]
-            preamble_lines = [line_text for line_text in preamble.splitlines() if not line_text.startswith("## ")]
+            preamble_lines = [
+                line_text for line_text in preamble.splitlines() if not line_text.startswith("## ")
+            ]
             if any(line_text.strip() for line_text in preamble_lines):
                 notes_lines.append("\n".join(preamble_lines).strip())
 
@@ -56,24 +58,43 @@ class ReportAppendix:
                 sec_body = "\n".join(sec_lines[1:]).strip()
 
                 if any(k in header for k in ("anhang a", "appendix a", "befehl", "command")):
-                    code_matches = list(re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", sec_body, re.DOTALL))
+                    code_matches = list(
+                        re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", sec_body, re.DOTALL)
+                    )
                     last_idx = 0
                     for idx, m in enumerate(code_matches, start=1):
-                        preceding = sec_body[last_idx:m.start()].strip()
+                        preceding = sec_body[last_idx : m.start()].strip()
                         last_idx = m.end()
                         caption = ""
                         if preceding:
-                            lines_prec = [line_text.strip() for line_text in preceding.splitlines() if line_text.strip()]
+                            lines_prec = [
+                                line_text.strip()
+                                for line_text in preceding.splitlines()
+                                if line_text.strip()
+                            ]
                             if lines_prec:
                                 last_line = lines_prec[-1]
-                                m_cap = re.match(r"^(?:####|\*\*|#+)\s*(.+?)(?:\*\*|#*)?$", last_line)
+                                m_cap = re.match(
+                                    r"^(?:####|\*\*|#+)\s*(.+?)(?:\*\*|#*)?$", last_line
+                                )
                                 if m_cap:
                                     caption = m_cap.group(1).strip()
-                                elif not last_line.startswith(("-", "*", "|")) and len(last_line) < 80:
+                                elif (
+                                    not last_line.startswith(("-", "*", "|"))
+                                    and len(last_line) < 80
+                                ):
                                     caption = last_line.strip("*_#`").strip()
                         lang = m.group(1) or ""
                         code = m.group(2) or ""
-                        t_type = "terminal" if (not lang or lang in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")) else "code"
+                        t_type = (
+                            "terminal"
+                            if (
+                                not lang
+                                or lang
+                                in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")
+                            )
+                            else "code"
+                        )
                         command_snippets.append(
                             ReportEvidenceItem(
                                 id=f"cmd_{idx}",
@@ -84,7 +105,17 @@ class ReportAppendix:
                             )
                         )
 
-                elif any(k in header for k in ("anhang b", "appendix b", "screenshot", "nachweis", "evidence", "bild")):
+                elif any(
+                    k in header
+                    for k in (
+                        "anhang b",
+                        "appendix b",
+                        "screenshot",
+                        "nachweis",
+                        "evidence",
+                        "bild",
+                    )
+                ):
                     imgs = re.findall(r"!\[(.*?)\]\((.*?)\)", sec_body)
                     for idx, (cap, path) in enumerate(imgs, start=1):
                         screenshots.append(
@@ -96,7 +127,18 @@ class ReportAppendix:
                             )
                         )
 
-                elif any(k in header for k in ("anhang c", "appendix c", "rohdaten", "notiz", "raw", "note", "ergänzend")):
+                elif any(
+                    k in header
+                    for k in (
+                        "anhang c",
+                        "appendix c",
+                        "rohdaten",
+                        "notiz",
+                        "raw",
+                        "note",
+                        "ergänzend",
+                    )
+                ):
                     if sec_body:
                         notes_lines.append(sec_body)
                 else:
@@ -114,11 +156,20 @@ class ReportAppendix:
                     )
                 )
 
-            code_matches = list(re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", markdown, re.DOTALL))
+            code_matches = list(
+                re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", markdown, re.DOTALL)
+            )
             for idx, m in enumerate(code_matches, start=1):
                 lang = m.group(1) or ""
                 code = m.group(2) or ""
-                t_type = "terminal" if (not lang or lang in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")) else "code"
+                t_type = (
+                    "terminal"
+                    if (
+                        not lang
+                        or lang in ("bash", "sh", "shell", "powershell", "cmd", "batch", "zsh")
+                    )
+                    else "code"
+                )
                 command_snippets.append(
                     ReportEvidenceItem(
                         id=f"cmd_{idx}",
@@ -131,7 +182,9 @@ class ReportAppendix:
 
             clean_text = re.sub(r"^##\s+.*$", "", markdown, flags=re.MULTILINE)
             clean_text = re.sub(r"!\[.*?\]\(.*?\)", "", clean_text)
-            clean_text = re.sub(r"```[a-zA-Z0-9_-]*\r?\n.*?\r?\n```", "", clean_text, flags=re.DOTALL)
+            clean_text = re.sub(
+                r"```[a-zA-Z0-9_-]*\r?\n.*?\r?\n```", "", clean_text, flags=re.DOTALL
+            )
             if clean_text.strip():
                 notes_lines.append(clean_text.strip())
 
@@ -154,7 +207,9 @@ class ReportAppendix:
             if self.commands_markdown or self.screenshots_markdown:
                 if self.commands_markdown:
                     lines.append(
-                        "### Anhang A: Ausgeführte Befehle" if language == "de" else "### Appendix A: Command History"
+                        "### Anhang A: Ausgeführte Befehle"
+                        if language == "de"
+                        else "### Appendix A: Command History"
                     )
                     lines.append("")
                     lines.append(self.commands_markdown.strip())
@@ -169,13 +224,21 @@ class ReportAppendix:
                     lines.append(self.screenshots_markdown.strip())
                     lines.append("")
                 return "\n".join(lines).strip()
-            empty_msg = "*Keine Anhänge oder Nachweise erfasst.*" if language == "de" else "*No appendices or evidence recorded.*"
+            empty_msg = (
+                "*Keine Anhänge oder Nachweise erfasst.*"
+                if language == "de"
+                else "*No appendices or evidence recorded.*"
+            )
             lines.append(empty_msg)
             lines.append("")
             return "\n".join(lines).strip()
 
         # Section A: Commands
-        title_a = "### Anhang A: Ausgeführte Befehle" if language == "de" else "### Appendix A: Executed Commands"
+        title_a = (
+            "### Anhang A: Ausgeführte Befehle"
+            if language == "de"
+            else "### Appendix A: Executed Commands"
+        )
         lines.append(title_a)
         lines.append("")
         if self.command_snippets:
@@ -186,12 +249,20 @@ class ReportAppendix:
                 lines.append(f"```{lang}\n{item.content.strip()}\n```")
                 lines.append("")
         else:
-            msg = "*Keine Befehlsprotokolle hinterlegt.*" if language == "de" else "*No command logs recorded.*"
+            msg = (
+                "*Keine Befehlsprotokolle hinterlegt.*"
+                if language == "de"
+                else "*No command logs recorded.*"
+            )
             lines.append(msg)
             lines.append("")
 
         # Section B: Screenshots
-        title_b = "### Anhang B: Screenshots & Nachweise" if language == "de" else "### Appendix B: Screenshots & Evidence"
+        title_b = (
+            "### Anhang B: Screenshots & Nachweise"
+            if language == "de"
+            else "### Appendix B: Screenshots & Evidence"
+        )
         lines.append(title_b)
         lines.append("")
         if self.screenshots:
@@ -200,13 +271,21 @@ class ReportAppendix:
                 lines.append(f"![{cap}]({item.content})")
                 lines.append("")
         else:
-            msg = "*Keine Screenshots oder Nachweise hinterlegt.*" if language == "de" else "*No screenshots or evidence recorded.*"
+            msg = (
+                "*Keine Screenshots oder Nachweise hinterlegt.*"
+                if language == "de"
+                else "*No screenshots or evidence recorded.*"
+            )
             lines.append(msg)
             lines.append("")
 
         # Section C: Notes / Raw Data
         if self.custom_notes.strip():
-            title_c = "### Anhang C: Ergänzende Rohdaten & Notizen" if language == "de" else "### Appendix C: Supplementary Raw Data & Notes"
+            title_c = (
+                "### Anhang C: Ergänzende Rohdaten & Notizen"
+                if language == "de"
+                else "### Appendix C: Supplementary Raw Data & Notes"
+            )
             lines.append(title_c)
             lines.append("")
             lines.append(self.custom_notes.strip())

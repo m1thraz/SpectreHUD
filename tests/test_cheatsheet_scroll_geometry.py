@@ -170,7 +170,10 @@ def test_wrapped_commands_receive_their_full_height(cheatsheet_window, width):
             label = card.lbl_command
             required = label.heightForWidth(label.width())
             assert label.height() >= required, (
-                card.snippet.get("title"), label.width(), label.height(), required
+                card.snippet.get("title"),
+                label.width(),
+                label.height(),
+                required,
             )
 
 

@@ -79,9 +79,7 @@ class ExportCoordinator(QObject):
             target.stat().st_size if target.exists() else len(clean_markdown.encode("utf-8"))
         )
         return ExportResult.success(
-            artifacts=(
-                ExportArtifact(path=target, format="markdown", bytes_written=bytes_written),
-            )
+            artifacts=(ExportArtifact(path=target, format="markdown", bytes_written=bytes_written),)
         )
 
     def export_report_html(
@@ -123,9 +121,7 @@ class ExportCoordinator(QObject):
             return res
         bytes_written = target.stat().st_size if target.exists() else 0
         return ExportResult.success(
-            artifacts=(
-                ExportArtifact(path=target, format="html", bytes_written=bytes_written),
-            )
+            artifacts=(ExportArtifact(path=target, format="html", bytes_written=bytes_written),)
         )
 
     def export_report_to_cherrytree(
@@ -326,11 +322,7 @@ class ExportCoordinator(QObject):
 
         if status is ExportStatus.FAILED:
             err = getattr(result, "error", None)
-            err_msg = (
-                getattr(err, "message", None)
-                if err
-                else "Export failed"
-            )
+            err_msg = getattr(err, "message", None) if err else "Export failed"
             details = getattr(err, "details", None) if err else None
             show_error_dialog(window, title, str(err_msg), details=details)
             return

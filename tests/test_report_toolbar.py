@@ -8,31 +8,34 @@ from PyQt6.QtGui import QIcon
 
 from ui.report.toolbar import build_format_toolbar
 
+
 class TestReportToolbar(unittest.TestCase):
     def setUp(self):
         self.callbacks = {f"heading_{i}": MagicMock() for i in range(1, 7)}
-        self.callbacks.update({
-            "bold": MagicMock(),
-            "italic": MagicMock(),
-            "strikethrough": MagicMock(),
-            "code": MagicMock(),
-            "code_block": MagicMock(),
-            "list": MagicMock(),
-            "numbered_list": MagicMock(),
-            "quote": MagicMock(),
-            "horizontal_rule": MagicMock(),
-            "image": MagicMock(),
-            "icon": MagicMock(),
-            "link": MagicMock(),
-            "table": MagicMock(),
-            "align_left": MagicMock(),
-            "align_center": MagicMock(),
-            "align_right": MagicMock(),
-            "page_break": MagicMock(),
-            "spacer_small": MagicMock(),
-            "spacer_medium": MagicMock(),
-            "spacer_large": MagicMock(),
-        })
+        self.callbacks.update(
+            {
+                "bold": MagicMock(),
+                "italic": MagicMock(),
+                "strikethrough": MagicMock(),
+                "code": MagicMock(),
+                "code_block": MagicMock(),
+                "list": MagicMock(),
+                "numbered_list": MagicMock(),
+                "quote": MagicMock(),
+                "horizontal_rule": MagicMock(),
+                "image": MagicMock(),
+                "icon": MagicMock(),
+                "link": MagicMock(),
+                "table": MagicMock(),
+                "align_left": MagicMock(),
+                "align_center": MagicMock(),
+                "align_right": MagicMock(),
+                "page_break": MagicMock(),
+                "spacer_small": MagicMock(),
+                "spacer_medium": MagicMock(),
+                "spacer_large": MagicMock(),
+            }
+        )
         self.toolbar = build_format_toolbar(None, self.callbacks)
 
     def tearDown(self):
@@ -170,7 +173,6 @@ class TestReportToolbar(unittest.TestCase):
 
         btn_right.click()
         self.callbacks["align_right"].assert_called_once()
-
 
     def test_toggle_button_collapses_and_expands_tools(self):
         """Verifies clicking the toggle button collapses and expands the formatting tools."""

@@ -37,7 +37,6 @@ class TestWorkflowRobustness(unittest.TestCase):
         self.config_dir = self.temp_path / "config"
         self.projects_dir = self.temp_path / "projects"
 
-
         self.config_mgr = ConfigManager(config_dir=self.config_dir)
         self.project_mgr = ProjectManager(base_dir=self.projects_dir)
         self.loot_mgr = LootManager()
@@ -58,9 +57,7 @@ class TestWorkflowRobustness(unittest.TestCase):
 
         self.session_service.load_project_session("BoxRapidOne")
         self.clip_watcher.add_entry("first-project-command", persist=False)
-        self.assertTrue(
-            self.session_service.save_project_session({}, "BoxRapidOne").success
-        )
+        self.assertTrue(self.session_service.save_project_session({}, "BoxRapidOne").success)
 
         for iteration in range(3):
             self.session_service.load_project_session("BoxRapidTwo")
@@ -69,9 +66,7 @@ class TestWorkflowRobustness(unittest.TestCase):
                 [entry["text"] for entry in self.clip_watcher.get_all_history()], expected_history
             )
             self.clip_watcher.add_entry("second-project-command", persist=False)
-            self.assertTrue(
-                self.session_service.save_project_session({}, "BoxRapidTwo").success
-            )
+            self.assertTrue(self.session_service.save_project_session({}, "BoxRapidTwo").success)
 
             self.session_service.load_project_session("BoxRapidOne")
             self.assertEqual(

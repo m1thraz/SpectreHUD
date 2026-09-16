@@ -272,4 +272,3 @@ def insert_spacer(editor: QPlainTextEdit, size: str) -> None:
     finally:
         cursor.endEditBlock()
     editor.setFocus()
-

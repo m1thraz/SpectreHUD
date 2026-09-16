@@ -95,19 +95,13 @@ class AddLootDialog(BaseHudDialog):
             or recommendation
             or kwargs.get("remediation", "")
         )
-        self.initial_report_role = str(
-            kwargs.get("report_role", default_report_role) or "evidence"
-        )
+        self.initial_report_role = str(kwargs.get("report_role", default_report_role) or "evidence")
         self.initial_targets = normalize_finding_targets(
             kwargs.get("targets", default_targets),
             fallback_target=self.current_target_ip,
         )
-        self.initial_cvss_score = normalize_cvss_score(
-            kwargs.get("cvss_score", default_cvss_score)
-        )
-        self.initial_cvss_vector = str(
-            kwargs.get("cvss_vector", default_cvss_vector) or ""
-        ).strip()
+        self.initial_cvss_score = normalize_cvss_score(kwargs.get("cvss_score", default_cvss_score))
+        self.initial_cvss_vector = str(kwargs.get("cvss_vector", default_cvss_vector) or "").strip()
         self.initial_finding_status = normalize_finding_status(
             kwargs.get("finding_status", default_finding_status)
         )
@@ -142,7 +136,6 @@ class AddLootDialog(BaseHudDialog):
             elif self._has_been_active:
                 self.close()
         super().changeEvent(event)
-
 
     def _init_form(self) -> None:
         layout = self.body_layout
@@ -299,9 +292,7 @@ class AddLootDialog(BaseHudDialog):
         details_row.addLayout(score_col, stretch=1)
 
         vector_col = QVBoxLayout()
-        vector_col.addWidget(
-            self._form_label(t("loot_dialog.lbl_cvss_vector", "CVSS Vector:"))
-        )
+        vector_col.addWidget(self._form_label(t("loot_dialog.lbl_cvss_vector", "CVSS Vector:")))
         self.txt_cvss_vector = QLineEdit(self.initial_cvss_vector)
         self.txt_cvss_vector.setPlaceholderText("CVSS:3.1/AV:N/AC:L/PR:N/...")
         vector_col.addWidget(self.txt_cvss_vector)
@@ -334,9 +325,7 @@ class AddLootDialog(BaseHudDialog):
         layout.addWidget(lbl_target)
 
         self.txt_target = QLineEdit(", ".join(self.initial_targets))
-        self.txt_target.setPlaceholderText(
-            t("loot_dialog.ph_targets", "10.10.10.x, /api/v1/auth")
-        )
+        self.txt_target.setPlaceholderText(t("loot_dialog.ph_targets", "10.10.10.x, /api/v1/auth"))
         layout.addWidget(self.txt_target)
 
         # 5. Action Buttons
@@ -357,7 +346,9 @@ class AddLootDialog(BaseHudDialog):
             self.btn_export_obsidian = QPushButton(t("loot.export_obsidian", "Obsidian"))
             self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
             if self.on_export_obsidian:
-                self.btn_export_obsidian.clicked.connect(lambda: self.on_export_obsidian(self.entry_id))
+                self.btn_export_obsidian.clicked.connect(
+                    lambda: self.on_export_obsidian(self.entry_id)
+                )
             btn_layout.addWidget(self.btn_export_obsidian)
         else:
             self.btn_export_file = None
@@ -404,17 +395,13 @@ class AddLootDialog(BaseHudDialog):
             "title": self.txt_title.text().strip(),
             "content": self.txt_content.toPlainText().strip(),
             "recommendation": self.txt_recommendation.toPlainText().strip(),
-            "report_role": (
-                "finding" if self.chk_report_finding.isChecked() else "evidence"
-            ),
+            "report_role": ("finding" if self.chk_report_finding.isChecked() else "evidence"),
             "target_ip": targets[0] if targets else "",
             "targets": targets,
             "cvss_score": normalize_cvss_score(self.txt_cvss_score.text()),
             "cvss_vector": self.txt_cvss_vector.text().strip(),
             "finding_status": self.combo_finding_status.currentData(),
-            "references": normalize_finding_references(
-                self.txt_references.toPlainText()
-            ),
+            "references": normalize_finding_references(self.txt_references.toPlainText()),
         }
         if self.entry_id:
             data["id"] = self.entry_id

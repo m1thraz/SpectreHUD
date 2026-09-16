@@ -151,9 +151,7 @@ class ReportPreviewController:
             self.preview.verticalScrollBar(),
         )
 
-    def _sync_scrollbars(
-        self, value: int, source_max: int, target_bar: QScrollBar
-    ) -> None:
+    def _sync_scrollbars(self, value: int, source_max: int, target_bar: QScrollBar) -> None:
         target_max = target_bar.maximum()
         if source_max <= 0 or target_max <= 0:
             return
@@ -163,9 +161,7 @@ class ReportPreviewController:
         finally:
             self.syncing_scroll = False
 
-    def _index_landmarks(
-        self, landmarks: tuple[tuple[str, str, str], ...]
-    ) -> None:
+    def _index_landmarks(self, landmarks: tuple[tuple[str, str, str], ...]) -> None:
         self.landmarks.clear()
         for token, kind, identity in landmarks:
             cursor = self.document.find(token)
@@ -178,9 +174,7 @@ class ReportPreviewController:
             if selection_start > target_block.position():
                 separator = QTextCursor(self.document)
                 separator.setPosition(selection_start - 1)
-                separator.setPosition(
-                    selection_start, QTextCursor.MoveMode.KeepAnchor
-                )
+                separator.setPosition(selection_start, QTextCursor.MoveMode.KeepAnchor)
                 if separator.selectedText() == " ":
                     removal_start -= 1
             cursor.setPosition(removal_start)
@@ -236,12 +230,16 @@ class ReportPreviewController:
             level = fmt.headingLevel()
             if level > 0:
                 cursor = QTextCursor(block)
-                top_margin = 4 if is_first else {
-                    1: 22,
-                    2: 26,
-                    3: 18,
-                    4: 12,
-                }.get(level, 10)
+                top_margin = (
+                    4
+                    if is_first
+                    else {
+                        1: 22,
+                        2: 26,
+                        3: 18,
+                        4: 12,
+                    }.get(level, 10)
+                )
                 bottom_margin = {
                     1: 10,
                     2: 8,

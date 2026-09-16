@@ -182,9 +182,7 @@ class ReportMutationActions:
         if loot_manager is None:
             return
         try:
-            state = self._service.compare_loot(
-                self._callbacks.current_markdown(), loot_manager
-            )
+            state = self._service.compare_loot(self._callbacks.current_markdown(), loot_manager)
         except Exception:
             logger.exception("Could not compare report markers with project Loot")
             return
@@ -206,9 +204,7 @@ class ReportMutationActions:
             return None
         return project_name
 
-    def _show_failure(
-        self, result: ReportMutationResult, *, operation: str
-    ) -> None:
+    def _show_failure(self, result: ReportMutationResult, *, operation: str) -> None:
         logger.error(
             "Report %s failed (%s): %s",
             operation,
@@ -251,6 +247,4 @@ class ReportMutationActions:
                 "report.mutation_failed_msg",
                 "The report could not be updated. Details are in the log.",
             )
-        show_error_dialog(
-            self._parent.window(), title, message, details=result.detail
-        )
+        show_error_dialog(self._parent.window(), title, message, details=result.detail)

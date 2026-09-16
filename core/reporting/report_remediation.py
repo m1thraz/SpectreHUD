@@ -45,7 +45,9 @@ class ReportRemediationPlan:
 
     @classmethod
     def from_markdown(cls, markdown: str, language: str = "de") -> "ReportRemediationPlan":
-        default_title = "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        default_title = (
+            "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        )
         if not markdown:
             return cls(title=default_title)
 
@@ -58,14 +60,16 @@ class ReportRemediationPlan:
         table_start = re.search(r"^[ \t]*\|", markdown, re.MULTILINE)
         if table_start:
             start_pos = h2.end() if h2 else 0
-            strategic_guidance = markdown[start_pos:table_start.start()].strip()
+            strategic_guidance = markdown[start_pos : table_start.start()].strip()
         elif h2:
-            strategic_guidance = markdown[h2.end():].strip()
+            strategic_guidance = markdown[h2.end() :].strip()
 
         return cls(title=title, strategic_guidance=strategic_guidance)
 
     def to_markdown(self, findings: List[ReportFindingItem], language: str = "de") -> str:
-        default_title = "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        default_title = (
+            "Remediation & Maßnahmenplan" if language == "de" else "Remediation & Action Plan"
+        )
         sec_title = self.title or default_title
         lines: List[str] = [f"## {sec_title}", ""]
 
@@ -74,15 +78,19 @@ class ReportRemediationPlan:
             lines.append("")
 
         if language == "de":
-            lines.extend([
-                "| Priorität | Schwachstelle | Empfohlene Maßnahme | Status |",
-                "|-----------|---------------|----------------------|--------|",
-            ])
+            lines.extend(
+                [
+                    "| Priorität | Schwachstelle | Empfohlene Maßnahme | Status |",
+                    "|-----------|---------------|----------------------|--------|",
+                ]
+            )
         else:
-            lines.extend([
-                "| Priority | Vulnerability | Recommended Action | Status |",
-                "|----------|---------------|--------------------|--------|",
-            ])
+            lines.extend(
+                [
+                    "| Priority | Vulnerability | Recommended Action | Status |",
+                    "|----------|---------------|--------------------|--------|",
+                ]
+            )
 
         sorted_findings = sorted(
             findings,

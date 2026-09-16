@@ -25,6 +25,7 @@ class VariableBar(QFrame):
 
     variables_changed = pyqtSignal(dict)
     add_snippet_clicked = pyqtSignal()
+    import_snippets_clicked = pyqtSignal()
 
     def __init__(self, initial_vars: Dict[str, Any], parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -32,6 +33,7 @@ class VariableBar(QFrame):
         self.initial_vars = initial_vars
         self._collapsed = False
         self._add_visible = True
+        self._is_cheatsheet = True
         self._expanded_minimum_height = self.minimumHeight()
         self._expanded_maximum_height = self.maximumHeight()
 
@@ -84,7 +86,9 @@ class VariableBar(QFrame):
         # 2. Attacker IP / LHOST Input
         self.lbl_attacker = QLabel(t("varbar.attacker", "LHOST:"))
         self.lbl_attacker.setProperty("class", "VarTagLabel")
-        self.txt_attacker = CopyableLineEdit(str(self.initial_vars.get("attacker_ip", "10.10.14.5")))
+        self.txt_attacker = CopyableLineEdit(
+            str(self.initial_vars.get("attacker_ip", "10.10.14.5"))
+        )
         self.txt_attacker.setProperty("class", "CompactVarInput")
         self.txt_attacker.setPlaceholderText("10.10.14.x")
         self.txt_attacker.setFixedWidth(138)
@@ -121,7 +125,10 @@ class VariableBar(QFrame):
         self.btn_scope.setIconSize(VARIABLE_BAR_ICON_SIZE)
         self.btn_scope.setProperty("class", "VarBadgeBtn")
         self.btn_scope.setToolTip(
-            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+            t(
+                "varbar.scope_tip",
+                "Set scope and environment variables used in copied Cheatsheet commands",
+            )
         )
         self.btn_scope.clicked.connect(lambda: self.popover_scope.show_below(self.btn_scope))
         layout.addWidget(self.btn_scope)
@@ -129,7 +136,7 @@ class VariableBar(QFrame):
         self._outer_layout.addWidget(self._content)
         self._outer_layout.addStretch()
 
-        # 6. Add Snippet Button — only shown in cheatsheet mode (see set_add_visible)
+        # 6. Add Snippet Button — only shown in cheatsheet & loot mode (see set_add_visible)
         self.btn_add = QPushButton(t("varbar.add_btn", "Neu"))
         self.btn_add.setIcon(icon("fa5s.plus"))
         self.btn_add.setIconSize(VARIABLE_BAR_ICON_SIZE)
@@ -138,6 +145,18 @@ class VariableBar(QFrame):
         self.btn_add.clicked.connect(self.add_snippet_clicked.emit)
         self.btn_add.setVisible(True)
         self._outer_layout.addWidget(self.btn_add)
+
+        # 7. Import Snippets Button — only shown in cheatsheet mode
+        self.btn_import = QPushButton(t("varbar.import_btn", "Import"))
+        self.btn_import.setIcon(icon("fa5s.file-import"))
+        self.btn_import.setIconSize(VARIABLE_BAR_ICON_SIZE)
+        self.btn_import.setProperty("class", "MiniActionBtn")
+        self.btn_import.setToolTip(
+            t("varbar.import_btn_tip", "Snippets aus Datei importieren (.json, .md)")
+        )
+        self.btn_import.clicked.connect(self.import_snippets_clicked.emit)
+        self.btn_import.setVisible(True)
+        self._outer_layout.addWidget(self.btn_import)
 
         # --- Chevron toggle (always visible, far right) ---
         self.btn_collapse = QPushButton(self)
@@ -159,6 +178,9 @@ class VariableBar(QFrame):
     def _apply_collapsed_state(self) -> None:
         self._content.setVisible(not self._collapsed)
         self.btn_add.setVisible(self._add_visible and not self._collapsed)
+        self.btn_import.setVisible(
+            self._add_visible and getattr(self, "_is_cheatsheet", True) and not self._collapsed
+        )
         self.setProperty("collapsed", self._collapsed)
         if self._collapsed:
             self._outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -181,10 +203,12 @@ class VariableBar(QFrame):
         self.btn_collapse.setIcon(icon(ico))
         self.btn_collapse.setIconSize(VARIABLE_BAR_ICON_SIZE)
 
-    def set_add_visible(self, visible: bool) -> None:
-        """Show or hide the New-snippet button (only relevant in cheatsheet mode)."""
+    def set_add_visible(self, visible: bool, is_cheatsheet: bool = True) -> None:
+        """Show or hide the New-snippet / Import buttons (only relevant in cheatsheet mode)."""
         self._add_visible = visible
+        self._is_cheatsheet = is_cheatsheet
         self.btn_add.setVisible(visible and not self._collapsed)
+        self.btn_import.setVisible(visible and is_cheatsheet and not self._collapsed)
 
     # ------------------------------------------------------------------ #
     # Badge / popover helpers
@@ -238,10 +262,17 @@ class VariableBar(QFrame):
             t("varbar.auth_tip", "Set authentication variables used in copied Cheatsheet commands")
         )
         self.btn_scope.setToolTip(
-            t("varbar.scope_tip", "Set scope and environment variables used in copied Cheatsheet commands")
+            t(
+                "varbar.scope_tip",
+                "Set scope and environment variables used in copied Cheatsheet commands",
+            )
         )
         self.btn_add.setText(t("varbar.add_btn", "Neu"))
         self.btn_add.setToolTip(t("varbar.add_btn_tip", "Neuen Befehl anlegen (Ctrl+N)"))
+        self.btn_import.setText(t("varbar.import_btn", "Import"))
+        self.btn_import.setToolTip(
+            t("varbar.import_btn_tip", "Snippets aus Datei importieren (.json, .md)")
+        )
         self.popover_auth.retranslate()
         self.popover_scope.retranslate()
         self._update_badge_buttons()
@@ -310,7 +341,8 @@ class VariableBar(QFrame):
             "ntlm_hash": auth_vals.get("ntlm_hash", ""),
             "hash": auth_vals.get("hash", ""),
             "hash_file": auth_vals.get("hash_file", ""),
-            "wordlist": scope_vals.get("wordlist", "") or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
+            "wordlist": scope_vals.get("wordlist", "")
+            or self.initial_vars.get("wordlist", "/usr/share/wordlists/dirb/common.txt"),
             "url": scope_vals.get("url", ""),
             "subnet": scope_vals.get("subnet", ""),
             "dns_server": scope_vals.get("dns_server", ""),

@@ -38,9 +38,7 @@ REPORT_ICON_CATEGORIES = ("general", "security", "infrastructure", "evidence")
 REPORT_ICONS = (
     ReportIconDefinition("note", "general", "fa5s.sticky-note", "report.icon.note"),
     ReportIconDefinition("info", "general", "fa5s.info-circle", "report.icon.info"),
-    ReportIconDefinition(
-        "warning", "general", "fa5s.exclamation-triangle", "report.icon.warning"
-    ),
+    ReportIconDefinition("warning", "general", "fa5s.exclamation-triangle", "report.icon.warning"),
     ReportIconDefinition("success", "general", "fa5s.check-circle", "report.icon.success"),
     ReportIconDefinition("failure", "general", "fa5s.times-circle", "report.icon.failure"),
     ReportIconDefinition("finding", "security", "fa5s.shield-alt", "report.icon.finding"),
@@ -59,12 +57,8 @@ REPORT_ICONS = (
     ReportIconDefinition("identity", "security", "fa5s.user", "report.icon.identity"),
     ReportIconDefinition("host", "infrastructure", "fa5s.desktop", "report.icon.host"),
     ReportIconDefinition("server", "infrastructure", "fa5s.server", "report.icon.server"),
-    ReportIconDefinition(
-        "network", "infrastructure", "fa5s.network-wired", "report.icon.network"
-    ),
-    ReportIconDefinition(
-        "database", "infrastructure", "fa5s.database", "report.icon.database"
-    ),
+    ReportIconDefinition("network", "infrastructure", "fa5s.network-wired", "report.icon.network"),
+    ReportIconDefinition("database", "infrastructure", "fa5s.database", "report.icon.database"),
     ReportIconDefinition("cloud", "infrastructure", "fa5s.cloud", "report.icon.cloud"),
     ReportIconDefinition("web", "infrastructure", "fa5s.globe", "report.icon.web"),
     ReportIconDefinition("linux", "infrastructure", "fa5b.linux", "report.icon.linux"),

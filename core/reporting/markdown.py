@@ -246,6 +246,7 @@ class _MarkdownHtmlParser:
     def __init__(self) -> None:
         self.html_lines: List[str] = []
         self.in_code_block: bool = False
+        self.code_block_fence: str = ""
         self.code_block_lang: str = ""
         self.code_block_lines: List[str] = []
         self.in_list: bool = False
@@ -278,21 +279,32 @@ class _MarkdownHtmlParser:
         self.flush_table()
         self.flush_blockquote()
 
-    def _handle_code_block_fence(self, stripped: str) -> None:
+    def _render_code_block(self) -> str:
+        raw_code = "\n".join(self.code_block_lines)
+        escaped_code = html.escape(raw_code)
+        safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", self.code_block_lang)
+        safe_lang = html.escape(safe_lang, quote=True)
+        lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
+        # Long evidence must be allowed to continue on the next printed page.
+        pre_class = (
+            ' class="report-code-long"'
+            if len(self.code_block_lines) > 35 or len(raw_code) > 2000
+            else ""
+        )
+        return f"<pre{pre_class}><code{lang_class}>{escaped_code}</code></pre>"
+
+    def _handle_code_block_fence(self, fence: str, language: str = "") -> None:
         if self.in_code_block:
-            raw_code = "\n".join(self.code_block_lines)
-            escaped_code = html.escape(raw_code)
-            safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", self.code_block_lang)
-            safe_lang = html.escape(safe_lang, quote=True)
-            lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
-            self.html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
+            self.html_lines.append(self._render_code_block())
             self.in_code_block = False
             self.code_block_lines = []
             self.code_block_lang = ""
+            self.code_block_fence = ""
         else:
             self.flush_open_containers()
             self.in_code_block = True
-            self.code_block_lang = stripped.lstrip("`").strip()
+            self.code_block_lang = language.strip()
+            self.code_block_fence = fence
             self.code_block_lines = []
 
     def _handle_pagebreak_or_spacer(self, stripped: str) -> bool:
@@ -370,9 +382,7 @@ class _MarkdownHtmlParser:
             ("# ", "h1"),
         ):
             if stripped.startswith(prefix):
-                self.html_lines.append(
-                    f"<{tag}>{format_inline(stripped[len(prefix):])}</{tag}>"
-                )
+                self.html_lines.append(f"<{tag}>{format_inline(stripped[len(prefix) :])}</{tag}>")
                 return True
         return False
 
@@ -397,12 +407,20 @@ class _MarkdownHtmlParser:
     def process_line(self, line: str) -> None:
         stripped = line.strip()
 
-        if stripped.startswith("```"):
-            self._handle_code_block_fence(stripped)
+        if self.in_code_block:
+            if re.fullmatch(
+                rf"{re.escape(self.code_block_fence[0])}"
+                rf"{{{len(self.code_block_fence)},}}",
+                stripped,
+            ):
+                self._handle_code_block_fence(self.code_block_fence)
+                return
+            self.code_block_lines.append(line)
             return
 
-        if self.in_code_block:
-            self.code_block_lines.append(line)
+        fence_match = re.fullmatch(r"(`{3,}|~{3,})([^`~]*)", stripped)
+        if fence_match:
+            self._handle_code_block_fence(fence_match.group(1), fence_match.group(2))
             return
 
         if self._handle_pagebreak_or_spacer(stripped):
@@ -434,17 +452,13 @@ class _MarkdownHtmlParser:
     def finalize(self) -> str:
         self.flush_open_containers()
         if self.in_code_block and self.code_block_lines:
-            raw_code = "\n".join(self.code_block_lines)
-            escaped_code = html.escape(raw_code)
-            safe_lang = re.sub(r"[^a-zA-Z0-9_+-]", "", self.code_block_lang)
-            safe_lang = html.escape(safe_lang, quote=True)
-            lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
-            self.html_lines.append(f"<pre><code{lang_class}>{escaped_code}</code></pre>")
+            self.html_lines.append(self._render_code_block())
         return "\n".join(self.html_lines)
 
     def parse(self, content: Union[str, Iterable[str]]) -> str:
         self.html_lines = []
         self.in_code_block = False
+        self.code_block_fence = ""
         self.code_block_lang = ""
         self.code_block_lines = []
         self.in_list = False

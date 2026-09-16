@@ -86,7 +86,10 @@ class QuickIpPopup(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         lbl_title = QLabel("⚡ QUICK-IP")
         lbl_title.setToolTip(
-            t("quick_ip.purpose_tip", "View or update Target and LHOST without opening the main window")
+            t(
+                "quick_ip.purpose_tip",
+                "View or update Target and LHOST without opening the main window",
+            )
         )
         lbl_title.setStyleSheet(
             f"color: {get_theme_color('ACCENT_BRAND')}; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;"

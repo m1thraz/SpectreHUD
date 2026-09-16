@@ -241,7 +241,9 @@ class HotkeySettingsPage(QWidget):
 
         # Quick Loot Shortcut
         row_quick_loot = QHBoxLayout()
-        lbl_quick_loot = QLabel(t("settings.lbl_quick_loot_shortcut", "Quick Loot (Add Loot Dialog):"))
+        lbl_quick_loot = QLabel(
+            t("settings.lbl_quick_loot_shortcut", "Quick Loot (Add Loot Dialog):")
+        )
         lbl_quick_loot.setProperty("class", "FormLabel")
         row_quick_loot.addWidget(lbl_quick_loot, stretch=1)
 
@@ -500,19 +502,17 @@ class AppearanceSettingsPage(QWidget):
                 clamp_transparency(self.config.get("report_transparency", 0), 0),
             )
         )
-        self.slider_bleed_through, self.spin_bleed_through = (
-            self._add_transparency_control(
-                transparency_layout,
-                t(
-                    "settings.lbl_bleed_through",
-                    "Echter Hintergrund-Durchblick",
-                ),
-                clamp_transparency(self.config.get("bleed_through", 0), 0),
-                effect_hint=t(
-                    "settings.bleed_through_tip",
-                    "0: Deaktiviert. Lässt echten Bildschirminhalt hinter dem HUD durchscheinen (OPSEC-Risiko bei Pentest-Sessions/Screenshots).",
-                ),
-            )
+        self.slider_bleed_through, self.spin_bleed_through = self._add_transparency_control(
+            transparency_layout,
+            t(
+                "settings.lbl_bleed_through",
+                "Echter Hintergrund-Durchblick",
+            ),
+            clamp_transparency(self.config.get("bleed_through", 0), 0),
+            effect_hint=t(
+                "settings.bleed_through_tip",
+                "0: Deaktiviert. Lässt echten Bildschirminhalt hinter dem HUD durchscheinen (OPSEC-Risiko bei Pentest-Sessions/Screenshots).",
+            ),
         )
         bleed_hint = QLabel(
             t(
@@ -727,23 +727,23 @@ class GeneralSettingsPage(QWidget):
         updates_layout.setSpacing(8)
 
         self.lbl_update_status = QLabel(
-            t("settings.update_current_version", "Installed version: {version}", version=APP_VERSION)
+            t(
+                "settings.update_current_version",
+                "Installed version: {version}",
+                version=APP_VERSION,
+            )
         )
         self.lbl_update_status.setWordWrap(True)
         self.lbl_update_status.setProperty("class", "FormHint")
         updates_layout.addWidget(self.lbl_update_status)
 
         update_actions = QHBoxLayout()
-        self.btn_check_updates = QPushButton(
-            t("settings.check_updates", "Check for Updates")
-        )
+        self.btn_check_updates = QPushButton(t("settings.check_updates", "Check for Updates"))
         self.btn_check_updates.setProperty("class", "SecondaryBtn")
         self.btn_check_updates.clicked.connect(self._check_for_updates)
         update_actions.addWidget(self.btn_check_updates)
 
-        self.btn_open_release = QPushButton(
-            t("settings.open_release", "Open Release Page")
-        )
+        self.btn_open_release = QPushButton(t("settings.open_release", "Open Release Page"))
         self.btn_open_release.setProperty("class", "PrimaryBtn")
         self.btn_open_release.clicked.connect(self._open_release_page)
         self.btn_open_release.hide()
@@ -775,9 +775,7 @@ class GeneralSettingsPage(QWidget):
         self.btn_open_diagnostics.clicked.connect(self._open_diagnostics_folder)
         diagnostics_actions.addWidget(self.btn_open_diagnostics)
 
-        self.btn_copy_log_path = QPushButton(
-            t("settings.copy_log_path", "Copy Log Path")
-        )
+        self.btn_copy_log_path = QPushButton(t("settings.copy_log_path", "Copy Log Path"))
         self.btn_copy_log_path.setProperty("class", "SecondaryBtn")
         self.btn_copy_log_path.clicked.connect(self._copy_log_path)
         diagnostics_actions.addWidget(self.btn_copy_log_path)
@@ -842,9 +840,7 @@ class GeneralSettingsPage(QWidget):
         d_layout.addWidget(lbl_ws)
 
         row_ws = QHBoxLayout()
-        self.txt_workspace = QLineEdit(
-            self.config.get("workspace_dir", str(projects_dir()))
-        )
+        self.txt_workspace = QLineEdit(self.config.get("workspace_dir", str(projects_dir())))
         row_ws.addWidget(self.txt_workspace, stretch=1)
 
         btn_browse_ws = QPushButton(t("dialog.browse", "Browse..."))

@@ -11,7 +11,14 @@ from core.platform import detect_platform_capabilities
         ("Windows", {}, True, True, False, False),
         ("Linux", {"XDG_SESSION_TYPE": "x11", "DISPLAY": ":0"}, True, True, False, True),
         ("Linux", {"DISPLAY": ":1"}, True, True, False, True),
-        ("Linux", {"XDG_SESSION_TYPE": "wayland", "WAYLAND_DISPLAY": "wayland-0"}, False, False, True, False),
+        (
+            "Linux",
+            {"XDG_SESSION_TYPE": "wayland", "WAYLAND_DISPLAY": "wayland-0"},
+            False,
+            False,
+            True,
+            False,
+        ),
         ("Linux", {"WAYLAND_DISPLAY": "wayland-1", "DISPLAY": ":0"}, False, False, True, False),
         ("Linux", {}, False, False, False, False),
         ("Darwin", {}, False, False, False, False),
@@ -43,4 +50,3 @@ def test_detect_platform_capabilities(
         assert capabilities.screen_capture_status == "limited"
     else:
         assert capabilities.screen_capture_status == "unavailable"
-

@@ -30,7 +30,14 @@ class SnippetManager:
             if fallback.exists():
                 return fallback
 
-        # 1. Standard repo or site-packages layout (next to core/)
+        # 1. Standard repo layout: core/snippets/manager.py -> repo_root / data
+        repo_data = Path(__file__).resolve().parent.parent.parent / "data"
+        if (repo_data / filename).exists():
+            return repo_data / filename
+        if (repo_data / "default_snippets.json").exists():
+            return repo_data / "default_snippets.json"
+
+        # 2. Site-packages / flat layout fallback: core/manager.py -> data
         data_dir = Path(__file__).resolve().parent.parent / "data"
         candidate = data_dir / filename
         if candidate.exists():
@@ -40,7 +47,7 @@ class SnippetManager:
         if fallback_candidate.exists():
             return fallback_candidate
 
-        # 2. Check importlib.resources if available
+        # 3. Check importlib.resources if available
         try:
             import importlib.resources as pkg_resources
 
@@ -54,11 +61,62 @@ class SnippetManager:
 
         return candidate
 
+    @staticmethod
+    def _resolve_community_snippets_paths() -> List[Path]:
+        """Resolves existing community/external snippet pack paths from bundle, repository, or package resources."""
+        import sys
+
+        candidate_dirs: List[Path] = []
+
+        # 0. PyInstaller frozen bundle
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            candidate_dirs.append(Path(sys._MEIPASS) / "data")
+
+        # 1. Standard repo layout: core/snippets/manager.py -> repo_root / data
+        repo_data = Path(__file__).resolve().parent.parent.parent / "data"
+        candidate_dirs.append(repo_data)
+
+        # 2. Site-packages / flat layout fallback: core/manager.py -> data
+        flat_data = Path(__file__).resolve().parent.parent / "data"
+        if flat_data != repo_data:
+            candidate_dirs.append(flat_data)
+
+        # 3. User config directory (persistent packs for portable exe & debian packages)
+        user_pack_dir = get_default_config_dir() / "community_snippets"
+        candidate_dirs.append(user_pack_dir)
+
+        # 4. Package resources (importlib.resources)
+        try:
+            import importlib.resources as pkg_resources
+
+            if hasattr(pkg_resources, "files"):
+                traversable = pkg_resources.files("data")
+                res_path = Path(str(traversable))
+                if res_path.exists():
+                    candidate_dirs.append(res_path)
+        except (ImportError, AttributeError, TypeError, ValueError, OSError) as e:
+            logger.debug(f"Could not resolve community snippets dir via importlib: {e}")
+
+        patterns = ("community_snippets.json", "community_*.json", "offensive_*.json")
+        found_paths: set[Path] = set()
+
+        for cdir in candidate_dirs:
+            if not cdir.exists() or not cdir.is_dir():
+                continue
+            cur_patterns = ("*.json",) if cdir == user_pack_dir else patterns
+            for pattern in cur_patterns:
+                for path in cdir.glob(pattern):
+                    if path.is_file():
+                        found_paths.add(path.resolve())
+
+        return sorted(found_paths)
+
     def __init__(
         self,
         default_snippets_path: Optional[Path] = None,
         user_snippets_path: Optional[Path] = None,
         favorites_path: Optional[Path] = None,
+        community_snippets_paths: Optional[List[Path]] = None,
         language: str = "en",
         event_bus: Optional[Any] = None,
     ):
@@ -70,11 +128,14 @@ class SnippetManager:
             user_snippets_path = get_default_config_dir() / "user_snippets.json"
         if favorites_path is None:
             favorites_path = get_default_config_dir() / "user_favorites.json"
+        if community_snippets_paths is None:
+            community_snippets_paths = self._resolve_community_snippets_paths()
 
         self.event_bus = event_bus
         self.default_snippets_path = Path(default_snippets_path)
         self.user_snippets_path = Path(user_snippets_path)
         self.favorites_path = Path(favorites_path)
+        self.community_snippets_paths = [Path(p) for p in community_snippets_paths]
         self.favorite_ids: set = set()
         self.categories: List[Dict[str, Any]] = []
         self.snippets: List[Dict[str, Any]] = []
@@ -223,12 +284,76 @@ class SnippetManager:
 
         return user_snippets
 
+    def _load_community_snippets(self) -> None:
+        """Loads optional external/community snippet packs without making them user-owned data."""
+        from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
+
+        for pack_path in self.community_snippets_paths:
+            if not pack_path.exists() or not is_file_size_valid(pack_path, MAX_SNIPPETS_FILE_SIZE):
+                continue
+            try:
+                with open(pack_path, "r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+            except (json.JSONDecodeError, RecursionError, OSError, UnicodeDecodeError) as exc:
+                logger.error(f"Error reading community snippets from {pack_path}: {exc}")
+                continue
+
+            if isinstance(data, dict):
+                categories = data.get("categories", [])
+            elif isinstance(data, list):
+                categories = [
+                    {
+                        "id": "community_snippets",
+                        "name": "Community Snippets",
+                        "snippets": data,
+                    }
+                ]
+            else:
+                logger.warning(
+                    f"Expected a list or category dictionary in community snippets at {pack_path}"
+                )
+                continue
+
+            if not isinstance(categories, list):
+                logger.warning(f"Invalid categories in community snippets at {pack_path}")
+                continue
+
+            existing_snippet_ids = {s.get("id") for s in self.snippets if s.get("id")}
+
+            for category in categories:
+                if not isinstance(category, dict):
+                    continue
+                category_id = category.get("id", category.get("name", "community_snippets"))
+                category_name = category.get("name", "Community Snippets")
+                if not any(item.get("id") == category_id for item in self.categories):
+                    self.categories.append(
+                        {
+                            "id": category_id,
+                            "name": category_name,
+                            "icon": category.get("icon", ""),
+                        }
+                    )
+                for snippet in category.get("snippets", []):
+                    if not isinstance(snippet, dict) or not snippet.get("id"):
+                        continue
+                    sid = snippet["id"]
+                    if sid in existing_snippet_ids:
+                        continue
+                    existing_snippet_ids.add(sid)
+                    loaded = dict(snippet)
+                    loaded["is_custom"] = False
+                    loaded["category_id"] = category_id
+                    loaded["category"] = loaded.get("category", category_name)
+                    loaded["is_favorite"] = sid in self.favorite_ids
+                    self.snippets.append(loaded)
+
     def load_all(self) -> None:
-        """Loads both default bundled snippets and user-added custom snippets."""
+        """Loads both default bundled snippets, community packs, and user-added custom snippets."""
         self.categories = []
         self.snippets = []
 
         self._load_default_snippets()
+        self._load_community_snippets()
 
         custom_category = {"id": "custom_snippets", "name": "Custom Notes & Snippets", "icon": ""}
         user_snippets = self._load_user_snippets()
@@ -334,6 +459,66 @@ class SnippetManager:
             self.snippets.extend(new_items)
 
         return len(new_items)
+
+    def import_snippets_file(self, file_path: Any) -> int:
+        """
+        Imports extra snippets from a JSON or Markdown file into the persistent database.
+        - JSON files (packs with 'categories' or lists of snippets) are stored in the user's
+          persistent community_snippets directory so they remain loaded across restarts and portable runs.
+        - Markdown files (.md) are parsed and added to user snippets.
+        Returns the number of snippets imported.
+        """
+        from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
+
+        p = Path(file_path)
+        if not p.exists():
+            raise FileNotFoundError(f"File not found: {p}")
+
+        if not is_file_size_valid(p, MAX_SNIPPETS_FILE_SIZE):
+            raise ValueError(
+                f"File {p.name} exceeds maximum allowed size of {MAX_SNIPPETS_FILE_SIZE} bytes."
+            )
+
+        suffix = p.suffix.lower()
+
+        if suffix == ".json":
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, RecursionError, UnicodeDecodeError) as e:
+                raise ValueError(f"Invalid JSON format in {p.name}: {e}") from e
+
+            # Persist pack file in user config directory
+            user_pack_dir = get_default_config_dir() / "community_snippets"
+            user_pack_dir.mkdir(parents=True, exist_ok=True)
+            target_pack = user_pack_dir / p.name
+
+            from core.atomic_write import atomic_write_json
+
+            atomic_write_json(target_pack, data, indent=2, ensure_ascii=False)
+
+            target_resolved = target_pack.resolve()
+            if target_resolved not in [cp.resolve() for cp in self.community_snippets_paths]:
+                self.community_snippets_paths.append(target_resolved)
+
+            prev_ids = {s.get("id") for s in self.snippets if s.get("id")}
+            self.load_all()
+            new_ids = {s.get("id") for s in self.snippets if s.get("id")}
+
+            added = len(new_ids - prev_ids)
+            if added == 0:
+                if isinstance(data, dict):
+                    cats = data.get("categories", [])
+                    added = sum(len(c.get("snippets", [])) for c in cats if isinstance(c, dict))
+                    if added == 0 and isinstance(data.get("snippets"), list):
+                        added = len(data["snippets"])
+                elif isinstance(data, list):
+                    added = len(data)
+            return added
+        else:
+            count = self.import_from_file(p)
+            self.load_all()
+            return count
 
     def delete_snippet(self, snippet_id: str) -> bool:
         """Deletes a custom snippet by its ID."""

@@ -107,8 +107,6 @@ class QuickNoteBulkBar(QFrame):
 
     def set_selected_count(self, count: int) -> None:
         self.lbl_selected.setText(
-            t("quick_note.bulk_selected_count", "{count} selected").replace(
-                "{count}", str(count)
-            )
+            t("quick_note.bulk_selected_count", "{count} selected").replace("{count}", str(count))
         )
         self.setVisible(count > 0)

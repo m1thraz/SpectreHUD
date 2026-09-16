@@ -70,7 +70,7 @@ class ReportAttackPath:
             start_pos = h2.end() if h2 else 0
             narrative_intro = markdown[start_pos:split_pos].strip()
         elif h2:
-            narrative_intro = markdown[h2.end():].strip()
+            narrative_intro = markdown[h2.end() :].strip()
 
         # Parse steps: handles both detailed bullets and one-line legacy bullets
         steps: List[AttackPathStep] = []

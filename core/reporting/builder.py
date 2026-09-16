@@ -90,4 +90,3 @@ class ReportBuilder:
         except OSError as e:
             logger.error(f"Failed to export report to {output_path}: {e}", exc_info=True)
             return f"Fehler beim Generieren des Reports: {e}"
-
