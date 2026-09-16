@@ -942,6 +942,49 @@ class TestControllersDomain(unittest.TestCase):
             res2 = self.loot_ctrl.open_edit_dialog(QWidget(), entry)
             self.assertFalse(res2)
 
+    def test_cheatsheet_controller_import_dialog(self):
+        """CheatsheetController.import_snippets_dialog handles cancel, import success and error."""
+        parent = QWidget()
+
+        # 1. User cancels file dialog
+        with patch("ui.controllers.cheatsheet_controller.QFileDialog.getOpenFileNames", return_value=([], "")):
+            self.assertFalse(self.cheatsheet_ctrl.import_snippets_dialog(parent))
+
+        # 2. User selects a valid snippet file
+        events = []
+        self.event_bus.subscribe(EventType.SNIPPETS_UPDATED, lambda d: events.append(d))
+        signals = []
+        self.cheatsheet_ctrl.snippets_updated.connect(lambda: signals.append(True))
+
+        with patch(
+            "ui.controllers.cheatsheet_controller.QFileDialog.getOpenFileNames",
+            return_value=(["/fake/pack.json"], "JSON Files (*.json)"),
+        ), patch.object(
+            self.snippet_mgr, "import_snippets_file", return_value=5
+        ) as mock_import, patch(
+            "ui.controllers.cheatsheet_controller.show_information_dialog"
+        ) as mock_info:
+            res = self.cheatsheet_ctrl.import_snippets_dialog(parent)
+            self.assertTrue(res)
+            mock_import.assert_called_once_with(Path("/fake/pack.json"))
+            mock_info.assert_called_once()
+            self.assertEqual(len(signals), 1)
+            self.assertEqual(len(events), 1)
+            self.assertEqual(events[0]["count"], 5)
+
+        # 3. Import raises exception -> shows error dialog
+        with patch(
+            "ui.controllers.cheatsheet_controller.QFileDialog.getOpenFileNames",
+            return_value=(["/fake/broken.json"], "JSON Files (*.json)"),
+        ), patch.object(
+            self.snippet_mgr, "import_snippets_file", side_effect=ValueError("Invalid JSON")
+        ), patch(
+            "ui.controllers.cheatsheet_controller.show_error_dialog"
+        ) as mock_err:
+            res_err = self.cheatsheet_ctrl.import_snippets_dialog(parent)
+            self.assertFalse(res_err)
+            mock_err.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

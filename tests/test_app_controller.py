@@ -589,6 +589,14 @@ class TestAppController(unittest.TestCase):
 
         first_instance.close()
 
+    def test_on_import_snippets_clicked(self):
+        with patch.object(
+            self.controller.cheatsheet_ctrl, "import_snippets_dialog", return_value=True
+        ) as mock_import, patch.object(self.controller, "_on_data_updated") as mock_update:
+            self.controller.on_import_snippets_clicked()
+            mock_import.assert_called_once_with(self.controller.window)
+            mock_update.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

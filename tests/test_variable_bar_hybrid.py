@@ -233,3 +233,45 @@ def test_subnet_dns_hash_file_popovers(var_bar):
         rendered
         == "nmap -sn 192.168.10.0/24 --dns-servers 192.168.10.1 -oN nmap.txt && john /opt/wordlists/ntlm.hashes"
     )
+
+
+def test_import_snippets_button_and_visibility(var_bar):
+    var_bar.show()
+    # Initial state: cheatsheet mode, expanded -> btn_import visible
+    assert var_bar.btn_import is not None
+    assert var_bar.btn_import.isVisible()
+    assert var_bar.btn_add.isVisible()
+
+    # Click triggers signal
+    clicked = []
+    var_bar.import_snippets_clicked.connect(lambda: clicked.append(True))
+    var_bar.btn_import.click()
+    assert len(clicked) == 1
+
+    # Switch to non-cheatsheet mode (e.g. loot mode: set_add_visible(True, is_cheatsheet=False))
+    var_bar.set_add_visible(True, is_cheatsheet=False)
+    assert var_bar.btn_add.isVisible()
+    assert not var_bar.btn_import.isVisible()
+
+    # Hide add altogether (e.g. history / report mode: set_add_visible(False, is_cheatsheet=False))
+    var_bar.set_add_visible(False, is_cheatsheet=False)
+    assert not var_bar.btn_add.isVisible()
+    assert not var_bar.btn_import.isVisible()
+
+    # Restore cheatsheet mode
+    var_bar.set_add_visible(True, is_cheatsheet=True)
+    assert var_bar.btn_add.isVisible()
+    assert var_bar.btn_import.isVisible()
+
+    # Collapsing bar hides both
+    var_bar.btn_collapse.click()
+    assert var_bar._collapsed
+    assert not var_bar.btn_add.isVisible()
+    assert not var_bar.btn_import.isVisible()
+
+    # Uncollapsing restores both in cheatsheet mode
+    var_bar.btn_collapse.click()
+    assert not var_bar._collapsed
+    assert var_bar.btn_add.isVisible()
+    assert var_bar.btn_import.isVisible()
+

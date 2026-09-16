@@ -284,6 +284,7 @@ class AppController(QObject):
         self.search.pills_width_changed.connect(self._on_pills_width_changed)
         self.var_bar.variables_changed.connect(self._on_variables_changed)
         self.var_bar.add_snippet_clicked.connect(self._on_add_button_clicked)
+        self.var_bar.import_snippets_clicked.connect(self.on_import_snippets_clicked)
         self.footer.always_on_top_toggled.connect(self._on_always_on_top_toggled)
         self.footer.shortcuts_requested.connect(self.open_shortcuts_dialog)
 
@@ -422,8 +423,8 @@ class AppController(QObject):
             self._quick_ip_popup.attacker_changed.connect(self._on_quick_ip_attacker_changed)
 
         vars_dict = self.var_bar.get_variables() if hasattr(self.var_bar, "get_variables") else {}
-        target_ip = str(vars_dict.get("target_ip", ""))
-        attacker_ip = str(vars_dict.get("attacker_ip", ""))
+        target_ip = vars_dict.get("target_ip", "")
+        attacker_ip = vars_dict.get("attacker_ip", "")
 
         self._quick_ip_popup.show_at_cursor(target_ip, attacker_ip)
 
@@ -474,7 +475,9 @@ class AppController(QObject):
 
     def _on_mode_switched(self, mode: str) -> None:
 
-        self.var_bar.set_add_visible(mode in ("cheatsheet", "loot"))
+        self.var_bar.set_add_visible(
+            mode in ("cheatsheet", "loot"), is_cheatsheet=(mode == "cheatsheet")
+        )
 
         self.refresh_filter_pills()
 
@@ -779,6 +782,12 @@ class AppController(QObject):
             self.quick_note_ctrl.show_popup()
 
     _on_add_button_clicked = on_add_button_clicked
+
+    def on_import_snippets_clicked(self) -> None:
+        if self.cheatsheet_ctrl.import_snippets_dialog(self.window):
+            self._on_data_updated()
+
+    _on_import_snippets_clicked = on_import_snippets_clicked
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
         def export_obsidian(entry_id: str) -> None:

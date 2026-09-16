@@ -115,6 +115,64 @@ gobuster dir -u http://$TARGET -w /wordlists/dir.txt
         count = self.mgr.import_from_file(fpath)
         self.assertEqual(count, 0)
 
+    def test_import_snippets_file_json_pack(self):
+        from unittest.mock import patch
+        import json
+
+        pack_data = {
+            "categories": [
+                {
+                    "name": "PackCategory",
+                    "snippets": [
+                        {
+                            "id": "pack_item_1",
+                            "title": "Pack Command",
+                            "template": "pack-tool $TARGET",
+                            "category": "PackCategory",
+                        }
+                    ],
+                }
+            ]
+        }
+        fpath = self.temp_path / "custom_pack.json"
+        fpath.write_text(json.dumps(pack_data), encoding="utf-8")
+
+        mock_config = self.temp_path / "mock_cfg"
+        with patch("core.snippets.manager.get_default_config_dir", return_value=mock_config):
+            count = self.mgr.import_snippets_file(fpath)
+
+        self.assertEqual(count, 1)
+        persisted = mock_config / "community_snippets" / "custom_pack.json"
+        self.assertTrue(persisted.exists())
+        self.assertTrue(any(s.get("title") == "Pack Command" for s in self.mgr.snippets))
+
+    def test_import_snippets_file_markdown(self):
+        fpath = self.temp_path / "extra_notes.md"
+        fpath.write_text(
+            """# Recon
+### Subdomain Enum
+```bash
+subfinder -d $TARGET
+```
+""",
+            encoding="utf-8",
+        )
+        count = self.mgr.import_snippets_file(fpath)
+        self.assertEqual(count, 1)
+        self.assertTrue(any(s.get("title") == "Subdomain Enum" for s in self.mgr.snippets))
+
+    def test_import_snippets_file_errors(self):
+        # Non-existent file
+        with self.assertRaises(FileNotFoundError):
+            self.mgr.import_snippets_file(self.temp_path / "nonexistent.json")
+
+        # Invalid JSON
+        bad_json = self.temp_path / "broken.json"
+        bad_json.write_text("{broken json", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            self.mgr.import_snippets_file(bad_json)
+
 
 if __name__ == "__main__":
     unittest.main()
+

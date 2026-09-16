@@ -81,7 +81,11 @@ class SnippetManager:
         if flat_data != repo_data:
             candidate_dirs.append(flat_data)
 
-        # 3. Package resources (importlib.resources)
+        # 3. User config directory (persistent packs for portable exe & debian packages)
+        user_pack_dir = get_default_config_dir() / "community_snippets"
+        candidate_dirs.append(user_pack_dir)
+
+        # 4. Package resources (importlib.resources)
         try:
             import importlib.resources as pkg_resources
 
@@ -99,7 +103,8 @@ class SnippetManager:
         for cdir in candidate_dirs:
             if not cdir.exists() or not cdir.is_dir():
                 continue
-            for pattern in patterns:
+            cur_patterns = ("*.json",) if cdir == user_pack_dir else patterns
+            for pattern in cur_patterns:
                 for path in cdir.glob(pattern):
                     if path.is_file():
                         found_paths.add(path.resolve())
@@ -454,6 +459,66 @@ class SnippetManager:
             self.snippets.extend(new_items)
 
         return len(new_items)
+
+    def import_snippets_file(self, file_path: Any) -> int:
+        """
+        Imports extra snippets from a JSON or Markdown file into the persistent database.
+        - JSON files (packs with 'categories' or lists of snippets) are stored in the user's
+          persistent community_snippets directory so they remain loaded across restarts and portable runs.
+        - Markdown files (.md) are parsed and added to user snippets.
+        Returns the number of snippets imported.
+        """
+        from core.validators import is_file_size_valid, MAX_SNIPPETS_FILE_SIZE
+
+        p = Path(file_path)
+        if not p.exists():
+            raise FileNotFoundError(f"File not found: {p}")
+
+        if not is_file_size_valid(p, MAX_SNIPPETS_FILE_SIZE):
+            raise ValueError(
+                f"File {p.name} exceeds maximum allowed size of {MAX_SNIPPETS_FILE_SIZE} bytes."
+            )
+
+        suffix = p.suffix.lower()
+
+        if suffix == ".json":
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, RecursionError, UnicodeDecodeError) as e:
+                raise ValueError(f"Invalid JSON format in {p.name}: {e}") from e
+
+            # Persist pack file in user config directory
+            user_pack_dir = get_default_config_dir() / "community_snippets"
+            user_pack_dir.mkdir(parents=True, exist_ok=True)
+            target_pack = user_pack_dir / p.name
+
+            from core.atomic_write import atomic_write_json
+
+            atomic_write_json(target_pack, data, indent=2, ensure_ascii=False)
+
+            target_resolved = target_pack.resolve()
+            if target_resolved not in [cp.resolve() for cp in self.community_snippets_paths]:
+                self.community_snippets_paths.append(target_resolved)
+
+            prev_ids = {s.get("id") for s in self.snippets if s.get("id")}
+            self.load_all()
+            new_ids = {s.get("id") for s in self.snippets if s.get("id")}
+
+            added = len(new_ids - prev_ids)
+            if added == 0:
+                if isinstance(data, dict):
+                    cats = data.get("categories", [])
+                    added = sum(len(c.get("snippets", [])) for c in cats if isinstance(c, dict))
+                    if added == 0 and isinstance(data.get("snippets"), list):
+                        added = len(data["snippets"])
+                elif isinstance(data, list):
+                    added = len(data)
+            return added
+        else:
+            count = self.import_from_file(p)
+            self.load_all()
+            return count
 
     def delete_snippet(self, snippet_id: str) -> bool:
         """Deletes a custom snippet by its ID."""
