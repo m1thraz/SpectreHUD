@@ -261,3 +261,39 @@ def test_loot_controller_density_toggle_and_board_propagation(qapp):
         assert len(toggled) == 1
 
         container.deleteLater()
+
+
+def test_loot_card_hides_phase_badge_in_board_mode(qapp, tmp_path):
+    entry = {
+        "id": "loot-phase-test",
+        "type": "note",
+        "category": "access",
+        "title": "Initial Foothold",
+        "content": "SSH key found",
+    }
+
+    # In board_mode (both comfortable and compact), phase badge is hidden as the column categorizes it
+    card_board_comf = LootCard(entry, project_dir=tmp_path, board_mode=True, density="comfortable")
+    card_board_comf.show()
+    qapp.processEvents()
+    assert not card_board_comf.lbl_cat.isVisible()
+    card_board_comf.deleteLater()
+
+    card_board_comp = LootCard(entry, project_dir=tmp_path, board_mode=True, density="compact")
+    card_board_comp.show()
+    qapp.processEvents()
+    assert not card_board_comp.lbl_cat.isVisible()
+    card_board_comp.deleteLater()
+
+    # In regular list mode (board_mode=False), phase badge remains visible
+    card_list_comf = LootCard(entry, project_dir=tmp_path, board_mode=False, density="comfortable")
+    card_list_comf.show()
+    qapp.processEvents()
+    assert card_list_comf.lbl_cat.isVisible()
+    card_list_comf.deleteLater()
+
+    card_list_comp = LootCard(entry, project_dir=tmp_path, board_mode=False, density="compact")
+    card_list_comp.show()
+    qapp.processEvents()
+    assert card_list_comp.lbl_cat.isVisible()
+    card_list_comp.deleteLater()

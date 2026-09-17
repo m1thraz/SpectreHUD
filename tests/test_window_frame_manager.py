@@ -113,3 +113,37 @@ def test_entering_edge_child_keeps_resize_cursor(qapp):
     assert window.cursor().shape() == Qt.CursorShape.SizeHorCursor
     window.close()
     window.deleteLater()
+
+
+def test_loot_card_and_board_do_not_drag_window(qapp):
+    from ui.controllers.window_frame_manager import is_interactive_widget
+    from ui.loot_card import LootCard
+
+    window = GestureWindow()
+    manager = WindowFrameManager(window, Mock())
+
+    entry = {
+        "id": "card-drag-test",
+        "type": "note",
+        "category": "recon",
+        "title": "Nmap Results",
+        "content": "port 80 open",
+    }
+    card = LootCard(entry, parent=window, board_mode=True)
+    card.setGeometry(50, 50, 200, 80)
+
+    # Both card and its internal children (e.g. grip icon, title) must be recognized as interactive
+    assert is_interactive_widget(card, window)
+    assert is_interactive_widget(card.lbl_grip, window)
+    assert is_interactive_widget(card.lbl_title, window)
+
+    # Mouse press on the card must not initiate window dragging
+    grip_pt = card.lbl_grip.mapTo(window, QPoint(2, 2))
+    assert not manager._process_mouse_press(
+        window.mapToGlobal(grip_pt), grip_pt, Qt.MouseButton.LeftButton
+    )
+    assert not manager._is_moving
+
+    card.deleteLater()
+    window.deleteLater()
+

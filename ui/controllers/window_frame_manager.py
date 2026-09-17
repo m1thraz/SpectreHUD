@@ -53,6 +53,30 @@ def is_interactive_widget(widget: Optional[QWidget], top_window: Optional[QWidge
             and curr.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
         ):
             return True
+        if (
+            curr.property("interactive") is True
+            or curr.property("boardCard") is not None
+            or curr.acceptDrops()
+            or getattr(curr, "objectName", lambda: "")()
+            in (
+                "lootCard",
+                "LootCardsContainer",
+                "LootBoardColumn",
+                "LootBoard",
+                "LootColumnScrollArea",
+                "LootColumnViewport",
+            )
+            or curr.__class__.__name__
+            in (
+                "LootCard",
+                "LootBoard",
+                "LootBoardDropArea",
+                "QuickNoteCard",
+                "SnippetCard",
+                "HistoryCard",
+            )
+        ):
+            return True
         curr = curr.parentWidget()
     return False
 

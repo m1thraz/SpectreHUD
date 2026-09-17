@@ -60,6 +60,7 @@ class LootCard(QFrame):
         self.density = density
         self.setProperty("boardCard", board_mode)
         self.setProperty("cardDensity", density)
+        self.setProperty("interactive", True)
         self._full_content = str(self.entry.get("content", ""))
         self._drag_start_position = None
         self._action_bar_widget: Optional[QWidget] = None
@@ -150,6 +151,8 @@ class LootCard(QFrame):
         self.lbl_cat.setProperty("class", "CategoryBadge")
         self.lbl_cat.setToolTip(t("loot.category_tip", "Pentest phase: {name}", name=phase.long))
         configure_badge_label(self.lbl_cat, phase.short, padding=14)
+        if self.board_mode:
+            self.lbl_cat.setVisible(False)
 
         self.lbl_report_role = QLabel(t("loot.report_finding_badge", "REPORT"))
         self.lbl_report_role.setTextFormat(Qt.TextFormat.PlainText)

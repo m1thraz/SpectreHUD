@@ -38,6 +38,7 @@ class LootBoardDropArea(QFrame):
         self.entry_ids: List[str] = []
         self.setAcceptDrops(True)
         self.setProperty("class", "LootBoardColumn")
+        self.setProperty("interactive", True)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
 
         layout = QVBoxLayout(self)
@@ -57,6 +58,7 @@ class LootBoardDropArea(QFrame):
         self.cards_layout.setSpacing(8)
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.cards_container.setAcceptDrops(True)
+        self.cards_container.setProperty("interactive", True)
         self.cards_container.installEventFilter(self)
 
         scroll = QScrollArea(self)
@@ -230,9 +232,11 @@ class LootBoard(QScrollArea):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setMinimumHeight(430)
         self.setProperty("class", "LootBoard")
+        self.setProperty("interactive", True)
         self.viewport().setAutoFillBackground(True)
 
         self._board_content = QWidget(self)
+        self._board_content.setProperty("interactive", True)
         layout = QHBoxLayout(self._board_content)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(10)
