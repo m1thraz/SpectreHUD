@@ -301,6 +301,37 @@ def normalize_professional_timestamps(body_html: str) -> str:
     )
 
 
+def normalize_professional_remediation_table(body_html: str) -> str:
+    """Enhance remediation action-plan tables with severity badges and clean empty cells."""
+    if "action-plan" not in body_html:
+        return body_html
+
+    def _replace_severity_cell(match: re.Match[str]) -> str:
+        open_tag = match.group(1)
+        raw_sev = match.group(2).strip()
+        close_tag = match.group(3)
+        sev_lower = raw_sev.lower()
+        if sev_lower in {"critical", "high", "medium", "low", "info"}:
+            badge = f'<span class="severity-pill severity-{sev_lower}">{raw_sev.upper()}</span>'
+            return f"{open_tag}{badge}{close_tag}"
+        return match.group(0)
+
+    body_html = re.sub(
+        r'(<tr[^>]*>\s*<td[^>]*>)\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)\s*(</td>)',
+        _replace_severity_cell,
+        body_html,
+        flags=re.IGNORECASE,
+    )
+
+    body_html = re.sub(
+        r'(<td[^>]*>)\s*([–—-])\s*(</td>)',
+        r'\1<span class="report-empty-cell">–</span>\3',
+        body_html,
+    )
+
+    return body_html
+
+
 _GENERATED_MATRIX_ROW_RE = re.compile(
     r"^\|\s*(\d+)\s*\|\s*(.*?)\s*\|\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)"
     r"\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$",

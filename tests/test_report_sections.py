@@ -806,6 +806,29 @@ def test_professional_tables_receive_stable_layout_roles():
     assert "table-layout: fixed;" in professional
 
 
+def test_professional_four_column_remediation_table_enhanced():
+    remediation = wrap_section_markdown(
+        """## 5. Remediation & Action Plan
+
+| Priority | Vulnerability | Recommended Action | Status |
+|----------|---------------|--------------------|--------|
+| CRITICAL | Sudo NOPASSWD /usr/bin/less | Remove sudoers rule | Open |
+| HIGH | Weak SSH Key | – | In Progress |""",
+        "remediation_table",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        remediation,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert '<table class="action-plan action-plan-4col">' in professional
+    assert 'class="severity-pill severity-critical"' in professional
+    assert 'class="severity-pill severity-high"' in professional
+    assert '<span class="report-empty-cell">–</span>' in professional
+    assert ".action-plan.action-plan-4col td:nth-child(2)" in professional
+
+
 def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_breaks():
     markdown = wrap_section_markdown(
         "## Findings\n\n<!-- spectre:pagebreak -->\n\nManual finding context.",

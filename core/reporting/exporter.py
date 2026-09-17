@@ -20,6 +20,7 @@ from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
     build_professional_cover_data,
     extract_report_title,
+    normalize_professional_remediation_table,
     normalize_professional_severity,
     normalize_professional_timestamps,
     professional_section_has_meaningful_content,
@@ -104,13 +105,19 @@ class HtmlReportExporter:
                 "remediation_table": "action-plan",
             }.get(segment.section_type)
             if table_class:
-                body = body.replace("<table>", f'<table class="{table_class}">', 1)
+                extra = (
+                    " action-plan-4col"
+                    if table_class == "action-plan" and "<th>" in body and body.count("<th>") >= 4
+                    else ""
+                )
+                body = body.replace("<table>", f'<table class="{table_class}{extra}">', 1)
             phase_attr = f' data-phase="{segment.category_id}"' if segment.category_id else ""
             html_segments.append(
                 f'<section class="report-section {class_names[segment.section_type]}"'
                 f"{phase_attr}>{body}</section>"
             )
         body_html = normalize_professional_severity("\n".join(html_segments))
+        body_html = normalize_professional_remediation_table(body_html)
         return normalize_professional_timestamps(body_html)
 
     @classmethod
@@ -128,11 +135,11 @@ class HtmlReportExporter:
     ) -> str:
         """Generates the full, styled HTML document ready for export."""
         active_profile = ReportExportProfile(profile)
-        body_html = (
-            cls._professional_body_html(markdown_content, project_dir, language)
-            if active_profile is ReportExportProfile.PROFESSIONAL_PRINT
-            else convert_markdown_with_findings(markdown_content, project_dir=project_dir)
-        )
+        if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
+            body_html = cls._professional_body_html(markdown_content, project_dir, language)
+        else:
+            raw_html = convert_markdown_with_findings(markdown_content, project_dir=project_dir)
+            body_html = normalize_professional_remediation_table(raw_html)
         title_from_md = extract_report_title(markdown_content)
         pname = (
             project_name
