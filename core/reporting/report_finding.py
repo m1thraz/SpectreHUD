@@ -150,6 +150,11 @@ class ReportFindingItem:
             if end_m:
                 desc_text = desc_text[: end_m.start()]
             description = desc_text.strip()
+            if description in (
+                "*Keine Beschreibung erfasst.*",
+                "*No description provided.*",
+            ):
+                description = ""
 
         if rec_header:
             rec_start = rec_header.end()
@@ -400,11 +405,19 @@ class ReportFindingItem:
         lines.append("  \n".join(meta_parts))
         lines.append("")
 
-        if self.description:
-            lines.append("#### Beschreibung" if language == "de" else "#### Description")
-            lines.append("")
-            lines.append(self.description)
-            lines.append("")
+        desc_heading = "#### Beschreibung" if language == "de" else "#### Description"
+        lines.append(desc_heading)
+        lines.append("")
+        lines.append(
+            self.description
+            if self.description
+            else (
+                "*Keine Beschreibung erfasst.*"
+                if language == "de"
+                else "*No description provided.*"
+            )
+        )
+        lines.append("")
 
         if self.recommendation:
             lines.append("#### Empfehlung" if language == "de" else "#### Recommendation")

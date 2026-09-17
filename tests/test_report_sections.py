@@ -1164,3 +1164,38 @@ Summary of vulnerabilities found.
     assert '<span class="report-cover-meta-label">Tester</span>' in html_de
 
 
+def test_manual_finding_structure_and_observed_consistency():
+    """Verify newly created findings have consistent structure and metadata with imported findings."""
+    finding = ReportFindingItem(
+        id="finding-test-1",
+        title="Manual Vulnerability",
+        severity="medium",
+        status="open",
+        phase="recon",
+        targets=["192.168.1.100"],
+        timestamp="2026-09-17 16:30:00",
+        description="",
+        recommendation="",
+    )
+
+    md_en = finding.to_markdown(language="en", include_phase=True)
+    assert "**Observed:** `2026-09-17 16:30:00`" in md_en
+    assert "#### Description" in md_en
+    assert "*No description provided.*" in md_en
+
+    # Roundtrip from markdown normalizes placeholder back to empty for UI inspector
+    reparsed = ReportFindingItem.from_markdown(md_en, finding.id, language="en")
+    assert reparsed.description == ""
+    assert reparsed.timestamp == "2026-09-17 16:30:00"
+
+    # HTML export renders semantic finding-description section and observed badge
+    html = HtmlReportExporter.build_full_html(
+        f"<!-- spectre:section:start:finding_section -->\n\n## Technical Findings\n\n{md_en}\n\n<!-- spectre:section:end:finding_section -->",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+        language="en",
+    )
+    assert '<section class="finding-description"><h4>Description</h4>' in html
+    assert '<span class="finding-meta-label">Observed</span>' in html
+    assert "2026-09-17 16:30" in html
+
+

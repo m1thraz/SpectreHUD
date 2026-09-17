@@ -1153,8 +1153,10 @@ class ReportEditorTab(QWidget):
             )
 
         import uuid
+        from datetime import datetime
 
         new_id = f"finding-{uuid.uuid4().hex[:6]}"
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         new_finding = ReportFindingItem(
             id=new_id,
             title=t("report.new_finding_default_title", "New Finding"),
@@ -1162,6 +1164,7 @@ class ReportEditorTab(QWidget):
             status="open",
             phase="recon",
             targets=[self._get_target_ip()] if self._get_target_ip() else [],
+            timestamp=now_str,
             description="",
             recommendation="",
         )

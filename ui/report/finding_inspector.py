@@ -685,6 +685,12 @@ class ReportFindingInspector(QWidget):
         desc = self._reconcile_description()
         self._original_description = desc
 
+        timestamp = self._finding.timestamp
+        if not timestamp:
+            from datetime import datetime
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         updated = ReportFindingItem(
             id=self._finding.id,
             title=self.txt_title.text().strip(),
@@ -694,7 +700,7 @@ class ReportFindingInspector(QWidget):
             status=str(self.cmb_status.currentData()),
             phase=str(self.cmb_phase.currentData()),
             targets=targets,
-            timestamp=self._finding.timestamp,
+            timestamp=timestamp,
             description=desc,
             recommendation=self.txt_rec.toPlainText(),
             references=refs,
