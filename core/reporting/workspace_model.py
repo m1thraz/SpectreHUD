@@ -73,6 +73,18 @@ class ReportNarrativeSection:
         return wrap_section_markdown(text, self.identity)
 
 
+def _is_meaningful_unstructured_block(markdown: str, branding_footer: str = "") -> bool:
+    stripped = markdown.strip()
+    if not stripped:
+        return False
+    if branding_footer and stripped == branding_footer:
+        return False
+    lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+    if all(line in ("---", "***", "___") for line in lines):
+        return False
+    return True
+
+
 @dataclass
 class ReportWorkspaceDocument:
     metadata: ReportMetadata = field(default_factory=ReportMetadata)
@@ -249,8 +261,8 @@ class ReportWorkspaceDocument:
                     )
                 )
             else:
-                if seg.markdown.strip() and seg.markdown.strip() != branding_footer:
-                    unstructured.append(seg.markdown)
+                if _is_meaningful_unstructured_block(seg.markdown, branding_footer):
+                    unstructured.append(seg.markdown.strip())
 
         return cls(
             metadata=metadata,
@@ -559,7 +571,7 @@ class ReportWorkspaceDocument:
 
         # Append unstructured preamble/extra blocks if any
         for unstr in self.unstructured_blocks:
-            if unstr.strip():
+            if _is_meaningful_unstructured_block(unstr):
                 parts.append(unstr.strip())
 
         body = "\n\n---\n\n".join(p for p in parts if p)

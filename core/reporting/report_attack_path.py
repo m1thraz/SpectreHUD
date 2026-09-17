@@ -72,6 +72,17 @@ class ReportAttackPath:
         elif h2:
             narrative_intro = markdown[h2.end() :].strip()
 
+        intro_lines = [
+            line
+            for line in narrative_intro.splitlines()
+            if not re.match(
+                r"^\s*[*_]*(?:No documented attack path is available|Kein dokumentierter Angriffspfad vorhanden)\.?[*_]*\s*$",
+                line,
+                re.IGNORECASE,
+            )
+        ]
+        narrative_intro = "\n".join(intro_lines).strip()
+
         # Parse steps: handles both detailed bullets and one-line legacy bullets
         steps: List[AttackPathStep] = []
         step_matches = list(
@@ -150,8 +161,17 @@ class ReportAttackPath:
         sec_title = self.title or default_title
         lines: List[str] = [f"## {sec_title}", ""]
 
-        if self.narrative_intro.strip():
-            lines.append(self.narrative_intro.strip())
+        clean_intro = "\n".join(
+            line
+            for line in self.narrative_intro.splitlines()
+            if not re.match(
+                r"^\s*[*_]*(?:No documented attack path is available|Kein dokumentierter Angriffspfad vorhanden)\.?[*_]*\s*$",
+                line,
+                re.IGNORECASE,
+            )
+        ).strip()
+        if clean_intro:
+            lines.append(clean_intro)
             lines.append("")
 
         if not self.steps:

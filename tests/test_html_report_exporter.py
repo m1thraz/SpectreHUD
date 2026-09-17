@@ -187,14 +187,19 @@ curl -i http://10.10.10.10/admin
         self.assertIn("report_edited_Evilscriptscriptalert1script.html", full_html)
 
     def test_protocol_relative_urls_blocked(self):
-        """Protocol-relative target content is blocked in exported links and images."""
+        """Protocol-relative and UNC network target content is blocked in exported links and images."""
         md_link_pr = "[Evil](//attacker.com/evil.js)"
-        html_out_link = convert_markdown_to_html(md_link_pr)
+        html_out_link = convert_markdown_to_html(md_link_pr, project_dir=self.proj_dir)
         self.assertIn('href="#unsafe-protocol-relative-blocked"', html_out_link)
 
         md_img_pr = "![Evil](//attacker.com/evil.png)"
-        html_out_img = convert_markdown_to_html(md_img_pr)
+        html_out_img = convert_markdown_to_html(md_img_pr, project_dir=self.proj_dir)
         self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_img)
+
+        # UNC network path must be bypassed before filesystem/network resolution and blocked safely
+        md_unc_img = r"![Evil](\\attacker.com\evil.png)"
+        html_out_unc = convert_markdown_to_html(md_unc_img, project_dir=self.proj_dir)
+        self.assertIn('src="#unsafe-protocol-relative-blocked"', html_out_unc)
 
     def test_image_embedding_respects_product_size_limit(self):
         """The report-size policy caps image count and aggregate bytes."""

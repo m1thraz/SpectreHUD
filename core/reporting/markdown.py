@@ -85,11 +85,13 @@ def resolve_and_embed_images(
         alt_text = match.group(1)
         raw_src = match.group(2).strip()
 
-        # Skip data URIs or external URLs
+        # Skip data URIs or external URLs (including protocol-relative and UNC network paths)
         if (
             raw_src.startswith("data:")
             or raw_src.startswith("http://")
             or raw_src.startswith("https://")
+            or raw_src.startswith("//")
+            or raw_src.startswith(r"\\")
         ):
             return match.group(0)
 
@@ -98,6 +100,9 @@ def resolve_and_embed_images(
             clean_src = clean_src[8:]
         elif clean_src.startswith("file://"):
             clean_src = clean_src[7:]
+
+        if clean_src.startswith("//") or clean_src.startswith(r"\\"):
+            return match.group(0)
 
         p = Path(clean_src)
         candidate_paths = []

@@ -783,3 +783,78 @@ def test_legacy_branding_footer_is_stripped_and_not_emitted():
     serialized = doc.to_markdown()
     assert "Erstellt mit SpectreHUD" not in serialized
     assert "Generated with SpectreHUD" not in serialized
+
+
+def test_roundtrip_does_not_accumulate_trailing_lines_or_dividers():
+    repo = TemplateRepository()
+    tmpl = repo.get_template("pentest_standard_en")
+    assert tmpl is not None
+    initial_md = TemplateRenderer().render(tmpl, ReportContext())
+
+    doc1 = ReportWorkspaceDocument.from_markdown(initial_md)
+    # Inter-section dividers must not be classified as unstructured blocks
+    assert len(doc1.unstructured_blocks) == 0
+
+    md1 = doc1.to_markdown()
+    doc2 = ReportWorkspaceDocument.from_markdown(md1)
+    assert len(doc2.unstructured_blocks) == 0
+
+    md2 = doc2.to_markdown()
+    doc3 = ReportWorkspaceDocument.from_markdown(md2)
+    assert len(doc3.unstructured_blocks) == 0
+
+    md3 = doc3.to_markdown()
+
+    # Verify line count and content is completely stable across roundtrips
+    assert len(md2.splitlines()) == len(md3.splitlines())
+    assert md2.rstrip() == md3.rstrip()
+
+
+def test_empty_attack_path_does_not_duplicate_placeholder_on_reload():
+    repo = TemplateRepository()
+    for tmpl_id, expected_msg in [
+        ("pentest_standard_en", "No documented attack path is available."),
+        ("pentest_standard_de", "Kein dokumentierter Angriffspfad vorhanden."),
+    ]:
+        tmpl = repo.get_template(tmpl_id)
+        assert tmpl is not None
+        initial_md = TemplateRenderer().render(tmpl, ReportContext())
+
+        doc1 = ReportWorkspaceDocument.from_markdown(initial_md)
+        path1 = doc1.get_attack_path()
+        assert path1.narrative_intro == ""
+
+        md1 = doc1.to_markdown()
+        assert md1.count(expected_msg) == 1
+
+        doc2 = ReportWorkspaceDocument.from_markdown(md1)
+        path2 = doc2.get_attack_path()
+        assert path2.narrative_intro == ""
+
+        md2 = doc2.to_markdown()
+        assert md2.count(expected_msg) == 1
+
+        doc3 = ReportWorkspaceDocument.from_markdown(md2)
+        path3 = doc3.get_attack_path()
+        assert path3.narrative_intro == ""
+
+        md3 = doc3.to_markdown()
+        assert md3.count(expected_msg) == 1
+
+
+def test_empty_attack_path_with_existing_corrupted_duplicates_is_cleaned():
+    corrupted_md = (
+        "<!-- spectre:section:start:attack_path -->\n\n"
+        "## 3. Attack Path / Assessment Narrative\n\n"
+        "No documented attack path is available.\n"
+        "No documented attack path is available.\n"
+        "No documented attack path is available.\n\n"
+        "<!-- spectre:section:end:attack_path -->"
+    )
+    doc = ReportWorkspaceDocument.from_markdown(corrupted_md, default_language="en")
+    path = doc.get_attack_path()
+    assert path.narrative_intro == ""
+
+    cleaned_md = doc.to_markdown()
+    assert cleaned_md.count("No documented attack path is available.") == 1
+
