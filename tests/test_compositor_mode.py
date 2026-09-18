@@ -61,6 +61,47 @@ class TestCompositorMode(unittest.TestCase):
             finally:
                 win_comp.close()
 
+    def test_zero_transparency_preserves_compositor_translucency(self):
+        from ui.main_window import MainWindow
+
+        with patch.object(MainWindow, "_detect_compositor", return_value=True):
+            win = create_main_window()
+            try:
+                self.assertTrue(win.has_compositor)
+                # Setting bleed through to 0 must NOT disable compositor translucency
+                win.set_bleed_through(0)
+                self.assertTrue(win.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
+                self.assertTrue(
+                    win.hud_frame.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                )
+                self.assertTrue(win.hud_frame._is_composited_hud())
+
+                # Glass intensity to 0 must also keep translucency and composited status
+                win.hud_frame.glassIntensity = 0
+                self.assertTrue(win.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
+                self.assertTrue(
+                    win.hud_frame.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                )
+            finally:
+                win.close()
+
+    def test_zero_transparency_in_non_composited_mode(self):
+        from ui.main_window import MainWindow
+
+        with patch.object(MainWindow, "_detect_compositor", return_value=False):
+            win = create_main_window()
+            try:
+                self.assertFalse(win.has_compositor)
+                win.set_bleed_through(0)
+                self.assertFalse(win.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
+                self.assertFalse(
+                    win.hud_frame.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                )
+                self.assertFalse(win.hud_frame._is_composited_hud())
+            finally:
+                win.close()
+
 
 if __name__ == "__main__":
     unittest.main()
+

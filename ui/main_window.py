@@ -181,8 +181,10 @@ class MainWindow(QMainWindow):
         outer_layout.setSpacing(0)
 
         bleed_through = clamp_transparency(self.config.get("bleed_through", 0), 0)
-        self.hud_frame = GlassPanel()
+        self.hud_frame = GlassPanel(central_widget)
         self.hud_frame.setObjectName("HudFrame")
+        if self.has_compositor:
+            self.hud_frame.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.hud_frame.set_bleed_through(bleed_through)
         self.hud_frame.setMouseTracking(True)
 
@@ -365,6 +367,8 @@ class MainWindow(QMainWindow):
         bleed = clamp_transparency(value, 0)
         if hasattr(self, "hud_frame") and self.hud_frame:
             self.hud_frame.set_bleed_through(bleed)
+        if self.has_compositor:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.update()
 
     # -------------------------------------------------------------
