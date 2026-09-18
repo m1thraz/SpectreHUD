@@ -23,9 +23,11 @@ class QuickNoteFocusReview(QFrame):
     """Present a single review decision without surrounding stream noise."""
 
     promote_requested = pyqtSignal(dict)
+    report_requested = pyqtSignal(dict)
     edit_requested = pyqtSignal(dict)
     text_save_requested = pyqtSignal(str, str)
     complete_requested = pyqtSignal(str)
+    later_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
     next_requested = pyqtSignal()
 
@@ -86,23 +88,37 @@ class QuickNoteFocusReview(QFrame):
 
         actions = QHBoxLayout()
         actions.setSpacing(8)
-        self.btn_edit = self._button(t("quick_note.edit_details", "Edit details"), "fa5s.pen")
-        self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
-        actions.addWidget(self.btn_edit)
-        loot = self._button(t("quick_note.send_loot", "Send to Loot"), "fa5s.archive")
+
+        # Primary decision actions
+        loot = self._button(t("quick_note.send_loot", "Loot"), "fa5s.archive")
         loot.clicked.connect(lambda: self.promote_requested.emit(self.entry))
         actions.addWidget(loot)
+
+        report = self._button(t("quick_note.send_report", "Report"), "fa5s.file-alt")
+        report.clicked.connect(lambda: self.report_requested.emit(self.entry))
+        actions.addWidget(report)
+
         complete = self._button(t("quick_note.review_complete", "Done"), "fa5s.check-circle")
         complete.setProperty("class", "PrimaryBtn")
         complete.clicked.connect(lambda: self.complete_requested.emit(self.entry.get("id", "")))
         actions.addWidget(complete)
+
+        later = self._button(t("quick_note.review_later", "Later"), "fa5s.clock")
+        later.clicked.connect(lambda: self.later_requested.emit(self.entry.get("id", "")))
+        actions.addWidget(later)
+
+        actions.addStretch()
+
+        # Secondary actions
+        self.btn_edit = self._button(t("quick_note.edit_details", "Edit"), "fa5s.pen")
+        self.btn_edit.clicked.connect(lambda: self.edit_requested.emit(self.entry))
+        actions.addWidget(self.btn_edit)
+
         delete = self._button(t("quick_note.review_delete", "Delete"), "fa5s.trash")
         delete.setProperty("class", "DangerBtn")
         delete.clicked.connect(lambda: self.delete_requested.emit(self.entry.get("id", "")))
         actions.addWidget(delete)
-        next_button = self._button(t("quick_note.review_next", "Next"), "fa5s.arrow-right")
-        next_button.clicked.connect(self.next_requested.emit)
-        actions.addWidget(next_button)
+
         layout.addLayout(actions)
 
     def _update_save_state(self) -> None:

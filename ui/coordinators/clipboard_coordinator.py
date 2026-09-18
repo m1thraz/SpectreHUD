@@ -30,6 +30,7 @@ class ClipboardCoordinator(QObject):
         loot_ctrl: LootController,
         target_provider: Callable[[], str],
         quick_note_ctrl: Optional[Any] = None,
+        phase_provider: Optional[Callable[[], Optional[str]]] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
@@ -38,8 +39,11 @@ class ClipboardCoordinator(QObject):
         self.loot_ctrl = loot_ctrl
         self.target_provider = target_provider
         self.quick_note_ctrl = quick_note_ctrl
+        self.phase_provider = phase_provider
 
         self.clipboard_monitor.set_target_provider(self.target_provider)
+        if self.phase_provider and hasattr(self.clipboard_monitor, "set_phase_provider"):
+            self.clipboard_monitor.set_phase_provider(self.phase_provider)
 
     def toggle_pause(self) -> bool:
         """Toggle recording and return whether recording is now active."""
@@ -56,12 +60,29 @@ class ClipboardCoordinator(QObject):
 
     def add_history_to_loot(self, window: QWidget, history_item: Dict[str, Any]) -> bool:
         """Opens the loot creation dialog prefilled from a history item."""
-        target_ip = history_item.get("target_ip") or self.target_provider()
+        target_ip = (
+            history_item.get("target_ip")
+            or (self.target_provider() if callable(self.target_provider) else "")
+        ).strip()
+
+        # Priority: captured phase > active phase > command heuristic > neutral fallback ("misc")
+        captured_phase = history_item.get("phase_id")
+        active_phase = self.phase_provider() if callable(self.phase_provider) else None
+        if captured_phase:
+            category = str(captured_phase).strip()
+        elif active_phase:
+            category = str(active_phase).strip()
+        elif history_item.get("is_command"):
+            category = "access"
+        else:
+            category = "misc"
+
+        default_type = "credentials" if history_item.get("is_command") else "note"
         success = self.loot_ctrl.open_add_dialog(
             parent_widget=window,
             target_ip=target_ip,
-            default_type="credentials" if history_item.get("is_command") else "note",
-            default_category="access" if history_item.get("is_command") else "recon",
+            default_type=default_type,
+            default_category=category,
             default_title=f"Kopiert aus Terminal ({history_item.get('timestamp', '')})",
             default_content=history_item.get("text", ""),
         )
@@ -71,18 +92,33 @@ class ClipboardCoordinator(QObject):
 
     def add_history_to_note(self, window: QWidget, history_item: Dict[str, Any]) -> bool:
         """Captures a history item directly as a Quick Note without dialog."""
-        target_ip = history_item.get("target_ip") or self.target_provider()
+        target_ip = (
+            history_item.get("target_ip")
+            or (self.target_provider() if callable(self.target_provider) else "")
+        ).strip()
         text = history_item.get("text", "")
         if not text.strip():
             return False
 
-        category = "access" if history_item.get("is_command") else "recon"
+        # Priority: captured phase > active phase > chosen category > command heuristic > neutral fallback ("misc")
+        captured_phase = history_item.get("phase_id")
+        active_phase = self.phase_provider() if callable(self.phase_provider) else None
+        chosen = None
         if self.quick_note_ctrl:
             chosen = getattr(self.quick_note_ctrl, "current_category", None) or getattr(
                 self.quick_note_ctrl, "last_category", None
             )
-            if chosen and chosen != "misc":
-                category = chosen
+
+        if captured_phase:
+            category = str(captured_phase).strip()
+        elif active_phase:
+            category = str(active_phase).strip()
+        elif chosen and chosen != "misc":
+            category = str(chosen).strip()
+        elif history_item.get("is_command"):
+            category = "access"
+        else:
+            category = "misc"
 
         success = False
         if self.quick_note_ctrl and hasattr(self.quick_note_ctrl, "add_entry"):

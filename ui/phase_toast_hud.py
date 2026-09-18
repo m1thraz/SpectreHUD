@@ -163,6 +163,21 @@ class PhaseToastHUD(QWidget):
         self.show()
         self._timer.start(self.DISPLAY_DURATION_MS)
 
+    def show_screenshot(self, phase_name: str = "", target: str = "") -> None:
+        self.badge.setText("CAPTURE")
+        self.lbl_category.setText(t("screenshot.hud_category", "SCREENSHOT SAVED"))
+        parts = []
+        if phase_name:
+            parts.append(phase_name)
+        if target:
+            parts.append(target)
+        self.lbl_phase_name.setText(
+            " · ".join(parts) if parts else t("screenshot.hud_saved", "Saved to Loot")
+        )
+        self._reposition_to_cursor_screen()
+        self.show()
+        self._timer.start(self.DISPLAY_DURATION_MS)
+
     def _reposition_to_cursor_screen(self) -> None:
         """Calculates position in top third of the monitor containing the mouse cursor."""
         cursor_pos = QCursor.pos()

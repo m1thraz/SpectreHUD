@@ -270,13 +270,70 @@ class TestClipboardCoordinatorCapture(unittest.TestCase):
             target_ip="10.10.10.100",
         )
 
-        # Case 2: is_command is False -> recon
+        # Case 2: is_command is False -> misc (neutral fallback)
         item_text = {"text": "Found robots.txt entries", "is_command": False}
         self.coordinator.add_history_to_note(window, item_text)
         self.quick_note_ctrl.add_entry.assert_called_with(
             text="Found robots.txt entries",
-            category="recon",
+            category="misc",
             target_ip="10.10.10.100",
+        )
+
+    def test_add_history_to_loot_provenance_priority(self):
+        window = QWidget()
+        self.coordinator.phase_provider = MagicMock(return_value="postexploit")
+        self.coordinator.target_provider = MagicMock(return_value="10.10.10.200")
+
+        # 1. Captured phase & target overrides active phase & active target
+        item_captured = {
+            "id": "h-cap",
+            "text": "hashdump output",
+            "phase_id": "privesc",
+            "target_ip": "10.10.10.50",
+            "timestamp": "14:00",
+        }
+        self.coordinator.add_history_to_loot(window, item_captured)
+        self.loot_ctrl.open_add_dialog.assert_called_with(
+            parent_widget=window,
+            target_ip="10.10.10.50",
+            default_type="note",
+            default_category="privesc",
+            default_title="Kopiert aus Terminal (14:00)",
+            default_content="hashdump output",
+        )
+
+        # 2. When captured phase missing, falls back to active phase & active target
+        item_no_phase = {
+            "id": "h-active",
+            "text": "whoami",
+            "timestamp": "14:05",
+        }
+        self.coordinator.add_history_to_loot(window, item_no_phase)
+        self.loot_ctrl.open_add_dialog.assert_called_with(
+            parent_widget=window,
+            target_ip="10.10.10.200",
+            default_type="note",
+            default_category="postexploit",
+            default_title="Kopiert aus Terminal (14:05)",
+            default_content="whoami",
+        )
+
+    def test_add_history_to_note_provenance_priority(self):
+        window = QWidget()
+        self.coordinator.phase_provider = MagicMock(return_value="recon")
+        self.coordinator.target_provider = MagicMock(return_value="10.10.10.99")
+
+        # Captured phase overrides active phase
+        item = {
+            "text": "sudo -l",
+            "phase_id": "privesc",
+            "target_ip": "10.10.10.42",
+        }
+        self.coordinator.add_history_to_note(window, item)
+        self.quick_note_ctrl.add_entry.assert_called_with(
+            text="sudo -l",
+            category="privesc",
+            target_ip="10.10.10.42",
         )
 
     def test_add_history_to_note_empty_text_ignored(self):

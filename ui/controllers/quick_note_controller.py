@@ -804,7 +804,18 @@ class QuickNoteController(QObject):
         notes: List[Dict[str, Any]],
         parent_widget: QWidget,
     ) -> List[QWidget]:
-        eligible = [n for n in reversed(notes) if n.get("status", "inbox") != "resolved"]
+        def _review_priority(n: Dict[str, Any]) -> int:
+            status = n.get("status", "inbox")
+            if status == "inbox":
+                return 0
+            elif status == "followup":
+                return 1
+            return 2
+
+        eligible = sorted(
+            [n for n in reversed(notes) if n.get("status", "inbox") != "resolved"],
+            key=_review_priority,
+        )
         active_entry, show_cycle_notice = self._review_session.prepare_step(eligible)
 
         if show_cycle_notice:
@@ -824,9 +835,13 @@ class QuickNoteController(QObject):
         review.promote_requested.connect(
             lambda note, p=parent_widget: self._review_promote(note, p)
         )
+        review.report_requested.connect(
+            lambda note, p=parent_widget: self._review_report(note, p)
+        )
         review.edit_requested.connect(lambda note, p=parent_widget: self.open_edit_dialog(p, note))
         review.text_save_requested.connect(self.update_note_text)
         review.complete_requested.connect(self._review_complete)
+        review.later_requested.connect(self._review_later)
         review.delete_requested.connect(self._review_delete)
         review.next_requested.connect(self._review_next)
         content_layout.addWidget(review)
@@ -840,6 +855,15 @@ class QuickNoteController(QObject):
         self._suppressed_event_ids.add(entry_id)
         try:
             success = self.set_note_status(entry_id, "resolved")
+        finally:
+            self._suppressed_event_ids.discard(entry_id)
+        if success:
+            self._advance_review(entry_id, completed=True)
+
+    def _review_later(self, entry_id: str) -> None:
+        self._suppressed_event_ids.add(entry_id)
+        try:
+            success = self.set_note_status(entry_id, "followup")
         finally:
             self._suppressed_event_ids.discard(entry_id)
         if success:
@@ -859,6 +883,18 @@ class QuickNoteController(QObject):
         self._suppressed_event_ids.add(entry_id)
         try:
             success = self.promote_to_loot(entry, parent_widget=parent_widget)
+        finally:
+            self._suppressed_event_ids.discard(entry_id)
+        if success:
+            self._advance_review(entry_id, completed=True)
+
+    def _review_report(
+        self, entry: Dict[str, Any], parent_widget: Optional[QWidget] = None
+    ) -> None:
+        entry_id = entry.get("id", "")
+        self._suppressed_event_ids.add(entry_id)
+        try:
+            success = self.send_to_report(entry, parent_widget=parent_widget)
         finally:
             self._suppressed_event_ids.discard(entry_id)
         if success:

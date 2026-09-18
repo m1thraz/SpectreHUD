@@ -229,3 +229,45 @@ def test_focus_next_advances_without_counting_completion(qapp):
     assert restarted[0].entry["id"] == "one"
     assert restarted_parent.findChild(QuickNoteReviewCycleNotice) is not None
     assert controller._review_completed_count == 0
+
+
+def test_focus_review_later_marks_followup_and_advances(qapp):
+    controller = _controller([_entry("n1", "2026-09-06 10:00:00")])
+    controller.set_review_mode(True, refresh=False)
+    parent = QWidget()
+    _render(controller, parent)
+
+    controller._review_later("n1")
+    note = next(n for n in controller.quick_note_manager.get_all_entries() if n["id"] == "n1")
+    assert note["status"] == "followup"
+    assert controller._review_completed_count == 1
+
+
+def test_focus_review_report_sends_to_report_and_resolves(qapp):
+    controller = _controller([_entry("n2", "2026-09-06 10:00:00")])
+    controller.report_controller.append_note.return_value = True
+    controller.set_review_mode(True, refresh=False)
+    parent = QWidget()
+    _render(controller, parent)
+
+    note_entry = next(n for n in controller.quick_note_manager.get_all_entries() if n["id"] == "n2")
+    controller._review_report(note_entry, parent_widget=parent)
+    controller.report_controller.append_note.assert_called_once()
+    note = next(n for n in controller.quick_note_manager.get_all_entries() if n["id"] == "n2")
+    assert note["status"] == "resolved"
+    assert controller._review_completed_count == 1
+
+
+def test_focus_review_prioritizes_inbox_before_followup(qapp):
+    controller = _controller(
+        [
+            _entry("e1_followup", "2026-09-06 08:00:00", status="followup"),
+            _entry("e2_inbox", "2026-09-06 09:00:00", status="inbox"),
+        ]
+    )
+    controller.set_review_mode(True, refresh=False)
+    parent = QWidget()
+    review = _render(controller, parent)[0]
+    # e2_inbox must be presented before e1_followup even though e1_followup is older
+    assert review.entry["id"] == "e2_inbox"
+

@@ -229,6 +229,7 @@ class ScreenshotManager(QObject):
             return False
 
         was_visible = parent_window.isVisible()
+        was_active = parent_window.isActiveWindow()
         parent_window.hide()
 
         def do_grab():
@@ -236,8 +237,9 @@ class ScreenshotManager(QObject):
                 full_pixmap, bbox = self.capture_virtual_desktop()
                 if not full_pixmap or full_pixmap.isNull():
                     logger.warning("No valid desktop pixmap captured for snip overlay.")
-                    if was_visible:
-                        parent_window.show()
+                    self._restore_parent_window(
+                        parent_window, was_visible=was_visible, was_active=was_active
+                    )
                     return
 
                 self._active_overlay = factory(full_pixmap, bbox=bbox)
@@ -250,15 +252,22 @@ class ScreenshotManager(QObject):
                         loot_manager,
                         target_ip,
                         phase_id,
+                        was_visible=was_visible,
+                        was_active=was_active,
                     )
                 )
                 self._active_overlay.snip_cancelled.connect(
-                    lambda: self._on_snip_cancelled(parent_window)
+                    lambda: self._on_snip_cancelled(
+                        parent_window,
+                        was_visible=was_visible,
+                        was_active=was_active,
+                    )
                 )
             except (RuntimeError, OSError) as e:
                 logger.error(f"Error during desktop grab: {e}", exc_info=True)
-                if was_visible:
-                    parent_window.show()
+                self._restore_parent_window(
+                    parent_window, was_visible=was_visible, was_active=was_active
+                )
 
         QTimer.singleShot(220, do_grab)
         return True
@@ -271,6 +280,9 @@ class ScreenshotManager(QObject):
         loot_manager,
         target_ip: str,
         phase_id: Optional[str] = None,
+        *,
+        was_visible: bool = True,
+        was_active: bool = True,
     ) -> None:
         """Saves cropped pixmap to project loot directory and creates Loot entry."""
         try:
@@ -317,22 +329,41 @@ class ScreenshotManager(QObject):
             logger.error(f"Error handling completed snip: {e}", exc_info=True)
             raise
         finally:
-            self._restore_parent_window(parent_window)
+            self._restore_parent_window(
+                parent_window, was_visible=was_visible, was_active=was_active
+            )
 
-    def _restore_parent_window(self, parent_window: QWidget) -> None:
+    def _restore_parent_window(
+        self,
+        parent_window: QWidget,
+        was_visible: bool = True,
+        was_active: bool = True,
+    ) -> None:
         """Restore the HUD after a completed or failed screenshot lifecycle."""
         try:
+            if not was_visible:
+                return
+
             parent_window.show()
-            parent_window.setWindowState(
-                parent_window.windowState() & ~Qt.WindowState.WindowMinimized
-                | Qt.WindowState.WindowActive
-            )
-            parent_window.raise_()
-            parent_window.activateWindow()
+            if was_active:
+                parent_window.setWindowState(
+                    parent_window.windowState() & ~Qt.WindowState.WindowMinimized
+                    | Qt.WindowState.WindowActive
+                )
+                parent_window.raise_()
+                parent_window.activateWindow()
 
         except RuntimeError as e:
             logger.error(f"Error restoring parent window after screenshot: {e}")
 
-    def _on_snip_cancelled(self, parent_window: QWidget) -> None:
+    def _on_snip_cancelled(
+        self,
+        parent_window: QWidget,
+        *,
+        was_visible: bool = True,
+        was_active: bool = True,
+    ) -> None:
         """Restores HUD when user cancels snip."""
-        self._restore_parent_window(parent_window)
+        self._restore_parent_window(
+            parent_window, was_visible=was_visible, was_active=was_active
+        )

@@ -7,7 +7,7 @@ Shows active phase, last logged action, and badge counters to restore focus with
 
 from typing import Any, Dict, Optional
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from core.i18n import t
@@ -17,13 +17,16 @@ from ui.styles.theme import rgba_str
 
 class SessionRecapBanner(QFrame):
     """
-    Lightweight, auto-dismissing banner providing instant context when returning to SpectreHUD.
+    Lightweight, non-distracting banner providing instant context and resume when returning to SpectreHUD.
     """
 
-    def __init__(self, parent: Optional[QWidget] = None, auto_dismiss_ms: int = 10000):
+    resume_clicked = pyqtSignal(dict)
+
+    def __init__(self, parent: Optional[QWidget] = None, auto_dismiss_ms: int = 25000):
         super().__init__(parent)
         self.setObjectName("SessionRecapBanner")
         self.auto_dismiss_ms = auto_dismiss_ms
+        self._current_info: Dict[str, Any] = {}
         self._dismiss_timer = QTimer(self)
         self._dismiss_timer.setSingleShot(True)
         self._dismiss_timer.timeout.connect(self.hide)
@@ -59,6 +62,16 @@ class SessionRecapBanner(QFrame):
         )
         layout.addWidget(self.lbl_phase)
 
+        self.lbl_sep_target = QLabel("·")
+        self.lbl_sep_target.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
+        layout.addWidget(self.lbl_sep_target)
+
+        self.lbl_target = QLabel("")
+        self.lbl_target.setStyleSheet(
+            f"color: {get_theme_color('TEXT_PRIMARY')}; font-size: 11px; font-weight: 600;"
+        )
+        layout.addWidget(self.lbl_target)
+
         self.lbl_sep1 = QLabel("·")
         self.lbl_sep1.setStyleSheet(f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px;")
         layout.addWidget(self.lbl_sep1)
@@ -81,6 +94,29 @@ class SessionRecapBanner(QFrame):
 
         layout.addStretch()
 
+        self.btn_resume = QPushButton(t("recap.resume", "Resume"))
+        self.btn_resume.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_resume.setFixedHeight(20)
+        self.btn_resume.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {get_theme_color("CYAN_A15")};
+                color: {get_theme_color("ACCENT_BRAND")};
+                border: 1px solid {get_theme_color("BORDER_GLOW")};
+                border-radius: 3px;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 1px 8px;
+            }}
+            QPushButton:hover {{
+                background-color: {get_theme_color("CYAN_A25", get_theme_color("CYAN_A15"))};
+                color: {get_theme_color("TEXT_PRIMARY")};
+            }}
+            """
+        )
+        self.btn_resume.clicked.connect(self._on_resume_clicked)
+        layout.addWidget(self.btn_resume)
+
         self.btn_close = QPushButton("✕")
         self.btn_close.setFixedSize(18, 18)
         self.btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -101,10 +137,24 @@ class SessionRecapBanner(QFrame):
         self.btn_close.clicked.connect(self.hide)
         layout.addWidget(self.btn_close)
 
+    def _on_resume_clicked(self) -> None:
+        self.hide()
+        self.resume_clicked.emit(self._current_info.get("resume_context") or {})
+
     def show_recap(self, info: Dict[str, Any]) -> None:
         """Populates fields and displays the recap banner, resetting the auto-dismiss timer."""
+        self._current_info = dict(info)
         phase_name = info.get("phase_name") or t("recap.phase_none", "Keine Phase")
         self.lbl_phase.setText(f"Phase: {phase_name}")
+
+        target = info.get("target")
+        if target:
+            self.lbl_target.setText(f"Target: {target}")
+            self.lbl_sep_target.show()
+            self.lbl_target.show()
+        else:
+            self.lbl_sep_target.hide()
+            self.lbl_target.hide()
 
         last_action = info.get("last_action")
         if last_action:

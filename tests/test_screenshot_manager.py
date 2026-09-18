@@ -1,10 +1,12 @@
 import os
 import unittest
+from unittest.mock import MagicMock
 import tempfile
 from pathlib import Path
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QPixmap, QImage, QColor
 
@@ -259,7 +261,7 @@ class TestScreenshotManager(unittest.TestCase):
         self.assertEqual(len(received), 1)
         self.assertEqual(set(received[0]), {"entry"})
         self.assertEqual(received[0]["entry"]["type"], "screenshot")
-        controller.switch_mode.assert_called_once_with("loot")
+        controller.switch_mode.assert_not_called()
 
     def test_screenshot_manager_respects_wayland_capability_restriction(self):
         """Ticket 18 & 19: Under Wayland, capture is marked limited and start_capture fails gracefully."""
@@ -315,6 +317,50 @@ class TestScreenshotManager(unittest.TestCase):
         # Triggering screenshot when capture is unavailable must return early
         AppController.trigger_screenshot(controller)
         mock_screenshot_mgr.start_capture.assert_not_called()
+
+    def test_restore_parent_window_matrix(self):
+        """Phase 1: Validate non-disruptive window restoration matrix.
+        - was_visible=False -> window stays hidden (no show, no activate).
+        - was_visible=True, was_active=False -> window shown, but no raise_ / activateWindow.
+        - was_visible=True, was_active=True -> window shown, raised, and activated.
+        """
+        # Case 1: was_visible=False
+        win_hidden = MagicMock()
+        self.screenshot_mgr._restore_parent_window(
+            win_hidden, was_visible=False, was_active=False
+        )
+        win_hidden.show.assert_not_called()
+        win_hidden.raise_.assert_not_called()
+        win_hidden.activateWindow.assert_not_called()
+
+        # Case 2: was_visible=True, was_active=False (Spectre visible in background)
+        win_background = MagicMock()
+        self.screenshot_mgr._restore_parent_window(
+            win_background, was_visible=True, was_active=False
+        )
+        win_background.show.assert_called_once()
+        win_background.raise_.assert_not_called()
+        win_background.activateWindow.assert_not_called()
+
+        # Case 3: was_visible=True, was_active=True (Spectre was focused)
+        win_active = MagicMock()
+        win_active.windowState.return_value = Qt.WindowState.WindowNoState
+        self.screenshot_mgr._restore_parent_window(
+            win_active, was_visible=True, was_active=True
+        )
+        win_active.show.assert_called_once()
+        win_active.raise_.assert_called_once()
+        win_active.activateWindow.assert_called_once()
+
+    def test_snip_cancelled_restores_window_matrix(self):
+        """Cancelled snip also preserves the was_visible / was_active matrix."""
+        win_background = MagicMock()
+        self.screenshot_mgr._on_snip_cancelled(
+            win_background, was_visible=True, was_active=False
+        )
+        win_background.show.assert_called_once()
+        win_background.raise_.assert_not_called()
+        win_background.activateWindow.assert_not_called()
 
 
 if __name__ == "__main__":

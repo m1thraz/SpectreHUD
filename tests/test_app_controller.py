@@ -413,7 +413,7 @@ class TestAppController(unittest.TestCase):
         ):
             with patch.object(self.controller, "switch_mode") as mock_sw:
                 self.controller._on_screenshot_saved(loot_entry)
-                mock_sw.assert_called_with("loot")
+                mock_sw.assert_not_called()
 
     def test_settings_dialog_and_always_on_top(self):
         """open_settings_dialog emits restart on theme change, always_on_top sets flags."""

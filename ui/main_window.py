@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
             event_bus=self.event_bus,
             quick_note_manager=self.quick_note_manager,
         )
+        self.recap_banner.resume_clicked.connect(self.app.handle_resume)
         self.shutdown_coordinator = ShutdownCoordinator(
             window=self,
             config=self.config,
@@ -452,8 +453,6 @@ class MainWindow(QMainWindow):
     def event(self, event: QEvent) -> bool:
         if event is not None and event.type() in (QEvent.Type.KeyPress, QEvent.Type.MouseButtonPress):
             self._last_interaction_time = time.time()
-            if hasattr(self, "recap_banner") and self.recap_banner.isVisible():
-                self.recap_banner.hide()
         return super().event(event)
 
     def changeEvent(self, event: QEvent) -> None:

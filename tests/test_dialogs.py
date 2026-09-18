@@ -131,6 +131,40 @@ class TestHudDialogs(unittest.TestCase):
 
         AddLootDialog._details_expanded = False
 
+    def test_add_loot_dialog_draft_caching_and_recovery(self):
+        AddLootDialog._cached_draft = None
+
+        # 1. Type dirty content and reject/close -> draft cached
+        dlg1 = AddLootDialog()
+        dlg1.txt_content.setPlainText("Discovered shadow file leak")
+        dlg1.reject()
+        self.assertIsNotNone(AddLootDialog._cached_draft)
+        self.assertEqual(
+            AddLootDialog._cached_draft["content"], "Discovered shadow file leak"
+        )
+
+        # 2. Opening new dialog restores draft and displays recovery banner
+        dlg2 = AddLootDialog()
+        self.assertFalse(dlg2.recovery_banner.isHidden())
+        self.assertEqual(dlg2.txt_content.toPlainText(), "Discovered shadow file leak")
+
+        # 3. Discard draft button clears fields and hides banner
+        dlg2.btn_discard_draft.click()
+        self.assertIsNone(AddLootDialog._cached_draft)
+        self.assertEqual(dlg2.txt_content.toPlainText(), "")
+        self.assertTrue(dlg2.recovery_banner.isHidden())
+        dlg2.close()
+
+    def test_add_loot_dialog_auto_derives_title_from_content(self):
+        AddLootDialog._cached_draft = None
+        dlg = AddLootDialog()
+        dlg.txt_content.setPlainText("admin:x:0:0:root:/root:/bin/bash\nsecond line")
+        dlg._on_save()
+        self.assertEqual(dlg.txt_title.text(), "admin:x:0:0:root:/root:/bin/ba")
+        data = dlg.get_data()
+        self.assertEqual(data["title"], "admin:x:0:0:root:/root:/bin/ba")
+        dlg.close()
+
     def test_new_project_dialog_data(self):
         custom_base = Path("C:/custom_ctf_projects")
         dlg = NewProjectDialog(

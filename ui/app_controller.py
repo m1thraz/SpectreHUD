@@ -5,7 +5,7 @@ Orchestrates UI panels, domain managers, and specialized coordinators.
 """
 
 import time
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from PyQt6.QtCore import QObject, Qt, pyqtSignal, QTimer
 from PyQt6.QtWidgets import QWidget, QPushButton
 
@@ -189,6 +189,7 @@ class AppController(QObject):
             loot_ctrl=self.loot_ctrl,
             target_provider=self._target_provider,
             quick_note_ctrl=self.quick_note_ctrl,
+            phase_provider=self._phase_provider,
             parent=self,
         )
         self.export_coord = ExportCoordinator(
@@ -516,36 +517,99 @@ class AppController(QObject):
             state = classify_loot_report_state(markdown, entries)
             unsynced_loot = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
 
-        last_action = self._get_last_action_summary()
+        target = self._target_provider()
+        last_action, resume_context = self._get_last_action_summary_and_context()
+        attention = self.get_next_attention_item()
+        display_action = f"Next: {attention['text']}" if attention else last_action
+        if attention:
+            resume_context = attention.get("context") or resume_context
 
         return {
             "phase_name": phase_name,
+            "target": target,
             "open_notes": open_notes,
             "unsynced_loot": unsynced_loot,
-            "last_action": last_action,
+            "last_action": display_action,
+            "attention_item": attention,
+            "resume_context": resume_context,
         }
 
-    def _get_last_action_summary(self) -> Optional[str]:
-        """Finds the most recent Note or Loot action snippet."""
+    def get_next_attention_item(self) -> Optional[Dict[str, Any]]:
+        """Determines the single most urgent pending task in deterministic priority:
+        1. Explicit follow-up note (status == 'followup')
+        2. Unreviewed inbox note (status == 'inbox')
+        3. Unsynced loot/finding
+        Returns None if there is no actionable pending item.
+        """
+        if self.quick_note_manager:
+            all_notes = self.quick_note_manager.get_all_entries()
+            # 1. Follow-up notes
+            for note in all_notes:
+                if note.get("status") == "followup":
+                    text = (note.get("text") or "").strip()
+                    snippet = text[:30] + ("..." if len(text) > 30 else "")
+                    return {
+                        "type": "followup",
+                        "text": f'Follow-up note "{snippet}"',
+                        "context": {"mode": "notes", "id": note.get("id")},
+                    }
+            # 2. Inbox notes
+            for note in all_notes:
+                if note.get("status", "inbox") == "inbox":
+                    text = (note.get("text") or "").strip()
+                    snippet = text[:30] + ("..." if len(text) > 30 else "")
+                    return {
+                        "type": "inbox",
+                        "text": f'Review note "{snippet}"',
+                        "context": {"mode": "notes", "id": note.get("id")},
+                    }
+
+        # 3. Unsynced loot/findings
+        if self.loot_manager:
+            entries = self.loot_manager.get_all_entries()
+            markdown = ""
+            if hasattr(self, "report_ctrl") and self.report_ctrl:
+                if self.report_ctrl.report_editor_tab is not None:
+                    markdown = self.report_ctrl.report_editor_tab.current_markdown()
+                else:
+                    markdown = self.report_ctrl.report_file_manager.load() or ""
+            from core.reporting.loot_sync import classify_loot_report_state
+
+            state = classify_loot_report_state(markdown, entries)
+            if state.missing:
+                missing_id = state.missing[0]
+                missing_entry = next((e for e in entries if e.get("id") == missing_id), None)
+                title = (missing_entry.get("title") if missing_entry else "") or "unlinked loot"
+                snippet = title[:30] + ("..." if len(title) > 30 else "")
+                return {
+                    "type": "unsynced_loot",
+                    "text": f'Sync finding "{snippet}"',
+                    "context": {"mode": "report"},
+                }
+
+        return None
+
+    def _get_last_action_summary_and_context(self) -> Tuple[Optional[str], Dict[str, Any]]:
+        """Finds the most recent Note or Loot action snippet and computes resume context."""
         candidates = []
         if self.quick_note_manager:
             for note in self.quick_note_manager.get_all_entries():
                 ts = note.get("timestamp", "")
                 text = (note.get("text") or "").strip()
                 if text:
-                    candidates.append((ts, "Note", text))
+                    candidates.append((ts, "Note", text, {"mode": "notes", "id": note.get("id")}))
         if self.loot_manager:
             for loot in self.loot_manager.get_all_entries():
                 ts = loot.get("timestamp", "")
                 title = (loot.get("title") or "").strip()
                 if title:
-                    candidates.append((ts, "Loot", title))
+                    candidates.append((ts, "Loot", title, {"mode": "loot", "id": loot.get("id")}))
 
         if not candidates:
-            return None
+            return None, {"mode": self.active_mode or "cheatsheet"}
 
         candidates.sort(key=lambda x: str(x[0]), reverse=True)
-        latest_ts, kind, text = candidates[0]
+        latest_ts, kind, text, ctx = candidates[0]
         snippet = text[:35] + ("..." if len(text) > 35 else "")
         time_part = (
             latest_ts.split()[-1][:5]
@@ -553,8 +617,21 @@ class AppController(QObject):
             else (latest_ts[-8:-3] if len(latest_ts) >= 8 else "")
         )
         if time_part:
-            return f"Letzte {kind} ({time_part}): \"{snippet}\""
-        return f"Letzte {kind}: \"{snippet}\""
+            summary = f"Letzte {kind} ({time_part}): \"{snippet}\""
+        else:
+            summary = f"Letzte {kind}: \"{snippet}\""
+        return summary, ctx
+
+    def _get_last_action_summary(self) -> Optional[str]:
+        """Finds the most recent Note or Loot action snippet."""
+        summary, _ = self._get_last_action_summary_and_context()
+        return summary
+
+    def handle_resume(self, context: Optional[Dict[str, Any]] = None) -> None:
+        """Navigates to the most relevant resume context after an interruption."""
+        ctx = context or {}
+        target_mode = ctx.get("mode") or self.active_mode or "cheatsheet"
+        self.switch_mode(target_mode)
 
     def _on_logging_state_changed(self, is_active: bool) -> None:
         """Handles REC indicator updates and resets nudge countdown."""
@@ -1052,8 +1129,13 @@ class AppController(QObject):
         result = self.screenshot_transaction.commit(loot_entry)
         if not result.ok:
             return
-        self.switch_mode("loot")
         self.event_bus.publish(EventType.SCREENSHOT_SAVED, {"entry": loot_entry})
+        phase = loot_entry.get("category", "")
+        target = loot_entry.get("target_ip", "")
+        if hasattr(self, "phase_hud") and self.phase_hud is not None:
+            self.phase_hud.show_screenshot(
+                phase_name=phase.upper() if phase else "", target=target
+            )
 
     def open_settings_dialog(self) -> None:
         previous_theme = self.config.get("theme", "cyber_dark")

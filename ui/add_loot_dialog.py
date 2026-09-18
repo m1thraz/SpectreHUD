@@ -1,3 +1,4 @@
+from datetime import datetime
 from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
@@ -7,10 +8,11 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QComboBox,
     QCheckBox,
+    QFrame,
     QWidget,
 )
 from PyQt6.QtCore import QLocale, Qt
-from PyQt6.QtGui import QDoubleValidator
+from PyQt6.QtGui import QColor, QDoubleValidator
 from typing import Dict, Any, Optional, Callable
 from core.loot import (
     CATEGORIES,
@@ -24,12 +26,14 @@ from core.i18n import t
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 from ui.styles.icons import get_severity_color, get_theme_color, icon
+from ui.styles.theme import rgba_str
 
 
 class AddLootDialog(BaseHudDialog):
     """Dialog to capture new or edit existing session loot (credentials, hashes, flags, notes, PoCs)."""
 
     _details_expanded: bool = False
+    _cached_draft: Optional[Dict[str, Any]] = None
 
     def __init__(
         self,
@@ -122,6 +126,26 @@ class AddLootDialog(BaseHudDialog):
         )
         self._is_details_expanded = has_existing_details or AddLootDialog._details_expanded
 
+        self._draft_loaded = False
+        self._draft_time = ""
+        if (
+            not self.is_edit
+            and not self.initial_title
+            and not self.initial_content
+            and AddLootDialog._cached_draft
+        ):
+            draft = AddLootDialog._cached_draft
+            self.initial_title = draft.get("title", "")
+            self.initial_content = draft.get("content", "")
+            if draft.get("type"):
+                self.initial_type = draft["type"]
+            if draft.get("category"):
+                self.initial_category = draft["category"]
+            if draft.get("target"):
+                self.current_target_ip = draft["target"]
+            self._draft_loaded = True
+            self._draft_time = draft.get("time", "")
+
         super().__init__(title=dialog_title, parent=parent)
         self.setMinimumWidth(540)
         self.resize(560, 640 if self._is_details_expanded else 440)
@@ -157,6 +181,59 @@ class AddLootDialog(BaseHudDialog):
 
     def _init_form(self) -> None:
         layout = self.body_layout
+
+        # Recovery Banner
+        self.recovery_banner = QFrame(self)
+        self.recovery_banner.setObjectName("QuickLootRecoveryBanner")
+        self.recovery_banner.setStyleSheet(
+            f"""
+            QFrame#QuickLootRecoveryBanner {{
+                background-color: {rgba_str(QColor(get_theme_color("BG_DARK")), 0.95)};
+                border: 1px solid {rgba_str(QColor(get_theme_color("ACCENT_BRAND")), 0.5)};
+                border-radius: 4px;
+            }}
+            """
+        )
+        rec_layout = QHBoxLayout(self.recovery_banner)
+        rec_layout.setContentsMargins(8, 4, 8, 4)
+        self.lbl_recovery = QLabel(self.recovery_banner)
+        self.lbl_recovery.setStyleSheet(
+            f"color: {get_theme_color('ACCENT_BRAND')}; font-size: 11px; font-weight: 600;"
+        )
+        rec_layout.addWidget(self.lbl_recovery)
+        rec_layout.addStretch()
+        self.btn_discard_draft = QPushButton(
+            t("draft.discard", "Discard Draft"), self.recovery_banner
+        )
+        self.btn_discard_draft.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_discard_draft.setFixedHeight(22)
+        self.btn_discard_draft.setStyleSheet(
+            f"""
+            QPushButton {{
+                background: transparent;
+                color: {get_theme_color('TEXT_MUTED')};
+                border: 1px solid {get_theme_color('BORDER_MUTED')};
+                border-radius: 3px;
+                font-size: 10px;
+                padding: 1px 8px;
+            }}
+            QPushButton:hover {{
+                color: {get_theme_color('TEXT_PRIMARY')};
+                border-color: {get_theme_color('BORDER_GLOW')};
+            }}
+            """
+        )
+        self.btn_discard_draft.clicked.connect(self._discard_draft)
+        rec_layout.addWidget(self.btn_discard_draft)
+        layout.addWidget(self.recovery_banner)
+
+        if self._draft_loaded:
+            self.lbl_recovery.setText(
+                f"{t('draft.restored', 'Unsaved draft restored')} ({self._draft_time})"
+            )
+            self.recovery_banner.show()
+        else:
+            self.recovery_banner.hide()
 
         # 1. Type and Category Selection (Side by Side in primary section)
         select_row = QHBoxLayout()
@@ -432,21 +509,60 @@ class AddLootDialog(BaseHudDialog):
 
         layout.addLayout(btn_layout)
 
+    def _discard_draft(self) -> None:
+        AddLootDialog._cached_draft = None
+        self.txt_title.clear()
+        self.txt_content.clear()
+        self.recovery_banner.hide()
+
+    def _save_draft_if_dirty(self) -> None:
+        if self.is_edit:
+            return
+        title = self.txt_title.text().strip() if hasattr(self, "txt_title") else ""
+        content = self.txt_content.toPlainText().strip() if hasattr(self, "txt_content") else ""
+        initial_title = (self.initial_title or "").strip()
+        initial_content = (self.initial_content or "").strip()
+        if (title or content) and (title != initial_title or content != initial_content):
+            AddLootDialog._cached_draft = {
+                "title": title,
+                "content": content,
+                "type": self.combo_type.currentData() if hasattr(self, "combo_type") else "note",
+                "category": self.combo_category.currentData() if hasattr(self, "combo_category") else "misc",
+                "target": self.txt_target.text().strip() if hasattr(self, "txt_target") else "",
+                "time": datetime.now().strftime("%H:%M:%S"),
+            }
+
+    def closeEvent(self, event) -> None:
+        self._save_draft_if_dirty()
+        super().closeEvent(event)
+
+    def reject(self) -> None:
+        self._save_draft_if_dirty()
+        super().reject()
+
     def _on_save(self) -> None:
-        if not self.txt_title.text().strip():
+        title = self.txt_title.text().strip()
+        content = self.txt_content.toPlainText().strip()
+
+        # Minimal capture without friction: auto-generate title if content exists
+        if not title and content:
+            first_line = content.split("\n")[0].strip()
+            title = first_line[:30] if len(first_line) > 30 else first_line
+            if not title:
+                title = f"Loot {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            self.txt_title.setText(title)
+        elif title and not content:
+            content = title
+            self.txt_content.setPlainText(content)
+        elif not title and not content:
             show_warning_dialog(
                 self,
                 t("dialog.error", "Error"),
-                t("loot_dialog.err_title", "Please enter a title for the loot entry."),
+                t("loot_dialog.err_title", "Please enter a title or content for the loot entry."),
             )
             return
-        if not self.txt_content.toPlainText().strip():
-            show_warning_dialog(
-                self,
-                t("dialog.error", "Error"),
-                t("loot_dialog.err_content", "Please enter the content / value."),
-            )
-            return
+
+        AddLootDialog._cached_draft = None
         self.accept()
 
     def get_data(self) -> Dict[str, Any]:
