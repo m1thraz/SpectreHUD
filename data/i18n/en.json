@@ -1150,5 +1150,21 @@
     "report.search_label": "Search:",
     "report.delete": "Delete",
     "report.delete_row": "Delete Row",
-    "report.view_workspace_short": "Workspace"
+    "report.view_workspace_short": "Workspace",
+    "quick_note.draft_prompt": "Restore incomplete draft from {time}?",
+    "quick_note.restore_yes": "Yes",
+    "quick_note.restore_no": "Discard",
+    "quick_note.review_later": "Later",
+    "header.rec_tooltip_nudged": "Clipboard REC active – no documentation captured for a while.\nClick to open a Quick Note.",
+    "draft.discard": "Discard Draft",
+    "draft.restored": "Unsaved draft restored",
+    "loot_dialog.toggle_details_hide": "▼ Fewer Details",
+    "loot_dialog.toggle_details_show": "▶ More Details (Severity, Targets, Recommendation, CVSS)",
+    "recap.tag": "RECAP //",
+    "recap.phase_none": "No Phase",
+    "recap.open_notes": "{count} open notes",
+    "recap.unsynced_loot": "{count} unsynced loot",
+    "recap.resume": "Resume",
+    "screenshot.hud_category": "SCREENSHOT SAVED",
+    "screenshot.hud_saved": "Saved to Loot"
 }

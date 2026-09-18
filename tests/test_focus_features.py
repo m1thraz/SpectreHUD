@@ -8,6 +8,7 @@ import time
 import unittest
 from unittest.mock import MagicMock
 
+from core.i18n import t
 from ui.clipboard_monitor import ClipboardMonitor
 from ui.panels.header_panel import HeaderPanel
 from ui.session_recap_banner import SessionRecapBanner
@@ -32,8 +33,8 @@ class TestSessionRecapBanner(unittest.TestCase):
         self.assertIn("10.10.10.42", banner.lbl_target.text())
         self.assertTrue(banner.lbl_target.isVisible())
         self.assertIn("Found open SSH", banner.lbl_last_action.text())
-        self.assertIn("3 offene Notes", banner.lbl_badges.text())
-        self.assertIn("1 ungesynctes Loot", banner.lbl_badges.text())
+        self.assertIn(t("recap.open_notes", "{count} offene Notes", count=3), banner.lbl_badges.text())
+        self.assertIn(t("recap.unsynced_loot", "{count} ungesynctes Loot", count=1), banner.lbl_badges.text())
 
         # Click resume button emits resume_clicked and hides
         resumed = []

@@ -138,7 +138,7 @@ class QuickNotePopup(QWidget):
             f"""
             QFrame#DraftRecoveryBanner {{
                 background-color: {get_theme_color("BG_INPUT")};
-                border: 1px solid {get_theme_color("STATUS_WARNING") if get_theme_color("STATUS_WARNING") else "#d97706"};
+                border: 1px solid {get_theme_color("STATUS_WARNING", get_theme_color("WARNING"))};
                 border-radius: 4px;
                 padding: 1px 4px;
             }}

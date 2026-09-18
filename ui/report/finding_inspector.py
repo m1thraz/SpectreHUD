@@ -39,6 +39,7 @@ from core.reporting import (
 from ui.glass_panel import GlassPanel
 from ui.report.inspector_style import style_inspector_header, style_inspector_scroll
 from ui.styles.icons import get_severity_color, get_theme_color, icon
+from ui.styles.theme import rgba_str
 
 SEVERITIES = ["critical", "high", "medium", "low", "info"]
 PHASES = ["recon", "access", "privesc", "postex", "scripts", "misc"]
@@ -698,15 +699,18 @@ class ReportFindingInspector(QWidget):
         border_col = QColor(card_color)
         border_col.setAlpha(60)
 
+        card_bg = rgba_str(get_theme_color("BG_SURFACE"), 0.65)
+        card_hover_bg = rgba_str(get_theme_color("BG_HOVER", get_theme_color("BG_SURFACE")), 0.85)
+
         card.setStyleSheet(
             f"QFrame {{ "
-            f"  background: rgba(20, 24, 35, 0.65); "
+            f"  background: {card_bg}; "
             f"  border: 1px solid {border_col.name(QColor.NameFormat.HexArgb)}; "
             f"  border-left: 3px solid {card_color}; "
             f"  border-radius: 6px; padding: 8px 12px; "
             f"}} "
             f"QFrame:hover {{ "
-            f"  background: rgba(30, 36, 50, 0.85); "
+            f"  background: {card_hover_bg}; "
             f"  border: 1px solid {card_color}; "
             f"}}"
         )

@@ -314,7 +314,7 @@ class AddLootDialog(BaseHudDialog):
                 padding: 4px 0px;
             }}
             QPushButton#LootDetailsToggleBtn:hover {{
-                color: {get_theme_color("CYAN_LIGHT") if get_theme_color("CYAN_LIGHT") else "#38bdf8"};
+                color: {get_theme_color("CYAN_LIGHT", get_theme_color("ACCENT_BRAND"))};
             }}
             """
         )

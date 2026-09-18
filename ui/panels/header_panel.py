@@ -491,7 +491,7 @@ class HeaderPanel(QFrame):
         if not getattr(self, "_rec_active", False):
             return
         if nudged:
-            warn_col = get_theme_color("STATUS_WARNING") or "#f59e0b"
+            warn_col = get_theme_color("STATUS_WARNING") or get_theme_color("WARNING")
             self.btn_rec_indicator.setIcon(
                 icon(
                     "fa5s.circle",
@@ -532,7 +532,7 @@ class HeaderPanel(QFrame):
     @staticmethod
     def _badge_style(warning: bool) -> str:
         if warning:
-            warn_col = get_theme_color("STATUS_WARNING") or "#d97706"
+            warn_col = get_theme_color("STATUS_WARNING") or get_theme_color("WARNING")
             return (
                 f"background-color: {get_theme_color('BG_INPUT')}; color: {warn_col}; "
                 f"border: 1px solid {warn_col}; border-radius: 7px; "

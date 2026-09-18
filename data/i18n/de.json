@@ -1150,5 +1150,21 @@
     "report.search_label": "Suche:",
     "report.delete": "Löschen",
     "report.delete_row": "Zeile löschen",
-    "report.view_workspace_short": "Workspace"
+    "report.view_workspace_short": "Workspace",
+    "quick_note.draft_prompt": "Unvollständigen Entwurf von {time} wiederherstellen?",
+    "quick_note.restore_yes": "Ja",
+    "quick_note.restore_no": "Verwerfen",
+    "quick_note.review_later": "Später",
+    "header.rec_tooltip_nudged": "Clipboard-REC aktiv – längere Zeit keine Doku erfasst.\nKlicken zum Öffnen einer Quick Note.",
+    "draft.discard": "Entwurf verwerfen",
+    "draft.restored": "Ungespeicherter Entwurf wiederhergestellt",
+    "loot_dialog.toggle_details_hide": "▼ Weniger Details",
+    "loot_dialog.toggle_details_show": "▶ Weitere Details (Severity, Targets, Empfehlung, CVSS)",
+    "recap.tag": "RECAP //",
+    "recap.phase_none": "Keine Phase",
+    "recap.open_notes": "{count} offene Notes",
+    "recap.unsynced_loot": "{count} ungesynctes Loot",
+    "recap.resume": "Fortsetzen",
+    "screenshot.hud_category": "SCREENSHOT GESPEICHERT",
+    "screenshot.hud_saved": "Im Loot gespeichert"
 }
