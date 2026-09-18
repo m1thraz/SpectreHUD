@@ -81,6 +81,7 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
         note_seq = format_hotkey_sequence(config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n"))
         ip_seq = format_hotkey_sequence(config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i"))
         loot_seq = format_hotkey_sequence(config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l"))
+        find_seq = format_hotkey_sequence(config_manager.get("quick_find_hotkey", "<ctrl>+<alt>+f"))
         quit_seq = format_hotkey_sequence(config_manager.get("quit_hotkey", "<ctrl>+<alt>+q"))
     else:
         toggle_seq = "Ctrl+Alt+H"
@@ -88,6 +89,7 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
         note_seq = "Ctrl+Alt+N"
         ip_seq = "Ctrl+Alt+I"
         loot_seq = "Ctrl+Alt+L"
+        find_seq = "Ctrl+Alt+F"
         quit_seq = "Ctrl+Alt+Q"
 
     return [
@@ -174,6 +176,14 @@ def get_shortcuts(config_manager: Optional[Any] = None) -> List[ShortcutDefiniti
             sequence=loot_seq,
             label_key="shortcuts.global_quick_loot",
             default_label="Strukturierten Loot direkt erfassen",
+            scope="global",
+            category="quick_capture",
+        ),
+        ShortcutDefinition(
+            id="global_quick_find",
+            sequence=find_seq,
+            label_key="shortcuts.global_quick_find",
+            default_label="Quick-Find Snippets (Spotlight Suche)",
             scope="global",
             category="quick_capture",
         ),

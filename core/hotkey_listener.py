@@ -32,6 +32,7 @@ class HotkeyConfig:
     quick_note: str = "<ctrl>+<alt>+n"
     quick_ip: str = "<ctrl>+<alt>+i"
     quick_loot: str = "<ctrl>+<alt>+l"
+    quick_find: str = "<ctrl>+<alt>+f"
     recorder: str = "<ctrl>+<alt>+r"
     quit: str = "<ctrl>+<alt>+q"
     phase_1: str = "<ctrl>+<alt>+1"
@@ -84,6 +85,7 @@ class HotkeyListener(QObject):
     quick_note_requested = pyqtSignal()
     quick_ip_requested = pyqtSignal()
     quick_loot_requested = pyqtSignal()
+    quick_find_requested = pyqtSignal()
     recorder_requested = pyqtSignal()
     quit_requested = pyqtSignal()
     phase_requested = pyqtSignal(int)
@@ -111,6 +113,7 @@ class HotkeyListener(QObject):
         self._last_quick_note_time = 0.0
         self._last_quick_ip_time = 0.0
         self._last_quick_loot_time = 0.0
+        self._last_quick_find_time = 0.0
         self._last_recorder_time = 0.0
         self._last_quit_time = 0.0
         self._last_phase_time = 0.0
@@ -164,6 +167,7 @@ class HotkeyListener(QObject):
             norm_note = normalize_hotkey_for_pynput(self.config.quick_note)
             norm_ip = normalize_hotkey_for_pynput(self.config.quick_ip)
             norm_loot = normalize_hotkey_for_pynput(self.config.quick_loot)
+            norm_find = normalize_hotkey_for_pynput(self.config.quick_find)
             norm_recorder = normalize_hotkey_for_pynput(self.config.recorder)
             norm_quit = normalize_hotkey_for_pynput(self.config.quit)
 
@@ -179,6 +183,8 @@ class HotkeyListener(QObject):
                 hotkey_mapping[norm_ip] = self._fire_quick_ip_trigger
             if norm_loot:
                 hotkey_mapping[norm_loot] = self._fire_quick_loot_trigger
+            if norm_find:
+                hotkey_mapping[norm_find] = self._fire_quick_find_trigger
             if norm_recorder:
                 hotkey_mapping[norm_recorder] = self._fire_recorder_trigger
             if norm_quit:
@@ -251,6 +257,13 @@ class HotkeyListener(QObject):
         if now - self._last_quick_loot_time >= self._debounce_cooldown:
             self._last_quick_loot_time = now
             self.quick_loot_requested.emit()
+
+    def _fire_quick_find_trigger(self) -> None:
+        """Debounces and emits quick find signal safely."""
+        now = time.time()
+        if now - self._last_quick_find_time >= self._debounce_cooldown:
+            self._last_quick_find_time = now
+            self.quick_find_requested.emit()
 
     def _fire_recorder_trigger(self) -> None:
         now = time.time()

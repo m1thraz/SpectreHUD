@@ -22,6 +22,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "quick_note_hotkey": "<ctrl>+<alt>+n",
     "quick_ip_hotkey": "<ctrl>+<alt>+i",
     "quick_loot_hotkey": "<ctrl>+<alt>+l",
+    "quick_find_hotkey": "<ctrl>+<alt>+f",
     "quit_hotkey": "<ctrl>+<alt>+q",
     "auto_hide_on_copy": False,
     "always_on_top": True,

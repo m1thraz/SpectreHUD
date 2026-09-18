@@ -37,6 +37,7 @@ class HotkeySettingsChangedPayload:
     quick_note_hotkey: Optional[str] = None
     quick_ip_hotkey: Optional[str] = None
     quick_loot_hotkey: Optional[str] = None
+    quick_find_hotkey: Optional[str] = None
 
 
 class EventType(str, Enum):

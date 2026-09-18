@@ -84,6 +84,13 @@ QUICK_LOOT_PRESETS = [
     {"label": "F10 (Single Key)", "value": "<f10>"},
 ]
 
+QUICK_FIND_PRESETS = [
+    {"label": "Ctrl + Alt + F (Standard)", "value": "<ctrl>+<alt>+f"},
+    {"label": "Ctrl + Super + F", "value": "<ctrl>+<cmd>+f"},
+    {"label": "Ctrl + Shift + F", "value": "<ctrl>+<shift>+f"},
+    {"label": "F7 (Single Key)", "value": "<f7>"},
+]
+
 
 def _configure_transparent_scroll_surfaces(scroll: QScrollArea) -> None:
     """Keep a scroll area's viewport and hosted page transparent to window glass."""
@@ -257,6 +264,24 @@ class HotkeySettingsPage(QWidget):
         row_quick_loot.addWidget(self.combo_quick_loot, stretch=1)
         card_layout.addLayout(row_quick_loot)
 
+        # Quick Find Shortcut
+        row_quick_find = QHBoxLayout()
+        lbl_quick_find = QLabel(
+            t("settings.lbl_quick_find_shortcut", "Quick-Find (Spotlight Search):")
+        )
+        lbl_quick_find.setProperty("class", "FormLabel")
+        row_quick_find.addWidget(lbl_quick_find, stretch=1)
+
+        self.combo_quick_find = QComboBox()
+        self.combo_quick_find.setMinimumWidth(220)
+        curr_quick_find = self.config.get("quick_find_hotkey", "<ctrl>+<alt>+f")
+        for i, preset in enumerate(QUICK_FIND_PRESETS):
+            self.combo_quick_find.addItem(preset["label"], preset["value"])
+            if preset["value"] == curr_quick_find:
+                self.combo_quick_find.setCurrentIndex(i)
+        row_quick_find.addWidget(self.combo_quick_find, stretch=1)
+        card_layout.addLayout(row_quick_find)
+
         # Quit Shortcut
         row_quit = QHBoxLayout()
         lbl_quit = QLabel(t("settings.lbl_quit_shortcut", "Quit SpectreHUD Completely:"))
@@ -337,6 +362,7 @@ class HotkeySettingsPage(QWidget):
         self.combo_quick_note.setCurrentIndex(0)
         self.combo_quick_ip.setCurrentIndex(0)
         self.combo_quick_loot.setCurrentIndex(0)
+        self.combo_quick_find.setCurrentIndex(0)
         self.combo_quit.setCurrentIndex(0)
 
     def get_settings(self) -> Dict[str, Any]:
@@ -346,6 +372,7 @@ class HotkeySettingsPage(QWidget):
             "quick_note_hotkey": self.combo_quick_note.currentData() or "<ctrl>+<alt>+n",
             "quick_ip_hotkey": self.combo_quick_ip.currentData() or "<ctrl>+<alt>+i",
             "quick_loot_hotkey": self.combo_quick_loot.currentData() or "<ctrl>+<alt>+l",
+            "quick_find_hotkey": self.combo_quick_find.currentData() or "<ctrl>+<alt>+f",
             "quit_hotkey": self.combo_quit.currentData() or "<ctrl>+<alt>+q",
         }
 

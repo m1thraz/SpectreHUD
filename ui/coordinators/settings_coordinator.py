@@ -91,6 +91,7 @@ class SettingsCoordinator:
                 "quick_note_hotkey",
                 "quick_ip_hotkey",
                 "quick_loot_hotkey",
+                "quick_find_hotkey",
                 "quit_hotkey",
             )
         ):
@@ -108,6 +109,7 @@ class SettingsCoordinator:
                 quick_note_hotkey=new_settings.get("quick_note_hotkey"),
                 quick_ip_hotkey=new_settings.get("quick_ip_hotkey"),
                 quick_loot_hotkey=new_settings.get("quick_loot_hotkey"),
+                quick_find_hotkey=new_settings.get("quick_find_hotkey"),
             )
             self.event_bus.publish(EventType.HOTKEY_SETTINGS_CHANGED, payload)
         if new_settings.get("workspace_dir"):

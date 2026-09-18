@@ -228,6 +228,7 @@ def main():
         hotkey_note = container.config_manager.get("quick_note_hotkey", "<ctrl>+<alt>+n")
         hotkey_ip = container.config_manager.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
         hotkey_loot = container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
+        hotkey_find = container.config_manager.get("quick_find_hotkey", "<ctrl>+<alt>+f")
         hotkey_quit = container.config_manager.get("quit_hotkey", "<ctrl>+<alt>+q")
         hotkey_config = HotkeyConfig(
             toggle=hotkey_toggle,
@@ -235,6 +236,7 @@ def main():
             quick_note=hotkey_note,
             quick_ip=hotkey_ip,
             quick_loot=hotkey_loot,
+            quick_find=hotkey_find,
             quit=hotkey_quit,
         )
 
@@ -244,6 +246,7 @@ def main():
         hotkey_listener.quick_note_requested.connect(window.app.trigger_quick_note)
         hotkey_listener.quick_ip_requested.connect(window.app.trigger_quick_ip)
         hotkey_listener.quick_loot_requested.connect(window.app.trigger_quick_loot)
+        hotkey_listener.quick_find_requested.connect(window.app.trigger_quick_find)
         hotkey_listener.recorder_requested.connect(
             lambda: window.app._toggle_pause_history(show_shortcut_feedback=True)
         )
@@ -293,6 +296,13 @@ def main():
         )
         act_loot.triggered.connect(window.app.trigger_quick_loot)
         tray_menu.addAction(act_loot)
+
+        act_find = QAction(
+            t("tray.quick_find", "Quick-Find Snippets ({hotkey})", hotkey=hotkey_find),
+            tray_menu,
+        )
+        act_find.triggered.connect(window.app.trigger_quick_find)
+        tray_menu.addAction(act_find)
 
         act_snip = QAction(
             t("tray.screenshot", "Screenshot aufnehmen ({hotkey})", hotkey=hotkey_snip),
@@ -370,6 +380,9 @@ def main():
             new_loot = data.quick_loot_hotkey
             if new_loot is None:
                 new_loot = container.config_manager.get("quick_loot_hotkey", "<ctrl>+<alt>+l")
+            new_find = data.quick_find_hotkey
+            if new_find is None:
+                new_find = container.config_manager.get("quick_find_hotkey", "<ctrl>+<alt>+f")
             new_quit = data.quit_hotkey
             new_cfg = HotkeyConfig(
                 toggle=new_toggle,
@@ -377,6 +390,7 @@ def main():
                 quick_note=new_note,
                 quick_ip=new_ip,
                 quick_loot=new_loot,
+                quick_find=new_find,
                 quit=new_quit,
             )
             hotkey_listener.update_config(new_cfg)
@@ -393,6 +407,7 @@ def main():
                 t("tray.quick_ip", "Quick-IP (Target / LHOST) ({hotkey})", hotkey=new_ip)
             )
             act_loot.setText(t("tray.quick_loot", "Loot erfassen ({hotkey})", hotkey=new_loot))
+            act_find.setText(t("tray.quick_find", "Quick-Find Snippets ({hotkey})", hotkey=new_find))
             act_quit.setText(t("tray.quit", "Beenden ({hotkey})", hotkey=new_quit))
 
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)

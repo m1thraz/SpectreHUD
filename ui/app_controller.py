@@ -115,6 +115,7 @@ class AppController(QObject):
         self.cards: List[QWidget] = []
         self._rendered_mode: Optional[str] = None
         self._quick_ip_popup: Optional[Any] = None
+        self._quick_find_popup: Optional[Any] = None
         self._current_phase_id: Optional[str] = self.phase_context.active_phase_id
         self._recorded_in_session: int = 0
 
@@ -427,6 +428,28 @@ class AppController(QObject):
             modal=False,
             on_accepted=lambda _data: self._on_loot_data_updated(),
         )
+
+    def trigger_quick_find(self) -> None:
+        """Opens the lightweight quick-find snippet HUD popup."""
+        self._open_quick_find_popup()
+
+    def _open_quick_find_popup(self) -> None:
+        if not hasattr(self, "cheatsheet_ctrl") or not self.cheatsheet_ctrl:
+            return
+        from ui.quick_find_popup import QuickFindPopup
+
+        if not hasattr(self, "_quick_find_popup") or self._quick_find_popup is None:
+            var_provider = (
+                self.var_bar.get_variables
+                if self.var_bar and hasattr(self.var_bar, "get_variables")
+                else dict
+            )
+            self._quick_find_popup = QuickFindPopup(
+                cheatsheet_controller=self.cheatsheet_ctrl,
+                variable_provider=var_provider,
+                parent=None,
+            )
+        self._quick_find_popup.show_at_cursor()
 
     def _open_quick_ip_popup(self) -> None:
         if not self.var_bar:
