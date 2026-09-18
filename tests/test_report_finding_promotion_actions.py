@@ -28,7 +28,7 @@ def test_promotion_actions_filter_reported_loot_and_deliver_finding(monkeypatch)
     delivered = []
 
     class AcceptedDialog:
-        def __init__(self, primary_entries, evidence_entries, parent):
+        def __init__(self, primary_entries, evidence_entries, parent, *args, **kwargs):
             assert primary_entries == [available]
             assert evidence_entries == [available]
             assert isinstance(parent, QWidget)
