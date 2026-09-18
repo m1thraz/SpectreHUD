@@ -5,7 +5,10 @@ Unit tests for core/reporting/evidence_bundler.py and LootFindingPromotionDialog
 from typing import Any, Dict
 
 from core.reporting import (
+    ALLOWED_CORRELATION_WINDOWS,
     EvidenceCandidate,
+    calculate_unscoped_proximity_seconds,
+    normalize_correlation_window_seconds,
     suggest_related_evidence,
 )
 
@@ -313,4 +316,159 @@ def test_dialog_evidence_suggestion_preserves_manual_selection_union(qapp):
     )
 
     dialog.close()
+
+
+def test_calculate_unscoped_proximity_seconds():
+    # 30s -> 15s
+    assert calculate_unscoped_proximity_seconds(30) == 15
+    # 60s -> 30s
+    assert calculate_unscoped_proximity_seconds(60) == 30
+    # 90s -> 45s (default)
+    assert calculate_unscoped_proximity_seconds(90) == 45
+    # 120s -> 60s (capped at 60s)
+    assert calculate_unscoped_proximity_seconds(120) == 60
+    # 180s -> 60s
+    assert calculate_unscoped_proximity_seconds(180) == 60
+    # 300s -> 60s
+    assert calculate_unscoped_proximity_seconds(300) == 60
+
+
+def test_calculate_unscoped_proximity_seconds_robust_on_bad_inputs():
+    # 0, negative or non-numeric inputs fallback to 90s (yielding 45s), never crash
+    assert calculate_unscoped_proximity_seconds(0) == 45
+    assert calculate_unscoped_proximity_seconds(-5) == 45
+    assert calculate_unscoped_proximity_seconds("banana") == 45  # type: ignore[arg-type]
+    assert calculate_unscoped_proximity_seconds(None) == 45  # type: ignore[arg-type]
+    # Small positive value clamps to at least 1s
+    assert calculate_unscoped_proximity_seconds(1) == 1
+
+
+def test_normalize_correlation_window_seconds():
+    for window in ALLOWED_CORRELATION_WINDOWS:
+        assert normalize_correlation_window_seconds(window) == window
+        assert normalize_correlation_window_seconds(str(window)) == window
+
+    # Invalid values fallback to default (90)
+    assert normalize_correlation_window_seconds(0) == 90
+    assert normalize_correlation_window_seconds(-10) == 90
+    assert normalize_correlation_window_seconds("banana") == 90
+    assert normalize_correlation_window_seconds(999) == 90
+    assert normalize_correlation_window_seconds(None) == 90
+
+
+def test_suggest_custom_proximity_window_60s():
+    anchor = _make_candidate("screenshot", "s1", "2026-09-18 14:00:00")
+    c_59 = _make_candidate("clipboard", "c59", "2026-09-18 14:00:59")
+    c_61 = _make_candidate("clipboard", "c61", "2026-09-18 14:01:01")
+
+    sugg = suggest_related_evidence(anchor, [c_59, c_61], proximity_seconds=60)
+    assert len(sugg) == 1
+    assert sugg[0].candidate.id == "c59"
+
+
+def test_suggest_custom_proximity_window_180s():
+    anchor = _make_candidate("screenshot", "s1", "2026-09-18 14:00:00")
+    c_179 = _make_candidate("clipboard", "c179", "2026-09-18 14:02:59")
+    c_181 = _make_candidate("clipboard", "c181", "2026-09-18 14:03:01")
+
+    sugg = suggest_related_evidence(anchor, [c_179, c_181], proximity_seconds=180)
+    assert len(sugg) == 1
+    assert sugg[0].candidate.id == "c179"
+
+
+def test_suggest_custom_window_unscoped_conservative():
+    anchor = _make_candidate("screenshot", "s1", "2026-09-18 14:00:00", phase_id="privesc")
+    # Candidate has empty phase -> unscoped window applies
+    cand_unscoped_31 = _make_candidate("quick_note", "n31", "2026-09-18 14:00:31", phase_id="")
+
+    # With default 90s window (unscoped 45s), 31s matches
+    assert len(suggest_related_evidence(anchor, [cand_unscoped_31], proximity_seconds=90)) == 1
+
+    # With 60s window (unscoped 30s), 31s fails
+    assert len(suggest_related_evidence(anchor, [cand_unscoped_31], proximity_seconds=60)) == 0
+
+
+def test_dialog_evidence_suggestions_disabled(qapp):
+    from ui.report.dialogs import LootFindingPromotionDialog
+
+    entries = [
+        {
+            "id": "loot_anchor",
+            "type": "screenshot",
+            "title": "Root Shell",
+            "content": "![Root](loot/s1.png)",
+            "category": "privesc",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:00",
+        },
+        {
+            "id": "loot_cand_related",
+            "type": "note",
+            "title": "sudo -l output",
+            "content": "NOPASSWD less",
+            "category": "privesc",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:20",
+        },
+    ]
+
+    dialog = LootFindingPromotionDialog(
+        primary_entries=entries,
+        evidence_entries=entries,
+        suggestions_enabled=False,
+    )
+    dialog.primary_list.setCurrentRow(0)
+
+    # When suggestions are disabled, button must be hidden and suggestions empty
+    assert dialog.btn_suggest.isHidden()
+    assert len(dialog._current_suggestions) == 0
+    dialog.close()
+
+
+def test_dialog_evidence_suggestions_custom_window(qapp):
+    from ui.report.dialogs import LootFindingPromotionDialog
+
+    entries = [
+        {
+            "id": "loot_anchor",
+            "type": "screenshot",
+            "title": "Root Shell",
+            "content": "![Root](loot/s1.png)",
+            "category": "privesc",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:00",
+        },
+        {
+            "id": "loot_cand_50s",
+            "type": "note",
+            "title": "50s candidate",
+            "content": "note 50s",
+            "category": "privesc",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:50",
+        },
+        {
+            "id": "loot_cand_75s",
+            "type": "note",
+            "title": "75s candidate",
+            "content": "note 75s",
+            "category": "privesc",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:01:15",
+        },
+    ]
+
+    # With 60s correlation window, only the 50s candidate matches
+    dialog = LootFindingPromotionDialog(
+        primary_entries=entries,
+        evidence_entries=entries,
+        correlation_window_seconds=60,
+    )
+    dialog.primary_list.setCurrentRow(0)
+
+    assert not dialog.btn_suggest.isHidden()
+    assert len(dialog._current_suggestions) == 1
+    assert dialog._current_suggestions[0].candidate.id == "loot_cand_50s"
+    dialog.close()
+
 

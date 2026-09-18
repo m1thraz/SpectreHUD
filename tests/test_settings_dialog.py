@@ -283,6 +283,51 @@ class TestSettingsDialog(unittest.TestCase):
 
         dlg.close()
 
+    def test_general_page_evidence_settings(self):
+        page = GeneralSettingsPage(self.config_manager)
+
+        # Default state
+        self.assertTrue(page.chk_evidence_suggestions.isChecked())
+        self.assertEqual(page.combo_evidence_window.currentData(), 90)
+        self.assertTrue(page.combo_evidence_window.isEnabled())
+
+        # Uncheck suggestions -> combo box gets disabled
+        page.chk_evidence_suggestions.setChecked(False)
+        self.assertFalse(page.combo_evidence_window.isEnabled())
+
+        # Re-check suggestions -> combo box re-enabled
+        page.chk_evidence_suggestions.setChecked(True)
+        self.assertTrue(page.combo_evidence_window.isEnabled())
+
+        # Select custom window (180s)
+        idx_180 = page.combo_evidence_window.findData(180)
+        self.assertGreaterEqual(idx_180, 0)
+        page.combo_evidence_window.setCurrentIndex(idx_180)
+
+        settings = page.get_settings()
+        self.assertTrue(settings["evidence_suggestions_enabled"])
+        self.assertEqual(settings["evidence_correlation_window_seconds"], 180)
+
+    def test_config_evidence_defaults_and_legacy_fallback(self):
+        from core.config import DEFAULT_CONFIG
+
+        # 1. DEFAULT_CONFIG contains expected defaults
+        self.assertIn("evidence_suggestions_enabled", DEFAULT_CONFIG)
+        self.assertTrue(DEFAULT_CONFIG["evidence_suggestions_enabled"])
+        self.assertIn("evidence_correlation_window_seconds", DEFAULT_CONFIG)
+        self.assertEqual(DEFAULT_CONFIG["evidence_correlation_window_seconds"], 90)
+
+        # 2. Legacy config without new keys automatically receives defaults
+        legacy_dir = Path(self.temp_dir.name) / "legacy_config"
+        legacy_dir.mkdir()
+        legacy_file = legacy_dir / "config.json"
+        legacy_file.write_text('{"target_ip": "10.10.10.99"}', encoding="utf-8")
+
+        legacy_mgr = ConfigManager(config_dir=legacy_dir)
+        self.assertTrue(legacy_mgr.get("evidence_suggestions_enabled"))
+        self.assertEqual(legacy_mgr.get("evidence_correlation_window_seconds"), 90)
+        self.assertEqual(legacy_mgr.get("target_ip"), "10.10.10.99")
+
 
 if __name__ == "__main__":
     unittest.main()

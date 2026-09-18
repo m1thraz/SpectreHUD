@@ -48,6 +48,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "nudge_enabled": True,
     "nudge_interval_minutes": 25,
     "loot_dialog_details_expanded": False,
+    "evidence_suggestions_enabled": True,
+    "evidence_correlation_window_seconds": 90,
 }
 
 

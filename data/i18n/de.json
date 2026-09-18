@@ -1185,5 +1185,8 @@
     "nudge.phase_captures_only": "{phase}: {count} Captures",
     "nudge.open_notes": "{count} offene Notes",
     "nudge.captures": "{count} Captures",
-    "nudge.rec_stopped": "Clipboard-Aufzeichnung beendet · {count} Einträge erfasst"
+    "nudge.rec_stopped": "Clipboard-Aufzeichnung beendet · {count} Einträge erfasst",
+    "settings.chk_evidence_suggestions": "Verwandte Evidenzen bei Finding-Erstellung vorschlagen",
+    "settings.lbl_evidence_window": "Korrelations-Zeitfenster:",
+    "settings.evidence_window_seconds": "{seconds} Sekunden"
 }

@@ -687,8 +687,15 @@ class LootFindingPromotionDialog(QDialog):
         primary_entries: list[dict],
         evidence_entries: Optional[list[dict]] = None,
         parent: Optional[QWidget] = None,
+        *,
+        suggestions_enabled: bool = True,
+        correlation_window_seconds: int = 90,
     ):
         super().__init__(parent)
+        from core.reporting import normalize_correlation_window_seconds
+
+        self.suggestions_enabled = bool(suggestions_enabled)
+        self.correlation_window_seconds = normalize_correlation_window_seconds(correlation_window_seconds)
         self.primary_entries = [entry for entry in primary_entries if isinstance(entry, dict)]
         self.evidence_entries = [
             entry
@@ -809,7 +816,7 @@ class LootFindingPromotionDialog(QDialog):
         self._on_evidence_selection_changed()
 
     def _update_evidence_suggestions(self) -> None:
-        if not self.selected_entry:
+        if not self.suggestions_enabled or not self.selected_entry:
             self._current_suggestions = []
             self.btn_suggest.setVisible(False)
             return
@@ -836,7 +843,11 @@ class LootFindingPromotionDialog(QDialog):
             if str(e.get("id", "")) != anchor.id
         ]
 
-        self._current_suggestions = suggest_related_evidence(anchor, candidates)
+        self._current_suggestions = suggest_related_evidence(
+            anchor,
+            candidates,
+            proximity_seconds=self.correlation_window_seconds,
+        )
         count = len(self._current_suggestions)
         if count > 0:
             self.btn_suggest.setText(

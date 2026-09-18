@@ -1,7 +1,7 @@
 """UI orchestration for explicit Loot-to-Finding promotion."""
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from PyQt6.QtWidgets import QDialog, QWidget
 
@@ -36,11 +36,13 @@ class ReportFindingPromotionActions:
         service: FindingPromotionService,
         loot_manager: Callable[[], Any],
         callbacks: FindingPromotionCallbacks,
+        config_manager: Optional[Any] = None,
     ):
         self._parent = parent
         self._service = service
         self._loot_manager = loot_manager
         self._callbacks = callbacks
+        self._config_manager = config_manager
 
     def promote(self) -> None:
         loot_manager = self._loot_manager()
@@ -64,10 +66,22 @@ class ReportFindingPromotionActions:
             )
             return
 
+        suggestions_enabled = True
+        correlation_window = 90
+        if self._config_manager is not None:
+            suggestions_enabled = bool(
+                self._config_manager.get("evidence_suggestions_enabled", True)
+            )
+            correlation_window = self._config_manager.get(
+                "evidence_correlation_window_seconds", 90
+            )
+
         dialog = LootFindingPromotionDialog(
             candidates,
             evidence_entries=candidates,
             parent=self._parent,
+            suggestions_enabled=suggestions_enabled,
+            correlation_window_seconds=correlation_window,
         )
         if dialog.exec() != QDialog.DialogCode.Accepted or not dialog.selected_entry:
             return

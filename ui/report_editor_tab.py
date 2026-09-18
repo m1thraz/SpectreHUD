@@ -201,6 +201,7 @@ class ReportEditorTab(QWidget):
                 current_markdown=self.current_markdown,
                 add_finding=self._add_promoted_finding,
             ),
+            config_manager=self.config,
         )
 
         self._preview_timer = QTimer(self)

@@ -159,18 +159,24 @@ from core.reporting.professional import (
     strip_professional_generator_footer,
 )
 from core.reporting.evidence_bundler import (
+    ALLOWED_CORRELATION_WINDOWS,
     AlreadyAttachedKey,
     EvidenceCandidate,
     EvidenceSuggestion,
     SourceType,
+    calculate_unscoped_proximity_seconds,
+    normalize_correlation_window_seconds,
     suggest_related_evidence,
 )
 
 __all__ = [
+    "ALLOWED_CORRELATION_WINDOWS",
     "AlreadyAttachedKey",
     "EvidenceCandidate",
     "EvidenceSuggestion",
     "SourceType",
+    "calculate_unscoped_proximity_seconds",
+    "normalize_correlation_window_seconds",
     "suggest_related_evidence",
     "strip_generator_footer",
     "strip_professional_generator_footer",

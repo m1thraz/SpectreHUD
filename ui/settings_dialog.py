@@ -799,6 +799,42 @@ class GeneralSettingsPage(QWidget):
         row_badge.addWidget(self.spin_badge_threshold)
         w_layout.addLayout(row_badge)
 
+        self.chk_evidence_suggestions = QCheckBox(
+            t("settings.chk_evidence_suggestions", "Suggest related evidence during finding creation")
+        )
+        self.chk_evidence_suggestions.setChecked(
+            bool(self.config.get("evidence_suggestions_enabled", True))
+        )
+        w_layout.addWidget(self.chk_evidence_suggestions)
+
+        row_evidence_window = QHBoxLayout()
+        lbl_evidence_window = QLabel(t("settings.lbl_evidence_window", "Correlation window:"))
+        lbl_evidence_window.setProperty("class", "FormLabel")
+        row_evidence_window.addWidget(lbl_evidence_window, stretch=1)
+
+        self.combo_evidence_window = QComboBox()
+        from core.reporting import (
+            ALLOWED_CORRELATION_WINDOWS,
+            normalize_correlation_window_seconds,
+        )
+
+        for seconds in ALLOWED_CORRELATION_WINDOWS:
+            self.combo_evidence_window.addItem(
+                t("settings.evidence_window_seconds", "{seconds} seconds", seconds=seconds),
+                seconds,
+            )
+        curr_window = normalize_correlation_window_seconds(
+            self.config.get("evidence_correlation_window_seconds", 90)
+        )
+        idx = self.combo_evidence_window.findData(curr_window)
+        if idx >= 0:
+            self.combo_evidence_window.setCurrentIndex(idx)
+        row_evidence_window.addWidget(self.combo_evidence_window)
+        w_layout.addLayout(row_evidence_window)
+
+        self.chk_evidence_suggestions.toggled.connect(self.combo_evidence_window.setEnabled)
+        self.combo_evidence_window.setEnabled(self.chk_evidence_suggestions.isChecked())
+
         layout.addWidget(card_workflow)
 
         lbl_updates = QLabel(t("settings.lbl_updates_section", "Application Updates"))
@@ -1103,6 +1139,8 @@ class GeneralSettingsPage(QWidget):
             "nudge_enabled": self.chk_nudge.isChecked(),
             "nudge_interval_minutes": self.spin_nudge_minutes.value(),
             "badge_warning_threshold": self.spin_badge_threshold.value(),
+            "evidence_suggestions_enabled": self.chk_evidence_suggestions.isChecked(),
+            "evidence_correlation_window_seconds": self.combo_evidence_window.currentData() or 90,
         }
 
 

@@ -16,6 +16,38 @@ AlreadyAttachedKey = Union[Tuple[SourceType, str], str]
 
 EVIDENCE_PROXIMITY_SECONDS: int = 90
 EVIDENCE_UNSCOPED_PROXIMITY_SECONDS: int = 45
+ALLOWED_CORRELATION_WINDOWS: Tuple[int, ...] = (30, 60, 90, 120, 180, 300)
+
+
+def normalize_correlation_window_seconds(
+    value: Any,
+    default: int = EVIDENCE_PROXIMITY_SECONDS,
+) -> int:
+    """Safely normalizes correlation window to an allowed preset, falling back to default."""
+    try:
+        int_val = int(value)
+    except (ValueError, TypeError):
+        return default
+    return int_val if int_val in ALLOWED_CORRELATION_WINDOWS else default
+
+
+def calculate_unscoped_proximity_seconds(proximity_seconds: int) -> int:
+    """
+    Derives the defensive unscoped window from the configured proximity window.
+
+    Guarantees:
+    - Robust against invalid or non-positive inputs (defaults or clamps to >= 1)
+    - unscoped is always more conservative than scoped
+    - unscoped never exceeds 60 seconds
+    - default 90s results in 45s
+    """
+    try:
+        seconds = int(proximity_seconds)
+    except (ValueError, TypeError):
+        seconds = EVIDENCE_PROXIMITY_SECONDS
+    if seconds < 1:
+        seconds = EVIDENCE_PROXIMITY_SECONDS
+    return max(1, min(int(seconds / 2), 60))
 
 
 @dataclass(frozen=True)
@@ -109,7 +141,7 @@ def suggest_related_evidence(
     *,
     already_attached_keys: Optional[Set[AlreadyAttachedKey]] = None,
     proximity_seconds: int = EVIDENCE_PROXIMITY_SECONDS,
-    unscoped_proximity_seconds: int = EVIDENCE_UNSCOPED_PROXIMITY_SECONDS,
+    unscoped_proximity_seconds: Optional[int] = None,
 ) -> List[EvidenceSuggestion]:
     """
     Suggests candidates that temporally and contextually correlate with the anchor.
@@ -129,6 +161,13 @@ def suggest_related_evidence(
     anchor_dt = parse_entry_datetime(anchor.entry)
     if anchor_dt is None:
         return []
+
+    valid_proximity = normalize_correlation_window_seconds(proximity_seconds)
+    valid_unscoped = (
+        calculate_unscoped_proximity_seconds(valid_proximity)
+        if unscoped_proximity_seconds is None
+        else max(1, int(unscoped_proximity_seconds))
+    )
 
     anchor_target = get_target(anchor.entry)
     anchor_phase = get_phase_id(anchor.entry)
@@ -161,11 +200,7 @@ def suggest_related_evidence(
         if not phase_ok:
             continue
 
-        max_dt = (
-            unscoped_proximity_seconds
-            if (target_unscoped or phase_unscoped)
-            else proximity_seconds
-        )
+        max_dt = valid_unscoped if (target_unscoped or phase_unscoped) else valid_proximity
 
         dt = abs((cand_dt - anchor_dt).total_seconds())
         if dt > max_dt:
