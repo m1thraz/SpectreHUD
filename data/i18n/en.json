@@ -783,6 +783,8 @@
     "report.promote_preview": "Primary Loot preview",
     "report.promote_loot_action": "Create Finding",
     "report.promote_selected_evidence": "{count} supporting entries selected",
+    "report.promote_suggest_evidence": "{count} related evidence items",
+    "report.promote_suggest_tooltip": "Suggested based on phase, target, and capture time",
     "report.no_promotable_loot_title": "No unassigned Loot",
     "report.no_promotable_loot_msg": "All available Loot is already represented by report findings.",
     "report.promote_failed_title": "Could not create finding",

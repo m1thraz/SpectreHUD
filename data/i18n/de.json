@@ -783,6 +783,8 @@
     "report.promote_preview": "Vorschau der Finding-Quelle",
     "report.promote_loot_action": "Finding erstellen",
     "report.promote_selected_evidence": "{count} unterstützende Einträge ausgewählt",
+    "report.promote_suggest_evidence": "{count} verwandte Evidenzen auswählen",
+    "report.promote_suggest_tooltip": "Basierend auf Phase, Target und Aufnahmezeit vorgeschlagen",
     "report.no_promotable_loot_title": "Kein unzugeordnetes Loot",
     "report.no_promotable_loot_msg": "Alle verfügbaren Loot-Einträge werden bereits durch Report-Findings repräsentiert.",
     "report.promote_failed_title": "Finding konnte nicht erstellt werden",

@@ -722,10 +722,21 @@ class LootFindingPromotionDialog(QDialog):
         lists.addLayout(primary_column, stretch=1)
 
         evidence_column = QVBoxLayout()
+        ev_header = QHBoxLayout()
         self.lbl_evidence = QLabel(
             t("report.promote_evidence", "2. Supporting evidence (optional)")
         )
-        evidence_column.addWidget(self.lbl_evidence)
+        ev_header.addWidget(self.lbl_evidence)
+        ev_header.addStretch()
+
+        self.btn_suggest = QPushButton()
+        self.btn_suggest.setProperty("class", "SecondaryBtn FormatToolBtn")
+        self.btn_suggest.setIcon(icon("fa5s.magic", color=get_theme_color("ACCENT_BRAND")))
+        self.btn_suggest.setVisible(False)
+        self.btn_suggest.clicked.connect(self._on_apply_suggestions_clicked)
+        ev_header.addWidget(self.btn_suggest)
+
+        evidence_column.addLayout(ev_header)
         self.evidence_list = QListWidget()
         self.evidence_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.evidence_list.itemSelectionChanged.connect(self._on_evidence_selection_changed)
@@ -756,6 +767,7 @@ class LootFindingPromotionDialog(QDialog):
         buttons.addWidget(self.btn_promote)
         layout.addLayout(buttons)
 
+        self._current_suggestions: list = []
         self._populate_primary_entries()
 
     @staticmethod
@@ -793,7 +805,68 @@ class LootFindingPromotionDialog(QDialog):
             item = QListWidgetItem(self._entry_label(entry))
             item.setData(Qt.ItemDataRole.UserRole, entry)
             self.evidence_list.addItem(item)
+        self._update_evidence_suggestions()
         self._on_evidence_selection_changed()
+
+    def _update_evidence_suggestions(self) -> None:
+        if not self.selected_entry:
+            self._current_suggestions = []
+            self.btn_suggest.setVisible(False)
+            return
+
+        from core.reporting import EvidenceCandidate, suggest_related_evidence
+
+        anchor_type = (
+            "screenshot"
+            if str(self.selected_entry.get("type") or "") == "screenshot"
+            else "loot"
+        )
+        anchor = EvidenceCandidate(source_type=anchor_type, entry=self.selected_entry)
+
+        candidates = [
+            EvidenceCandidate(
+                source_type=(
+                    "screenshot"
+                    if str(e.get("type") or "") == "screenshot"
+                    else "loot"
+                ),
+                entry=e,
+            )
+            for e in self.evidence_entries
+            if str(e.get("id", "")) != anchor.id
+        ]
+
+        self._current_suggestions = suggest_related_evidence(anchor, candidates)
+        count = len(self._current_suggestions)
+        if count > 0:
+            self.btn_suggest.setText(
+                t(
+                    "report.promote_suggest_evidence",
+                    "{count} verwandte Evidenzen auswählen",
+                    count=count,
+                )
+            )
+            self.btn_suggest.setToolTip(
+                t(
+                    "report.promote_suggest_tooltip",
+                    "Basierend auf Phase, Target und Aufnahmezeit vorgeschlagen",
+                )
+            )
+            self.btn_suggest.setVisible(True)
+        else:
+            self.btn_suggest.setVisible(False)
+
+    def _on_apply_suggestions_clicked(self) -> None:
+        if not getattr(self, "_current_suggestions", None):
+            return
+        suggested_ids = {s.candidate.id for s in self._current_suggestions}
+        for idx in range(self.evidence_list.count()):
+            item = self.evidence_list.item(idx)
+            if item is None:
+                continue
+            entry = item.data(Qt.ItemDataRole.UserRole)
+            if entry and str(entry.get("id", "")) in suggested_ids:
+                item.setSelected(True)
 
     def _on_evidence_selection_changed(self) -> None:
         self.selected_evidence_entries = [
