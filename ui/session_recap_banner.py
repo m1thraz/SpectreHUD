@@ -144,8 +144,11 @@ class SessionRecapBanner(QFrame):
     def show_recap(self, info: Dict[str, Any]) -> None:
         """Populates fields and displays the recap banner, resetting the auto-dismiss timer."""
         self._current_info = dict(info)
+        self.lbl_tag.setText(t("recap.tag", "RECAP //"))
+        self.btn_resume.setText(t("recap.resume", "Resume"))
         phase_name = info.get("phase_name") or t("recap.phase_none", "Keine Phase")
         self.lbl_phase.setText(f"Phase: {phase_name}")
+        self.lbl_phase.show()
 
         target = info.get("target")
         if target:
@@ -183,3 +186,53 @@ class SessionRecapBanner(QFrame):
 
         self.show()
         self._dismiss_timer.start(self.auto_dismiss_ms)
+
+    def show_nudge(self, info: Dict[str, Any]) -> None:
+        """Displays a non-modal, dismissable review nudge triggered by natural workflow events."""
+        self._current_info = dict(info)
+        tag = info.get("tag") or t("nudge.tag", "REVIEW //")
+        self.lbl_tag.setText(tag)
+
+        phase_name = info.get("phase_name")
+        if phase_name:
+            self.lbl_phase.setText(f"Phase: {phase_name}")
+            self.lbl_phase.show()
+        else:
+            self.lbl_phase.hide()
+
+        target = info.get("target")
+        if target:
+            self.lbl_target.setText(f"Target: {target}")
+            self.lbl_sep_target.show()
+            self.lbl_target.show()
+        else:
+            self.lbl_sep_target.hide()
+            self.lbl_target.hide()
+
+        message = info.get("message")
+        if message:
+            self.lbl_last_action.setText(message)
+            if phase_name or target:
+                self.lbl_sep1.show()
+            else:
+                self.lbl_sep1.hide()
+            self.lbl_last_action.show()
+        else:
+            self.lbl_sep1.hide()
+            self.lbl_last_action.hide()
+
+        badges = info.get("badges")
+        if badges:
+            self.lbl_badges.setText(badges if isinstance(badges, str) else " · ".join(badges))
+            self.lbl_sep2.show()
+            self.lbl_badges.show()
+        else:
+            self.lbl_sep2.hide()
+            self.lbl_badges.hide()
+
+        action_label = info.get("action_label") or t("nudge.action_review", "Review")
+        self.btn_resume.setText(action_label)
+
+        self.show()
+        self._dismiss_timer.start(self.auto_dismiss_ms)
+

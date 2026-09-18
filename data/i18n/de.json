@@ -1166,5 +1166,13 @@
     "recap.unsynced_loot": "{count} ungesynctes Loot",
     "recap.resume": "Fortsetzen",
     "screenshot.hud_category": "SCREENSHOT GESPEICHERT",
-    "screenshot.hud_saved": "Im Loot gespeichert"
+    "screenshot.hud_saved": "Im Loot gespeichert",
+    "nudge.tag": "REVIEW //",
+    "nudge.action_review": "Sichten",
+    "nudge.phase_switch": "{phase}: {notes} und {captures}",
+    "nudge.phase_notes_only": "{phase}: {count} offene Notes",
+    "nudge.phase_captures_only": "{phase}: {count} Captures",
+    "nudge.open_notes": "{count} offene Notes",
+    "nudge.captures": "{count} Captures",
+    "nudge.rec_stopped": "Clipboard-Aufzeichnung beendet · {count} Einträge erfasst"
 }

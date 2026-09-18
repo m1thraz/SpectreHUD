@@ -115,6 +115,8 @@ class AppController(QObject):
         self.cards: List[QWidget] = []
         self._rendered_mode: Optional[str] = None
         self._quick_ip_popup: Optional[Any] = None
+        self._current_phase_id: Optional[str] = self.phase_context.active_phase_id
+        self._recorded_in_session: int = 0
 
         # Specialized Coordinators & Providers
         self._target_provider = lambda: (
@@ -347,11 +349,17 @@ class AppController(QObject):
         """Handles phase change event from event bus."""
         phase_id = payload.phase_id
         source = payload.source
+        old_phase = getattr(self, "_current_phase_id", None)
+        self._current_phase_id = phase_id
+
         self.footer.set_phase(phase_id)
         if hasattr(self.header, "set_phase"):
             self.header.set_phase(phase_id)
         if source == "hotkey":
             self.phase_hud.show_phase(phase_id)
+
+        if old_phase and old_phase != phase_id:
+            self._check_phase_switch_nudge(old_phase, phase_id)
 
     def _show_phase_menu(self, button: QPushButton) -> None:
         """Opens the phase selection popup menu over the footer phase button."""
@@ -632,11 +640,106 @@ class AppController(QObject):
         ctx = context or {}
         target_mode = ctx.get("mode") or self.active_mode or "cheatsheet"
         self.switch_mode(target_mode)
+        if target_mode == "notes":
+            phase = ctx.get("phase")
+            if phase and hasattr(self.quick_note_ctrl, "select_filter"):
+                self.quick_note_ctrl.select_filter(phase)
+            if ctx.get("review_mode") and hasattr(self.quick_note_ctrl, "set_review_mode"):
+                self.quick_note_ctrl.set_review_mode(True)
 
     def _on_logging_state_changed(self, is_active: bool) -> None:
         """Handles REC indicator updates and resets nudge countdown."""
         self.header.update_rec_indicator(is_active)
         self._reset_rec_nudge()
+        if is_active:
+            self._recorded_in_session = 0
+        else:
+            rec_count = getattr(self, "_recorded_in_session", 0)
+            if rec_count > 0:
+                self._check_recorder_stopped_nudge(rec_count)
+                self._recorded_in_session = 0
+
+    def _check_phase_switch_nudge(self, old_phase: str, new_phase: Optional[str]) -> None:
+        """Shows a subtle, non-modal review nudge if leaving a phase with open items."""
+        if not self.config.get("review_nudges_enabled", True):
+            return
+        if not hasattr(self.window, "isVisible") or not self.window.isVisible():
+            return
+
+        open_notes = [
+            n for n in self.quick_note_manager.get_all_entries()
+            if n.get("status") != "resolved" and n.get("category") == old_phase
+        ]
+        captures = [
+            h for h in self.clipboard_history.get_all_history()
+            if h.get("phase_id") == old_phase
+        ]
+
+        if not open_notes and not captures:
+            return
+
+        from core.phases import PHASES
+        phase_obj = next((p for p in PHASES if p.key == old_phase), None)
+        phase_name = phase_obj.short if phase_obj else old_phase.upper()
+
+        if open_notes and captures:
+            message = t(
+                "nudge.phase_switch",
+                "{phase}: {notes} und {captures}",
+                phase=phase_name,
+                notes=t("nudge.open_notes", "{count} offene Notes", count=len(open_notes)),
+                captures=t("nudge.captures", "{count} Captures", count=len(captures)),
+            )
+        elif open_notes:
+            message = t(
+                "nudge.phase_notes_only",
+                "{phase}: {count} offene Notes",
+                phase=phase_name,
+                count=len(open_notes),
+            )
+        else:
+            message = t(
+                "nudge.phase_captures_only",
+                "{phase}: {count} Captures",
+                phase=phase_name,
+                count=len(captures),
+            )
+
+        resume_ctx = {
+            "mode": "notes" if open_notes else "history",
+            "phase": old_phase,
+            "review_mode": bool(open_notes),
+        }
+
+        recap_banner = getattr(self.window, "recap_banner", None)
+        if recap_banner and hasattr(recap_banner, "show_nudge"):
+            recap_banner.show_nudge({
+                "tag": t("nudge.tag", "REVIEW //"),
+                "message": message,
+                "action_label": t("nudge.action_review", "Review"),
+                "resume_context": resume_ctx,
+            })
+
+    def _check_recorder_stopped_nudge(self, count: int) -> None:
+        """Shows a subtle, non-modal review nudge after clipboard recording stops."""
+        if not self.config.get("review_nudges_enabled", True):
+            return
+        if not hasattr(self.window, "isVisible") or not self.window.isVisible():
+            return
+
+        message = t(
+            "nudge.rec_stopped",
+            "Clipboard-Aufzeichnung beendet · {count} Einträge erfasst",
+            count=count,
+        )
+        recap_banner = getattr(self.window, "recap_banner", None)
+        if recap_banner and hasattr(recap_banner, "show_nudge"):
+            recap_banner.show_nudge({
+                "tag": t("nudge.tag", "REVIEW //"),
+                "message": message,
+                "action_label": t("nudge.action_review", "Review"),
+                "resume_context": {"mode": "history"},
+            })
 
     def _check_rec_nudge(self) -> None:
         """Checks whether active clipboard REC has run without documentation captures."""
@@ -1024,6 +1127,7 @@ class AppController(QObject):
         self._on_loot_data_updated()
 
     def _on_clipboard_entry_added(self, entry: Dict[str, Any]) -> None:
+        self._recorded_in_session = getattr(self, "_recorded_in_session", 0) + 1
         self.clipboard_coord.on_clipboard_entry_added(entry)
 
     def _clear_loot(self) -> None:

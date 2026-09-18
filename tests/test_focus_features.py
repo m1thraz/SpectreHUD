@@ -318,3 +318,143 @@ class TestWorkflowAcceptanceScenario(unittest.TestCase):
         dlg2.deleteLater()
         AddLootDialog._cached_draft = None
 
+
+class TestEventReviewNudges(unittest.TestCase):
+    def test_session_recap_banner_show_nudge(self):
+        banner = SessionRecapBanner(auto_dismiss_ms=5000)
+        self.assertTrue(banner.isHidden())
+
+        nudge_info = {
+            "tag": "REVIEW //",
+            "message": "Recon: 2 offene Notes",
+            "action_label": "Sichten",
+            "resume_context": {"mode": "notes", "phase": "recon", "review_mode": True},
+        }
+        banner.show_nudge(nudge_info)
+        self.assertFalse(banner.isHidden())
+        self.assertEqual(banner.lbl_tag.text(), "REVIEW //")
+        self.assertIn("Recon: 2 offene Notes", banner.lbl_last_action.text())
+        self.assertEqual(banner.btn_resume.text(), "Sichten")
+
+        resumed = []
+        banner.resume_clicked.connect(resumed.append)
+        banner.btn_resume.click()
+        self.assertTrue(banner.isHidden())
+        self.assertEqual(len(resumed), 1)
+        self.assertEqual(resumed[0], {"mode": "notes", "phase": "recon", "review_mode": True})
+        banner.deleteLater()
+
+    def test_phase_switch_nudge_when_open_notes_exist(self):
+        from core.event_bus import ActivePhaseChangedPayload
+        from ui.app_controller import AppController
+
+        ctrl = MagicMock()
+        ctrl.config = {"review_nudges_enabled": True}
+        ctrl.window = MagicMock()
+        ctrl.window.isVisible.return_value = True
+        ctrl.window.recap_banner = MagicMock()
+        ctrl.header = MagicMock()
+        ctrl.footer = MagicMock()
+        ctrl._current_phase_id = "recon"
+
+        # Mock quick_note_manager with an open note in recon
+        ctrl.quick_note_manager = MagicMock()
+        ctrl.quick_note_manager.get_all_entries.return_value = [
+            {"id": "n1", "text": "DNS recon", "category": "recon", "status": "inbox"},
+            {"id": "n2", "text": "SSH brute", "category": "access", "status": "inbox"},
+        ]
+        ctrl.clipboard_history = MagicMock()
+        ctrl.clipboard_history.get_all_history.return_value = []
+
+        ctrl._check_phase_switch_nudge = AppController._check_phase_switch_nudge.__get__(ctrl)
+        ctrl._on_active_phase_changed = AppController._on_active_phase_changed.__get__(ctrl)
+
+        # Switch to access phase
+        ctrl._on_active_phase_changed(ActivePhaseChangedPayload(phase_id="access", source="ui"))
+
+        # Assert nudge was shown for recon
+        ctrl.window.recap_banner.show_nudge.assert_called_once()
+        call_arg = ctrl.window.recap_banner.show_nudge.call_args[0][0]
+        self.assertEqual(call_arg["tag"], "REVIEW //")
+        self.assertIn("RECON", call_arg["message"])
+        self.assertEqual(call_arg["resume_context"]["mode"], "notes")
+        self.assertEqual(call_arg["resume_context"]["phase"], "recon")
+
+    def test_phase_switch_nudge_silent_when_no_items(self):
+        from core.event_bus import ActivePhaseChangedPayload
+        from ui.app_controller import AppController
+
+        ctrl = MagicMock()
+        ctrl.config = {"review_nudges_enabled": True}
+        ctrl.window = MagicMock()
+        ctrl.window.isVisible.return_value = True
+        ctrl.window.recap_banner = MagicMock()
+        ctrl.header = MagicMock()
+        ctrl.footer = MagicMock()
+        ctrl._current_phase_id = "recon"
+
+        ctrl.quick_note_manager = MagicMock()
+        ctrl.quick_note_manager.get_all_entries.return_value = []
+        ctrl.clipboard_history = MagicMock()
+        ctrl.clipboard_history.get_all_history.return_value = []
+
+        ctrl._check_phase_switch_nudge = AppController._check_phase_switch_nudge.__get__(ctrl)
+        ctrl._on_active_phase_changed = AppController._on_active_phase_changed.__get__(ctrl)
+
+        ctrl._on_active_phase_changed(ActivePhaseChangedPayload(phase_id="access", source="ui"))
+
+        # Zero items -> no nudge
+        ctrl.window.recap_banner.show_nudge.assert_not_called()
+
+    def test_phase_switch_nudge_silent_when_window_hidden(self):
+        from core.event_bus import ActivePhaseChangedPayload
+        from ui.app_controller import AppController
+
+        ctrl = MagicMock()
+        ctrl.config = {"review_nudges_enabled": True}
+        ctrl.window = MagicMock()
+        ctrl.window.isVisible.return_value = False  # Hidden window
+        ctrl.window.recap_banner = MagicMock()
+        ctrl.header = MagicMock()
+        ctrl.footer = MagicMock()
+        ctrl._current_phase_id = "recon"
+
+        ctrl.quick_note_manager = MagicMock()
+        ctrl.quick_note_manager.get_all_entries.return_value = [
+            {"id": "n1", "category": "recon", "status": "inbox"}
+        ]
+        ctrl.clipboard_history = MagicMock()
+        ctrl.clipboard_history.get_all_history.return_value = []
+
+        ctrl._check_phase_switch_nudge = AppController._check_phase_switch_nudge.__get__(ctrl)
+        ctrl._on_active_phase_changed = AppController._on_active_phase_changed.__get__(ctrl)
+
+        ctrl._on_active_phase_changed(ActivePhaseChangedPayload(phase_id="access", source="hotkey"))
+
+        # Must not display or steal focus when window is hidden
+        ctrl.window.recap_banner.show_nudge.assert_not_called()
+
+    def test_recorder_stopped_nudge_triggers_when_items_captured(self):
+        from ui.app_controller import AppController
+
+        ctrl = MagicMock()
+        ctrl.config = {"review_nudges_enabled": True}
+        ctrl.window = MagicMock()
+        ctrl.window.isVisible.return_value = True
+        ctrl.window.recap_banner = MagicMock()
+        ctrl.header = MagicMock()
+        ctrl._reset_rec_nudge = MagicMock()
+        ctrl._recorded_in_session = 4
+
+        ctrl._check_recorder_stopped_nudge = AppController._check_recorder_stopped_nudge.__get__(ctrl)
+        ctrl._on_logging_state_changed = AppController._on_logging_state_changed.__get__(ctrl)
+
+        ctrl._on_logging_state_changed(False)
+
+        ctrl.window.recap_banner.show_nudge.assert_called_once()
+        call_arg = ctrl.window.recap_banner.show_nudge.call_args[0][0]
+        self.assertIn("4", call_arg["message"])
+        self.assertEqual(call_arg["resume_context"]["mode"], "history")
+        self.assertEqual(ctrl._recorded_in_session, 0)
+
+
