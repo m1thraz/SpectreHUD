@@ -10,7 +10,9 @@ from datetime import datetime
 from typing import Any, List, Literal, Mapping, Optional, Sequence, Set, Tuple, Union
 
 SourceType = Literal["screenshot", "clipboard", "quick_note", "loot"]
-AlreadyAttachedKey = Union[str, Tuple[SourceType, str]]
+# Canonical key is (source_type, entry_id) to prevent cross-source ID collisions.
+# Raw string ID is supported strictly as a legacy fallback.
+AlreadyAttachedKey = Union[Tuple[SourceType, str], str]
 
 EVIDENCE_PROXIMITY_SECONDS: int = 90
 EVIDENCE_UNSCOPED_PROXIMITY_SECONDS: int = 45
@@ -112,9 +114,13 @@ def suggest_related_evidence(
     """
     Suggests candidates that temporally and contextually correlate with the anchor.
 
+    Returns all valid matching candidates without an arbitrary core-level limit,
+    enabling presentation-level progressive disclosure or full batch operations.
+
     Rules:
     - Never suggests the anchor itself.
-    - Excludes items present in already_attached_keys (flat ID or (source_type, ID) tuple).
+    - Excludes items present in already_attached_keys (canonical (source_type, id)
+      tuples checked first, with raw id strings supported as legacy fallback).
     - Excludes pure clipboard -> clipboard sequences.
     - Requires target and phase compatibility.
     - Enforces proximity window (defensively reduced when target or phase is unscoped).
@@ -135,7 +141,8 @@ def suggest_related_evidence(
         if not c_id or c_id == anchor.id:
             continue
 
-        if c_id in attached_set or (cand.source_type, c_id) in attached_set:
+        # Check canonical (source_type, id) tuple first; fallback to legacy raw id
+        if (cand.source_type, c_id) in attached_set or c_id in attached_set:
             continue
 
         # Rule: Exclude pure clipboard -> clipboard series

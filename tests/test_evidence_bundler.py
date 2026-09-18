@@ -221,3 +221,96 @@ def test_dialog_evidence_suggestion_ui(qapp):
     assert "loot_cand_unrelated" not in selected_ids
 
     dialog.close()
+
+
+def test_suggest_canonical_already_attached_keys_avoids_id_collisions():
+    """Verify that (source_type, id) prevents collision when two sources share the same ID."""
+    anchor = _make_candidate("screenshot", "s1", "2026-09-18 14:00:00")
+    c_clip = _make_candidate("clipboard", "entry_123", "2026-09-18 14:00:10")
+    c_loot = _make_candidate("loot", "entry_123", "2026-09-18 14:00:15")
+
+    # Excluding ("clipboard", "entry_123") must NOT exclude ("loot", "entry_123")
+    sugg = suggest_related_evidence(
+        anchor, [c_clip, c_loot], already_attached_keys={("clipboard", "entry_123")}
+    )
+    assert len(sugg) == 1
+    assert sugg[0].candidate.source_type == "loot"
+    assert sugg[0].candidate.id == "entry_123"
+
+
+def test_dialog_evidence_suggestion_preserves_manual_selection_union(qapp):
+    """
+    Regression test: Clicking 'btn_suggest' must perform an exact union
+    (existing_selection ∪ suggestions) and never deselect manually checked entries.
+    """
+    from PyQt6.QtCore import Qt
+    from ui.report.dialogs import LootFindingPromotionDialog
+    entries = [
+        {
+            "id": "anchor_id",
+            "type": "note",
+            "title": "Anchor Loot",
+            "content": "Secret credentials",
+            "category": "exploitation",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:00",
+        },
+        {
+            "id": "manual_item_1",
+            "type": "note",
+            "title": "Manual Selection 1 (old)",
+            "content": "Old scan notes",
+            "category": "recon",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 10:00:00",
+        },
+        {
+            "id": "manual_item_2",
+            "type": "note",
+            "title": "Manual Selection 2 (old)",
+            "content": "Old scan notes 2",
+            "category": "recon",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 10:05:00",
+        },
+        {
+            "id": "suggested_item_1",
+            "type": "note",
+            "title": "Correlated loot",
+            "content": "Proof snippet",
+            "category": "exploitation",
+            "target_ip": "10.10.10.42",
+            "timestamp": "2026-09-18 14:00:25",
+        },
+    ]
+
+    dialog = LootFindingPromotionDialog(primary_entries=entries, evidence_entries=entries)
+    dialog.primary_list.setCurrentRow(0)
+
+    # 1 suggestion detected
+    assert len(dialog._current_suggestions) == 1
+    assert dialog._current_suggestions[0].candidate.id == "suggested_item_1"
+
+    # User manually selects manual_item_1 and manual_item_2
+    for idx in range(dialog.evidence_list.count()):
+        item = dialog.evidence_list.item(idx)
+        entry = item.data(Qt.ItemDataRole.UserRole)
+        if entry.get("id") in ("manual_item_1", "manual_item_2"):
+            item.setSelected(True)
+
+    # Verify manual selection prior to clicking suggestions
+    initial_selected = {e.get("id") for e in dialog.selected_evidence_entries}
+    assert initial_selected == {"manual_item_1", "manual_item_2"}
+
+    # User clicks 'btn_suggest'
+    dialog.btn_suggest.click()
+
+    # Verify that existing_selection was preserved and unioned with suggestions
+    final_selected = {e.get("id") for e in dialog.selected_evidence_entries}
+    expected_union = {"manual_item_1", "manual_item_2", "suggested_item_1"}
+    assert final_selected == expected_union, (
+        f"Expected union {expected_union}, got {final_selected}"
+    )
+
+    dialog.close()
+
