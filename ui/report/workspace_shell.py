@@ -163,6 +163,9 @@ def build_report_workspace_shell(
     finding.finding_changed.connect(callbacks.finding_changed)
     finding.finding_deleted.connect(callbacks.finding_deleted)
     finding.finding_duplicated.connect(callbacks.finding_duplicated)
+    finding.finding_selected.connect(
+        lambda finding_id: callbacks.navigate(ReportLocation.finding(finding_id))
+    )
     finding.request_loot_screenshot.connect(evidence_actions.attach_loot_screenshot)
     finding.request_image_file.connect(evidence_actions.attach_image_file)
     finding.request_clipboard_history.connect(evidence_actions.attach_clipboard_history)

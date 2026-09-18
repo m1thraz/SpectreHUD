@@ -124,25 +124,21 @@ class ReportWorkspaceRouter:
         document: ReportWorkspaceDocument,
         context: ReportRouteContext,
     ) -> ReportRoute:
-        finding = None
-        if location.kind is ReportLocationKind.PHASE_GROUP and location.identity:
-            finding = next(
-                (
-                    candidate
-                    for candidate in document.findings
-                    if normalize_phase_key(candidate.phase) == location.identity
-                ),
-                None,
-            )
-        if finding is None and document.findings:
-            finding = document.findings[0]
-
         inspector = self._surfaces.finding.inspector
         inspector.set_project_target_ip(context.target_ip)
-        inspector.load_finding(finding)
-        preview_target = (
-            ("finding", finding.id) if finding is not None else ("section", "finding_section")
-        )
+
+        phase_key = location.identity if location.kind is ReportLocationKind.PHASE_GROUP else None
+        findings = document.findings
+        if phase_key:
+            findings = [f for f in findings if normalize_phase_key(f.phase) == phase_key]
+
+        if not document.findings:
+            inspector.load_finding(None)
+            preview_target = ("section", "finding_section")
+        else:
+            inspector.load_findings_overview(findings, phase_filter=phase_key)
+            preview_target = ("section", "finding_section")
+
         return ReportRoute(
             self._surfaces.finding.surface,
             preview_target,

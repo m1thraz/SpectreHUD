@@ -6,11 +6,11 @@ markdown description/recommendation editing, target scoping, and an integrated
 Evidence & Proof-of-Concept drawer (Loot screenshots, terminal outputs, credentials).
 """
 
-from typing import Optional
+from typing import Dict, List, Optional
 import uuid
 
 from PyQt6.QtCore import QLocale, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QDoubleValidator
+from PyQt6.QtGui import QColor, QDoubleValidator
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -38,7 +38,7 @@ from core.reporting import (
 )
 from ui.glass_panel import GlassPanel
 from ui.report.inspector_style import style_inspector_header, style_inspector_scroll
-from ui.styles.icons import get_theme_color, icon
+from ui.styles.icons import get_severity_color, get_theme_color, icon
 
 SEVERITIES = ["critical", "high", "medium", "low", "info"]
 PHASES = ["recon", "access", "privesc", "postex", "scripts", "misc"]
@@ -134,6 +134,7 @@ class ReportFindingInspector(QWidget):
     finding_changed = pyqtSignal(ReportFindingItem)
     finding_deleted = pyqtSignal(str)
     finding_duplicated = pyqtSignal(str)
+    finding_selected = pyqtSignal(str)
 
     # External picker requests
     request_loot_screenshot = pyqtSignal()
@@ -513,6 +514,11 @@ class ReportFindingInspector(QWidget):
         ed_layout.addWidget(scroll, stretch=1)
 
         self._stack.addWidget(self.editor_widget)
+
+        # Page 2: Findings Overview
+        self.overview_widget = self._build_overview_ui()
+        self._stack.addWidget(self.overview_widget)
+
         main_layout.addWidget(self._stack)
 
     def _make_label(self, text: str) -> QLabel:
@@ -539,6 +545,223 @@ class ReportFindingInspector(QWidget):
             self.btn_toggle_details.setText(
                 t("report.show_details", "▶ Details & Formalia (CVSS, Remediation, Referenzen)")
             )
+
+    def _build_overview_ui(self) -> QWidget:
+        container = QWidget(self)
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(10)
+
+        # Header Card (GlassPanel)
+        self.overview_header_card = GlassPanel(container)
+        h_layout = QHBoxLayout(self.overview_header_card)
+        h_layout.setContentsMargins(12, 8, 12, 8)
+        h_layout.setSpacing(8)
+
+        lbl_icon = QLabel()
+        lbl_icon.setPixmap(
+            icon("fa5s.shield-alt", color=get_theme_color("CYBER_CYAN")).pixmap(20, 20)
+        )
+        h_layout.addWidget(lbl_icon)
+
+        self.lbl_overview_title = QLabel(t("report.findings_overview_title", "Findings Overview"))
+        style_inspector_header(self.overview_header_card, self.lbl_overview_title)
+        h_layout.addWidget(self.lbl_overview_title)
+
+        self.lbl_overview_count = QLabel("(0)")
+        self.lbl_overview_count.setStyleSheet(
+            f"color: {get_theme_color('TEXT_MUTED')}; font-size: 11px; margin-left: 4px;"
+        )
+        h_layout.addWidget(self.lbl_overview_count)
+        h_layout.addStretch()
+
+        self.btn_overview_create = QPushButton(
+            t("report.empty_add_finding_btn", "Neues Finding anlegen")
+        )
+        self.btn_overview_create.setProperty("class", "PrimaryBtn")
+        self.btn_overview_create.setIcon(icon("fa5s.plus", color=get_theme_color("TEXT_PRIMARY")))
+        self.btn_overview_create.clicked.connect(self.request_create_finding.emit)
+        h_layout.addWidget(self.btn_overview_create)
+
+        self.btn_overview_promote = QPushButton(
+            t("report.empty_promote_loot_btn", "Finding aus Loot erstellen")
+        )
+        self.btn_overview_promote.setProperty("class", "SecondaryBtn")
+        self.btn_overview_promote.setIcon(
+            icon("fa5s.file-medical", color=get_theme_color("SUCCESS"))
+        )
+        self.btn_overview_promote.clicked.connect(self.request_promote_loot.emit)
+        h_layout.addWidget(self.btn_overview_promote)
+
+        layout.addWidget(self.overview_header_card)
+
+        # Severity breakdown bar
+        self.overview_pills_container = QWidget()
+        self.overview_pills_layout = QHBoxLayout(self.overview_pills_container)
+        self.overview_pills_layout.setContentsMargins(0, 0, 0, 0)
+        self.overview_pills_layout.setSpacing(6)
+        layout.addWidget(self.overview_pills_container)
+
+        # Scroll Area for Finding Cards
+        scroll = QScrollArea(container)
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
+        self.overview_cards_widget = QWidget()
+        style_inspector_scroll(scroll, self.overview_cards_widget)
+        self.overview_cards_layout = QVBoxLayout(self.overview_cards_widget)
+        self.overview_cards_layout.setContentsMargins(4, 4, 4, 8)
+        self.overview_cards_layout.setSpacing(8)
+
+        scroll.setWidget(self.overview_cards_widget)
+        layout.addWidget(scroll, stretch=1)
+
+        return container
+
+    def load_findings_overview(
+        self,
+        findings: List[ReportFindingItem],
+        phase_filter: Optional[str] = None,
+    ) -> None:
+        self._finding = None
+        self._stack.setCurrentWidget(self.overview_widget)
+
+        # Clear existing cards
+        while self.overview_cards_layout.count():
+            child = self.overview_cards_layout.takeAt(0)
+            widget = child.widget()
+            if widget:
+                widget.deleteLater()
+
+        # Clear existing pills
+        while self.overview_pills_layout.count():
+            child = self.overview_pills_layout.takeAt(0)
+            widget = child.widget()
+            if widget:
+                widget.deleteLater()
+
+        total_count = len(findings)
+        self.lbl_overview_count.setText(f"({total_count})")
+        if phase_filter:
+            phase_name = t(f"phases.{phase_filter}", phase_filter.capitalize())
+            self.lbl_overview_title.setText(
+                f"{phase_name} {t('report.findings_overview_title', 'Findings Overview')}"
+            )
+        else:
+            self.lbl_overview_title.setText(
+                t("report.findings_overview_title", "Findings Overview")
+            )
+
+        # Severity breakdown pills
+        sev_counts: Dict[str, int] = {}
+        for f in findings:
+            sev = (f.severity or "medium").lower()
+            sev_counts[sev] = sev_counts.get(sev, 0) + 1
+
+        for s in SEVERITIES:
+            cnt = sev_counts.get(s, 0)
+            if cnt > 0:
+                lbl_pill = QLabel(f"{s.upper()}: {cnt}")
+                color = get_severity_color(s)
+                bg_color = QColor(color)
+                bg_color.setAlpha(35)
+                lbl_pill.setStyleSheet(
+                    f"background-color: {bg_color.name(QColor.NameFormat.HexArgb)}; "
+                    f"color: {color}; border: 1px solid {color}; "
+                    "border-radius: 4px; padding: 2px 8px; font-weight: bold; font-size: 11px;"
+                )
+                self.overview_pills_layout.addWidget(lbl_pill)
+        self.overview_pills_layout.addStretch()
+
+        if not findings:
+            lbl_none = QLabel(
+                t("report.no_findings_phase", "Keine Findings in dieser Phase erfasst.")
+            )
+            lbl_none.setStyleSheet(
+                f"color: {get_theme_color('TEXT_MUTED')}; font-style: italic; font-size: 12px; padding: 12px;"
+            )
+            self.overview_cards_layout.addWidget(lbl_none)
+            self.overview_cards_layout.addStretch()
+            return
+
+        for f in findings:
+            card = self._create_finding_overview_card(f)
+            self.overview_cards_layout.addWidget(card)
+
+        self.overview_cards_layout.addStretch()
+
+    def _create_finding_overview_card(self, f: ReportFindingItem) -> QFrame:
+        card = QFrame()
+        card.setProperty("class", "ReportMetricCard")
+        card.setCursor(Qt.CursorShape.PointingHandCursor)
+        card_color = get_severity_color(f.severity.lower())
+        border_col = QColor(card_color)
+        border_col.setAlpha(60)
+
+        card.setStyleSheet(
+            f"QFrame {{ "
+            f"  background: rgba(20, 24, 35, 0.65); "
+            f"  border: 1px solid {border_col.name(QColor.NameFormat.HexArgb)}; "
+            f"  border-left: 3px solid {card_color}; "
+            f"  border-radius: 6px; padding: 8px 12px; "
+            f"}} "
+            f"QFrame:hover {{ "
+            f"  background: rgba(30, 36, 50, 0.85); "
+            f"  border: 1px solid {card_color}; "
+            f"}}"
+        )
+
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(8, 8, 8, 8)
+        card_layout.setSpacing(12)
+
+        lbl_sev = QLabel(f.severity.upper())
+        lbl_sev.setStyleSheet(
+            f"background: transparent; color: {card_color}; font-weight: bold; font-size: 11px; min-width: 65px;"
+        )
+        card_layout.addWidget(lbl_sev)
+
+        v_info = QVBoxLayout()
+        v_info.setSpacing(3)
+
+        lbl_title = QLabel(f.title or t("report.finding_unnamed", "Untitled Finding"))
+        lbl_title.setStyleSheet(
+            f"font-size: 13px; font-weight: bold; color: {get_theme_color('TEXT_PRIMARY')};"
+        )
+        lbl_title.setWordWrap(True)
+        v_info.addWidget(lbl_title)
+
+        sub_items = []
+        if f.phase:
+            sub_items.append(t(f"phases.{normalize_phase_key(f.phase)}", f.phase.capitalize()))
+        if f.targets:
+            sub_items.append(", ".join(f.targets))
+        if f.status:
+            sub_items.append(f.status.replace("_", " ").title())
+        if f.cvss_score is not None:
+            sub_items.append(f"CVSS {f.cvss_score:.1f}")
+        if f.evidence_items:
+            sub_items.append(f"📎 {len(f.evidence_items)}")
+
+        lbl_meta = QLabel(" · ".join(sub_items))
+        lbl_meta.setStyleSheet(f"font-size: 11px; color: {get_theme_color('TEXT_MUTED')};")
+        v_info.addWidget(lbl_meta)
+        card_layout.addLayout(v_info, stretch=1)
+
+        btn_open = QPushButton(t("report.open_finding", "Öffnen ➔"))
+        btn_open.setProperty("class", "SecondaryBtn")
+        btn_open.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_open.clicked.connect(lambda _, fid=f.id: self.finding_selected.emit(fid))
+        card_layout.addWidget(btn_open)
+
+        def _on_card_click(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.finding_selected.emit(f.id)
+            QFrame.mousePressEvent(card, event)
+
+        card.mousePressEvent = _on_card_click
+
+        return card
 
     def load_finding(self, finding: Optional[ReportFindingItem]) -> None:
         if finding is None:

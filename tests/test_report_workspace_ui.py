@@ -674,6 +674,105 @@ Appendix body
         ReportFindingInspector._details_expanded = False
         insp.deleteLater()
 
+    def test_finding_inspector_overview_mode_and_selection(self):
+        from PyQt6.QtCore import QEvent, QPointF
+        from PyQt6.QtGui import QMouseEvent
+
+        insp = ReportFindingInspector()
+
+        findings = [
+            ReportFindingItem(
+                id="f-crit-1",
+                title="Critical SQL Injection",
+                severity="critical",
+                phase="access",
+                status="in_progress",
+                targets=["10.10.10.50"],
+                cvss_score=9.8,
+            ),
+            ReportFindingItem(
+                id="f-low-1",
+                title="Info Disclosure",
+                severity="low",
+                phase="recon",
+                status="open",
+                targets=["10.10.10.50"],
+            ),
+        ]
+
+        selected = []
+        insp.finding_selected.connect(selected.append)
+
+        # 1. Load overview with findings
+        insp.load_findings_overview(findings)
+        self.assertEqual(insp._stack.currentWidget(), insp.overview_widget)
+        self.assertEqual(insp.lbl_overview_count.text(), "(2)")
+        self.assertIn("Findings", insp.lbl_overview_title.text())
+
+        # Cards count in layout
+        card_widgets = [
+            insp.overview_cards_layout.itemAt(i).widget()
+            for i in range(insp.overview_cards_layout.count())
+            if insp.overview_cards_layout.itemAt(i).widget() is not None
+        ]
+        self.assertEqual(len(card_widgets), 2)
+
+        # 2. Click on the first card triggers finding_selected signal with f-crit-1
+        press_event = QMouseEvent(
+            QEvent.Type.MouseButtonPress,
+            QPointF(10, 10),
+            Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+        card_widgets[0].mousePressEvent(press_event)
+        self.assertEqual(selected, ["f-crit-1"])
+
+        # 3. Filtered overview by phase
+        insp.load_findings_overview([findings[1]], phase_filter="recon")
+        self.assertEqual(insp.lbl_overview_count.text(), "(1)")
+        self.assertIn("Recon", insp.lbl_overview_title.text())
+
+        # 4. Empty list in overview shows empty phase hint
+        insp.load_findings_overview([], phase_filter="privesc")
+        self.assertEqual(insp.lbl_overview_count.text(), "(0)")
+
+        insp.deleteLater()
+
+    def test_report_editor_tab_findings_overview_navigation(self):
+        tab = ReportEditorTab(self.report_file_mgr, self.loot_mgr, self.clip_watcher)
+        tab.load_project("WorkspaceBox")
+
+        # Add a finding so findings is not empty
+        tab.add_finding()
+        self.assertEqual(len(tab.workspace_document.findings), 1)
+
+        # Navigating to FINDINGS_OVERVIEW displays the overview_widget
+        tab.navigate_to(ReportLocation(ReportLocationKind.FINDINGS_OVERVIEW))
+        self.assertEqual(
+            tab.workspace_shell.center_stack.currentWidget(),
+            tab.workspace_shell.finding_inspector_glass,
+        )
+        self.assertEqual(
+            tab.workspace_shell.finding_inspector._stack.currentWidget(),
+            tab.workspace_shell.finding_inspector.overview_widget,
+        )
+
+        # Selecting a finding from overview navigates to finding editor_widget
+        finding_id = tab.workspace_document.findings[0].id
+        tab.workspace_shell.finding_inspector.finding_selected.emit(finding_id)
+        self.assertEqual(
+            tab.workspace_shell.finding_inspector._stack.currentWidget(),
+            tab.workspace_shell.finding_inspector.editor_widget,
+        )
+        self.assertEqual(
+            tab.workspace_shell.finding_inspector.txt_title.text(),
+            tab.workspace_document.findings[0].title,
+        )
+
+        tab.close()
+        tab.deleteLater()
+
     def test_loot_entry_picker_dialog(self):
         entries = [
             {
