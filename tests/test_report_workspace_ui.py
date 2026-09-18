@@ -628,6 +628,52 @@ Appendix body
 
         insp.deleteLater()
 
+    def test_finding_inspector_progressive_disclosure(self):
+        ReportFindingInspector._details_expanded = False
+
+        insp = ReportFindingInspector()
+        f_simple = ReportFindingItem(
+            id="f-simple", title="Simple Finding", description="Summary text"
+        )
+        insp.load_finding(f_simple)
+
+        # Details section must be collapsed by default
+        self.assertTrue(insp.details_widget.isHidden())
+        self.assertIn("▶", insp.btn_toggle_details.text())
+
+        # Toggle button expands it
+        insp.btn_toggle_details.click()
+        self.assertFalse(insp.details_widget.isHidden())
+        self.assertIn("▼", insp.btn_toggle_details.text())
+        self.assertTrue(ReportFindingInspector._details_expanded)
+
+        # Toggle button collapses it again
+        insp.btn_toggle_details.click()
+        self.assertTrue(insp.details_widget.isHidden())
+        self.assertIn("▶", insp.btn_toggle_details.text())
+        self.assertFalse(ReportFindingInspector._details_expanded)
+
+        # Loading finding with existing CVSS / remediation / references auto-expands
+        f_detailed = ReportFindingItem(
+            id="f-detailed",
+            title="Detailed Finding",
+            cvss_score=8.5,
+            recommendation="Update package to v2.0",
+            references=["CVE-2026-9999"],
+        )
+        insp.load_finding(f_detailed)
+        self.assertFalse(insp.details_widget.isHidden())
+        self.assertIn("▼", insp.btn_toggle_details.text())
+
+        # Next simple finding retains expanded state if user/finding had it expanded
+        f_simple2 = ReportFindingItem(id="f-simple2", title="Simple 2")
+        insp.load_finding(f_simple2)
+        self.assertFalse(insp.details_widget.isHidden())
+
+        # Reset class-level memory
+        ReportFindingInspector._details_expanded = False
+        insp.deleteLater()
+
     def test_loot_entry_picker_dialog(self):
         entries = [
             {

@@ -129,6 +129,8 @@ class ReportEvidenceCard(QFrame):
 class ReportFindingInspector(QWidget):
     """Contextual form, evidence drawer, and markdown editor for a single finding."""
 
+    _details_expanded: bool = False
+
     finding_changed = pyqtSignal(ReportFindingItem)
     finding_deleted = pyqtSignal(str)
     finding_duplicated = pyqtSignal(str)
@@ -328,7 +330,6 @@ class ReportFindingInspector(QWidget):
         self.txt_cvss_vector.setPlaceholderText("CVSS:3.1/AV:N/AC:L/PR:N/...")
         self.txt_cvss_vector.textChanged.connect(self._on_field_changed)
         cvss_row.addWidget(self.txt_cvss_vector, stretch=1)
-        form.addRow(self._make_label("CVSS:"), cvss_row)
 
         # Phase & Target
         phase_row = QHBoxLayout()
@@ -457,8 +458,31 @@ class ReportFindingInspector(QWidget):
         self.evidence_cards_layout.setSpacing(6)
         v_content.addWidget(self.evidence_container)
 
+        # Collapsible Details Toggle Button
+        self.btn_toggle_details = QPushButton()
+        self.btn_toggle_details.setObjectName("btn_toggle_details")
+        self.btn_toggle_details.setProperty("class", "SecondaryBtn")
+        self.btn_toggle_details.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_toggle_details.setStyleSheet(
+            "text-align: left; padding: 6px 10px; font-weight: bold;"
+        )
+        self.btn_toggle_details.clicked.connect(self._toggle_details)
+        v_content.addWidget(self.btn_toggle_details)
+
+        # Collapsible Details Widget (CVSS, Remediation, References)
+        self.details_widget = QWidget()
+        details_layout = QVBoxLayout(self.details_widget)
+        details_layout.setContentsMargins(0, 4, 0, 0)
+        details_layout.setSpacing(12)
+
+        cvss_form = QFormLayout()
+        cvss_form.setSpacing(10)
+        cvss_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        cvss_form.addRow(self._make_label("CVSS:"), cvss_row)
+        details_layout.addLayout(cvss_form)
+
         # Recommendation text
-        v_content.addWidget(
+        details_layout.addWidget(
             self._make_section_header(t("report.finding_remediation", "Recommended Remediation"))
         )
         self.txt_rec = QPlainTextEdit()
@@ -470,17 +494,20 @@ class ReportFindingInspector(QWidget):
         )
         self.txt_rec.setMinimumHeight(100)
         self.txt_rec.textChanged.connect(self._on_field_changed)
-        v_content.addWidget(self.txt_rec)
+        details_layout.addWidget(self.txt_rec)
 
         # References
-        v_content.addWidget(
+        details_layout.addWidget(
             self._make_section_header(t("report.finding_refs", "References & CVEs (one per line)"))
         )
         self.txt_refs = QPlainTextEdit()
         self.txt_refs.setPlaceholderText("- CVE-2026-12345\n- https://owasp.org/...")
         self.txt_refs.setMaximumHeight(80)
         self.txt_refs.textChanged.connect(self._on_field_changed)
-        v_content.addWidget(self.txt_refs)
+        details_layout.addWidget(self.txt_refs)
+
+        v_content.addWidget(self.details_widget)
+        self._set_details_expanded(ReportFindingInspector._details_expanded)
 
         scroll.setWidget(content_widget)
         ed_layout.addWidget(scroll, stretch=1)
@@ -497,6 +524,21 @@ class ReportFindingInspector(QWidget):
         lbl = QLabel(text)
         lbl.setProperty("class", "ReportInspectorSectionTitle ReportInspectorAccentTitle")
         return lbl
+
+    def _toggle_details(self) -> None:
+        self._set_details_expanded(not ReportFindingInspector._details_expanded)
+
+    def _set_details_expanded(self, expanded: bool) -> None:
+        ReportFindingInspector._details_expanded = expanded
+        self.details_widget.setVisible(expanded)
+        if expanded:
+            self.btn_toggle_details.setText(
+                t("report.hide_details", "▼ Details & Formalia verbergen")
+            )
+        else:
+            self.btn_toggle_details.setText(
+                t("report.show_details", "▶ Details & Formalia (CVSS, Remediation, Referenzen)")
+            )
 
     def load_finding(self, finding: Optional[ReportFindingItem]) -> None:
         if finding is None:
@@ -536,6 +578,17 @@ class ReportFindingInspector(QWidget):
             self.txt_rec.setPlainText(finding.recommendation)
             self.txt_refs.setPlainText("\n".join(finding.references))
             self._refresh_evidence_cards()
+
+            has_details = bool(
+                finding.cvss_score is not None
+                or (finding.cvss_vector and finding.cvss_vector.strip())
+                or (finding.recommendation and finding.recommendation.strip())
+                or (finding.references and any(r.strip() for r in finding.references))
+            )
+            if has_details:
+                self._set_details_expanded(True)
+            else:
+                self._set_details_expanded(ReportFindingInspector._details_expanded)
         finally:
             self._loading = False
 

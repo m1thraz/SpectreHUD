@@ -642,6 +642,8 @@
     "report.add_code_evidence": "Code-Snippet / Exploit einfügen",
     "report.finding_remediation": "Empfohlene Gegenmaßnahmen (Remediation)",
     "report.finding_remediation_placeholder": "Schritte zur Behebung, Konfigurationsänderungen oder Patches...",
+    "report.show_details": "▶ Details & Formalia (CVSS, Remediation, Referenzen)",
+    "report.hide_details": "▼ Details & Formalia verbergen",
     "report.confirm_delete_finding_title": "Finding löschen",
     "report.confirm_delete_finding_msg": "Möchtest du das Finding '{title}' wirklich löschen?",
     "report.status_open": "Offen",

@@ -642,6 +642,8 @@
     "report.add_code_evidence": "Insert code snippet / exploit",
     "report.finding_remediation": "Remediation & Recommendations",
     "report.finding_remediation_placeholder": "Remediation steps, configuration hardening, or patch guidance...",
+    "report.show_details": "▶ Details & Formalities (CVSS, Remediation, References)",
+    "report.hide_details": "▼ Hide Details & Formalities",
     "report.confirm_delete_finding_title": "Delete Finding",
     "report.confirm_delete_finding_msg": "Are you sure you want to delete finding '{title}'?",
     "report.status_open": "Open",
