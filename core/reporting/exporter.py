@@ -32,6 +32,7 @@ from core.reporting.professional import (
     synchronize_professional_findings_matrix,
 )
 from core.reporting.findings import (
+    FINDING_START_RE,
     convert_markdown_with_findings,
 )
 from core.reporting.section_markers import segment_report_markdown, strip_section_markers
@@ -71,6 +72,7 @@ class HtmlReportExporter:
             for segment in segments
         )
         visible_number = 0
+        finding_counter = 1
         for segment in segments:
             if segment.is_structured and not professional_section_has_meaningful_content(
                 segment.section_type, segment.markdown
@@ -89,8 +91,11 @@ class HtmlReportExporter:
                     visible_number += 1
                     segment_markdown = renumbered
             body = convert_markdown_with_findings(
-                strip_section_markers(segment_markdown), project_dir=None
+                strip_section_markers(segment_markdown),
+                project_dir=None,
+                start_index=finding_counter,
             )
+            finding_counter += len(FINDING_START_RE.findall(segment_markdown))
             if not segment.is_structured:
                 if not has_structured_header:
                     body = prune_unstructured_header_metadata_html(body)

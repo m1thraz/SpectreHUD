@@ -790,10 +790,25 @@ body[data-report-profile="professional_print"] .report-cover-kicker {
     letter-spacing: 0.18em;
 }
 
+body[data-report-profile="professional_print"] .report-cover-severity-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+}
+
+body[data-report-profile="professional_print"] .report-cover-severity-label {
+    color: #899198;
+    font-size: 6px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
 body[data-report-profile="professional_print"] .report-cover-severity {
     padding: 1px 0 2px;
-    font-size: 7.5px;
-    font-weight: 700;
+    font-size: 8px;
+    font-weight: 750;
     letter-spacing: 0.14em;
 }
 
@@ -852,10 +867,10 @@ body[data-report-profile="professional_print"] .report-cover-meta-value {
 
 body[data-report-profile="professional_print"] .report-cover-brand {
     margin-top: 14mm;
-    color: #a0a7ac;
-    font-size: 6.5px;
+    color: #899198;
+    font-size: 8px;
     font-weight: 600;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
 }
 
@@ -1075,6 +1090,15 @@ body[data-report-profile="professional_print"] .finding-header h3 {
     line-height: 1.3;
 }
 
+body[data-report-profile="professional_print"] .finding-header h3 .finding-id,
+.finding-id {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #6c757d;
+    letter-spacing: 0.04em;
+}
+
 body[data-report-profile="professional_print"] .finding-meta {
     display: flex;
     flex-wrap: wrap;
@@ -1109,6 +1133,10 @@ body[data-report-profile="professional_print"] .finding-meta-value {
     min-width: 0;
     font-size: 9pt;
     overflow-wrap: anywhere;
+}
+
+body[data-report-profile="professional_print"] .finding-meta-value code {
+    color: inherit;
 }
 
 body[data-report-profile="professional_print"] .finding-meta-cvss-vector {

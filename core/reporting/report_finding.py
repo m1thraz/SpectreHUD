@@ -20,6 +20,7 @@ from core.reporting.findings import (
     FINDING_END_RE,
     finding_end_marker,
     finding_start_marker,
+    is_meaningful_finding_value,
 )
 from core.reporting.report_evidence import (
     CODE_BLOCK_RE,
@@ -419,16 +420,17 @@ class ReportFindingItem:
         )
         lines.append("")
 
-        if self.recommendation:
+        if is_meaningful_finding_value(self.recommendation):
             lines.append("#### Empfehlung" if language == "de" else "#### Recommendation")
             lines.append("")
             lines.append(self.recommendation)
             lines.append("")
 
-        if self.references:
+        meaningful_refs = [r for r in self.references if is_meaningful_finding_value(r)]
+        if meaningful_refs:
             lines.append("#### Referenzen" if language == "de" else "#### References")
             lines.append("")
-            for ref in self.references:
+            for ref in meaningful_refs:
                 lines.append(f"- {ref}")
             lines.append("")
 

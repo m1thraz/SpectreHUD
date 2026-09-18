@@ -1199,3 +1199,230 @@ def test_manual_finding_structure_and_observed_consistency():
     assert "2026-09-17 16:30" in html
 
 
+def test_cover_highest_finding_severity_label_and_suppression():
+    """Phase 1: Cover clearly labels highest finding severity and suppresses it if empty."""
+    from core.reporting.professional import (
+        ProfessionalCoverData,
+        render_professional_cover,
+        build_professional_cover_data,
+    )
+
+    # 1. Critical finding present
+    cover_data_crit = ProfessionalCoverData(
+        project_name="Security Assessment Report",
+        report_label="Security Assessment",
+        severity="CRITICAL",
+        classification=None,
+        metadata=(("Target", "192.168.1.1"), ("Date", "2026-09-18")),
+        header_label="Security Assessment",
+    )
+    html_crit = render_professional_cover(cover_data_crit)
+    assert 'class="report-cover-severity-block"' in html_crit
+    assert '<span class="report-cover-severity-label">Highest Finding Severity</span>' in html_crit
+    assert "CRITICAL" in html_crit
+
+    # 2. No findings present -> severity block is suppressed, no invented severity
+    cover_data_empty = ProfessionalCoverData(
+        project_name="Clean Assessment",
+        report_label="Security Assessment",
+        severity=None,
+        classification=None,
+        metadata=(("Target", "10.0.0.1"), ("Date", "2026-09-18")),
+        header_label="Security Assessment",
+    )
+    html_empty = render_professional_cover(cover_data_empty)
+    assert 'class="report-cover-severity-block"' not in html_empty
+    assert "CRITICAL" not in html_empty
+    assert "HIGH" not in html_empty
+
+    # Verify build_professional_cover_data computes highest severity from markdown
+    md_with_findings = (
+        "| # | Finding | Severity | Phase | Status |\n"
+        "|---|---------|----------|-------|--------|\n"
+        "| 1 | Low Issue | LOW | Recon | Open |\n"
+        "| 2 | High Vulnerability | HIGH | Access | Open |\n"
+    )
+    data_from_md = build_professional_cover_data(
+        md_with_findings,
+        project_name="Test Assessment",
+        target_ip="192.168.1.1",
+        category="pentest",
+        body_html='<span class="report-severity-badge severity-high">HIGH</span>',
+        language="en",
+    )
+    assert data_from_md.severity == "HIGH"
+
+
+def test_empty_state_rendering_highlights_and_findings():
+    """Phase 2: Suppress empty and meaningless sections/placeholders."""
+    from core.reporting.report_executive_summary import ReportExecutiveSummary
+
+    # All dashes/empty highlights -> entire Key Highlights section omitted
+    summary_empty_hl = ReportExecutiveSummary(
+        initial_access="-",
+        privilege_escalation="–",
+        business_impact="none",
+        remediation_summary="",
+    )
+    md_out = summary_empty_hl.to_markdown(findings=[], language="en")
+    assert "### Key Highlights" not in md_out
+    assert "- **Initial Access Vector:**" not in md_out
+
+    # Partially filled highlights -> only filled items appear
+    summary_partial = ReportExecutiveSummary(
+        initial_access="SQL Injection in login",
+        privilege_escalation="-",
+        business_impact="Full DB compromise",
+        remediation_summary="–",
+    )
+    md_partial = summary_partial.to_markdown(findings=[], language="en")
+    assert "### Key Highlights" in md_partial
+    assert "- **Initial Access Vector:** SQL Injection in login" in md_partial
+    assert "- **Business Impact & Risk:** Full DB compromise" in md_partial
+    assert "Privilege Escalation" not in md_partial
+    assert "Recommended Remediation" not in md_partial
+
+    # Finding with recommendation "-" -> recommendation block omitted
+    f_dash = ReportFindingItem(
+        id="f-dash",
+        title="Dash Finding",
+        severity="medium",
+        recommendation="-",
+    )
+    f_dash_md = f_dash.to_markdown(language="en")
+    assert "#### Recommendation" not in f_dash_md
+
+    # Finding with real recommendation -> block present
+    f_real = ReportFindingItem(
+        id="f-real",
+        title="Real Finding",
+        severity="high",
+        recommendation="Apply security patch 1.2.3 immediately.",
+    )
+    f_real_md = f_real.to_markdown(language="en")
+    assert "#### Recommendation" in f_real_md
+    assert "Apply security patch 1.2.3 immediately." in f_real_md
+
+    # HTML export prunes "-" recommendation
+    html_f_dash = HtmlReportExporter.build_full_html(
+        f"<!-- spectre:section:start:finding_section -->\n\n## Technical Findings\n\n{f_dash_md}\n\n<!-- spectre:section:end:finding_section -->",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+    assert 'class="finding-recommendation"' not in html_f_dash
+
+
+def test_markdown_stripping_in_structured_scope():
+    """Phase 3: Markdown markers and section headers do not leak into structured scope/methodology."""
+    from core.reporting.report_scope import ReportScopeMethodology, clean_scope_text
+
+    raw_dirty_scope_md = (
+        "## Scope & Methodology\n\n"
+        "### In-Scope Targets & Networks\n\n"
+        "| Target / Host / Subnet | Type | Environment | Description |\n"
+        "|---|---|---|---|\n"
+        "| - **Out of Scope: | network | production | |\n"
+        "| **Methodology:** | network | production | |\n"
+        "| ## Scope | network | production | |\n"
+        "| - **10.10.10.50**: | host | production | Internal Gateway |\n"
+        "| `api.corp.local` | webapp | staging | REST API |\n"
+    )
+
+    scope = ReportScopeMethodology.from_markdown(raw_dirty_scope_md, language="en")
+    # Section header artifacts should NOT be parsed as target items
+    target_names = [t.target for t in scope.in_scope_targets]
+    assert "- **Out of Scope:" not in target_names
+    assert "Out of Scope" not in target_names
+    assert "Methodology" not in target_names
+    assert "Scope" not in target_names
+
+    # Real target should be cleaned of leading - ** and trailing :
+    assert "10.10.10.50" in target_names
+    assert "api.corp.local" in target_names
+
+    # Clean function unit tests
+    assert clean_scope_text("- **Out of Scope:") == "Out of Scope"
+    assert clean_scope_text("## Scope") == "Scope"
+    assert clean_scope_text("- **192.168.1.1**:") == "192.168.1.1"
+
+    # Serialized markdown table output is clean
+    serialized = scope.to_markdown(language="en")
+    assert "| `10.10.10.50` |" in serialized
+    assert "- **Out of Scope:" not in serialized
+
+
+def test_appendix_hierarchy_and_single_empty_state():
+    """Phase 4: Clean Appendix hierarchy A/B/C without duplicate Appendix A or duplicate empty notices."""
+    from core.reporting.report_appendix import ReportAppendix
+
+    # Title normalization
+    raw_md = (
+        "## 6. Appendix A: Terminal Command History\n\n"
+        "### A. Executed Commands\n\n"
+        "```bash\nid\n```\n\n"
+        "### B. Screenshots & Evidence\n\n"
+        "*No screenshots or evidence recorded.*\n\n"
+        "### C. Supplementary Raw Data & Notes\n\n"
+        "Raw nmap notes here\n"
+    )
+    app = ReportAppendix.from_markdown(raw_md, language="en")
+    assert app.title == "6. Appendix"
+    assert len(app.command_snippets) == 1
+    assert len(app.screenshots) == 0
+    assert "Raw nmap notes here" in app.custom_notes
+
+    # Verify to_markdown output
+    md_out = app.to_markdown(language="en")
+    assert "## 6. Appendix" in md_out
+    assert "6. Appendix A:" not in md_out
+    assert "### A. Executed Commands" in md_out
+    assert "### B. Screenshots & Evidence" in md_out
+    assert "*No screenshots or evidence recorded.*" in md_out
+    # No duplicate empty screenshots text
+    assert md_out.count("screenshots or evidence recorded") == 1
+    assert "No screenshots captured in this project." not in md_out
+
+
+def test_deterministic_finding_ids_synchronized():
+    """Phase 5: Stable F-001, F-002, F-010 deterministic IDs across Matrix, Finding, and Remediation."""
+    from core.reporting.report_executive_summary import ReportExecutiveSummary
+    from core.reporting.report_remediation import ReportRemediationPlan
+    from core.reporting.report_finding import ReportFindingItem
+    from core.reporting.findings import convert_markdown_with_findings
+
+    findings = [
+        ReportFindingItem(id=f"item-{i}", title=f"Vulnerability {i}", severity="high" if i % 2 == 0 else "medium")
+        for i in range(1, 12)
+    ]
+
+    # 1. Findings Matrix format
+    summary = ReportExecutiveSummary()
+    summary_md = summary.to_markdown(findings, language="en")
+    assert "| F-001 | Vulnerability 1 |" in summary_md
+    assert "| F-010 | Vulnerability 10 |" in summary_md
+    assert "| F-011 | Vulnerability 11 |" in summary_md
+
+    # 2. Remediation Table format
+    plan = ReportRemediationPlan()
+    remed_md = plan.to_markdown(findings, language="en")
+    assert "F-001 · Vulnerability 1" in remed_md
+    assert "F-010 · Vulnerability 10" in remed_md
+
+    # 3. Technical Finding Heading in HTML
+    finding_md = findings[0].to_markdown(language="en")
+    html = convert_markdown_with_findings(finding_md, start_index=1)
+    assert '<span class="finding-id">F-001</span> · Vulnerability 1' in html
+
+    finding10_md = findings[9].to_markdown(language="en")
+    html10 = convert_markdown_with_findings(finding10_md, start_index=10)
+    assert '<span class="finding-id">F-010</span> · Vulnerability 10' in html10
+
+
+def test_finding_metadata_code_color_neutralized():
+    """Phase 6: Code in finding metadata does not use accent color in professional print."""
+    from core.reporting.styles import get_report_css
+
+    css = get_report_css(profile="professional_print")
+    assert 'body[data-report-profile="professional_print"] .finding-meta-value code' in css
+    assert "color: inherit;" in css
+
+

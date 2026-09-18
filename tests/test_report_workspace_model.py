@@ -741,12 +741,12 @@ def test_appendix_parsing_and_serialization():
     # Serialize to markdown
     md_out = appendix.to_markdown(language="de")
     assert "## 6. Anhang & Nachweise" in md_out
-    assert "### Anhang A: Ausgeführte Befehle" in md_out
+    assert "### A. Ausgeführte Befehle" in md_out
     assert "#### Portscan Enumeration" in md_out
     assert "nmap -sV -sC -p- 10.10.10.123" in md_out
-    assert "### Anhang B: Screenshots & Nachweise" in md_out
+    assert "### B. Screenshots & Nachweise" in md_out
     assert "![Root Proof Shell](screenshots/root_proof.png)" in md_out
-    assert "### Anhang C: Ergänzende Rohdaten & Notizen" in md_out
+    assert "### C. Ergänzende Rohdaten & Notizen" in md_out
 
     # Test document roundtrip
     doc = ReportWorkspaceDocument.from_markdown(

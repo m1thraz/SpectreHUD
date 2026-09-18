@@ -25,6 +25,20 @@ PHASE_NAMES_DE: Dict[str, str] = {
 }
 
 
+def is_meaningful_highlight_value(val: str | None) -> bool:
+    """Returns False for empty, whitespace, dashes or placeholder values."""
+    if not val:
+        return False
+    stripped = val.strip()
+    if not stripped:
+        return False
+    if stripped.lower() in ("-", "–", "—", "none", "n/a", "null", "undefined", "*keine*", "keine"):
+        return False
+    if re.match(r"^[-–—\s]+$", stripped):
+        return False
+    return True
+
+
 @dataclass
 class ReportExecutiveSummary:
     """Structured representation of the Executive Summary narrative section."""
@@ -65,7 +79,8 @@ class ReportExecutiveSummary:
                     re.MULTILINE | re.IGNORECASE,
                 )
                 if m:
-                    return m.group(1).strip()
+                    extracted = m.group(1).strip()
+                    return extracted if is_meaningful_highlight_value(extracted) else ""
             return ""
 
         initial_access = _extract_bullet(
@@ -111,10 +126,7 @@ class ReportExecutiveSummary:
         )
 
     def to_markdown(self, findings: List[ReportFindingItem], language: str = "de") -> str:
-        lines: List[str] = []
-        sec_title = self.title or "Executive Summary"
-        lines.append(f"## {sec_title}")
-        lines.append("")
+        lines: List[str] = [f"## {self.title}", ""]
 
         if self.intro_text.strip():
             lines.append(self.intro_text.strip())
@@ -123,7 +135,9 @@ class ReportExecutiveSummary:
         matrix_title = "### Findings-Übersicht" if language == "de" else "### Findings Matrix"
         lines.append(matrix_title)
         lines.append("")
-        lines.append("| # | Finding | Severity | Phase | Status |")
+        id_header = "ID"
+        finding_col = "Schwachstelle" if language == "de" else "Finding"
+        lines.append(f"| {id_header} | {finding_col} | Severity | Phase | Status |")
         lines.append("|---|---------|----------|-------|--------|")
 
         sev_counts: Counter[str] = Counter()
@@ -139,7 +153,8 @@ class ReportExecutiveSummary:
             st = status_labels.get(
                 status_key, f.status.capitalize() if f.status else status_labels["open"]
             )
-            lines.append(f"| {idx} | {t} | {f.severity.upper()} | {ph} | {st} |")
+            finding_id = f"F-{idx:03d}"
+            lines.append(f"| {finding_id} | {t} | {f.severity.upper()} | {ph} | {st} |")
 
         if not findings:
             lines.append("| | | | | |")
@@ -154,19 +169,31 @@ class ReportExecutiveSummary:
         lines.append(f"**{'Gesamt' if language == 'de' else 'Total'}:** {total_str}")
         lines.append("")
 
-        # Highlights section
-        hl_title = "### Kernaussagen" if language == "de" else "### Key Highlights"
-        lines.append(hl_title)
-        lines.append("")
+        # Highlights section: render only items with meaningful content
+        highlight_items: List[str] = []
         if language == "de":
-            lines.append(f"- **Initial Access / Schwachstelle:** {self.initial_access}".rstrip())
-            lines.append(f"- **Privilege Escalation:** {self.privilege_escalation}".rstrip())
-            lines.append(f"- **Business Impact / Risiko:** {self.business_impact}".rstrip())
-            lines.append(f"- **Empfohlene Remediation:** {self.remediation_summary}".rstrip())
+            mapping = [
+                ("Initial Access / Schwachstelle", self.initial_access),
+                ("Privilege Escalation", self.privilege_escalation),
+                ("Business Impact / Risiko", self.business_impact),
+                ("Empfohlene Remediation", self.remediation_summary),
+            ]
         else:
-            lines.append(f"- **Initial Access Vector:** {self.initial_access}".rstrip())
-            lines.append(f"- **Privilege Escalation:** {self.privilege_escalation}".rstrip())
-            lines.append(f"- **Business Impact & Risk:** {self.business_impact}".rstrip())
-            lines.append(f"- **Recommended Remediation:** {self.remediation_summary}".rstrip())
+            mapping = [
+                ("Initial Access Vector", self.initial_access),
+                ("Privilege Escalation", self.privilege_escalation),
+                ("Business Impact & Risk", self.business_impact),
+                ("Recommended Remediation", self.remediation_summary),
+            ]
+
+        for label, val in mapping:
+            if is_meaningful_highlight_value(val):
+                highlight_items.append(f"- **{label}:** {val.strip()}")
+
+        if highlight_items:
+            hl_title = "### Kernaussagen" if language == "de" else "### Key Highlights"
+            lines.append(hl_title)
+            lines.append("")
+            lines.extend(highlight_items)
 
         return "\n".join(lines).strip()

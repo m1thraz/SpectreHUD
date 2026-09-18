@@ -13,6 +13,40 @@ from typing import List, Optional
 from core.reporting.report_evidence import ReportEvidenceItem
 
 
+_BOILERPLATE_EMPTY_NOTICES = {
+    "keine clipboard-historie aufgezeichnet.",
+    "no clipboard history recorded.",
+    "keine screenshots in diesem projekt vorhanden.",
+    "no screenshots captured in this project.",
+    "keine befehlsprotokolle hinterlegt.",
+    "no command logs recorded.",
+    "keine screenshots oder nachweise hinterlegt.",
+    "keine screenshots oder nachweise erfasst.",
+    "no screenshots or evidence recorded.",
+    "keine anhänge oder nachweise erfasst.",
+    "no appendices or evidence recorded.",
+    "keine befehle für den report ausgewählt.",
+    "no commands selected for report.",
+}
+
+
+def normalize_appendix_h2_title(title: Optional[str], language: str = "de") -> str:
+    """Strip redundant 'A: ...' suffix to prevent '6. Appendix A: ...' hierarchy collisions."""
+    default_title = "Anhang" if language == "de" else "Appendix"
+    if not title or not title.strip():
+        return default_title
+    clean = title.strip()
+    clean = re.sub(
+        r"\s+(?:A|B|C)\s*[:\-–—]\s*(?:Terminal\s+Command\s+History|Chronologischer\s+Befehlsverlauf|Command\s+History|Befehlsverlauf|Screenshots).*$",
+        "",
+        clean,
+        flags=re.IGNORECASE,
+    ).strip()
+    if clean.lower() in ("appendix a", "anhang a"):
+        return default_title
+    return clean or default_title
+
+
 @dataclass
 class ReportAppendix:
     """Structured representation of the Appendix & Evidence section."""
@@ -34,21 +68,27 @@ class ReportAppendix:
         title = default_title
         h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
         if h2:
-            title = h2.group(1).strip()
+            title = normalize_appendix_h2_title(h2.group(1).strip(), language=language)
 
         command_snippets: List[ReportEvidenceItem] = []
         screenshots: List[ReportEvidenceItem] = []
         notes_lines: List[str] = []
 
-        has_subsections = bool(re.search(r"^###\s+", markdown, re.MULTILINE))
+        has_subsections = bool(re.search(r"^###\s+", markdown, re.MULTILINE)) or len(re.findall(r"^##\s+", markdown, re.MULTILINE)) > 1
         if has_subsections:
-            sections = re.split(r"^###\s+", markdown, flags=re.MULTILINE)
+            sections = re.split(r"^(?:###?)\s+", markdown, flags=re.MULTILINE)
             preamble = sections[0]
             preamble_lines = [
                 line_text for line_text in preamble.splitlines() if not line_text.startswith("## ")
             ]
-            if any(line_text.strip() for line_text in preamble_lines):
-                notes_lines.append("\n".join(preamble_lines).strip())
+            clean_preamble = []
+            for line_text in preamble_lines:
+                clean_line = line_text.strip().strip("*_`").strip().lower()
+                if clean_line in _BOILERPLATE_EMPTY_NOTICES or clean_line.startswith(("## anhang", "## appendix")):
+                    continue
+                clean_preamble.append(line_text)
+            if any(line_text.strip() for line_text in clean_preamble):
+                notes_lines.append("\n".join(clean_preamble).strip())
 
             for sec in sections[1:]:
                 sec_lines = sec.strip().splitlines()
@@ -57,7 +97,7 @@ class ReportAppendix:
                 header = sec_lines[0].lower()
                 sec_body = "\n".join(sec_lines[1:]).strip()
 
-                if any(k in header for k in ("anhang a", "appendix a", "befehl", "command")):
+                if any(k in header for k in ("a.", "anhang a", "appendix a", "befehl", "command", "terminal")):
                     code_matches = list(
                         re.finditer(r"```([a-zA-Z0-9_-]*)\r?\n(.*?)\r?\n```", sec_body, re.DOTALL)
                     )
@@ -108,6 +148,7 @@ class ReportAppendix:
                 elif any(
                     k in header
                     for k in (
+                        "b.",
                         "anhang b",
                         "appendix b",
                         "screenshot",
@@ -130,6 +171,7 @@ class ReportAppendix:
                 elif any(
                     k in header
                     for k in (
+                        "c.",
                         "anhang c",
                         "appendix c",
                         "rohdaten",
@@ -139,10 +181,25 @@ class ReportAppendix:
                         "ergänzend",
                     )
                 ):
-                    if sec_body:
-                        notes_lines.append(sec_body)
+                    clean_body_lines = []
+                    for line_text in sec_body.splitlines():
+                        c_line = line_text.strip().strip("*_`").strip().lower()
+                        if c_line in _BOILERPLATE_EMPTY_NOTICES or c_line.startswith(("## anhang", "## appendix")):
+                            continue
+                        clean_body_lines.append(line_text)
+                    cleaned_body = "\n".join(clean_body_lines).strip()
+                    if cleaned_body:
+                        notes_lines.append(cleaned_body)
                 else:
-                    notes_lines.append(f"### {sec_lines[0]}\n\n{sec_body}")
+                    clean_other_lines = []
+                    for line_text in sec_body.splitlines():
+                        c_line = line_text.strip().strip("*_`").strip().lower()
+                        if c_line in _BOILERPLATE_EMPTY_NOTICES:
+                            continue
+                        clean_other_lines.append(line_text)
+                    cleaned_other = "\n".join(clean_other_lines).strip()
+                    if cleaned_other:
+                        notes_lines.append(f"### {sec_lines[0]}\n\n{cleaned_other}")
 
         else:
             imgs = re.findall(r"!\[(.*?)\]\((.*?)\)", markdown)
@@ -185,8 +242,15 @@ class ReportAppendix:
             clean_text = re.sub(
                 r"```[a-zA-Z0-9_-]*\r?\n.*?\r?\n```", "", clean_text, flags=re.DOTALL
             )
-            if clean_text.strip():
-                notes_lines.append(clean_text.strip())
+            clean_text_lines = []
+            for line_text in clean_text.splitlines():
+                c_line = line_text.strip().strip("*_`").strip().lower()
+                if c_line in _BOILERPLATE_EMPTY_NOTICES or c_line.startswith(("## anhang", "## appendix")):
+                    continue
+                clean_text_lines.append(line_text)
+            cleaned_text = "\n".join(clean_text_lines).strip()
+            if cleaned_text:
+                notes_lines.append(cleaned_text)
 
         return cls(
             title=title,
@@ -198,7 +262,7 @@ class ReportAppendix:
 
     def to_markdown(self, title: Optional[str] = None, language: str = "de") -> str:
         default_title = "Anhang" if language == "de" else "Appendix"
-        sec_title = title or self.title or default_title
+        sec_title = normalize_appendix_h2_title(title or self.title or default_title, language=language)
         lines: List[str] = [f"## {sec_title}", ""]
 
         if not self.command_snippets and not self.screenshots and not self.custom_notes.strip():
@@ -207,18 +271,18 @@ class ReportAppendix:
             if self.commands_markdown or self.screenshots_markdown:
                 if self.commands_markdown:
                     lines.append(
-                        "### Anhang A: Ausgeführte Befehle"
+                        "### A. Ausgeführte Befehle"
                         if language == "de"
-                        else "### Appendix A: Command History"
+                        else "### A. Executed Commands"
                     )
                     lines.append("")
                     lines.append(self.commands_markdown.strip())
                     lines.append("")
                 if self.screenshots_markdown:
                     lines.append(
-                        "### Anhang B: Screenshots & Nachweise"
+                        "### B. Screenshots & Nachweise"
                         if language == "de"
-                        else "### Appendix B: Screenshots & Evidence"
+                        else "### B. Screenshots & Evidence"
                     )
                     lines.append("")
                     lines.append(self.screenshots_markdown.strip())
@@ -235,9 +299,9 @@ class ReportAppendix:
 
         # Section A: Commands
         title_a = (
-            "### Anhang A: Ausgeführte Befehle"
+            "### A. Ausgeführte Befehle"
             if language == "de"
-            else "### Appendix A: Executed Commands"
+            else "### A. Executed Commands"
         )
         lines.append(title_a)
         lines.append("")
@@ -259,9 +323,9 @@ class ReportAppendix:
 
         # Section B: Screenshots
         title_b = (
-            "### Anhang B: Screenshots & Nachweise"
+            "### B. Screenshots & Nachweise"
             if language == "de"
-            else "### Appendix B: Screenshots & Evidence"
+            else "### B. Screenshots & Evidence"
         )
         lines.append(title_b)
         lines.append("")
@@ -272,7 +336,7 @@ class ReportAppendix:
                 lines.append("")
         else:
             msg = (
-                "*Keine Screenshots oder Nachweise hinterlegt.*"
+                "*Keine Screenshots oder Nachweise erfasst.*"
                 if language == "de"
                 else "*No screenshots or evidence recorded.*"
             )
@@ -282,9 +346,9 @@ class ReportAppendix:
         # Section C: Notes / Raw Data
         if self.custom_notes.strip():
             title_c = (
-                "### Anhang C: Ergänzende Rohdaten & Notizen"
+                "### C. Ergänzende Rohdaten & Notizen"
                 if language == "de"
-                else "### Appendix C: Supplementary Raw Data & Notes"
+                else "### C. Supplementary Raw Data & Notes"
             )
             lines.append(title_c)
             lines.append("")

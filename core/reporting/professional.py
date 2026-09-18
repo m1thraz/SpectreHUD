@@ -241,8 +241,11 @@ def strip_professional_generator_footer(markdown: str) -> str:
 
 def render_professional_cover(data: ProfessionalCoverData) -> str:
     severity = (
+        '<div class="report-cover-severity-block">'
+        '<span class="report-cover-severity-label">Highest Finding Severity</span>'
         f'<span class="report-cover-severity severity-{data.severity.lower()}">'
         f"{html.escape(data.severity)}</span>"
+        "</div>"
         if data.severity
         else ""
     )
@@ -333,7 +336,7 @@ def normalize_professional_remediation_table(body_html: str) -> str:
 
 
 _GENERATED_MATRIX_ROW_RE = re.compile(
-    r"^\|\s*(\d+)\s*\|\s*(.*?)\s*\|\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)"
+    r"^\|\s*(\d+|F-\d{3})\s*\|\s*(.*?)\s*\|\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)"
     r"\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$",
     re.IGNORECASE,
 )
@@ -382,7 +385,13 @@ def synchronize_professional_findings_matrix(
         (
             index
             for index in range(matrix_start + 1, len(lines))
-            if lines[index].strip() == "| # | Finding | Severity | Phase | Status |"
+            if lines[index].strip()
+            in {
+                "| # | Finding | Severity | Phase | Status |",
+                "| ID | Finding | Severity | Phase | Status |",
+                "| ID | Schwachstelle | Severity | Phase | Status |",
+                "| # | Schwachstelle | Severity | Phase | Status |",
+            }
         ),
         None,
     )
@@ -403,6 +412,14 @@ def synchronize_professional_findings_matrix(
     if not rows:
         return summary_markdown
 
+    def _matches_id(group1: str, position: int) -> bool:
+        clean_g1 = group1.strip()
+        if clean_g1.isdigit():
+            return int(clean_g1) == position
+        if clean_g1.upper().startswith("F-"):
+            return clean_g1.upper() == f"F-{position:03d}"
+        return False
+
     findings = _structured_findings(report_markdown)
     candidates = (findings, [finding for finding in findings if finding.severity != "info"])
     matching = next(
@@ -411,7 +428,7 @@ def synchronize_professional_findings_matrix(
             for candidate in candidates
             if len(candidate) == len(rows)
             and all(
-                int(match.group(1)) == position
+                _matches_id(match.group(1), position)
                 and match.group(2).strip()
                 == (finding.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
                 and match.group(3).upper() == finding.severity.upper()
@@ -508,8 +525,21 @@ def _has_appendix_content(lines: List[str]) -> bool:
         "*No clipboard history recorded.*",
         "*Keine Screenshots in diesem Projekt vorhanden.*",
         "*No screenshots captured in this project.*",
+        "*Keine Befehlsprotokolle hinterlegt.*",
+        "*No command logs recorded.*",
+        "*Keine Screenshots oder Nachweise hinterlegt.*",
+        "*Keine Screenshots oder Nachweise erfasst.*",
+        "*No screenshots or evidence recorded.*",
+        "*Keine Anhänge oder Nachweise erfasst.*",
+        "*No appendices or evidence recorded.*",
+        "*Keine Befehle für den Report ausgewählt.*",
+        "*No commands selected for report.*",
     }
-    return any(not line.startswith("## ") and line not in empty_notices for line in lines)
+    return any(
+        not line.startswith(("## ", "### ", "#### ", "---")) and line.strip() not in empty_notices
+        for line in lines
+        if line.strip()
+    )
 
 
 _SECTION_CONTENT_PREDICATES: Dict[str, Callable[[List[str], str], bool]] = {
@@ -547,25 +577,42 @@ def prune_professional_section_html(section_type: str, body_html: str) -> str:
             return ""
         return body_html.strip()
     if section_type in {"executive_summary", "scope_limitations"}:
-        body_html = re.sub(r"<li><strong>[^<]+:</strong></li>", "", body_html)
         body_html = re.sub(
-            r"<h3>(?:Key Highlights|Kernaussagen)</h3>\s*<ul>\s*</ul>",
+            r"<li><strong>[^<]+:</strong>\s*(?:[-–—\s]*|none|n/a)?</li>",
+            "",
+            body_html,
+            flags=re.IGNORECASE,
+        )
+        body_html = re.sub(
+            r"<h3>(?:Key Highlights|Kernaussagen)</h3>\s*(?:<ul>\s*</ul>)?",
             "",
             body_html,
         )
     if section_type == "appendix":
         body_html = re.sub(
-            r"<h2>[^<]*(?:Terminal Command History|Befehlsverlauf)[^<]*</h2>\s*"
-            r"<p><em>(?:No clipboard history recorded\.|Keine Clipboard-Historie aufgezeichnet\.)</em></p>"
-            r"\s*(?:<hr>\s*)?",
-            "",
-            body_html,
-        )
-        body_html = re.sub(
-            r"(?:<hr>\s*)?<h2>[^<]*Screenshots</h2>\s*"
+            r"(?:<hr>\s*)?<h[23]>[^<]*Screenshots[^<]*</h[23]>\s*"
             r"<p><em>(?:No screenshots captured in this project\.|Keine Screenshots in diesem Projekt vorhanden\.)</em></p>",
             "",
             body_html,
+            flags=re.IGNORECASE,
+        )
+        body_html = re.sub(
+            r"<p><em>(?:No screenshots captured in this project\.|Keine Screenshots in diesem Projekt vorhanden\.)</em></p>",
+            "",
+            body_html,
+            flags=re.IGNORECASE,
+        )
+        body_html = re.sub(
+            r"<p><em>(?:No clipboard history recorded\.|Keine Clipboard-Historie aufgezeichnet\.)</em></p>\s*(?:<p><em>(?:No command logs recorded\.|Keine Befehlsprotokolle hinterlegt\.)</em></p>)",
+            "<p><em>No command logs recorded.</em></p>",
+            body_html,
+            flags=re.IGNORECASE,
+        )
+        body_html = re.sub(
+            r"^<h2>[^<]*(?:Appendix|Anhang)[^<]*</h2>\s*$",
+            "",
+            body_html.strip(),
+            flags=re.IGNORECASE,
         )
     return body_html
 

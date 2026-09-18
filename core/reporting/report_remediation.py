@@ -92,6 +92,9 @@ class ReportRemediationPlan:
                 ]
             )
 
+        # Map findings to deterministic F-001 IDs based on document finding list order
+        id_map = {id(f): f"F-{i:03d}" for i, f in enumerate(findings, start=1)}
+
         sorted_findings = sorted(
             findings,
             key=lambda f: SEVERITY_ORDER.get((f.severity or "medium").strip().lower(), 99),
@@ -100,6 +103,9 @@ class ReportRemediationPlan:
         for f in sorted_findings:
             sev = (f.severity or "medium").strip().upper()
             t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
+            f_id = id_map.get(id(f), "")
+            if f_id and not re.match(r"^F-\d{3}\b", t):
+                t = f"{f_id} · {t}"
             rec = (f.recommendation or "–").replace("|", "\\|").replace("\n", " ")
             st_key = (f.status or "open").strip().lower()
             if language == "de":

@@ -55,28 +55,90 @@ def normalize_environment(val: str) -> str:
     return "other" if v else "production"
 
 
+def clean_scope_text(text: str) -> str:
+    """Strip markdown formatting markers, leading list/heading bullets, and trailing colons from structured metadata fields."""
+    if not text:
+        return ""
+    val = text.strip()
+    # Strip leading markdown heading tokens like #, ##, ###
+    val = re.sub(r"^[#\s]+", "", val).strip()
+    # Strip leading bullet/list symbols like -, *, +, >
+    val = re.sub(r"^[-*+>]\s*", "", val).strip()
+    # Strip enclosing bold/italic/backtick/quote markers iteratively
+    while val and (val.startswith(("*", "_", "`", '"', "'")) or val.endswith(("*", "_", "`", '"', "'", ":"))):
+        val = val.strip("*_`\"': \t")
+    # Also strip if there was inner bold/italic at the start e.g. "**Out of Scope:" -> "Out of Scope"
+    val = re.sub(r"^[*_]+", "", val)
+    val = re.sub(r"[*_:]+$", "", val).strip()
+    return val
+
+
+_SECTION_LABEL_NAMES = {
+    "in scope",
+    "in-scope",
+    "in scope ziele & netzwerke",
+    "in-scope targets & networks",
+    "out of scope",
+    "out-of-scope",
+    "out of scope & ausschlusskriterien",
+    "out-of-scope & exclusions",
+    "scope",
+    "scope & methodik",
+    "scope & methodology",
+    "methodology",
+    "methodik",
+    "ansatz",
+    "approach",
+    "pentest-ansatz & methodik",
+    "pentest approach & methodology",
+    "einschränkungen",
+    "limitations",
+    "rules of engagement",
+    "ziel",
+    "target",
+    "ziel / host / subnetz",
+    "target / host / subnet",
+    "keine ziele definiert",
+    "no targets defined",
+    "ausgeschlossenes ziel / komponente",
+    "excluded target / component",
+    "keine ausschlüsse definiert",
+    "no exclusions defined",
+}
+
+
+def is_scope_section_header_artifact(cleaned: str) -> bool:
+    """Check if the text is a scope/methodology section header artifact rather than a real target."""
+    low = cleaned.lower().strip()
+    if not low:
+        return True
+    if low in _SECTION_LABEL_NAMES:
+        return True
+    if low.startswith(("in-scope", "in scope", "out-of-scope", "out of scope", "methodology", "methodik", "approach", "ansatz")):
+        return True
+    return False
+
+
 @dataclass
 class ReportScopeMethodology:
     """Structured representation of the Scope & Methodology section."""
 
-    title: str = "Scope & Methodik"
+    title: str = ""
     approach: str = "greybox"  # "blackbox", "greybox", "whitebox"
     approach_details: str = ""
     in_scope_targets: List[ScopeTargetItem] = field(default_factory=list)
     out_of_scope_targets: List[ScopeExclusionItem] = field(default_factory=list)
-    restrictions: List[str] = field(
-        default_factory=lambda: ["no_dos", "no_social_engineering", "no_data_destruction"]
-    )
+    restrictions: List[str] = field(default_factory=list)
     custom_rules: str = ""
 
     @classmethod
     def from_markdown(cls, markdown: str, language: str = "de") -> "ReportScopeMethodology":
-        default_title = "Scope & Methodik" if language == "de" else "Scope & Methodology"
-        if not markdown:
-            return cls(title=default_title)
+        if not markdown or not markdown.strip():
+            return cls()
 
-        title = default_title
-        h2 = re.search(r"^##\s+(.*?)$", markdown, re.MULTILINE)
+        # Extract title from H2
+        title = ""
+        h2 = re.search(r"^##\s+(.+)$", markdown, re.MULTILINE)
         if h2:
             title = h2.group(1).strip()
 
@@ -124,9 +186,9 @@ class ReportScopeMethodology:
                             re.IGNORECASE,
                         )
                         if m_det:
-                            approach_details = m_det.group(1).strip()
+                            approach_details = clean_scope_text(m_det.group(1))
                         elif not cl.startswith(("-", "*", "|")) and not approach_details:
-                            approach_details = cl
+                            approach_details = clean_scope_text(cl)
 
                 elif (
                     "in-scope" in sec_header
@@ -139,21 +201,15 @@ class ReportScopeMethodology:
                         if not cl.startswith("|") or cl.startswith("|---"):
                             continue
                         cols = [c.strip() for c in cl.split("|")[1:-1]]
-                        if len(cols) >= 2:
-                            raw_tgt = cols[0].strip().strip("`").strip()
-                            low_tgt = raw_tgt.lower()
-                            if (
-                                not raw_tgt
-                                or low_tgt
-                                in ("ziel", "target", "keine ziele definiert", "no targets defined")
-                                or low_tgt.startswith(("ziel /", "target /"))
-                            ):
+                        if len(cols) >= 1:
+                            raw_tgt = clean_scope_text(cols[0])
+                            if not raw_tgt or is_scope_section_header_artifact(raw_tgt):
                                 continue
-                            t_type = normalize_target_type(cols[1]) if len(cols) > 1 else "network"
+                            t_type = normalize_target_type(clean_scope_text(cols[1])) if len(cols) > 1 else "network"
                             t_env = (
-                                normalize_environment(cols[2]) if len(cols) > 2 else "production"
+                                normalize_environment(clean_scope_text(cols[2])) if len(cols) > 2 else "production"
                             )
-                            t_desc = cols[3] if len(cols) > 3 else ""
+                            t_desc = clean_scope_text(cols[3]) if len(cols) > 3 else ""
                             in_targets.append(
                                 ScopeTargetItem(
                                     target=raw_tgt,
@@ -175,21 +231,10 @@ class ReportScopeMethodology:
                             continue
                         cols = [c.strip() for c in cl.split("|")[1:-1]]
                         if len(cols) >= 1:
-                            raw_tgt = cols[0].strip().strip("`").strip()
-                            low_tgt = raw_tgt.lower()
-                            if (
-                                not raw_tgt
-                                or low_tgt
-                                in (
-                                    "ausgeschlossen",
-                                    "excluded",
-                                    "keine ausschlüsse definiert",
-                                    "no exclusions defined",
-                                )
-                                or low_tgt.startswith(("ausgeschlossenes", "excluded target"))
-                            ):
+                            raw_tgt = clean_scope_text(cols[0])
+                            if not raw_tgt or is_scope_section_header_artifact(raw_tgt):
                                 continue
-                            reason = cols[1] if len(cols) > 1 else ""
+                            reason = clean_scope_text(cols[1]) if len(cols) > 1 else ""
                             out_targets.append(ScopeExclusionItem(target=raw_tgt, reason=reason))
 
                 elif any(
@@ -240,8 +285,8 @@ class ReportScopeMethodology:
                 val = m_in.group(1).strip()
                 if val:
                     for t_part in re.split(r"[,;\n]+", val):
-                        clean_t = t_part.strip().strip("*_`").strip()
-                        if clean_t:
+                        clean_t = clean_scope_text(t_part)
+                        if clean_t and not is_scope_section_header_artifact(clean_t):
                             in_targets.append(
                                 ScopeTargetItem(
                                     target=clean_t, target_type="network", environment="production"
@@ -258,8 +303,8 @@ class ReportScopeMethodology:
                 val = m_out.group(1).strip()
                 if val:
                     for o_part in re.split(r"[,;\n]+", val):
-                        clean_o = o_part.strip().strip("*_`").strip()
-                        if clean_o:
+                        clean_o = clean_scope_text(o_part)
+                        if clean_o and not is_scope_section_header_artifact(clean_o):
                             out_targets.append(
                                 ScopeExclusionItem(target=clean_o, reason="Out of Scope")
                             )
@@ -364,7 +409,8 @@ class ReportScopeMethodology:
 
         if self.in_scope_targets:
             for item in self.in_scope_targets:
-                tgt = (item.target or "–").replace("|", "\\|").replace("\n", " ")
+                raw_t = clean_scope_text(item.target)
+                tgt = (raw_t or "–").replace("|", "\\|").replace("\n", " ")
                 t_lbl = (
                     type_map_de.get(item.target_type, item.target_type.capitalize())
                     if language == "de"
@@ -399,7 +445,8 @@ class ReportScopeMethodology:
 
         if self.out_of_scope_targets:
             for ex_item in self.out_of_scope_targets:
-                tgt = (ex_item.target or "–").replace("|", "\\|").replace("\n", " ")
+                raw_t = clean_scope_text(ex_item.target)
+                tgt = (raw_t or "–").replace("|", "\\|").replace("\n", " ")
                 reason = (ex_item.reason or "–").replace("|", "\\|").replace("\n", " ")
                 lines.append(f"| `{tgt}` | {reason} |")
         else:

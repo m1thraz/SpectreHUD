@@ -34,11 +34,19 @@ def strip_finding_markers(markdown: str) -> str:
     return FINDING_MARKER_RE.sub("", markdown)
 
 
-def _semantic_finding_html(body_html: str) -> str:
+def is_meaningful_finding_value(val: Optional[str]) -> bool:
+    """Return True if the text represents real content rather than a placeholder dash or empty value."""
+    if val is None:
+        return False
+    v = val.strip()
+    if not v:
+        return False
+    clean = re.sub(r"[*_`#]+", "", v).strip()
+    return clean.lower() not in {"", "-", "–", "—", "none", "n/a", "null", "keine", "nicht angegeben"}
+
+
+def _semantic_finding_html(body_html: str, finding_id: Optional[str] = None) -> str:
     heading = re.search(r"<h3>(.*?)</h3>", body_html, re.DOTALL)
-    description = re.search(r"<h4>(Description|Beschreibung)</h4>", body_html)
-    recommendation = re.search(r"<h4>(Recommendation|Empfehlung)</h4>", body_html)
-    references = re.search(r"<h4>(References|Referenzen)</h4>", body_html)
     if heading is None:
         return body_html
 
@@ -59,12 +67,17 @@ def _semantic_finding_html(body_html: str) -> str:
     ):
         match = re.search(rf"<p><strong>{label}:</strong>\s*(.*?)</p>", body_html, re.DOTALL)
         if match:
+            raw_val = match.group(1).strip()
+            plain_val = re.sub(r"<[^>]+>", "", raw_val).strip()
+            if not is_meaningful_finding_value(plain_val):
+                body_html = body_html.replace(match.group(0), "", 1)
+                continue
             meta_items.append(
                 '<div class="finding-meta-item'
                 + (" finding-meta-cvss-vector" if label == "CVSS Vector" else "")
                 + '">'
                 f'<span class="finding-meta-label">{label}</span>'
-                f'<span class="finding-meta-value">{match.group(1)}</span>'
+                f'<span class="finding-meta-value">{raw_val}</span>'
                 "</div>"
             )
             body_html = body_html.replace(match.group(0), "", 1)
@@ -72,35 +85,86 @@ def _semantic_finding_html(body_html: str) -> str:
     if severity_match:
         body_html = body_html.replace(severity_match.group(0), "", 1)
     body_html = body_html.replace(heading.group(0), "", 1)
-    if description:
-        body_html = body_html.replace(
-            description.group(0),
-            f'<section class="finding-description"><h4>{description.group(1)}</h4>',
-            1,
-        )
+
+    description = re.search(r"<h4>(Description|Beschreibung)</h4>", body_html)
+    recommendation = re.search(r"<h4>(Recommendation|Empfehlung)</h4>", body_html)
+    references = re.search(r"<h4>(References|Referenzen)</h4>", body_html)
+
+    # Check and prune empty recommendation block if meaningless
     if recommendation:
-        recommendation_open = (
-            "</section>" if description else ""
-        ) + f'<section class="finding-recommendation"><h4>{recommendation.group(1)}</h4>'
-        body_html = body_html.replace(recommendation.group(0), recommendation_open, 1)
+        rec_tail = body_html[recommendation.end() :]
+        next_h = re.search(r"<h4>", rec_tail)
+        rec_content = rec_tail[: next_h.start()] if next_h else rec_tail
+        rec_plain = re.sub(r"<[^>]+>", "", rec_content).strip()
+        if not is_meaningful_finding_value(rec_plain):
+            block_to_remove = body_html[
+                recommendation.start() : (recommendation.end() + len(rec_content))
+            ]
+            body_html = body_html.replace(block_to_remove, "", 1)
+            recommendation = None
+
+    # Check and prune empty references block if meaningless
     if references:
-        references_open = (
-            "</section>" if description or recommendation else ""
-        ) + f'<section class="finding-references"><h4>{references.group(1)}</h4>'
-        body_html = body_html.replace(references.group(0), references_open, 1)
+        ref_tail = body_html[references.end() :]
+        next_h = re.search(r"<h4>", ref_tail)
+        ref_content = ref_tail[: next_h.start()] if next_h else ref_tail
+        ref_plain = re.sub(r"<[^>]+>", "", ref_content).strip()
+        if not is_meaningful_finding_value(ref_plain):
+            block_to_remove = body_html[
+                references.start() : (references.end() + len(ref_content))
+            ]
+            body_html = body_html.replace(block_to_remove, "", 1)
+            references = None
+
+    if description:
+        description_match = re.search(r"<h4>(Description|Beschreibung)</h4>", body_html)
+        if description_match:
+            body_html = body_html.replace(
+                description_match.group(0),
+                f'<section class="finding-description"><h4>{description_match.group(1)}</h4>',
+                1,
+            )
+    if recommendation:
+        recommendation_match = re.search(r"<h4>(Recommendation|Empfehlung)</h4>", body_html)
+        if recommendation_match:
+            recommendation_open = (
+                "</section>" if description else ""
+            ) + f'<section class="finding-recommendation"><h4>{recommendation_match.group(1)}</h4>'
+            body_html = body_html.replace(recommendation_match.group(0), recommendation_open, 1)
+    if references:
+        references_match = re.search(r"<h4>(References|Referenzen)</h4>", body_html)
+        if references_match:
+            references_open = (
+                "</section>" if description or recommendation else ""
+            ) + f'<section class="finding-references"><h4>{references_match.group(1)}</h4>'
+            body_html = body_html.replace(references_match.group(0), references_open, 1)
+
     header_severity = (
         f'<div class="finding-severity">{severity_html}</div>' if severity_html else ""
     )
     metadata = f'<div class="finding-meta">{"".join(meta_items)}</div>' if meta_items else ""
+
+    orig_title = heading.group(1).strip()
+    m_id = re.match(r"^(F-\d{3})\s*[·\-\:]\s*(.*)$", orig_title)
+    if m_id:
+        f_id, f_text = m_id.group(1), m_id.group(2).strip()
+        styled_heading = f'<h3><span class="finding-id">{f_id}</span> · {f_text}</h3>'
+    elif finding_id:
+        styled_heading = f'<h3><span class="finding-id">{finding_id}</span> · {orig_title}</h3>'
+    else:
+        styled_heading = heading.group(0)
+
     return (
         f'<article class="report-finding{severity_class}">'
         '<header class="finding-header">'
-        f"{heading.group(0)}{header_severity}</header>"
+        f"{styled_heading}{header_severity}</header>"
         f"{metadata}{body_html}{'</section>' if description or recommendation or references else ''}</article>"
     )
 
 
-def convert_markdown_with_findings(markdown: str, project_dir: Optional[Path] = None) -> str:
+def convert_markdown_with_findings(
+    markdown: str, project_dir: Optional[Path] = None, start_index: int = 1
+) -> str:
     """Convert only explicitly marked v1 findings into semantic report articles."""
     if not FINDING_START_RE.search(markdown):
         return convert_markdown_to_html(markdown, project_dir=project_dir)
@@ -108,7 +172,10 @@ def convert_markdown_with_findings(markdown: str, project_dir: Optional[Path] = 
     embedded = resolve_and_embed_images(markdown, project_dir)
     html_parts = []
     cursor = 0
+    finding_index = start_index - 1
     while start := FINDING_START_RE.search(embedded, cursor):
+        finding_index += 1
+        finding_id = f"F-{finding_index:03d}"
         if start.start() > cursor:
             html_parts.append(convert_markdown_to_html(embedded[cursor : start.start()]))
         entry_id = start.group(1)
@@ -127,7 +194,7 @@ def convert_markdown_with_findings(markdown: str, project_dir: Optional[Path] = 
             break
         finding_markdown = embedded[start.end() : end.start()]
         finding_html = convert_markdown_to_html(finding_markdown)
-        html_parts.append(_semantic_finding_html(finding_html))
+        html_parts.append(_semantic_finding_html(finding_html, finding_id=finding_id))
         cursor = end.end()
     if cursor < len(embedded):
         html_parts.append(convert_markdown_to_html(embedded[cursor:]))
