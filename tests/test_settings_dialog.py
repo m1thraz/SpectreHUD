@@ -247,6 +247,42 @@ class TestSettingsDialog(unittest.TestCase):
 
         dlg.close()
 
+    def test_general_page_workflow_settings(self):
+        dlg = SettingsDialog(self.config_manager)
+        page = dlg.page_general
+
+        self.assertTrue(page.chk_recap.isChecked())
+        self.assertEqual(page.spin_recap_minutes.value(), 10)
+        self.assertTrue(page.chk_nudge.isChecked())
+        self.assertEqual(page.spin_nudge_minutes.value(), 25)
+        self.assertEqual(page.spin_badge_threshold.value(), 5)
+
+        # Modify values
+        page.chk_recap.setChecked(False)
+        page.spin_recap_minutes.setValue(15)
+        page.chk_nudge.setChecked(False)
+        page.spin_nudge_minutes.setValue(30)
+        page.spin_badge_threshold.setValue(8)
+
+        applied = []
+        dlg.settings_applied.connect(applied.append)
+        dlg._on_save_settings()
+
+        self.assertEqual(len(applied), 1)
+        self.assertFalse(applied[0]["recap_enabled"])
+        self.assertEqual(applied[0]["recap_inactivity_minutes"], 15)
+        self.assertFalse(applied[0]["nudge_enabled"])
+        self.assertEqual(applied[0]["nudge_interval_minutes"], 30)
+        self.assertEqual(applied[0]["badge_warning_threshold"], 8)
+
+        self.assertFalse(self.config_manager.get("recap_enabled"))
+        self.assertEqual(self.config_manager.get("recap_inactivity_minutes"), 15)
+        self.assertFalse(self.config_manager.get("nudge_enabled"))
+        self.assertEqual(self.config_manager.get("nudge_interval_minutes"), 30)
+        self.assertEqual(self.config_manager.get("badge_warning_threshold"), 8)
+
+        dlg.close()
+
 
 if __name__ == "__main__":
     unittest.main()

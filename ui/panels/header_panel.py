@@ -89,6 +89,13 @@ class HeaderPanel(QFrame):
         self.btn_mode_notes.clicked.connect(lambda: self.mode_changed.emit("notes"))
         layout.addWidget(self.btn_mode_notes)
 
+        self.badge_notes = QLabel(self)
+        self.badge_notes.setObjectName("NotesBadge")
+        self.badge_notes.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.badge_notes.mousePressEvent = lambda _e: self.mode_changed.emit("notes")
+        self.badge_notes.hide()
+        layout.addWidget(self.badge_notes)
+
         self.btn_mode_loot = QPushButton(t("header.mode_loot", "Loot"))
         self.btn_mode_loot.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_mode_loot.setProperty("class", "ModeSwitchBtn")
@@ -97,6 +104,13 @@ class HeaderPanel(QFrame):
         )
         self.btn_mode_loot.clicked.connect(lambda: self.mode_changed.emit("loot"))
         layout.addWidget(self.btn_mode_loot)
+
+        self.badge_loot = QLabel(self)
+        self.badge_loot.setObjectName("LootBadge")
+        self.badge_loot.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.badge_loot.mousePressEvent = lambda _e: self.mode_changed.emit("loot")
+        self.badge_loot.hide()
+        layout.addWidget(self.badge_loot)
 
         self.btn_mode_report = QPushButton(t("header.mode_report", "Report"))
         self.btn_mode_report.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -159,8 +173,9 @@ class HeaderPanel(QFrame):
                 "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+Alt+R zum Starten der Aufzeichnung.",
             )
         )
-        self.btn_rec_indicator.clicked.connect(self.toggle_rec_requested.emit)
+        self.btn_rec_indicator.clicked.connect(self._on_rec_indicator_clicked)
         layout.addWidget(self.btn_rec_indicator)
+
 
         # Action Overflow Button (shown when space is constrained)
         self.btn_overflow = QPushButton()
@@ -234,6 +249,9 @@ class HeaderPanel(QFrame):
         ]
         if self.btn_phase is not None:
             fixed_items.append(self.btn_phase)
+        for badge in (getattr(self, "badge_notes", None), getattr(self, "badge_loot", None)):
+            if badge is not None and badge.isVisible():
+                fixed_items.append(badge)
 
         fixed_w = sum(w.sizeHint().width() for w in fixed_items)
         action_items = [self.btn_quick_note, self.btn_screenshot, self.btn_rec_indicator]
@@ -467,17 +485,90 @@ class HeaderPanel(QFrame):
         self.btn_rec_indicator.style().polish(self.btn_rec_indicator)
         self._update_overflow_indicator()
 
-    def update_notes_badge(self, count: int = 0) -> None:
-        """Notes tab label without count badge, keeping clean title."""
-        self.btn_mode_notes.setText(t("header.mode_notes", "Notes"))
-
-    def update_history_badge(self, notes_count: int = 0) -> None:
-        """Kept for backward compatibility."""
-        base_text = t("header.mode_history", "History")
-        if notes_count > 0:
-            self.btn_mode_history.setText(f"{base_text} [{notes_count}]")
+    def set_rec_nudged(self, nudged: bool) -> None:
+        """Applies subtle visual highlight to REC indicator when documentation is due."""
+        self._rec_nudged = nudged
+        if not getattr(self, "_rec_active", False):
+            return
+        if nudged:
+            warn_col = get_theme_color("STATUS_WARNING") or "#f59e0b"
+            self.btn_rec_indicator.setIcon(
+                icon(
+                    "fa5s.circle",
+                    color=warn_col,
+                    color_active=warn_col,
+                )
+            )
+            self.btn_rec_indicator.setToolTip(
+                t(
+                    "header.rec_tooltip_nudged",
+                    "Clipboard-REC aktiv – längere Zeit keine Doku erfasst.\nKlicken zum Öffnen einer Quick Note.",
+                )
+            )
         else:
-            self.btn_mode_history.setText(base_text)
+            self.btn_rec_indicator.setIcon(
+                icon(
+                    "fa5s.circle",
+                    color=get_theme_color("ERROR"),
+                    color_active=get_theme_color("ERROR"),
+                )
+            )
+            self.btn_rec_indicator.setToolTip(
+                t(
+                    "header.rec_tooltip_active",
+                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+Alt+R zum Pausieren.",
+                )
+            )
+
+    def _on_rec_indicator_clicked(self) -> None:
+        """Opens quick note directly when nudged, otherwise toggles REC state."""
+        if getattr(self, "_rec_nudged", False):
+            self.set_rec_nudged(False)
+            self.quick_note_requested.emit()
+        else:
+            self.toggle_rec_requested.emit()
+
+
+    @staticmethod
+    def _badge_style(warning: bool) -> str:
+        if warning:
+            warn_col = get_theme_color("STATUS_WARNING") or "#d97706"
+            return (
+                f"background-color: {get_theme_color('BG_INPUT')}; color: {warn_col}; "
+                f"border: 1px solid {warn_col}; border-radius: 7px; "
+                f"font-size: 9px; font-weight: bold; padding: 0px 4px; margin-left: -4px; margin-right: 2px;"
+            )
+        return (
+            f"background-color: {get_theme_color('CONTROL_A70')}; color: {get_theme_color('TEXT_SECONDARY')}; "
+            f"border: 1px solid {get_theme_color('BORDER_A80')}; border-radius: 7px; "
+            f"font-size: 9px; font-weight: 600; padding: 0px 4px; margin-left: -4px; margin-right: 2px;"
+        )
+
+    def update_notes_badge(self, count: int = 0, threshold: int = 5) -> None:
+        """Updates the notes pill badge with open note count (hidden if 0)."""
+        self.btn_mode_notes.setText(t("header.mode_notes", "Notes"))
+        if not hasattr(self, "badge_notes"):
+            return
+        if count <= 0:
+            self.badge_notes.hide()
+        else:
+            self.badge_notes.setText(str(count))
+            self.badge_notes.setStyleSheet(self._badge_style(warning=count > threshold))
+            self.badge_notes.show()
+        self.update_overflow_state()
+
+    def update_loot_badge(self, count: int = 0, threshold: int = 5) -> None:
+        """Updates the loot pill badge with unsynchronized finding count (hidden if 0)."""
+        self.btn_mode_loot.setText(t("header.mode_loot", "Loot"))
+        if not hasattr(self, "badge_loot"):
+            return
+        if count <= 0:
+            self.badge_loot.hide()
+        else:
+            self.badge_loot.setText(str(count))
+            self.badge_loot.setStyleSheet(self._badge_style(warning=count > threshold))
+            self.badge_loot.show()
+        self.update_overflow_state()
 
     def retranslate(self) -> None:
         """Dynamically re-translates all texts on language changes."""

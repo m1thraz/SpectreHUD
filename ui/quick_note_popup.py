@@ -4,6 +4,7 @@ Quick Note Popup for SpectreHUD.
 Minimal frameless popup for rapid note capturing with single-key pentest phase tagging.
 """
 
+from datetime import datetime
 from typing import Any, Dict, Optional
 from PyQt6.QtWidgets import (
     QWidget,
@@ -19,8 +20,11 @@ from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QKeyEvent
 
 from core.loot import VALID_CATEGORY_IDS
 from core.i18n import t
+from core.logger import get_logger
 from ui.styles.icons import get_theme_color
 from ui.styles.theme import rgba_str
+
+logger = get_logger("quick_note_popup")
 
 
 PHASE_PILLS = [
@@ -127,7 +131,50 @@ class QuickNotePopup(QWidget):
             pills_layout.addWidget(btn)
         card_layout.addLayout(pills_layout)
 
+        # Draft Recovery Banner (shown only when an unsaved fallback draft exists)
+        self.recovery_banner = QFrame(self.card)
+        self.recovery_banner.setObjectName("DraftRecoveryBanner")
+        self.recovery_banner.setStyleSheet(
+            f"""
+            QFrame#DraftRecoveryBanner {{
+                background-color: {get_theme_color("BG_INPUT")};
+                border: 1px solid {get_theme_color("STATUS_WARNING") if get_theme_color("STATUS_WARNING") else "#d97706"};
+                border-radius: 4px;
+                padding: 1px 4px;
+            }}
+            """
+        )
+        rec_layout = QHBoxLayout(self.recovery_banner)
+        rec_layout.setContentsMargins(4, 2, 4, 2)
+        rec_layout.setSpacing(6)
+
+        self.lbl_recovery = QLabel(self.recovery_banner)
+        self.lbl_recovery.setStyleSheet(f"color: {get_theme_color('TEXT_PRIMARY')}; font-size: 10px;")
+        rec_layout.addWidget(self.lbl_recovery, stretch=1)
+
+        self.btn_restore_draft = QPushButton(t("quick_note.restore_yes", "Ja"), self.recovery_banner)
+        self.btn_restore_draft.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_restore_draft.setStyleSheet(
+            f"background-color: {get_theme_color('CYAN_A20')}; color: {get_theme_color('ACCENT_BRAND')}; "
+            f"border: 1px solid {get_theme_color('ACCENT_BRAND')}; border-radius: 3px; font-size: 10px; font-weight: bold; padding: 1px 6px;"
+        )
+        self.btn_restore_draft.clicked.connect(self._restore_fallback_draft)
+        rec_layout.addWidget(self.btn_restore_draft)
+
+        self.btn_discard_draft = QPushButton(t("quick_note.restore_no", "Verwerfen"), self.recovery_banner)
+        self.btn_discard_draft.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_discard_draft.setStyleSheet(
+            f"background-color: {get_theme_color('CONTROL_A70')}; color: {get_theme_color('TEXT_MUTED')}; "
+            f"border: 1px solid {get_theme_color('BORDER_A80')}; border-radius: 3px; font-size: 10px; padding: 1px 6px;"
+        )
+        self.btn_discard_draft.clicked.connect(self._discard_fallback_draft)
+        rec_layout.addWidget(self.btn_discard_draft)
+
+        self.recovery_banner.hide()
+        card_layout.addWidget(self.recovery_banner)
+
         # Text Editor
+
         self.text_edit = QPlainTextEdit(self.card)
         self.text_edit.setPlaceholderText(
             t(
@@ -217,24 +264,66 @@ class QuickNotePopup(QWidget):
             return
         super().keyPressEvent(event)
 
+    _cached_draft: Optional[Dict[str, Any]] = None
+
     def changeEvent(self, event) -> None:
-        """Dismisses popup when focus/activation is lost after having been active."""
+        """Dismisses popup when focus/activation is lost after having been active, auto-saving non-empty text."""
         if event is not None and event.type() == event.Type.ActivationChange:
             if self.isActiveWindow():
                 self._has_been_active = True
             elif self._has_been_active:
+                text = self.text_edit.toPlainText().strip()
+                if text:
+                    self._auto_save_or_fallback(text)
                 self.close()
         super().changeEvent(event)
+
+    def _emit_note_submitted(self, text: str, category: str) -> None:
+        """Emits the note_submitted signal."""
+        self.note_submitted.emit(text, category)
+
+    def _auto_save_or_fallback(self, text: str) -> None:
+        """Saves note text via note_submitted or stores in fallback cache on failure."""
+        cat = self.current_category
+        try:
+            self._emit_note_submitted(text, cat)
+            self.text_edit.clear()
+            QuickNotePopup._cached_draft = None
+        except Exception as exc:
+            logger.warning(f"Failed to auto-save quick note draft: {exc}")
+            QuickNotePopup._cached_draft = {
+                "text": text,
+                "category": cat,
+                "time": datetime.now().strftime("%H:%M:%S"),
+            }
+
+
+    def _restore_fallback_draft(self) -> None:
+        draft = QuickNotePopup._cached_draft
+        if draft:
+            self.text_edit.setPlainText(draft.get("text", ""))
+            self.select_category(draft.get("category", self.current_category))
+            QuickNotePopup._cached_draft = None
+        self.recovery_banner.hide()
+        self.setFixedSize(400, 170)
+        self.text_edit.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+
+    def _discard_fallback_draft(self) -> None:
+        QuickNotePopup._cached_draft = None
+        self.recovery_banner.hide()
+        self.setFixedSize(400, 170)
+        self.text_edit.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
 
     def accept(self) -> None:
         """Submits the note if text is non-empty and closes."""
         text = self.text_edit.toPlainText().strip()
         if text:
-            self.note_submitted.emit(text, self.current_category)
+            self._auto_save_or_fallback(text)
         self.close()
 
     def reject(self) -> None:
         """Closes the popup without saving."""
+        self.text_edit.clear()
         self.cancelled.emit()
         self.close()
 
@@ -245,6 +334,21 @@ class QuickNotePopup(QWidget):
 
         self.text_edit.clear()
         self._has_been_active = False
+
+        if QuickNotePopup._cached_draft:
+            draft_time = QuickNotePopup._cached_draft.get("time", "")
+            self.lbl_recovery.setText(
+                t(
+                    "quick_note.draft_prompt",
+                    "Unvollständiger Entwurf von {time} wiederherstellen?",
+                    time=draft_time,
+                )
+            )
+            self.recovery_banner.show()
+            self.setFixedSize(400, 205)
+        else:
+            self.recovery_banner.hide()
+            self.setFixedSize(400, 170)
 
         cursor_pos = QCursor.pos()
         screen = QGuiApplication.screenAt(cursor_pos) or QGuiApplication.primaryScreen()
@@ -266,3 +370,4 @@ class QuickNotePopup(QWidget):
         self.activateWindow()
         # Give keyboard focus once on open — no repeated timer so click-outside still dismisses
         self.text_edit.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+

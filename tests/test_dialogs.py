@@ -103,6 +103,34 @@ class TestHudDialogs(unittest.TestCase):
         self.assertTrue(dlg.finding_details_widget.isHidden())
         dlg.close()
 
+    def test_loot_details_progressive_disclosure(self):
+        AddLootDialog._details_expanded = False
+
+        dlg1 = AddLootDialog()
+        self.assertTrue(dlg1.details_widget.isHidden())
+        self.assertIn("▶", dlg1.btn_toggle_details.text())
+
+        dlg1.btn_toggle_details.click()
+        self.assertFalse(dlg1.details_widget.isHidden())
+        self.assertIn("▼", dlg1.btn_toggle_details.text())
+        self.assertTrue(AddLootDialog._details_expanded)
+        dlg1.close()
+
+        dlg2 = AddLootDialog()
+        self.assertFalse(dlg2.details_widget.isHidden())
+        dlg2.close()
+
+        AddLootDialog._details_expanded = False
+
+        dlg_with_details = AddLootDialog(
+            default_recommendation="Fix it immediately",
+            default_report_role="evidence",
+        )
+        self.assertFalse(dlg_with_details.details_widget.isHidden())
+        dlg_with_details.close()
+
+        AddLootDialog._details_expanded = False
+
     def test_new_project_dialog_data(self):
         custom_base = Path("C:/custom_ctf_projects")
         dlg = NewProjectDialog(

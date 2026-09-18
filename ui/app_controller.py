@@ -4,8 +4,9 @@ Central Application Orchestrator for SpectreHUD.
 Orchestrates UI panels, domain managers, and specialized coordinators.
 """
 
+import time
 from typing import Dict, Any, List, Optional
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal, QTimer
 from PyQt6.QtWidgets import QWidget, QPushButton
 
 from core.config import ConfigManager
@@ -308,7 +309,13 @@ class AppController(QObject):
             self.quick_note_manager.entry_added.connect(
                 lambda _: self._on_notes_updated(), Qt.ConnectionType.QueuedConnection
             )
-        self.clipboard_monitor.logging_state_changed.connect(self.header.update_rec_indicator)
+        self.clipboard_monitor.logging_state_changed.connect(self._on_logging_state_changed)
+        self._last_doc_activity_time = time.time()
+        self._nudge_timer = QTimer(self)
+        self._nudge_timer.setInterval(30000)
+        self._nudge_timer.timeout.connect(self._check_rec_nudge)
+        self._nudge_timer.start()
+
         self.footer.phase_menu_requested.connect(self._show_phase_menu)
         self.content.scroll_area.verticalScrollBar().valueChanged.connect(
             self._maybe_load_more_cheatsheet
@@ -439,6 +446,7 @@ class AppController(QObject):
                 self.var_bar.txt_attacker.setText(text)
 
     def _on_notes_updated(self) -> None:
+        self._reset_rec_nudge()
         self._update_notes_badge()
         if self.active_mode == "notes":
             self.refresh_filter_pills()
@@ -455,6 +463,121 @@ class AppController(QObject):
             else 0
         )
         self.header.update_notes_badge(count)
+
+    def _update_loot_badge(self) -> None:
+        if not self.loot_manager:
+            self.header.update_loot_badge(0)
+            return
+        cfg = getattr(self, "config", None)
+        threshold = int(cfg.get("badge_warning_threshold", 5)) if cfg and hasattr(cfg, "get") else 5
+        entries = self.loot_manager.get_all_entries()
+        markdown = ""
+        if hasattr(self, "report_ctrl") and self.report_ctrl:
+            if self.report_ctrl.report_editor_tab is not None:
+                markdown = self.report_ctrl.report_editor_tab.current_markdown()
+            else:
+                markdown = self.report_ctrl.report_file_manager.load() or ""
+        from core.reporting.loot_sync import classify_loot_report_state
+
+        state = classify_loot_report_state(markdown, entries)
+        unsynced_count = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
+        self.header.update_loot_badge(unsynced_count, threshold=threshold)
+
+    def get_session_recap_info(self) -> Dict[str, Any]:
+        """Collects state for the session recap banner."""
+        phase_name = None
+        if self.phase_context.active_phase_id:
+            from core.phases import get_phase
+
+            phase = get_phase(self.phase_context.active_phase_id)
+            phase_name = phase.short if phase else self.phase_context.active_phase_id
+
+        open_notes = (
+            sum(
+                1
+                for note in self.quick_note_manager.get_all_entries()
+                if note.get("status", "inbox") != "resolved"
+            )
+            if self.quick_note_manager
+            else 0
+        )
+
+        unsynced_loot = 0
+        if self.loot_manager:
+            entries = self.loot_manager.get_all_entries()
+            markdown = ""
+            if hasattr(self, "report_ctrl") and self.report_ctrl:
+                if self.report_ctrl.report_editor_tab is not None:
+                    markdown = self.report_ctrl.report_editor_tab.current_markdown()
+                else:
+                    markdown = self.report_ctrl.report_file_manager.load() or ""
+            from core.reporting.loot_sync import classify_loot_report_state
+
+            state = classify_loot_report_state(markdown, entries)
+            unsynced_loot = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
+
+        last_action = self._get_last_action_summary()
+
+        return {
+            "phase_name": phase_name,
+            "open_notes": open_notes,
+            "unsynced_loot": unsynced_loot,
+            "last_action": last_action,
+        }
+
+    def _get_last_action_summary(self) -> Optional[str]:
+        """Finds the most recent Note or Loot action snippet."""
+        candidates = []
+        if self.quick_note_manager:
+            for note in self.quick_note_manager.get_all_entries():
+                ts = note.get("timestamp", "")
+                text = (note.get("text") or "").strip()
+                if text:
+                    candidates.append((ts, "Note", text))
+        if self.loot_manager:
+            for loot in self.loot_manager.get_all_entries():
+                ts = loot.get("timestamp", "")
+                title = (loot.get("title") or "").strip()
+                if title:
+                    candidates.append((ts, "Loot", title))
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda x: str(x[0]), reverse=True)
+        latest_ts, kind, text = candidates[0]
+        snippet = text[:35] + ("..." if len(text) > 35 else "")
+        time_part = (
+            latest_ts.split()[-1][:5]
+            if " " in latest_ts
+            else (latest_ts[-8:-3] if len(latest_ts) >= 8 else "")
+        )
+        if time_part:
+            return f"Letzte {kind} ({time_part}): \"{snippet}\""
+        return f"Letzte {kind}: \"{snippet}\""
+
+    def _on_logging_state_changed(self, is_active: bool) -> None:
+        """Handles REC indicator updates and resets nudge countdown."""
+        self.header.update_rec_indicator(is_active)
+        self._reset_rec_nudge()
+
+    def _check_rec_nudge(self) -> None:
+        """Checks whether active clipboard REC has run without documentation captures."""
+        if not self.config.get("nudge_enabled", True):
+            self.header.set_rec_nudged(False)
+            return
+        if not getattr(self.clipboard_monitor, "is_recording", False):
+            self.header.set_rec_nudged(False)
+            return
+        threshold_sec = int(self.config.get("nudge_interval_minutes", 25)) * 60
+        elapsed = time.time() - getattr(self, "_last_doc_activity_time", time.time())
+        self.header.set_rec_nudged(elapsed >= threshold_sec)
+
+    def _reset_rec_nudge(self) -> None:
+        """Resets the documentation activity timer and clears any active nudge."""
+        self._last_doc_activity_time = time.time()
+        self.header.set_rec_nudged(False)
+
 
     def switch_mode(self, mode: str) -> None:
         self.navigation_coord.switch_mode(mode)
@@ -838,6 +961,8 @@ class AppController(QObject):
     def _on_loot_data_updated(self) -> None:
         self.save_current_project_state()
         self.report_ctrl.refresh_loot_sync_state()
+        self._reset_rec_nudge()
+        self._update_loot_badge()
         self.refresh_filter_pills()
         self.refresh_content()
 
@@ -871,6 +996,7 @@ class AppController(QObject):
         if state is not None and self.var_bar:
             self.var_bar.set_variables(state.to_dict())
         self._update_notes_badge()
+        self._update_loot_badge()
 
     def save_current_project_state(self) -> bool:
         vars_dict = self.var_bar.get_variables() if self.var_bar else {}
@@ -968,6 +1094,7 @@ class AppController(QObject):
             self.snippet_manager.set_language(active_lang)
         self.header.retranslate()
         self._update_notes_badge()
+        self._update_loot_badge()
         if self.var_bar:
             self.var_bar.retranslate()
         self._update_footer_status()

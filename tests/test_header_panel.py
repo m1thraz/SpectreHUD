@@ -54,15 +54,44 @@ def test_notes_mode_button_and_badge(qapp):
     assert header.btn_mode_notes.property("class") == "ModeSwitchBtnActive"
     assert header.btn_mode_history.property("class") == "ModeSwitchBtn"
 
-    # Header notes pill must remain clean without count badge
+    # Header notes text must remain clean, while pill badge displays count
     header.update_notes_badge(5)
     assert header.btn_mode_notes.text() == "Notes"
     assert "[5]" not in header.btn_mode_notes.text()
+    assert not header.badge_notes.isHidden()
+    assert header.badge_notes.text() == "5"
 
     header.update_notes_badge(0)
     assert header.btn_mode_notes.text() == "Notes"
+    assert header.badge_notes.isHidden()
+
+    # Loot badge tests
+    assert hasattr(header, "badge_loot")
+    assert header.badge_loot.isHidden()
+
+    header.update_loot_badge(3)
+    assert not header.badge_loot.isHidden()
+    assert header.badge_loot.text() == "3"
+
+    header.update_loot_badge(0)
+    assert header.badge_loot.isHidden()
+
+    # Threshold warning style
+    header.update_notes_badge(7, threshold=5)
+    assert not header.badge_notes.isHidden()
+    assert header.badge_notes.text() == "7"
+
+    # Clicking pill badges switches mode
+    emitted_modes.clear()
+    header.badge_notes.mousePressEvent(None)
+    assert emitted_modes == ["notes"]
+
+    emitted_modes.clear()
+    header.badge_loot.mousePressEvent(None)
+    assert emitted_modes == ["loot"]
 
     header.deleteLater()
+
 
 
 def test_project_button_class_and_theme(qapp):

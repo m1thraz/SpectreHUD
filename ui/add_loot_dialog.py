@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QWidget,
 )
-from PyQt6.QtCore import QLocale
+from PyQt6.QtCore import QLocale, Qt
 from PyQt6.QtGui import QDoubleValidator
 from typing import Dict, Any, Optional, Callable
 from core.loot import (
@@ -28,6 +28,8 @@ from ui.styles.icons import get_severity_color, get_theme_color, icon
 
 class AddLootDialog(BaseHudDialog):
     """Dialog to capture new or edit existing session loot (credentials, hashes, flags, notes, PoCs)."""
+
+    _details_expanded: bool = False
 
     def __init__(
         self,
@@ -70,10 +72,6 @@ class AddLootDialog(BaseHudDialog):
             "SPECTRE // EDIT SESSION LOOT" if self.is_edit else "SPECTRE // CAPTURE SESSION LOOT",
         )
 
-        super().__init__(title=dialog_title, parent=parent)
-        self.setMinimumWidth(540)
-        self.resize(560, 600)
-
         self.current_target_ip = target_ip or current_target_ip or kwargs.get("target", "")
         self.initial_type = default_type or initial_type or entry_type or kwargs.get("type", "note")
         self.initial_category = (
@@ -109,12 +107,32 @@ class AddLootDialog(BaseHudDialog):
             kwargs.get("references", default_references)
         )
 
+        has_existing_details = bool(
+            (self.initial_severity and self.initial_severity.lower() != "info")
+            or bool(self.initial_recommendation)
+            or bool(
+                self.initial_targets
+                and self.initial_targets
+                != ([self.current_target_ip] if self.current_target_ip else [])
+            )
+            or self.initial_cvss_score is not None
+            or bool(self.initial_cvss_vector)
+            or bool(self.initial_references)
+            or self.initial_report_role in {"finding", "legacy"}
+        )
+        self._is_details_expanded = has_existing_details or AddLootDialog._details_expanded
+
+        super().__init__(title=dialog_title, parent=parent)
+        self.setMinimumWidth(540)
+        self.resize(560, 640 if self._is_details_expanded else 440)
+
         # When opened non-modally (Quick Loot), set to True after first activation
         # so clicking outside dismisses the window. Stays False in modal (exec()) mode.
         self._dismiss_on_deactivate = False
         self._has_been_active = False
 
         self._init_form()
+
 
     @property
     def dismiss_on_deactivate(self) -> bool:
@@ -140,7 +158,7 @@ class AddLootDialog(BaseHudDialog):
     def _init_form(self) -> None:
         layout = self.body_layout
 
-        # 1. Type, Severity, and Category Selection (Side by Side)
+        # 1. Type and Category Selection (Side by Side in primary section)
         select_row = QHBoxLayout()
         select_row.setSpacing(10)
 
@@ -159,30 +177,7 @@ class AddLootDialog(BaseHudDialog):
         type_col.addWidget(self.combo_type)
         select_row.addLayout(type_col, stretch=1)
 
-        # 1b. Severity / Schweregrad
-        sev_col = QVBoxLayout()
-        sev_col.setSpacing(4)
-        lbl_sev = QLabel(t("loot_dialog.lbl_severity", "Severity:"))
-        lbl_sev.setProperty("class", "FormLabel")
-        sev_col.addWidget(lbl_sev)
-
-        self.combo_severity = QComboBox()
-        severities = [
-            (t("severity.info", "Info"), "info"),
-            (t("severity.low", "Low"), "low"),
-            (t("severity.medium", "Medium"), "medium"),
-            (t("severity.high", "High"), "high"),
-            (t("severity.critical", "Critical"), "critical"),
-        ]
-        for i, (s_label, s_id) in enumerate(severities):
-            sev_icon = icon("fa5s.circle", color=get_severity_color(s_id))
-            self.combo_severity.addItem(sev_icon, s_label, s_id)
-            if s_id == self.initial_severity.lower():
-                self.combo_severity.setCurrentIndex(i)
-        sev_col.addWidget(self.combo_severity)
-        select_row.addLayout(sev_col, stretch=1)
-
-        # 1c. Pentest Category
+        # 1b. Pentest Category
         cat_col = QVBoxLayout()
         cat_col.setSpacing(4)
         lbl_cat = QLabel(t("loot_dialog.lbl_category", "Pentest Phase / Category:"))
@@ -195,7 +190,7 @@ class AddLootDialog(BaseHudDialog):
             if c["id"] == self.initial_category:
                 self.combo_category.setCurrentIndex(i)
         cat_col.addWidget(self.combo_category)
-        select_row.addLayout(cat_col, stretch=2)
+        select_row.addLayout(cat_col, stretch=1)
 
         layout.addLayout(select_row)
 
@@ -223,14 +218,85 @@ class AddLootDialog(BaseHudDialog):
         self.txt_content.setPlaceholderText(
             t("loot_dialog.ph_content", "e.g. admin:SuperSecretPass! or THM{fl4g_h3r3}")
         )
-        self.txt_content.setFixedHeight(100)
+        self.txt_content.setFixedHeight(90)
         layout.addWidget(self.txt_content)
 
+        # 4. Progressive Disclosure Toggle
+        self.btn_toggle_details = QPushButton(self)
+        self.btn_toggle_details.setObjectName("LootDetailsToggleBtn")
+        self.btn_toggle_details.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_toggle_details.setStyleSheet(
+            f"""
+            QPushButton#LootDetailsToggleBtn {{
+                background: transparent;
+                color: {get_theme_color("ACCENT_BRAND")};
+                border: none;
+                text-align: left;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 4px 0px;
+            }}
+            QPushButton#LootDetailsToggleBtn:hover {{
+                color: {get_theme_color("CYAN_LIGHT") if get_theme_color("CYAN_LIGHT") else "#38bdf8"};
+            }}
+            """
+        )
+        self.btn_toggle_details.clicked.connect(self._toggle_details)
+        layout.addWidget(self.btn_toggle_details)
+
+        # 5. Collapsible Details Container
+        self.details_widget = QWidget(self)
+        det_layout = QVBoxLayout(self.details_widget)
+        det_layout.setContentsMargins(0, 2, 0, 2)
+        det_layout.setSpacing(6)
+
+        # Row: Severity & Associated Targets
+        det_top_row = QHBoxLayout()
+        det_top_row.setSpacing(10)
+
+        # Severity
+        sev_col = QVBoxLayout()
+        sev_col.setSpacing(4)
+        lbl_sev = QLabel(t("loot_dialog.lbl_severity", "Severity:"))
+        lbl_sev.setProperty("class", "FormLabel")
+        sev_col.addWidget(lbl_sev)
+
+        self.combo_severity = QComboBox()
+        severities = [
+            (t("severity.info", "Info"), "info"),
+            (t("severity.low", "Low"), "low"),
+            (t("severity.medium", "Medium"), "medium"),
+            (t("severity.high", "High"), "high"),
+            (t("severity.critical", "Critical"), "critical"),
+        ]
+        for i, (s_label, s_id) in enumerate(severities):
+            sev_icon = icon("fa5s.circle", color=get_severity_color(s_id))
+            self.combo_severity.addItem(sev_icon, s_label, s_id)
+            if s_id == self.initial_severity.lower():
+                self.combo_severity.setCurrentIndex(i)
+        sev_col.addWidget(self.combo_severity)
+        det_top_row.addLayout(sev_col, stretch=1)
+
+        # Targets
+        target_col = QVBoxLayout()
+        target_col.setSpacing(4)
+        lbl_target = QLabel(t("loot_dialog.lbl_targets", "Associated Targets (optional):"))
+        lbl_target.setProperty("class", "FormLabel")
+        target_col.addWidget(lbl_target)
+
+        self.txt_target = QLineEdit(", ".join(self.initial_targets))
+        self.txt_target.setPlaceholderText(t("loot_dialog.ph_targets", "10.10.10.x, /api/v1/auth"))
+        target_col.addWidget(self.txt_target)
+        det_top_row.addLayout(target_col, stretch=2)
+
+        det_layout.addLayout(det_top_row)
+
+        # Recommendation
         lbl_recommendation = QLabel(
             t("loot_dialog.lbl_recommendation", "Recommendation (optional):")
         )
         lbl_recommendation.setProperty("class", "FormLabel")
-        layout.addWidget(lbl_recommendation)
+        det_layout.addWidget(lbl_recommendation)
 
         self.txt_recommendation = QPlainTextEdit()
         self.txt_recommendation.setObjectName("CommandBox")
@@ -241,9 +307,10 @@ class AddLootDialog(BaseHudDialog):
                 "Describe the concrete action required to remediate this finding.",
             )
         )
-        self.txt_recommendation.setFixedHeight(100)
-        layout.addWidget(self.txt_recommendation)
+        self.txt_recommendation.setFixedHeight(70)
+        det_layout.addWidget(self.txt_recommendation)
 
+        # Standalone Report Finding Checkbox
         self.chk_report_finding = QCheckBox(
             t("loot_dialog.report_finding", "Use as a standalone report finding")
         )
@@ -254,12 +321,13 @@ class AddLootDialog(BaseHudDialog):
             )
         )
         self.chk_report_finding.setChecked(self.initial_report_role in {"finding", "legacy"})
-        layout.addWidget(self.chk_report_finding)
+        det_layout.addWidget(self.chk_report_finding)
 
+        # Finding Details (status, cvss, vector, references)
         self.finding_details_widget = QWidget()
-        details_layout = QVBoxLayout(self.finding_details_widget)
-        details_layout.setContentsMargins(0, 4, 0, 4)
-        details_layout.setSpacing(8)
+        finding_layout = QVBoxLayout(self.finding_details_widget)
+        finding_layout.setContentsMargins(0, 4, 0, 4)
+        finding_layout.setSpacing(8)
 
         details_row = QHBoxLayout()
         details_row.setSpacing(10)
@@ -297,9 +365,9 @@ class AddLootDialog(BaseHudDialog):
         self.txt_cvss_vector.setPlaceholderText("CVSS:3.1/AV:N/AC:L/PR:N/...")
         vector_col.addWidget(self.txt_cvss_vector)
         details_row.addLayout(vector_col, stretch=2)
-        details_layout.addLayout(details_row)
+        finding_layout.addLayout(details_row)
 
-        details_layout.addWidget(
+        finding_layout.addWidget(
             self._form_label(t("loot_dialog.lbl_references", "References (one per line):"))
         )
         self.txt_references = QPlainTextEdit()
@@ -311,20 +379,15 @@ class AddLootDialog(BaseHudDialog):
                 "CVE, advisory, ticket, or documentation URL",
             )
         )
-        self.txt_references.setFixedHeight(70)
-        details_layout.addWidget(self.txt_references)
+        self.txt_references.setFixedHeight(65)
+        finding_layout.addWidget(self.txt_references)
+
         self.finding_details_widget.setVisible(self.chk_report_finding.isChecked())
         self.chk_report_finding.toggled.connect(self._set_finding_details_visible)
-        layout.addWidget(self.finding_details_widget)
-        if self.chk_report_finding.isChecked():
-            self.resize(max(self.width(), 660), max(self.height(), 740))
+        det_layout.addWidget(self.finding_details_widget)
 
-        # 4. Target IP
-        lbl_target = QLabel(t("loot_dialog.lbl_targets", "Associated Targets (optional):"))
-        lbl_target.setProperty("class", "FormLabel")
-        layout.addWidget(lbl_target)
-
-        self.txt_target = QLineEdit(", ".join(self.initial_targets))
+        layout.addWidget(self.details_widget)
+        self._set_details_expanded(self._is_details_expanded)
         self.txt_target.setPlaceholderText(t("loot_dialog.ph_targets", "10.10.10.x, /api/v1/auth"))
         layout.addWidget(self.txt_target)
 
@@ -413,9 +476,31 @@ class AddLootDialog(BaseHudDialog):
         label.setProperty("class", "FormLabel")
         return label
 
+    def _toggle_details(self) -> None:
+        self._set_details_expanded(not self.details_widget.isVisible())
+
+    def _set_details_expanded(self, expanded: bool) -> None:
+        AddLootDialog._details_expanded = expanded
+        self.details_widget.setVisible(expanded)
+        if expanded:
+            self.btn_toggle_details.setText(
+                t("loot_dialog.toggle_details_hide", "▼ Weniger Details")
+            )
+            if self.height() < 640:
+                self.resize(max(self.width(), 580), 640)
+        else:
+            self.btn_toggle_details.setText(
+                t(
+                    "loot_dialog.toggle_details_show",
+                    "▶ Weitere Details (Severity, Targets, Empfehlung, CVSS)",
+                )
+            )
+            if self.height() > 440:
+                self.resize(self.width(), 440)
+
     def _set_finding_details_visible(self, visible: bool) -> None:
         self.finding_details_widget.setVisible(visible)
-        if visible and self.height() < 740:
-            self.resize(max(self.width(), 660), 740)
-        elif not visible and self.height() <= 740:
-            self.resize(self.width(), 600)
+        if visible and self.height() < 720:
+            self.resize(max(self.width(), 620), 720)
+        elif not visible and self.height() > 640:
+            self.resize(self.width(), 640)

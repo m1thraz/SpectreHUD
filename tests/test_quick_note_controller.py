@@ -320,6 +320,62 @@ class TestQuickNotePopup(unittest.TestCase):
         self.popup.reject()
         self.assertEqual(len(cancelled), 1)
 
+    def test_blur_with_text_auto_saves(self):
+        from PyQt6.QtCore import QEvent
+
+        submitted = []
+        self.popup.note_submitted.connect(lambda text, cat: submitted.append((text, cat)))
+        self.popup.text_edit.setPlainText("Auto-saved draft on blur")
+        self.popup.select_category("access")
+        self.popup._has_been_active = True
+
+        event = QEvent(QEvent.Type.ActivationChange)
+        self.popup.changeEvent(event)
+
+        self.assertEqual(len(submitted), 1)
+        self.assertEqual(submitted[0][0], "Auto-saved draft on blur")
+        self.assertEqual(submitted[0][1], "access")
+
+    def test_blur_with_empty_text_does_not_emit(self):
+        from PyQt6.QtCore import QEvent
+
+        submitted = []
+        self.popup.note_submitted.connect(lambda text, cat: submitted.append((text, cat)))
+        self.popup.text_edit.clear()
+        self.popup._has_been_active = True
+
+        event = QEvent(QEvent.Type.ActivationChange)
+        self.popup.changeEvent(event)
+
+        self.assertEqual(len(submitted), 0)
+
+    def test_draft_fallback_recovery(self):
+        from PyQt6.QtCore import QEvent
+
+        self.popup._emit_note_submitted = MagicMock(side_effect=RuntimeError("Storage failure"))
+        self.popup.text_edit.setPlainText("Critical thought before crash")
+        self.popup.select_category("privesc")
+        self.popup._has_been_active = True
+
+        event = QEvent(QEvent.Type.ActivationChange)
+        self.popup.changeEvent(event)
+
+
+        self.assertIsNotNone(QuickNotePopup._cached_draft)
+        self.assertEqual(QuickNotePopup._cached_draft["text"], "Critical thought before crash")
+        self.assertEqual(QuickNotePopup._cached_draft["category"], "privesc")
+
+        # Now show at cursor and verify recovery banner
+        self.popup.show_at_cursor()
+        self.assertFalse(self.popup.recovery_banner.isHidden())
+
+        # Restore draft
+        self.popup.btn_restore_draft.click()
+        self.assertEqual(self.popup.text_edit.toPlainText(), "Critical thought before crash")
+        self.assertEqual(self.popup.current_category, "privesc")
+        self.assertIsNone(QuickNotePopup._cached_draft)
+        self.assertTrue(self.popup.recovery_banner.isHidden())
+
 
 class TestAppControllerAddButtonAndNotesIntegration(unittest.TestCase):
     def setUp(self):

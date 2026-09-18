@@ -29,6 +29,11 @@ class ClipboardMonitor(QObject):
         self._phase_provider: Optional[Callable[[], Optional[str]]] = None
         self._clipboard = None
 
+    @property
+    def is_recording(self) -> bool:
+        """Returns True if clipboard monitoring is actively capturing entries."""
+        return not self._is_paused
+
     def set_target_provider(self, provider: Callable[[], str]) -> None:
         self._target_provider = provider
 

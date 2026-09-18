@@ -717,6 +717,63 @@ class GeneralSettingsPage(QWidget):
 
         layout.addWidget(card_behavior)
 
+        # 1b. Workflow & Focus Section
+        lbl_workflow = QLabel(t("settings.lbl_workflow_section", "Workflow & Focus"))
+        lbl_workflow.setProperty("class", "SettingsSectionTitle")
+        layout.addWidget(lbl_workflow)
+
+        card_workflow = QFrame()
+        card_workflow.setProperty("class", "SettingsCard")
+        w_layout = QVBoxLayout(card_workflow)
+        w_layout.setSpacing(10)
+
+        row_recap = QHBoxLayout()
+        self.chk_recap = QCheckBox(
+            t("settings.chk_recap", "Show session recap banner after inactivity")
+        )
+        self.chk_recap.setChecked(self.config.get("recap_enabled", True))
+        row_recap.addWidget(self.chk_recap, stretch=1)
+
+        lbl_recap_min = QLabel(t("settings.lbl_recap_minutes", "Inactivity (min):"))
+        lbl_recap_min.setProperty("class", "FormLabel")
+        row_recap.addWidget(lbl_recap_min)
+
+        self.spin_recap_minutes = QSpinBox()
+        self.spin_recap_minutes.setRange(1, 120)
+        self.spin_recap_minutes.setValue(int(self.config.get("recap_inactivity_minutes", 10)))
+        row_recap.addWidget(self.spin_recap_minutes)
+        w_layout.addLayout(row_recap)
+
+        row_nudge = QHBoxLayout()
+        self.chk_nudge = QCheckBox(
+            t("settings.chk_nudge", "Subtle documentation nudge during long recordings")
+        )
+        self.chk_nudge.setChecked(self.config.get("nudge_enabled", True))
+        row_nudge.addWidget(self.chk_nudge, stretch=1)
+
+        lbl_nudge_min = QLabel(t("settings.lbl_nudge_minutes", "Interval (min):"))
+        lbl_nudge_min.setProperty("class", "FormLabel")
+        row_nudge.addWidget(lbl_nudge_min)
+
+        self.spin_nudge_minutes = QSpinBox()
+        self.spin_nudge_minutes.setRange(5, 180)
+        self.spin_nudge_minutes.setValue(int(self.config.get("nudge_interval_minutes", 25)))
+        row_nudge.addWidget(self.spin_nudge_minutes)
+        w_layout.addLayout(row_nudge)
+
+        row_badge = QHBoxLayout()
+        lbl_badge = QLabel(t("settings.lbl_badge_threshold", "Unprocessed items warning threshold:"))
+        lbl_badge.setProperty("class", "FormLabel")
+        row_badge.addWidget(lbl_badge, stretch=1)
+
+        self.spin_badge_threshold = QSpinBox()
+        self.spin_badge_threshold.setRange(1, 50)
+        self.spin_badge_threshold.setValue(int(self.config.get("badge_warning_threshold", 5)))
+        row_badge.addWidget(self.spin_badge_threshold)
+        w_layout.addLayout(row_badge)
+
+        layout.addWidget(card_workflow)
+
         lbl_updates = QLabel(t("settings.lbl_updates_section", "Application Updates"))
         lbl_updates.setProperty("class", "SettingsSectionTitle")
         layout.addWidget(lbl_updates)
@@ -1014,6 +1071,11 @@ class GeneralSettingsPage(QWidget):
             "obsidian_vault_path": self.txt_obsidian_vault.text().strip(),
             "obsidian_export_folder": self.txt_obsidian_folder.text().strip() or "CTF/SpectreHUD",
             "obsidian_open_after_export": self.chk_obsidian_open.isChecked(),
+            "recap_enabled": self.chk_recap.isChecked(),
+            "recap_inactivity_minutes": self.spin_recap_minutes.value(),
+            "nudge_enabled": self.chk_nudge.isChecked(),
+            "nudge_interval_minutes": self.spin_nudge_minutes.value(),
+            "badge_warning_threshold": self.spin_badge_threshold.value(),
         }
 
 

@@ -19,6 +19,7 @@ from ui.coordinators.shutdown_coordinator import ShutdownCoordinator
 from ui.styles import get_app_icon
 
 from ui.snipping_overlay import SnippingOverlay
+from ui.session_recap_banner import SessionRecapBanner
 from core.container import ServiceContainer
 
 logger = get_logger("main_window")
@@ -57,6 +58,7 @@ class MainWindow(QMainWindow):
 
         # Window Frame Manager for Frameless Resize & Dragging
         self.frame_manager = WindowFrameManager(self, self.config)
+        self._last_interaction_time = time.time()
         self._startup_mark(started_at, "frame manager ready")
 
         # Build UI Structure & Panels
@@ -190,6 +192,11 @@ class MainWindow(QMainWindow):
         # 1. Header Panel
         self.header_panel = HeaderPanel(self)
         hud_layout.addWidget(self.header_panel)
+
+        # 1b. Session Recap Banner
+        self.recap_banner = SessionRecapBanner(self)
+        self.recap_banner.hide()
+        hud_layout.addWidget(self.recap_banner)
 
         # 2. Search & Filter Pills Panel
         self.search_panel = SearchPanel(self)
@@ -441,6 +448,30 @@ class MainWindow(QMainWindow):
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if not self.frame_manager.handle_mouse_double_click(event):
             super().mouseDoubleClickEvent(event)
+
+    def event(self, event: QEvent) -> bool:
+        if event is not None and event.type() in (QEvent.Type.KeyPress, QEvent.Type.MouseButtonPress):
+            self._last_interaction_time = time.time()
+            if hasattr(self, "recap_banner") and self.recap_banner.isVisible():
+                self.recap_banner.hide()
+        return super().event(event)
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event is not None and event.type() == QEvent.Type.ActivationChange:
+            if self.isActiveWindow():
+                self._check_session_recap()
+        super().changeEvent(event)
+
+    def _check_session_recap(self) -> None:
+        if not self.config.get("recap_enabled", True):
+            return
+        threshold_sec = int(self.config.get("recap_inactivity_minutes", 10)) * 60
+        now = time.time()
+        if (now - self._last_interaction_time) >= threshold_sec:
+            if hasattr(self, "app") and self.app:
+                info = self.app.get_session_recap_info()
+                self.recap_banner.show_recap(info)
+        self._last_interaction_time = now
 
     def leaveEvent(self, event: QEvent) -> None:
         self.frame_manager.handle_leave(event)

@@ -41,6 +41,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "obsidian_vault_path": "",
     "obsidian_export_folder": "CTF/SpectreHUD",
     "obsidian_open_after_export": False,
+    "badge_warning_threshold": 5,
+    "recap_enabled": True,
+    "recap_inactivity_minutes": 10,
+    "nudge_enabled": True,
+    "nudge_interval_minutes": 25,
+    "loot_dialog_details_expanded": False,
 }
 
 
