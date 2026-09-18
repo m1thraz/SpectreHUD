@@ -98,7 +98,7 @@ More details:
 
 - [Architecture guide](docs/architecture.md)
 - [Desktop threat model and test scope](docs/threat_model.md)
-- [v2.1.9 release notes](docs/release_notes_v2.1.9.md)
+- [v2.2.0 release notes](docs/release_notes_v2.2.0.md)
 - [Pentest Mode](docs/pentest_mode.md)
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)

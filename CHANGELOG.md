@@ -6,6 +6,22 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-18
+
+### Added
+
+* **Capture and Continue**: Screenshots captured via global hotkey now preserve background execution without stealing desktop focus or forcibly switching views, confirming saves via non-intrusive HUD toast.
+* **Context Provenance**: Clipboard promotion to Loot and Quick Notes preserves captured phase and target provenance rather than overriding them with current active phase or heuristics.
+* **Session Recap & Resume**: Added persistent target display, last activity indicator, and a one-click `[Resume]` button on the Session Recap banner to quickly re-enter the interrupted work context.
+* **Focus Review Clear Decisions**: Streamlined Quick Note triage into four primary actions (`Loot`, `Report`, `Done`, `Later`), prioritizing fresh inbox notes ahead of postponed follow-ups.
+* **Deterministic Next Attention Item**: Introduced a single next attention item (prioritizing follow-up notes, inbox triage, and unlinked findings) directly visible in the recap banner.
+* **Fault-Tolerant Quick Loot**: Added automatic draft caching on dialog cancel/blur with a recovery banner and automatic title derivation from content first line.
+* **Findings Workspace Progressive Disclosure & Compact Overview**: Added compact findings overview with direct navigation and streamlined inspection.
+
+### Fixed
+
+* **Compositor & Rounded Corners on Zero Transparency**: Preserved `WA_TranslucentBackground` and antialiased rounded corners when background transparency or simulated glass intensity is set to zero on composited desktops (Windows DWM / composited Linux).
+
 ## [2.1.9] - 2026-09-16
 
 ### Added
@@ -386,7 +402,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...v2.2.0
 [2.1.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...v2.1.9
 [2.1.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...v2.1.8
 [2.1.7]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.6...v2.1.7

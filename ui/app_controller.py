@@ -478,7 +478,7 @@ class AppController(QObject):
                 markdown = self.report_ctrl.report_editor_tab.current_markdown()
             else:
                 markdown = self.report_ctrl.report_file_manager.load() or ""
-        from core.reporting.loot_sync import classify_loot_report_state
+        from core.reporting import classify_loot_report_state
 
         state = classify_loot_report_state(markdown, entries)
         unsynced_count = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
@@ -512,7 +512,7 @@ class AppController(QObject):
                     markdown = self.report_ctrl.report_editor_tab.current_markdown()
                 else:
                     markdown = self.report_ctrl.report_file_manager.load() or ""
-            from core.reporting.loot_sync import classify_loot_report_state
+            from core.reporting import classify_loot_report_state
 
             state = classify_loot_report_state(markdown, entries)
             unsynced_loot = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
@@ -573,7 +573,7 @@ class AppController(QObject):
                     markdown = self.report_ctrl.report_editor_tab.current_markdown()
                 else:
                     markdown = self.report_ctrl.report_file_manager.load() or ""
-            from core.reporting.loot_sync import classify_loot_report_state
+            from core.reporting import classify_loot_report_state
 
             state = classify_loot_report_state(markdown, entries)
             if state.missing:
