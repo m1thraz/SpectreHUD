@@ -855,6 +855,55 @@ def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_br
     assert 'body[data-report-profile="professional_print"] .report-finding {' not in interactive
 
 
+def test_professional_attack_path_renders_as_timeline_without_changing_interactive_html():
+    markdown = wrap_section_markdown(
+        """## 3. Attack Path
+
+The validated path from exposure to impact is summarized below.
+
+### Attack Chain
+
+1. **Reconnaissance & Enumeration**: Public API enumerated
+   - *Description:* An undocumented administrative route was discovered.
+   - *Finding:* Unauthenticated API access <!-- finding:finding_1 -->
+2. **Initial Access & Exploitation**: Administrative records retrieved
+   - *Description:* The route accepted requests without a valid session.
+   - *Finding:* Stored operator payload <!-- finding:finding_2 -->""",
+        "attack_path",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    assert '<div class="attack-path-timeline">' in professional
+    assert professional.count('class="attack-path-step"') == 2
+    assert '<div class="attack-path-node">01</div>' in professional
+    assert '<div class="attack-path-phase">Reconnaissance &amp; Enumeration</div>' in professional
+    assert "An undocumented administrative route was discovered." in professional
+    assert '<span class="attack-path-finding-label">Finding</span>' in professional
+    assert "finding:finding_1" not in professional
+    assert 'body[data-report-profile="professional_print"] .attack-path-step {' in professional
+
+    assert 'class="attack-path-timeline"' not in interactive
+    assert "<ol>" in interactive
+
+
+def test_professional_manual_attack_path_uses_neutral_step_label():
+    markdown = wrap_section_markdown(
+        "## Attack Path\n\n1. Enumerate the public endpoint.\n2. Validate impact.",
+        "attack_path",
+    )
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert '<div class="attack-path-phase">Step 01</div>' in professional
+    assert '<div class="attack-path-phase">Step 02</div>' in professional
+    assert "Reconnaissance" not in professional
+
+
 def test_professional_long_code_can_flow_across_pages_without_splitting_short_code():
     markdown = wrap_section_markdown(
         "## Findings\n\n" + "```bash\n" + "\n".join(["id"] * 36) + "\n```",

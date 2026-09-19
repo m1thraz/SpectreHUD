@@ -905,21 +905,78 @@ body[data-report-profile="professional_print"] .report-section h3 {
     font-weight: 650;
 }
 
-body[data-report-profile="professional_print"] .report-attack-path ol {
-    margin: 0;
-    padding: 1mm 0 1mm 24px;
-    border-left: 1px solid var(--report-border);
+body[data-report-profile="professional_print"] .attack-path-timeline {
+    margin: 5mm 0 2mm;
 }
 
-body[data-report-profile="professional_print"] .report-attack-path li {
-    margin: 0 0 12px;
-    padding-left: 8px;
+body[data-report-profile="professional_print"] .attack-path-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 10mm minmax(0, 1fr);
+    column-gap: 5mm;
+    padding: 0 0 8mm;
 }
 
-body[data-report-profile="professional_print"] .report-attack-path li::marker {
+body[data-report-profile="professional_print"] .attack-path-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 9mm;
+    bottom: 0;
+    left: calc(5mm - 0.5px);
+    width: 1px;
+    background: var(--report-border);
+}
+
+body[data-report-profile="professional_print"] .attack-path-node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 10mm;
+    height: 10mm;
+    align-items: center;
+    justify-content: center;
+    background: var(--report-bg);
+    border: 1.5px solid var(--report-accent);
+    border-radius: 50%;
+    color: var(--report-accent);
+    font: 700 8pt var(--font-mono, monospace);
+}
+
+body[data-report-profile="professional_print"] .attack-path-content {
+    min-width: 0;
+    padding: 0.5mm 0 0;
+}
+
+body[data-report-profile="professional_print"] .attack-path-phase {
+    color: var(--report-muted);
+    font-size: 7.25pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+body[data-report-profile="professional_print"] .attack-path-title {
+    margin-top: 1mm;
+    color: var(--report-text);
+    font-size: 11pt;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+body[data-report-profile="professional_print"] .attack-path-description,
+body[data-report-profile="professional_print"] .attack-path-finding {
+    margin: 2mm 0 0;
     color: var(--report-muted);
     font-size: 9pt;
-    font-weight: 650;
+}
+
+body[data-report-profile="professional_print"] .attack-path-finding-label {
+    margin-right: 2mm;
+    color: var(--report-accent);
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 body[data-report-profile="professional_print"] p {
@@ -1231,6 +1288,11 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
     body[data-report-profile="professional_print"] .finding-meta {
         break-after: avoid;
         page-break-after: avoid;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    body[data-report-profile="professional_print"] .attack-path-step {
         break-inside: avoid;
         page-break-inside: avoid;
     }

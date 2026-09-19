@@ -15,6 +15,7 @@ from core.reporting.export_result import (
     ExportResult,
 )
 from core.reporting.markdown import resolve_and_embed_images
+from core.reporting.attack_path_export import render_professional_attack_path
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
 from core.reporting.professional import (
@@ -90,11 +91,15 @@ class HtmlReportExporter:
                 if changed:
                     visible_number += 1
                     segment_markdown = renumbered
-            body = convert_markdown_with_findings(
-                strip_section_markers(segment_markdown),
-                project_dir=None,
-                start_index=finding_counter,
-            )
+            clean_segment_markdown = strip_section_markers(segment_markdown)
+            if segment.section_type == "attack_path":
+                body = render_professional_attack_path(clean_segment_markdown, language)
+            else:
+                body = convert_markdown_with_findings(
+                    clean_segment_markdown,
+                    project_dir=None,
+                    start_index=finding_counter,
+                )
             finding_counter += len(FINDING_START_RE.findall(segment_markdown))
             if not segment.is_structured:
                 if not has_structured_header:

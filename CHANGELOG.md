@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Changed
+
+* Redesigned the Professional Print attack path as a compact, print-safe vertical timeline with phase, description, and finding context.
+
 ## [2.2.1] - 2026-09-19
 
 ### Added

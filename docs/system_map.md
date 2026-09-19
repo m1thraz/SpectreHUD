@@ -15,8 +15,8 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 
 ## Report Export
 
-- Not immediately obvious: All exports consume the current Markdown text from the source editor; "Professional Print" segments it semantically and cleans up the presentation, whereas "Classic Web" renders it generically—neither path regenerates or saves `report.md`.
-- Known pitfall: Changes made in the editable live preview are only written back upon an explicit preview commit; export actions do not currently perform this commit themselves and may therefore export the source in its previous state.
+- Not immediately obvious: All exports consume the current Markdown text from the source editor; "Professional Print" segments it semantically and projects structured attack-path steps as a print-only timeline, whereas "Classic Web" renders the Markdown generically—neither path regenerates or saves `report.md`.
+- Export actions ask the Report Editor to commit an active editable live preview before reading the source Markdown; a rejected conversion-loss warning aborts the export instead of exporting stale or truncated content.
 - Known pitfall: Markdown, Obsidian, CherryTree, and visible HTML formats strip out internal section, finding, and loot markers; consequently, an export is not a lossless substitute for the synchronizable `report.md`.
 - Design rationale: Internal markers carry structural and synchronization identity but are intended to remain invisible in client-facing artifacts and must not be altered by the export process.
 

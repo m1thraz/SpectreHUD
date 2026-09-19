@@ -109,3 +109,4 @@ results.txt
 data/community_snippets.json
 data/community_*.json
 data/offensive_*.json
+/output/pdf
