@@ -42,24 +42,12 @@ Spectre is designed to reduce friction during testing, not to lock the finished 
 
 ## What it does
 
-- **Interactive cheatsheet** with reusable commands and live project variables
-- **Quick-Find Spotlight HUD** (`Ctrl+Alt+F`) for instant snippet search and clipboard copying without leaving your terminal
-- **Quick-IP popup** (`Ctrl+Alt+I`) to copy or change the active target without returning to the main window
-- **Clipboard History** for capturing useful terminal and browser output
-- **Quick Notes** with phase tagging and 1-click promotion into Loot
-- **Quick Loot** for structured findings, targets, severity, recommendations, and captured evidence
-- **Project-scoped screenshots** tied directly to the active engagement
-- **Markdown report editor** with source, split, and editable live-preview modes
-- **Add Missing Loot** to append newly captured findings without overwriting manual report edits
-- **Classic Web export** for full manual control over the final HTML
-- **Professional export** that restructures the report into a cleaner print-oriented format while remaining editable before PDF creation
-- **Obsidian and CherryTree handoff** for continuing the report or preserving engagement knowledge in your preferred note-taking workflow
-- **Markdown and portable exports**
-- **Global hotkeys** (`Ctrl+Alt+H/X/N/I/F/Q`)
-- **Tray integration**
-- **English/German UI**
-- **Built-in themes**, including Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night
-- **Optional encrypted Pentest Mode** project state
+- **Cheatsheet & Variable Engine**: Reusable command templates with live target/LHOST interpolation and dynamic parameter prompts.
+- **Spotlight & Quick-Popups**: Global hotkeys (`Ctrl+Alt+F/I/N/L/S`) for Quick-Find command search, Quick-IP target switching, Quick-Notes, and Quick-Loot without leaving external terminals.
+- **Continuous Capture Pipeline**: Clipboard history monitoring and project-scoped screenshots with 1-click promotion into structured findings.
+- **Live Markdown Report Editor**: Split and editable preview modes with non-destructive finding synchronization ("Add Missing Loot").
+- **Versatile Reporting & Handoff**: Professional print-ready PDF/HTML exports, classic web writeups, and direct Obsidian / CherryTree workspace export.
+- **Desktop Companion**: Tray integration, dark glass themes (Dracula, Tokyo Night, Catppuccin, Gruvbox), bilingual UI (EN/DE), and optional encrypted Pentest Mode.
 
 ### Cheatsheet & Community Snippets
 
@@ -67,8 +55,6 @@ To prevent antivirus false positives on packaged binaries (`.exe`, `.deb`), Spec
 
 - **Bundled Snippets (Default):** Pre-installed out of the box. Curated, antivirus-safe commands for recon, enumeration, and common assessment tasks.
 - **Community Snippets (Optional):** Available as a separate download on the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases) (`community_snippets.json`). Contains advanced, payload-heavy, and explicit pentesting commands. You can load them directly into your database with one click via the **Import** button in the Cheatsheet view.
-
-
 
 ## From capture to report
 
