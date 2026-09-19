@@ -84,8 +84,6 @@ into a material business risk.
 
 <!-- spectre:section:start:finding_section -->
 
-<!-- spectre:pagebreak -->
-
 ## 4. Technical Findings
 
 <!-- spectre:finding:start:finding-001 -->
@@ -189,8 +187,6 @@ Issue unique, scoped credentials per service and rotate the shared demonstration
 
 <!-- spectre:finding:end:finding-003 -->
 
-<!-- spectre:pagebreak -->
-
 <!-- spectre:finding:start:finding-004 -->
 ### Verbose Build Metadata
 
@@ -223,8 +219,6 @@ in authenticated operational tooling.
 <!-- spectre:finding:end:finding-004 -->
 
 <!-- spectre:section:end:finding_section -->
-
-<!-- spectre:pagebreak -->
 
 <!-- spectre:section:start:remediation_table -->
 

@@ -962,6 +962,36 @@ def test_professional_manual_attack_path_uses_neutral_step_label():
     assert "Reconnaissance" not in professional
 
 
+def test_professional_attack_path_preserves_unstructured_markdown_between_and_after_steps():
+    markdown = wrap_section_markdown(
+        """## Attack Path
+
+1. **Reconnaissance**: Enumerate the public endpoint
+   - *Description:* The public surface was mapped.
+
+Manual reviewer note between generated steps.
+
+2. **Initial Access**: Validate impact
+   - *Finding:* Synthetic access finding
+
+Manual conclusion after the final generated step.""",
+        "attack_path",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert professional.count('class="attack-path-step"') == 2
+    assert professional.count('class="attack-path-timeline"') == 2
+    assert (
+        professional.index("Enumerate the public endpoint")
+        < professional.index("Manual reviewer note between generated steps.")
+        < professional.index("Validate impact")
+        < professional.index("Manual conclusion after the final generated step.")
+    )
+
+
 def test_professional_long_code_can_flow_across_pages_without_splitting_short_code():
     markdown = wrap_section_markdown(
         "## Findings\n\n" + "```bash\n" + "\n".join(["id"] * 36) + "\n```",

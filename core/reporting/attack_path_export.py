@@ -10,7 +10,7 @@ from core.reporting.print_layout import PRINT_KEEP_TOGETHER
 
 
 _STEP_RE = re.compile(
-    r"^[ \t]*(\d+)\.\s+(.*?)(?=(?:\n[ \t]*\d+\.|\n[ \t]*##|\Z))",
+    r"^[ \t]*(\d+)\.\s+(.*?)(?=(?:\n[ \t]*\d+\.\s+|\n[ \t]*##|\n(?=\S)|\Z))",
     re.DOTALL | re.MULTILINE,
 )
 _PHASE_RE = re.compile(r"^\*\*(.*?)\*\*[:—\-]?\s*(.*)$")
@@ -76,13 +76,27 @@ def render_professional_attack_path(markdown: str, language: str) -> str:
         return convert_markdown_to_html(markdown)
 
     prefix = markdown[: matches[0].start()].rstrip()
-    suffix = markdown[matches[-1].end() :].strip()
     parts = [convert_markdown_to_html(prefix)] if prefix else []
-    steps = [
-        _step_html(position, match.group(2), language)
-        for position, match in enumerate(matches, start=1)
-    ]
-    parts.append(f'<div class="attack-path-timeline">{"".join(steps)}</div>')
+    pending_steps: list[str] = []
+    cursor = matches[0].start()
+
+    def flush_timeline() -> None:
+        if pending_steps:
+            parts.append(f'<div class="attack-path-timeline">{"".join(pending_steps)}</div>')
+            pending_steps.clear()
+
+    for position, match in enumerate(matches, start=1):
+        # Unstructured Markdown between generated steps is user-authored content,
+        # so it must remain visible instead of being absorbed by a timeline item.
+        gap = markdown[cursor : match.start()].strip()
+        if gap:
+            flush_timeline()
+            parts.append(convert_markdown_to_html(gap))
+        pending_steps.append(_step_html(position, match.group(2), language))
+        cursor = match.end()
+
+    flush_timeline()
+    suffix = markdown[cursor:].strip()
     if suffix:
         parts.append(convert_markdown_to_html(suffix))
     return "\n".join(part for part in parts if part)

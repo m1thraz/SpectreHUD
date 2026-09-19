@@ -19,6 +19,10 @@ semantic versioning.
 * Unified severity labels across Professional Print matrices, finding headers, summaries, and remediation tables, including calmer typography for summary totals.
 * Expanded internal pentest phase IDs to their localized full names in Professional Print findings matrices.
 
+### Fixed
+
+* Preserved manually added text between or after structured attack-path steps in Professional Print exports.
+
 ## [2.2.1] - 2026-09-19
 
 ### Added

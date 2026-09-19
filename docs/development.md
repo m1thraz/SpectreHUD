@@ -117,6 +117,12 @@ it cannot be combined with `--verbose`. Successful artifacts are deleted unless
 JUnit report. Calling `python scripts/run_tests.py` without a tier intentionally
 remains the complete, unfiltered final gate.
 
+For real-browser Professional Print validation, use the repeatable stress suite
+and review its PDF pages as described in
+[`report_export_stress_test.md`](report_export_stress_test.md). It exercises
+dense findings, large tables, oversized evidence, extended attack paths, and
+long metadata/media independently of the ordinary unit-test gate.
+
 The workflow-invariant modules, `test_smoke.py`, and Cheatsheet geometry are
 integration suites because their assertions depend on a composed `MainWindow`.
 The focused UI, container, i18n, adversarial, report, and single-instance
