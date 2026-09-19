@@ -3,9 +3,10 @@ Unit tests for QuickFindPopup spotlight search HUD.
 """
 
 from typing import List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QEvent, QPointF
+from PyQt6.QtGui import QMouseEvent
 
 from ui.quick_find_popup import QuickFindPopup
 
@@ -39,8 +40,62 @@ def test_quick_find_popup_init(qapp, mock_cheatsheet_ctrl, sample_variables):
     )
     assert popup.windowFlags() & Qt.WindowType.FramelessWindowHint
     assert popup.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
+    assert popup.layout().count() == 1
+    assert popup.layout().itemAt(0).widget() is popup.card
+    popup.show()
+    qapp.processEvents()
+    assert popup.card.width() >= 500
+    assert popup.card.height() >= 300
     assert popup.search_input.text() == ""
     assert popup._current_results == []
+    popup.close()
+
+
+def test_quick_find_margin_click_closes(qapp, mock_cheatsheet_ctrl, sample_variables):
+    popup = QuickFindPopup(
+        cheatsheet_controller=mock_cheatsheet_ctrl,
+        variable_provider=lambda: sample_variables,
+    )
+    popup.show()
+    qapp.processEvents()
+    assert popup.isVisible()
+
+    margin_event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(1.0, 1.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    popup.mousePressEvent(margin_event)
+    assert not popup.isVisible()
+
+
+def test_quick_find_focus_loss_dismissal(qapp, mock_cheatsheet_ctrl, sample_variables):
+    popup = QuickFindPopup(
+        cheatsheet_controller=mock_cheatsheet_ctrl,
+        variable_provider=lambda: sample_variables,
+    )
+    popup.show()
+    qapp.processEvents()
+    popup._has_been_active = True
+
+    event = QEvent(QEvent.Type.ActivationChange)
+    with patch.object(popup, "isActiveWindow", return_value=False):
+        popup.changeEvent(event)
+    assert not popup.isVisible()
+
+
+def test_quick_find_arm_autoclose(qapp, mock_cheatsheet_ctrl, sample_variables):
+    popup = QuickFindPopup(
+        cheatsheet_controller=mock_cheatsheet_ctrl,
+        variable_provider=lambda: sample_variables,
+    )
+    popup.show()
+    qapp.processEvents()
+    popup._has_been_active = False
+    popup._arm_autoclose()
+    assert popup._has_been_active
     popup.close()
 
 

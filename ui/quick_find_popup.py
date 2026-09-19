@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QApplication,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QEvent, QTimer
-from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QKeyEvent
+from PyQt6.QtGui import QColor, QCursor, QGuiApplication, QKeyEvent, QMouseEvent
 
 from core.i18n import t
 from core.snippets import TemplateEngine
@@ -230,6 +230,7 @@ class QuickFindPopup(QWidget):
         self.results_layout.addStretch()
 
         card_layout.addWidget(self.results_container, stretch=1)
+        outer_layout.addWidget(self.card)
 
     def eventFilter(self, watched, event: QEvent) -> bool:
         if watched == self.search_input and event.type() == QEvent.Type.KeyPress:
@@ -267,8 +268,15 @@ class QuickFindPopup(QWidget):
             return
         super().keyPressEvent(event)
 
-    def changeEvent(self, event: QEvent) -> None:
-        if event is not None and event.type() == event.Type.ActivationChange:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Dismisses popup if user clicks on the outer transparent margin."""
+        if not self.card.geometry().contains(event.pos()):
+            self.close()
+            return
+        super().mousePressEvent(event)
+
+    def changeEvent(self, event: Optional[QEvent]) -> None:
+        if event is not None and event.type() == QEvent.Type.ActivationChange:
             if self.isActiveWindow():
                 self._has_been_active = True
             elif self._has_been_active:
@@ -442,3 +450,9 @@ class QuickFindPopup(QWidget):
 
         self._force_focus_input()
         QTimer.singleShot(0, self._force_focus_input)
+        QTimer.singleShot(150, self._arm_autoclose)
+
+    def _arm_autoclose(self) -> None:
+        """Ensures the popup is marked active so focus-loss dismissal works reliably."""
+        if self.isVisible():
+            self._has_been_active = True
