@@ -42,7 +42,8 @@ Spectre is designed to reduce friction during testing, not to lock the finished 
 ## What it does
 
 - **Interactive cheatsheet** with reusable commands and live project variables
-- **Quick-IP popup** to copy or change the active target without returning to the main window
+- **Quick-Find Spotlight HUD** (`Ctrl+Alt+F`) for instant snippet search and clipboard copying without leaving your terminal
+- **Quick-IP popup** (`Ctrl+Alt+I`) to copy or change the active target without returning to the main window
 - **Clipboard History** for capturing useful terminal and browser output
 - **Quick Notes** with phase tagging and 1-click promotion into Loot
 - **Quick Loot** for structured findings, targets, severity, recommendations, and captured evidence
@@ -53,11 +54,18 @@ Spectre is designed to reduce friction during testing, not to lock the finished 
 - **Professional export** that restructures the report into a cleaner print-oriented format while remaining editable before PDF creation
 - **Obsidian and CherryTree handoff** for continuing the report or preserving engagement knowledge in your preferred note-taking workflow
 - **Markdown and portable exports**
-- **Global hotkeys** (`Ctrl+Alt+H/X/N/I/Q`)
+- **Global hotkeys** (`Ctrl+Alt+H/X/N/I/F/Q`)
 - **Tray integration**
 - **English/German UI**
 - **Built-in themes**, including Dracula, Catppuccin Mocha, Gruvbox, and Tokyo Night
 - **Optional encrypted Pentest Mode** project state
+
+### Cheatsheet & Community Snippets
+
+To prevent antivirus false positives on packaged binaries (`.exe`, `.deb`), SpectreHUD partitions its command collection into two tiers:
+
+- **Bundled Snippets (Default):** Pre-installed out of the box. Curated, antivirus-safe commands for recon, enumeration, and common assessment tasks.
+- **Community Snippets (Optional):** Available as a separate download on the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases) (`community_snippets.json`). Contains advanced, payload-heavy, and explicit pentesting commands. You can load them directly into your database with one click via the **Import** button in the Cheatsheet view.
 
 ## Why SpectreHUD
 
