@@ -613,6 +613,9 @@ def test_professional_severity_is_text_only_and_uses_existing_top_severity():
 
     assert '<span class="report-cover-severity severity-high">HIGH</span>' in professional
     assert '<span class="severity-pill severity-high">HIGH</span>' in professional
+    assert '<p class="report-severity-total"><strong>Total:</strong>' in professional
+    assert ".report-severity-total {" in professional
+    assert "font-size: 8.5px;" in professional
     assert not any(emoji in professional for emoji in ("🔴", "🟠", "🟡", "🟢", "🔵"))
     assert "🟠 HIGH</span>" in interactive
 
@@ -991,7 +994,13 @@ def test_professional_projects_status_and_phase_names_into_recognizable_generate
         manual, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
     assert "<td>Open</td>" in untouched
-    assert "<td>access</td>" in untouched
+    assert "<td>Initial Access &amp; Exploitation</td>" in untouched
+
+    summary_only = HtmlReportExporter.build_full_html(
+        summary, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert "<td>Open</td>" in summary_only
+    assert "<td>Initial Access &amp; Exploitation</td>" in summary_only
 
     custom_phase = source.replace("| access | Open |", "| customer-validation | Open |")
     custom = HtmlReportExporter.build_full_html(

@@ -309,7 +309,8 @@ def normalize_professional_severity(body_html: str) -> str:
     )
 
     def clean_total(match: re.Match[str]) -> str:
-        return match.group(1) + _SEVERITY_EMOJI_RE.sub("", match.group(2)) + match.group(3)
+        opening = match.group(1).replace("<p>", '<p class="report-severity-total">', 1)
+        return opening + _SEVERITY_EMOJI_RE.sub("", match.group(2)) + match.group(3)
 
     return re.sub(
         r"(<p><strong>(?:Total|Gesamt):</strong>)(.*?)(</p>)",
@@ -376,7 +377,7 @@ def _structured_findings(markdown: str) -> list[ReportFindingItem]:
 def synchronize_professional_findings_matrix(
     summary_markdown: str, report_markdown: str, language: str
 ) -> str:
-    """Correct only a recognizable generated matrix in the print projection."""
+    """Expand phase labels and project current statuses into a generated matrix."""
     lines = summary_markdown.splitlines(keepends=True)
     matrix_start = next(
         (
@@ -445,12 +446,12 @@ def synchronize_professional_findings_matrix(
         ),
         None,
     )
-    if matching is None:
-        return summary_markdown
-
     labels = STATUS_LABELS_DE if language.lower().startswith("de") else STATUS_LABELS_EN
-    for (index, match), finding in zip(rows, matching):
-        status = labels.get((finding.status or "open").lower(), labels["open"])
+    for position, (index, match) in enumerate(rows):
+        status = match.group(5).strip()
+        if matching is not None:
+            finding = matching[position]
+            status = labels.get((finding.status or "open").lower(), labels["open"])
         phase = phase_display_name(match.group(4), language).replace("|", "\\|")
         line_ending = "\r\n" if lines[index].endswith("\r\n") else "\n"
         if not lines[index].endswith(("\r\n", "\n")):

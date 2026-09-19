@@ -1125,6 +1125,23 @@ body[data-report-profile="professional_print"] .severity-medium { color: var(--s
 body[data-report-profile="professional_print"] .severity-low { color: var(--severity-low); }
 body[data-report-profile="professional_print"] .severity-info { color: var(--report-muted); }
 
+body[data-report-profile="professional_print"] .report-severity-total {
+    color: var(--report-muted);
+    font-size: 8.5px;
+    line-height: 1.6;
+}
+
+body[data-report-profile="professional_print"] .report-severity-total > strong {
+    margin-right: 4px;
+    color: var(--report-text);
+    font-size: 11px;
+}
+
+body[data-report-profile="professional_print"] .report-severity-total .severity-pill {
+    margin-left: 2px;
+    vertical-align: baseline;
+}
+
 body[data-report-profile="professional_print"] .report-finding {
     margin: 12mm 0 15mm;
     padding: 0 0 0 5mm;
