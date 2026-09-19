@@ -48,6 +48,15 @@ from core.reporting.print_layout import (
     annotate_table_print_layout,
     section_print_layout_attribute,
 )
+from core.reporting.pagination import (
+    DEFAULT_PRINTABLE_HEIGHT_MM,
+    PLANNED_PAGE_START_ATTRIBUTE,
+    PaginationBlock,
+    PaginationPlacement,
+    PaginationPlan,
+    PaginationPlanner,
+    plan_professional_pagination,
+)
 from core.reporting.section_markers import (
     KNOWN_SECTION_TYPES,
     RenderedSection,
@@ -223,6 +232,13 @@ __all__ = [
     "SECTION_PRINT_LAYOUT_POLICIES",
     "annotate_table_print_layout",
     "section_print_layout_attribute",
+    "DEFAULT_PRINTABLE_HEIGHT_MM",
+    "PLANNED_PAGE_START_ATTRIBUTE",
+    "PaginationBlock",
+    "PaginationPlacement",
+    "PaginationPlan",
+    "PaginationPlanner",
+    "plan_professional_pagination",
     "KNOWN_SECTION_TYPES",
     "RenderedSection",
     "normalize_leading_section_pagebreaks",

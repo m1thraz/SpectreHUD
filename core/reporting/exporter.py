@@ -22,6 +22,7 @@ from core.reporting.print_layout import (
     annotate_table_print_layout,
     section_print_layout_attribute,
 )
+from core.reporting.pagination import plan_professional_pagination
 from core.reporting.professional import (
     build_professional_cover_data,
     extract_report_title,
@@ -163,6 +164,8 @@ class HtmlReportExporter:
             raw_html = convert_markdown_with_findings(markdown_content, project_dir=project_dir)
             body_html = normalize_professional_remediation_table(raw_html)
         body_html = annotate_table_print_layout(body_html)
+        if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
+            body_html = plan_professional_pagination(body_html)
         title_from_md = extract_report_title(markdown_content)
         pname = (
             project_name

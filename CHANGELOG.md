@@ -14,6 +14,7 @@ semantic versioning.
 
 * Improved Professional Print pagination by anchoring leading manual page breaks at clean section boundaries.
 * Added semantic print rules for sections, findings, attack paths, tables, code blocks, blockquotes, and screenshots.
+* Added automatic Professional Print pagination planning at safe semantic content boundaries.
 * Redesigned the Professional Print attack path as a compact, print-safe vertical timeline with phase, description, and finding context.
 * Unified severity labels across Professional Print matrices, finding headers, summaries, and remediation tables, including calmer typography for summary totals.
 * Expanded internal pentest phase IDs to their localized full names in Professional Print findings matrices.

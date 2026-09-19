@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -82,28 +83,60 @@ def _find_pdftoppm(override: str | None) -> Path:
     return renderer
 
 
-def _render_pdf(browser: Path, html_path: Path, pdf_path: Path) -> None:
+def _render_pdf(
+    browser: Path,
+    html_path: Path,
+    pdf_path: Path,
+    *,
+    temp_dir: Path | None = None,
+) -> None:
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     pdf_path.unlink(missing_ok=True)
-    subprocess.run(
-        [
-            str(browser),
-            "--headless=new",
-            "--disable-gpu",
-            "--no-pdf-header-footer",
-            f"--print-to-pdf={pdf_path}",
-            html_path.as_uri(),
-        ],
-        check=True,
-    )
+    # A dedicated profile prevents an already-running desktop browser from
+    # swallowing the headless request without producing the requested file.
+    with tempfile.TemporaryDirectory(
+        prefix="spectrehud-sample-browser-",
+        dir=temp_dir,
+        ignore_cleanup_errors=True,
+    ) as profile_dir:
+        completed = subprocess.run(
+            [
+                str(browser),
+                "--headless",
+                "--disable-gpu",
+                "--no-first-run",
+                f"--user-data-dir={profile_dir}",
+                "--no-pdf-header-footer",
+                f"--print-to-pdf={pdf_path}",
+                html_path.as_uri(),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline:
+            if pdf_path.is_file() and pdf_path.stat().st_size > 0:
+                break
+            time.sleep(0.1)
     if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
-        raise RuntimeError(f"Browser did not create {pdf_path}")
+        diagnostics = (completed.stderr or completed.stdout).strip()
+        detail = f": {diagnostics}" if diagnostics else ""
+        raise RuntimeError(f"Browser did not create {pdf_path}{detail}")
 
 
-def _render_preview(pdftoppm: Path, pdf_path: Path, preview_path: Path) -> None:
+def _render_preview(
+    pdftoppm: Path,
+    pdf_path: Path,
+    preview_path: Path,
+    *,
+    temp_dir: Path | None = None,
+) -> None:
     preview_path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="spectrehud-sample-preview-") as temp_dir:
-        prefix = Path(temp_dir) / "preview"
+    with tempfile.TemporaryDirectory(
+        prefix="spectrehud-sample-preview-", dir=temp_dir
+    ) as preview_temp_dir:
+        prefix = Path(preview_temp_dir) / "preview"
         subprocess.run(
             [
                 str(pdftoppm),
@@ -139,6 +172,7 @@ def generate_sample_report(
     *,
     browser: Path,
     pdftoppm: Path,
+    temp_dir: Path | None = None,
 ) -> None:
     markdown = source_path.read_text(encoding="utf-8")
     html = HtmlReportExporter.build_full_html(
@@ -148,20 +182,22 @@ def generate_sample_report(
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
         category="pentest",
     )
-    with tempfile.TemporaryDirectory(prefix="spectrehud-sample-report-") as temp_dir:
-        staging_dir = Path(temp_dir)
+    with tempfile.TemporaryDirectory(
+        prefix="spectrehud-sample-report-", dir=temp_dir
+    ) as report_temp_dir:
+        staging_dir = Path(report_temp_dir)
         html_path = staging_dir / "SpectreHUD-Sample-Report.html"
         staged_pdf = staging_dir / pdf_path.name
         staged_preview = staging_dir / preview_path.name
         html_path.write_text(html, encoding="utf-8")
-        _render_pdf(browser, html_path, staged_pdf)
+        _render_pdf(browser, html_path, staged_pdf, temp_dir=temp_dir)
         report = preflight_pdf(
             staged_pdf,
             expected_page_count=8,
             expected_page_size=(595.28, 841.89),
             required_phrases=SAMPLE_REQUIRED_PHRASES,
         )
-        _render_preview(pdftoppm, staged_pdf, staged_preview)
+        _render_preview(pdftoppm, staged_pdf, staged_preview, temp_dir=temp_dir)
         _publish_artifact(staged_pdf, pdf_path)
         _publish_artifact(staged_preview, preview_path)
     print(
@@ -177,6 +213,7 @@ def main() -> int:
     parser.add_argument("--preview", type=Path, default=DEFAULT_PREVIEW)
     parser.add_argument("--browser", help="Path to Chrome, Chromium, or Edge")
     parser.add_argument("--pdftoppm", help="Path to Poppler pdftoppm")
+    parser.add_argument("--temp-dir", type=Path, help="Optional temporary workspace directory")
     args = parser.parse_args()
 
     generate_sample_report(
@@ -185,6 +222,7 @@ def main() -> int:
         args.preview.resolve(),
         browser=_find_browser(args.browser),
         pdftoppm=_find_pdftoppm(args.pdftoppm),
+        temp_dir=args.temp_dir.resolve() if args.temp_dir else None,
     )
     print(f"Generated {args.output}")
     print(f"Generated {args.preview}")

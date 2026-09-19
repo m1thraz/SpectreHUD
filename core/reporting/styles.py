@@ -633,6 +633,11 @@ REPORT_PRINT_CSS = """
         page-break-inside: auto !important;
     }
 
+    [data-print-plan~="page-start"] {
+        break-before: page !important;
+        page-break-before: always !important;
+    }
+
     /* Manual page break marker: forces a new page and hides screen styling */
     .spectre-page-break {
         display: block !important;

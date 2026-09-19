@@ -52,7 +52,7 @@ def test_sample_generation_preserves_published_artifacts_when_preflight_fails(
     monkeypatch.setattr(
         sample_generator,
         "_render_pdf",
-        lambda _browser, _html, staged: staged.write_bytes(b"invalid-pdf"),
+        lambda _browser, _html, staged, **_kwargs: staged.write_bytes(b"invalid-pdf"),
     )
     monkeypatch.setattr(
         sample_generator,
@@ -82,7 +82,7 @@ def test_sample_generation_publishes_only_validated_artifacts(tmp_path, monkeypa
     monkeypatch.setattr(
         sample_generator,
         "_render_pdf",
-        lambda _browser, _html, staged: staged.write_bytes(b"validated-pdf"),
+        lambda _browser, _html, staged, **_kwargs: staged.write_bytes(b"validated-pdf"),
     )
     monkeypatch.setattr(
         sample_generator,
@@ -92,7 +92,7 @@ def test_sample_generation_publishes_only_validated_artifacts(tmp_path, monkeypa
     monkeypatch.setattr(
         sample_generator,
         "_render_preview",
-        lambda _renderer, _pdf, staged: staged.write_bytes(b"validated-preview"),
+        lambda _renderer, _pdf, staged, **_kwargs: staged.write_bytes(b"validated-preview"),
     )
 
     sample_generator.generate_sample_report(
@@ -105,3 +105,32 @@ def test_sample_generation_publishes_only_validated_artifacts(tmp_path, monkeypa
 
     assert output.read_bytes() == b"validated-pdf"
     assert preview.read_bytes() == b"validated-preview"
+
+
+def test_headless_pdf_render_uses_an_isolated_browser_profile(tmp_path, monkeypatch):
+    html_path = tmp_path / "report.html"
+    pdf_path = tmp_path / "report.pdf"
+    html_path.write_text("<html></html>", encoding="utf-8")
+    captured: list[list[str]] = []
+
+    def render(command, *, check, capture_output, text):
+        assert check is True
+        assert capture_output is True
+        assert text is True
+        captured.append(command)
+        output_arg = next(arg for arg in command if arg.startswith("--print-to-pdf="))
+        Path(output_arg.split("=", 1)[1]).write_bytes(b"pdf")
+        return SimpleNamespace(stdout="", stderr="")
+
+    monkeypatch.setattr(sample_generator.subprocess, "run", render)
+
+    browser_temp = tmp_path / "browser-temp"
+    browser_temp.mkdir()
+    sample_generator._render_pdf(
+        Path("browser"), html_path, pdf_path, temp_dir=browser_temp
+    )
+
+    assert pdf_path.read_bytes() == b"pdf"
+    assert "--headless" in captured[0]
+    profile_arg = next(arg for arg in captured[0] if arg.startswith("--user-data-dir="))
+    assert str(browser_temp) in profile_arg
