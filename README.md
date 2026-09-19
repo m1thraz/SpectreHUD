@@ -65,6 +65,19 @@ Spectre keeps the documentation workflow connected from structured findings to t
 | [![Loot organized by pentest phase](assets/loot.png)](assets/loot.png) | [![Report editor with generated findings](assets/report_editor.png)](assets/report_editor.png) | [![Professional print-oriented report output](assets/professional_report.png)](assets/professional_report.png) |
 | Notes and captured evidence become structured Loot. | Generate the report and keep editing it as the engagement evolves. | Let Spectre clean up the structure, make final edits, then print to PDF. |
 
+## Example professional report
+
+[![Preview of the synthetic SpectreHUD Professional Print report](docs/examples/SpectreHUD-Sample-Report-preview.png)](docs/examples/SpectreHUD-Sample-Report.pdf)
+
+Open the [complete sample report](docs/examples/SpectreHUD-Sample-Report.pdf) to see the
+Professional Print output from cover page through findings, attack path, remediation plan,
+and appendix. Every organization, system, account, observation, and evidence item is
+obviously fictional and uses reserved example domains and documentation networks.
+
+The [Markdown source](docs/examples/sample-report-source.md) and
+[generation script](scripts/generate_sample_report.py) are included so the showcase can be
+regenerated after export changes instead of being maintained as a hand-edited PDF.
+
 ## Engineering focus
 
 SpectreHUD is intentionally a **single-user desktop application**.

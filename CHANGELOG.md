@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Added a fully synthetic Professional Print example report, README preview, and reproducible generation workflow.
+
 ### Changed
 
 * Redesigned the Professional Print attack path as a compact, print-safe vertical timeline with phase, description, and finding context.
