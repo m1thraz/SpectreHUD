@@ -1,7 +1,12 @@
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from core.reporting.exporter import HtmlReportExporter
 from core.reporting.profiles import ReportExportProfile
+from scripts import generate_sample_report as sample_generator
+from scripts.report_pdf_preflight import PdfPreflightError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,3 +37,71 @@ def test_public_sample_report_is_clearly_synthetic_and_exportable():
     assert "Reconnaissance &amp; Enumeration" in rendered
     assert "Administrative Export Authorization Bypass" in rendered
     assert "Stored Operator Note Injection" in rendered
+
+
+def test_sample_generation_preserves_published_artifacts_when_preflight_fails(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "source.md"
+    output = tmp_path / "sample.pdf"
+    preview = tmp_path / "preview.png"
+    source.write_text("# Synthetic report", encoding="utf-8")
+    output.write_bytes(b"last-good-pdf")
+    preview.write_bytes(b"last-good-preview")
+
+    monkeypatch.setattr(
+        sample_generator,
+        "_render_pdf",
+        lambda _browser, _html, staged: staged.write_bytes(b"invalid-pdf"),
+    )
+    monkeypatch.setattr(
+        sample_generator,
+        "preflight_pdf",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(PdfPreflightError("bad layout")),
+    )
+
+    with pytest.raises(PdfPreflightError, match="bad layout"):
+        sample_generator.generate_sample_report(
+            source,
+            output,
+            preview,
+            browser=Path("browser"),
+            pdftoppm=Path("pdftoppm"),
+        )
+
+    assert output.read_bytes() == b"last-good-pdf"
+    assert preview.read_bytes() == b"last-good-preview"
+
+
+def test_sample_generation_publishes_only_validated_artifacts(tmp_path, monkeypatch):
+    source = tmp_path / "source.md"
+    output = tmp_path / "sample.pdf"
+    preview = tmp_path / "preview.png"
+    source.write_text("# Synthetic report", encoding="utf-8")
+
+    monkeypatch.setattr(
+        sample_generator,
+        "_render_pdf",
+        lambda _browser, _html, staged: staged.write_bytes(b"validated-pdf"),
+    )
+    monkeypatch.setattr(
+        sample_generator,
+        "preflight_pdf",
+        lambda *_args, **_kwargs: SimpleNamespace(page_count=1, word_count=4),
+    )
+    monkeypatch.setattr(
+        sample_generator,
+        "_render_preview",
+        lambda _renderer, _pdf, staged: staged.write_bytes(b"validated-preview"),
+    )
+
+    sample_generator.generate_sample_report(
+        source,
+        output,
+        preview,
+        browser=Path("browser"),
+        pdftoppm=Path("pdftoppm"),
+    )
+
+    assert output.read_bytes() == b"validated-pdf"
+    assert preview.read_bytes() == b"validated-preview"

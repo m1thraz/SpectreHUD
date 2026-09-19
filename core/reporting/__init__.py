@@ -41,6 +41,7 @@ from core.reporting.profiles import ReportExportProfile
 from core.reporting.section_markers import (
     KNOWN_SECTION_TYPES,
     RenderedSection,
+    normalize_leading_section_pagebreaks,
     reconcile_section_markers,
     segment_report_markdown,
     wrap_section_markdown,
@@ -206,6 +207,7 @@ __all__ = [
     "ReportExportProfile",
     "KNOWN_SECTION_TYPES",
     "RenderedSection",
+    "normalize_leading_section_pagebreaks",
     "reconcile_section_markers",
     "segment_report_markdown",
     "wrap_section_markdown",

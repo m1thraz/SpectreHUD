@@ -29,6 +29,12 @@ SECTION_MARKER_RE = re.compile(
     r"^<!--\s*spectre:section:(?:start|end):[a-z0-9_-]+(?:[:][a-z0-9_-]+)*\s*-->\s*\r?\n?",
     re.IGNORECASE | re.MULTILINE,
 )
+_LEADING_SECTION_PAGEBREAK_RE = re.compile(
+    r"(?P<start>^<!--\s*spectre:section:start:"
+    r"[a-z0-9_-]+(?:[:][a-z0-9_-]+)*\s*-->[ \t]*(?:\r?\n)+)"
+    r"(?P<pagebreak><!--\s*spectre:pagebreak\s*-->[ \t]*(?:\r?\n)+)",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 @dataclass(frozen=True)
@@ -72,6 +78,17 @@ def wrap_section_markdown(markdown: str, identity: str) -> str:
 
 def strip_section_markers(markdown: str) -> str:
     return SECTION_MARKER_RE.sub("", markdown)
+
+
+def normalize_leading_section_pagebreaks(markdown: str) -> str:
+    """Place a section's leading manual break before its structural wrapper."""
+    if not markdown or "spectre:pagebreak" not in markdown:
+        return markdown
+
+    return _LEADING_SECTION_PAGEBREAK_RE.sub(
+        lambda match: f"{match.group('pagebreak')}{match.group('start')}",
+        markdown,
+    )
 
 
 def _next_content_line(markdown: str) -> str:

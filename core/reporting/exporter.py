@@ -36,7 +36,11 @@ from core.reporting.findings import (
     FINDING_START_RE,
     convert_markdown_with_findings,
 )
-from core.reporting.section_markers import segment_report_markdown, strip_section_markers
+from core.reporting.section_markers import (
+    normalize_leading_section_pagebreaks,
+    segment_report_markdown,
+    strip_section_markers,
+)
 
 logger = get_logger(__name__)
 
@@ -51,6 +55,7 @@ class HtmlReportExporter:
         cls, markdown_content: str, project_dir: Optional[Path], language: str
     ) -> str:
         markdown_content = strip_professional_generator_footer(markdown_content)
+        markdown_content = normalize_leading_section_pagebreaks(markdown_content)
         embedded_markdown = resolve_and_embed_images(markdown_content, project_dir)
         class_names = {
             "header_metadata": "report-header-metadata",

@@ -4,6 +4,7 @@ from core.reporting import HtmlReportExporter
 from core.reporting import ReportExportProfile
 from core.reporting import TemplateRepository
 from core.reporting import (
+    normalize_leading_section_pagebreaks,
     reconcile_section_markers,
     segment_report_markdown,
     wrap_section_markdown,
@@ -888,6 +889,25 @@ def test_professional_pagination_rules_are_profile_isolated_and_keep_explicit_br
     assert 'content: "APPENDIX";' in professional
     assert 'font: 7.25pt "Segoe UI", sans-serif;' in professional
     assert 'body[data-report-profile="professional_print"] .report-finding {' not in interactive
+
+
+def test_professional_moves_leading_pagebreak_before_semantic_section():
+    markdown = wrap_section_markdown(
+        "<!-- spectre:pagebreak -->\n\n## 5. Remediation\n\nPlan details.",
+        "remediation_table",
+    )
+
+    normalized = normalize_leading_section_pagebreaks(markdown)
+    professional = HtmlReportExporter.build_full_html(
+        markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+
+    assert normalized.index("spectre:pagebreak") < normalized.index("spectre:section:start")
+    assert professional.index('class="spectre-page-break"') < professional.index(
+        'class="report-section report-remediation"'
+    )
+    remediation = professional.split('class="report-section report-remediation"', 1)[1]
+    assert 'class="spectre-page-break"' not in remediation
 
 
 def test_professional_attack_path_renders_as_timeline_without_changing_interactive_html():

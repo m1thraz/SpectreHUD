@@ -16,11 +16,23 @@ if str(REPO_ROOT) not in sys.path:
 
 from core.reporting.exporter import HtmlReportExporter
 from core.reporting.profiles import ReportExportProfile
+from core.atomic_write import atomic_write_bytes
+from scripts.report_pdf_preflight import preflight_pdf
 
 
 DEFAULT_SOURCE = REPO_ROOT / "docs" / "examples" / "sample-report-source.md"
 DEFAULT_PDF = REPO_ROOT / "docs" / "examples" / "SpectreHUD-Sample-Report.pdf"
 DEFAULT_PREVIEW = REPO_ROOT / "docs" / "examples" / "SpectreHUD-Sample-Report-preview.png"
+SAMPLE_REQUIRED_PHRASES = (
+    "DEMO - SYNTHETIC DATA",
+    "Administrative Export Authorization Bypass",
+    "Stored Operator Note Injection",
+    "Shared Deployment Credential",
+    "Verbose Build Metadata",
+    "Reconnaissance & Enumeration",
+    "Privilege Escalation",
+    "Appendix & Evidence",
+)
 
 
 def _first_executable(candidates: list[str | Path | None]) -> Path | None:
@@ -114,6 +126,12 @@ def _render_preview(pdftoppm: Path, pdf_path: Path, preview_path: Path) -> None:
         shutil.copyfile(generated, preview_path)
 
 
+def _publish_artifact(staged_path: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not atomic_write_bytes(destination, staged_path.read_bytes()):
+        raise RuntimeError(f"Could not publish validated report artifact to {destination}")
+
+
 def generate_sample_report(
     source_path: Path,
     pdf_path: Path,
@@ -131,10 +149,25 @@ def generate_sample_report(
         category="pentest",
     )
     with tempfile.TemporaryDirectory(prefix="spectrehud-sample-report-") as temp_dir:
-        html_path = Path(temp_dir) / "SpectreHUD-Sample-Report.html"
+        staging_dir = Path(temp_dir)
+        html_path = staging_dir / "SpectreHUD-Sample-Report.html"
+        staged_pdf = staging_dir / pdf_path.name
+        staged_preview = staging_dir / preview_path.name
         html_path.write_text(html, encoding="utf-8")
-        _render_pdf(browser, html_path, pdf_path)
-    _render_preview(pdftoppm, pdf_path, preview_path)
+        _render_pdf(browser, html_path, staged_pdf)
+        report = preflight_pdf(
+            staged_pdf,
+            expected_page_count=8,
+            expected_page_size=(595.28, 841.89),
+            required_phrases=SAMPLE_REQUIRED_PHRASES,
+        )
+        _render_preview(pdftoppm, staged_pdf, staged_preview)
+        _publish_artifact(staged_pdf, pdf_path)
+        _publish_artifact(staged_preview, preview_path)
+    print(
+        f"Preflight passed: {report.page_count} pages, "
+        f"{report.word_count} positioned words"
+    )
 
 
 def main() -> int:
