@@ -283,6 +283,30 @@ def normalize_professional_severity(body_html: str) -> str:
         flags=re.DOTALL,
     )
 
+    def wrap_table_severity(match: re.Match[str]) -> str:
+        def wrap_cell(cell: re.Match[str]) -> str:
+            severity = cell.group(2).strip().lower()
+            badge = (
+                f'<span class="severity-pill severity-{severity}">'
+                f"{severity.upper()}</span>"
+            )
+            return f"{cell.group(1)}{badge}{cell.group(3)}"
+
+        return re.sub(
+            r"(<td[^>]*>)\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)\s*(</td>)",
+            wrap_cell,
+            match.group(0),
+            flags=re.IGNORECASE,
+        )
+
+    normalized = re.sub(
+        r'<table class="(?=[^"]*(?:findings-matrix|action-plan))[^"]*"[^>]*>'
+        r".*?</table>",
+        wrap_table_severity,
+        normalized,
+        flags=re.DOTALL,
+    )
+
     def clean_total(match: re.Match[str]) -> str:
         return match.group(1) + _SEVERITY_EMOJI_RE.sub("", match.group(2)) + match.group(3)
 
@@ -305,26 +329,9 @@ def normalize_professional_timestamps(body_html: str) -> str:
 
 
 def normalize_professional_remediation_table(body_html: str) -> str:
-    """Enhance remediation action-plan tables with severity badges and clean empty cells."""
+    """Clean empty cells in remediation action-plan tables."""
     if "action-plan" not in body_html:
         return body_html
-
-    def _replace_severity_cell(match: re.Match[str]) -> str:
-        open_tag = match.group(1)
-        raw_sev = match.group(2).strip()
-        close_tag = match.group(3)
-        sev_lower = raw_sev.lower()
-        if sev_lower in {"critical", "high", "medium", "low", "info"}:
-            badge = f'<span class="severity-pill severity-{sev_lower}">{raw_sev.upper()}</span>'
-            return f"{open_tag}{badge}{close_tag}"
-        return match.group(0)
-
-    body_html = re.sub(
-        r'(<tr[^>]*>\s*<td[^>]*>)\s*(CRITICAL|HIGH|MEDIUM|LOW|INFO)\s*(</td>)',
-        _replace_severity_cell,
-        body_html,
-        flags=re.IGNORECASE,
-    )
 
     body_html = re.sub(
         r'(<td[^>]*>)\s*([–—-])\s*(</td>)',

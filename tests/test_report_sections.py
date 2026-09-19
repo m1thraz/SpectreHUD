@@ -806,6 +806,38 @@ def test_professional_tables_receive_stable_layout_roles():
     assert "table-layout: fixed;" in professional
 
 
+def test_professional_findings_matrix_uses_the_shared_severity_badges():
+    executive = wrap_section_markdown(
+        """## 1. Executive Summary
+
+### Findings Matrix
+
+| # | Finding | Severity | Phase | Status |
+|---|---|---|---|---|
+| 1 | Remote code execution | CRITICAL | access | Open |
+| 2 | Stored scripting | HIGH | access | Open |
+| 3 | Weak credential policy | MEDIUM | privesc | In Progress |
+| 4 | Verbose banner | LOW | recon | Resolved |
+| 5 | Informational note | INFO | misc | Open |
+
+**Total:** <span class="severity-pill severity-critical">CRITICAL</span> 1 · <span class="severity-pill severity-high">HIGH</span> 1 · <span class="severity-pill severity-medium">MEDIUM</span> 1 · <span class="severity-pill severity-low">LOW</span> 1""",
+        "executive_summary",
+    )
+
+    professional = HtmlReportExporter.build_full_html(
+        executive, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    interactive = HtmlReportExporter.build_full_html(executive)
+
+    for severity in ("critical", "high", "medium", "low", "info"):
+        badge = f'<span class="severity-pill severity-{severity}">{severity.upper()}</span>'
+        assert badge in professional
+    assert "<td>CRITICAL</td>" not in professional
+    assert "<td>HIGH</td>" not in professional
+    assert "<td>CRITICAL</td>" in interactive
+    assert "<td>HIGH</td>" in interactive
+
+
 def test_professional_four_column_remediation_table_enhanced():
     remediation = wrap_section_markdown(
         """## 5. Remediation & Action Plan
