@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Optional
 from core.reporting.section_markers import segment_report_markdown
 from core.reporting.findings import FINDING_END_RE, FINDING_START_RE
 from core.reporting.report_finding import ReportFindingItem
+from core.reporting.report_executive_summary import phase_display_name
 from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
 
 
@@ -450,10 +451,14 @@ def synchronize_professional_findings_matrix(
     labels = STATUS_LABELS_DE if language.lower().startswith("de") else STATUS_LABELS_EN
     for (index, match), finding in zip(rows, matching):
         status = labels.get((finding.status or "open").lower(), labels["open"])
-        line = lines[index]
-        previous = match.group(5).strip()
-        if previous != status:
-            lines[index] = line.replace(f"| {previous} |", f"| {status} |", 1)
+        phase = phase_display_name(match.group(4), language).replace("|", "\\|")
+        line_ending = "\r\n" if lines[index].endswith("\r\n") else "\n"
+        if not lines[index].endswith(("\r\n", "\n")):
+            line_ending = ""
+        lines[index] = (
+            f"| {match.group(1).strip()} | {match.group(2).strip()} | "
+            f"{match.group(3).upper()} | {phase} | {status} |{line_ending}"
+        )
     return "".join(lines)
 
 

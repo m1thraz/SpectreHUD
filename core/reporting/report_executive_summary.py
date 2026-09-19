@@ -10,7 +10,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Dict, List
 
-from core.phases import get_phase
+from core.phases import get_phase, try_normalize_phase_key
 from core.reporting.charts import render_severity_counts
 from core.reporting.report_finding import ReportFindingItem
 from core.reporting.report_remediation import STATUS_LABELS_DE, STATUS_LABELS_EN
@@ -23,6 +23,18 @@ PHASE_NAMES_DE: Dict[str, str] = {
     "scripts": "Eigene Skripte & PoCs",
     "misc": "Sonstiges",
 }
+
+
+def phase_display_name(phase: str, language: str = "en") -> str:
+    """Return the canonical, localized long name for a persisted phase value."""
+    raw_phase = str(phase).strip()
+    phase_key = try_normalize_phase_key(raw_phase)
+    if phase_key is None:
+        return raw_phase
+    phase_obj = get_phase(phase_key)
+    if language.lower().startswith("de"):
+        return PHASE_NAMES_DE.get(phase_obj.key, phase_obj.long)
+    return phase_obj.long
 
 
 def is_meaningful_highlight_value(val: str | None) -> bool:
@@ -145,8 +157,7 @@ class ReportExecutiveSummary:
             sev = f.severity.lower()
             sev_counts[sev] += 1
             t = (f.title or "Unnamed").replace("|", "\\|").replace("\n", " ")
-            p_obj = get_phase(f.phase)
-            ph_name = PHASE_NAMES_DE.get(p_obj.key, p_obj.long) if language == "de" else p_obj.long
+            ph_name = phase_display_name(f.phase, language)
             ph = ph_name.replace("|", "\\|").replace("\n", " ")
             status_key = (f.status or "open").strip().lower()
             status_labels = STATUS_LABELS_DE if language == "de" else STATUS_LABELS_EN

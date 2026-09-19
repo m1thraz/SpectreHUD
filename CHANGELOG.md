@@ -10,6 +10,7 @@ semantic versioning.
 
 * Redesigned the Professional Print attack path as a compact, print-safe vertical timeline with phase, description, and finding context.
 * Unified severity labels across Professional Print matrices, finding headers, summaries, and remediation tables with the same color-coded badge treatment.
+* Expanded internal pentest phase IDs to their localized full names in Professional Print findings matrices.
 
 ## [2.2.1] - 2026-09-19
 

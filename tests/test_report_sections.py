@@ -949,9 +949,13 @@ def test_professional_long_code_can_flow_across_pages_without_splitting_short_co
     assert "break-inside: auto;" in html
 
 
-def test_professional_projects_current_status_into_only_recognizable_generated_matrix():
+def test_professional_projects_status_and_phase_names_into_recognizable_generated_matrix():
     finding = ReportFindingItem(
-        id="finding_1", title="Authentication bypass", severity="high", status="resolved"
+        id="finding_1",
+        title="Authentication bypass",
+        severity="high",
+        phase="access",
+        status="resolved",
     )
     summary = wrap_section_markdown(
         "## 1. Executive Summary\n\n### Findings Matrix\n\n"
@@ -971,9 +975,15 @@ def test_professional_projects_current_status_into_only_recognizable_generated_m
     professional = HtmlReportExporter.build_full_html(
         source, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
+    professional_de = HtmlReportExporter.build_full_html(
+        source, language="de", profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
     interactive = HtmlReportExporter.build_full_html(source)
     assert "<td>Resolved</td>" in professional
+    assert "<td>Initial Access &amp; Exploitation</td>" in professional
+    assert "<td>Initialer Zugriff &amp; Exploitation</td>" in professional_de
     assert "<td>Open</td>" in interactive
+    assert "<td>access</td>" in interactive
     assert "| access | Open |" in source
 
     manual = source.replace("Authentication bypass | HIGH", "Manual note | HIGH")
@@ -981,6 +991,13 @@ def test_professional_projects_current_status_into_only_recognizable_generated_m
         manual, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
     assert "<td>Open</td>" in untouched
+    assert "<td>access</td>" in untouched
+
+    custom_phase = source.replace("| access | Open |", "| customer-validation | Open |")
+    custom = HtmlReportExporter.build_full_html(
+        custom_phase, profile=ReportExportProfile.PROFESSIONAL_PRINT
+    )
+    assert "<td>customer-validation</td>" in custom
 
 
 def test_professional_finding_metadata_references_and_nested_code_evidence():
