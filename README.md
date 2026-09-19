@@ -67,17 +67,7 @@ To prevent antivirus false positives on packaged binaries (`.exe`, `.deb`), Spec
 - **Bundled Snippets (Default):** Pre-installed out of the box. Curated, antivirus-safe commands for recon, enumeration, and common assessment tasks.
 - **Community Snippets (Optional):** Available as a separate download on the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases) (`community_snippets.json`). Contains advanced, payload-heavy, and explicit pentesting commands. You can load them directly into your database with one click via the **Import** button in the Cheatsheet view.
 
-## Why SpectreHUD
 
-The core idea is not just to keep notes in one place, but to reduce interruptions between testing and documentation:
-
-- **Capture without stopping the workflow**
-- **Keep targets and commands one shortcut away**
-- **Promote raw observations into structured findings**
-- **Build the report during the engagement instead of afterward**
-- **Keep manual edits intact instead of regenerating everything**
-- **Capture live in Spectre, refine later in Obsidian, CherryTree, HTML, or Markdown**
-- **Finish in editable HTML before creating the final PDF**
 
 ## From capture to report
 
