@@ -554,8 +554,6 @@ REPORT_PRINT_CSS = """
         overflow-wrap: anywhere !important;
         word-break: break-word !important;
         max-height: none !important;
-        page-break-inside: auto;
-        break-inside: auto;
     }
 
     pre code, code {
@@ -579,42 +577,21 @@ REPORT_PRINT_CSS = """
         background-color: #f6f8fa !important;
         border-left: 4px solid #0969da !important;
         color: #57606a !important;
-        page-break-inside: avoid;
-        break-inside: avoid;
     }
 
     figure, .screenshot-container {
         background-color: #f6f8fa !important;
         border-color: #d0d7de !important;
-        page-break-inside: avoid;
-        break-inside: avoid;
     }
 
     .screenshot-img, img {
         max-width: 100% !important;
         height: auto !important;
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    .screenshot-caption, .screenshot-container p {
-        page-break-before: avoid;
-        break-before: avoid;
-    }
-
-    .finding-header, .finding-meta {
-        page-break-inside: avoid;
-        break-inside: avoid;
     }
 
     .table-container {
         overflow: visible !important;
         overflow-x: visible !important;
-    }
-
-    table {
-        page-break-inside: auto;
-        break-inside: auto;
     }
 
     thead {
@@ -625,16 +602,6 @@ REPORT_PRINT_CSS = """
         display: table-footer-group;
     }
 
-    tr, tbody tr {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
-    th, td {
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-
     th {
         background-color: #f6f8fa !important;
         color: #1f2328 !important;
@@ -642,6 +609,28 @@ REPORT_PRINT_CSS = """
 
     td {
         border-color: #d0d7de !important;
+    }
+
+    [data-print-layout~="page-start"] {
+        break-before: page !important;
+        page-break-before: always !important;
+    }
+
+    [data-print-layout~="keep-together"] {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    [data-print-layout~="keep-with-next"] {
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    [data-print-layout~="breakable"] {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
     }
 
     /* Manual page break marker: forces a new page and hides screen styling */
@@ -1313,63 +1302,20 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
-    body[data-report-profile="professional_print"] pre.report-code-long {
-        break-inside: auto;
-        page-break-inside: auto;
-    }
-
-    body[data-report-profile="professional_print"] table {
-        break-inside: auto;
-        page-break-inside: auto;
     }
 
     body[data-report-profile="professional_print"] thead {
         display: table-header-group;
     }
 
-    body[data-report-profile="professional_print"] tr,
-    body[data-report-profile="professional_print"] tbody tr {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
     body[data-report-profile="professional_print"] .report-appendix {
         padding-top: 8mm;
-    }
-
-    body[data-report-profile="professional_print"] [data-print-layout~="page-start"] {
-        break-before: page !important;
-        page-break-before: always !important;
-    }
-
-    body[data-report-profile="professional_print"] [data-print-layout~="keep-together"] {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-
-    body[data-report-profile="professional_print"] [data-print-layout~="keep-with-next"] {
-        break-after: avoid !important;
-        page-break-after: avoid !important;
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-
-    body[data-report-profile="professional_print"] blockquote,
-    body[data-report-profile="professional_print"] figure {
-        break-inside: avoid;
-        page-break-inside: avoid;
     }
 
     body[data-report-profile="professional_print"] img {
         max-width: 100%;
         max-height: 220mm;
         object-fit: contain;
-        break-inside: avoid;
-        page-break-inside: avoid;
     }
 }
 

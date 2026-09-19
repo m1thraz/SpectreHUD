@@ -18,7 +18,10 @@ from core.reporting.markdown import resolve_and_embed_images
 from core.reporting.attack_path_export import render_professional_attack_path
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
-from core.reporting.print_layout import section_print_layout_attribute
+from core.reporting.print_layout import (
+    annotate_table_print_layout,
+    section_print_layout_attribute,
+)
 from core.reporting.professional import (
     build_professional_cover_data,
     extract_report_title,
@@ -159,6 +162,7 @@ class HtmlReportExporter:
         else:
             raw_html = convert_markdown_with_findings(markdown_content, project_dir=project_dir)
             body_html = normalize_professional_remediation_table(raw_html)
+        body_html = annotate_table_print_layout(body_html)
         title_from_md = extract_report_title(markdown_content)
         pname = (
             project_name

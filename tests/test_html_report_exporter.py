@@ -49,7 +49,8 @@ curl -i http://10.10.10.10/admin
             '<code class="language-bash">curl -i http://10.10.10.10/admin</code>', html_out
         )
         self.assertIn(
-            "<blockquote>Important note about SQL injection vulnerability in search parameter.</blockquote>",
+            '<blockquote data-print-layout="keep-together">Important note about SQL '
+            "injection vulnerability in search parameter.</blockquote>",
             html_out,
         )
         self.assertIn("<table>", html_out)

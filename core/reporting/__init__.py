@@ -39,11 +39,13 @@ from core.reporting.markdown import (
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
 from core.reporting.print_layout import (
+    PRINT_BREAKABLE,
     PRINT_KEEP_TOGETHER,
     PRINT_KEEP_WITH_NEXT,
     PRINT_PAGE_START,
     SECTION_PRINT_LAYOUT_POLICIES,
     PrintLayoutPolicy,
+    annotate_table_print_layout,
     section_print_layout_attribute,
 )
 from core.reporting.section_markers import (
@@ -214,10 +216,12 @@ __all__ = [
     "render_report_html",
     "ReportExportProfile",
     "PrintLayoutPolicy",
+    "PRINT_BREAKABLE",
     "PRINT_PAGE_START",
     "PRINT_KEEP_TOGETHER",
     "PRINT_KEEP_WITH_NEXT",
     "SECTION_PRINT_LAYOUT_POLICIES",
+    "annotate_table_print_layout",
     "section_print_layout_attribute",
     "KNOWN_SECTION_TYPES",
     "RenderedSection",

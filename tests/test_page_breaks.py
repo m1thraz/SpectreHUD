@@ -93,23 +93,21 @@ class TestPrintCssRules(unittest.TestCase):
         self.assertIn("break-inside: avoid;", REPORT_PRINT_CSS)
 
     def test_tables_intelligent_pagination(self):
-        self.assertIn("table {", REPORT_PRINT_CSS)
-        self.assertIn("break-inside: auto;", REPORT_PRINT_CSS)
+        self.assertIn('[data-print-layout~="breakable"]', REPORT_PRINT_CSS)
+        self.assertIn("break-inside: auto !important;", REPORT_PRINT_CSS)
         self.assertIn("thead {", REPORT_PRINT_CSS)
         self.assertIn("display: table-header-group;", REPORT_PRINT_CSS)
         self.assertIn("tfoot {", REPORT_PRINT_CSS)
         self.assertIn("display: table-footer-group;", REPORT_PRINT_CSS)
-        self.assertIn("tr, tbody tr {", REPORT_PRINT_CSS)
-        self.assertIn("break-inside: avoid;", REPORT_PRINT_CSS)
+        self.assertIn('[data-print-layout~="keep-together"]', REPORT_PRINT_CSS)
 
     def test_figures_and_screenshots(self):
         self.assertIn("figure, .screenshot-container {", REPORT_PRINT_CSS)
-        self.assertIn(".screenshot-caption, .screenshot-container p {", REPORT_PRINT_CSS)
-        self.assertIn("page-break-before: avoid;", REPORT_PRINT_CSS)
+        self.assertIn('[data-print-layout~="keep-together"]', REPORT_PRINT_CSS)
 
     def test_finding_header_avoid_break(self):
-        self.assertIn(".finding-header, .finding-meta {", REPORT_PRINT_CSS)
-        self.assertIn("break-inside: avoid;", REPORT_PRINT_CSS)
+        self.assertIn('[data-print-layout~="keep-with-next"]', REPORT_PRINT_CSS)
+        self.assertIn("break-inside: avoid !important;", REPORT_PRINT_CSS)
 
     def test_spectre_page_break_print_styling(self):
         self.assertIn(".spectre-page-break {", REPORT_PRINT_CSS)

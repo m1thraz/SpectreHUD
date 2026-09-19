@@ -1,6 +1,7 @@
 """Contracts for semantic Professional Print layout directives."""
 
 from core.reporting import (
+    PRINT_BREAKABLE,
     PRINT_KEEP_TOGETHER,
     PRINT_KEEP_WITH_NEXT,
     PRINT_PAGE_START,
@@ -24,6 +25,42 @@ def test_print_layout_policy_serializes_composable_directives():
     assert PRINT_PAGE_START.html_attribute() == 'data-print-layout="page-start"'
     assert PRINT_KEEP_TOGETHER.html_attribute() == 'data-print-layout="keep-together"'
     assert PRINT_KEEP_WITH_NEXT.html_attribute() == 'data-print-layout="keep-with-next"'
+    assert PRINT_BREAKABLE.html_attribute() == 'data-print-layout="breakable"'
+
+
+def test_print_layout_policy_rejects_conflicting_fragmentation_rules():
+    import pytest
+
+    with pytest.raises(ValueError, match="keep-together and breakable"):
+        PrintLayoutPolicy(keep_together=True, breakable=True)
+
+
+def test_markdown_blocks_emit_semantic_print_directives():
+    markdown = """## Evidence
+
+| Item | Value |
+|---|---|
+| Target | portal.example.test |
+
+> Important evidence note.
+
+```text
+short evidence
+```
+
+![Evidence](evidence.png)
+"""
+
+    html = HtmlReportExporter.build_full_html(markdown)
+
+    assert '<table data-print-layout="breakable">' in html
+    assert '<tr data-print-layout="keep-together">' in html
+    assert '<blockquote data-print-layout="keep-together">' in html
+    assert '<pre data-print-layout="keep-together"><code class="language-text">' in html
+    assert (
+        '<div data-print-layout="keep-together" class="screenshot-container">' in html
+    )
+    assert '[data-print-layout~="breakable"]' in html
 
 
 def test_professional_sections_and_components_emit_semantic_print_directives():
@@ -75,21 +112,18 @@ Demonstration finding.
     ) in html
 
 
-def test_print_directive_css_is_scoped_to_professional_profile():
+def test_print_directive_css_is_shared_by_print_profiles():
     html = HtmlReportExporter.build_full_html(
         "# Report",
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
     )
 
     assert (
-        'body[data-report-profile="professional_print"] '
         '[data-print-layout~="page-start"]' in html
     )
     assert (
-        'body[data-report-profile="professional_print"] '
         '[data-print-layout~="keep-together"]' in html
     )
     assert (
-        'body[data-report-profile="professional_print"] '
         '[data-print-layout~="keep-with-next"]' in html
     )

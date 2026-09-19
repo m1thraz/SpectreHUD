@@ -801,8 +801,8 @@ def test_professional_tables_receive_stable_layout_roles():
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
     )
 
-    assert '<table class="findings-matrix">' in professional
-    assert '<table class="action-plan">' in professional
+    assert '<table class="findings-matrix" data-print-layout="breakable">' in professional
+    assert '<table class="action-plan" data-print-layout="breakable">' in professional
     assert ".findings-matrix th:nth-child(2)" in professional
     assert ".action-plan th:nth-child(2)" in professional
     assert ".action-plan td:nth-child(2) { width: 72%; }" in professional
@@ -858,7 +858,10 @@ def test_professional_four_column_remediation_table_enhanced():
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
     )
 
-    assert '<table class="action-plan action-plan-4col">' in professional
+    assert (
+        '<table class="action-plan action-plan-4col" data-print-layout="breakable">'
+        in professional
+    )
     assert 'class="severity-pill severity-critical"' in professional
     assert 'class="severity-pill severity-high"' in professional
     assert '<span class="report-empty-cell">–</span>' in professional
@@ -967,8 +970,11 @@ def test_professional_long_code_can_flow_across_pages_without_splitting_short_co
     html = HtmlReportExporter.build_full_html(
         markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
-    assert '<pre class="report-code-long"><code class="language-bash">' in html
-    assert 'body[data-report-profile="professional_print"] pre.report-code-long {' in html
+    assert (
+        '<pre class="report-code-long" data-print-layout="breakable">'
+        '<code class="language-bash">' in html
+    )
+    assert '[data-print-layout~="breakable"]' in html
     assert "break-inside: auto;" in html
 
 
@@ -1059,7 +1065,7 @@ def test_professional_finding_metadata_references_and_nested_code_evidence():
     assert "Accepted Risk" in html
     assert 'class="finding-references"' in html
     assert "CVE-2026-1234" in html
-    assert html.count("<pre>") == 1
+    assert html.count('<pre data-print-layout="keep-together">') == 1
     assert "echo before\n```\necho after" in html
     assert "spectre:evidence" not in html
     assert "spectre:finding" not in html

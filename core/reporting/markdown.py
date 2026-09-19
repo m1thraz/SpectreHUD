@@ -14,6 +14,7 @@ from core.reporting.loot_sync import (
     SPACER_REGEX,
     strip_report_markers,
 )
+from core.reporting.print_layout import PRINT_BREAKABLE, PRINT_KEEP_TOGETHER
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -275,7 +276,10 @@ class _MarkdownHtmlParser:
     def flush_blockquote(self) -> None:
         if self.in_blockquote and self.blockquote_lines:
             inner_text = "<br>".join([format_inline(bl) for bl in self.blockquote_lines])
-            self.html_lines.append(f"<blockquote>{inner_text}</blockquote>")
+            self.html_lines.append(
+                f"<blockquote {PRINT_KEEP_TOGETHER.html_attribute()}>"
+                f"{inner_text}</blockquote>"
+            )
             self.in_blockquote = False
             self.blockquote_lines = []
 
@@ -291,12 +295,13 @@ class _MarkdownHtmlParser:
         safe_lang = html.escape(safe_lang, quote=True)
         lang_class = f' class="language-{safe_lang}"' if safe_lang else ""
         # Long evidence must be allowed to continue on the next printed page.
-        pre_class = (
-            ' class="report-code-long"'
-            if len(self.code_block_lines) > 35 or len(raw_code) > 2000
-            else ""
+        is_long = len(self.code_block_lines) > 35 or len(raw_code) > 2000
+        pre_class = ' class="report-code-long"' if is_long else ""
+        layout = PRINT_BREAKABLE if is_long else PRINT_KEEP_TOGETHER
+        return (
+            f"<pre{pre_class} {layout.html_attribute()}>"
+            f"<code{lang_class}>{escaped_code}</code></pre>"
         )
-        return f"<pre{pre_class}><code{lang_class}>{escaped_code}</code></pre>"
 
     def _handle_code_block_fence(self, fence: str, language: str = "") -> None:
         if self.in_code_block:
@@ -398,7 +403,9 @@ class _MarkdownHtmlParser:
             raw_src = img_match.group(2)
             src = sanitize_url(raw_src, is_image=True)
             self.html_lines.append(
-                f'<div class="screenshot-container"><img src="{src}" alt="{alt}" class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
+                f"<div {PRINT_KEEP_TOGETHER.html_attribute()} "
+                f'class="screenshot-container"><img src="{src}" alt="{alt}" '
+                f'class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
             )
             return True
         return False
