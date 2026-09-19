@@ -30,9 +30,15 @@ class SnippetResultRow(QFrame):
 
     clicked = pyqtSignal(dict)
 
-    def __init__(self, snippet: Dict[str, Any], parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        snippet: Dict[str, Any],
+        variables: Optional[Dict[str, Any]] = None,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
         self.snippet = snippet
+        self.variables = variables or {}
         self._is_selected = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._init_ui()
@@ -67,9 +73,10 @@ class SnippetResultRow(QFrame):
 
         layout.addLayout(top_layout)
 
-        # Bottom line: Template preview (elided command preview)
-        template_text = self.snippet.get("template", "").replace("\n", " ").strip()
-        self.lbl_template = QLabel(template_text)
+        # Bottom line: Template preview (rendered with current variables)
+        template_raw = self.snippet.get("template", "").replace("\n", " ").strip()
+        rendered_preview = TemplateEngine.render(template_raw, self.variables)
+        self.lbl_template = QLabel(rendered_preview)
         self.lbl_template.setStyleSheet(
             f"color: {get_theme_color('TEXT_MUTED')}; font-family: monospace; font-size: 11px;"
         )
@@ -117,11 +124,13 @@ class QuickFindPopup(QWidget):
         self,
         cheatsheet_controller: Any,
         variable_provider: Optional[Callable[[], Dict[str, Any]]] = None,
+        config_manager: Optional[Any] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.cheatsheet_ctrl = cheatsheet_controller
         self.variable_provider = variable_provider or dict
+        self.config_manager = config_manager
         self._has_been_active = False
         self._current_results: List[Dict[str, Any]] = []
         self._result_widgets: List[SnippetResultRow] = []
@@ -329,8 +338,11 @@ class QuickFindPopup(QWidget):
 
         self.lbl_status.hide()
 
+        variables = self.variable_provider() if callable(self.variable_provider) else {}
         for idx, snip in enumerate(self._current_results):
-            row = SnippetResultRow(snip, parent=self.results_container)
+            row = SnippetResultRow(
+                snip, variables=variables, parent=self.results_container
+            )
             row.clicked.connect(self._copy_item)
             self.results_layout.insertWidget(idx, row)
             self._result_widgets.append(row)
@@ -363,7 +375,38 @@ class QuickFindPopup(QWidget):
     def _copy_item(self, snippet: Dict[str, Any]) -> None:
         template = snippet.get("template", "")
         variables = self.variable_provider() if callable(self.variable_provider) else {}
-        rendered = TemplateEngine.render(template, variables)
+        unresolved = TemplateEngine.extract_unresolved_placeholders(template, variables)
+
+        if unresolved:
+            cached_params: Dict[str, str] = {}
+            if self.config_manager and hasattr(self.config_manager, "session_param_cache"):
+                cached_params = self.config_manager.session_param_cache
+
+            self.hide()
+
+            from ui.param_prompt_dialog import ParamPromptDialog
+
+            dlg = ParamPromptDialog(
+                template=template,
+                variables=variables,
+                unresolved_params=unresolved,
+                cached_params=cached_params,
+                parent=None,
+            )
+
+            if dlg.exec():
+                custom_values = dlg.get_values()
+                if self.config_manager and hasattr(self.config_manager, "set_cached_param"):
+                    for k, v in custom_values.items():
+                        self.config_manager.set_cached_param(k, v)
+                rendered = TemplateEngine.render_with_custom(
+                    template, variables, custom_values
+                ).strip()
+            else:
+                self.close()
+                return
+        else:
+            rendered = TemplateEngine.render(template, variables).strip()
 
         clipboard = QApplication.clipboard()
         if clipboard is not None:
@@ -378,11 +421,14 @@ class QuickFindPopup(QWidget):
         self.snippet_copied.emit(rendered)
 
         # Brief visual feedback before closing
-        self.lbl_hint.setText(t("quick_find.copied", "Kopiert!"))
-        self.lbl_hint.setStyleSheet(
-            f"color: {get_theme_color('STATUS_SUCCESS')}; font-weight: bold; font-size: 11px;"
-        )
-        QTimer.singleShot(120, self.close)
+        if self.isVisible():
+            self.lbl_hint.setText(t("quick_find.copied", "Kopiert!"))
+            self.lbl_hint.setStyleSheet(
+                f"color: {get_theme_color('STATUS_SUCCESS')}; font-weight: bold; font-size: 11px;"
+            )
+            QTimer.singleShot(120, self.close)
+        else:
+            self.close()
 
     def _force_focus_input(self) -> None:
         if sys.platform == "win32":

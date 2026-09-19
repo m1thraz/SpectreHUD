@@ -124,6 +124,41 @@ def test_quick_find_search_enforces_max_5_results(qapp, mock_cheatsheet_ctrl, sa
     assert len(popup._result_widgets) == 5
     assert popup._selected_index == 0
     assert popup._result_widgets[0]._is_selected
+    # Verify variables are interpolated in preview label
+    assert "10.10.10.123" in popup._result_widgets[0].lbl_template.text()
+    assert "{{TARGET_IP}}" not in popup._result_widgets[0].lbl_template.text()
+    popup.close()
+
+
+def test_quick_find_unresolved_parameters_prompt(qapp, sample_variables):
+    ctrl = MagicMock()
+    ctrl.get_snippets.return_value = [
+        {
+            "id": "snip_unresolved",
+            "title": "Custom Scan",
+            "category": "recon",
+            "template": "nmap -i {{INTERFACE}} {{TARGET_IP}}",
+        }
+    ]
+    cfg = MagicMock()
+    cfg.session_param_cache = {"INTERFACE": "eth0"}
+
+    popup = QuickFindPopup(
+        cheatsheet_controller=ctrl,
+        variable_provider=lambda: sample_variables,
+        config_manager=cfg,
+    )
+    popup._on_search_changed("custom")
+
+    with patch("ui.param_prompt_dialog.ParamPromptDialog.exec", return_value=True), \
+         patch("ui.param_prompt_dialog.ParamPromptDialog.get_values", return_value={"INTERFACE": "eth0"}):
+        copied_signals: List[str] = []
+        popup.snippet_copied.connect(copied_signals.append)
+        popup._copy_selected()
+
+        assert len(copied_signals) == 1
+        assert "nmap -i eth0 10.10.10.123" == copied_signals[0]
+        cfg.set_cached_param.assert_called_once_with("INTERFACE", "eth0")
     popup.close()
 
 

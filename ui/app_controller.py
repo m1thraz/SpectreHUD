@@ -433,20 +433,28 @@ class AppController(QObject):
         """Opens the lightweight quick-find snippet HUD popup."""
         self._open_quick_find_popup()
 
+    def _get_quick_find_variables(self) -> Dict[str, Any]:
+        vars_dict = (
+            self.var_bar.get_variables()
+            if self.var_bar and hasattr(self.var_bar, "get_variables")
+            else {}
+        )
+        if hasattr(self, "config") and self.config and hasattr(self.config, "session_param_cache"):
+            merged = dict(self.config.session_param_cache)
+            merged.update(vars_dict)
+            return merged
+        return vars_dict
+
     def _open_quick_find_popup(self) -> None:
         if not hasattr(self, "cheatsheet_ctrl") or not self.cheatsheet_ctrl:
             return
         from ui.quick_find_popup import QuickFindPopup
 
         if not hasattr(self, "_quick_find_popup") or self._quick_find_popup is None:
-            var_provider = (
-                self.var_bar.get_variables
-                if self.var_bar and hasattr(self.var_bar, "get_variables")
-                else dict
-            )
             self._quick_find_popup = QuickFindPopup(
                 cheatsheet_controller=self.cheatsheet_ctrl,
-                variable_provider=var_provider,
+                variable_provider=self._get_quick_find_variables,
+                config_manager=self.config if hasattr(self, "config") else None,
                 parent=None,
             )
         self._quick_find_popup.show_at_cursor()
