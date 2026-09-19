@@ -18,6 +18,7 @@ from core.reporting.markdown import resolve_and_embed_images
 from core.reporting.attack_path_export import render_professional_attack_path
 from core.reporting.template import render_report_html
 from core.reporting.profiles import ReportExportProfile
+from core.reporting.print_layout import section_print_layout_attribute
 from core.reporting.professional import (
     build_professional_cover_data,
     extract_report_title,
@@ -127,8 +128,11 @@ class HtmlReportExporter:
                 )
                 body = body.replace("<table>", f'<table class="{table_class}{extra}">', 1)
             phase_attr = f' data-phase="{segment.category_id}"' if segment.category_id else ""
+            layout_attr = section_print_layout_attribute(segment.section_type)
+            layout_prefix = f"{layout_attr} " if layout_attr else ""
             html_segments.append(
-                f'<section class="report-section {class_names[segment.section_type]}"'
+                f"<section {layout_prefix}"
+                f'class="report-section {class_names[segment.section_type]}"'
                 f"{phase_attr}>{body}</section>"
             )
         body_html = normalize_professional_severity("\n".join(html_segments))

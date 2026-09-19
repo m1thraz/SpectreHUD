@@ -6,6 +6,7 @@ import html
 import re
 
 from core.reporting.markdown import convert_markdown_to_html, format_inline
+from core.reporting.print_layout import PRINT_KEEP_TOGETHER
 
 
 _STEP_RE = re.compile(
@@ -58,7 +59,8 @@ def _step_html(number: int, body: str, language: str) -> str:
         )
 
     return (
-        '<article class="attack-path-step">'
+        f"<article {PRINT_KEEP_TOGETHER.html_attribute()} "
+        'class="attack-path-step">'
         f'<div class="attack-path-node">{number:02d}</div>'
         '<div class="attack-path-content">'
         f'<div class="attack-path-phase">{html.escape(label)}</div>'

@@ -1301,19 +1301,6 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         page-break-inside: auto;
     }
 
-    body[data-report-profile="professional_print"] .finding-header,
-    body[data-report-profile="professional_print"] .finding-meta {
-        break-after: avoid;
-        page-break-after: avoid;
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
-    body[data-report-profile="professional_print"] .attack-path-step {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
     body[data-report-profile="professional_print"] .finding-description h4,
     body[data-report-profile="professional_print"] .finding-recommendation h4,
     body[data-report-profile="professional_print"] .finding-references h4 {
@@ -1351,9 +1338,24 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
     }
 
     body[data-report-profile="professional_print"] .report-appendix {
-        break-before: page;
-        page-break-before: always;
         padding-top: 8mm;
+    }
+
+    body[data-report-profile="professional_print"] [data-print-layout~="page-start"] {
+        break-before: page !important;
+        page-break-before: always !important;
+    }
+
+    body[data-report-profile="professional_print"] [data-print-layout~="keep-together"] {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    body[data-report-profile="professional_print"] [data-print-layout~="keep-with-next"] {
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
 
     body[data-report-profile="professional_print"] blockquote,

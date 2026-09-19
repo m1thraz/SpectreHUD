@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from core.reporting.markdown import convert_markdown_to_html, resolve_and_embed_images
+from core.reporting.print_layout import PRINT_KEEP_WITH_NEXT
 
 
 FINDING_START_RE = re.compile(
@@ -156,9 +157,11 @@ def _semantic_finding_html(body_html: str, finding_id: Optional[str] = None) -> 
 
     return (
         f'<article class="report-finding{severity_class}">'
-        '<header class="finding-header">'
+        f"<div {PRINT_KEEP_WITH_NEXT.html_attribute()} "
+        'class="finding-lead"><header class="finding-header">'
         f"{styled_heading}{header_severity}</header>"
-        f"{metadata}{body_html}{'</section>' if description or recommendation or references else ''}</article>"
+        f"{metadata}</div>{body_html}"
+        f"{'</section>' if description or recommendation or references else ''}</article>"
     )
 
 
