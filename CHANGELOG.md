@@ -6,6 +6,18 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-09-19
+
+### Added
+
+* **Quick-Find Spotlight HUD**: Lightweight spotlight popup triggered via global hotkey (`Ctrl+Alt+F`) for lightning-fast command search across all cheatsheet categories with instant clipboard copying.
+* **Live Variable Interpolation in Quick-Find**: Renders active project variables (`TARGET_IP`, `LHOST`, `PORT`, `URL`, `WORDLIST`, etc.) directly in the Quick-Find snippet preview list.
+* **Interactive Parameter Prompt & Session Cache in Quick-Find**: Automatically prompts via `ParamPromptDialog` for unpopulated command placeholders (`{{INTERFACE}}`, `{{FILE}}`, etc.) and seamlessly integrates with `session_param_cache`.
+
+### Fixed
+
+* **Quick-Find Layout & Dismissal**: Resolved an issue where the Quick-Find popup card was not added to the window layout (rendering as an unmanaged 100x30 dark bar), and ensured reliable focus-loss and margin-click dismissal.
+
 ## [2.2.0] - 2026-09-18
 
 ### Added
@@ -402,7 +414,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...v2.2.0
 [2.1.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...v2.1.9
 [2.1.8]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.7...v2.1.8
