@@ -113,6 +113,22 @@ def test_html_adapter_adds_idempotent_soft_break_at_finding_boundary():
     assert plan_professional_pagination(planned, printable_height_mm=100.0) == planned
 
 
+def test_html_adapter_allows_medium_finding_to_use_remaining_page_space():
+    html = (
+        '<section class="report-section report-findings">'
+        "<h2>Technical Findings</h2>"
+        f"<p>{'context ' * 10}</p>"
+        '<article class="report-finding">'
+        '<div data-print-layout="keep-with-next" class="finding-lead">Finding lead</div>'
+        f"<p>{'finding detail ' * 25}</p>"
+        "</article></section>"
+    )
+
+    planned = plan_professional_pagination(html, printable_height_mm=115.0)
+
+    assert '<article class="report-finding" data-print-plan="page-start">' not in planned
+
+
 def test_html_adapter_preserves_manual_break_as_hard_reset():
     html = (
         '<section class="report-section report-scope">'
@@ -140,7 +156,7 @@ def test_html_adapter_leaves_atomic_fragmentation_to_semantic_css():
     assert 'data-print-layout="keep-together"' in planned
 
 
-def test_sample_without_manual_breaks_plans_last_finding_boundary():
+def test_sample_without_manual_breaks_keeps_last_finding_lead_with_its_body():
     source_path = Path(__file__).resolve().parents[1] / "docs" / "examples" / "sample-report-source.md"
     markdown = source_path.read_text(encoding="utf-8").replace(
         "<!-- spectre:pagebreak -->", ""
@@ -152,10 +168,8 @@ def test_sample_without_manual_breaks_plans_last_finding_boundary():
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
     )
 
-    assert (
-        '<article class="report-finding severity-low" data-print-plan="page-start">'
-        in rendered
-    )
+    last_finding = rendered.split('<article class="report-finding severity-low"', 1)[1]
+    assert '<div data-print-layout="keep-with-next" class="finding-lead">' in last_finding
 
 
 def test_exporter_applies_planner_only_to_professional_profile(monkeypatch):

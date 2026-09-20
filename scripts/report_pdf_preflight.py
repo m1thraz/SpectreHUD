@@ -17,10 +17,19 @@ class PdfWord:
 
 
 @dataclass(frozen=True)
+class PdfImage:
+    x0: float
+    x1: float
+    top: float
+    bottom: float
+
+
+@dataclass(frozen=True)
 class PdfPage:
     width: float
     height: float
     words: tuple[PdfWord, ...]
+    images: tuple[PdfImage, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -47,6 +56,9 @@ def analyze_pdf_pages(
     min_words_per_page: int = 8,
     safe_edge_margin: float = 8.0,
     size_tolerance: float = 2.0,
+    min_main_content_height_ratio: float = 0.04,
+    low_coverage_word_limit: int = 24,
+    running_content_margin: float = 36.0,
 ) -> PdfPreflightReport:
     """Check page geometry and visible text without depending on a PDF backend."""
     issues: list[str] = []
@@ -76,6 +88,30 @@ def analyze_pdf_pages(
             issues.append(
                 f"page {page_number} looks unexpectedly sparse ({len(page.words)} words)"
             )
+
+        main_words = tuple(
+            word
+            for word in page.words
+            if word.bottom > running_content_margin
+            and word.top < page.height - running_content_margin
+        )
+        main_boxes = [
+            (word.x0, word.x1, word.top, word.bottom) for word in main_words
+        ] + [
+            (image.x0, image.x1, image.top, image.bottom)
+            for image in page.images
+            if image.bottom > running_content_margin
+            and image.top < page.height - running_content_margin
+        ]
+        if main_boxes and len(main_words) <= low_coverage_word_limit:
+            content_top = min(box[2] for box in main_boxes)
+            content_bottom = max(box[3] for box in main_boxes)
+            content_height_ratio = (content_bottom - content_top) / page.height
+            if content_height_ratio < min_main_content_height_ratio:
+                issues.append(
+                    f"page {page_number} has very low main-content coverage "
+                    f"({content_height_ratio:.1%}, {len(main_words)} words)"
+                )
 
         has_out_of_bounds_text = False
         has_unsafe_edge_text = False
@@ -136,7 +172,22 @@ def load_pdf_pages(pdf_path: Path) -> tuple[PdfPage, ...]:
                 )
                 for word in page.extract_words()
             )
-            pages.append(PdfPage(float(page.width), float(page.height), words))
+            images = tuple(
+                PdfImage(
+                    x0=float(image["x0"]),
+                    x1=float(image["x1"]),
+                    top=float(image.get("top", float(page.height) - float(image["y1"]))),
+                    bottom=float(
+                        image.get("bottom", float(page.height) - float(image["y0"]))
+                    ),
+                )
+                for image in page.images
+                if image.get("x0") is not None
+                and image.get("x1") is not None
+                and image.get("y0") is not None
+                and image.get("y1") is not None
+            )
+            pages.append(PdfPage(float(page.width), float(page.height), words, images))
     return tuple(pages)
 
 
@@ -149,6 +200,9 @@ def preflight_pdf(
     min_words_per_page: int = 8,
     safe_edge_margin: float = 8.0,
     size_tolerance: float = 2.0,
+    min_main_content_height_ratio: float = 0.04,
+    low_coverage_word_limit: int = 24,
+    running_content_margin: float = 36.0,
 ) -> PdfPreflightReport:
     """Validate a PDF and raise one actionable error containing every issue."""
     report = analyze_pdf_pages(
@@ -159,6 +213,9 @@ def preflight_pdf(
         min_words_per_page=min_words_per_page,
         safe_edge_margin=safe_edge_margin,
         size_tolerance=size_tolerance,
+        min_main_content_height_ratio=min_main_content_height_ratio,
+        low_coverage_word_limit=low_coverage_word_limit,
+        running_content_margin=running_content_margin,
     )
     if not report.ok:
         details = "\n".join(f"- {issue}" for issue in report.issues)

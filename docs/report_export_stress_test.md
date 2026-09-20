@@ -11,21 +11,22 @@ geometry/content preflight, and visual page inspection.
 - Renderer: installed Google Chrome in headless print-to-PDF mode
 - Output: A4 Professional Print PDFs
 - Inputs: synthetic data and documentation-reserved addresses only
-- Result: all 5 scenarios passed the automated checks after preserving
-  unstructured attack-path content
+- Result: all 5 scenarios passed after the content-preservation and pagination
+  polishing changes
 
-The five reports contained 77 pages and 11,122 positioned words in total.
+The five reports contained 70 pages and 11,019 positioned words in total.
 Preflight checked A4 geometry, safe page edges, unexpectedly sparse pages,
-required end markers, and leaked internal Spectre markers. Every page was also
-rendered to PNG and visually reviewed.
+main-content height including embedded images, required end markers, and leaked
+internal Spectre markers. Every page was also rendered to PNG and visually
+reviewed.
 
 | Scenario | Load | Pages | Words | Automated result |
 |---|---:|---:|---:|---|
-| Dense findings | 18 findings and an 18-row summary matrix | 23 | 2,962 | Pass |
+| Dense findings | 18 findings and an 18-row summary matrix | 20 | 2,915 | Pass |
 | Large remediation table | 60 multi-line rows | 13 | 2,917 | Pass |
-| Oversized evidence | 180 code lines and a 1,600-character token | 13 | 2,151 | Pass |
+| Oversized evidence | 180 code lines and a 1,600-character token | 13 | 2,156 | Pass |
 | Extended attack path | 24 semantic timeline steps and a trailing note | 12 | 1,794 | Pass |
-| Long metadata and media | long cover fields, IPv6 scope, and 4 screenshots | 16 | 1,298 | Pass |
+| Long metadata and media | long cover fields, IPv6 scope, and 4 screenshots | 12 | 1,237 | Pass |
 
 The generated PDFs and page renders are temporary diagnostics under
 `tmp/pdfs/report-export-stress/`; they are intentionally not versioned.
@@ -46,7 +47,8 @@ The generated PDFs and page renders are temporary diagnostics under
   continuation pages. Free text after the final step remains visible before the
   next report section.
 - Long client/scope metadata fits on the cover, including an IPv6 range. Large
-  images scale within the page and are not cropped.
+  images scale within the page and are not cropped. Each screenshot, caption,
+  and explanatory note stays together as one figure.
 - No raw section/finding/page-break markers leaked into any PDF. No out-of-bounds
   or unsafe-edge text was detected.
 
@@ -64,49 +66,45 @@ and a conclusion after the final step. The repeated real-browser run retained
 `ATTACK-PATH-END-024` on page 7, directly before Technical Findings, and all five
 stress scenarios passed.
 
-## Remaining improvements
+### Kept screenshots with their captions and notes
 
-### P2 — Keep a screenshot with its explanatory caption or note
+Professional Print now projects block images as semantic `<figure>` elements
+with a `<figcaption>`. A directly following explanatory paragraph becomes part
+of that caption only in Professional Print; Classic Web retains its independent
+paragraph behavior.
 
-Large screenshots are scaled correctly, but the following explanatory paragraph
-can be pushed onto a nearly empty page. This is valid output, yet it looks less
-deliberate than the rest of the report.
+The print stylesheet reserves caption space by limiting evidence images to
+195 mm. The media stress case consequently fell from 16 to 12 pages without
+cropping or isolated caption pages.
 
-Recommended change: emit evidence images as semantic `<figure>` elements with a
-`<figcaption>`, then let the pagination estimator reserve space for both. If an
-image plus caption cannot fit, scale the image to the remaining printable height
-or move the complete figure to the next page.
+### Refined medium-finding density
 
-### P3 — Refine density decisions for medium findings
+The finding opener now reserves 56 mm rather than a blanket 75 mm. This keeps
+the lead and useful opening context together while allowing the browser to use
+safe remaining page space. Recommendation and reference blocks stay intact, and
+split findings clone their visual border treatment across page fragments.
 
-The dense-findings report is stable and readable, but the planner places most
-medium-sized findings on individual pages, leaving substantial whitespace. That
-is a safe professional default and not a correctness defect.
+The 18-finding scenario fell from 23 to 20 pages. The official sample report
+remains eight pages, with all finding headers and closing sections visible.
 
-Recommended change: only if a more compact report is desired, calibrate the
-finding height estimate with measured browser geometry or allow a second finding
-when both complete blocks fit with a minimum bottom margin. Keep the current
-behavior as the fallback; avoiding clipped findings is more important than page
-count.
+### Extended preflight beyond word count
 
-### P3 — Extend preflight beyond word count
+Preflight now records embedded image bounds and measures the height occupied by
+main content after excluding the running header/footer bands. A low-word page
+with less than four percent main-content height is rejected, while a page with a
+large evidence image is correctly treated as meaningful content.
 
-The current sparse-page guard correctly rejects pages with fewer than eight
-words, but an isolated 10-word image note can still consume a page. The visual
-review caught this; the automated preflight did not.
-
-Recommended change: add occupied-height and semantic adjacency checks. Useful
-signals are a low text bounding-box ratio, a paragraph separated from the image
-that precedes it, and required end sentinels per semantic section.
+Focused tests cover both the formerly missed low-coverage case and an image-heavy
+page that must pass.
 
 ## Verdict
 
 Professional Print is robust for the normal report workflow and for heavy
 findings, tables, code evidence, long metadata, and multi-page attack paths. It
 does not clip content in those workloads, and manually added content around
-structured attack-path steps is retained. The remaining screenshot/caption,
-finding-density, and preflight refinements are presentation and diagnostic
-polish rather than release blockers.
+structured attack-path steps is retained. Screenshot grouping, finding density,
+and sparse-page diagnostics now also pass their real-browser stress cases. No
+remaining correctness or presentation blocker was found in this test matrix.
 
 ## Reproduce
 

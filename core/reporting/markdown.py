@@ -249,7 +249,8 @@ class _MarkdownHtmlParser:
     Preserves code block precedence, delayed inline escaping, and export-safety invariants.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, group_image_notes: bool = False) -> None:
+        self.group_image_notes = group_image_notes
         self.html_lines: List[str] = []
         self.in_code_block: bool = False
         self.code_block_fence: str = ""
@@ -261,6 +262,7 @@ class _MarkdownHtmlParser:
         self.table_rows: List[List[str]] = []
         self.in_blockquote: bool = False
         self.blockquote_lines: List[str] = []
+        self.pending_figure: Optional[tuple[str, str]] = None
 
     def flush_list(self) -> None:
         if self.in_list:
@@ -283,10 +285,27 @@ class _MarkdownHtmlParser:
             self.in_blockquote = False
             self.blockquote_lines = []
 
+    def flush_pending_figure(self, note: str = "") -> None:
+        if self.pending_figure is None:
+            return
+        src, caption = self.pending_figure
+        note_html = (
+            f'<span class="screenshot-note">{format_inline(note)}</span>' if note else ""
+        )
+        self.html_lines.append(
+            f"<figure {PRINT_KEEP_TOGETHER.html_attribute()} "
+            f'class="screenshot-container"><img src="{src}" alt="{caption}" '
+            f'class="screenshot-img"><figcaption class="screenshot-caption">'
+            f'<span class="screenshot-caption-title">{caption}</span>'
+            f"{note_html}</figcaption></figure>"
+        )
+        self.pending_figure = None
+
     def flush_open_containers(self) -> None:
         self.flush_list()
         self.flush_table()
         self.flush_blockquote()
+        self.flush_pending_figure()
 
     def _render_code_block(self) -> str:
         raw_code = "\n".join(self.code_block_lines)
@@ -335,6 +354,7 @@ class _MarkdownHtmlParser:
 
     def _handle_blockquote(self, stripped: str) -> bool:
         if stripped.startswith(">"):
+            self.flush_pending_figure()
             self.flush_list()
             self.flush_table()
             self.in_blockquote = True
@@ -346,6 +366,7 @@ class _MarkdownHtmlParser:
 
     def _handle_table_row(self, stripped: str) -> bool:
         if stripped.startswith("|") and stripped.endswith("|"):
+            self.flush_pending_figure()
             self.flush_list()
             self.flush_blockquote()
             if re.match(r"^\|[\s\-:|]+\|$", stripped):
@@ -366,6 +387,7 @@ class _MarkdownHtmlParser:
         ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
 
         if unordered_match or ordered_match:
+            self.flush_pending_figure()
             self.flush_blockquote()
             self.flush_table()
             target_type = "ul" if unordered_match else "ol"
@@ -392,6 +414,7 @@ class _MarkdownHtmlParser:
             ("# ", "h1"),
         ):
             if stripped.startswith(prefix):
+                self.flush_pending_figure()
                 self.html_lines.append(f"<{tag}>{format_inline(stripped[len(prefix) :])}</{tag}>")
                 return True
         return False
@@ -399,19 +422,19 @@ class _MarkdownHtmlParser:
     def _handle_image(self, stripped: str) -> bool:
         img_match = re.match(r"^!\[(.*?)\]\((.*?)\)$", stripped)
         if img_match:
+            self.flush_pending_figure()
             alt = html.escape(img_match.group(1), quote=True)
             raw_src = img_match.group(2)
             src = sanitize_url(raw_src, is_image=True)
-            self.html_lines.append(
-                f"<div {PRINT_KEEP_TOGETHER.html_attribute()} "
-                f'class="screenshot-container"><img src="{src}" alt="{alt}" '
-                f'class="screenshot-img"><p class="screenshot-caption">{alt}</p></div>'
-            )
+            self.pending_figure = (src, alt)
+            if not self.group_image_notes:
+                self.flush_pending_figure()
             return True
         return False
 
     def _handle_horizontal_rule(self, stripped: str) -> bool:
         if stripped in ("---", "***", "___"):
+            self.flush_pending_figure()
             self.html_lines.append("<hr>")
             return True
         return False
@@ -459,7 +482,10 @@ class _MarkdownHtmlParser:
         if self._handle_image(stripped):
             return
 
-        self.html_lines.append(f"<p>{format_inline(stripped)}</p>")
+        if self.pending_figure is not None:
+            self.flush_pending_figure(note=stripped)
+        else:
+            self.html_lines.append(f"<p>{format_inline(stripped)}</p>")
 
     def finalize(self) -> str:
         self.flush_open_containers()
@@ -479,13 +505,19 @@ class _MarkdownHtmlParser:
         self.table_rows = []
         self.in_blockquote = False
         self.blockquote_lines = []
+        self.pending_figure = None
         line_list = content.splitlines() if isinstance(content, str) else content
         for line in line_list:
             self.process_line(line)
         return self.finalize()
 
 
-def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -> str:
+def convert_markdown_to_html(
+    md_text: str,
+    project_dir: Optional[Path] = None,
+    *,
+    group_image_notes: bool = False,
+) -> str:
     """Convert the line-oriented report subset after loot-marker stripping and image resolution.
 
     Block precedence and delayed inline escaping are structural and export-safety invariants,
@@ -493,4 +525,6 @@ def convert_markdown_to_html(md_text: str, project_dir: Optional[Path] = None) -
     """
     clean_md = strip_report_markers(md_text)
     processed_md = resolve_and_embed_images(clean_md, project_dir)
-    return _MarkdownHtmlParser().parse(processed_md.splitlines())
+    return _MarkdownHtmlParser(group_image_notes=group_image_notes).parse(
+        processed_md.splitlines()
+    )

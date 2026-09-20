@@ -166,11 +166,19 @@ def _semantic_finding_html(body_html: str, finding_id: Optional[str] = None) -> 
 
 
 def convert_markdown_with_findings(
-    markdown: str, project_dir: Optional[Path] = None, start_index: int = 1
+    markdown: str,
+    project_dir: Optional[Path] = None,
+    start_index: int = 1,
+    *,
+    group_image_notes: bool = False,
 ) -> str:
     """Convert only explicitly marked v1 findings into semantic report articles."""
     if not FINDING_START_RE.search(markdown):
-        return convert_markdown_to_html(markdown, project_dir=project_dir)
+        return convert_markdown_to_html(
+            markdown,
+            project_dir=project_dir,
+            group_image_notes=group_image_notes,
+        )
 
     embedded = resolve_and_embed_images(markdown, project_dir)
     html_parts = []
@@ -180,7 +188,12 @@ def convert_markdown_with_findings(
         finding_index += 1
         finding_id = f"F-{finding_index:03d}"
         if start.start() > cursor:
-            html_parts.append(convert_markdown_to_html(embedded[cursor : start.start()]))
+            html_parts.append(
+                convert_markdown_to_html(
+                    embedded[cursor : start.start()],
+                    group_image_notes=group_image_notes,
+                )
+            )
         entry_id = start.group(1)
         end = next(
             (
@@ -192,15 +205,28 @@ def convert_markdown_with_findings(
         )
         next_start = FINDING_START_RE.search(embedded, start.end())
         if end is None or (next_start and next_start.start() < end.start()):
-            html_parts.append(convert_markdown_to_html(embedded[start.start() :]))
+            html_parts.append(
+                convert_markdown_to_html(
+                    embedded[start.start() :],
+                    group_image_notes=group_image_notes,
+                )
+            )
             cursor = len(embedded)
             break
         finding_markdown = embedded[start.end() : end.start()]
-        finding_html = convert_markdown_to_html(finding_markdown)
+        finding_html = convert_markdown_to_html(
+            finding_markdown,
+            group_image_notes=group_image_notes,
+        )
         html_parts.append(_semantic_finding_html(finding_html, finding_id=finding_id))
         cursor = end.end()
     if cursor < len(embedded):
-        html_parts.append(convert_markdown_to_html(embedded[cursor:]))
+        html_parts.append(
+            convert_markdown_to_html(
+                embedded[cursor:],
+                group_image_notes=group_image_notes,
+            )
+        )
     return "\n".join(part for part in html_parts if part)
 
 

@@ -58,8 +58,9 @@ short evidence
     assert '<blockquote data-print-layout="keep-together">' in html
     assert '<pre data-print-layout="keep-together"><code class="language-text">' in html
     assert (
-        '<div data-print-layout="keep-together" class="screenshot-container">' in html
+        '<figure data-print-layout="keep-together" class="screenshot-container">' in html
     )
+    assert '<figcaption class="screenshot-caption">' in html
     assert '[data-print-layout~="breakable"]' in html
 
 
@@ -110,6 +111,20 @@ Demonstration finding.
         '<section data-print-layout="page-start" '
         'class="report-section report-appendix">'
     ) in html
+
+
+def test_only_professional_print_groups_following_image_note_into_figure():
+    markdown = "![Evidence](evidence.png)\n\nSupporting explanation."
+
+    professional = HtmlReportExporter.build_full_html(
+        markdown,
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+    interactive = HtmlReportExporter.build_full_html(markdown)
+
+    assert '<span class="screenshot-note">Supporting explanation.</span>' in professional
+    assert '<span class="screenshot-note">' not in interactive
+    assert "</figure>\n<p>Supporting explanation.</p>" in interactive
 
 
 def test_print_directive_css_is_shared_by_print_profiles():

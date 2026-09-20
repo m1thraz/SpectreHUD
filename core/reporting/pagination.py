@@ -14,6 +14,7 @@ from core.reporting.print_layout import PrintLayoutPolicy
 
 DEFAULT_PRINTABLE_HEIGHT_MM = 255.0
 PLANNED_PAGE_START_ATTRIBUTE = 'data-print-plan="page-start"'
+FINDING_OPENING_RESERVE_MM = 56.0
 
 
 @dataclass(frozen=True)
@@ -280,9 +281,13 @@ def _build_flow(nodes: Iterable[_HtmlNode], source: str) -> list[_HtmlFlowBlock]
         if "report-finding" in classes:
             add(
                 node,
-                10.0,
+                4.0,
                 PrintLayoutPolicy(keep_with_next=True),
-                following_height_mm=75.0,
+                # The browser may split a finding body, but never strand its
+                # lead. Reserving the lead plus opening paragraph is enough;
+                # the previous 75 mm guard forced medium findings onto mostly
+                # empty individual pages.
+                following_height_mm=FINDING_OPENING_RESERVE_MM,
                 eligible=True,
             )
             for child in node.children:

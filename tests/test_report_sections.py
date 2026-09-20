@@ -1008,6 +1008,19 @@ def test_professional_long_code_can_flow_across_pages_without_splitting_short_co
     assert "break-inside: auto;" in html
 
 
+def test_professional_keeps_short_finding_closing_sections_together():
+    html = HtmlReportExporter.build_full_html(
+        "## Findings\n\nNarrative.",
+        profile=ReportExportProfile.PROFESSIONAL_PRINT,
+    )
+
+    assert (
+        'body[data-report-profile="professional_print"] .finding-recommendation,' in html
+    )
+    assert 'body[data-report-profile="professional_print"] .finding-references {' in html
+    assert "box-decoration-break: clone;" in html
+
+
 def test_professional_projects_status_and_phase_names_into_recognizable_generated_matrix():
     finding = ReportFindingItem(
         id="finding_1",

@@ -101,6 +101,40 @@ class TestMarkdownHtmlParser(unittest.TestCase):
         self.assertIn("</blockquote>", html)
         self.assertIn("<p>Regular text.</p>", html)
 
+    def test_block_image_groups_caption_and_following_explanation_semantically(self) -> None:
+        html = _MarkdownHtmlParser(group_image_notes=True).parse(
+            "![Authentication response](evidence.png)\n\n"
+            "The response confirms the synthetic authorization issue."
+        )
+
+        self.assertIn(
+            '<figure data-print-layout="keep-together" class="screenshot-container">', html
+        )
+        self.assertIn('<figcaption class="screenshot-caption">', html)
+        self.assertIn(
+            '<span class="screenshot-caption-title">Authentication response</span>', html
+        )
+        self.assertIn(
+            '<span class="screenshot-note">'
+            "The response confirms the synthetic authorization issue.</span>",
+            html,
+        )
+        self.assertNotIn("<p>The response confirms", html)
+
+    def test_block_image_does_not_absorb_the_next_structural_block(self) -> None:
+        html = _MarkdownHtmlParser(group_image_notes=True).parse(
+            "![Evidence](evidence.png)\n\n### Next section"
+        )
+
+        self.assertLess(html.index("</figure>"), html.index("<h3>Next section</h3>"))
+        self.assertNotIn('class="screenshot-note"', html)
+
+    def test_generic_markdown_keeps_paragraph_after_image_independent(self) -> None:
+        html = self.parser.parse("![Evidence](evidence.png)\n\nIndependent paragraph.")
+
+        self.assertLess(html.index("</figure>"), html.index("<p>Independent paragraph.</p>"))
+        self.assertNotIn('class="screenshot-note"', html)
+
     def test_horizontal_rules(self) -> None:
         for hr in ["---", "***", "___"]:
             md = f"Top\n\n{hr}\n\nBottom"

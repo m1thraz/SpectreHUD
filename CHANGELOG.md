@@ -18,6 +18,7 @@ semantic versioning.
 * Redesigned the Professional Print attack path as a compact, print-safe vertical timeline with phase, description, and finding context.
 * Unified severity labels across Professional Print matrices, finding headers, summaries, and remediation tables, including calmer typography for summary totals.
 * Expanded internal pentest phase IDs to their localized full names in Professional Print findings matrices.
+* Improved Professional Print pagination so evidence screenshots stay with their captions and explanatory notes while findings use available page space more efficiently.
 
 ### Fixed
 

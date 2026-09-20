@@ -1,6 +1,6 @@
 """Tests for publication checks applied to generated report PDFs."""
 
-from scripts.report_pdf_preflight import PdfPage, PdfWord, analyze_pdf_pages
+from scripts.report_pdf_preflight import PdfImage, PdfPage, PdfWord, analyze_pdf_pages
 
 
 def _word(text: str, *, x0: float = 24, top: float = 24) -> PdfWord:
@@ -8,7 +8,10 @@ def _word(text: str, *, x0: float = 24, top: float = 24) -> PdfWord:
 
 
 def test_pdf_preflight_accepts_expected_geometry_and_content():
-    words = tuple(_word(text) for text in ("DEMO", "SYNTHETIC", "Report", "Finding"))
+    words = tuple(
+        _word(text, top=80 + index * 40)
+        for index, text in enumerate(("DEMO", "SYNTHETIC", "Report", "Finding"))
+    )
     pages = (PdfPage(595.28, 841.89, words),)
 
     report = analyze_pdf_pages(
@@ -51,3 +54,20 @@ def test_pdf_preflight_reports_layout_content_and_marker_failures():
     assert any("out-of-bounds text" in issue for issue in report.issues)
     assert any("internal marker leaked" in issue for issue in report.issues)
     assert any("required text is missing" in issue for issue in report.issues)
+
+
+def test_pdf_preflight_reports_low_main_content_coverage_even_with_enough_words():
+    words = tuple(_word(f"word-{index}", top=120) for index in range(12))
+
+    report = analyze_pdf_pages((PdfPage(595.28, 841.89, words),))
+
+    assert any("very low main-content coverage" in issue for issue in report.issues)
+
+
+def test_pdf_preflight_counts_large_images_as_meaningful_page_content():
+    words = tuple(_word(f"caption-{index}", top=680) for index in range(12))
+    image = PdfImage(x0=60, x1=535, top=90, bottom=660)
+
+    report = analyze_pdf_pages((PdfPage(595.28, 841.89, words, (image,)),))
+
+    assert report.ok

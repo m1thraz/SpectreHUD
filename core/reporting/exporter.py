@@ -109,6 +109,7 @@ class HtmlReportExporter:
                     clean_segment_markdown,
                     project_dir=None,
                     start_index=finding_counter,
+                    group_image_notes=True,
                 )
             finding_counter += len(FINDING_START_RE.findall(segment_markdown))
             if not segment.is_structured:

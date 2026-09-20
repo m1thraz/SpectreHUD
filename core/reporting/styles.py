@@ -270,10 +270,21 @@ main.report-body img {
 }
 
 .screenshot-caption {
+    display: block;
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 6px;
     font-style: italic;
+}
+
+.screenshot-caption-title,
+.screenshot-note {
+    display: block;
+}
+
+.screenshot-note {
+    margin-top: 4px;
+    font-style: normal;
 }
 
 .table-container {
@@ -1143,6 +1154,8 @@ body[data-report-profile="professional_print"] .report-finding {
     border: 0;
     border-left: 1.5px solid var(--report-accent);
     border-radius: 0;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
 }
 
 body[data-report-profile="professional_print"] .finding-header {
@@ -1302,6 +1315,12 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         page-break-after: avoid;
     }
 
+    body[data-report-profile="professional_print"] .finding-recommendation,
+    body[data-report-profile="professional_print"] .finding-references {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
     body[data-report-profile="professional_print"] pre {
         overflow: visible;
         white-space: pre-wrap;
@@ -1321,6 +1340,10 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         max-width: 100%;
         max-height: 220mm;
         object-fit: contain;
+    }
+
+    body[data-report-profile="professional_print"] .screenshot-container .screenshot-img {
+        max-height: 195mm;
     }
 }
 
