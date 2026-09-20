@@ -120,6 +120,19 @@ class TestReportFileManager(unittest.TestCase):
         self.assertIs(result.status, ReportReadStatus.READ_FAILED)
         self.assertIn("access denied", result.detail)
 
+    def test_non_utf8_report_is_read_failed_and_original_bytes_are_preserved(self):
+        self.project_mgr.create_project("Windows1252Report")
+        report_path = self.report_mgr.get_report_path("Windows1252Report")
+        original = "# Prüfbericht\nMüller".encode("windows-1252")
+        report_path.write_bytes(original)
+
+        result = self.report_mgr.load_result("Windows1252Report")
+
+        self.assertIs(result.status, ReportReadStatus.READ_FAILED)
+        with self.assertRaises(ReportReadError):
+            self.report_mgr.load("Windows1252Report")
+        self.assertEqual(report_path.read_bytes(), original)
+
     def test_regenerate_never_writes_when_existing_report_read_fails(self):
         from unittest.mock import patch
 
