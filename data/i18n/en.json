@@ -169,6 +169,7 @@
     "report.draft_recovery_msg": "An unsaved draft for '{project}' from {time} was found.\n\nDo you want to restore it?",
     "report.draft_restore_btn": "Restore Draft",
     "report.draft_discard_btn": "Discard Draft",
+    "report.draft_cleanup_warning": "The recovery draft could not be removed. The saved report is unchanged, but you may be prompted about the draft again.",
     "report.empty_title": "No active project",
     "report.empty_desc": "Select a box above to view and edit the pentest report.",
     "report.discard_title": "Unsaved Changes",

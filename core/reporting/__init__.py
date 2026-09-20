@@ -97,6 +97,8 @@ from core.reporting.readiness import (
 )
 from core.reporting.draft_manager import (
     DRAFT_FILENAME,
+    DraftDiscardResult,
+    DraftDiscardStatus,
     discard_draft,
     get_draft,
     get_draft_path,
@@ -273,6 +275,8 @@ __all__ = [
     "ReportReadinessLevel",
     "assess_report_readiness",
     "DRAFT_FILENAME",
+    "DraftDiscardResult",
+    "DraftDiscardStatus",
     "discard_draft",
     "get_draft",
     "get_draft_path",

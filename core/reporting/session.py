@@ -6,13 +6,19 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from core.logger import get_logger
 from core.reporting.draft_manager import (
+    DraftDiscardResult,
+    DraftDiscardStatus,
     discard_draft as discard_recovery_draft,
     get_draft,
+    get_draft_path,
     has_recoverable_draft,
     save_draft as save_recovery_draft,
 )
 from core.reporting.file_manager import ReportFileManager
+
+logger = get_logger("report_session")
 
 
 class ReportPersistFailureReason(str, Enum):
@@ -29,10 +35,13 @@ class ReportPersistResult:
     success: bool
     failure_reason: Optional[ReportPersistFailureReason] = None
     detail: str = ""
+    draft_cleanup: Optional[DraftDiscardResult] = None
 
     @classmethod
-    def succeeded(cls) -> "ReportPersistResult":
-        return cls(success=True)
+    def succeeded(
+        cls, *, draft_cleanup: Optional[DraftDiscardResult] = None
+    ) -> "ReportPersistResult":
+        return cls(success=True, draft_cleanup=draft_cleanup)
 
     @classmethod
     def failed(
@@ -84,17 +93,36 @@ class ReportSessionService:
         self, project_name: str, markdown: str, *, clear_recovery_draft: bool
     ) -> ReportPersistResult:
         try:
+            project_dir = (
+                self._file_manager.project_manager.get_project_dir(project_name)
+                if clear_recovery_draft
+                else None
+            )
             if not self._file_manager.save(markdown, project_name=project_name):
                 return ReportPersistResult.failed(ReportPersistFailureReason.WRITE_REJECTED)
-            if clear_recovery_draft:
-                project_dir = self._file_manager.project_manager.get_project_dir(project_name)
-                discard_recovery_draft(project_dir)
         except Exception as exc:
             return ReportPersistResult.failed(
                 ReportPersistFailureReason.UNEXPECTED_ERROR,
                 detail=str(exc),
             )
-        return ReportPersistResult.succeeded()
+
+        draft_cleanup: Optional[DraftDiscardResult] = None
+        if project_dir is not None:
+            try:
+                draft_cleanup = discard_recovery_draft(project_dir)
+            except Exception as exc:
+                draft_cleanup = DraftDiscardResult(
+                    DraftDiscardStatus.FAILED,
+                    get_draft_path(project_dir),
+                    detail=str(exc),
+                )
+            if draft_cleanup.status is DraftDiscardStatus.FAILED:
+                logger.warning(
+                    "Report '%s' was saved, but its recovery draft could not be removed: %s",
+                    project_name,
+                    draft_cleanup.detail,
+                )
+        return ReportPersistResult.succeeded(draft_cleanup=draft_cleanup)
 
     def save_draft(self, project_name: str, markdown: str) -> ReportPersistResult:
         try:
@@ -109,5 +137,5 @@ class ReportSessionService:
         return ReportPersistResult.succeeded()
 
     @staticmethod
-    def discard_draft(project_dir: Path) -> bool:
+    def discard_draft(project_dir: Path) -> DraftDiscardResult:
         return discard_recovery_draft(project_dir)

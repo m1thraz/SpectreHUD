@@ -169,6 +169,7 @@
     "report.draft_recovery_msg": "Für '{project}' wurde ein ungespeicherter Entwurf vom {time} gefunden.\n\nMöchtest du ihn wiederherstellen?",
     "report.draft_restore_btn": "Entwurf wiederherstellen",
     "report.draft_discard_btn": "Entwurf verwerfen",
+    "report.draft_cleanup_warning": "Der Wiederherstellungsentwurf konnte nicht entfernt werden. Der gespeicherte Report bleibt unverändert, aber der Entwurf kann erneut angeboten werden.",
     "report.empty_title": "Kein aktives Projekt",
     "report.empty_desc": "Wähle oben eine Box aus, um den Pentest-Report zu bearbeiten.",
     "report.discard_title": "Ungespeicherte Änderungen",

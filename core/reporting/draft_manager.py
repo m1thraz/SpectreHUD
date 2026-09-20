@@ -6,7 +6,9 @@ unexpected terminations (crash, OOM, OS freeze) while cleaning up automatically
 on clean save or discard.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 import os
 from pathlib import Path
 import tempfile
@@ -17,6 +19,23 @@ from core.logger import get_logger
 logger = get_logger("draft_manager")
 
 DRAFT_FILENAME = ".report.md.draft"
+
+
+class DraftDiscardStatus(str, Enum):
+    """Machine-readable outcome of removing a recovery draft."""
+
+    NOT_FOUND = "not_found"
+    REMOVED = "removed"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True)
+class DraftDiscardResult:
+    """Distinguishes a harmless no-op from a failed cleanup."""
+
+    status: DraftDiscardStatus
+    path: Path
+    detail: str = ""
 
 
 def get_draft_path(project_dir: Path) -> Path:
@@ -84,21 +103,33 @@ def has_recoverable_draft(project_dir: Path, saved_content: str) -> bool:
         return False
 
     draft_content, _ = result
+    draft_path = get_draft_path(project_dir)
+    report_path = Path(project_dir) / "report.md"
+    try:
+        if (
+            report_path.is_file()
+            and draft_path.stat().st_mtime_ns < report_path.stat().st_mtime_ns
+        ):
+            logger.warning("Ignoring stale recovery draft older than report.md: %s", draft_path)
+            return False
+    except OSError as exc:
+        logger.warning(
+            "Could not compare report and draft timestamps in %s: %s", project_dir, exc
+        )
+
     # Compare stripped contents so harmless newline/whitespace differences don't trigger prompt
     return draft_content.strip() != (saved_content or "").strip()
 
 
-def discard_draft(project_dir: Path) -> bool:
-    """
-    Safely removes the draft file.
-    Returns True if a draft was removed, False if no draft existed.
-    """
+def discard_draft(project_dir: Path) -> DraftDiscardResult:
+    """Remove a draft while preserving absent, removed, and failed outcomes."""
     draft_path = get_draft_path(project_dir)
     try:
-        if draft_path.exists():
-            draft_path.unlink()
-            logger.debug("Draft snapshot discarded for %s", Path(project_dir).name)
-            return True
-    except Exception as exc:
+        draft_path.unlink()
+    except FileNotFoundError:
+        return DraftDiscardResult(DraftDiscardStatus.NOT_FOUND, draft_path)
+    except OSError as exc:
         logger.warning("Failed to discard draft file %s: %s", draft_path, exc)
-    return False
+        return DraftDiscardResult(DraftDiscardStatus.FAILED, draft_path, detail=str(exc))
+    logger.debug("Draft snapshot discarded for %s", Path(project_dir).name)
+    return DraftDiscardResult(DraftDiscardStatus.REMOVED, draft_path)

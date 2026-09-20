@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from core.reporting import (
+    DraftDiscardResult,
+    DraftDiscardStatus,
     ReportFileManager,
     ReportPersistFailureReason,
     ReportReadError,
@@ -75,12 +77,48 @@ def test_manual_save_clears_recovery_draft_after_success(tmp_path: Path) -> None
     service, file_manager = _service(tmp_path)
     file_manager.save.return_value = True
 
-    with patch("core.reporting.session.discard_recovery_draft") as discard:
+    cleanup = DraftDiscardResult(DraftDiscardStatus.REMOVED, tmp_path / ".report.md.draft")
+    with patch("core.reporting.session.discard_recovery_draft", return_value=cleanup) as discard:
         result = service.save_document("Box", "# Updated", clear_recovery_draft=True)
 
     assert result.success
     file_manager.save.assert_called_once_with("# Updated", project_name="Box")
     discard.assert_called_once_with(tmp_path)
+    assert result.draft_cleanup is cleanup
+
+
+def test_manual_save_succeeds_but_reports_failed_draft_cleanup(tmp_path: Path) -> None:
+    service, file_manager = _service(tmp_path)
+    file_manager.save.return_value = True
+    cleanup = DraftDiscardResult(
+        DraftDiscardStatus.FAILED,
+        tmp_path / ".report.md.draft",
+        detail="access denied",
+    )
+
+    with patch("core.reporting.session.discard_recovery_draft", return_value=cleanup):
+        result = service.save_document("Box", "# Updated", clear_recovery_draft=True)
+
+    assert result.success
+    assert result.draft_cleanup is cleanup
+
+
+def test_cleanup_exception_does_not_turn_completed_report_save_into_failure(
+    tmp_path: Path,
+) -> None:
+    service, file_manager = _service(tmp_path)
+    file_manager.save.return_value = True
+
+    with patch(
+        "core.reporting.session.discard_recovery_draft",
+        side_effect=RuntimeError("unexpected cleanup failure"),
+    ):
+        result = service.save_document("Box", "# Updated", clear_recovery_draft=True)
+
+    assert result.success
+    assert result.draft_cleanup is not None
+    assert result.draft_cleanup.status is DraftDiscardStatus.FAILED
+    assert result.draft_cleanup.detail == "unexpected cleanup failure"
 
 
 def test_autosave_keeps_recovery_draft_after_success(tmp_path: Path) -> None:

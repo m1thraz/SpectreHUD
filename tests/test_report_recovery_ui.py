@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from PyQt6.QtWidgets import QMessageBox
 
-from core.reporting import ReportFileManager
+from core.reporting import DraftDiscardResult, DraftDiscardStatus, ReportFileManager
 from core.reporting import get_draft_path, save_draft
 from ui.report_editor_tab import ReportEditorTab
 
@@ -109,6 +109,25 @@ class TestReportRecoveryUI(unittest.TestCase):
         self.tab.save()
 
         self.assertFalse(get_draft_path(self.project_dir).exists())
+
+    def test_save_warns_when_recovery_draft_cleanup_fails(self):
+        self.tab.current_project = "TestBox"
+        self.tab.replace_markdown("Saved despite stale draft")
+        cleanup = DraftDiscardResult(
+            DraftDiscardStatus.FAILED,
+            get_draft_path(self.project_dir),
+            detail="access denied",
+        )
+
+        with (
+            patch("core.reporting.session.discard_recovery_draft", return_value=cleanup),
+            patch("ui.report.session_controller.show_warning_dialog") as warning,
+        ):
+            saved = self.tab.save()
+
+        self.assertTrue(saved)
+        self.assertFalse(self.tab.is_dirty())
+        warning.assert_called_once()
 
 
 if __name__ == "__main__":

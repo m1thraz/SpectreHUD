@@ -2,14 +2,14 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from core.i18n import t
 from core.logger import get_logger
-from core.reporting import ReportSessionService
-from ui.message_boxes import show_error_dialog
+from core.reporting import DraftDiscardResult, DraftDiscardStatus, ReportSessionService
+from ui.message_boxes import show_error_dialog, show_warning_dialog
 
 logger = get_logger("report_session_controller")
 
@@ -67,12 +67,13 @@ class ReportSessionController:
 
         if msg.clickedButton() is restore_button:
             return LoadedReport(recovery_draft.markdown, state.project_dir, True)
-        self._service.discard_draft(state.project_dir)
+        self._warn_failed_cleanup(self._service.discard_draft(state.project_dir))
         return LoadedReport(state.markdown, state.project_dir, False)
 
     def save(self, project_name: str, markdown: str) -> bool:
         result = self._service.save_document(project_name, markdown, clear_recovery_draft=True)
         if result.success:
+            self._warn_failed_cleanup(result.draft_cleanup)
             return True
         logger.error(
             "Manual save failed for report '%s' (%s): %s",
@@ -105,3 +106,16 @@ class ReportSessionController:
 
     def save_draft(self, project_name: str, markdown: str) -> None:
         self._service.save_draft(project_name, markdown)
+
+    def _warn_failed_cleanup(self, cleanup: Optional[DraftDiscardResult]) -> None:
+        if cleanup is None or cleanup.status is not DraftDiscardStatus.FAILED:
+            return
+        show_warning_dialog(
+            self._parent.window(),
+            t("dialog.warning", "Warning"),
+            t(
+                "report.draft_cleanup_warning",
+                "The recovery draft could not be removed. The saved report is unchanged, "
+                "but you may be prompted about the draft again.",
+            ),
+        )

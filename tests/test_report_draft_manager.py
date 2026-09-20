@@ -1,10 +1,13 @@
 """Tests for core/reporting/draft_manager.py (Tier 0 pure logic)."""
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.reporting import (
+    DraftDiscardStatus,
     discard_draft,
     get_draft,
     get_draft_path,
@@ -50,12 +53,32 @@ class TestReportDraftManager(unittest.TestCase):
         self.assertTrue(get_draft_path(self.project_dir).exists())
 
         removed = discard_draft(self.project_dir)
-        self.assertTrue(removed)
+        self.assertIs(removed.status, DraftDiscardStatus.REMOVED)
         self.assertFalse(get_draft_path(self.project_dir).exists())
 
         # Second discard is safe no-op
         removed_again = discard_draft(self.project_dir)
-        self.assertFalse(removed_again)
+        self.assertIs(removed_again.status, DraftDiscardStatus.NOT_FOUND)
+
+    def test_discard_draft_reports_cleanup_failure(self):
+        save_draft(self.project_dir, "Draft content")
+
+        with patch.object(Path, "unlink", side_effect=PermissionError("access denied")):
+            result = discard_draft(self.project_dir)
+
+        self.assertIs(result.status, DraftDiscardStatus.FAILED)
+        self.assertIn("access denied", result.detail)
+        self.assertTrue(get_draft_path(self.project_dir).exists())
+
+    def test_draft_older_than_saved_report_is_not_recoverable(self):
+        draft_path = get_draft_path(self.project_dir)
+        report_path = self.project_dir / "report.md"
+        save_draft(self.project_dir, "# Stale Draft")
+        report_path.write_text("# Newer Report", encoding="utf-8")
+        os.utime(draft_path, ns=(1_000_000_000, 1_000_000_000))
+        os.utime(report_path, ns=(2_000_000_000, 2_000_000_000))
+
+        self.assertFalse(has_recoverable_draft(self.project_dir, "# Newer Report"))
 
 
 if __name__ == "__main__":
