@@ -93,6 +93,7 @@ class ExportCoordinator(QObject):
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
         category: Optional[str] = None,
+        include_toc: bool = False,
     ) -> ExportResult:
         """Render the current editor document as a standalone HTML report."""
         project_dir = self.project_manager.get_project_dir(project_name)
@@ -108,6 +109,7 @@ class ExportCoordinator(QObject):
             language=language,
             profile=profile,
             category=category,
+            include_toc=include_toc,
         )
         if not res:
             err_msg = (

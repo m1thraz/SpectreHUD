@@ -351,6 +351,7 @@ def run_stress_suite(
                 language="en",
                 profile=ReportExportProfile.PROFESSIONAL_PRINT,
                 category="pentest",
+                include_toc=True,
             )
             html_path = work_dir / f"{scenario.slug}.html"
             pdf_path = output_dir / f"{scenario.slug}.pdf"

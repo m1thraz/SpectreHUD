@@ -134,6 +134,7 @@ def test_html_report_export_resolves_project_through_coordinator(tmp_path):
         language="en",
         profile=ReportExportProfile.INTERACTIVE,
         category=None,
+        include_toc=False,
     )
 
 

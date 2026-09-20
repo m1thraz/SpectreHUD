@@ -523,6 +523,8 @@
     "report.html_profile_classic_web": "Classic Web (editable)",
     "report.html_profile_professional": "Professional Print",
     "report.html_profile_professional_tip": "Print-ready A4 presentation for browser PDF generation",
+    "report.html_profile_include_toc": "Include a linked table of contents in Professional Print",
+    "report.html_profile_include_toc_tip": "Lists report sections and findings after the cover page without page numbers",
     "report.html_profile_classic_web_tip": "Editable responsive web report for browser use",
     "report.change_view": "Change View",
     "report.change_view_tip": "Choose report editor layout",

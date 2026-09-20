@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -1246,7 +1247,14 @@ class ReportExportTypeDialog(BaseHudDialog):
         return dlg.selected_type
 
 
-def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[tuple[str, str]]:
+@dataclass(frozen=True)
+class HtmlExportOptions:
+    theme: str
+    profile: str
+    include_toc: bool = False
+
+
+def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[HtmlExportOptions]:
     """Choose the HTML presentation profile without changing report content."""
     msg = QMessageBox(parent)
     msg.setWindowTitle(t("report.html_profile_title", "Choose HTML Export Profile"))
@@ -1258,6 +1266,21 @@ def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[tup
         )
     )
     msg.setIcon(QMessageBox.Icon.Question)
+    toc_checkbox = QCheckBox(
+        t(
+            "report.html_profile_include_toc",
+            "Include a linked table of contents in Professional Print",
+        ),
+        msg,
+    )
+    toc_checkbox.setChecked(True)
+    toc_checkbox.setToolTip(
+        t(
+            "report.html_profile_include_toc_tip",
+            "Lists report sections and findings after the cover page without page numbers",
+        )
+    )
+    msg.setCheckBox(toc_checkbox)
     professional_button = msg.addButton(
         t("report.html_profile_professional", "Professional Print"),
         QMessageBox.ButtonRole.AcceptRole,
@@ -1284,7 +1307,11 @@ def select_html_export_options(parent: Optional[QWidget] = None) -> Optional[tup
     msg.exec()
 
     if msg.clickedButton() is professional_button:
-        return "light", "professional_print"
+        return HtmlExportOptions(
+            theme="light",
+            profile="professional_print",
+            include_toc=toc_checkbox.isChecked(),
+        )
     if msg.clickedButton() is classic_web_button:
-        return "light", "interactive"
+        return HtmlExportOptions(theme="light", profile="interactive")
     return None

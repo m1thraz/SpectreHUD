@@ -11,10 +11,10 @@ geometry/content preflight, and visual page inspection.
 - Renderer: installed Google Chrome in headless print-to-PDF mode
 - Output: A4 Professional Print PDFs
 - Inputs: synthetic data and documentation-reserved addresses only
-- Result: all 5 scenarios passed after the content-preservation and pagination
-  polishing changes
+- Result: all 5 scenarios passed with the optional linked table of contents
+  enabled after the content-preservation and pagination polishing changes
 
-The five reports contained 70 pages and 11,019 positioned words in total.
+The five reports contained 75 pages and 11,498 positioned words in total.
 Preflight checked A4 geometry, safe page edges, unexpectedly sparse pages,
 main-content height including embedded images, required end markers, and leaked
 internal Spectre markers. Every page was also rendered to PNG and visually
@@ -22,17 +22,20 @@ reviewed.
 
 | Scenario | Load | Pages | Words | Automated result |
 |---|---:|---:|---:|---|
-| Dense findings | 18 findings and an 18-row summary matrix | 20 | 2,915 | Pass |
-| Large remediation table | 60 multi-line rows | 13 | 2,917 | Pass |
-| Oversized evidence | 180 code lines and a 1,600-character token | 13 | 2,156 | Pass |
-| Extended attack path | 24 semantic timeline steps and a trailing note | 12 | 1,794 | Pass |
-| Long metadata and media | long cover fields, IPv6 scope, and 4 screenshots | 12 | 1,237 | Pass |
+| Dense findings | 18 findings and an 18-row summary matrix | 21 | 3,132 | Pass |
+| Large remediation table | 60 multi-line rows | 14 | 2,980 | Pass |
+| Oversized evidence | 180 code lines and a 1,600-character token | 14 | 2,229 | Pass |
+| Extended attack path | 24 semantic timeline steps and a trailing note | 13 | 1,857 | Pass |
+| Long metadata and media | long cover fields, IPv6 scope, and 4 screenshots | 13 | 1,300 | Pass |
 
 The generated PDFs and page renders are temporary diagnostics under
 `tmp/pdfs/report-export-stress/`; they are intentionally not versioned.
 
 ## What works well
 
+- The linked table of contents occupies one dedicated page after the cover in
+  every scenario. Even the dense case lists all six main sections and all 18
+  nested findings with severity badges without clipping or spilling.
 - The 18-row findings matrix flows onto a second page with a repeated header.
   Long finding names, full phase labels, statuses, and unified severity badges
   remain legible and inside their columns.
@@ -84,8 +87,10 @@ the lead and useful opening context together while allowing the browser to use
 safe remaining page space. Recommendation and reference blocks stay intact, and
 split findings clone their visual border treatment across page fragments.
 
-The 18-finding scenario fell from 23 to 20 pages. The official sample report
-remains eight pages, with all finding headers and closing sections visible.
+Before the table of contents was enabled, the 18-finding scenario fell from 23
+to 20 content pages. It now has 21 pages including its one-page contents list.
+The official sample report now has nine pages, including its contents page, with
+all finding headers and closing sections visible.
 
 ### Extended preflight beyond word count
 
@@ -103,8 +108,9 @@ Professional Print is robust for the normal report workflow and for heavy
 findings, tables, code evidence, long metadata, and multi-page attack paths. It
 does not clip content in those workloads, and manually added content around
 structured attack-path steps is retained. Screenshot grouping, finding density,
-and sparse-page diagnostics now also pass their real-browser stress cases. No
-remaining correctness or presentation blocker was found in this test matrix.
+the single-page linked contents list, and sparse-page diagnostics now also pass
+their real-browser stress cases. No remaining correctness or presentation
+blocker was found in this test matrix.
 
 ## Reproduce
 

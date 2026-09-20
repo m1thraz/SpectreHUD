@@ -8,6 +8,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox, QPlainTextEdit, QWidget
 
 from core.reporting import ExportArtifact, ExportResult, ExportStatus
+from ui.report import HtmlExportOptions
 from ui.coordinators.export_coordinator import ReportExportError
 from ui.report.export_actions import ReportExportActions
 
@@ -120,7 +121,7 @@ class TestReportExportActions(unittest.TestCase):
                 patch.object(
                     self.actions,
                     "select_html_export_options",
-                    return_value=("light", "professional_print"),
+                    return_value=HtmlExportOptions("light", "professional_print", True),
                 ),
                 patch(
                     "ui.report.export_actions.QFileDialog.getSaveFileName",
@@ -133,6 +134,7 @@ class TestReportExportActions(unittest.TestCase):
             ):
                 self.actions.on_export_html_clicked()
                 self.coordinator.export_report_html.assert_called_once()
+                assert self.coordinator.export_report_html.call_args.kwargs["include_toc"] is True
 
     def test_on_export_obsidian_clicked(self):
         self.editor.setPlainText("# Obsidian Content")
@@ -200,7 +202,11 @@ class TestReportExportActions(unittest.TestCase):
         mock_prepare.reset_mock()
 
         with (
-            patch.object(actions, "select_html_export_options", return_value=("light", "professional_print")),
+            patch.object(
+                actions,
+                "select_html_export_options",
+                return_value=HtmlExportOptions("light", "professional_print", True),
+            ),
             patch("ui.report.export_actions.QFileDialog.getSaveFileName", return_value=("/fake/report.html", "HTML (*.html)")),
         ):
             actions.on_export_html_clicked()

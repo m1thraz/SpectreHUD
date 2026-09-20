@@ -16,6 +16,7 @@ from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.reporting import ReportFileManager
 from core.i18n import t
+from ui.report import HtmlExportOptions
 from ui.report.dialogs import (
     ReportExportTypeDialog,
     ReportGenerationDialog,
@@ -116,7 +117,11 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertNotIn("Interactive — Dark", buttons)
         professional = buttons[t("report.html_profile_professional", "Professional Print")]
         classic_web = buttons[t("report.html_profile_classic_web", "Classic Web (editable)")]
+        toc_checkbox = dialog.checkBox()
         self.assertIs(dialog.defaultButton(), professional)
+        self.assertIsNotNone(toc_checkbox)
+        self.assertTrue(toc_checkbox.isChecked())
+        self.assertIn("contents", toc_checkbox.text().lower())
         self.assertGreater(professional.sizeHint().width(), 0)
         self.assertGreater(classic_web.sizeHint().width(), 0)
 
@@ -740,7 +745,7 @@ Text
             patch.object(
                 self.tab.export_actions,
                 "select_html_export_options",
-                return_value=("light", "interactive"),
+                return_value=HtmlExportOptions("light", "interactive"),
             ),
             patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")),
         ):
@@ -753,7 +758,7 @@ Text
             patch.object(
                 self.tab.export_actions,
                 "select_html_export_options",
-                return_value=("light", "professional_print"),
+                return_value=HtmlExportOptions("light", "professional_print", True),
             ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
@@ -771,6 +776,7 @@ Text
                 language="de",
                 profile="professional_print",
                 category="ctf",
+                include_toc=True,
             )
 
         # 4. Export error
@@ -781,7 +787,7 @@ Text
             patch.object(
                 self.tab.export_actions,
                 "select_html_export_options",
-                return_value=("light", "interactive"),
+                return_value=HtmlExportOptions("light", "interactive"),
             ),
             patch(
                 "PyQt6.QtWidgets.QFileDialog.getSaveFileName",

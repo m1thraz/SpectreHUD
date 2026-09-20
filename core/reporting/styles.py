@@ -879,6 +879,64 @@ body[data-report-profile="professional_print"] .report-cover-brand {
     text-transform: uppercase;
 }
 
+body[data-report-profile="professional_print"] .report-toc {
+    min-height: 245mm;
+    padding: 18mm 0 12mm;
+    break-after: page;
+    page-break-after: always;
+}
+
+body[data-report-profile="professional_print"] .report-toc > h2 {
+    margin: 0 0 6mm;
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--report-accent);
+    font-size: 21pt;
+    font-weight: 620;
+    letter-spacing: -0.02em;
+}
+
+body[data-report-profile="professional_print"] .report-toc-sections,
+body[data-report-profile="professional_print"] .report-toc-findings {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+body[data-report-profile="professional_print"] .report-toc-section {
+    border-bottom: 1px solid var(--report-border);
+}
+
+body[data-report-profile="professional_print"] .report-toc-section > a,
+body[data-report-profile="professional_print"] .report-toc-finding > a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    color: var(--report-text);
+    text-decoration: none;
+}
+
+body[data-report-profile="professional_print"] .report-toc-section > a {
+    padding: 2.5mm 0;
+    font-size: 11pt;
+    font-weight: 650;
+}
+
+body[data-report-profile="professional_print"] .report-toc-findings {
+    padding: 0 0 2mm 7mm;
+}
+
+body[data-report-profile="professional_print"] .report-toc-finding > a {
+    padding: 1mm 0;
+    color: var(--report-muted);
+    font-size: 8.5pt;
+}
+
+body[data-report-profile="professional_print"] .report-toc-finding .severity-pill {
+    flex: 0 0 auto;
+    font-size: 6.5pt;
+}
+
 body[data-report-profile="professional_print"] .report-section {
     margin-top: var(--space-section);
 }
@@ -1281,6 +1339,11 @@ html[lang="de"] body[data-report-profile="professional_print"] .report-appendix:
         width: 210mm;
         min-height: 297mm;
         padding: 22mm 18mm 14mm;
+    }
+
+    body[data-report-profile="professional_print"] .report-toc {
+        min-height: 0;
+        padding: 8mm 0 4mm;
     }
 
     body[data-report-profile="professional_print"] .report-section {

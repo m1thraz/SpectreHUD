@@ -17,6 +17,7 @@ from core.reporting import (
     finding_from_loot_entry,
 )
 from core.validators import MAX_REPORT_FILE_SIZE
+from ui.report import HtmlExportOptions
 
 
 class FakeClipboardHistory:
@@ -401,7 +402,7 @@ class TestReportFileManager(unittest.TestCase):
             patch.object(
                 tab.export_actions,
                 "select_html_export_options",
-                return_value=("light", "interactive"),
+                return_value=HtmlExportOptions("light", "interactive"),
             ),
             patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.No),
         ):

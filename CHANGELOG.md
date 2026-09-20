@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Added
+
+* Added an optional linked table of contents to Professional Print exports, listing report sections and nested findings directly after the cover page.
+
 ## [2.2.2] - 2026-09-20
 
 ### Added

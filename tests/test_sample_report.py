@@ -27,6 +27,7 @@ def test_public_sample_report_is_clearly_synthetic_and_exportable():
         language="en",
         profile=ReportExportProfile.PROFESSIONAL_PRINT,
         category="pentest",
+        include_toc=True,
     )
 
     assert "spectre:section" not in rendered
@@ -37,6 +38,7 @@ def test_public_sample_report_is_clearly_synthetic_and_exportable():
     assert "Reconnaissance &amp; Enumeration" in rendered
     assert "Administrative Export Authorization Bypass" in rendered
     assert "Stored Operator Note Injection" in rendered
+    assert '<h2 id="report-toc-title">Contents</h2>' in rendered
 
 
 def test_sample_generation_preserves_published_artifacts_when_preflight_fails(

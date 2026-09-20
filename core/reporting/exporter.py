@@ -23,6 +23,7 @@ from core.reporting.print_layout import (
     section_print_layout_attribute,
 )
 from core.reporting.pagination import plan_professional_pagination
+from core.reporting.table_of_contents import build_professional_table_of_contents
 from core.reporting.professional import (
     build_professional_cover_data,
     extract_report_title,
@@ -156,6 +157,7 @@ class HtmlReportExporter:
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
         category: Optional[str] = None,
+        include_toc: bool = False,
     ) -> str:
         """Generates the full, styled HTML document ready for export."""
         active_profile = ReportExportProfile(profile)
@@ -167,6 +169,11 @@ class HtmlReportExporter:
         body_html = annotate_table_print_layout(body_html)
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
             body_html = plan_professional_pagination(body_html)
+            toc_html = ""
+            if include_toc:
+                toc_result = build_professional_table_of_contents(body_html, language)
+                body_html = toc_result.body_html
+                toc_html = toc_result.toc_html
         title_from_md = extract_report_title(markdown_content)
         pname = (
             project_name
@@ -184,7 +191,7 @@ class HtmlReportExporter:
                 body_html=body_html,
                 category=category,
             )
-            body_html = render_professional_cover(cover_data) + body_html
+            body_html = render_professional_cover(cover_data) + toc_html + body_html
         return render_report_html(
             body_html=body_html,
             project_name=pname,
@@ -210,6 +217,7 @@ class HtmlReportExporter:
         language: str = "en",
         profile: ReportExportProfile | str = ReportExportProfile.INTERACTIVE,
         category: Optional[str] = None,
+        include_toc: bool = False,
     ) -> ExportResult:
         """Renders HTML from Markdown and writes it atomically to output_path."""
         out = Path(output_path)
@@ -226,6 +234,7 @@ class HtmlReportExporter:
             language=language,
             profile=profile,
             category=category,
+            include_toc=include_toc,
         )
         try:
             success = atomic_write_text(out, full_html, encoding="utf-8")

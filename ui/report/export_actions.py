@@ -13,7 +13,7 @@ from ui.coordinators.export_coordinator import (
     present_export_result as _coordinator_present_export_result,
 )
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
-from ui.report.dialogs import ReportExportTypeDialog, select_html_export_options
+from ui.report.dialogs import HtmlExportOptions, ReportExportTypeDialog, select_html_export_options
 
 logger = get_logger(__name__)
 
@@ -31,7 +31,7 @@ class ReportExportActions:
         active_template_provider: Callable[[], Any],
         report_font_key_provider: Callable[[], str],
         select_export_type_override: Optional[Callable[[], Optional[str]]] = None,
-        select_html_options_override: Optional[Callable[[], Optional[tuple[str, str]]]] = None,
+        select_html_options_override: Optional[Callable[[], Optional[HtmlExportOptions]]] = None,
         prepare_export: Optional[Callable[[], bool]] = None,
     ):
         self.parent_widget = parent_widget
@@ -93,7 +93,7 @@ class ReportExportActions:
             return self._select_export_type_override()
         return ReportExportTypeDialog.select_export_type(self.parent_widget)
 
-    def select_html_export_options(self) -> Optional[tuple[str, str]]:
+    def select_html_export_options(self) -> Optional[HtmlExportOptions]:
         """Choose the HTML presentation profile without changing report content."""
         if self._select_html_options_override:
             return self._select_html_options_override()
@@ -161,7 +161,8 @@ class ReportExportActions:
         export_options = self.select_html_export_options()
         if export_options is None:
             return
-        theme, profile = export_options
+        theme = export_options.theme
+        profile = export_options.profile
 
         rfm = self.report_file_manager
         default_path = (
@@ -200,6 +201,7 @@ class ReportExportActions:
                 language=doc_lang,
                 profile=profile,
                 category=doc_category,
+                include_toc=export_options.include_toc,
             )
             self.present_export_result(
                 result,

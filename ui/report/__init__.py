@@ -5,6 +5,7 @@ from ui.report.dialogs import (
     LootEntryPickerDialog,
     LootFindingPromotionDialog,
     LootImagePickerDialog,
+    HtmlExportOptions,
     ReportExportTypeDialog,
     select_html_export_options,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "LootEntryPickerDialog",
     "LootFindingPromotionDialog",
     "LootImagePickerDialog",
+    "HtmlExportOptions",
     "ReportAppendixInspector",
     "ReportAttackPathInspector",
     "ReportExportActions",

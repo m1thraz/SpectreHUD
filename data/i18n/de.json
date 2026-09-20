@@ -523,6 +523,8 @@
     "report.html_profile_classic_web": "Klassische Webversion (editierbar)",
     "report.html_profile_professional": "Professional Print",
     "report.html_profile_professional_tip": "Druckfertige A4-Darstellung zur PDF-Erzeugung im Browser",
+    "report.html_profile_include_toc": "Verlinktes Inhaltsverzeichnis in Professional Print einfügen",
+    "report.html_profile_include_toc_tip": "Listet Reportabschnitte und Findings ohne Seitenzahlen direkt nach dem Deckblatt auf",
     "report.html_profile_classic_web_tip": "Editierbarer responsiver Webreport zur Nutzung im Browser",
     "report.change_view": "Ansicht ändern",
     "report.change_view_tip": "Layout des Report-Editors auswählen",
