@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-09-20
+
 ### Added
 
 * Added a fully synthetic Professional Print example report, README preview, and reproducible generation workflow.
@@ -432,7 +434,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.2...HEAD
+[2.2.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...v2.2.0
 [2.1.9]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.8...v2.1.9
