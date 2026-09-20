@@ -4,9 +4,14 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from core.reporting import (
     ReportFileManager,
     ReportPersistFailureReason,
+    ReportReadError,
+    ReportReadResult,
+    ReportReadStatus,
     ReportSessionService,
 )
 
@@ -44,6 +49,26 @@ def test_load_project_exposes_recoverable_draft(tmp_path: Path) -> None:
     assert state.recovery_draft is not None
     assert state.recovery_draft.markdown == "# Draft"
     assert state.recovery_draft.saved_at == saved_at
+
+
+def test_load_project_propagates_report_read_failure(tmp_path: Path) -> None:
+    service, file_manager = _service(tmp_path)
+    failure = ReportReadError(
+        ReportReadResult(
+            ReportReadStatus.READ_FAILED,
+            tmp_path / "report.md",
+            detail="mount unavailable",
+        )
+    )
+    file_manager.load.side_effect = failure
+
+    with (
+        patch("core.reporting.session.has_recoverable_draft") as has_draft,
+        pytest.raises(ReportReadError),
+    ):
+        service.load_project("Box")
+
+    has_draft.assert_not_called()
 
 
 def test_manual_save_clears_recovery_draft_after_success(tmp_path: Path) -> None:

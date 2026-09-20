@@ -81,6 +81,9 @@ from core.reporting.template_repository import (
 from core.reporting.file_manager import (
     ReportBackupError,
     ReportFileManager,
+    ReportReadError,
+    ReportReadResult,
+    ReportReadStatus,
     ReportSaveError,
 )
 from core.reporting.builder import ReportBuilder
@@ -257,6 +260,9 @@ __all__ = [
     "dict_to_template",
     "ReportBackupError",
     "ReportFileManager",
+    "ReportReadError",
+    "ReportReadResult",
+    "ReportReadStatus",
     "ReportSaveError",
     "ReportBuilder",
     "append_report_note",

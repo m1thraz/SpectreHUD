@@ -7,6 +7,7 @@ from typing import Any, Optional
 from core.reporting.file_manager import (
     ReportBackupError,
     ReportFileManager,
+    ReportReadError,
     ReportSaveError,
 )
 from core.reporting.loot_sync import LootReportState, classify_loot_report_state
@@ -23,6 +24,7 @@ class ReportMutationFailureReason(str, Enum):
     """Machine-readable reason why a report mutation did not complete."""
 
     BACKUP_FAILED = "backup_failed"
+    READ_FAILED = "read_failed"
     SAVE_FAILED = "save_failed"
     RECONCILIATION_CHANGED = "reconciliation_changed"
     UNEXPECTED_ERROR = "unexpected_error"
@@ -81,6 +83,10 @@ class ReportMutationService:
             return ReportMutationResult.failed(
                 ReportMutationFailureReason.BACKUP_FAILED, detail=str(exc)
             )
+        except ReportReadError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.READ_FAILED, detail=str(exc)
+            )
         except ReportSaveError as exc:
             return ReportMutationResult.failed(
                 ReportMutationFailureReason.SAVE_FAILED, detail=str(exc)
@@ -107,6 +113,10 @@ class ReportMutationService:
         except ReportBackupError as exc:
             return ReportMutationResult.failed(
                 ReportMutationFailureReason.BACKUP_FAILED, detail=str(exc)
+            )
+        except ReportReadError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.READ_FAILED, detail=str(exc)
             )
         except ReportSaveError as exc:
             return ReportMutationResult.failed(
@@ -148,6 +158,10 @@ class ReportMutationService:
         except ReportBackupError as exc:
             return ReportMutationResult.failed(
                 ReportMutationFailureReason.BACKUP_FAILED, detail=str(exc)
+            )
+        except ReportReadError as exc:
+            return ReportMutationResult.failed(
+                ReportMutationFailureReason.READ_FAILED, detail=str(exc)
             )
         except ReportSaveError as exc:
             return ReportMutationResult.failed(

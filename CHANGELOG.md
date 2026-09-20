@@ -10,6 +10,11 @@ semantic versioning.
 
 * Added an optional linked table of contents to Professional Print exports, listing report sections and nested findings directly after the cover page.
 
+### Fixed
+
+* Persist all Target, authentication, scope, wordlist, URL, subnet, DNS, and hash variables across project switches and application restarts.
+* Prevent unreadable or oversized existing reports from being treated as empty documents, blocking editor writes, autosave, note appends, and report mutations until the read problem is resolved.
+
 ## [2.2.2] - 2026-09-20
 
 ### Added

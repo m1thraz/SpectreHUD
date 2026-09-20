@@ -10,7 +10,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.project import ProjectManager
 from core.loot import LootManager
-from core.reporting import ReportFileManager
+from core.reporting import (
+    ReportFileManager,
+    ReportReadError,
+    ReportReadStatus,
+)
 from core.reporting import ReportTemplate
 from core.reporting import (
     LootReconciliationAction,
@@ -78,6 +82,65 @@ class TestReportFileManager(unittest.TestCase):
 
         loaded = self.report_mgr.load("BoxBeta")
         self.assertEqual(loaded, content)
+
+    def test_read_result_distinguishes_missing_and_loaded_empty_report(self):
+        self.project_mgr.create_project("ReadStates")
+
+        missing = self.report_mgr.load_result("ReadStates")
+        self.assertIs(missing.status, ReportReadStatus.NOT_FOUND)
+        self.assertEqual(self.report_mgr.load("ReadStates"), "")
+
+        report_path = self.report_mgr.get_report_path("ReadStates")
+        report_path.write_text("", encoding="utf-8")
+        loaded_empty = self.report_mgr.load_result("ReadStates")
+        self.assertIs(loaded_empty.status, ReportReadStatus.LOADED)
+        self.assertEqual(loaded_empty.content, "")
+
+    def test_oversized_existing_report_is_read_failed_and_load_raises(self):
+        self.project_mgr.create_project("OversizedExisting")
+        report_path = self.report_mgr.get_report_path("OversizedExisting")
+        report_path.write_bytes(b"x" * (MAX_REPORT_FILE_SIZE + 1))
+
+        result = self.report_mgr.load_result("OversizedExisting")
+
+        self.assertIs(result.status, ReportReadStatus.READ_FAILED)
+        with self.assertRaises(ReportReadError):
+            self.report_mgr.load("OversizedExisting")
+
+    def test_os_error_is_read_failed_instead_of_missing(self):
+        from unittest.mock import patch
+
+        self.project_mgr.create_project("UnreadableExisting")
+        report_path = self.report_mgr.get_report_path("UnreadableExisting")
+        report_path.write_text("# Existing", encoding="utf-8")
+
+        with patch.object(Path, "read_bytes", side_effect=PermissionError("access denied")):
+            result = self.report_mgr.load_result("UnreadableExisting")
+
+        self.assertIs(result.status, ReportReadStatus.READ_FAILED)
+        self.assertIn("access denied", result.detail)
+
+    def test_regenerate_never_writes_when_existing_report_read_fails(self):
+        from unittest.mock import patch
+
+        self.project_mgr.create_project("UnreadableRegenerate")
+        report_path = self.report_mgr.get_report_path("UnreadableRegenerate")
+        original = b"# Existing manual report"
+        report_path.write_bytes(original)
+
+        with (
+            patch.object(Path, "read_bytes", side_effect=PermissionError("mount unavailable")),
+            patch.object(self.report_mgr, "save") as save,
+            self.assertRaises(ReportReadError),
+        ):
+            self.report_mgr.regenerate(
+                self.loot_mgr,
+                self.clip_watcher,
+                "UnreadableRegenerate",
+            )
+
+        save.assert_not_called()
+        self.assertEqual(report_path.read_bytes(), original)
 
     def test_save_rejects_report_larger_than_its_read_limit(self):
         """The configured report-size product limit applies consistently to writes."""

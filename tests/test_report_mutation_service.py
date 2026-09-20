@@ -1,5 +1,6 @@
 """Headless tests for typed report-content mutations."""
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,8 +11,21 @@ from core.reporting import (
     ReportFileManager,
     ReportMutationFailureReason,
     ReportMutationService,
+    ReportReadError,
+    ReportReadResult,
+    ReportReadStatus,
     ReportSaveError,
 )
+
+
+def _read_error() -> ReportReadError:
+    return ReportReadError(
+        ReportReadResult(
+            ReportReadStatus.READ_FAILED,
+            Path("report.md"),
+            detail="access denied",
+        )
+    )
 
 
 @pytest.fixture
@@ -42,6 +56,7 @@ def test_regenerate_returns_persisted_content(dependencies) -> None:
     ("error", "reason"),
     [
         (ReportBackupError("backup"), ReportMutationFailureReason.BACKUP_FAILED),
+        (_read_error(), ReportMutationFailureReason.READ_FAILED),
         (ReportSaveError("save"), ReportMutationFailureReason.SAVE_FAILED),
         (RuntimeError("unexpected"), ReportMutationFailureReason.UNEXPECTED_ERROR),
     ],
@@ -81,6 +96,7 @@ def test_append_missing_loot_preserves_result_metadata(dependencies) -> None:
     ("error", "reason"),
     [
         (ReportBackupError("backup"), ReportMutationFailureReason.BACKUP_FAILED),
+        (_read_error(), ReportMutationFailureReason.READ_FAILED),
         (ReportSaveError("save"), ReportMutationFailureReason.SAVE_FAILED),
         (RuntimeError("unexpected"), ReportMutationFailureReason.UNEXPECTED_ERROR),
     ],
@@ -147,3 +163,13 @@ def test_reconcile_loot_maps_changed_review_state(dependencies) -> None:
 
     assert not result.success
     assert result.failure_reason is ReportMutationFailureReason.RECONCILIATION_CHANGED
+
+
+def test_reconcile_loot_maps_report_read_failure(dependencies) -> None:
+    service, file_manager = dependencies
+    file_manager.reconcile_loot.side_effect = _read_error()
+
+    result = service.reconcile_loot(project_name="Box", loot_manager="loot", decisions={})
+
+    assert not result.success
+    assert result.failure_reason is ReportMutationFailureReason.READ_FAILED

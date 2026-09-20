@@ -37,6 +37,7 @@ from core.reporting import (
     ReportMetadata,
     FindingPromotionService,
     ReportMutationService,
+    ReportReadError,
     ReportRemediationPlan,
     ReportScopeMethodology,
     ReportSessionService,
@@ -84,7 +85,7 @@ from ui.report.workspace_shell import (
     build_report_workspace_shell,
 )
 from ui.styles.icons import icon
-from ui.message_boxes import show_warning_dialog
+from ui.message_boxes import show_error_dialog, show_warning_dialog
 
 logger = get_logger("report_editor")
 
@@ -138,6 +139,7 @@ class ReportEditorTab(QWidget):
         self._view_mode = ViewMode.WORKSPACE
         self._light_report_view = False
         self._preview_markdown_snapshot: Optional[str] = None
+        self._report_write_blocked = False
         self.session_controller = ReportSessionController(
             service=ReportSessionService(report_file_manager),
             parent=self,
@@ -523,15 +525,36 @@ class ReportEditorTab(QWidget):
     # Projekt-Wechsel / Laden
     # ------------------------------------------------------------------ #
 
-    def load_project(self, project_name: str) -> None:
+    def load_project(self, project_name: str, *, fail_closed: bool = False) -> bool:
         """
         Lädt den Report des angegebenen Projekts in den Editor.
         Muss von main_window bei jedem Projektwechsel aufgerufen werden -
         prüft NICHT selbst auf ungespeicherte Änderungen im vorherigen
         Projekt, das ist Aufgabe des Aufrufers (siehe confirm_discard_if_dirty).
         """
+        try:
+            loaded = self.session_controller.load_project(project_name)
+        except ReportReadError as exc:
+            if fail_closed:
+                raise
+            self._enter_report_read_failure(project_name)
+            show_error_dialog(
+                self.window(),
+                t("report.read_error_title", "Report could not be loaded"),
+                t(
+                    "report.read_error_message",
+                    "The existing report could not be read. Editing and saving are disabled "
+                    "to protect its contents. Check the file or mount permissions and try again.",
+                ),
+                details=str(exc),
+            )
+            return False
+
         self.current_project = project_name
-        loaded = self.session_controller.load_project(project_name)
+        self._report_write_blocked = False
+        self.workspace_shell.editor.setReadOnly(False)
+        self.workspace_shell.center_stack.setEnabled(True)
+        self.action_toolbar.btn_save.setEnabled(True)
         self.workspace_shell.preview_document.set_project_dir(loaded.project_dir)
         content = strip_generator_footer(loaded.markdown)
 
@@ -545,6 +568,28 @@ class ReportEditorTab(QWidget):
         self._refresh_workspace_navigator(preserve_selection=False)
         if self._view_mode == ViewMode.WORKSPACE:
             self.navigate_to(ReportLocation(ReportLocationKind.METADATA))
+        self.refresh_preview()
+        if self._view_mode == ViewMode.PREVIEW:
+            self._enter_preview_mode()
+        self._update_status_label()
+        return True
+
+    def _enter_report_read_failure(self, project_name: str) -> None:
+        """Expose an unreadable report only as a write-blocked editor session."""
+        self.current_project = project_name
+        self._report_write_blocked = True
+        project_dir = self.report_file_manager.project_manager.get_project_dir(project_name)
+        self.workspace_shell.preview_document.set_project_dir(project_dir)
+        self.workspace_shell.editor.blockSignals(True)
+        self.workspace_shell.editor.clear()
+        self.workspace_shell.editor.blockSignals(False)
+        self.workspace_shell.editor.setReadOnly(True)
+        self.workspace_shell.preview.setReadOnly(True)
+        self.workspace_shell.center_stack.setEnabled(False)
+        self.action_toolbar.btn_save.setEnabled(False)
+        self._set_dirty(False)
+        self._workspace_doc = ReportWorkspaceDocument.from_markdown("")
+        self._refresh_workspace_navigator(preserve_selection=False)
         self.refresh_preview()
         self._update_status_label()
 
@@ -571,8 +616,13 @@ class ReportEditorTab(QWidget):
         """Return the canonical Markdown owned by the editor."""
         return self.workspace_shell.editor.toPlainText()
 
+    def is_write_blocked(self) -> bool:
+        return self._report_write_blocked
+
     def replace_markdown(self, markdown: str) -> None:
         """Replace the canonical Markdown through the tab's public boundary."""
+        if self._report_write_blocked:
+            return
         self.workspace_shell.editor.setPlainText(markdown)
 
     def set_export_coordinator(self, coordinator: ExportCoordinator) -> None:
@@ -631,6 +681,9 @@ class ReportEditorTab(QWidget):
         if self._preview_timer.isActive():
             self._preview_timer.stop()
         self.refresh_preview()
+        if self._report_write_blocked:
+            self.workspace_shell.preview.setReadOnly(True)
+            return
         self._preview_markdown_snapshot = self.workspace_shell.editor.toPlainText()
         self.workspace_shell.preview.setReadOnly(False)
         self.workspace_shell.preview.setFocus()
@@ -860,7 +913,7 @@ class ReportEditorTab(QWidget):
         self.set_view_mode(modes[(idx + 1) % len(modes)])
 
     def save(self) -> bool:
-        if not self.current_project:
+        if not self.current_project or self._report_write_blocked:
             return False
 
         if self._view_mode == ViewMode.PREVIEW:
@@ -878,7 +931,7 @@ class ReportEditorTab(QWidget):
 
     def autosave(self) -> None:
         """Persist a dirty report without interrupting the user on failures."""
-        if not self.is_dirty() or not self.current_project:
+        if self._report_write_blocked or not self.is_dirty() or not self.current_project:
             return
         if self._view_mode == ViewMode.PREVIEW:
             if not self._commit_preview_to_markdown():
@@ -935,6 +988,11 @@ class ReportEditorTab(QWidget):
     def _update_status_label(self) -> None:
         if not self.current_project:
             self.action_toolbar.lbl_status.setText("")
+            return
+        if self._report_write_blocked:
+            self.action_toolbar.lbl_status.setText(
+                t("report.read_error_status", "Report unreadable — editing disabled")
+            )
             return
         status_text = (
             f"● {t('report.unsaved', 'Unsaved changes')}"
@@ -1017,7 +1075,7 @@ class ReportEditorTab(QWidget):
 
     def _save_draft_snapshot(self) -> None:
         """Saves an in-flight draft snapshot for crash recovery if content is dirty."""
-        if not self._dirty or not self.current_project:
+        if self._report_write_blocked or not self._dirty or not self.current_project:
             return
         self.session_controller.save_draft(
             self.current_project, self.workspace_shell.editor.toPlainText()

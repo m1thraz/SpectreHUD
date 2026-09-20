@@ -7,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PyQt6.QtWidgets import QApplication
 from ui.variable_bar import VariableBar
+from core.project_variables import PROJECT_VARIABLE_KEYS
 from core.snippets import TemplateEngine
 
 
@@ -71,6 +72,10 @@ def test_variable_bar_get_and_set_variables(var_bar):
     assert res["ntlm_hash"] == "hash123"
     assert res["wordlist"] == "/usr/share/seclists/Discovery/Web-Content/raft-small-words.txt"
     assert res["url"] == "https://192.168.1.100:8443/api"
+
+
+def test_variable_bar_matches_the_persisted_project_variable_contract(var_bar):
+    assert set(var_bar.get_variables()) == set(PROJECT_VARIABLE_KEYS)
 
 
 def test_variable_bar_live_signal_from_popovers(var_bar):

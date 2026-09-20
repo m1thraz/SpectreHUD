@@ -513,10 +513,10 @@ class AppController(QObject):
         entries = self.loot_manager.get_all_entries()
         markdown = ""
         if hasattr(self, "report_ctrl") and self.report_ctrl:
-            if self.report_ctrl.report_editor_tab is not None:
-                markdown = self.report_ctrl.report_editor_tab.current_markdown()
-            else:
-                markdown = self.report_ctrl.report_file_manager.load() or ""
+            report_markdown = self.report_ctrl.markdown_for_analysis()
+            if report_markdown is None:
+                return
+            markdown = report_markdown
         from core.reporting import classify_loot_report_state
 
         state = classify_loot_report_state(markdown, entries)
@@ -545,16 +545,14 @@ class AppController(QObject):
         unsynced_loot = 0
         if self.loot_manager:
             entries = self.loot_manager.get_all_entries()
-            markdown = ""
+            report_markdown: Optional[str] = ""
             if hasattr(self, "report_ctrl") and self.report_ctrl:
-                if self.report_ctrl.report_editor_tab is not None:
-                    markdown = self.report_ctrl.report_editor_tab.current_markdown()
-                else:
-                    markdown = self.report_ctrl.report_file_manager.load() or ""
-            from core.reporting import classify_loot_report_state
+                report_markdown = self.report_ctrl.markdown_for_analysis()
+            if report_markdown is not None:
+                from core.reporting import classify_loot_report_state
 
-            state = classify_loot_report_state(markdown, entries)
-            unsynced_loot = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
+                state = classify_loot_report_state(report_markdown, entries)
+                unsynced_loot = len(state.missing) + len(state.stale) + len(state.orphaned_ids)
 
         target = self._target_provider()
         last_action, resume_context = self._get_last_action_summary_and_context()
@@ -608,10 +606,10 @@ class AppController(QObject):
             entries = self.loot_manager.get_all_entries()
             markdown = ""
             if hasattr(self, "report_ctrl") and self.report_ctrl:
-                if self.report_ctrl.report_editor_tab is not None:
-                    markdown = self.report_ctrl.report_editor_tab.current_markdown()
-                else:
-                    markdown = self.report_ctrl.report_file_manager.load() or ""
+                report_markdown = self.report_ctrl.markdown_for_analysis()
+                if report_markdown is None:
+                    return None
+                markdown = report_markdown
             from core.reporting import classify_loot_report_state
 
             state = classify_loot_report_state(markdown, entries)

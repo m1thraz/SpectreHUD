@@ -223,6 +223,12 @@ class ReportMutationActions:
                 else "report.append_backup_failed_msg",
                 "Das automatische Backup ist fehlgeschlagen. Zum Schutz des bestehenden Reports wurde die Änderung abgebrochen.",
             )
+        elif result.failure_reason is ReportMutationFailureReason.READ_FAILED:
+            title = t("report.read_error_title", "Report could not be loaded")
+            message = t(
+                "report.read_error_mutation",
+                "The report could not be read. No changes were written.",
+            )
         elif result.failure_reason is ReportMutationFailureReason.SAVE_FAILED:
             title = (
                 t("report.save_failed_title", "Speichern fehlgeschlagen")

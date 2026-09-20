@@ -19,6 +19,7 @@ from core.crypto_service import (
     verify_password,
 )
 from core.logger import get_logger
+from core.project_variables import PROJECT_VARIABLE_KEYS
 from core.project.validator import validate_project_name
 from core.project.lock_service import (
     ProjectLockedError,
@@ -69,7 +70,15 @@ class ProjectState:
     port: str
     username: str
     password: str
+    domain: str
+    ntlm_hash: str
+    hash: str
+    hash_file: str
     wordlist: str
+    url: str
+    subnet: str
+    dns_server: str
+    dns: str
     created_at: str
     updated_at: str
     loot: List[Dict[str, Any]]
@@ -81,12 +90,7 @@ class ProjectState:
         return {
             "schema_version": self.schema_version,
             "name": self.name,
-            "target_ip": self.target_ip,
-            "attacker_ip": self.attacker_ip,
-            "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "wordlist": self.wordlist,
+            **{key: getattr(self, key) for key in PROJECT_VARIABLE_KEYS},
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "loot": list(self.loot),
@@ -129,17 +133,7 @@ def validate_and_parse_project_state(
     ):
         raise ProjectSchemaMismatchError("Project state uses an unsupported schema version.")
 
-    text_fields = (
-        "name",
-        "target_ip",
-        "attacker_ip",
-        "port",
-        "username",
-        "password",
-        "wordlist",
-        "created_at",
-        "updated_at",
-    )
+    text_fields = ("name", *PROJECT_VARIABLE_KEYS, "created_at", "updated_at")
     list_fields = ("loot", "clipboard_history", "quick_notes")
     if any(field in raw and not isinstance(raw[field], str) for field in text_fields):
         raise ProjectStateCorruptedError("Project state contains an invalid text field.")

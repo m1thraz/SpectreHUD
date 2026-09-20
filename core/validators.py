@@ -296,15 +296,13 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
     strictly bounding all string lengths and list sizes without corrupting credentials.
     """
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    default_state = {
+    from core.project_variables import normalize_project_variables
+
+    variables = normalize_project_variables(data if isinstance(data, dict) else None)
+    default_state: Dict[str, Any] = {
         "schema_version": 1,
         "name": fallback_name[:MAX_PROJECT_NAME_LENGTH],
-        "target_ip": "10.10.10.10",
-        "attacker_ip": "10.10.14.5",
-        "port": "4444",
-        "username": "",
-        "password": "",
-        "wordlist": "/usr/share/wordlists/dirb/common.txt",
+        **variables,
         "created_at": now_str,
         "updated_at": now_str,
         "loot": [],
@@ -319,12 +317,7 @@ def validate_project_state(data: Any, fallback_name: str = "Default") -> Dict[st
     return {
         "schema_version": 1,
         "name": str(data.get("name") or fallback_name)[:MAX_PROJECT_NAME_LENGTH],
-        "target_ip": str(data.get("target_ip") or "10.10.10.10")[:MAX_TARGET_IP_LENGTH],
-        "attacker_ip": str(data.get("attacker_ip") or "10.10.14.5")[:MAX_TARGET_IP_LENGTH],
-        "port": str(data.get("port") or "4444")[:32],
-        "username": str(data.get("username") or "")[:1024],
-        "password": str(data.get("password") or "")[:1024],
-        "wordlist": str(data.get("wordlist") or "/usr/share/wordlists/dirb/common.txt")[:1024],
+        **variables,
         "created_at": str(data.get("created_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "updated_at": str(data.get("updated_at") or now_str)[:MAX_TIMESTAMP_LENGTH],
         "loot": validate_loot_list(data.get("loot")),

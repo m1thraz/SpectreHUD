@@ -5,9 +5,14 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from core.project import ProjectManager
 from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
-from core.reporting import ReportFileManager
+from core.reporting import ReportFileManager, ReportReadError, ReportReadStatus
 from core.config import ConfigManager
 from core.reporting import append_report_note
+from core.i18n import t
+from core.logger import get_logger
+from ui.message_boxes import show_error_dialog
+
+logger = get_logger("report_controller")
 
 if TYPE_CHECKING:
     from ui.coordinators.export_coordinator import ExportCoordinator
@@ -66,7 +71,9 @@ class ReportController(QObject):
 
     def load_project(self, project_name: str) -> None:
         if self.report_editor_tab is not None:
-            self.report_editor_tab.load_project(project_name)
+            self.report_editor_tab.load_project(project_name, fail_closed=True)
+        else:
+            self.report_file_manager.load(project_name)
 
     def confirm_discard_if_dirty(self) -> bool:
         return (
@@ -104,9 +111,24 @@ class ReportController(QObject):
     def append_note(self, note: dict) -> bool:
         """Appends a quick note to the active project's report.md."""
         if self.report_editor_tab is not None:
+            if self.report_editor_tab.is_write_blocked():
+                return False
             current = self.report_editor_tab.current_markdown()
         else:
-            current = self.report_file_manager.load() or ""
+            try:
+                current = self.report_file_manager.load()
+            except ReportReadError as exc:
+                logger.error("Could not append note because report reading failed: %s", exc)
+                show_error_dialog(
+                    self.parent_widget,
+                    t("report.read_error_title", "Report could not be loaded"),
+                    t(
+                        "report.read_error_append",
+                        "The note was not added because the existing report could not be read.",
+                    ),
+                    details=str(exc),
+                )
+                return False
 
         new_content = append_report_note(
             current,
@@ -118,7 +140,20 @@ class ReportController(QObject):
 
         if self.report_editor_tab is not None:
             self.report_editor_tab.replace_markdown(new_content)
-            self.report_editor_tab.save()
-            return True
+            return self.report_editor_tab.save()
 
         return self.report_file_manager.save(new_content)
+
+    def markdown_for_analysis(self) -> Optional[str]:
+        """Return report text for read-only UI analysis, or None when disk reading failed."""
+        if self.report_editor_tab is not None:
+            return (
+                None
+                if self.report_editor_tab.is_write_blocked()
+                else self.report_editor_tab.current_markdown()
+            )
+        result = self.report_file_manager.load_result()
+        if result.status is ReportReadStatus.READ_FAILED:
+            logger.error("Skipping report analysis because reading failed: %s", result.detail)
+            return None
+        return result.content

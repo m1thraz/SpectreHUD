@@ -7,6 +7,7 @@ from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.logger import get_logger
 from core.phases import VALID_PHASE_KEYS, try_normalize_phase_key
+from core.project_variables import normalize_project_variables
 from core.validators import validate_clipboard_list, validate_loot_list, validate_quick_notes_list
 
 logger = get_logger("project_session_service")
@@ -157,13 +158,10 @@ class ProjectSessionService:
         Returns the typed persistence outcome.
         """
         pname = project_name or self.project_manager.get_active_project()
+        project_variables = normalize_project_variables(variables)
         return self.project_manager.save_project_state(
             name=pname,
-            target_ip=variables.get("target_ip", "10.10.10.10"),
-            attacker_ip=variables.get("attacker_ip", "10.10.14.5"),
-            port=variables.get("port", "4444"),
-            username=variables.get("username", ""),
-            password=variables.get("password", ""),
+            **project_variables,
             loot=self.loot_manager.get_all_entries(),
             clipboard_history=self.clipboard_history.get_all_history(),
             quick_notes=(

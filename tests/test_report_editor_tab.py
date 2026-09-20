@@ -276,6 +276,57 @@ class TestReportEditorTab(unittest.TestCase):
         message_exec.assert_not_called()
         self.assertTrue(self.tab.is_dirty())
 
+    def test_report_read_failure_blocks_editor_save_and_autosave(self):
+        from core.reporting import ReportReadError, ReportReadResult, ReportReadStatus
+
+        failure = ReportReadError(
+            ReportReadResult(
+                ReportReadStatus.READ_FAILED,
+                self.tab.report_file_manager.get_report_path("TestBox"),
+                detail="access denied",
+            )
+        )
+        with (
+            patch.object(self.tab.session_controller, "load_project", side_effect=failure),
+            patch("ui.report_editor_tab.show_error_dialog") as show_error,
+        ):
+            loaded = self.tab.load_project("TestBox")
+
+        self.assertFalse(loaded)
+        self.assertTrue(self.tab.is_write_blocked())
+        self.assertTrue(self.tab.workspace_shell.editor.isReadOnly())
+        self.assertFalse(self.tab.action_toolbar.btn_save.isEnabled())
+        self.assertEqual(
+            self.tab.action_toolbar.lbl_status.text(),
+            t("report.read_error_status", "Report unreadable — editing disabled"),
+        )
+        show_error.assert_called_once()
+
+        self.tab.workspace_shell.editor.setPlainText("replacement content")
+        with patch.object(self.tab.session_controller, "autosave") as autosave:
+            self.tab.autosave()
+        autosave.assert_not_called()
+        self.assertFalse(self.tab.save())
+
+    def test_fail_closed_project_load_preserves_current_editor_content(self):
+        from core.reporting import ReportReadError, ReportReadResult, ReportReadStatus
+
+        self.tab.replace_markdown("# Previous project")
+        failure = ReportReadError(
+            ReportReadResult(
+                ReportReadStatus.READ_FAILED,
+                self.tab.report_file_manager.get_report_path("TestBox"),
+                detail="mount unavailable",
+            )
+        )
+
+        with patch.object(self.tab.session_controller, "load_project", side_effect=failure):
+            with self.assertRaises(ReportReadError):
+                self.tab.load_project("TestBox", fail_closed=True)
+
+        self.assertEqual(self.tab.current_markdown(), "# Previous project")
+        self.assertFalse(self.tab.is_write_blocked())
+
     def test_btn_append_loot_exists_in_toolbar(self):
         """Ticket 24: Verify 'Aus Loot ergänzen' button exists and is positioned in the action toolbar."""
         self.assertTrue(hasattr(self.tab.action_toolbar, "btn_append_loot"))

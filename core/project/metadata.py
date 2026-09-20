@@ -107,15 +107,17 @@ def create_initial_state(
 ) -> Dict[str, Any]:
     """Generates initial dictionary structure for project_state.json."""
     from core.validators import format_timestamp
+    from core.project_variables import PROJECT_VARIABLE_DEFAULTS
 
     ts = created_at or format_timestamp()
     return {
         "schema_version": 1,
         "name": project_name,
-        "target_ip": target_ip or "10.10.10.10",
-        "attacker_ip": attacker_ip or "10.10.14.5",
-        "port": port or "4444",
-        "wordlist": wordlist or "/usr/share/wordlists/dirb/common.txt",
+        **PROJECT_VARIABLE_DEFAULTS,
+        "target_ip": target_ip or PROJECT_VARIABLE_DEFAULTS["target_ip"],
+        "attacker_ip": attacker_ip or PROJECT_VARIABLE_DEFAULTS["attacker_ip"],
+        "port": port or PROJECT_VARIABLE_DEFAULTS["port"],
+        "wordlist": wordlist or PROJECT_VARIABLE_DEFAULTS["wordlist"],
         "created_at": ts,
         "updated_at": ts,
         "loot": [],

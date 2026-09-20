@@ -1,6 +1,7 @@
 import json
 import unittest
 import tempfile
+from dataclasses import fields
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +16,7 @@ from core.clipboard_history import ClipboardHistory
 from core.quick_note_manager import QuickNoteManager
 from core.project import ProjectStateCorruptedError
 from core.project import ProjectSessionService, ProjectSessionValidationError
+from core.project_variables import PROJECT_VARIABLE_KEYS, ProjectVariables
 
 
 class TestProjectSessionService(unittest.TestCase):
@@ -89,6 +91,56 @@ class TestProjectSessionService(unittest.TestCase):
         self.assertEqual(
             self.quick_note_manager.get_all_entries()[0]["text"], "Investigate SMB share"
         )
+
+    def test_complete_variable_dictionary_round_trips_through_a_fresh_runtime(self):
+        self.project_manager.create_project("VariableRoundTrip")
+        variables = {
+            "target_ip": "192.0.2.45",
+            "attacker_ip": "198.51.100.23",
+            "port": "8443",
+            "username": "operator",
+            "password": "synthetic-secret",
+            "domain": "corp.example.test",
+            "ntlm_hash": "aad3b435b51404eeaad3b435b51404ee",
+            "hash": "synthetic-hash",
+            "hash_file": "C:/demo/hashes.txt",
+            "wordlist": "C:/demo/raft-large.txt",
+            "url": "https://portal.example.test:8443/admin",
+            "subnet": "192.0.2.0/24",
+            "dns_server": "192.0.2.53",
+            "dns": "192.0.2.53",
+        }
+        self.assertEqual(set(variables), set(PROJECT_VARIABLE_KEYS))
+
+        saved = self.session_service.save_project_session(
+            variables=variables,
+            project_name="VariableRoundTrip",
+        )
+        self.assertTrue(saved.success)
+
+        fresh_project_manager = ProjectManager(
+            base_dir=self.projects_dir,
+            config_dir=self.project_manager.config_dir,
+        )
+        fresh_session_service = ProjectSessionService(
+            project_manager=fresh_project_manager,
+            loot_manager=LootManager(storage_file=self.config_dir / "fresh-loot.json"),
+            clipboard_history=ClipboardHistory(
+                storage_file=self.config_dir / "fresh-clip.json"
+            ),
+            quick_note_manager=QuickNoteManager(
+                storage_file=self.config_dir / "fresh-notes.json"
+            ),
+        )
+
+        loaded_state = fresh_session_service.load_project_session("VariableRoundTrip")
+        loaded_variables = {
+            key: loaded_state.to_dict()[key] for key in PROJECT_VARIABLE_KEYS
+        }
+        self.assertEqual(loaded_variables, variables)
+        state_fields = {field.name for field in fields(loaded_state)}
+        self.assertTrue(set(PROJECT_VARIABLE_KEYS).issubset(state_fields))
+        self.assertEqual(set(PROJECT_VARIABLE_KEYS), ProjectVariables.__required_keys__)
 
     def test_session_isolation_across_projects(self):
         """Tests that loading an empty/new project cleans up loot and clipboard in memory."""
@@ -186,6 +238,24 @@ class TestProjectSessionService(unittest.TestCase):
         self.assertEqual(json.loads(state_file.read_text(encoding="utf-8"))["schema_version"], 1)
         backup = project_dir / "project_state.json.pre-schema-v1.bak"
         self.assertEqual(backup.read_bytes(), legacy_bytes)
+
+    def test_existing_schema_one_state_without_extended_variables_uses_defaults(self):
+        project_dir = self.project_manager.create_project("OlderSchemaOne")
+        state_file = project_dir / "project_state.json"
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        for key in PROJECT_VARIABLE_KEYS:
+            if key not in {"target_ip", "attacker_ip", "port", "username", "password", "wordlist"}:
+                state.pop(key, None)
+        state_file.write_text(json.dumps(state), encoding="utf-8")
+
+        loaded = self.session_service.load_project_session("OlderSchemaOne")
+
+        self.assertEqual(loaded.domain, "")
+        self.assertEqual(loaded.ntlm_hash, "")
+        self.assertEqual(loaded.url, "")
+        self.assertEqual(loaded.subnet, "")
+        self.assertEqual(loaded.dns_server, "")
+        self.assertEqual(loaded.wordlist, "/usr/share/wordlists/dirb/common.txt")
 
     def test_unknown_project_state_schema_is_explicit_and_preserves_runtime(self):
         project_dir = self.project_manager.create_project("FutureSchema")
