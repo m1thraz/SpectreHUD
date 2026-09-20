@@ -67,7 +67,11 @@ Spectre keeps the documentation workflow connected from structured findings to t
 
 ## Example professional report
 
-[![Preview of the synthetic SpectreHUD Professional Print report](docs/examples/SpectreHUD-Sample-Report-preview.png)](docs/examples/SpectreHUD-Sample-Report.pdf)
+<p align="center">
+  <a href="docs/examples/SpectreHUD-Sample-Report.pdf">
+    <img src="docs/examples/SpectreHUD-Sample-Report-preview.png" alt="Preview of the synthetic SpectreHUD Professional Print report" width="300">
+  </a>
+</p>
 
 Open the [complete sample report](docs/examples/SpectreHUD-Sample-Report.pdf) to see the
 Professional Print output from cover page through findings, attack path, remediation plan,
@@ -109,39 +113,36 @@ Download the current Windows build from the [GitHub Releases page](https://githu
 
 No Python installation is required.
 
-### Linux
+### Linux (`.deb` package)
 
-Requirements: Python 3.10+ and standard Qt6/XCB desktop runtime dependencies.
-
-#### Ubuntu / Debian / Kali Linux
+On Debian, Ubuntu, or Kali Linux, download the current `spectrehud_*_amd64.deb`
+from the [GitHub Releases page](https://github.com/m1thraz/SpectreHUD/releases), then
+install it from your download directory:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y libegl1 libgl1 libxcb-cursor0 libxkbcommon-x11-0 libdbus-1-3
+cd ~/Downloads
+sudo apt install ./spectrehud_*_amd64.deb
 ```
 
-#### Fedora / RHEL
+Required system libraries are installed through the package dependencies. No Python
+installation is required.
+
+#### Other Linux distributions
+
+For distributions without `.deb` support, install the Qt6/XCB runtime dependencies and
+continue with the source installation below.
+
+Fedora / RHEL:
 
 ```bash
 sudo dnf install -y mesa-libEGL mesa-libGL libxkbcommon-x11 dbus-libs
 ```
 
-#### Arch Linux
+Arch Linux:
 
 ```bash
 sudo pacman -S libxkbcommon-x11 xcb-util-cursor dbus
 ```
-
-#### Install and run
-
-```bash
-git clone https://github.com/m1thraz/SpectreHUD.git
-cd SpectreHUD
-pip install .
-spectrehud
-```
-
-Once published to PyPI, direct `pip install spectrehud` will also be available.
 
 ### From source / development
 
