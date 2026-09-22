@@ -501,7 +501,7 @@ class LootController(QObject):
                     (
                         "No Loot entries match the current search or type filter."
                         if has_loot
-                        else "Loot stores structured evidence and findings used by report generation and Add Missing Loot. Press Ctrl+N here, use Quick Loot (Ctrl+Alt+L), or capture a Snip."
+                        else "No Loot yet. Save important findings, credentials, or artifacts here (Ctrl+N / Ctrl+Alt+L); use them in your report later."
                     ),
                 )
             )

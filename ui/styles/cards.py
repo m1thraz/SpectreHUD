@@ -308,6 +308,13 @@ QLineEdit.TweakLineEdit:focus {
     background-color: {CODE_A98};
 }
 
+/* Report editing hint */
+QFrame#ReportEditingHint {
+    background-color: {ACTIVE_BLUE_A20};
+    border: 1px solid {ACTIVE_BLUE_A40};
+    border-radius: 6px;
+}
+
 /* Privacy Warning Banner */
 QFrame#PrivacyWarningBanner {
     background-color: {WARNING_A12};

@@ -60,8 +60,8 @@ class ContentPanel(QWidget):
         self.lbl_warn = QLabel(
             t(
                 "privacy.warning",
-                "Privacy Notice: Copied passwords or personal data are logged while REC is active "
-                "(Pause with Ctrl+Alt+R or click REC: ON).",
+                "Privacy Notice: Clip is off by default. While enabled, copied text can "
+                "include passwords or personal data. Pause with Ctrl+Alt+R or click Clip.",
             )
         )
         self.lbl_warn.setTextFormat(Qt.TextFormat.PlainText)

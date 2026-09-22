@@ -88,7 +88,7 @@ class TestI18n(unittest.TestCase):
         # 1. German
         self.i18n.set_locale("de")
         self.assertIn("Noch keine Befehle", self.i18n.t("cheatsheet.empty_state"))
-        self.assertIn("strukturierte Evidenz", self.i18n.t("loot.empty_state"))
+        self.assertIn("wichtige Findings", self.i18n.t("loot.empty_state"))
         self.assertIn("Noch keine Clipboard-Historie", self.i18n.t("history.empty_state"))
         self.assertIn("aktuellen Suche", self.i18n.t("history.no_results"))
         self.assertIn("Datenschutz-Hinweis", self.i18n.t("privacy.warning"))
@@ -99,7 +99,7 @@ class TestI18n(unittest.TestCase):
         # 2. English
         self.i18n.set_locale("en")
         self.assertIn("No commands are available yet", self.i18n.t("cheatsheet.empty_state"))
-        self.assertIn("structured evidence", self.i18n.t("loot.empty_state"))
+        self.assertIn("important findings", self.i18n.t("loot.empty_state"))
         self.assertIn("No clipboard history yet", self.i18n.t("history.empty_state"))
         self.assertIn("current search", self.i18n.t("history.no_results"))
         self.assertIn("Privacy Notice", self.i18n.t("privacy.warning"))

@@ -129,6 +129,31 @@ class MainWindow(QMainWindow):
         self.app.refresh_content()
         self._startup_mark(self._startup_started_at, "initial content rendered")
 
+    def show_getting_started_if_needed(self) -> None:
+        if not self.config.get("getting_started_pending", False):
+            return
+
+        from core.shortcuts import format_hotkey_sequence
+        from core.storage import PersistenceError
+        from ui.getting_started_dialog import GettingStartedDialog
+
+        quick_ip_hotkey = format_hotkey_sequence(
+            self.config.get("quick_ip_hotkey", "<ctrl>+<alt>+i")
+        )
+        dialog = GettingStartedDialog(quick_ip_hotkey, parent=self)
+        dialog.exec()
+
+        if dialog.dont_show_again.isChecked():
+            try:
+                self.config.set("getting_started_pending", False)
+            except PersistenceError as exc:
+                logger.warning("Could not persist Getting Started dismissal: %s", exc)
+
+        if dialog.selected_action == "new_project":
+            QTimer.singleShot(0, self.app._open_new_project_dialog)
+        elif dialog.selected_action == "open_project":
+            QTimer.singleShot(0, self.header_panel.btn_project.click)
+
     def showEvent(self, event) -> None:
         super().showEvent(event)
         if self._initial_content_pending:

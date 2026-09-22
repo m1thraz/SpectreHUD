@@ -50,6 +50,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "loot_dialog_details_expanded": False,
     "evidence_suggestions_enabled": True,
     "evidence_correlation_window_seconds": 90,
+    "getting_started_pending": False,
+    "report_editing_hint_pending": False,
 }
 
 
@@ -106,6 +108,7 @@ class ConfigManager:
         failure is suppressed here so startup can proceed; explicit saves remain the
         durable error-reporting boundary.
         """
+        is_new_config = not self.storage.exists("config")
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
             migrated = False
@@ -153,6 +156,9 @@ class ConfigManager:
             return cfg
 
         cfg = DEFAULT_CONFIG.copy()
+        if is_new_config:
+            cfg["getting_started_pending"] = True
+            cfg["report_editing_hint_pending"] = True
         self.data = cfg
         try:
             self.save_config()

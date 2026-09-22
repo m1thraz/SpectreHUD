@@ -297,7 +297,7 @@ class HistoryController(QObject):
                     (
                         "No clipboard entries match the current search or filter."
                         if has_history
-                        else "No clipboard history yet. Start REC (Ctrl+Alt+R); copied terminal commands and output will appear here."
+                        else "No clipboard history yet. Clip is off by default; enable it with Ctrl+Alt+R to capture copied text for later review."
                     ),
                 )
             )

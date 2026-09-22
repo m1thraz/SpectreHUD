@@ -2,6 +2,10 @@
 
 This map covers only contracts and pitfalls that become apparent at the boundaries between multiple components.
 
+## First Run
+- `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.
+- The Welcome dialog reuses the existing New Project action and project selector menu. It is scheduled after the production window and global hotkeys are ready; construction of `MainWindow` in tests or other embedding contexts does not open it.
+
 ## Project Switching
 - Non-obvious: The interactive "report dirty" decision and saving of the old session occur prior to activation so the user can abort without side-effects; target activation, unlocking, report loading, and session state loading are orchestrated as an atomic transaction by `WorkspaceApplicationService` with automatic rollback on failure.
 - Known pitfall: `activate_project()` discards the old in-memory key and publishes `PROJECT_CHANGED` with the phase `activated` before unlocking and loading succeed; if the operation is aborted or fails, `WorkspaceApplicationService` rolls back to the previous project and restores its key, but listeners that react eagerly to `phase="activated"` see the transient target activation before the rollback event. Components should primarily await `phase="loaded"`.

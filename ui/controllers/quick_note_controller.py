@@ -730,7 +730,7 @@ class QuickNoteController(QObject):
                     (
                         "No notes match the current search or filter."
                         if has_notes
-                        else "Quick Notes is your capture and triage inbox. Capture a thought with Ctrl+Alt+N, then send it to Loot or the Report when ready."
+                        else "No Quick Notes yet. Remember a thought with Ctrl+Alt+N, even while minimized, and decide later where it belongs."
                     ),
                 )
             )

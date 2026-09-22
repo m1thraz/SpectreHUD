@@ -413,6 +413,8 @@ def main():
         container.event_bus.subscribe(EventType.HOTKEY_SETTINGS_CHANGED, on_hotkeys_changed)
 
         _startup_mark(started_at, "application ready")
+        if not os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
+            QTimer.singleShot(0, window.show_getting_started_if_needed)
         if os.environ.get("SPECTREHUD_STARTUP_PROFILE"):
             profile_exit_ms = int(os.environ.get("SPECTREHUD_PROFILE_EXIT_MS", "0"))
             if profile_exit_ms > 0:

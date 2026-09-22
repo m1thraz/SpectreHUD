@@ -74,7 +74,7 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.setToolTip(
             t(
                 "header.history_tip",
-                "Review commands and output captured while clipboard REC is active",
+                "Review copied text captured while Clip is on; decide what to keep later",
             )
         )
         self.btn_mode_history.clicked.connect(lambda: self.mode_changed.emit("history"))
@@ -138,7 +138,7 @@ class HeaderPanel(QFrame):
         self.btn_quick_note.setIcon(icon("fa5s.pen"))
         self.btn_quick_note.setIconSize(QSize(13, 13))
         self.btn_quick_note.setToolTip(
-            t("header.note_tip", "Capture a thought in the Quick Notes inbox (Ctrl+Alt+N)")
+            t("header.note_tip", "Remember a thought for later with Quick Note (Ctrl+Alt+N, even while minimized)")
         )
         self.btn_quick_note.clicked.connect(self.quick_note_requested.emit)
         layout.addWidget(self.btn_quick_note)
@@ -572,7 +572,7 @@ class HeaderPanel(QFrame):
         self.btn_mode_history.setToolTip(
             t(
                 "header.history_tip",
-                "Review commands and output captured while clipboard REC is active",
+                "Review copied text captured while Clip is on; decide what to keep later",
             )
         )
         self.btn_mode_notes.setToolTip(
@@ -589,7 +589,7 @@ class HeaderPanel(QFrame):
         )
         self.btn_quick_note.setText(t("header.note", "Note"))
         self.btn_quick_note.setToolTip(
-            t("header.note_tip", "Capture a thought in the Quick Notes inbox (Ctrl+Alt+N)")
+            t("header.note_tip", "Remember a thought for later with Quick Note (Ctrl+Alt+N, even while minimized)")
         )
         self.btn_screenshot.setText(t("header.snip", "Snip"))
         self.btn_screenshot.setToolTip(

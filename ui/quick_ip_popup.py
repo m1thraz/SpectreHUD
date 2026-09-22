@@ -88,7 +88,7 @@ class QuickIpPopup(QWidget):
         lbl_title.setToolTip(
             t(
                 "quick_ip.purpose_tip",
-                "View or update Target and LHOST without opening the main window",
+                "Set Target and Attacker IP globally, even while SpectreHUD is minimized",
             )
         )
         lbl_title.setStyleSheet(

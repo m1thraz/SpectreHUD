@@ -20,6 +20,10 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
     QWidget,
     QVBoxLayout,
     QMessageBox,
@@ -50,6 +54,7 @@ from core.reporting import (
     strip_generator_footer,
 )
 from core.config import ConfigManager
+from core.storage import PersistenceError
 from ui.coordinators.export_coordinator import ExportCoordinator
 from core.i18n import t
 from core.logger import get_logger
@@ -289,6 +294,27 @@ class ReportEditorTab(QWidget):
         self._update_report_theme_button()
         layout.addWidget(self.action_toolbar)
 
+        if self.config and self.config.get("report_editing_hint_pending", False):
+            self._editing_hint = QFrame(self)
+            self._editing_hint.setObjectName("ReportEditingHint")
+            hint_layout = QHBoxLayout(self._editing_hint)
+            hint_layout.setContentsMargins(10, 4, 8, 4)
+            hint_layout.setSpacing(8)
+            hint_text = QLabel(
+                t(
+                    "report.editing_view_hint",
+                    "Editing view: work on your report here. Final layout and styling are applied during export.",
+                )
+            )
+            hint_text.setWordWrap(True)
+            hint_layout.addWidget(hint_text, stretch=1)
+            dismiss = QPushButton(t("report.editing_view_got_it", "Got it"))
+            dismiss.setObjectName("ReportEditingHintDismissBtn")
+            dismiss.setProperty("class", "SecondaryBtn")
+            dismiss.clicked.connect(self._dismiss_editing_hint)
+            hint_layout.addWidget(dismiss)
+            layout.addWidget(self._editing_hint)
+
         # Ebene 2: Formatierungsleiste (Struktur, Inline-Stil, Einfügen)
         self.format_toolbar_widget = build_format_toolbar(
             self,
@@ -329,6 +355,14 @@ class ReportEditorTab(QWidget):
         self._build_editor_splitter(layout)
         self._setup_shortcuts()
         self._apply_view_mode(self._view_mode)
+
+    def _dismiss_editing_hint(self) -> None:
+        self._editing_hint.hide()
+        if self.config:
+            try:
+                self.config.set("report_editing_hint_pending", False)
+            except PersistenceError as exc:
+                logger.warning("Could not persist Report editing hint dismissal: %s", exc)
 
     def _on_toolbar_collapse_toggled(self, collapsed: bool) -> None:
         """Collapse or expand Ebene 1 alongside Ebene 2."""
