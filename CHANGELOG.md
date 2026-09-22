@@ -12,6 +12,7 @@ semantic versioning.
 
 ### Fixed
 
+* Replaced the ambiguous REC header button with a themed Clipboard icon and a fixed Clip label while keeping its active warning highlight.
 * Persist all Target, authentication, scope, wordlist, URL, subnet, DNS, and hash variables across project switches and application restarts.
 * Prevent unreadable or oversized existing reports from being treated as empty documents, blocking editor writes, autosave, note appends, and report mutations until the read problem is resolved.
 * Warn when a saved report's recovery draft cannot be removed and suppress stale drafts older than the current report.

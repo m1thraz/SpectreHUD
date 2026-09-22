@@ -155,22 +155,16 @@ class HeaderPanel(QFrame):
         layout.addWidget(self.btn_screenshot)
 
         # Clipboard Recording Indicator Button
-        self.btn_rec_indicator = QPushButton("REC: Off")
+        self.btn_rec_indicator = QPushButton("Clip")
         self.btn_rec_indicator.setObjectName("RecIndicatorBtn")
         self.btn_rec_indicator.setProperty("paused", "true")
-        self.btn_rec_indicator.setIcon(
-            icon(
-                "fa5s.circle",
-                color=get_theme_color("TEXT_DIMMED"),
-                color_active=get_theme_color("TEXT_DIMMED"),
-            )
-        )
-        self.btn_rec_indicator.setIconSize(QSize(10, 10))
+        self.btn_rec_indicator.setIcon(icon("fa5s.clipboard"))
+        self.btn_rec_indicator.setIconSize(QSize(13, 13))
         self.btn_rec_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_rec_indicator.setToolTip(
             t(
                 "header.rec_tooltip_paused",
-                "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+Alt+R zum Starten der Aufzeichnung.",
+                "Clipboard Recorder: Off (paused).\nClick or Ctrl+Alt+R to start recording.",
             )
         )
         self.btn_rec_indicator.clicked.connect(self._on_rec_indicator_clicked)
@@ -450,10 +444,9 @@ class HeaderPanel(QFrame):
         """Updates the visual indicator for clipboard history recording state."""
         self._rec_active = is_active
         if is_active:
-            self.btn_rec_indicator.setText("REC: ON")
             self.btn_rec_indicator.setIcon(
                 icon(
-                    "fa5s.circle",
+                    "fa5s.clipboard",
                     color=get_theme_color("ERROR"),
                     color_active=get_theme_color("ERROR"),
                 )
@@ -462,23 +455,16 @@ class HeaderPanel(QFrame):
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_active",
-                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+Alt+R zum Pausieren.",
+                    "Clipboard Recorder: On (recording).\nClick or Ctrl+Alt+R to pause.",
                 )
             )
         else:
-            self.btn_rec_indicator.setText("REC: Off")
-            self.btn_rec_indicator.setIcon(
-                icon(
-                    "fa5s.circle",
-                    color=get_theme_color("TEXT_DIMMED"),
-                    color_active=get_theme_color("TEXT_DIMMED"),
-                )
-            )
+            self.btn_rec_indicator.setIcon(icon("fa5s.clipboard"))
             self.btn_rec_indicator.setProperty("paused", "true")
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_paused",
-                    "Clipboard-Logger ist PAUSIERT (keine Aufzeichnung).\nKlicken oder Ctrl+Alt+R zum Starten der Aufzeichnung.",
+                    "Clipboard Recorder: Off (paused).\nClick or Ctrl+Alt+R to start recording.",
                 )
             )
         self.btn_rec_indicator.style().unpolish(self.btn_rec_indicator)
@@ -494,7 +480,7 @@ class HeaderPanel(QFrame):
             warn_col = get_theme_color("STATUS_WARNING") or get_theme_color("WARNING")
             self.btn_rec_indicator.setIcon(
                 icon(
-                    "fa5s.circle",
+                    "fa5s.clipboard",
                     color=warn_col,
                     color_active=warn_col,
                 )
@@ -502,13 +488,13 @@ class HeaderPanel(QFrame):
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_nudged",
-                    "Clipboard-REC aktiv – längere Zeit keine Doku erfasst.\nKlicken zum Öffnen einer Quick Note.",
+                    "Clipboard Recorder: On. No documentation captured for a while.\nClick to open a Quick Note.",
                 )
             )
         else:
             self.btn_rec_indicator.setIcon(
                 icon(
-                    "fa5s.circle",
+                    "fa5s.clipboard",
                     color=get_theme_color("ERROR"),
                     color_active=get_theme_color("ERROR"),
                 )
@@ -516,7 +502,7 @@ class HeaderPanel(QFrame):
             self.btn_rec_indicator.setToolTip(
                 t(
                     "header.rec_tooltip_active",
-                    "Clipboard-Logger ist AKTIV (Aufzeichnung läuft).\nKlicken oder Ctrl+Alt+R zum Pausieren.",
+                    "Clipboard Recorder: On (recording).\nClick or Ctrl+Alt+R to pause.",
                 )
             )
 

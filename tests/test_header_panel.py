@@ -139,18 +139,42 @@ def test_default_icons_use_active_theme_palette():
 
 def test_rec_indicator_icon_toggle(qapp):
     header = HeaderPanel()
-    assert "REC: Off" in header.btn_rec_indicator.text()
+    assert header.btn_rec_indicator.text() == "Clip"
     assert not header.btn_rec_indicator.icon().isNull()
+    assert header.btn_rec_indicator.property("paused") == "true"
+    assert "Clipboard Recorder" in header.btn_rec_indicator.toolTip()
+    assert "Off" in header.btn_rec_indicator.toolTip()
 
-    header.update_rec_indicator(True)
-    assert "REC: ON" in header.btn_rec_indicator.text()
+    with patch("ui.panels.header_panel.icon", wraps=icon) as themed_icon:
+        header.update_rec_indicator(True)
+    themed_icon.assert_any_call(
+        "fa5s.clipboard",
+        color=CYBER_DARK_PALETTE["ERROR"],
+        color_active=CYBER_DARK_PALETTE["ERROR"],
+    )
+    assert header.btn_rec_indicator.text() == "Clip"
     assert not header.btn_rec_indicator.icon().isNull()
+    assert header.btn_rec_indicator.property("paused") == "false"
+    assert "Clipboard Recorder" in header.btn_rec_indicator.toolTip()
+    assert "On" in header.btn_rec_indicator.toolTip()
 
-    header.update_rec_indicator(False)
-    assert "REC: Off" in header.btn_rec_indicator.text()
+    with patch("ui.panels.header_panel.icon", wraps=icon) as themed_icon:
+        header.update_rec_indicator(False)
+    themed_icon.assert_any_call("fa5s.clipboard")
+    assert header.btn_rec_indicator.text() == "Clip"
     assert not header.btn_rec_indicator.icon().isNull()
+    assert header.btn_rec_indicator.property("paused") == "true"
+    assert "Off" in header.btn_rec_indicator.toolTip()
 
     header.deleteLater()
+
+
+def test_paused_clip_button_uses_the_same_theme_colors_as_quick_actions():
+    qss = build_app_theme(CYBER_DARK_PALETTE)
+    paused_style = qss.split('QPushButton#RecIndicatorBtn[paused="true"] {', 1)[1].split("}", 1)[0]
+    assert f"background-color: {CYBER_DARK_PALETTE['NAV_A75']};" in paused_style
+    assert f"border: 1px solid {CYBER_DARK_PALETTE['ACTIVE_BLUE_A50']};" in paused_style
+    assert f"color: {CYBER_DARK_PALETTE['CYBER_BLUE_LIGHT']};" in paused_style
 
 
 def test_header_action_overflow_progressive(qapp):

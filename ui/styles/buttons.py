@@ -643,16 +643,17 @@ QPushButton#RecIndicatorBtn:hover {
 }
 
 QPushButton#RecIndicatorBtn[paused="true"] {
-    background-color: {MUTED_A25};
-    border: 1px solid {MUTED_A60};
-    color: {TEXT_FORM};
-    font-weight: 700;
+    background-color: {NAV_A75};
+    border: 1px solid {ACTIVE_BLUE_A50};
+    border-radius: 6px;
+    color: {CYBER_BLUE_LIGHT};
+    font-weight: 600;
 }
 
 QPushButton#RecIndicatorBtn[paused="true"]:hover {
-    background-color: {MUTED_A40};
-    color: {TEXT_WHITE};
-    border-color: {CYBER_BLUE};
+    background-color: {ACTIVE_BLUE_A25};
+    color: {CYBER_CYAN};
+    border-color: {CYBER_CYAN};
 }
 
 /* Settings Navigation Buttons */
