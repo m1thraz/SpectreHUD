@@ -60,11 +60,12 @@ def test_snippet_copy_feedback_timer_is_owned_by_card(qapp):
 
 
 def test_loot_card_uses_icons_for_card_actions(qapp):
-    from core.export_plugins import create_bundled_export_plugin_registry
+    from core.export_plugins import ExportCapability, create_bundled_export_plugin_registry
 
     plugins = tuple(
         descriptor.metadata
         for descriptor in create_bundled_export_plugin_registry().descriptors
+        if ExportCapability.LOOT_APPEND in descriptor.metadata.capabilities
     )
     card = LootCard(
         {"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"},

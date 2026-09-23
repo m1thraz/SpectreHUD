@@ -19,7 +19,7 @@ from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
 from core.project import PersistFailureReason, PersistResult, ProjectManager
 from core.event_bus import EventBus, EventType
-from core.export_plugins import create_bundled_export_plugin_registry
+from core.export_plugins import ExportCapability, create_bundled_export_plugin_registry
 from ui.controllers.project_controller import ProjectController
 from ui.controllers.cheatsheet_controller import CheatsheetController
 from ui.controllers.loot_controller import LootController
@@ -754,6 +754,7 @@ class TestControllersDomain(unittest.TestCase):
         plugins = tuple(
             descriptor.metadata
             for descriptor in create_bundled_export_plugin_registry().descriptors
+            if ExportCapability.LOOT_APPEND in descriptor.metadata.capabilities
         )
 
         self.loot_ctrl.build_filter_pills(

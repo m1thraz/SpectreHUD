@@ -29,6 +29,7 @@ hidden_imports = [
     "pyperclip",
     "qtawesome",
     "core.export_plugins.bundled.obsidian.plugin",
+    "core.export_plugins.bundled.cherrytree.plugin",
 ]
 
 a = Analysis(

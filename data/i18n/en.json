@@ -864,6 +864,7 @@
     "loot.export_plugin_entry_tip": "Append this Loot entry to {plugin}",
     "loot.export_plugin_tip": "Append the current Loot to {plugin}",
     "report.export_cherrytree": "Export CherryTree Package...",
+    "report.cherrytree_name": "CherryTree",
     "report.export_cherrytree_tip": "Create portable report.html, loot.html and images for CherryTree import",
     "report.cherrytree_directory_title": "Choose CherryTree export directory",
     "report.cherrytree_export_failed_title": "CherryTree export failed",

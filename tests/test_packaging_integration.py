@@ -75,6 +75,14 @@ class TestPackagingIntegration(unittest.TestCase):
                     "core/export_plugins/bundled/obsidian/plugin.py",
                     names,
                 )
+                self.assertIn(
+                    "core/export_plugins/bundled/cherrytree/plugin.json",
+                    names,
+                )
+                self.assertIn(
+                    "core/export_plugins/bundled/cherrytree/plugin.py",
+                    names,
+                )
 
                 # 4. UI modules & Controllers
                 self.assertTrue(any(n.startswith("ui/") for n in names))

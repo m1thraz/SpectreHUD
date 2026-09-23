@@ -1,7 +1,6 @@
 """Focused tests for application-level export orchestration."""
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from ui.coordinators.export_coordinator import ExportCoordinator
@@ -158,29 +157,28 @@ def test_html_report_export_resolves_project_through_coordinator(tmp_path):
 
 
 def test_cherrytree_report_export_uses_shared_project_and_loot_state(tmp_path):
-    coordinator, project_manager = _coordinator({}, tmp_path / "project")
-    coordinator.loot_manager.get_all_entries.return_value = [{"id": "loot-1"}]
-    result = SimpleNamespace(note_path=tmp_path / "export" / "Forest.html", warnings=())
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    destination = tmp_path / "export"
+    coordinator, project_manager = _coordinator({}, project_dir)
+    coordinator.loot_manager.get_all_entries.return_value = [
+        {"id": "loot-1", "title": "Finding", "content": "Proof"}
+    ]
 
-    with patch("ui.coordinators.export_coordinator.CherryTreeExporter") as exporter_class:
-        exporter_class.return_value.export_package.return_value = result
-        actual = coordinator.export_report_to_cherrytree(
-            destination=tmp_path / "export",
-            project_name="Forest",
-            markdown="# Report",
-            report_font="inter",
+    with patch("ui.coordinators.export_coordinator.show_information_dialog"):
+        actual = coordinator.export_report_with_plugin(
+            None,
+            "spectrehud.cherrytree",
+            "Forest",
+            "# Report",
+            "inter",
+            execution_values={"destination": str(destination)},
         )
 
-    assert actual is result
+    assert actual is not None and actual.is_success
+    assert actual.note_path == destination / "Forest" / "report.html"
+    assert (destination / "Forest" / "loot.html").exists()
     project_manager.get_project_dir.assert_called_once_with("Forest")
-    exporter_class.assert_called_once_with(tmp_path / "export")
-    exporter_class.return_value.export_package.assert_called_once_with(
-        project_name="Forest",
-        project_dir=tmp_path / "project",
-        report_markdown="# Report",
-        loot_entries=[{"id": "loot-1"}],
-        report_font="inter",
-    )
 
 
 def test_export_coordinator_export_loot_delegates_to_history_ctrl():
@@ -234,4 +232,4 @@ def test_present_export_result_success_shows_info_dialog_with_warnings(tmp_path)
         args = mock_info.call_args[0]
         assert args[1] == "Done"
         assert "report.html" in args[2]
-    assert "Some images could not be copied" in args[2]
+    assert "Some attachments could not be copied" in args[2]

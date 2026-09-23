@@ -864,6 +864,7 @@
     "loot.export_plugin_entry_tip": "Diesen Loot-Eintrag an {plugin} anhängen",
     "loot.export_plugin_tip": "Das aktuelle Loot an {plugin} anhängen",
     "report.export_cherrytree": "CherryTree-Paket exportieren...",
+    "report.cherrytree_name": "CherryTree",
     "report.export_cherrytree_tip": "Portables report.html-, loot.html- und images-Paket für den CherryTree-Import erstellen",
     "report.cherrytree_directory_title": "CherryTree-Exportordner auswählen",
     "report.cherrytree_export_failed_title": "CherryTree-Export fehlgeschlagen",

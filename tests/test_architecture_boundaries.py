@@ -135,6 +135,18 @@ def test_obsidian_execution_is_owned_by_its_bundled_plugin():
     assert ui_mentions == [], "Obsidian-specific UI coupling remains: " + ", ".join(ui_mentions)
 
 
+def test_cherrytree_execution_is_owned_by_its_bundled_plugin():
+    """Gate 2: host UI collects declared inputs without CherryTree-specific branches."""
+    assert not (PROJECT_ROOT / "core" / "exporters" / "cherrytree.py").exists()
+
+    ui_mentions = []
+    for path in (PROJECT_ROOT / "ui").rglob("*.py"):
+        if "cherrytree" in path.read_text(encoding="utf-8").casefold():
+            ui_mentions.append(str(path.relative_to(PROJECT_ROOT)))
+
+    assert ui_mentions == [], "CherryTree-specific UI coupling remains: " + ", ".join(ui_mentions)
+
+
 def test_app_controller_receives_resolved_application_services():
     """Service selection belongs to MainWindow, not a second composition root."""
     tree = ast.parse(

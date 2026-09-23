@@ -6,6 +6,7 @@ from typing import Any, Callable, Optional
 from PyQt6.QtWidgets import QFileDialog, QPlainTextEdit, QWidget
 
 from core.i18n import t
+from core.export_plugins import FieldKind, PluginValue
 from core.logger import get_logger
 from ui.coordinators.export_coordinator import (
     ExportCoordinator,
@@ -84,8 +85,6 @@ class ReportExportActions:
             self.on_export_html_clicked()
         elif export_type and export_type.startswith("plugin:"):
             self.on_export_plugin_clicked(export_type.removeprefix("plugin:"))
-        elif export_type == "cherrytree":
-            self.on_export_cherrytree_clicked()
 
     def select_export_type(self) -> Optional[str]:
         """Returns the selected export workflow choice or None if cancelled."""
@@ -236,6 +235,9 @@ class ReportExportActions:
         coordinator = self.require_export_coordinator()
         if coordinator is None:
             return
+        execution_values = self._collect_plugin_execution_values(coordinator, plugin_id)
+        if execution_values is None:
+            return
         if not self._ready_to_export():
             return
         coordinator.export_report_with_plugin(
@@ -244,51 +246,53 @@ class ReportExportActions:
             self.current_project,
             self.editor.toPlainText(),
             self.report_font_key(),
+            execution_values=execution_values,
         )
 
-    def on_export_cherrytree_clicked(self) -> None:
-        """Creates a portable HTML package; no CherryTree database is touched."""
-        if not self.current_project:
-            return
-        rfm = self.report_file_manager
-        if not rfm or not getattr(rfm, "project_manager", None):
-            return
-        project_dir = rfm.project_manager.get_project_dir(self.current_project)
-        default_directory = project_dir / "exports"
-        destination = QFileDialog.getExistingDirectory(
-            self.parent_widget,
-            t("report.cherrytree_directory_title", "Choose CherryTree export directory"),
-            str(default_directory if default_directory.exists() else project_dir),
-        )
-        if not destination:
-            return
-        coordinator = self.require_export_coordinator()
-        if coordinator is None:
-            return
-        if not self._ready_to_export():
-            return
-        try:
-            result = coordinator.export_report_to_cherrytree(
-                destination=Path(destination),
-                project_name=self.current_project,
-                markdown=self.editor.toPlainText(),
-                report_font=self.report_font_key(),
-            )
-            self.present_export_result(
-                result,
-                title=t("report.cherrytree_exported_title", "CherryTree package complete"),
-            )
-        except ReportExportError as exc:
-            logger.error("CherryTree package export failed: %s", exc, exc_info=True)
+    def _collect_plugin_execution_values(
+        self,
+        coordinator: ExportCoordinator,
+        plugin_id: str,
+    ) -> Optional[dict[str, PluginValue]]:
+        metadata = coordinator.plugin_metadata_for(plugin_id)
+        if metadata is None:
             show_error_dialog(
                 self.parent_widget,
-                t("report.cherrytree_export_failed_title", "CherryTree export failed"),
-                t(
-                    "report.cherrytree_export_failed",
-                    "The CherryTree package could not be created:\n{error}",
-                    error=str(exc),
-                ),
+                t("plugins.export_unavailable_title", "Export plugin unavailable"),
+                t("plugins.export_unavailable", "The selected export plugin is unavailable."),
             )
+            return None
+        if not metadata.execution_fields:
+            return {}
+
+        rfm = self.report_file_manager
+        if not rfm or not getattr(rfm, "project_manager", None):
+            return None
+        project_dir = rfm.project_manager.get_project_dir(self.current_project)
+        default_directory = project_dir / "exports"
+        values: dict[str, PluginValue] = {}
+        for field in metadata.execution_fields:
+            if field.kind is not FieldKind.DIRECTORY:
+                logger.error(
+                    "Unsupported V1 execution field kind %s for plugin %s",
+                    field.kind.value,
+                    plugin_id,
+                )
+                show_error_dialog(
+                    self.parent_widget,
+                    t("plugins.export_unavailable_title", "Export plugin unavailable"),
+                    t("plugins.export_unavailable", "The selected export plugin is unavailable."),
+                )
+                return None
+            destination = QFileDialog.getExistingDirectory(
+                self.parent_widget,
+                t(field.label.translation_key, field.label.fallback),
+                str(default_directory if default_directory.exists() else project_dir),
+            )
+            if not destination:
+                return None
+            values[field.key] = destination
+        return values
 
     # ------------------------------------------------------------------ #
     # Result Presentation

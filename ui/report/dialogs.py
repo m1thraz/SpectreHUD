@@ -1102,19 +1102,6 @@ class ReportExportTypeDialog(BaseHudDialog):
                 "CYAN_A35",
             ),
             (
-                "cherrytree",
-                t("report.export_cherrytree", "Export CherryTree Package..."),
-                "PACKAGE",
-                t(
-                    "report.export_cherrytree_desc",
-                    "Create a portable HTML package with attachments for import into CherryTree.",
-                ),
-                "fa5s.tree",
-                "STATUS_SUCCESS",
-                "SUCCESS_A20",
-                "SUCCESS_A40",
-            ),
-            (
                 "markdown",
                 t("report.export_copy", "Export MD..."),
                 ".MD RAW",

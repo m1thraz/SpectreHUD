@@ -11,7 +11,7 @@ from PyQt6.QtCore import QPoint, QPointF, Qt
 from PyQt6.QtGui import QEnterEvent, QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
-from core.export_plugins import create_bundled_export_plugin_registry
+from core.export_plugins import ExportCapability, create_bundled_export_plugin_registry
 from ui.loot_board import LootBoard
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
@@ -22,6 +22,7 @@ def _loot_append_plugins():
     return tuple(
         descriptor.metadata
         for descriptor in create_bundled_export_plugin_registry().descriptors
+        if ExportCapability.LOOT_APPEND in descriptor.metadata.capabilities
     )
 
 

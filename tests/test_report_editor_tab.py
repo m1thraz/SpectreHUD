@@ -75,6 +75,10 @@ class TestReportEditorTab(unittest.TestCase):
 
     def test_plugin_export_delegates_current_editor_state(self):
         coordinator = MagicMock()
+        registry = create_bundled_export_plugin_registry()
+        coordinator.plugin_metadata_for.return_value = registry.get_descriptor(
+            "spectrehud.obsidian"
+        ).metadata
         self.tab.export_coordinator = coordinator
         self.tab.workspace_shell.editor.setPlainText("# Current report\nEvidence")
 
@@ -86,6 +90,7 @@ class TestReportEditorTab(unittest.TestCase):
             "TestBox",
             "# Current report\nEvidence",
             "segoe_ui",
+            execution_values={},
         )
 
     def test_template_selection_is_in_report_generation_dialog(self):
@@ -151,11 +156,16 @@ class TestReportEditorTab(unittest.TestCase):
         }
         self.assertEqual(
             set(descriptions),
-            {"html", "plugin:spectrehud.obsidian", "cherrytree", "markdown"},
+            {
+                "html",
+                "plugin:spectrehud.obsidian",
+                "plugin:spectrehud.cherrytree",
+                "markdown",
+            },
         )
         self.assertIn("PDF", descriptions["html"])
         self.assertIn("vault", descriptions["plugin:spectrehud.obsidian"].lower())
-        self.assertIn("CherryTree", descriptions["cherrytree"])
+        self.assertIn("CherryTree", descriptions["plugin:spectrehud.cherrytree"])
         self.assertIn("Markdown", descriptions["markdown"])
 
     def test_view_mode_switching(self):
@@ -860,59 +870,33 @@ Text
         ):
             self.tab.export_actions.on_export_html_clicked()
 
-    def test_export_cherrytree_flow_success_and_error(self):
+    def test_cherrytree_plugin_collects_destination_and_delegates(self):
         coordinator = MagicMock()
+        registry = create_bundled_export_plugin_registry()
+        coordinator.plugin_metadata_for.return_value = registry.get_descriptor(
+            "spectrehud.cherrytree"
+        ).metadata
         self.tab.export_coordinator = coordinator
         self.tab.workspace_shell.editor.setPlainText("# CherryTree Notes")
 
-        # 1. Cancelled directory dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getExistingDirectory", return_value=""):
-            self.tab.export_actions.on_export_cherrytree_clicked()
-            coordinator.export_report_to_cherrytree.assert_not_called()
+            self.tab.export_actions.on_export_plugin_clicked("spectrehud.cherrytree")
+            coordinator.export_report_with_plugin.assert_not_called()
 
-        # 2. Successful export without warnings
-        mock_res = MagicMock()
-        mock_res.note_path = Path("dest/notes.ctd")
-        mock_res.warnings = []
-        coordinator.export_report_to_cherrytree.return_value = mock_res
-
-        with (
-            patch(
-                "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
-                return_value=str(self.temp_path),
-            ),
-            patch("ui.report.export_actions.show_information_dialog") as mock_info,
+        with patch(
+            "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
+            return_value=str(self.temp_path),
         ):
-            self.tab.export_actions.on_export_cherrytree_clicked()
-            coordinator.export_report_to_cherrytree.assert_called_once()
-            mock_info.assert_called_once()
+            self.tab.export_actions.on_export_plugin_clicked("spectrehud.cherrytree")
 
-        # 3. Successful export with warnings
-        mock_res.warnings = ["Image missing"]
-        with (
-            patch(
-                "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
-                return_value=str(self.temp_path),
-            ),
-            patch("ui.report.export_actions.show_information_dialog") as mock_info,
-        ):
-            self.tab.export_actions.on_export_cherrytree_clicked()
-            mock_info.assert_called_once()
-            self.assertIn("Some images could not be copied", mock_info.call_args[0][2])
-
-        # 4. Error during export
-        from ui.coordinators.export_coordinator import ReportExportError
-
-        coordinator.export_report_to_cherrytree.side_effect = ReportExportError("Package failed")
-        with (
-            patch(
-                "PyQt6.QtWidgets.QFileDialog.getExistingDirectory",
-                return_value=str(self.temp_path),
-            ),
-            patch("ui.report.export_actions.show_error_dialog") as mock_warn,
-        ):
-            self.tab.export_actions.on_export_cherrytree_clicked()
-            mock_warn.assert_called_once()
+        coordinator.export_report_with_plugin.assert_called_once_with(
+            self.tab,
+            "spectrehud.cherrytree",
+            "TestBox",
+            "# CherryTree Notes",
+            "segoe_ui",
+            execution_values={"destination": str(self.temp_path)},
+        )
 
     def test_browse_and_insert_image(self):
         # 1. Cancelled
@@ -1019,16 +1003,13 @@ Text
             btn.text() for btn in dialog.findChildren(QPushButton) if btn != dialog.btn_dialog_close
         ]
         self.assertEqual(
-            labels[:4],
-            [
+            set(labels[:4]),
+            {
                 t("report.export_html", "Export HTML/PDF"),
-                t("report.export_obsidian", "Export to Obsidian..."),
-                t(
-                    "report.export_cherrytree",
-                    "Export CherryTree Package...",
-                ),
+                t("report.export_plugin", "Export to {plugin}...", plugin="Obsidian"),
+                t("report.export_plugin", "Export to {plugin}...", plugin="CherryTree"),
                 t("report.export_copy", "Export MD..."),
-            ],
+            },
         )
         self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
         self.assertEqual(

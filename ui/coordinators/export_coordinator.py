@@ -13,13 +13,11 @@ from PyQt6.QtWidgets import QWidget
 from core.config import ConfigManager
 from core.atomic_write import atomic_write_text
 from core.exporters import (
-    CherryTreeExporter,
     ExportArtifact,
     ExportError,
     ExportErrorCode,
     ExportResult,
     ExportStatus,
-    ExternalExportError,
 )
 from core.export_plugins import (
     ExportCapability,
@@ -81,6 +79,10 @@ class ExportCoordinator(QObject):
             for descriptor in self.export_plugins.descriptors
             if capability in descriptor.metadata.capabilities
         )
+
+    def plugin_metadata_for(self, plugin_id: str) -> Optional[ExportPluginMetadata]:
+        descriptor = self.export_plugins.get_descriptor(plugin_id)
+        return descriptor.metadata if descriptor is not None else None
 
     def _plugin_configuration(
         self, metadata: ExportPluginMetadata
@@ -223,27 +225,6 @@ class ExportCoordinator(QObject):
             artifacts=(ExportArtifact(path=target, format="html", bytes_written=bytes_written),)
         )
 
-    def export_report_to_cherrytree(
-        self,
-        *,
-        destination: Path,
-        project_name: str,
-        markdown: str,
-        report_font: str,
-    ) -> ExportResult:
-        """Create a portable CherryTree-compatible HTML package."""
-        project_dir = self.project_manager.get_project_dir(project_name)
-        try:
-            return CherryTreeExporter(destination).export_package(
-                project_name=project_name,
-                project_dir=project_dir,
-                report_markdown=markdown,
-                loot_entries=self.loot_manager.get_all_entries(),
-                report_font=report_font,
-            )
-        except (ExternalExportError, OSError, RuntimeError) as exc:
-            raise ReportExportError(str(exc)) from exc
-
     def export_report_with_plugin(
         self,
         window: QWidget,
@@ -251,6 +232,7 @@ class ExportCoordinator(QObject):
         project_name: str,
         markdown: str,
         report_font: str,
+        execution_values: Optional[Mapping[str, PluginValue]] = None,
     ) -> Optional[ExportResult]:
         resolved = self._load_available_plugin(window, plugin_id)
         if resolved is None:
@@ -286,7 +268,7 @@ class ExportCoordinator(QObject):
                 ReportExportRequest(
                     context=context,
                     configuration=configuration,
-                    execution_values={},
+                    execution_values=execution_values or {},
                 )
             )
         except BaseException as exc:
@@ -456,32 +438,18 @@ def present_export_result(
         note_path = getattr(result, "note_path", None)
         if artifacts:
             first = artifacts[0].path
-            if any(getattr(a, "format", "") == "image" for a in artifacts):
-                msg = t(
-                    "report.cherrytree_exported",
-                    "CherryTree HTML package created:\n{path}",
-                    path=str(first.parent),
-                )
-            else:
-                msg = t(
-                    "report.export_saved_msg",
-                    "Kopie gespeichert: {filename}",
-                    filename=first.name,
-                )
+            msg = t(
+                "report.export_saved_msg",
+                "Kopie gespeichert: {filename}",
+                filename=first.name,
+            )
         elif note_path:
             p = Path(note_path)
-            if p.suffix.lower() in (".html", ".ctd", ".ctb"):
-                msg = t(
-                    "report.cherrytree_exported",
-                    "CherryTree HTML package created:\n{path}",
-                    path=str(p.parent),
-                )
-            else:
-                msg = t(
-                    "report.export_saved_msg",
-                    "Kopie gespeichert: {filename}",
-                    filename=p.name,
-                )
+            msg = t(
+                "report.export_saved_msg",
+                "Kopie gespeichert: {filename}",
+                filename=p.name,
+            )
         else:
             msg = t("report.export_saved_title", "Exportiert")
 
@@ -490,8 +458,8 @@ def present_export_result(
         msg += "\n\n" + (
             warning_message
             or t(
-                "report.cherrytree_attachment_warning",
-                "Some images could not be copied.",
+                "plugins.attachment_warning",
+                "Some attachments could not be copied.",
             )
         )
 

@@ -483,6 +483,7 @@ def test_contract_import_is_headless_and_does_not_load_concrete_exporters() -> N
         "assert 'core.exporters.obsidian' not in sys.modules\n"
         "assert 'core.export_plugins.bundled.obsidian.plugin' not in sys.modules\n"
         "assert 'core.exporters.cherrytree' not in sys.modules\n"
+        "assert 'core.export_plugins.bundled.cherrytree.plugin' not in sys.modules\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -494,21 +495,26 @@ def test_contract_import_is_headless_and_does_not_load_concrete_exporters() -> N
     assert result.returncode == 0, result.stderr
 
 
-def test_bundled_obsidian_is_discovered_passively_and_loaded_on_demand() -> None:
+def test_bundled_plugins_are_discovered_passively_and_loaded_independently() -> None:
     code = (
         "import sys\n"
         "from core.export_plugins import (\n"
         "    PluginAvailabilityCode, create_bundled_export_plugin_registry,\n"
         ")\n"
-        "module = 'core.export_plugins.bundled.obsidian.plugin'\n"
+        "obsidian = 'core.export_plugins.bundled.obsidian.plugin'\n"
+        "cherrytree = 'core.export_plugins.bundled.cherrytree.plugin'\n"
         "registry = create_bundled_export_plugin_registry()\n"
         "assert [item.metadata.plugin_id for item in registry.descriptors] == "
-        "['spectrehud.obsidian']\n"
-        "assert module not in sys.modules\n"
+        "['spectrehud.cherrytree', 'spectrehud.obsidian']\n"
+        "assert obsidian not in sys.modules and cherrytree not in sys.modules\n"
         "loaded = registry.load('spectrehud.obsidian')\n"
         "assert loaded is not None and loaded.plugin is not None\n"
         "assert loaded.availability.code is PluginAvailabilityCode.AVAILABLE\n"
-        "assert module in sys.modules\n"
+        "assert obsidian in sys.modules and cherrytree not in sys.modules\n"
+        "loaded = registry.load('spectrehud.cherrytree')\n"
+        "assert loaded is not None and loaded.plugin is not None\n"
+        "assert loaded.availability.code is PluginAvailabilityCode.AVAILABLE\n"
+        "assert cherrytree in sys.modules\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -518,6 +524,26 @@ def test_bundled_obsidian_is_discovered_passively_and_loaded_on_demand() -> None
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_bundled_cherrytree_declares_only_its_real_v1_requirements() -> None:
+    from core.export_plugins import create_bundled_export_plugin_registry
+
+    registry = create_bundled_export_plugin_registry()
+    descriptor = registry.get_descriptor("spectrehud.cherrytree")
+    assert descriptor is not None
+    metadata = descriptor.metadata
+    assert metadata.capabilities == frozenset({ExportCapability.REPORT_EXPORT})
+    assert metadata.report_data_requirements == frozenset(
+        {ExportDataRequirement.LOOT, ExportDataRequirement.REPORT_FONT}
+    )
+    assert metadata.configuration_fields == ()
+    assert len(metadata.execution_fields) == 1
+    assert metadata.execution_fields[0].kind is FieldKind.DIRECTORY
+
+    loaded = registry.load("spectrehud.cherrytree")
+    assert loaded is not None and loaded.plugin is not None
+    assert loaded.plugin.capabilities.loot_append is None
 
 
 def test_missing_implementation_module_is_a_controlled_load_failure(tmp_path: Path) -> None:

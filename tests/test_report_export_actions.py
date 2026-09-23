@@ -8,6 +8,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox, QPlainTextEdit, QWidget
 
 from core.reporting import ExportArtifact, ExportResult, ExportStatus
+from core.export_plugins import create_bundled_export_plugin_registry
 from ui.report import HtmlExportOptions
 from ui.coordinators.export_coordinator import ReportExportError
 from ui.report.export_actions import ReportExportActions
@@ -21,6 +22,13 @@ class TestReportExportActions(unittest.TestCase):
         self.parent = QWidget()
         self.rfm = MagicMock()
         self.coordinator = MagicMock()
+        registry = create_bundled_export_plugin_registry()
+        metadata = {
+            descriptor.metadata.plugin_id: descriptor.metadata
+            for descriptor in registry.descriptors
+        }
+        self.coordinator.plugin_metadata.return_value = tuple(metadata.values())
+        self.coordinator.plugin_metadata_for.side_effect = metadata.get
         self.current_project = "ProjectBeta"
         self.template = MagicMock()
         self.template.language = "en"
@@ -145,9 +153,10 @@ class TestReportExportActions(unittest.TestCase):
             "ProjectBeta",
             "# Obsidian Content",
             "default",
+            execution_values={},
         )
 
-    def test_on_export_cherrytree_clicked(self):
+    def test_on_export_plugin_collects_cherrytree_destination(self):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -156,22 +165,20 @@ class TestReportExportActions(unittest.TestCase):
 
             self.rfm.project_manager.get_project_dir.return_value = Path(tmp_dir)
             self.editor.setPlainText("# CT Content")
-            mock_res = ExportResult(
-                status=ExportStatus.SUCCESS,
-                artifacts=[MagicMock(path=dest_dir / "report.html", format="html")],
-            )
-            self.coordinator.export_report_to_cherrytree.return_value = mock_res
-
-            with (
-                patch(
-                    "ui.report.export_actions.QFileDialog.getExistingDirectory",
-                    return_value=str(dest_dir),
-                ),
-                patch("ui.report.export_actions.show_information_dialog") as mock_info,
+            with patch(
+                "ui.report.export_actions.QFileDialog.getExistingDirectory",
+                return_value=str(dest_dir),
             ):
-                self.actions.on_export_cherrytree_clicked()
-                self.coordinator.export_report_to_cherrytree.assert_called_once()
-                mock_info.assert_called_once()
+                self.actions.on_export_plugin_clicked("spectrehud.cherrytree")
+
+            self.coordinator.export_report_with_plugin.assert_called_once_with(
+                self.parent,
+                "spectrehud.cherrytree",
+                "ProjectBeta",
+                "# CT Content",
+                "default",
+                execution_values={"destination": str(dest_dir)},
+            )
 
     def test_present_export_result_variants(self):
         # Cancelled

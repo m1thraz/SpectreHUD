@@ -13,7 +13,7 @@ semantic versioning.
 
 ### Changed
 
-* Migrated the bundled Obsidian report and Loot exports to the new isolated export-plugin boundary while preserving the existing workflow and settings.
+* Migrated the bundled Obsidian and CherryTree exports to the new isolated export-plugin boundary while preserving their existing report, Loot, and package workflows.
 
 ### Fixed
 
