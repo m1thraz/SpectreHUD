@@ -1,6 +1,82 @@
 import pytest
 
-from core.exporters import ExternalExportError, ObsidianExporter
+from core.export_plugins import (
+    LootAppendRequest,
+    LootExportEntry,
+    PluginAvailabilityCode,
+    ProjectExportContext,
+    ProjectNetworkContext,
+    ReportExportContext,
+    ReportExportRequest,
+    create_bundled_export_plugin_registry,
+)
+
+
+class ObsidianPluginHarness:
+    """Exercise legacy behavior only through the V1 plugin capabilities."""
+
+    def __init__(self, vault, export_folder="CTF/SpectreHUD"):
+        self.configuration = {
+            "obsidian_vault_path": str(vault),
+            "obsidian_export_folder": export_folder,
+            "obsidian_open_after_export": False,
+        }
+        loaded = create_bundled_export_plugin_registry().load("spectrehud.obsidian")
+        assert loaded is not None and loaded.plugin is not None
+        self.plugin = loaded.plugin
+
+    def export_report(
+        self,
+        *,
+        project_name,
+        project_dir,
+        markdown,
+        project_state=None,
+    ):
+        state = project_state or {}
+        request = ReportExportRequest(
+            context=ReportExportContext(
+                project=ProjectExportContext(project_name, project_dir),
+                markdown=markdown,
+                network=ProjectNetworkContext(
+                    str(state.get("target_ip", "")),
+                    str(state.get("attacker_ip", "")),
+                ),
+            ),
+            configuration=self.configuration,
+            execution_values={},
+        )
+        return self.plugin.capabilities.report_export.export_report(request)
+
+    def append_loot(self, *, project_name, entries, note_path=None):
+        del note_path
+        snapshots = tuple(
+            LootExportEntry(
+                entry_id=str(entry.get("id", "")),
+                entry_type=str(entry.get("type", "note")),
+                title=str(entry.get("title", "Untitled loot")),
+                content=str(entry.get("content", "")),
+                recommendation=str(entry.get("recommendation", "") or ""),
+                target_ip=str(entry.get("target_ip", "")),
+                timestamp=str(entry.get("timestamp", "")),
+            )
+            for entry in entries
+        )
+        capability = self.plugin.capabilities.loot_append
+        assert capability is not None
+        return capability.append_loot(
+            LootAppendRequest(
+                project=ProjectExportContext(project_name, self.configuration_path.parent),
+                entries=snapshots,
+                configuration=self.configuration,
+            )
+        )
+
+    @property
+    def configuration_path(self):
+        from pathlib import Path
+
+        return Path(str(self.configuration["obsidian_vault_path"]))
 
 
 @pytest.fixture
@@ -16,7 +92,7 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
     vault, project = workspace
     image = project / "loot" / "proof.png"
     image.write_bytes(b"png")
-    exporter = ObsidianExporter(vault, "CTF/SpectreHUD")
+    exporter = ObsidianPluginHarness(vault, "CTF/SpectreHUD")
 
     result = exporter.export_report(
         project_name="Forest",
@@ -43,7 +119,7 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
 
 def test_obsidian_report_translates_spacers_to_renderable_breaks(workspace):
     vault, project = workspace
-    result = ObsidianExporter(vault).export_report(
+    result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest",
         project_dir=project,
         markdown="Before\n\n<!-- spectre:spacer:medium -->\n\nAfter",
@@ -63,7 +139,7 @@ def test_obsidian_report_strips_internal_section_markers(workspace):
         "<!-- spectre:finding:end:loot_1 -->\n"
         "<!-- spectre:section:end:executive_summary -->"
     )
-    result = ObsidianExporter(vault).export_report(
+    result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest", project_dir=project, markdown=markdown
     )
     content = result.note_path.read_text(encoding="utf-8")
@@ -78,7 +154,7 @@ def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
     icon.parent.mkdir(parents=True)
     icon.write_bytes(b"png-icon")
 
-    result = ObsidianExporter(vault).export_report(
+    result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest",
         project_dir=project,
         markdown="![Credential](assets/icons/fa5s_key_32.png)",
@@ -91,7 +167,7 @@ def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
 
 def test_obsidian_export_preserves_existing_note_by_default(workspace):
     vault, project = workspace
-    exporter = ObsidianExporter(vault)
+    exporter = ObsidianPluginHarness(vault)
     first = exporter.export_report(project_name="Forest", project_dir=project, markdown="one")
     second = exporter.export_report(project_name="Forest", project_dir=project, markdown="two")
 
@@ -102,8 +178,9 @@ def test_obsidian_export_preserves_existing_note_by_default(workspace):
 def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
     """Export destinations and copied attachments must stay inside the selected vault."""
     vault, project = workspace
-    with pytest.raises(ExternalExportError):
-        ObsidianExporter(vault, "../../outside")
+    invalid = ObsidianPluginHarness(vault, "../../outside")
+    availability = invalid.plugin.validate_configuration(invalid.configuration)
+    assert availability.code is PluginAvailabilityCode.INVALID_CONFIGURATION
 
     external = vault.parent / "outside.png"
     external.write_bytes(b"not-safe")
@@ -113,7 +190,7 @@ def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
     except OSError:
         pytest.skip("Symlinks are unavailable on this host")
 
-    result = ObsidianExporter(vault).export_report(
+    result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest", project_dir=project, markdown="![Escape](loot/escape.png)"
     )
     assert "attachments/escape.png" not in result.note_path.read_text(encoding="utf-8")
@@ -122,7 +199,7 @@ def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
 
 def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspace):
     vault, project = workspace
-    exporter = ObsidianExporter(vault)
+    exporter = ObsidianPluginHarness(vault)
     note = exporter.export_report(
         project_name="Forest", project_dir=project, markdown="# Manual report"
     ).note_path
@@ -140,7 +217,8 @@ def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspac
 
 def test_obsidian_loot_export_includes_real_recommendation(workspace):
     vault, _project = workspace
-    exporter = ObsidianExporter(vault)
+    exporter = ObsidianPluginHarness(vault)
+    exporter.export_report(project_name="Forest", project_dir=_project, markdown="# Report")
     entry = {
         "id": "loot-remediation",
         "type": "note",
@@ -159,7 +237,7 @@ def test_obsidian_loot_export_includes_real_recommendation(workspace):
 
 def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
     vault, project = workspace
-    exporter = ObsidianExporter(vault)
+    exporter = ObsidianPluginHarness(vault)
     note = exporter.export_report(
         project_name="Forest", project_dir=project, markdown="# Manual report"
     ).note_path
@@ -188,7 +266,7 @@ def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
 
 def test_obsidian_uri_is_url_encoded(workspace):
     vault, project = workspace
-    exporter = ObsidianExporter(vault, "CTF Notes")
+    exporter = ObsidianPluginHarness(vault, "CTF Notes")
     result = exporter.export_report(project_name="Forest", project_dir=project, markdown="report")
 
     assert "vault=Vault" in result.obsidian_uri
@@ -198,7 +276,7 @@ def test_obsidian_uri_is_url_encoded(workspace):
 def test_obsidian_report_export_strips_spectre_loot_markers(workspace):
     """Ticket 8 & 40: Obsidian report export removes internal spectre:loot: markers."""
     vault, project = workspace
-    exporter = ObsidianExporter(vault)
+    exporter = ObsidianPluginHarness(vault)
     md = "<!-- spectre:loot:loot_123:deadbeef1234 -->\n# Findings\n<!-- user note -->\nDetails."
     result = exporter.export_report(project_name="Forest", project_dir=project, markdown=md)
     content = result.note_path.read_text(encoding="utf-8")

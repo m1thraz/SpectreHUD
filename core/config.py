@@ -39,9 +39,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "language": "en",
     "time_format": "24h",
     "workspace_dir": str(projects_dir()),
-    "obsidian_vault_path": "",
-    "obsidian_export_folder": "CTF/SpectreHUD",
-    "obsidian_open_after_export": False,
+    "export_plugins": {},
     "badge_warning_threshold": 5,
     "recap_enabled": True,
     "recap_inactivity_minutes": 10,
@@ -112,6 +110,31 @@ class ConfigManager:
         loaded = self.storage.load_json("config")
         if isinstance(loaded, dict):
             migrated = False
+            plugin_settings = loaded.get("export_plugins", {})
+            if not isinstance(plugin_settings, dict):
+                plugin_settings = {}
+                loaded["export_plugins"] = plugin_settings
+                migrated = True
+            legacy_obsidian_keys = (
+                "obsidian_vault_path",
+                "obsidian_export_folder",
+                "obsidian_open_after_export",
+            )
+            legacy_obsidian = {
+                "obsidian_vault_path": loaded.get("obsidian_vault_path", ""),
+                "obsidian_export_folder": loaded.get(
+                    "obsidian_export_folder", "CTF/SpectreHUD"
+                ),
+                "obsidian_open_after_export": loaded.get(
+                    "obsidian_open_after_export", False
+                ),
+            }
+            if any(key in loaded for key in legacy_obsidian_keys):
+                plugin_settings.setdefault("spectrehud.obsidian", legacy_obsidian)
+                for key in legacy_obsidian_keys:
+                    loaded.pop(key, None)
+                loaded["export_plugins"] = plugin_settings
+                migrated = True
             if loaded.get("hotkey") in [
                 "<ctrl>+<shift>+c",
                 "ctrl+shift+c",

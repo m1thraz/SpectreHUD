@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 from core.config import ConfigManager
+from core.export_plugins import create_bundled_export_plugin_registry
 from ui.settings_dialog import (
     SettingsDialog,
     HotkeySettingsPage,
@@ -58,6 +59,38 @@ class TestSettingsDialog(unittest.TestCase):
         self.assertEqual(settings["target_ip"], "192.168.1.100")
         self.assertNotIn("theme", settings)
         self.assertNotIn("loot_view_mode", settings)
+
+    def test_general_page_builds_export_plugin_settings_from_metadata(self):
+        self.config_manager.set(
+            "export_plugins",
+            {"third.party": {"destination": "C:/KeepMe"}},
+        )
+        registry = create_bundled_export_plugin_registry()
+        page = GeneralSettingsPage(
+            self.config_manager,
+            export_plugin_registry=registry,
+        )
+
+        self.assertEqual(
+            set(page.plugin_field_widgets["spectrehud.obsidian"]),
+            {
+                "obsidian_vault_path",
+                "obsidian_export_folder",
+                "obsidian_open_after_export",
+            },
+        )
+        widgets = page.plugin_field_widgets["spectrehud.obsidian"]
+        widgets["obsidian_vault_path"].setText("C:/Vault")
+        widgets["obsidian_open_after_export"].setChecked(True)
+
+        settings = page.get_settings()
+        plugin_settings = settings["export_plugins"]["spectrehud.obsidian"]
+        self.assertEqual(plugin_settings["obsidian_vault_path"], "C:/Vault")
+        self.assertTrue(plugin_settings["obsidian_open_after_export"])
+        self.assertEqual(
+            settings["export_plugins"]["third.party"],
+            {"destination": "C:/KeepMe"},
+        )
 
     def test_general_page_exposes_manual_update_check(self):
         from core.cli import APP_VERSION

@@ -1,4 +1,4 @@
-"""Safe, one-way Markdown export into an Obsidian vault.
+"""Plugin-owned one-way Markdown export into an Obsidian vault.
 
 This adapter deliberately treats an Obsidian vault as a normal filesystem
 folder.  It never reads Obsidian databases, watches the vault, or attempts a
@@ -15,9 +15,14 @@ from typing import Any, Iterable, Mapping, Optional
 from urllib.parse import urlencode
 
 from core.atomic_write import atomic_write_bytes, atomic_write_text
-from core.exporters.base import ExportArtifact, ExportResult, ExternalExportError
+from core.exporters import (
+    ExportArtifact,
+    ExportResult,
+    ExternalExportError,
+    render_loot_markdown,
+    safe_attachment_source,
+)
 from core.project import sanitize_filename_component, validate_project_name
-from core.reporting import MAX_EMBED_IMAGE_FILE_SIZE
 from core.reporting import SPACER_REGEX, strip_report_markers
 
 
@@ -123,32 +128,6 @@ class ObsidianExporter:
         lines.extend(["tags:", "  - ctf", "  - spectrehud", "---", ""])
         return "\n".join(lines)
 
-    @staticmethod
-    def _safe_attachment_source(raw_path: str, project_dir: Path) -> Optional[Path]:
-        raw_path = raw_path.strip()
-        if not raw_path or raw_path.startswith(("#", "data:", "http:", "https:")):
-            return None
-        candidate = Path(raw_path)
-        if candidate.is_absolute():
-            return None
-        resolved_project = project_dir.resolve()
-        try:
-            resolved = (project_dir / candidate).resolve(strict=True)
-        except OSError:
-            return None
-        if (
-            not resolved.is_relative_to(resolved_project)
-            or resolved.is_symlink()
-            or not resolved.is_file()
-        ):
-            return None
-        try:
-            if resolved.stat().st_size > MAX_EMBED_IMAGE_FILE_SIZE:
-                return None
-        except OSError:
-            return None
-        return resolved
-
     def _copy_attachments(
         self, markdown: str, project_dir: Path, destination_dir: Path
     ) -> tuple[str, tuple[Path, ...], tuple[str, ...]]:
@@ -160,7 +139,7 @@ class ObsidianExporter:
 
         def replace(match: re.Match[str]) -> str:
             alt_text, raw_path = match.group(1), match.group(2)
-            source = self._safe_attachment_source(raw_path, project_dir)
+            source = safe_attachment_source(raw_path, project_dir)
             if source is None:
                 if (
                     raw_path.lower()
@@ -260,41 +239,6 @@ class ObsidianExporter:
             metadata={"obsidian_uri": self.build_open_uri(note_path)},
         )
 
-    @staticmethod
-    def _loot_markdown(entries: Iterable[Mapping[str, Any]]) -> str:
-        blocks: list[str] = []
-        for entry in entries:
-            entry_id = str(entry.get("id", "")).strip()
-            if not entry_id:
-                continue
-            title = str(entry.get("title", "Untitled loot")).strip() or "Untitled loot"
-            entry_type = str(entry.get("type", "note")).strip() or "note"
-            timestamp = str(entry.get("timestamp", "")).strip()
-            target = str(entry.get("target_ip", "")).strip()
-            metadata = [f"- Type: `{entry_type}`"]
-            if target:
-                metadata.append(f"- Target: `{target}`")
-            if timestamp:
-                metadata.append(f"- Captured: `{timestamp}`")
-            content = str(entry.get("content", "")).rstrip()
-            recommendation = str(entry.get("recommendation", "") or "").strip()
-            fence = "```"
-            while fence in content:
-                fence += "`"
-            lines = [
-                f"<!-- spectrehud-entry:{entry_id} -->",
-                f"### {title}",
-                *metadata,
-                "",
-                fence,
-                content,
-                fence,
-            ]
-            if recommendation:
-                lines.extend(["", "#### Recommendation", "", recommendation])
-            blocks.append("\n".join(lines))
-        return "\n\n".join(blocks)
-
     def append_loot(
         self,
         *,
@@ -334,7 +278,7 @@ class ObsidianExporter:
             else:
                 new_entries.append(entry)
         skipped = tuple(skipped_ids)
-        rendered = self._loot_markdown(new_entries)
+        rendered = render_loot_markdown(new_entries)
         if rendered:
             separator = "\n\n" if existing.rstrip() else ""
             if _LOOT_SECTION not in existing:

@@ -67,6 +67,14 @@ class TestPackagingIntegration(unittest.TestCase):
                 self.assertNotIn("core/clipboard_watcher.py", names)
                 self.assertIn("core/project/__init__.py", names)
                 self.assertNotIn("core/project_manager.py", names)
+                self.assertIn(
+                    "core/export_plugins/bundled/obsidian/plugin.json",
+                    names,
+                )
+                self.assertIn(
+                    "core/export_plugins/bundled/obsidian/plugin.py",
+                    names,
+                )
 
                 # 4. UI modules & Controllers
                 self.assertTrue(any(n.startswith("ui/") for n in names))

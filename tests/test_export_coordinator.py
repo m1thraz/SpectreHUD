@@ -5,8 +5,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from ui.coordinators.export_coordinator import ExportCoordinator
+from core.export_plugins import create_bundled_export_plugin_registry
 from core.project import ProjectState
-from core.reporting import ReportExportProfile
+from core.reporting import ExportStatus, ReportExportProfile
 
 
 def _coordinator(config_values, project_dir: Path) -> tuple[ExportCoordinator, MagicMock]:
@@ -44,59 +45,69 @@ def _coordinator(config_values, project_dir: Path) -> tuple[ExportCoordinator, M
         history_ctrl=MagicMock(),
         target_provider=lambda: "10.10.10.10",
         config_manager=config,
+        export_plugin_registry=create_bundled_export_plugin_registry(),
     )
     return coordinator, project_manager
 
 
 def test_report_obsidian_export_uses_shared_coordinator_workflow(tmp_path):
+    vault_dir = tmp_path / "vault"
+    project_dir = tmp_path / "project"
+    vault_dir.mkdir()
+    project_dir.mkdir()
     coordinator, project_manager = _coordinator(
         {
-            "obsidian_vault_path": str(tmp_path / "vault"),
-            "obsidian_export_folder": "CTF/SpectreHUD",
-            "obsidian_open_after_export": True,
+            "export_plugins": {
+                "spectrehud.obsidian": {
+                    "obsidian_vault_path": str(vault_dir),
+                    "obsidian_export_folder": "CTF/SpectreHUD",
+                    "obsidian_open_after_export": True,
+                }
+            },
         },
-        tmp_path / "project",
-    )
-    result = SimpleNamespace(
-        note_path=tmp_path / "vault" / "Forest.md",
-        warnings=(),
-        obsidian_uri="obsidian://open?vault=Test&file=Forest",
+        project_dir,
     )
 
     with (
-        patch("ui.coordinators.export_coordinator.ObsidianExporter") as exporter_class,
         patch("ui.coordinators.export_coordinator.show_information_dialog") as information,
         patch(
             "ui.coordinators.export_coordinator.QDesktopServices.openUrl", return_value=True
         ) as open_url,
     ):
-        exporter_class.return_value.export_report.return_value = result
+        result = coordinator.export_report_with_plugin(
+            None,
+            "spectrehud.obsidian",
+            "Forest",
+            "# Current editor text",
+            "inter",
+        )
 
-        coordinator.export_report_to_obsidian(None, "Forest", "# Current editor text")
-
-    exporter_class.assert_called_once_with(str(tmp_path / "vault"), "CTF/SpectreHUD")
-    exporter_class.return_value.export_report.assert_called_once_with(
-        project_name="Forest",
-        project_dir=tmp_path / "project",
-        markdown="# Current editor text",
-        project_state=project_manager.load_project_state.return_value.to_dict(),
-        overwrite="copy",
-    )
+    assert result is not None
+    assert result.status is ExportStatus.SUCCESS
+    note_path = vault_dir / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
+    assert note_path.exists()
+    assert "# Current editor text" in note_path.read_text(encoding="utf-8")
+    assert result.note_path == note_path
     project_manager.load_project_state.assert_called_once_with("Forest")
     information.assert_called_once()
     open_url.assert_called_once()
 
 
-def test_report_obsidian_export_without_vault_stops_before_exporter(tmp_path):
+def test_report_obsidian_export_without_vault_stops_before_plugin_execution(tmp_path):
     coordinator, project_manager = _coordinator({}, tmp_path / "project")
 
-    with (
-        patch("ui.coordinators.export_coordinator.ObsidianExporter") as exporter_class,
-        patch("ui.coordinators.export_coordinator.show_information_dialog") as information,
-    ):
-        coordinator.export_report_to_obsidian(None, "Forest", "# Report")
+    with patch(
+        "ui.coordinators.export_coordinator.show_information_dialog"
+    ) as information:
+        result = coordinator.export_report_with_plugin(
+            None,
+            "spectrehud.obsidian",
+            "Forest",
+            "# Report",
+            "inter",
+        )
 
-    exporter_class.assert_not_called()
+    assert result is None
     project_manager.get_project_dir.assert_not_called()
     information.assert_called_once()
 
@@ -223,4 +234,4 @@ def test_present_export_result_success_shows_info_dialog_with_warnings(tmp_path)
         args = mock_info.call_args[0]
         assert args[1] == "Done"
         assert "report.html" in args[2]
-        assert "Some images could not be copied" in args[2]
+    assert "Some images could not be copied" in args[2]

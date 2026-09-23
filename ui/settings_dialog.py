@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Mapping, Optional
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -19,6 +19,7 @@ from PyQt6.QtCore import QObject, QRunnable, QThreadPool, Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QDesktopServices, QFontDatabase, QStandardItemModel
 from core.cli import APP_VERSION
 from core.config import ConfigManager, clamp_transparency
+from core.export_plugins import ExportPluginRegistry, FieldKind, PluginAvailabilityCode
 from core.platform import (
     PlatformCapabilities,
     detect_platform_capabilities,
@@ -698,9 +699,16 @@ class AppearanceSettingsPage(QWidget):
 class GeneralSettingsPage(QWidget):
     """Modular settings page for overlay behavior and default parameters."""
 
-    def __init__(self, config_manager: ConfigManager, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        config_manager: ConfigManager,
+        export_plugin_registry: Optional[ExportPluginRegistry] = None,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
         self.config = config_manager
+        self.export_plugin_registry = export_plugin_registry or ExportPluginRegistry()
+        self.plugin_field_widgets: Dict[str, Dict[str, QWidget]] = {}
         self._update_task: Optional[_UpdateCheckTask] = None
         self._release_url = ""
         self._init_ui()
@@ -969,37 +977,54 @@ class GeneralSettingsPage(QWidget):
         row_ws.addWidget(btn_browse_ws)
         d_layout.addLayout(row_ws)
 
-        # Optional Obsidian one-way export destination.  The vault must already
-        # exist; only the configured export subfolder is created on demand.
-        lbl_obsidian = QLabel(t("settings.lbl_obsidian_vault", "Obsidian Vault (optional):"))
-        lbl_obsidian.setProperty("class", "FormLabel")
-        d_layout.addWidget(lbl_obsidian)
-        row_obsidian = QHBoxLayout()
-        self.txt_obsidian_vault = QLineEdit(self.config.get("obsidian_vault_path", ""))
-        self.txt_obsidian_vault.setPlaceholderText(
-            t("settings.obsidian_vault_placeholder", "Select an existing Obsidian vault")
-        )
-        row_obsidian.addWidget(self.txt_obsidian_vault, stretch=1)
-        btn_browse_obsidian = QPushButton(t("dialog.browse", "Browse..."))
-        btn_browse_obsidian.setProperty("class", "BrowseBtn")
-        btn_browse_obsidian.clicked.connect(self._on_browse_obsidian_vault)
-        row_obsidian.addWidget(btn_browse_obsidian)
-        d_layout.addLayout(row_obsidian)
-
-        row_obsidian_folder = QHBoxLayout()
-        lbl_obsidian_folder = QLabel(t("settings.lbl_obsidian_folder", "Obsidian export folder:"))
-        lbl_obsidian_folder.setProperty("class", "FormLabel")
-        row_obsidian_folder.addWidget(lbl_obsidian_folder)
-        self.txt_obsidian_folder = QLineEdit(
-            self.config.get("obsidian_export_folder", "CTF/SpectreHUD")
-        )
-        row_obsidian_folder.addWidget(self.txt_obsidian_folder, stretch=1)
-        d_layout.addLayout(row_obsidian_folder)
-        self.chk_obsidian_open = QCheckBox(
-            t("settings.chk_obsidian_open", "Open exported note in Obsidian")
-        )
-        self.chk_obsidian_open.setChecked(self.config.get("obsidian_open_after_export", False))
-        d_layout.addWidget(self.chk_obsidian_open)
+        for descriptor in self.export_plugin_registry.descriptors:
+            metadata = descriptor.metadata
+            if not metadata.configuration_fields:
+                continue
+            plugin_name = t(
+                metadata.display_name.translation_key,
+                metadata.display_name.fallback,
+            )
+            plugin_label = QLabel(plugin_name)
+            plugin_label.setProperty("class", "SettingsSectionTitle")
+            d_layout.addWidget(plugin_label)
+            stored_plugins = self.config.get("export_plugins", {})
+            stored_values = (
+                stored_plugins.get(metadata.plugin_id, {})
+                if isinstance(stored_plugins, Mapping)
+                else {}
+            )
+            if not isinstance(stored_values, Mapping):
+                stored_values = {}
+            field_widgets: Dict[str, QWidget] = {}
+            for field in metadata.configuration_fields:
+                label_text = t(field.label.translation_key, field.label.fallback)
+                current = stored_values.get(field.key, field.default)
+                if field.kind is FieldKind.BOOLEAN:
+                    widget = QCheckBox(label_text)
+                    widget.setChecked(bool(current))
+                    d_layout.addWidget(widget)
+                else:
+                    label = QLabel(label_text)
+                    label.setProperty("class", "FormLabel")
+                    d_layout.addWidget(label)
+                    widget = QLineEdit(str(current or ""))
+                    if field.kind is FieldKind.DIRECTORY:
+                        row = QHBoxLayout()
+                        row.addWidget(widget, stretch=1)
+                        browse = QPushButton(t("dialog.browse", "Browse..."))
+                        browse.setProperty("class", "BrowseBtn")
+                        browse.clicked.connect(
+                            lambda _checked=False, edit=widget, title=label_text: self._browse_plugin_directory(
+                                edit, title
+                            )
+                        )
+                        row.addWidget(browse)
+                        d_layout.addLayout(row)
+                    else:
+                        d_layout.addWidget(widget)
+                field_widgets[field.key] = widget
+            self.plugin_field_widgets[metadata.plugin_id] = field_widgets
 
         layout.addWidget(card_defaults)
         layout.addStretch()
@@ -1114,26 +1139,23 @@ class GeneralSettingsPage(QWidget):
         if folder:
             self.txt_workspace.setText(folder)
 
-    def _on_browse_obsidian_vault(self) -> None:
+    def _browse_plugin_directory(self, editor: QLineEdit, title: str) -> None:
         folder = QFileDialog.getExistingDirectory(
             self,
-            t("settings.lbl_obsidian_vault", "Obsidian Vault (optional):"),
-            self.txt_obsidian_vault.text().strip(),
+            title,
+            editor.text().strip(),
         )
         if folder:
-            self.txt_obsidian_vault.setText(folder)
+            editor.setText(folder)
 
     def get_settings(self) -> Dict[str, Any]:
-        return {
+        settings = {
             "always_on_top": self.chk_always_on_top.isChecked(),
             "auto_hide_on_copy": self.chk_auto_hide.isChecked(),
             "target_ip": self.txt_default_target.text().strip(),
             "attacker_ip": self.txt_default_attacker.text().strip(),
             "wordlist": self.txt_wordlist.text().strip(),
             "workspace_dir": self.txt_workspace.text().strip(),
-            "obsidian_vault_path": self.txt_obsidian_vault.text().strip(),
-            "obsidian_export_folder": self.txt_obsidian_folder.text().strip() or "CTF/SpectreHUD",
-            "obsidian_open_after_export": self.chk_obsidian_open.isChecked(),
             "recap_enabled": self.chk_recap.isChecked(),
             "recap_inactivity_minutes": self.spin_recap_minutes.value(),
             "nudge_enabled": self.chk_nudge.isChecked(),
@@ -1142,6 +1164,25 @@ class GeneralSettingsPage(QWidget):
             "evidence_suggestions_enabled": self.chk_evidence_suggestions.isChecked(),
             "evidence_correlation_window_seconds": self.combo_evidence_window.currentData() or 90,
         }
+        stored_plugins = self.config.get("export_plugins", {})
+        plugin_settings = {
+            str(plugin_id): dict(values)
+            for plugin_id, values in (
+                stored_plugins.items() if isinstance(stored_plugins, Mapping) else ()
+            )
+            if isinstance(values, Mapping)
+        }
+        for plugin_id, field_widgets in self.plugin_field_widgets.items():
+            plugin_settings[plugin_id] = {
+                key: (
+                    widget.isChecked()
+                    if isinstance(widget, QCheckBox)
+                    else widget.text().strip()
+                )
+                for key, widget in field_widgets.items()
+            }
+        settings["export_plugins"] = plugin_settings
+        return settings
 
 
 class SettingsDialog(BaseHudDialog):
@@ -1155,11 +1196,13 @@ class SettingsDialog(BaseHudDialog):
     def __init__(
         self,
         config_manager: ConfigManager,
+        export_plugin_registry: Optional[ExportPluginRegistry] = None,
         parent: Optional[QWidget] = None,
         capabilities: Optional[PlatformCapabilities] = None,
     ):
         super().__init__(title=t("settings.title", "SPECTRE // SETTINGS & OPTIONS"), parent=parent)
         self.config = config_manager
+        self.export_plugin_registry = export_plugin_registry or ExportPluginRegistry()
         self.capabilities = (
             capabilities if capabilities is not None else detect_platform_capabilities()
         )
@@ -1221,7 +1264,10 @@ class SettingsDialog(BaseHudDialog):
 
         self.page_hotkeys = HotkeySettingsPage(self.config, capabilities=self.capabilities)
         self.page_language = LanguageSettingsPage(self.config)
-        self.page_general = GeneralSettingsPage(self.config)
+        self.page_general = GeneralSettingsPage(
+            self.config,
+            export_plugin_registry=self.export_plugin_registry,
+        )
         self.page_appearance = AppearanceSettingsPage(self.config)
 
         self.stack.addWidget(self.page_hotkeys)
@@ -1299,22 +1345,50 @@ class SettingsDialog(BaseHudDialog):
                 )
                 return
 
-        if all_settings.get("obsidian_vault_path"):
-            from core.exporters import ExternalExportError, ObsidianExporter
-
-            try:
-                ObsidianExporter(
-                    all_settings["obsidian_vault_path"],
-                    all_settings.get("obsidian_export_folder", "CTF/SpectreHUD"),
+        for descriptor in self.export_plugin_registry.descriptors:
+            metadata = descriptor.metadata
+            plugin_settings = all_settings.get("export_plugins", {})
+            stored_values = (
+                plugin_settings.get(metadata.plugin_id, {})
+                if isinstance(plugin_settings, Mapping)
+                else {}
+            )
+            if not isinstance(stored_values, Mapping):
+                stored_values = {}
+            values = {
+                field.key: stored_values.get(field.key, field.default)
+                for field in metadata.configuration_fields
+            }
+            if not any(values[field.key] != field.default for field in metadata.configuration_fields):
+                continue
+            availability = self.export_plugin_registry.availability(
+                metadata.plugin_id,
+                values,
+            )
+            if availability is None or availability.code is not PluginAvailabilityCode.AVAILABLE:
+                plugin_name = t(
+                    metadata.display_name.translation_key,
+                    metadata.display_name.fallback,
                 )
-            except ExternalExportError as exc:
                 show_warning_dialog(
                     self,
-                    t("settings.obsidian_invalid_title", "Invalid Obsidian settings"),
                     t(
-                        "settings.obsidian_invalid_message",
-                        "The Obsidian vault or export folder is invalid:\n{error}",
-                        error=str(exc),
+                        "plugins.invalid_settings_title",
+                        "Invalid {plugin} settings",
+                        plugin=plugin_name,
+                    ),
+                    t(
+                        "plugins.invalid_settings_message",
+                        "The {plugin} configuration is invalid:\n{error}",
+                        plugin=plugin_name,
+                        error=(
+                            availability.message
+                            if availability
+                            else t(
+                                "plugins.export_unavailable",
+                                "The selected export plugin is unavailable.",
+                            )
+                        ),
                     ),
                 )
                 return

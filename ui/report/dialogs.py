@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.i18n import t
+from core.export_plugins import ExportPluginMetadata
 from ui.message_boxes import show_warning_dialog
 from core.reporting import ReportTemplate
 from core.reporting import TemplateRepository
@@ -1057,9 +1058,13 @@ class ClipboardHistoryPickerDialog(QDialog):
 
 
 class ReportExportTypeDialog(BaseHudDialog):
-    """Dialog for choosing report export format (HTML/PDF, Obsidian, CherryTree, Markdown)."""
+    """Dialog for host and discovered report export choices."""
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        plugin_metadata: Sequence[ExportPluginMetadata] = (),
+    ):
         title = t("report.export_dialog_title", "SPECTRE // EXPORT REPORT")
         super().__init__(title=title, parent=parent)
         self.setObjectName("ReportExportTypeDialog")
@@ -1067,6 +1072,7 @@ class ReportExportTypeDialog(BaseHudDialog):
         self.setMinimumWidth(540)
         self.selected_type: Optional[str] = None
         self.export_buttons: list[QPushButton] = []
+        self.plugin_metadata = tuple(plugin_metadata)
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -1081,7 +1087,7 @@ class ReportExportTypeDialog(BaseHudDialog):
         lbl.setWordWrap(True)
         layout.addWidget(lbl)
 
-        choices = (
+        choices = [
             (
                 "html",
                 t("report.export_html", "Export HTML/PDF"),
@@ -1094,19 +1100,6 @@ class ReportExportTypeDialog(BaseHudDialog):
                 "CYBER_CYAN",
                 "CYAN_A15",
                 "CYAN_A35",
-            ),
-            (
-                "obsidian",
-                t("report.export_obsidian", "Export to Obsidian..."),
-                "VAULT",
-                t(
-                    "report.export_obsidian_desc",
-                    "Write the report and linked screenshots into the configured Obsidian vault.",
-                ),
-                "fa5s.gem",
-                "STATUS_PURPLE",
-                "PURPLE_A20",
-                "PURPLE_A40",
             ),
             (
                 "cherrytree",
@@ -1134,7 +1127,35 @@ class ReportExportTypeDialog(BaseHudDialog):
                 "BLUE_A25",
                 "BLUE_A40",
             ),
-        )
+        ]
+
+        accent_tokens = {
+            "purple": ("STATUS_PURPLE", "PURPLE_A20", "PURPLE_A40"),
+            "green": ("STATUS_SUCCESS", "SUCCESS_A20", "SUCCESS_A40"),
+            "cyan": ("CYBER_CYAN", "CYAN_A15", "CYAN_A35"),
+        }
+        plugin_choices = []
+        for metadata in self.plugin_metadata:
+            plugin_name = t(
+                metadata.display_name.translation_key,
+                metadata.display_name.fallback,
+            )
+            accent_token, bg_token, border_token = accent_tokens.get(
+                metadata.accent or "", ("CYBER_BLUE", "BLUE_A25", "BLUE_A40")
+            )
+            plugin_choices.append(
+                (
+                    f"plugin:{metadata.plugin_id}",
+                    t("report.export_plugin", "Export to {plugin}...", plugin=plugin_name),
+                    metadata.badge,
+                    t(metadata.description.translation_key, metadata.description.fallback),
+                    metadata.icon_name,
+                    accent_token,
+                    bg_token,
+                    border_token,
+                )
+            )
+        choices[1:1] = plugin_choices
 
         for (
             export_type,
@@ -1241,8 +1262,12 @@ class ReportExportTypeDialog(BaseHudDialog):
         layout.addLayout(footer)
 
     @classmethod
-    def select_export_type(cls, parent: Optional[QWidget] = None) -> Optional[str]:
-        dlg = cls(parent)
+    def select_export_type(
+        cls,
+        parent: Optional[QWidget] = None,
+        plugin_metadata: Sequence[ExportPluginMetadata] = (),
+    ) -> Optional[str]:
+        dlg = cls(parent, plugin_metadata=plugin_metadata)
         dlg.exec()
         return dlg.selected_type
 

@@ -19,6 +19,7 @@ from core.clipboard_history import ClipboardHistory
 from ui.clipboard_monitor import ClipboardMonitor
 from core.project import PersistFailureReason, PersistResult, ProjectManager
 from core.event_bus import EventBus, EventType
+from core.export_plugins import create_bundled_export_plugin_registry
 from ui.controllers.project_controller import ProjectController
 from ui.controllers.cheatsheet_controller import CheatsheetController
 from ui.controllers.loot_controller import LootController
@@ -750,6 +751,10 @@ class TestControllersDomain(unittest.TestCase):
         clears = []
         toggle_views = []
         obsidian_exports = []
+        plugins = tuple(
+            descriptor.metadata
+            for descriptor in create_bundled_export_plugin_registry().descriptors
+        )
 
         self.loot_ctrl.build_filter_pills(
             pills_layout=layout,
@@ -757,7 +762,8 @@ class TestControllersDomain(unittest.TestCase):
             on_export=lambda: exports.append(True),
             on_clear=lambda: clears.append(True),
             export_tooltip="Export tooltip",
-            on_export_obsidian=lambda: obsidian_exports.append(True),
+            on_export_plugin=lambda plugin_id: obsidian_exports.append(plugin_id),
+            loot_append_plugins=plugins,
             on_toggle_view=lambda: toggle_views.append(True),
             view_mode="list",
         )
@@ -792,7 +798,7 @@ class TestControllersDomain(unittest.TestCase):
 
         btn_obs = layout.itemAt(layout.count() - 2).widget()
         btn_obs.click()
-        self.assertEqual(len(obsidian_exports), 1)
+        self.assertEqual(obsidian_exports, ["spectrehud.obsidian"])
 
         btn_clr = layout.itemAt(layout.count() - 1).widget()
         btn_clr.click()

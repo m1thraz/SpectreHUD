@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 
 from core.i18n import t
 from core.loot import CATEGORIES
+from core.export_plugins import ExportPluginMetadata
 from ui.loot_card import LootCard
 
 
@@ -217,7 +218,8 @@ class LootBoard(QScrollArea):
         on_edit: Callable[[Dict[str, Any]], None],
         on_export: Callable[[str], None],
         on_move: Callable[[str, str, int], bool],
-        on_export_obsidian: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: tuple[ExportPluginMetadata, ...] = (),
+        on_export_plugin: Optional[Callable[[str, str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
         parent: Optional[QWidget] = None,
         density: str = "comfortable",
@@ -263,12 +265,13 @@ class LootBoard(QScrollArea):
                     parent=column.cards_container,
                     board_mode=True,
                     density=density,
+                    loot_append_plugins=loot_append_plugins,
                 )
                 card.loot_deleted.connect(on_delete)
                 card.edit_requested.connect(on_edit)
                 card.export_requested.connect(on_export)
-                if on_export_obsidian is not None:
-                    card.obsidian_export_requested.connect(on_export_obsidian)
+                if on_export_plugin is not None:
+                    card.plugin_export_requested.connect(on_export_plugin)
                 if on_copied is not None:
                     card.copied.connect(on_copied)
                 column.add_card(card)

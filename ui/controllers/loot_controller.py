@@ -14,6 +14,7 @@ from core.logger import get_logger
 from core.menu_actions import MenuAction
 from core.event_bus import EventBus
 from core.i18n import t
+from core.export_plugins import ExportPluginMetadata
 from ui.loot_card import LootCard
 from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
@@ -382,7 +383,8 @@ class LootController(QObject):
         on_export: Callable[[], None],
         on_clear: Callable[[], None],
         export_tooltip: str,
-        on_export_obsidian: Optional[Callable[[], None]] = None,
+        on_export_plugin: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: tuple[ExportPluginMetadata, ...] = (),
         on_toggle_view: Optional[Callable[[], None]] = None,
         view_mode: str = "list",
         on_toggle_density: Optional[Callable[[], None]] = None,
@@ -457,17 +459,27 @@ class LootController(QObject):
         btn_export.clicked.connect(on_export)
         pills_layout.addWidget(btn_export)
 
-        if on_export_obsidian is not None:
-            btn_obsidian = QPushButton(t("loot.export_obsidian", "Obsidian"))
-            btn_obsidian.setProperty("class", "MiniActionBtn")
-            btn_obsidian.setToolTip(
-                t(
-                    "loot.export_obsidian_tip",
-                    "Append the current loot to the exported Obsidian project note",
+        if on_export_plugin is not None:
+            for metadata in loot_append_plugins:
+                plugin_name = t(
+                    metadata.display_name.translation_key,
+                    metadata.display_name.fallback,
                 )
-            )
-            btn_obsidian.clicked.connect(on_export_obsidian)
-            pills_layout.addWidget(btn_obsidian)
+                button = QPushButton(plugin_name)
+                button.setProperty("class", "MiniActionBtn")
+                button.setToolTip(
+                    t(
+                        "loot.export_plugin_tip",
+                        "Append the current Loot to {plugin}",
+                        plugin=plugin_name,
+                    )
+                )
+                button.clicked.connect(
+                    lambda _checked=False, plugin_id=metadata.plugin_id: on_export_plugin(
+                        plugin_id
+                    )
+                )
+                pills_layout.addWidget(button)
 
         btn_clear = QPushButton(t("common.clear", "Clear"))
         btn_clear.setProperty("class", "MiniDangerBtn")
@@ -485,7 +497,8 @@ class LootController(QObject):
         on_export_loot: Callable[[str], None],
         parent_widget: QWidget,
         show_empty_state_fn: Callable[[str], None],
-        on_export_obsidian: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: tuple[ExportPluginMetadata, ...] = (),
+        on_export_plugin: Optional[Callable[[str, str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
         density: str = "comfortable",
     ) -> List[QWidget]:
@@ -520,12 +533,18 @@ class LootController(QObject):
             rendered_cards.append(sec_header)
 
             for entry in cat_entries:
-                card = LootCard(entry, proj_dir, parent=parent_widget, density=density)
+                card = LootCard(
+                    entry,
+                    proj_dir,
+                    parent=parent_widget,
+                    density=density,
+                    loot_append_plugins=loot_append_plugins,
+                )
                 card.loot_deleted.connect(on_delete_loot)
                 card.edit_requested.connect(on_edit_loot)
                 card.export_requested.connect(on_export_loot)
-                if on_export_obsidian is not None:
-                    card.obsidian_export_requested.connect(on_export_obsidian)
+                if on_export_plugin is not None:
+                    card.plugin_export_requested.connect(on_export_plugin)
                 if on_copied is not None:
                     card.copied.connect(on_copied)
                 content_layout.addWidget(card)
@@ -543,7 +562,8 @@ class LootController(QObject):
         on_export_loot: Callable[[str], None],
         on_move_loot: Callable[[str, str, int], bool],
         parent_widget: QWidget,
-        on_export_obsidian: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: tuple[ExportPluginMetadata, ...] = (),
+        on_export_plugin: Optional[Callable[[str, str], None]] = None,
         on_copied: Optional[Callable[[str], None]] = None,
         density: str = "comfortable",
     ) -> List[QWidget]:
@@ -571,7 +591,8 @@ class LootController(QObject):
             on_edit=on_edit_loot,
             on_export=on_export_loot,
             on_move=on_move_loot,
-            on_export_obsidian=on_export_obsidian,
+            loot_append_plugins=loot_append_plugins,
+            on_export_plugin=on_export_plugin,
             on_copied=on_copied,
             parent=parent_widget,
             density=density,
@@ -714,7 +735,8 @@ class LootController(QObject):
         parent_widget: QWidget,
         entry: Dict[str, Any],
         on_export_file: Optional[Callable[[str], None]] = None,
-        on_export_obsidian: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: tuple[ExportPluginMetadata, ...] = (),
+        on_export_plugin: Optional[Callable[[str, str], None]] = None,
     ) -> bool:
         dlg = AddLootDialog(
             parent=parent_widget,
@@ -734,7 +756,8 @@ class LootController(QObject):
             default_finding_status=entry.get("finding_status", "open"),
             default_references=entry.get("references", []),
             on_export_file=on_export_file,
-            on_export_obsidian=on_export_obsidian,
+            loot_append_plugins=loot_append_plugins,
+            on_export_plugin=on_export_plugin,
         )
         if dlg.exec():
             data = dlg.get_data()

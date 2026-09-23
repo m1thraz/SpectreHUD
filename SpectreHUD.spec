@@ -15,7 +15,10 @@ datas = [
     (str(data_dir / "themes"), "data/themes"),
     (str(data_dir / "icon.ico"), "data"),
     (str(data_dir / "icon.svg"), "data"),
-] + collect_data_files("qtawesome")
+] + collect_data_files("qtawesome") + collect_data_files(
+    "core.export_plugins.bundled",
+    includes=["**/plugin.json"],
+)
 
 hidden_imports = [
     "pynput.keyboard._win32",
@@ -25,6 +28,7 @@ hidden_imports = [
     "PyQt6.QtWidgets",
     "pyperclip",
     "qtawesome",
+    "core.export_plugins.bundled.obsidian.plugin",
 ]
 
 a = Analysis(

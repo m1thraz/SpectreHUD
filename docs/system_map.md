@@ -19,8 +19,13 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - The optional `accent` metadata value is a short safe identifier interpreted as an opaque host
   visual hint. It cannot contain style objects, arbitrary style strings, Qt values, stylesheets,
   or UI injection behavior.
-- No production exporter is registered or migrated in Phase 2. The existing Obsidian and
-  CherryTree workflows remain on their current paths until their dedicated migration phases.
+- The bundled Obsidian integration is the first migrated production plugin. Its manifest is
+  discovered passively, its implementation loads only on demand, and both Report Export and
+  optional Loot Append are invoked through capabilities. Host UI builds export actions and
+  settings from metadata and must not import or branch on Obsidian execution details.
+- CherryTree remains on its existing direct path until its dedicated migration phase. Shared
+  attachment resolution and Loot-to-Markdown rendering live in `core.exporters` so CherryTree
+  does not depend on private Obsidian implementation methods during the transition.
 
 ## First Run
 - `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.

@@ -16,6 +16,7 @@ from core.loot import LootManager
 from core.clipboard_history import ClipboardHistory
 from core.reporting import ReportFileManager
 from core.i18n import t
+from core.export_plugins import create_bundled_export_plugin_registry
 from ui.report import HtmlExportOptions
 from ui.report.dialogs import (
     ReportExportTypeDialog,
@@ -72,17 +73,19 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertTrue(self.tab.action_toolbar.view_actions[ViewMode.WORKSPACE].isChecked())
         self.assertFalse(hasattr(self.tab, "btn_mode_editor"))
 
-    def test_obsidian_export_delegates_current_editor_state(self):
+    def test_plugin_export_delegates_current_editor_state(self):
         coordinator = MagicMock()
         self.tab.export_coordinator = coordinator
         self.tab.workspace_shell.editor.setPlainText("# Current report\nEvidence")
 
-        self.tab.export_actions.on_export_obsidian_clicked()
+        self.tab.export_actions.on_export_plugin_clicked("spectrehud.obsidian")
 
-        coordinator.export_report_to_obsidian.assert_called_once_with(
+        coordinator.export_report_with_plugin.assert_called_once_with(
             self.tab,
+            "spectrehud.obsidian",
             "TestBox",
             "# Current report\nEvidence",
+            "segoe_ui",
         )
 
     def test_template_selection_is_in_report_generation_dialog(self):
@@ -126,6 +129,12 @@ class TestReportEditorTab(unittest.TestCase):
         self.assertGreater(classic_web.sizeHint().width(), 0)
 
     def test_export_chooser_explains_each_handoff(self):
+        registry = create_bundled_export_plugin_registry()
+        coordinator = MagicMock()
+        coordinator.plugin_metadata.return_value = tuple(
+            descriptor.metadata for descriptor in registry.descriptors
+        )
+        self.tab.export_coordinator = coordinator
         with patch.object(QDialog, "exec", return_value=QDialog.DialogCode.Rejected):
             self.assertIsNone(self.tab.export_actions.select_export_type())
 
@@ -140,9 +149,12 @@ class TestReportEditorTab(unittest.TestCase):
             for label in export_dialog.findChildren(QLabel)
             if label.property("exportType")
         }
-        self.assertEqual(set(descriptions), {"html", "obsidian", "cherrytree", "markdown"})
+        self.assertEqual(
+            set(descriptions),
+            {"html", "plugin:spectrehud.obsidian", "cherrytree", "markdown"},
+        )
         self.assertIn("PDF", descriptions["html"])
-        self.assertIn("vault", descriptions["obsidian"].lower())
+        self.assertIn("vault", descriptions["plugin:spectrehud.obsidian"].lower())
         self.assertIn("CherryTree", descriptions["cherrytree"])
         self.assertIn("Markdown", descriptions["markdown"])
 
@@ -993,7 +1005,9 @@ Text
         from PyQt6.QtWidgets import QPushButton
 
         # 1. HTML selection: simulate clicking HTML button on dialog
-        dialog = ReportExportTypeDialog(self.tab)
+        registry = create_bundled_export_plugin_registry()
+        metadata = tuple(descriptor.metadata for descriptor in registry.descriptors)
+        dialog = ReportExportTypeDialog(self.tab, plugin_metadata=metadata)
         for btn in dialog.findChildren(QPushButton):
             if "HTML" in btn.text():
                 btn.click()

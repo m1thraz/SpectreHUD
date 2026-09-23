@@ -82,8 +82,8 @@ class ReportExportActions:
             self.on_export_copy_clicked()
         elif export_type == "html":
             self.on_export_html_clicked()
-        elif export_type == "obsidian":
-            self.on_export_obsidian_clicked()
+        elif export_type and export_type.startswith("plugin:"):
+            self.on_export_plugin_clicked(export_type.removeprefix("plugin:"))
         elif export_type == "cherrytree":
             self.on_export_cherrytree_clicked()
 
@@ -91,7 +91,12 @@ class ReportExportActions:
         """Returns the selected export workflow choice or None if cancelled."""
         if self._select_export_type_override:
             return self._select_export_type_override()
-        return ReportExportTypeDialog.select_export_type(self.parent_widget)
+        coordinator = self.export_coordinator
+        plugin_metadata = coordinator.plugin_metadata() if coordinator else ()
+        return ReportExportTypeDialog.select_export_type(
+            self.parent_widget,
+            plugin_metadata=plugin_metadata,
+        )
 
     def select_html_export_options(self) -> Optional[HtmlExportOptions]:
         """Choose the HTML presentation profile without changing report content."""
@@ -105,13 +110,13 @@ class ReportExportActions:
         """Return the application export boundary or show a controlled error."""
         coordinator = self.export_coordinator
         if coordinator is None:
-            logger.error("Obsidian report export requested without a configured handler.")
+            logger.error("Report export requested without a configured handler.")
             show_error_dialog(
                 self.parent_widget,
-                t("report.obsidian_export_failed_title", "Obsidian export failed"),
+                t("plugins.export_unavailable_title", "Export plugin unavailable"),
                 t(
-                    "report.obsidian_export_unavailable",
-                    "The Obsidian export service is unavailable.",
+                    "plugins.export_unavailable",
+                    "The selected export plugin is unavailable.",
                 ),
             )
             return None
@@ -224,8 +229,8 @@ class ReportExportActions:
             details=str(exc),
         )
 
-    def on_export_obsidian_clicked(self) -> None:
-        """Delegate the current editor document to the shared export coordinator."""
+    def on_export_plugin_clicked(self, plugin_id: str) -> None:
+        """Delegate the current editor document through a discovered capability."""
         if not self.current_project:
             return
         coordinator = self.require_export_coordinator()
@@ -233,10 +238,12 @@ class ReportExportActions:
             return
         if not self._ready_to_export():
             return
-        coordinator.export_report_to_obsidian(
+        coordinator.export_report_with_plugin(
             self.parent_widget,
+            plugin_id,
             self.current_project,
             self.editor.toPlainText(),
+            self.report_font_key(),
         )
 
     def on_export_cherrytree_clicked(self) -> None:

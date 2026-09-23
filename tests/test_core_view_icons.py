@@ -60,12 +60,21 @@ def test_snippet_copy_feedback_timer_is_owned_by_card(qapp):
 
 
 def test_loot_card_uses_icons_for_card_actions(qapp):
-    card = LootCard({"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"})
+    from core.export_plugins import create_bundled_export_plugin_registry
+
+    plugins = tuple(
+        descriptor.metadata
+        for descriptor in create_bundled_export_plugin_registry().descriptors
+    )
+    card = LootCard(
+        {"id": "loot-1", "title": "Finding", "content": "secret", "category": "recon"},
+        loot_append_plugins=plugins,
+    )
 
     for button in (
         card.btn_edit,
         card.btn_export_file,
-        card.btn_export_obsidian,
+        card.plugin_export_buttons["spectrehud.obsidian"],
         card.btn_delete,
         card.btn_copy,
     ):

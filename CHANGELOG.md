@@ -11,6 +11,10 @@ semantic versioning.
 * Added a compact first-run Getting Started dialog and a dismissible Report editing-view hint, with clearer in-context guidance for Clip, Quick IP, Quick Notes, and Loot.
 * Added an optional linked table of contents to Professional Print exports, listing report sections and nested findings directly after the cover page.
 
+### Changed
+
+* Migrated the bundled Obsidian report and Loot exports to the new isolated export-plugin boundary while preserving the existing workflow and settings.
+
 ### Fixed
 
 * Replaced the ambiguous REC header button with a themed Clipboard icon and a fixed Clip label while keeping its active warning highlight.

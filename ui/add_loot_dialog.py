@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import QLocale, Qt
 from PyQt6.QtGui import QColor, QDoubleValidator
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, Sequence
 from core.loot import (
     CATEGORIES,
     LOOT_TYPES,
@@ -23,6 +23,7 @@ from core.loot import (
     normalize_finding_targets,
 )
 from core.i18n import t
+from core.export_plugins import ExportPluginMetadata
 from ui.message_boxes import show_warning_dialog
 from ui.base_dialog import BaseHudDialog
 from ui.styles.icons import get_severity_color, get_theme_color, icon
@@ -64,13 +65,15 @@ class AddLootDialog(BaseHudDialog):
         entry_id: Optional[str] = None,
         is_edit: bool = False,
         on_export_file: Optional[Callable[[str], None]] = None,
-        on_export_obsidian: Optional[Callable[[str], None]] = None,
+        loot_append_plugins: Sequence[ExportPluginMetadata] = (),
+        on_export_plugin: Optional[Callable[[str, str], None]] = None,
         **kwargs,
     ):
         self.entry_id = entry_id or kwargs.get("id")
         self.is_edit = is_edit or bool(self.entry_id)
         self.on_export_file = on_export_file
-        self.on_export_obsidian = on_export_obsidian
+        self.loot_append_plugins = tuple(loot_append_plugins)
+        self.on_export_plugin = on_export_plugin
         dialog_title = t(
             "loot_dialog.title_edit" if self.is_edit else "loot_dialog.title_new",
             "SPECTRE // EDIT SESSION LOOT" if self.is_edit else "SPECTRE // CAPTURE SESSION LOOT",
@@ -483,16 +486,25 @@ class AddLootDialog(BaseHudDialog):
                 self.btn_export_file.clicked.connect(lambda: self.on_export_file(self.entry_id))
             btn_layout.addWidget(self.btn_export_file)
 
-            self.btn_export_obsidian = QPushButton(t("loot.export_obsidian", "Obsidian"))
-            self.btn_export_obsidian.setProperty("class", "SecondaryBtn")
-            if self.on_export_obsidian:
-                self.btn_export_obsidian.clicked.connect(
-                    lambda: self.on_export_obsidian(self.entry_id)
-                )
-            btn_layout.addWidget(self.btn_export_obsidian)
+            self.plugin_export_buttons: dict[str, QPushButton] = {}
+            if self.on_export_plugin:
+                for metadata in self.loot_append_plugins:
+                    plugin_name = t(
+                        metadata.display_name.translation_key,
+                        metadata.display_name.fallback,
+                    )
+                    button = QPushButton(plugin_name)
+                    button.setProperty("class", "SecondaryBtn")
+                    button.clicked.connect(
+                        lambda _checked=False, plugin_id=metadata.plugin_id: self.on_export_plugin(
+                            plugin_id, self.entry_id
+                        )
+                    )
+                    btn_layout.addWidget(button)
+                    self.plugin_export_buttons[metadata.plugin_id] = button
         else:
             self.btn_export_file = None
-            self.btn_export_obsidian = None
+            self.plugin_export_buttons = {}
 
         btn_layout.addStretch()
 

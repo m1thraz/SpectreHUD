@@ -5,7 +5,7 @@ Coordinates report and loot export operations (Markdown, HTML, ZIP archives).
 """
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 from PyQt6.QtCore import QObject, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QWidget
@@ -15,10 +15,25 @@ from core.atomic_write import atomic_write_text
 from core.exporters import (
     CherryTreeExporter,
     ExportArtifact,
+    ExportError,
+    ExportErrorCode,
     ExportResult,
     ExportStatus,
     ExternalExportError,
-    ObsidianExporter,
+)
+from core.export_plugins import (
+    ExportCapability,
+    ExportDataRequirement,
+    ExportPluginMetadata,
+    ExportPluginRegistry,
+    LootAppendRequest,
+    LootExportEntry,
+    PluginAvailabilityCode,
+    PluginValue,
+    ProjectExportContext,
+    ProjectNetworkContext,
+    ReportExportContext,
+    ReportExportRequest,
 )
 from core.reporting import HtmlReportExporter
 from core.reporting import ReportExportProfile
@@ -47,6 +62,7 @@ class ExportCoordinator(QObject):
         history_ctrl: HistoryController,
         target_provider: Callable[[], str],
         config_manager: ConfigManager,
+        export_plugin_registry: Optional[ExportPluginRegistry] = None,
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
@@ -55,6 +71,87 @@ class ExportCoordinator(QObject):
         self.history_ctrl = history_ctrl
         self.target_provider = target_provider
         self.config = config_manager
+        self.export_plugins = export_plugin_registry or ExportPluginRegistry()
+
+    def plugin_metadata(
+        self, capability: ExportCapability = ExportCapability.REPORT_EXPORT
+    ) -> tuple[ExportPluginMetadata, ...]:
+        return tuple(
+            descriptor.metadata
+            for descriptor in self.export_plugins.descriptors
+            if capability in descriptor.metadata.capabilities
+        )
+
+    def _plugin_configuration(
+        self, metadata: ExportPluginMetadata
+    ) -> dict[str, PluginValue]:
+        all_plugin_values = self.config.get("export_plugins", {})
+        if not isinstance(all_plugin_values, Mapping):
+            all_plugin_values = {}
+        plugin_values = all_plugin_values.get(metadata.plugin_id, {})
+        if not isinstance(plugin_values, Mapping):
+            plugin_values = {}
+        return {
+            field.key: plugin_values.get(field.key, field.default)
+            for field in metadata.configuration_fields
+        }
+
+    @staticmethod
+    def _plugin_name(metadata: ExportPluginMetadata) -> str:
+        return t(metadata.display_name.translation_key, metadata.display_name.fallback)
+
+    @staticmethod
+    def _loot_snapshot(entries: Iterable[Dict[str, Any]]) -> tuple[LootExportEntry, ...]:
+        return tuple(
+            LootExportEntry(
+                entry_id=str(entry.get("id", "")),
+                entry_type=str(entry.get("type", "note")),
+                title=str(entry.get("title", "Untitled loot")),
+                content=str(entry.get("content", "")),
+                recommendation=str(entry.get("recommendation", "") or ""),
+                target_ip=str(entry.get("target_ip", "")),
+                timestamp=str(entry.get("timestamp", "")),
+            )
+            for entry in entries
+        )
+
+    def _load_available_plugin(self, window: QWidget, plugin_id: str):
+        loaded = self.export_plugins.load(plugin_id)
+        if loaded is None:
+            show_error_dialog(
+                window,
+                t("plugins.export_unavailable_title", "Export plugin unavailable"),
+                t("plugins.export_unavailable", "The selected export plugin is unavailable."),
+            )
+            return None
+        if loaded.plugin is None:
+            show_error_dialog(
+                window,
+                t("plugins.export_unavailable_title", "Export plugin unavailable"),
+                loaded.availability.message,
+                details=loaded.availability.details,
+            )
+            return None
+        configuration = self._plugin_configuration(loaded.descriptor.metadata)
+        availability = self.export_plugins.availability(plugin_id, configuration)
+        if availability is None or availability.code is not PluginAvailabilityCode.AVAILABLE:
+            plugin_name = self._plugin_name(loaded.descriptor.metadata)
+            show_information_dialog(
+                window,
+                t(
+                    "plugins.not_configured_title",
+                    "{plugin} is not configured",
+                    plugin=plugin_name,
+                ),
+                availability.message
+                if availability
+                else t(
+                    "plugins.export_unavailable",
+                    "The selected export plugin is unavailable.",
+                ),
+            )
+            return None
+        return loaded, configuration
 
     def export_loot(self, window: QWidget) -> None:
         """Exports session loot / report copy."""
@@ -147,166 +244,156 @@ class ExportCoordinator(QObject):
         except (ExternalExportError, OSError, RuntimeError) as exc:
             raise ReportExportError(str(exc)) from exc
 
-    def export_loot_to_obsidian(self, window: QWidget) -> None:
-        """Append active-session loot without rewriting a user's report note."""
-        self.append_loot_entries_to_obsidian(window, self.loot_manager.get_all_entries())
-
-    def _configured_obsidian_exporter(
+    def export_report_with_plugin(
         self,
         window: QWidget,
-        *,
-        scope: str,
-    ) -> Optional[ObsidianExporter]:
-        """Return the shared configured exporter or explain the missing setup."""
-        is_loot = scope == "loot"
-        vault_path = str(self.config.get("obsidian_vault_path", "") or "").strip()
-        if not vault_path:
-            show_information_dialog(
-                window,
-                t(f"{scope}.obsidian_not_configured_title", "Obsidian is not configured"),
-                t(
-                    f"{scope}.obsidian_not_configured",
-                    "Choose an existing Obsidian vault in Settings before exporting loot."
-                    if is_loot
-                    else "Choose an existing Obsidian vault in Settings before exporting.",
-                ),
-            )
-            return None
-        try:
-            return ObsidianExporter(
-                vault_path,
-                self.config.get("obsidian_export_folder", "CTF/SpectreHUD"),
-            )
-        except ExternalExportError as exc:
-            logger.warning("Invalid Obsidian export configuration: %s", exc)
-            show_error_dialog(
-                window,
-                t(f"{scope}.obsidian_export_failed_title", "Obsidian export failed"),
-                t(
-                    f"{scope}.obsidian_export_failed",
-                    "Loot could not be sent to Obsidian:\n{error}"
-                    if is_loot
-                    else "The report could not be exported to Obsidian:\n{error}",
-                    error=str(exc),
-                ),
-            )
-            return None
-
-    def export_report_to_obsidian(
-        self,
-        window: QWidget,
+        plugin_id: str,
         project_name: str,
         markdown: str,
-    ) -> None:
-        """Export the current editor document through the shared Obsidian workflow."""
-        exporter = self._configured_obsidian_exporter(
-            window,
-            scope="report",
-        )
-        if exporter is None:
-            return
-
+        report_font: str,
+    ) -> Optional[ExportResult]:
+        resolved = self._load_available_plugin(window, plugin_id)
+        if resolved is None:
+            return None
+        loaded, configuration = resolved
+        metadata = loaded.descriptor.metadata
         try:
             project_dir = self.project_manager.get_project_dir(project_name)
-            project_state = self.project_manager.load_project_state(project_name)
-            result = exporter.export_report(
-                project_name=project_name,
-                project_dir=project_dir,
-                markdown=markdown,
-                project_state=project_state.to_dict(),
-                overwrite="copy",
+            network = None
+            if ExportDataRequirement.PROJECT_NETWORK in metadata.report_data_requirements:
+                project_state = self.project_manager.load_project_state(project_name)
+                network = ProjectNetworkContext(
+                    target_ip=project_state.target_ip,
+                    attacker_ip=project_state.attacker_ip,
+                )
+            loot = (
+                self._loot_snapshot(self.loot_manager.get_all_entries())
+                if ExportDataRequirement.LOOT in metadata.report_data_requirements
+                else None
             )
-        except (ExternalExportError, OSError, RuntimeError) as exc:
-            logger.error("Obsidian report export failed: %s", exc, exc_info=True)
-            show_error_dialog(
-                window,
-                t("report.obsidian_export_failed_title", "Obsidian export failed"),
-                t(
-                    "report.obsidian_export_failed",
-                    "The report could not be exported to Obsidian:\n{error}",
-                    error=str(exc),
+            context = ReportExportContext(
+                project=ProjectExportContext(project_name, project_dir),
+                markdown=markdown,
+                network=network,
+                loot=loot,
+                report_font=(
+                    report_font
+                    if ExportDataRequirement.REPORT_FONT in metadata.report_data_requirements
+                    else None
                 ),
             )
-            return
-
-        message = t(
-            "report.obsidian_exported",
-            "Exported to Obsidian:\n{path}",
-            path=str(result.note_path),
-        )
-        if result.warnings:
-            message += "\n\n" + t(
-                "report.obsidian_attachment_warning",
-                "Some attachments could not be copied.",
+            result = loaded.plugin.capabilities.report_export.export_report(
+                ReportExportRequest(
+                    context=context,
+                    configuration=configuration,
+                    execution_values={},
+                )
             )
-        show_information_dialog(
+        except BaseException as exc:
+            logger.error("Export plugin %s failed: %s", plugin_id, exc, exc_info=True)
+            result = ExportResult.failure(
+                ExportError(
+                    ExportErrorCode.INTERNAL_ERROR,
+                    t("plugins.export_failed", "The export plugin failed."),
+                    f"{type(exc).__name__}: {exc}",
+                )
+            )
+        plugin_name = self._plugin_name(metadata)
+        self.present_export_result(
             window,
-            t("report.obsidian_exported_title", "Obsidian export complete"),
-            message,
+            result,
+            title=t(
+                "plugins.export_complete_title",
+                "{plugin} export complete",
+                plugin=plugin_name,
+            ),
+            success_message=t(
+                "plugins.report_exported",
+                "Exported to {plugin}:\n{path}",
+                plugin=plugin_name,
+                path=str(result.note_path),
+            ),
+            warning_message=t(
+                "plugins.attachment_warning",
+                "Some attachments could not be copied.",
+            ),
         )
-        if self.config.get("obsidian_open_after_export", False):
-            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
-                logger.warning("Obsidian could not open export URI: %s", result.obsidian_uri)
+        return result
 
-    def append_loot_entries_to_obsidian(
-        self, window: QWidget, entries: List[Dict[str, Any]]
-    ) -> None:
-        """Append selected entries to the current project note with deduplication."""
-        exporter = self._configured_obsidian_exporter(
-            window,
-            scope="loot",
-        )
-        if exporter is None:
-            return
+    def append_loot_with_plugin(
+        self,
+        window: QWidget,
+        plugin_id: str,
+        entries: Iterable[Dict[str, Any]],
+    ) -> Optional[ExportResult]:
+        resolved = self._load_available_plugin(window, plugin_id)
+        if resolved is None:
+            return None
+        loaded, configuration = resolved
+        capability = loaded.plugin.capabilities.loot_append
+        if capability is None:
+            return None
         project_name = self.project_manager.get_active_project()
         try:
-            note_path = exporter.note_path_for(project_name)
-            if not note_path.exists():
-                raise ExternalExportError(
-                    "Export the report to Obsidian first so SpectreHUD can append loot without creating an incomplete note."
+            result = capability.append_loot(
+                LootAppendRequest(
+                    project=ProjectExportContext(
+                        project_name,
+                        self.project_manager.get_project_dir(project_name),
+                    ),
+                    entries=self._loot_snapshot(entries),
+                    configuration=configuration,
                 )
-            result = exporter.append_loot(
-                project_name=project_name, entries=entries, note_path=note_path
             )
-        except ExternalExportError as exc:
-            logger.warning("Obsidian loot export failed: %s", exc)
-            show_error_dialog(
-                window,
-                t("loot.obsidian_export_failed_title", "Obsidian export failed"),
-                t(
-                    "loot.obsidian_export_failed",
-                    "Loot could not be sent to Obsidian:\n{error}",
-                    error=str(exc),
-                ),
+        except BaseException as exc:
+            logger.error("Loot plugin %s failed: %s", plugin_id, exc, exc_info=True)
+            result = ExportResult.failure(
+                ExportError(
+                    ExportErrorCode.INTERNAL_ERROR,
+                    t("plugins.export_failed", "The export plugin failed."),
+                    f"{type(exc).__name__}: {exc}",
+                )
             )
-            return
-
+        plugin_name = self._plugin_name(loaded.descriptor.metadata)
         if result.skipped_entry_ids:
             message = t(
-                "loot.obsidian_exported_duplicates",
-                "Loot is already up to date in Obsidian ({count} duplicate entries skipped).",
+                "plugins.loot_exported_duplicates",
+                "Loot is already up to date in {plugin} ({count} duplicate entries skipped).",
+                plugin=plugin_name,
                 count=len(result.skipped_entry_ids),
             )
         else:
             message = t(
-                "loot.obsidian_exported",
-                "Loot appended to Obsidian:\n{path}",
+                "plugins.loot_exported",
+                "Loot appended to {plugin}:\n{path}",
+                plugin=plugin_name,
                 path=str(result.note_path),
             )
-        show_information_dialog(
-            window, t("loot.obsidian_exported_title", "Obsidian updated"), message
+        self.present_export_result(
+            window,
+            result,
+            title=t(
+                "plugins.updated_title",
+                "{plugin} updated",
+                plugin=plugin_name,
+            ),
+            success_message=message,
+            warning_message=t(
+                "plugins.attachment_warning",
+                "Some attachments could not be copied.",
+            ),
         )
-        if self.config.get("obsidian_open_after_export", False):
-            if not QDesktopServices.openUrl(QUrl(result.obsidian_uri)):
-                logger.warning("Obsidian could not open loot export URI: %s", result.obsidian_uri)
+        return result
 
-    def export_single_loot_to_obsidian(self, window: QWidget, entry_id: str) -> None:
+    def append_single_loot_with_plugin(
+        self, window: QWidget, plugin_id: str, entry_id: str
+    ) -> None:
         entry = next(
             (item for item in self.loot_manager.get_all_entries() if item.get("id") == entry_id),
             None,
         )
         if entry is not None:
-            self.append_loot_entries_to_obsidian(window, [entry])
+            self.append_loot_with_plugin(window, plugin_id, [entry])
 
     def present_export_result(
         self,
@@ -316,23 +403,19 @@ class ExportCoordinator(QObject):
         title: str,
         success_message: Optional[str] = None,
         ask_open_file: Optional[Path] = None,
+        warning_message: Optional[str] = None,
         show_info_dialog_fn: Optional[Callable] = None,
         show_error_dialog_fn: Optional[Callable] = None,
         ask_confirm_fn: Optional[Callable] = None,
     ) -> None:
         """Present any ExportResult to the user in a consistent, UI-standard way."""
-        auto_open = (
-            bool(self.config.get("obsidian_open_after_export", False))
-            if hasattr(self, "config") and self.config
-            else False
-        )
         present_export_result(
             window,
             result,
             title=title,
             success_message=success_message,
             ask_open_file=ask_open_file,
-            auto_open_obsidian=auto_open,
+            warning_message=warning_message,
             show_info_dialog_fn=show_info_dialog_fn,
             show_error_dialog_fn=show_error_dialog_fn,
             ask_confirm_fn=ask_confirm_fn,
@@ -346,7 +429,7 @@ def present_export_result(
     title: str,
     success_message: Optional[str] = None,
     ask_open_file: Optional[Path] = None,
-    auto_open_obsidian: bool = False,
+    warning_message: Optional[str] = None,
     show_info_dialog_fn: Optional[Callable] = None,
     show_error_dialog_fn: Optional[Callable] = None,
     ask_confirm_fn: Optional[Callable] = None,
@@ -404,9 +487,12 @@ def present_export_result(
 
     warnings = getattr(result, "warnings", ())
     if warnings:
-        msg += "\n\n" + t(
-            "report.cherrytree_attachment_warning",
-            "Some images could not be copied.",
+        msg += "\n\n" + (
+            warning_message
+            or t(
+                "report.cherrytree_attachment_warning",
+                "Some images could not be copied.",
+            )
         )
 
     if ask_open_file:
@@ -436,7 +522,7 @@ def present_export_result(
     else:
         _show_info(window, title, msg)
 
-    obsidian_uri = getattr(result, "obsidian_uri", None)
-    if obsidian_uri and auto_open_obsidian:
-        if not QDesktopServices.openUrl(QUrl(obsidian_uri)):
-            logger.warning("Obsidian could not open export URI: %s", obsidian_uri)
+    suggested_open_uri = getattr(result, "metadata", {}).get("suggested_open_uri")
+    if suggested_open_uri:
+        if not QDesktopServices.openUrl(QUrl(str(suggested_open_uri))):
+            logger.warning("Export URI could not be opened: %s", suggested_open_uri)

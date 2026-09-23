@@ -10,7 +10,7 @@ from core.exporters.base import (
     ExternalExporter,
 )
 from core.exporters.cherrytree import CherryTreeExporter
-from core.exporters.obsidian import ObsidianExporter
+from core.exporters.shared import render_loot_markdown, safe_attachment_source
 
 __all__ = [
     "CherryTreeExporter",
@@ -21,5 +21,6 @@ __all__ = [
     "ExportStatus",
     "ExternalExportError",
     "ExternalExporter",
-    "ObsidianExporter",
+    "render_loot_markdown",
+    "safe_attachment_source",
 ]

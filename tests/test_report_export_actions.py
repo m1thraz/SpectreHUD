@@ -136,13 +136,15 @@ class TestReportExportActions(unittest.TestCase):
                 self.coordinator.export_report_html.assert_called_once()
                 assert self.coordinator.export_report_html.call_args.kwargs["include_toc"] is True
 
-    def test_on_export_obsidian_clicked(self):
+    def test_on_export_plugin_clicked(self):
         self.editor.setPlainText("# Obsidian Content")
-        self.actions.on_export_obsidian_clicked()
-        self.coordinator.export_report_to_obsidian.assert_called_once_with(
+        self.actions.on_export_plugin_clicked("spectrehud.obsidian")
+        self.coordinator.export_report_with_plugin.assert_called_once_with(
             self.parent,
+            "spectrehud.obsidian",
             "ProjectBeta",
             "# Obsidian Content",
+            "default",
         )
 
     def test_on_export_cherrytree_clicked(self):

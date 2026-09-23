@@ -24,6 +24,8 @@ from core.export_plugins import (
     ReportExportRequest,
     discover_export_plugins,
 )
+from core.config import ConfigManager
+from core.storage import InMemoryStorageBackend
 
 
 def _manifest(
@@ -479,7 +481,34 @@ def test_contract_import_is_headless_and_does_not_load_concrete_exporters() -> N
         "import core.export_plugins\n"
         "assert not [name for name in sys.modules if name.startswith('PyQt6')]\n"
         "assert 'core.exporters.obsidian' not in sys.modules\n"
+        "assert 'core.export_plugins.bundled.obsidian.plugin' not in sys.modules\n"
         "assert 'core.exporters.cherrytree' not in sys.modules\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_bundled_obsidian_is_discovered_passively_and_loaded_on_demand() -> None:
+    code = (
+        "import sys\n"
+        "from core.export_plugins import (\n"
+        "    PluginAvailabilityCode, create_bundled_export_plugin_registry,\n"
+        ")\n"
+        "module = 'core.export_plugins.bundled.obsidian.plugin'\n"
+        "registry = create_bundled_export_plugin_registry()\n"
+        "assert [item.metadata.plugin_id for item in registry.descriptors] == "
+        "['spectrehud.obsidian']\n"
+        "assert module not in sys.modules\n"
+        "loaded = registry.load('spectrehud.obsidian')\n"
+        "assert loaded is not None and loaded.plugin is not None\n"
+        "assert loaded.availability.code is PluginAvailabilityCode.AVAILABLE\n"
+        "assert module in sys.modules\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -517,3 +546,34 @@ def test_contract_field_types_remain_the_three_approved_v1_types() -> None:
         ExportDataRequirement.LOOT,
         ExportDataRequirement.REPORT_FONT,
     }
+
+
+def test_legacy_obsidian_settings_migrate_under_stable_plugin_id() -> None:
+    storage = InMemoryStorageBackend(
+        initial_data={
+            "config": {
+                "obsidian_vault_path": "C:/Notes",
+                "obsidian_export_folder": "Exports/SpectreHUD",
+                "obsidian_open_after_export": True,
+            }
+        }
+    )
+
+    config = ConfigManager(storage=storage)
+
+    assert config.get("export_plugins") == {
+        "spectrehud.obsidian": {
+            "obsidian_vault_path": "C:/Notes",
+            "obsidian_export_folder": "Exports/SpectreHUD",
+            "obsidian_open_after_export": True,
+        }
+    }
+    persisted = storage.load_json("config")
+    assert all(
+        key not in persisted
+        for key in (
+            "obsidian_vault_path",
+            "obsidian_export_folder",
+            "obsidian_open_after_export",
+        )
+    )

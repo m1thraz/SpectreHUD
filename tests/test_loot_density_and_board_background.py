@@ -11,10 +11,18 @@ from PyQt6.QtCore import QPoint, QPointF, Qt
 from PyQt6.QtGui import QEnterEvent, QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
+from core.export_plugins import create_bundled_export_plugin_registry
 from ui.loot_board import LootBoard
 from ui.loot_card import LootCard
 from ui.add_loot_dialog import AddLootDialog
 from ui.controllers.loot_controller import LootController
+
+
+def _loot_append_plugins():
+    return tuple(
+        descriptor.metadata
+        for descriptor in create_bundled_export_plugin_registry().descriptors
+    )
 
 
 def test_loot_board_autofill_background_and_qss_rule(qapp):
@@ -89,6 +97,7 @@ def test_loot_card_comfortable_mode_resting_actions_and_context_menu(qapp):
             project_dir=Path(tmp_dir),
             board_mode=True,
             density="comfortable",
+            loot_append_plugins=_loot_append_plugins(),
         )
         card.resize(260, 160)
         card.show()
@@ -115,8 +124,8 @@ def test_loot_card_comfortable_mode_resting_actions_and_context_menu(qapp):
         menu_triggered = {}
         card.edit_requested.connect(lambda e: menu_triggered.setdefault("edit", True))
         card.export_requested.connect(lambda eid: menu_triggered.setdefault("export", True))
-        card.obsidian_export_requested.connect(
-            lambda eid: menu_triggered.setdefault("obsidian", True)
+        card.plugin_export_requested.connect(
+            lambda plugin_id, eid: menu_triggered.setdefault(plugin_id, eid)
         )
         card.deleted.connect(lambda eid: menu_triggered.setdefault("delete", True))
 
@@ -136,7 +145,7 @@ def test_loot_card_comfortable_mode_resting_actions_and_context_menu(qapp):
 
         assert menu_triggered.get("edit") is True
         assert menu_triggered.get("export") is True
-        assert menu_triggered.get("obsidian") is True
+        assert menu_triggered.get("spectrehud.obsidian") == entry["id"]
         assert menu_triggered.get("delete") is True
 
         # Test right-click handler with exec patched
@@ -208,14 +217,15 @@ def test_add_loot_dialog_export_buttons_in_edit_mode(qapp):
         title="Test Entry",
         content="Secret Value",
         on_export_file=lambda eid: exported_files.append(eid),
-        on_export_obsidian=lambda eid: exported_obsidian.append(eid),
+        loot_append_plugins=_loot_append_plugins(),
+        on_export_plugin=lambda plugin_id, eid: exported_obsidian.append((plugin_id, eid)),
     )
     assert dlg.btn_export_file is not None
-    assert dlg.btn_export_obsidian is not None
+    assert "spectrehud.obsidian" in dlg.plugin_export_buttons
     dlg.btn_export_file.click()
     assert exported_files == ["loot_test_123"]
-    dlg.btn_export_obsidian.click()
-    assert exported_obsidian == ["loot_test_123"]
+    dlg.plugin_export_buttons["spectrehud.obsidian"].click()
+    assert exported_obsidian == [("spectrehud.obsidian", "loot_test_123")]
     dlg.deleteLater()
 
     # In create mode without entry_id
@@ -223,7 +233,7 @@ def test_add_loot_dialog_export_buttons_in_edit_mode(qapp):
         is_edit=False,
     )
     assert dlg_new.btn_export_file is None
-    assert dlg_new.btn_export_obsidian is None
+    assert dlg_new.plugin_export_buttons == {}
     dlg_new.deleteLater()
 
 

@@ -13,8 +13,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QMimeData, QSize, QEvent, QPoint
 from PyQt6.QtGui import QPixmap, QMouseEvent, QDrag, QContextMenuEvent, QCursor
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Sequence
 from core.loot import LOOT_TYPES, is_report_finding_entry
+from core.export_plugins import ExportPluginMetadata
 from core.phases import get_phase
 from core.project import get_default_projects_dir
 from core.logger import get_logger
@@ -39,7 +40,7 @@ class LootCard(QFrame):
     deleted = pyqtSignal(str)
     edit_requested = pyqtSignal(dict)
     export_requested = pyqtSignal(str)
-    obsidian_export_requested = pyqtSignal(str)
+    plugin_export_requested = pyqtSignal(str, str)
     loot_deleted = deleted
 
     def __init__(
@@ -49,6 +50,7 @@ class LootCard(QFrame):
         parent: Optional[QWidget] = None,
         board_mode: bool = False,
         density: str = "comfortable",  # "compact" | "comfortable"
+        loot_append_plugins: Sequence[ExportPluginMetadata] = (),
     ):
         super().__init__(parent)
         self.setObjectName("lootCard")
@@ -58,6 +60,7 @@ class LootCard(QFrame):
         self.project_dir = project_dir
         self.board_mode = board_mode
         self.density = density
+        self.loot_append_plugins = tuple(loot_append_plugins)
         self.setProperty("boardCard", board_mode)
         self.setProperty("cardDensity", density)
         self.setProperty("interactive", True)
@@ -104,17 +107,30 @@ class LootCard(QFrame):
         )
         action_layout.addWidget(self.btn_export_file)
 
-        self.btn_export_obsidian = QPushButton()
-        self.btn_export_obsidian.setIcon(icon("fa5s.book-open"))
-        self.btn_export_obsidian.setIconSize(CARD_ICON_SIZE)
-        self.btn_export_obsidian.setProperty("class", "CardIconBtn")
-        self.btn_export_obsidian.setToolTip(
-            t("loot.export_obsidian_tip", "Append this loot entry to the Obsidian project note")
-        )
-        self.btn_export_obsidian.clicked.connect(
-            lambda: self.obsidian_export_requested.emit(self.entry.get("id", ""))
-        )
-        action_layout.addWidget(self.btn_export_obsidian)
+        self.plugin_export_buttons: dict[str, QPushButton] = {}
+        for metadata in self.loot_append_plugins:
+            plugin_name = t(
+                metadata.display_name.translation_key,
+                metadata.display_name.fallback,
+            )
+            button = QPushButton()
+            button.setIcon(icon("fa5s.book-open"))
+            button.setIconSize(CARD_ICON_SIZE)
+            button.setProperty("class", "CardIconBtn")
+            button.setToolTip(
+                t(
+                    "loot.export_plugin_entry_tip",
+                    "Append this Loot entry to {plugin}",
+                    plugin=plugin_name,
+                )
+            )
+            button.clicked.connect(
+                lambda _checked=False, plugin_id=metadata.plugin_id: self.plugin_export_requested.emit(
+                    plugin_id, self.entry.get("id", "")
+                )
+            )
+            action_layout.addWidget(button)
+            self.plugin_export_buttons[metadata.plugin_id] = button
 
         self.btn_delete = QPushButton()
         self.btn_delete.setIcon(icon("fa5s.trash"))
@@ -390,12 +406,17 @@ class LootCard(QFrame):
             lambda: self.export_requested.emit(self.entry.get("id", ""))
         )
 
-        export_obsidian_action = menu.addAction(
-            icon("fa5s.book-open"), t("loot.export_obsidian", "Obsidian")
-        )
-        export_obsidian_action.triggered.connect(
-            lambda: self.obsidian_export_requested.emit(self.entry.get("id", ""))
-        )
+        for metadata in self.loot_append_plugins:
+            plugin_name = t(
+                metadata.display_name.translation_key,
+                metadata.display_name.fallback,
+            )
+            plugin_action = menu.addAction(icon("fa5s.book-open"), plugin_name)
+            plugin_action.triggered.connect(
+                lambda _checked=False, plugin_id=metadata.plugin_id: self.plugin_export_requested.emit(
+                    plugin_id, self.entry.get("id", "")
+                )
+            )
 
         menu.addSeparator()
 

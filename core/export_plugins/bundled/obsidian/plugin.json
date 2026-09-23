@@ -1,0 +1,55 @@
+{
+  "plugin_id": "spectrehud.obsidian",
+  "display_name": {
+    "translation_key": "loot.export_obsidian",
+    "fallback": "Obsidian"
+  },
+  "description": {
+    "translation_key": "report.export_obsidian_desc",
+    "fallback": "Write the report and linked screenshots into the configured Obsidian vault."
+  },
+  "badge": "VAULT",
+  "icon_name": "fa5s.gem",
+  "accent": "purple",
+  "capabilities": [
+    "report_export",
+    "loot_append"
+  ],
+  "report_data_requirements": [
+    "project_network"
+  ],
+  "configuration_fields": [
+    {
+      "key": "obsidian_vault_path",
+      "label": {
+        "translation_key": "settings.lbl_obsidian_vault",
+        "fallback": "Obsidian Vault (optional):"
+      },
+      "kind": "directory",
+      "required": true,
+      "default": ""
+    },
+    {
+      "key": "obsidian_export_folder",
+      "label": {
+        "translation_key": "settings.lbl_obsidian_folder",
+        "fallback": "Obsidian export folder:"
+      },
+      "kind": "text",
+      "required": true,
+      "default": "CTF/SpectreHUD"
+    },
+    {
+      "key": "obsidian_open_after_export",
+      "label": {
+        "translation_key": "settings.chk_obsidian_open",
+        "fallback": "Open exported note in Obsidian"
+      },
+      "kind": "boolean",
+      "required": false,
+      "default": false
+    }
+  ],
+  "execution_fields": [],
+  "loader": "core.export_plugins.bundled.obsidian.plugin:create_plugin"
+}

@@ -21,6 +21,7 @@ from core.logger import get_logger
 from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.phase_context import PhaseContext
 from core.storage import PersistenceError
+from core.export_plugins import ExportCapability, create_bundled_export_plugin_registry
 
 from ui.phase_toast_hud import PhaseToastHUD
 from ui.message_boxes import show_error_dialog
@@ -195,12 +196,14 @@ class AppController(QObject):
             phase_provider=self._phase_provider,
             parent=self,
         )
+        self.export_plugin_registry = create_bundled_export_plugin_registry()
         self.export_coord = ExportCoordinator(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,
             history_ctrl=self.history_ctrl,
             target_provider=self._target_provider,
             config_manager=self.config,
+            export_plugin_registry=self.export_plugin_registry,
             parent=self,
         )
         self.report_ctrl.set_export_coordinator(self.export_coord)
@@ -839,17 +842,25 @@ class AppController(QObject):
             "Creates a new copy based on current session loot",
         )
         self.loot_ctrl.build_filter_pills(
-            self.search.get_pills_layout(),
-            self._select_loot_type,
-            lambda: self.export_coord.export_loot(self.window),
-            self._clear_loot,
-            export_tooltip,
-            lambda: self.export_coord.export_loot_to_obsidian(self.window),
-            self._toggle_loot_view,
-            self.config.get("loot_view_mode", "list"),
-            self._toggle_loot_density,
-            self.config.get("loot_density", "comfortable"),
+            pills_layout=self.search.get_pills_layout(),
+            on_select_type=self._select_loot_type,
+            on_export=lambda: self.export_coord.export_loot(self.window),
+            on_clear=self._clear_loot,
+            export_tooltip=export_tooltip,
+            on_export_plugin=lambda plugin_id: self.export_coord.append_loot_with_plugin(
+                self.window,
+                plugin_id,
+                self.loot_manager.get_all_entries(),
+            ),
+            loot_append_plugins=self._loot_append_plugins(),
+            on_toggle_view=self._toggle_loot_view,
+            view_mode=self.config.get("loot_view_mode", "list"),
+            on_toggle_density=self._toggle_loot_density,
+            density=self.config.get("loot_density", "comfortable"),
         )
+
+    def _loot_append_plugins(self):
+        return self.export_coord.plugin_metadata(capability=ExportCapability.LOOT_APPEND)
 
     def _build_history_pills(self) -> None:
         export_tooltip = t(
@@ -964,8 +975,8 @@ class AppController(QObject):
         scrollbar = self.content.scroll_area.verticalScrollBar()
         self.cheatsheet_ctrl.check_scroll_load_more(value, scrollbar)
 
-    def _export_single_loot_to_obsidian(self, entry_id: str) -> None:
-        self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
+    def _export_single_loot_with_plugin(self, plugin_id: str, entry_id: str) -> None:
+        self.export_coord.append_single_loot_with_plugin(self.window, plugin_id, entry_id)
 
     def _render_loot(self) -> RenderResult:
         content_layout = self._prepare_card_content()
@@ -984,7 +995,8 @@ class AppController(QObject):
                 self._on_export_loot_entry,
                 self._on_move_loot_category,
                 self.window,
-                on_export_obsidian=self._export_single_loot_to_obsidian,
+                loot_append_plugins=self._loot_append_plugins(),
+                on_export_plugin=self._export_single_loot_with_plugin,
                 on_copied=self._on_content_copied,
                 density=density,
             )
@@ -998,7 +1010,8 @@ class AppController(QObject):
                 self._on_export_loot_entry,
                 self.window,
                 self.content.show_empty_state,
-                on_export_obsidian=self._export_single_loot_to_obsidian,
+                loot_append_plugins=self._loot_append_plugins(),
+                on_export_plugin=self._export_single_loot_with_plugin,
                 on_copied=self._on_content_copied,
                 density=density,
             )
@@ -1122,14 +1135,12 @@ class AppController(QObject):
     _on_import_snippets_clicked = on_import_snippets_clicked
 
     def _on_edit_loot_requested(self, entry: Dict[str, Any]) -> None:
-        def export_obsidian(entry_id: str) -> None:
-            self.export_coord.export_single_loot_to_obsidian(self.window, entry_id)
-
         if self.loot_ctrl.open_edit_dialog(
             self.window,
             entry,
             on_export_file=self._on_export_loot_entry,
-            on_export_obsidian=export_obsidian,
+            loot_append_plugins=self._loot_append_plugins(),
+            on_export_plugin=self._export_single_loot_with_plugin,
         ):
             self._on_loot_data_updated()
 
@@ -1273,7 +1284,11 @@ class AppController(QObject):
     def open_settings_dialog(self) -> None:
         previous_theme = self.config.get("theme", "cyber_dark")
         applied_settings: Dict[str, Any] = {}
-        dlg = SettingsDialog(self.config, parent=self.window)
+        dlg = SettingsDialog(
+            self.config,
+            export_plugin_registry=self.export_plugin_registry,
+            parent=self.window,
+        )
 
         def apply_settings(settings: Dict[str, Any]) -> None:
             applied_settings.update(settings)

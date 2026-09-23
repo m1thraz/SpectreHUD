@@ -14,7 +14,7 @@ from typing import Any, Iterable, Mapping
 
 from core.atomic_write import atomic_write_bytes, atomic_write_text
 from core.exporters.base import ExportArtifact, ExportResult, ExternalExportError
-from core.exporters.obsidian import ObsidianExporter
+from core.exporters.shared import render_loot_markdown, safe_attachment_source
 from core.project import sanitize_filename_component, validate_project_name
 from core.reporting import get_report_css
 from core.reporting import convert_markdown_to_html
@@ -93,7 +93,7 @@ img.inline-img {{ max-width: 100%; height: auto; }}
 
         def replace(match: re.Match[str]) -> str:
             alt_text, raw_path = match.group(1), match.group(2)
-            source = ObsidianExporter._safe_attachment_source(raw_path, project_dir)
+            source = safe_attachment_source(raw_path, project_dir)
             if source is None:
                 if (
                     raw_path.lower()
@@ -144,7 +144,7 @@ img.inline-img {{ max-width: 100%; height: auto; }}
         report_html = self._document(
             f"{project_name} – Report", convert_markdown_to_html(rewritten), report_font
         )
-        loot_markdown = ObsidianExporter._loot_markdown(loot_entries)
+        loot_markdown = render_loot_markdown(loot_entries)
         loot_html = self._document(
             f"{project_name} – Loot", convert_markdown_to_html(loot_markdown), report_font
         )
