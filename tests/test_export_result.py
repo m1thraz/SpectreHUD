@@ -26,7 +26,6 @@ def test_export_result_success_creation():
     assert res.status == ExportStatus.SUCCESS
     assert bool(res) is True
     assert res.primary_artifact == art
-    assert res.note_path == Path("/tmp/report.html")
     assert res.warnings == ("Non-critical warning",)
     assert res.metadata["custom_key"] == 42
     assert res.error is None
@@ -62,27 +61,25 @@ def test_export_result_cancelled_creation():
     assert res.error is None
 
 
-def test_export_result_legacy_positional_compatibility():
-    note = Path("/vault/notes/Forest.md")
-    att1 = Path("/vault/notes/attachments/p1.png")
-    att2 = Path("/vault/notes/attachments/p2.png")
+def test_export_result_normalizes_boundary_collections():
+    artifact = ExportArtifact(path=Path("/vault/notes/Forest.md"), format="markdown")
+    metadata = {"suggested_open_uri": "obsidian://open?vault=Vault&file=Forest"}
 
     res = ExportResult(
-        note,
-        [att1, att2],
-        ["Warning 1"],
-        obsidian_uri="obsidian://open?vault=Vault&file=Forest",
+        status=ExportStatus.SUCCESS,
+        artifacts=[artifact],  # type: ignore[arg-type]
+        warnings=["Warning 1"],  # type: ignore[arg-type]
+        skipped_entry_ids=["loot-1"],  # type: ignore[arg-type]
+        metadata=metadata,
     )
+    metadata.clear()
 
-    assert res.is_success is True
-    assert bool(res) is True
-    assert res.note_path == note
-    assert res.attachment_paths == (att1, att2)
+    assert res.artifacts == (artifact,)
     assert res.warnings == ("Warning 1",)
-    assert res.obsidian_uri == "obsidian://open?vault=Vault&file=Forest"
-    assert len(res.artifacts) == 3
-    assert res.artifacts[0].path == note
-    assert res.artifacts[1].path == att1
+    assert res.skipped_entry_ids == ("loot-1",)
+    assert res.metadata == {
+        "suggested_open_uri": "obsidian://open?vault=Vault&file=Forest"
+    }
 
 
 def test_export_artifact_frozen():

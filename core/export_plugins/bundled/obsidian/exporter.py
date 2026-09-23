@@ -236,7 +236,7 @@ class ObsidianExporter:
         return ExportResult.success(
             artifacts=tuple(artifacts),
             warnings=warnings,
-            metadata={"obsidian_uri": self.build_open_uri(note_path)},
+            metadata={"suggested_open_uri": self.build_open_uri(note_path)},
         )
 
     def append_loot(
@@ -291,5 +291,5 @@ class ObsidianExporter:
         return ExportResult.success(
             artifacts=(ExportArtifact(path=target, format="markdown", bytes_written=target_size),),
             skipped_entry_ids=skipped,
-            metadata={"obsidian_uri": self.build_open_uri(target)},
+            metadata={"suggested_open_uri": self.build_open_uri(target)},
         )

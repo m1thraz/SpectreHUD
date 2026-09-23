@@ -80,10 +80,10 @@ def test_cherrytree_export_creates_portable_html_package(package_workspace):
 
     package = output / "Forest"
     assert result.is_success is True
-    assert result.note_path == package / "report.html"
+    assert result.artifacts[0].path == package / "report.html"
     assert (package / "loot.html").exists()
     assert (package / "images" / "proof.png").read_bytes() == b"png"
-    assert 'src="images/proof.png"' in result.note_path.read_text(encoding="utf-8")
+    assert 'src="images/proof.png"' in result.artifacts[0].path.read_text(encoding="utf-8")
     assert "SMB signing disabled" in (package / "loot.html").read_text(encoding="utf-8")
     assert "Require SMB signing" in (package / "loot.html").read_text(encoding="utf-8")
     assert len(result.artifacts) == 3
@@ -108,8 +108,8 @@ def test_cherrytree_report_icon_uses_generic_image_pipeline(package_workspace):
         loot_entries=[],
     )
 
-    assert 'src="images/fa5s_key_32.png"' in result.note_path.read_text(encoding="utf-8")
-    assert (result.note_path.parent / "images" / "fa5s_key_32.png").read_bytes() == b"png-icon"
+    assert 'src="images/fa5s_key_32.png"' in result.artifacts[0].path.read_text(encoding="utf-8")
+    assert (result.artifacts[0].path.parent / "images" / "fa5s_key_32.png").read_bytes() == b"png-icon"
 
 
 def test_cherrytree_export_validates_name_and_existing_project(package_workspace):
@@ -137,7 +137,7 @@ def test_cherrytree_export_keeps_missing_image_as_report_warning(package_workspa
         loot_entries=[],
     )
     assert result.warnings
-    assert "loot/missing.png" in result.note_path.read_text(encoding="utf-8")
+    assert "loot/missing.png" in result.artifacts[0].path.read_text(encoding="utf-8")
 
 
 def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
@@ -156,7 +156,7 @@ def test_cherrytree_export_strips_spectre_loot_markers(package_workspace):
         report_markdown=md,
         loot_entries=[],
     )
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert "spectre:loot" not in content
     assert "spectre:section" not in content
     assert "spectre:finding" not in content

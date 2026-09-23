@@ -293,7 +293,7 @@ class ExportCoordinator(QObject):
                 "plugins.report_exported",
                 "Exported to {plugin}:\n{path}",
                 plugin=plugin_name,
-                path=str(result.note_path),
+                path=str(result.primary_artifact.path if result.primary_artifact else ""),
             ),
             warning_message=t(
                 "plugins.attachment_warning",
@@ -349,7 +349,7 @@ class ExportCoordinator(QObject):
                 "plugins.loot_exported",
                 "Loot appended to {plugin}:\n{path}",
                 plugin=plugin_name,
-                path=str(result.note_path),
+                path=str(result.primary_artifact.path if result.primary_artifact else ""),
             )
         self.present_export_result(
             window,

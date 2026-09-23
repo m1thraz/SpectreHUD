@@ -92,7 +92,7 @@ graph TD
 - **`AppController` (`ui/app_controller.py`)**: High-level UI orchestrator connecting panels, mode switching, and domain controllers. It receives fully resolved services from `MainWindow` and never instantiates domain services or accesses `ServiceContainer` directly.
 - **Application Coordinators (`ui/coordinators/`)**:
   - `SettingsCoordinator`: Owns application style application, font metrics, and glass-intensity updates.
-  - `ExportCoordinator`: Bridges UI export actions (Markdown, HTML, Obsidian, CherryTree) to pure core exporters.
+  - `ExportCoordinator`: Bridges built-in Markdown/HTML actions and metadata-driven export-plugin capabilities to pure core export boundaries.
   - `WorkspaceCoordinator`: Coordinates multi-project switching and cache eviction across controllers.
   - `NavigationCoordinator`: Handles mode switching (Cheatsheet, Loot, Notes, History, Report Editor) and header/footer states.
   - `ClipboardCoordinator`: Handles system clipboard monitoring and variable auto-detection.

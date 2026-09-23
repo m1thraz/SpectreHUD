@@ -7,7 +7,6 @@ from core.exporters.base import (
     ExportResult,
     ExportStatus,
     ExternalExportError,
-    ExternalExporter,
 )
 from core.exporters.shared import render_loot_markdown, safe_attachment_source
 
@@ -18,7 +17,6 @@ __all__ = [
     "ExportResult",
     "ExportStatus",
     "ExternalExportError",
-    "ExternalExporter",
     "render_loot_markdown",
     "safe_attachment_source",
 ]

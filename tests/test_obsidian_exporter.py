@@ -13,13 +13,13 @@ from core.export_plugins import (
 
 
 class ObsidianPluginHarness:
-    """Exercise legacy behavior only through the V1 plugin capabilities."""
+    """Exercise exporter behavior only through the V1 plugin capabilities."""
 
-    def __init__(self, vault, export_folder="CTF/SpectreHUD"):
+    def __init__(self, vault, export_folder="CTF/SpectreHUD", *, open_after_export=False):
         self.configuration = {
             "obsidian_vault_path": str(vault),
             "obsidian_export_folder": export_folder,
-            "obsidian_open_after_export": False,
+            "obsidian_open_after_export": open_after_export,
         }
         loaded = create_bundled_export_plugin_registry().load("spectrehud.obsidian")
         assert loaded is not None and loaded.plugin is not None
@@ -106,15 +106,15 @@ def test_obsidian_report_export_creates_note_frontmatter_and_attachments(workspa
     )
 
     assert result.is_success is True
-    assert result.note_path == vault / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
+    assert result.artifacts[0].path == vault / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
     assert len(result.artifacts) == 2
     assert result.artifacts[0].format == "markdown"
     assert result.artifacts[1].format == "attachment"
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert 'target: "10.10.10.161"' in content
     assert "password" not in content
     assert "attachments/proof.png" in content
-    assert (result.note_path.parent / "attachments" / "proof.png").read_bytes() == b"png"
+    assert (result.artifacts[0].path.parent / "attachments" / "proof.png").read_bytes() == b"png"
 
 
 def test_obsidian_report_translates_spacers_to_renderable_breaks(workspace):
@@ -125,7 +125,7 @@ def test_obsidian_report_translates_spacers_to_renderable_breaks(workspace):
         markdown="Before\n\n<!-- spectre:spacer:medium -->\n\nAfter",
     )
 
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert "spectre:spacer" not in content
     assert "<br>\n<br>" in content
 
@@ -142,7 +142,7 @@ def test_obsidian_report_strips_internal_section_markers(workspace):
     result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest", project_dir=project, markdown=markdown
     )
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert "spectre:section" not in content
     assert "spectre:finding" not in content
     assert "Manual content" in content
@@ -160,9 +160,9 @@ def test_obsidian_report_icon_uses_generic_attachment_pipeline(workspace):
         markdown="![Credential](assets/icons/fa5s_key_32.png)",
     )
 
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert "![Credential](attachments/fa5s_key_32.png)" in content
-    assert (result.note_path.parent / "attachments" / "fa5s_key_32.png").read_bytes() == b"png-icon"
+    assert (result.artifacts[0].path.parent / "attachments" / "fa5s_key_32.png").read_bytes() == b"png-icon"
 
 
 def test_obsidian_export_preserves_existing_note_by_default(workspace):
@@ -171,8 +171,8 @@ def test_obsidian_export_preserves_existing_note_by_default(workspace):
     first = exporter.export_report(project_name="Forest", project_dir=project, markdown="one")
     second = exporter.export_report(project_name="Forest", project_dir=project, markdown="two")
 
-    assert first.note_path.read_text(encoding="utf-8").endswith("one")
-    assert second.note_path.name == "Forest_2.md"
+    assert first.artifacts[0].path.read_text(encoding="utf-8").endswith("one")
+    assert second.artifacts[0].path.name == "Forest_2.md"
 
 
 def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
@@ -193,7 +193,7 @@ def test_obsidian_export_rejects_unsafe_paths_and_symlink_attachment(workspace):
     result = ObsidianPluginHarness(vault).export_report(
         project_name="Forest", project_dir=project, markdown="![Escape](loot/escape.png)"
     )
-    assert "attachments/escape.png" not in result.note_path.read_text(encoding="utf-8")
+    assert "attachments/escape.png" not in result.artifacts[0].path.read_text(encoding="utf-8")
     assert result.warnings
 
 
@@ -202,7 +202,7 @@ def test_obsidian_append_loot_preserves_manual_content_and_deduplicates(workspac
     exporter = ObsidianPluginHarness(vault)
     note = exporter.export_report(
         project_name="Forest", project_dir=project, markdown="# Manual report"
-    ).note_path
+    ).artifacts[0].path
     entry = {"id": "loot-1", "type": "credentials", "title": "Admin", "content": "admin:secret"}
 
     first = exporter.append_loot(project_name="Forest", entries=[entry], note_path=note)
@@ -228,7 +228,7 @@ def test_obsidian_loot_export_includes_real_recommendation(workspace):
     }
 
     result = exporter.append_loot(project_name="Forest", entries=[entry])
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
 
     assert "#### Recommendation" in content
     assert "Reject invalid tokens and rotate signing keys." in content
@@ -240,7 +240,7 @@ def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
     exporter = ObsidianPluginHarness(vault)
     note = exporter.export_report(
         project_name="Forest", project_dir=project, markdown="# Manual report"
-    ).note_path
+    ).artifacts[0].path
     existing_entry = {
         "id": "loot-1",
         "type": "credentials",
@@ -264,13 +264,23 @@ def test_obsidian_append_loot_reports_skipped_ids_from_generator(workspace):
     assert content.count("spectrehud-entry:loot-2") == 1
 
 
-def test_obsidian_uri_is_url_encoded(workspace):
+def test_suggested_open_uri_is_url_encoded(workspace):
     vault, project = workspace
-    exporter = ObsidianPluginHarness(vault, "CTF Notes")
+    exporter = ObsidianPluginHarness(vault, "CTF Notes", open_after_export=True)
     result = exporter.export_report(project_name="Forest", project_dir=project, markdown="report")
 
-    assert "vault=Vault" in result.obsidian_uri
-    assert "file=CTF+Notes%2FForest%2FForest.md" in result.obsidian_uri
+    open_uri = str(result.metadata["suggested_open_uri"])
+    assert "vault=Vault" in open_uri
+    assert "file=CTF+Notes%2FForest%2FForest.md" in open_uri
+
+
+def test_suggested_open_uri_is_omitted_when_open_after_export_is_disabled(workspace):
+    vault, project = workspace
+    result = ObsidianPluginHarness(vault).export_report(
+        project_name="Forest", project_dir=project, markdown="report"
+    )
+
+    assert "suggested_open_uri" not in result.metadata
 
 
 def test_obsidian_report_export_strips_spectre_loot_markers(workspace):
@@ -279,7 +289,7 @@ def test_obsidian_report_export_strips_spectre_loot_markers(workspace):
     exporter = ObsidianPluginHarness(vault)
     md = "<!-- spectre:loot:loot_123:deadbeef1234 -->\n# Findings\n<!-- user note -->\nDetails."
     result = exporter.export_report(project_name="Forest", project_dir=project, markdown=md)
-    content = result.note_path.read_text(encoding="utf-8")
+    content = result.artifacts[0].path.read_text(encoding="utf-8")
     assert "spectre:loot" not in content
     assert "<!-- user note -->" in content
     assert "# Findings" in content

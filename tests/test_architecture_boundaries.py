@@ -147,6 +147,44 @@ def test_cherrytree_execution_is_owned_by_its_bundled_plugin():
     assert ui_mentions == [], "CherryTree-specific UI coupling remains: " + ", ".join(ui_mentions)
 
 
+def test_export_host_has_no_legacy_direct_adapter_surface():
+    """Phase 5: only the capability contract may describe plugin execution."""
+    base_tree = ast.parse(
+        (PROJECT_ROOT / "core" / "exporters" / "base.py").read_text(encoding="utf-8")
+    )
+    base_classes = {
+        node.name for node in base_tree.body if isinstance(node, ast.ClassDef)
+    }
+    assert "ExternalExporter" not in base_classes
+
+    result_tree = ast.parse(
+        (PROJECT_ROOT / "core" / "reporting" / "export_result.py").read_text(
+            encoding="utf-8"
+        )
+    )
+    result_class = next(
+        node
+        for node in result_tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "ExportResult"
+    )
+    result_methods = {
+        node.name
+        for node in result_class.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    assert result_methods.isdisjoint({"__init__", "note_path", "attachment_paths", "obsidian_uri"})
+
+    plugin_specific_metadata = []
+    for path in (PROJECT_ROOT / "core" / "export_plugins").rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(
+            isinstance(node, ast.Constant) and node.value == "obsidian_uri"
+            for node in ast.walk(tree)
+        ):
+            plugin_specific_metadata.append(str(path.relative_to(PROJECT_ROOT)))
+    assert plugin_specific_metadata == []
+
+
 def test_app_controller_receives_resolved_application_services():
     """Service selection belongs to MainWindow, not a second composition root."""
     tree = ast.parse(

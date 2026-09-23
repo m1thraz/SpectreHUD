@@ -55,10 +55,8 @@ def _successful_result(
     configuration: Mapping[str, PluginValue],
 ) -> ExportResult:
     metadata = dict(result.metadata)
-    if bool(configuration.get("obsidian_open_after_export", False)):
-        open_uri = str(metadata.get("obsidian_uri", "") or "")
-        if open_uri:
-            metadata["suggested_open_uri"] = open_uri
+    if not bool(configuration.get("obsidian_open_after_export", False)):
+        metadata.pop("suggested_open_uri", None)
     return ExportResult.success(
         artifacts=result.artifacts,
         warnings=result.warnings,

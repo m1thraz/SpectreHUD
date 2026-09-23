@@ -1,6 +1,4 @@
-"""UI-free contracts shared by external exporters."""
-
-from typing import Protocol
+"""UI-free primitives shared by external exporters."""
 
 from core.reporting import (
     ExportArtifact,
@@ -15,14 +13,6 @@ class ExternalExportError(RuntimeError):
     """Raised when an external export cannot be completed safely."""
 
 
-class ExternalExporter(Protocol):
-    """Small common boundary for one-way external export adapters."""
-
-    def export_report(self, *args, **kwargs) -> ExportResult: ...
-
-    def append_loot(self, *args, **kwargs) -> ExportResult: ...
-
-
 __all__ = [
     "ExportArtifact",
     "ExportError",
@@ -30,5 +20,4 @@ __all__ = [
     "ExportResult",
     "ExportStatus",
     "ExternalExportError",
-    "ExternalExporter",
 ]

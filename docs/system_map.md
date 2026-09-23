@@ -24,8 +24,11 @@ This map covers only contracts and pitfalls that become apparent at the boundari
   Report Export plus optional Loot Append; CherryTree supplies only Report Export and declares
   its per-run destination, Loot snapshot, and report-font inputs through the V1 contract.
 - Host UI builds export actions, settings, and per-run directory selection from metadata and
-  must not import or branch on either implementation. Shared attachment resolution and
-  Loot-to-Markdown rendering remain host-domain utilities in `core.exporters`.
+  must not import or branch on either implementation. Plugin results cross that boundary only
+  through artifacts, structured failures/warnings, skipped Loot IDs, and optional generic
+  metadata such as `suggested_open_uri`; the pre-plugin result aliases no longer exist. Shared
+  attachment resolution and Loot-to-Markdown rendering remain host-domain utilities in
+  `core.exporters`.
 
 ## First Run
 - `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.

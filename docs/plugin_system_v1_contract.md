@@ -1,7 +1,7 @@
 # Minimal Export Plugin Contract (V1)
 
-Status: design proposal for review. No implementation or exporter migration is implied by this
-document.
+Status: implemented internal V1 contract, validated by the bundled Obsidian and CherryTree
+plugins. It remains provisional until a third exporter validates the abstraction in Phase 6.
 
 ## Scope decision
 
@@ -175,10 +175,11 @@ class ExportPlugin(Protocol):
     ) -> PluginAvailability: ...
 ```
 
-`ExportResult` in this proposal is the existing UI-free result model from
+`ExportResult` is the UI-free result model from
 `core.reporting.export_result`. Plugins use its generic `status`, `artifacts`, `warnings`,
-`error`, `skipped_entry_ids`, and `metadata` fields. The legacy `note_path` and `obsidian_uri`
-properties are not part of the plugin contract.
+`error`, `skipped_entry_ids`, and `metadata` fields. Phase 5 removed the former positional
+constructor and the `note_path`, `attachment_paths`, and `obsidian_uri` compatibility aliases;
+callers use artifacts and explicitly defined generic metadata instead.
 
 ## Metadata
 
@@ -372,9 +373,9 @@ Generic host presentation may use:
 - skipped Loot entry IDs;
 - explicitly defined generic metadata such as a suggested URI to open.
 
-The presenter must not infer CherryTree from `.html`, infer Obsidian from `obsidian_uri`, or
-select text by plugin ID. User-facing success/failure titles and descriptions belong to passive
-plugin metadata or generic host messages.
+The presenter must not infer a plugin from an artifact suffix or select text by plugin ID.
+User-facing success/failure titles and descriptions belong to passive plugin metadata or generic
+host messages; optional post-export opening uses only `suggested_open_uri`.
 
 ## Required invariants
 

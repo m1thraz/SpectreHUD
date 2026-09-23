@@ -86,7 +86,7 @@ def test_report_obsidian_export_uses_shared_coordinator_workflow(tmp_path):
     note_path = vault_dir / "CTF" / "SpectreHUD" / "Forest" / "Forest.md"
     assert note_path.exists()
     assert "# Current editor text" in note_path.read_text(encoding="utf-8")
-    assert result.note_path == note_path
+    assert result.artifacts[0].path == note_path
     project_manager.load_project_state.assert_called_once_with("Forest")
     information.assert_called_once()
     open_url.assert_called_once()
@@ -176,7 +176,7 @@ def test_cherrytree_report_export_uses_shared_project_and_loot_state(tmp_path):
         )
 
     assert actual is not None and actual.is_success
-    assert actual.note_path == destination / "Forest" / "report.html"
+    assert actual.artifacts[0].path == destination / "Forest" / "report.html"
     assert (destination / "Forest" / "loot.html").exists()
     project_manager.get_project_dir.assert_called_once_with("Forest")
 
