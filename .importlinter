@@ -68,9 +68,18 @@ allowed_importers =
     core.exporters
 
 [importlinter:contract:9]
+name = Protect core.export_plugins internals
+type = protected
+protected_modules =
+    core.export_plugins.*
+allowed_importers =
+    core.export_plugins
+
+[importlinter:contract:10]
 name = Core domain layers
 type = layers
 layers =
+    core.export_plugins
     core.exporters
     core.reporting
     core.project

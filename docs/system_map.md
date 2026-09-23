@@ -2,6 +2,26 @@
 
 This map covers only contracts and pitfalls that become apparent at the boundaries between multiple components.
 
+## Export Plugins
+
+- V1 covers export plugins only. Import and feature/tool plugins are separate future contracts
+  that require their own real reference implementations.
+- `core.export_plugins` is the headless contract and host-loading boundary. Passive local
+  `plugin.json` descriptors contain only approved metadata, the required Report Export
+  capability, the optional Loot Append capability, three explicit data requirements, and the
+  three currently needed field kinds.
+- Discovery reads only passive manifests. It does not import implementation modules, optional
+  dependencies, Obsidian, or CherryTree. A plugin is imported only when its descriptor is
+  explicitly loaded, and each load result is isolated and cached.
+- Loaded metadata and capabilities must exactly match the passive descriptor. Missing optional
+  dependencies, broken loaders, identity mismatches, and capability mismatches become typed
+  availability outcomes instead of escaping into application startup.
+- The optional `accent` metadata value is a short safe identifier interpreted as an opaque host
+  visual hint. It cannot contain style objects, arbitrary style strings, Qt values, stylesheets,
+  or UI injection behavior.
+- No production exporter is registered or migrated in Phase 2. The existing Obsidian and
+  CherryTree workflows remain on their current paths until their dedicated migration phases.
+
 ## First Run
 - `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.
 - The Welcome dialog reuses the existing New Project action and project selector menu. It is scheduled after the production window and global hotkeys are ready; construction of `MainWindow` in tests or other embedding contexts does not open it.

@@ -258,6 +258,7 @@ KNOWN_PURE_CORE_TEST_FILES = {
     "test_display_geometry.py",
     "test_event_bus.py",
     "test_export_result.py",
+    "test_export_plugin_system.py",
     "test_fuzzy_matcher.py",
     "test_hotkeys.py",
     "test_html_report_exporter.py",
