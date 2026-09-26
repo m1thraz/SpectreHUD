@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from importlib import import_module
+from pathlib import Path
+import sys
 from typing import Iterable, Mapping, cast
 
 from core.export_plugins.contract import (
@@ -67,9 +69,34 @@ class ExportPluginRegistry:
             )
 
     @staticmethod
+    def _local_import_roots(descriptor: ExportPluginDescriptor) -> tuple[Path, ...]:
+        source_root = descriptor.source_root
+        if source_root is None:
+            return ()
+        module_name = descriptor.loader_reference.split(":", 1)[0]
+        top_level = module_name.split(".", 1)[0]
+        if not (
+            (source_root / top_level).is_dir()
+            or (source_root / f"{top_level}.py").is_file()
+        ):
+            return ()
+        roots = [source_root]
+        vendor = source_root / "vendor"
+        if vendor.is_dir():
+            roots.append(vendor)
+        return tuple(roots)
+
+    @staticmethod
     def _load_descriptor(descriptor: ExportPluginDescriptor) -> PluginLoadResult:
         module_name, factory_path = descriptor.loader_reference.split(":", 1)
+        added_paths: list[str] = []
         try:
+            # A copied plugin bundle must remain importable for lazy imports during execution.
+            for root in reversed(ExportPluginRegistry._local_import_roots(descriptor)):
+                value = str(root)
+                if value not in sys.path:
+                    sys.path.insert(0, value)
+                    added_paths.append(value)
             module = import_module(module_name)
             factory: object = module
             for part in factory_path.split("."):
@@ -84,6 +111,9 @@ class ExportPluginRegistry:
                 PluginAvailability(PluginAvailabilityCode.AVAILABLE),
             )
         except ModuleNotFoundError as exc:
+            for value in added_paths:
+                if value in sys.path:
+                    sys.path.remove(value)
             missing_name = exc.name or "unknown dependency"
             code = (
                 PluginAvailabilityCode.LOAD_FAILED
@@ -103,6 +133,9 @@ class ExportPluginRegistry:
                 PluginAvailability(code, message, f"ModuleNotFoundError: {exc}"),
             )
         except BaseException as exc:
+            for value in added_paths:
+                if value in sys.path:
+                    sys.path.remove(value)
             return PluginLoadResult(
                 descriptor,
                 None,

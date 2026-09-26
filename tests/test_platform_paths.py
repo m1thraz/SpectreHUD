@@ -5,6 +5,7 @@ from core.platform import (
     config_dir,
     data_dir,
     logs_dir,
+    plugins_dir,
     projects_dir,
     user_themes_dir,
 )
@@ -24,6 +25,10 @@ def test_linux_uses_explicit_xdg_roots(tmp_path):
     assert (
         data_dir(system_name="Linux", environ=environment, home=tmp_path)
         == tmp_path / "xdg-data" / "spectrehud"
+    )
+    assert (
+        plugins_dir(system_name="Linux", environ=environment, home=tmp_path)
+        == tmp_path / "xdg-data" / "spectrehud" / "plugins"
     )
     assert (
         cache_dir(system_name="Linux", environ=environment, home=tmp_path)
@@ -59,6 +64,10 @@ def test_windows_uses_roaming_config_and_local_data(tmp_path):
     assert (
         data_dir(system_name="Windows", environ=environment, home=tmp_path)
         == tmp_path / "Local" / "SpectreHUD"
+    )
+    assert (
+        plugins_dir(system_name="Windows", environ=environment, home=tmp_path)
+        == tmp_path / "Local" / "SpectreHUD" / "plugins"
     )
     assert (
         logs_dir(system_name="Windows", environ=environment, home=tmp_path)

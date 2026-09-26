@@ -31,9 +31,11 @@ from core.export_plugins.discovery import (
     parse_export_plugin_manifest,
 )
 from core.export_plugins.registry import ExportPluginRegistry
+from core.export_plugins.installation import default_external_export_plugin_roots
 from core.export_plugins.bundled_registry import (
     bundled_export_plugin_root,
     create_bundled_export_plugin_registry,
+    create_export_plugin_registry,
     discover_bundled_export_plugins,
 )
 
@@ -66,6 +68,8 @@ __all__ = [
     "discover_export_plugins",
     "bundled_export_plugin_root",
     "create_bundled_export_plugin_registry",
+    "create_export_plugin_registry",
+    "default_external_export_plugin_roots",
     "discover_bundled_export_plugins",
     "parse_export_plugin_manifest",
 ]

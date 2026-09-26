@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -206,15 +206,27 @@ def parse_export_plugin_manifest(raw_manifest: object) -> ExportPluginDescriptor
 
 
 def _manifest_paths(roots: Iterable[Path | str]) -> tuple[Path, ...]:
-    paths: set[Path] = set()
+    paths: list[Path] = []
+    seen: set[Path] = set()
     for value in roots:
         root = Path(value)
         direct = root / "plugin.json"
+        candidates: list[Path] = []
         if direct.is_file():
-            paths.add(direct)
+            candidates.append(direct)
         if root.is_dir():
-            paths.update(path for path in root.glob("*/plugin.json") if path.is_file())
-    return tuple(sorted(paths, key=lambda path: str(path).casefold()))
+            candidates.extend(
+                sorted(
+                    (path for path in root.glob("*/plugin.json") if path.is_file()),
+                    key=lambda path: str(path).casefold(),
+                )
+            )
+        for path in candidates:
+            resolved = path.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                paths.append(resolved)
+    return tuple(paths)
 
 
 def discover_export_plugins(roots: Iterable[Path | str]) -> PluginDiscoveryResult:
@@ -224,7 +236,10 @@ def discover_export_plugins(roots: Iterable[Path | str]) -> PluginDiscoveryResul
     for manifest_path in _manifest_paths(roots):
         try:
             raw = json.loads(manifest_path.read_text(encoding="utf-8"))
-            descriptor = parse_export_plugin_manifest(raw)
+            descriptor = replace(
+                parse_export_plugin_manifest(raw),
+                source_root=manifest_path.parent,
+            )
             plugin_id = descriptor.metadata.plugin_id
             if plugin_id in seen:
                 raise PluginManifestError(f"Duplicate plugin_id: {plugin_id}.")

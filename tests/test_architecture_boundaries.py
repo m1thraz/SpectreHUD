@@ -147,6 +147,20 @@ def test_cherrytree_execution_is_owned_by_its_bundled_plugin():
     assert ui_mentions == [], "CherryTree-specific UI coupling remains: " + ", ".join(ui_mentions)
 
 
+def test_external_docx_plugin_does_not_leak_into_the_host_package():
+    """Phase 6: the reference plugin remains a separately distributed consumer."""
+    mentions = []
+    for root_name in ("core", "ui"):
+        for path in (PROJECT_ROOT / root_name).rglob("*.py"):
+            source = path.read_text(encoding="utf-8").casefold()
+            if "spectrehud_docx" in source or "spectrehud.docx" in source:
+                mentions.append(str(path.relative_to(PROJECT_ROOT)))
+
+    spec = (PROJECT_ROOT / "SpectreHUD.spec").read_text(encoding="utf-8").casefold()
+    assert mentions == [], "DOCX plugin coupling remains in host code: " + ", ".join(mentions)
+    assert "spectrehud_docx" not in spec
+
+
 def test_export_host_has_no_legacy_direct_adapter_surface():
     """Phase 5: only the capability contract may describe plugin execution."""
     base_tree = ast.parse(

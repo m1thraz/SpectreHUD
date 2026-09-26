@@ -81,6 +81,16 @@ def data_dir(
     return _base_from_env(environment, "XDG_DATA_HOME", home_path / ".local" / "share") / APP_SLUG
 
 
+def plugins_dir(
+    *,
+    system_name: Optional[str] = None,
+    environ: Optional[Mapping[str, str]] = None,
+    home: Optional[Path] = None,
+) -> Path:
+    """Return the per-user root for optional local plugin bundles."""
+    return data_dir(system_name=system_name, environ=environ, home=home) / "plugins"
+
+
 def logs_dir(
     *,
     system_name: Optional[str] = None,

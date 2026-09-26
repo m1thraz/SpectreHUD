@@ -1,0 +1,34 @@
+{
+  "plugin_id": "spectrehud.docx",
+  "display_name": {
+    "translation_key": "plugins.docx.name",
+    "fallback": "Word / DOCX"
+  },
+  "description": {
+    "translation_key": "plugins.docx.description",
+    "fallback": "Create an editable Microsoft Word report from the current report."
+  },
+  "badge": "DOCX",
+  "icon_name": "fa5s.file-word",
+  "accent": "blue",
+  "capabilities": [
+    "report_export"
+  ],
+  "report_data_requirements": [
+    "report_font"
+  ],
+  "configuration_fields": [],
+  "execution_fields": [
+    {
+      "key": "destination",
+      "label": {
+        "translation_key": "plugins.docx.destination",
+        "fallback": "Choose DOCX export directory"
+      },
+      "kind": "directory",
+      "required": true,
+      "default": ""
+    }
+  ],
+  "loader": "spectrehud_docx.plugin:create_plugin"
+}

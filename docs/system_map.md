@@ -13,6 +13,13 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - Discovery reads only passive manifests. It does not import implementation modules, optional
   dependencies, Obsidian, or CherryTree. A plugin is imported only when its descriptor is
   explicitly loaded, and each load result is isolated and cached.
+- Separately distributed plugins are discovered after bundled plugins, so bundled IDs remain
+  reserved. Portable Windows additionally reads `plugins` beside the executable; Linux reads
+  `/usr/lib/spectrehud/plugins`; both then read the platform user-data `plugins` directory.
+- An external plugin is imported relative to its manifest folder and may carry platform-matched
+  dependencies in a local `vendor` directory. These paths enter the process only during lazy
+  loading and remain available after a successful load because plugin execution may import
+  additional modules later. Plugins are trusted in-process Python code, not a sandbox boundary.
 - Loaded metadata and capabilities must exactly match the passive descriptor. Missing optional
   dependencies, broken loaders, identity mismatches, and capability mismatches become typed
   availability outcomes instead of escaping into application startup.
@@ -29,6 +36,9 @@ This map covers only contracts and pitfalls that become apparent at the boundari
   metadata such as `suggested_open_uri`; the pre-plugin result aliases no longer exist. Shared
   attachment resolution and Loot-to-Markdown rendering remain host-domain utilities in
   `core.exporters`.
+- The optional DOCX exporter is the first separately distributed reference plugin. It lives in
+  `plugins-src`, is excluded from the main wheel/executable, uses only the existing Report Export
+  capability, and is released as separate Windows and Linux bundles with its own dependencies.
 
 ## First Run
 - `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.

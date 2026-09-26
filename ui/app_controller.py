@@ -21,7 +21,7 @@ from core.logger import get_logger
 from core.event_bus import ActivePhaseChangedPayload, EventBus, EventType
 from core.phase_context import PhaseContext
 from core.storage import PersistenceError
-from core.export_plugins import ExportCapability, create_bundled_export_plugin_registry
+from core.export_plugins import ExportCapability, create_export_plugin_registry
 
 from ui.phase_toast_hud import PhaseToastHUD
 from ui.message_boxes import show_error_dialog
@@ -196,7 +196,7 @@ class AppController(QObject):
             phase_provider=self._phase_provider,
             parent=self,
         )
-        self.export_plugin_registry = create_bundled_export_plugin_registry()
+        self.export_plugin_registry = create_export_plugin_registry()
         self.export_coord = ExportCoordinator(
             project_manager=self.project_manager,
             loot_manager=self.loot_manager,

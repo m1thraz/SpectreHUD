@@ -10,6 +10,8 @@ semantic versioning.
 
 * Added a compact first-run Getting Started dialog and a dismissible Report editing-view hint, with clearer in-context guidance for Clip, Quick IP, Quick Notes, and Loot.
 * Added an optional linked table of contents to Professional Print exports, listing report sections and nested findings directly after the cover page.
+* Added support for separately distributed local export plugins across portable Windows, Linux system, and per-user plugin locations.
+* Added an optional editable DOCX export plugin as a separate platform-specific release download.
 
 ### Changed
 

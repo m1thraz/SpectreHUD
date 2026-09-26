@@ -23,6 +23,8 @@ from core.export_plugins import (
     ReportExportContext,
     ReportExportRequest,
     discover_export_plugins,
+    default_external_export_plugin_roots,
+    create_export_plugin_registry,
 )
 from core.config import ConfigManager
 from core.storage import InMemoryStorageBackend
@@ -71,7 +73,7 @@ def _manifest(
 
 def _write_manifest(root: Path, folder: str, payload: dict[str, object]) -> Path:
     plugin_dir = root / folder
-    plugin_dir.mkdir(parents=True)
+    plugin_dir.mkdir(parents=True, exist_ok=True)
     path = plugin_dir / "plugin.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path
@@ -278,6 +280,88 @@ def test_registry_loads_on_demand_caches_instance_and_validates_configuration(
     available = registry.availability("sample.valid", {"destination": "C:/exports"})
     assert available is not None
     assert available.code is PluginAvailabilityCode.AVAILABLE
+
+
+def test_registry_loads_plugin_package_relative_to_its_manifest_without_sys_path_setup(
+    tmp_path: Path,
+) -> None:
+    module_name = "portable_sample_plugin"
+    plugin_dir = tmp_path / "portable"
+    package_dir = plugin_dir / module_name
+    package_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    _write_valid_plugin_module(package_dir, "plugin", "sample.portable")
+    _write_manifest(
+        tmp_path,
+        "portable",
+        _manifest("sample.portable", f"{module_name}.plugin:create_plugin"),
+    )
+    registry = ExportPluginRegistry(discover_export_plugins([tmp_path]).descriptors)
+
+    assert str(plugin_dir) not in sys.path
+    loaded = registry.load("sample.portable")
+
+    assert loaded is not None and loaded.plugin is not None
+    assert loaded.availability.code is PluginAvailabilityCode.AVAILABLE
+    assert str(plugin_dir) in sys.path
+
+
+def test_default_external_roots_cover_portable_windows_user_and_linux_system_locations(
+    tmp_path: Path,
+) -> None:
+    environment = {
+        "LOCALAPPDATA": str(tmp_path / "Local"),
+        "XDG_DATA_HOME": str(tmp_path / "xdg-data"),
+    }
+
+    windows = default_external_export_plugin_roots(
+        system_name="Windows",
+        environ=environment,
+        home=tmp_path,
+        executable=tmp_path / "portable" / "SpectreHUD.exe",
+        frozen=True,
+    )
+    linux = default_external_export_plugin_roots(
+        system_name="Linux",
+        environ=environment,
+        home=tmp_path,
+        executable=Path("/usr/bin/spectrehud"),
+        frozen=True,
+    )
+
+    assert windows == (
+        tmp_path / "portable" / "plugins",
+        tmp_path / "Local" / "SpectreHUD" / "plugins",
+    )
+    assert linux == (
+        Path("/usr/lib/spectrehud/plugins"),
+        tmp_path / "xdg-data" / "spectrehud" / "plugins",
+    )
+
+
+def test_combined_registry_keeps_bundled_plugin_ids_reserved(tmp_path: Path) -> None:
+    _write_manifest(
+        tmp_path,
+        "collision",
+        _manifest("spectrehud.obsidian", "collision_plugin:create_plugin"),
+    )
+    _write_manifest(
+        tmp_path,
+        "external",
+        _manifest("sample.external", "external_plugin:create_plugin"),
+    )
+
+    registry = create_export_plugin_registry(external_roots=(tmp_path,))
+
+    descriptors = {item.metadata.plugin_id: item for item in registry.descriptors}
+    assert set(descriptors) == {
+        "spectrehud.cherrytree",
+        "spectrehud.obsidian",
+        "sample.external",
+    }
+    assert descriptors["spectrehud.obsidian"].loader_reference.startswith(
+        "core.export_plugins.bundled.obsidian"
+    )
 
 
 def test_optional_loot_capability_must_match_passive_metadata(

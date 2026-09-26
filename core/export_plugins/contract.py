@@ -161,6 +161,7 @@ class ExportPlugin(Protocol):
 class ExportPluginDescriptor:
     metadata: ExportPluginMetadata
     loader_reference: str
+    source_root: Path | None = None
 
 
 @dataclass(frozen=True)

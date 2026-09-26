@@ -133,6 +133,26 @@ def test_release_workflow_includes_supply_chain_artifacts():
     assert "actions/attest-build-provenance@" in content
 
 
+def test_release_workflow_publishes_platform_docx_plugin_bundles():
+    """Optional plugins remain separate, checksummed release downloads."""
+    repo_root = Path(__file__).parent.parent
+    release_workflow = (repo_root / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    plugin_project = tomllib.loads(
+        (repo_root / "plugins-src" / "spectrehud-docx" / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert plugin_project["project"]["dependencies"] == ["python-docx>=1.1,<2"]
+    assert release_workflow.count("plugins-src/spectrehud-docx/build_bundle.py") == 2
+    assert release_workflow.count("dist/spectrehud-docx-*.zip") == 2
+    assert "dist/plugins/spectrehud-docx-*.zip" not in release_workflow
+    assert "sha256sum SpectreHUD.exe spectrehud_*_amd64.deb *.whl " \
+        "spectrehud-docx-*.zip" in release_workflow
+
+
 def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds():
     """pyproject.toml must keep open bounds while constraints-release.txt provides exact version pins."""
     repo_root = Path(__file__).parent.parent
@@ -160,6 +180,9 @@ def test_release_constraints_pin_dependencies_and_preserve_open_pyproject_bounds
         "pyperclip==",
         "cryptography==",
         "qtawesome==",
+        "python-docx==",
+        "lxml==",
+        "typing_extensions==",
         "pyinstaller==",
         "setuptools==",
         "wheel==",
