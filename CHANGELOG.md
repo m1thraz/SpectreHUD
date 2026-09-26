@@ -6,6 +6,8 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [2.2.3] - 2026-09-26
+
 ### Added
 
 * Added a compact first-run Getting Started dialog and a dismissible Report editing-view hint, with clearer in-context guidance for Clip, Quick IP, Quick Notes, and Loot.
@@ -21,11 +23,11 @@ semantic versioning.
 
 ### Fixed
 
-* Ensure bundled and optional export plugins are packaged and runtime-validated for portable Windows and Debian releases.
+* Ensured bundled and optional export plugins are packaged and runtime-validated for portable Windows and Debian releases.
 * Replaced the ambiguous REC header button with a themed Clipboard icon and a fixed Clip label while keeping its active warning highlight.
-* Persist all Target, authentication, scope, wordlist, URL, subnet, DNS, and hash variables across project switches and application restarts.
-* Prevent unreadable or oversized existing reports from being treated as empty documents, blocking editor writes, autosave, note appends, and report mutations until the read problem is resolved.
-* Warn when a saved report's recovery draft cannot be removed and suppress stale drafts older than the current report.
+* Persisted all Target, authentication, scope, wordlist, URL, subnet, DNS, and hash variables across project switches and application restarts.
+* Prevented unreadable or oversized existing reports from being treated as empty documents, blocking editor writes, autosave, note appends, and report mutations until the read problem is resolved.
+* Warned when a saved report's recovery draft cannot be removed and suppressed stale drafts older than the current report.
 
 ## [2.2.2] - 2026-09-20
 
@@ -455,7 +457,8 @@ See the [full v2.0.0 release notes](docs/release_notes_v2.0.0.md).
 Earlier repository tags predate the maintained changelog and are intentionally
 not reconstructed without authoritative release notes.
 
-[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.2...HEAD
+[Unreleased]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.3...HEAD
+[2.2.3]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.2...v2.2.3
 [2.2.2]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/m1thraz/SpectreHUD/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/m1thraz/SpectreHUD/compare/v2.1.9...v2.2.0

@@ -49,7 +49,7 @@ dependencies require separate bundles for each operating system and architecture
 {
   "api_version": 1,
   "plugin_version": "1.0.0",
-  "minimum_host_version": "2.2.2",
+  "minimum_host_version": "2.2.3",
   "plugin_id": "example.my-exporter",
   "display_name": {
     "translation_key": "plugins.example.name",

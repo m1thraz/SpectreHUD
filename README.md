@@ -102,7 +102,7 @@ More details:
 - [Export Plugin API V1](docs/export_plugin_api_v1.md)
 - [DOCX reference plugin](plugins-src/spectrehud-docx)
 - [Desktop threat model and test scope](docs/threat_model.md)
-- [v2.2.2 release notes](docs/release_notes_v2.2.2.md)
+- [v2.2.3 release notes](docs/release_notes_v2.2.3.md)
 - [Pentest Mode](docs/pentest_mode.md)
 - [Contributor development guide](docs/development.md)
 - [Changelog](CHANGELOG.md)
