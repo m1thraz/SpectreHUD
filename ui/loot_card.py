@@ -21,6 +21,7 @@ from core.project import get_default_projects_dir
 from core.logger import get_logger
 from core.i18n import t
 from ui.message_boxes import show_error_dialog
+from ui.plugin_text import plugin_text
 from core.platform import open_path
 from ui.styles.icons import icon, get_theme_color
 from ui.styles.palette import STATUS_ERROR, STATUS_SUCCESS
@@ -109,10 +110,7 @@ class LootCard(QFrame):
 
         self.plugin_export_buttons: dict[str, QPushButton] = {}
         for metadata in self.loot_append_plugins:
-            plugin_name = t(
-                metadata.display_name.translation_key,
-                metadata.display_name.fallback,
-            )
+            plugin_name = plugin_text(metadata.display_name)
             button = QPushButton()
             button.setIcon(icon("fa5s.book-open"))
             button.setIconSize(CARD_ICON_SIZE)
@@ -407,10 +405,7 @@ class LootCard(QFrame):
         )
 
         for metadata in self.loot_append_plugins:
-            plugin_name = t(
-                metadata.display_name.translation_key,
-                metadata.display_name.fallback,
-            )
+            plugin_name = plugin_text(metadata.display_name)
             plugin_action = menu.addAction(icon("fa5s.book-open"), plugin_name)
             plugin_action.triggered.connect(
                 lambda _checked=False, plugin_id=metadata.plugin_id: self.plugin_export_requested.emit(

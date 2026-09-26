@@ -40,6 +40,7 @@ def test_windows_spec_includes_runtime_data_directories():
     assert 'collect_data_files(\n    "core.export_plugins.bundled"' in spec
     assert '"core.export_plugins.bundled.obsidian.plugin"' in spec
     assert '"core.export_plugins.bundled.cherrytree.plugin"' in spec
+    assert '"spectrehud_plugin_api"' in spec
 
 
 def test_release_workflow_has_least_privilege_permissions():

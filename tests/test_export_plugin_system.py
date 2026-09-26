@@ -38,6 +38,9 @@ def _manifest(
     accent: str | None = None,
 ) -> dict[str, object]:
     manifest: dict[str, object] = {
+        "api_version": 1,
+        "plugin_version": "1.0.0",
+        "minimum_host_version": "2.2.2",
         "plugin_id": plugin_id,
         "display_name": {
             "translation_key": f"plugins.{plugin_id}.name",
@@ -122,6 +125,9 @@ class LootCapability:
 
 class SamplePlugin:
     metadata = ExportPluginMetadata(
+        api_version=1,
+        plugin_version="1.0.0",
+        minimum_host_version="2.2.2",
         plugin_id={runtime_plugin_id or plugin_id!r},
         display_name=PluginText("plugins.{plugin_id}.name", "Sample Export"),
         description=PluginText("plugins.{plugin_id}.description", "Sample export plugin"),
@@ -160,6 +166,9 @@ def create_plugin():
 
 def test_contract_snapshots_are_immutable_and_accent_is_optional() -> None:
     metadata = ExportPluginMetadata(
+        api_version=1,
+        plugin_version="1.0.0",
+        minimum_host_version="2.2.2",
         plugin_id="sample.export",
         display_name=PluginText("plugins.sample.name", "Sample"),
         description=PluginText("plugins.sample.description", "Sample exporter"),

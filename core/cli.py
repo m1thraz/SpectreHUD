@@ -5,8 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
-APP_VERSION = "2.2.2"
+from core.version import APP_VERSION
 
 
 def write_cli(lines: list[str]) -> None:

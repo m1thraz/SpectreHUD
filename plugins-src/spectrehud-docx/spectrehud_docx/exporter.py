@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from docx import Document
 
-from core.reporting import ExportArtifact, ExportResult, strip_report_markers
+from spectrehud_plugin_api import ExportArtifact, ExportResult, strip_report_markers
 
 from spectrehud_docx.markdown_renderer import DocxMarkdownRenderer
 

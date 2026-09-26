@@ -161,6 +161,23 @@ def test_external_docx_plugin_does_not_leak_into_the_host_package():
     assert "spectrehud_docx" not in spec
 
 
+def test_external_docx_plugin_uses_only_the_public_plugin_api():
+    plugin_package = PROJECT_ROOT / "plugins-src" / "spectrehud-docx" / "spectrehud_docx"
+    violations = []
+    for path in plugin_package.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                if node.module == "core" or node.module.startswith("core."):
+                    violations.append(f"{path.name}:{node.lineno} imports {node.module}")
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "core" or alias.name.startswith("core."):
+                        violations.append(f"{path.name}:{node.lineno} imports {alias.name}")
+
+    assert violations == [], "\n".join(violations)
+
+
 def test_export_host_has_no_legacy_direct_adapter_surface():
     """Phase 5: only the capability contract may describe plugin execution."""
     base_tree = ast.parse(

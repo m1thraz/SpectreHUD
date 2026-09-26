@@ -19,6 +19,7 @@ from ui.loot_card import LootCard
 from ui.loot_board import LootBoard
 from ui.add_loot_dialog import AddLootDialog
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
+from ui.plugin_text import plugin_text
 
 logger = get_logger("loot_controller")
 _UNSET = object()
@@ -461,10 +462,7 @@ class LootController(QObject):
 
         if on_export_plugin is not None:
             for metadata in loot_append_plugins:
-                plugin_name = t(
-                    metadata.display_name.translation_key,
-                    metadata.display_name.fallback,
-                )
+                plugin_name = plugin_text(metadata.display_name)
                 button = QPushButton(plugin_name)
                 button.setProperty("class", "MiniActionBtn")
                 button.setToolTip(

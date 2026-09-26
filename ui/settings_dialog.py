@@ -32,6 +32,7 @@ from core.theme_loader import ThemeLoader
 from core.update_checker import UpdateCheckError, UpdateCheckResult, check_for_updates
 from ui.base_dialog import BaseHudDialog
 from ui.message_boxes import show_error_dialog, show_warning_dialog
+from ui.plugin_text import plugin_text
 from ui.styles.icons import get_theme_color
 from ui.styles.theme import rgba_str
 from core.fonts import (
@@ -981,10 +982,7 @@ class GeneralSettingsPage(QWidget):
             metadata = descriptor.metadata
             if not metadata.configuration_fields:
                 continue
-            plugin_name = t(
-                metadata.display_name.translation_key,
-                metadata.display_name.fallback,
-            )
+            plugin_name = plugin_text(metadata.display_name)
             plugin_label = QLabel(plugin_name)
             plugin_label.setProperty("class", "SettingsSectionTitle")
             d_layout.addWidget(plugin_label)
@@ -998,7 +996,7 @@ class GeneralSettingsPage(QWidget):
                 stored_values = {}
             field_widgets: Dict[str, QWidget] = {}
             for field in metadata.configuration_fields:
-                label_text = t(field.label.translation_key, field.label.fallback)
+                label_text = plugin_text(field.label)
                 current = stored_values.get(field.key, field.default)
                 if field.kind is FieldKind.BOOLEAN:
                     widget = QCheckBox(label_text)
@@ -1366,10 +1364,7 @@ class SettingsDialog(BaseHudDialog):
                 values,
             )
             if availability is None or availability.code is not PluginAvailabilityCode.AVAILABLE:
-                plugin_name = t(
-                    metadata.display_name.translation_key,
-                    metadata.display_name.fallback,
-                )
+                plugin_name = plugin_text(metadata.display_name)
                 show_warning_dialog(
                     self,
                     t(

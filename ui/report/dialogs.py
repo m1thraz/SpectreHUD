@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 from core.i18n import t
 from core.export_plugins import ExportPluginMetadata
 from ui.message_boxes import show_warning_dialog
+from ui.plugin_text import plugin_text
 from core.reporting import ReportTemplate
 from core.reporting import TemplateRepository
 from core.theme_palette import (
@@ -1123,10 +1124,7 @@ class ReportExportTypeDialog(BaseHudDialog):
         }
         plugin_choices = []
         for metadata in self.plugin_metadata:
-            plugin_name = t(
-                metadata.display_name.translation_key,
-                metadata.display_name.fallback,
-            )
+            plugin_name = plugin_text(metadata.display_name)
             accent_token, bg_token, border_token = accent_tokens.get(
                 metadata.accent or "", ("CYBER_BLUE", "BLUE_A25", "BLUE_A40")
             )
@@ -1135,7 +1133,7 @@ class ReportExportTypeDialog(BaseHudDialog):
                     f"plugin:{metadata.plugin_id}",
                     t("report.export_plugin", "Export to {plugin}...", plugin=plugin_name),
                     metadata.badge,
-                    t(metadata.description.translation_key, metadata.description.fallback),
+                    plugin_text(metadata.description),
                     metadata.icon_name,
                     accent_token,
                     bg_token,

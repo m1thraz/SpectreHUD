@@ -1,4 +1,7 @@
 {
+  "api_version": 1,
+  "plugin_version": "0.1.0",
+  "minimum_host_version": "2.2.2",
   "plugin_id": "spectrehud.docx",
   "display_name": {
     "translation_key": "plugins.docx.name",
@@ -30,5 +33,12 @@
       "default": ""
     }
   ],
+  "translations": {
+    "de": {
+      "plugins.docx.name": "Word / DOCX",
+      "plugins.docx.description": "Erstellt einen bearbeitbaren Microsoft-Word-Bericht aus dem aktuellen Report.",
+      "plugins.docx.destination": "DOCX-Exportordner auswählen"
+    }
+  },
   "loader": "spectrehud_docx.plugin:create_plugin"
 }

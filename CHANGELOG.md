@@ -12,6 +12,7 @@ semantic versioning.
 * Added an optional linked table of contents to Professional Print exports, listing report sections and nested findings directly after the cover page.
 * Added support for separately distributed local export plugins across portable Windows, Linux system, and per-user plugin locations.
 * Added an optional editable DOCX export plugin as a separate platform-specific release download.
+* Published a versioned V1 export-plugin API with compatibility checks, plugin-owned translations, and an external-plugin author guide.
 
 ### Changed
 

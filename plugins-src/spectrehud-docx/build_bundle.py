@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import platform
 import shutil
 import subprocess
@@ -11,12 +12,13 @@ from pathlib import Path
 
 
 PLUGIN_SLUG = "spectrehud-docx"
-PLUGIN_VERSION = "0.1.0"
 PLUGIN_DEPENDENCIES = ("python-docx>=1.1,<2",)
 
 
 def build_bundle(output_dir: Path, *, vendor_dependencies: bool) -> Path:
     source_root = Path(__file__).resolve().parent
+    manifest = json.loads((source_root / "plugin.json").read_text(encoding="utf-8"))
+    plugin_version = str(manifest["plugin_version"])
     stage = output_dir / PLUGIN_SLUG
     if stage.exists():
         shutil.rmtree(stage)
@@ -46,7 +48,7 @@ def build_bundle(output_dir: Path, *, vendor_dependencies: bool) -> Path:
     operating_system = platform.system().strip().lower() or sys.platform
     architecture = platform.machine().strip().lower() or "unknown"
     platform_tag = f"{operating_system}-{architecture}"
-    archive_base = output_dir / f"{PLUGIN_SLUG}-{PLUGIN_VERSION}-{platform_tag}"
+    archive_base = output_dir / f"{PLUGIN_SLUG}-{plugin_version}-{platform_tag}"
     archive = Path(shutil.make_archive(str(archive_base), "zip", output_dir, PLUGIN_SLUG))
     return archive
 

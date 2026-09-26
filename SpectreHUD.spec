@@ -30,6 +30,7 @@ hidden_imports = [
     "qtawesome",
     "core.export_plugins.bundled.obsidian.plugin",
     "core.export_plugins.bundled.cherrytree.plugin",
+    "spectrehud_plugin_api",
 ]
 
 a = Analysis(

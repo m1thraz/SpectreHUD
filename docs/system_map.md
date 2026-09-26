@@ -6,6 +6,8 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 
 - V1 covers export plugins only. Import and feature/tool plugins are separate future contracts
   that require their own real reference implementations.
+- `spectrehud_plugin_api` is the stable public V1 facade for external implementations. Imports
+  from `core.*` and `ui.*` remain internal and carry no plugin compatibility guarantee.
 - `core.export_plugins` is the headless contract and host-loading boundary. Passive local
   `plugin.json` descriptors contain only approved metadata, the required Report Export
   capability, the optional Loot Append capability, three explicit data requirements, and the
@@ -23,6 +25,9 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - Loaded metadata and capabilities must exactly match the passive descriptor. Missing optional
   dependencies, broken loaders, identity mismatches, and capability mismatches become typed
   availability outcomes instead of escaping into application startup.
+- Manifests declare an exact API major, independent plugin version, and minimum host version.
+  Incompatible versions are rejected during passive discovery before implementation code loads;
+  passive inline locale catalogs provide plugin-owned exact/base-language UI text.
 - The optional `accent` metadata value is a short safe identifier interpreted as an opaque host
   visual hint. It cannot contain style objects, arbitrary style strings, Qt values, stylesheets,
   or UI injection behavior.

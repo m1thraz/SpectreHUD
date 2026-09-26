@@ -6,8 +6,11 @@ import json
 from pathlib import Path
 from typing import Mapping
 
-from core.export_plugins import (
+from spectrehud_plugin_api import (
+    ExportError,
+    ExportErrorCode,
     ExportPluginMetadata,
+    ExportResult,
     LoadedExportCapabilities,
     PluginAvailability,
     PluginAvailabilityCode,
@@ -15,7 +18,6 @@ from core.export_plugins import (
     ReportExportRequest,
     parse_export_plugin_manifest,
 )
-from core.reporting import ExportError, ExportErrorCode, ExportResult
 
 from spectrehud_docx.exporter import export_docx
 

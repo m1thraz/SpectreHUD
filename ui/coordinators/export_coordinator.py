@@ -37,6 +37,7 @@ from core.reporting import HtmlReportExporter
 from core.reporting import ReportExportProfile
 from core.i18n import t
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
+from ui.plugin_text import plugin_text
 from core.platform import open_path
 from core.project import ProjectManager
 from core.loot import LootManager
@@ -100,7 +101,7 @@ class ExportCoordinator(QObject):
 
     @staticmethod
     def _plugin_name(metadata: ExportPluginMetadata) -> str:
-        return t(metadata.display_name.translation_key, metadata.display_name.fallback)
+        return plugin_text(metadata.display_name)
 
     @staticmethod
     def _loot_snapshot(entries: Iterable[Dict[str, Any]]) -> tuple[LootExportEntry, ...]:

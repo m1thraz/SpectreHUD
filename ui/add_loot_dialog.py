@@ -25,6 +25,7 @@ from core.loot import (
 from core.i18n import t
 from core.export_plugins import ExportPluginMetadata
 from ui.message_boxes import show_warning_dialog
+from ui.plugin_text import plugin_text
 from ui.base_dialog import BaseHudDialog
 from ui.styles.icons import get_severity_color, get_theme_color, icon
 from ui.styles.theme import rgba_str
@@ -489,10 +490,7 @@ class AddLootDialog(BaseHudDialog):
             self.plugin_export_buttons: dict[str, QPushButton] = {}
             if self.on_export_plugin:
                 for metadata in self.loot_append_plugins:
-                    plugin_name = t(
-                        metadata.display_name.translation_key,
-                        metadata.display_name.fallback,
-                    )
+                    plugin_name = plugin_text(metadata.display_name)
                     button = QPushButton(plugin_name)
                     button.setProperty("class", "SecondaryBtn")
                     button.clicked.connect(

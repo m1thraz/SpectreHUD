@@ -14,6 +14,7 @@ from ui.coordinators.export_coordinator import (
     present_export_result as _coordinator_present_export_result,
 )
 from ui.message_boxes import ask_confirmation, show_error_dialog, show_information_dialog
+from ui.plugin_text import plugin_text
 from ui.report.dialogs import HtmlExportOptions, ReportExportTypeDialog, select_html_export_options
 
 logger = get_logger(__name__)
@@ -286,7 +287,7 @@ class ReportExportActions:
                 return None
             destination = QFileDialog.getExistingDirectory(
                 self.parent_widget,
-                t(field.label.translation_key, field.label.fallback),
+                plugin_text(field.label),
                 str(default_directory if default_directory.exists() else project_dir),
             )
             if not destination:

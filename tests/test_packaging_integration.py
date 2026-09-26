@@ -83,6 +83,7 @@ class TestPackagingIntegration(unittest.TestCase):
                     "core/export_plugins/bundled/cherrytree/plugin.py",
                     names,
                 )
+                self.assertIn("spectrehud_plugin_api/__init__.py", names)
 
                 # 4. UI modules & Controllers
                 self.assertTrue(any(n.startswith("ui/") for n in names))

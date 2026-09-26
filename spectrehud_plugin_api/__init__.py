@@ -1,6 +1,6 @@
-"""Public internal boundary for V1 export plugins."""
+"""Stable, headless public API for SpectreHUD export plugins."""
 
-from core.export_plugins.contract import (
+from core.export_plugins import (
     EXPORT_PLUGIN_API_VERSION,
     ExportCapability,
     ExportDataRequirement,
@@ -16,6 +16,7 @@ from core.export_plugins.contract import (
     PluginAvailabilityCode,
     PluginField,
     PluginLoadResult,
+    PluginManifestError,
     PluginText,
     PluginValue,
     ProjectExportContext,
@@ -23,31 +24,29 @@ from core.export_plugins.contract import (
     ReportExportCapability,
     ReportExportContext,
     ReportExportRequest,
-)
-from core.export_plugins.discovery import (
-    PluginDiscoveryIssue,
-    PluginDiscoveryResult,
-    PluginManifestError,
-    discover_export_plugins,
     parse_export_plugin_manifest,
 )
-from core.export_plugins.registry import ExportPluginRegistry
-from core.export_plugins.installation import default_external_export_plugin_roots
-from core.export_plugins.bundled_registry import (
-    bundled_export_plugin_root,
-    create_bundled_export_plugin_registry,
-    create_export_plugin_registry,
-    discover_bundled_export_plugins,
+from core.reporting import (
+    ExportArtifact,
+    ExportError,
+    ExportErrorCode,
+    ExportResult,
+    ExportStatus,
+    strip_report_markers,
 )
 
 __all__ = [
     "EXPORT_PLUGIN_API_VERSION",
+    "ExportArtifact",
     "ExportCapability",
     "ExportDataRequirement",
+    "ExportError",
+    "ExportErrorCode",
     "ExportPlugin",
     "ExportPluginDescriptor",
     "ExportPluginMetadata",
-    "ExportPluginRegistry",
+    "ExportResult",
+    "ExportStatus",
     "FieldKind",
     "LoadedExportCapabilities",
     "LootAppendCapability",
@@ -55,8 +54,6 @@ __all__ = [
     "LootExportEntry",
     "PluginAvailability",
     "PluginAvailabilityCode",
-    "PluginDiscoveryIssue",
-    "PluginDiscoveryResult",
     "PluginField",
     "PluginLoadResult",
     "PluginManifestError",
@@ -67,11 +64,6 @@ __all__ = [
     "ReportExportCapability",
     "ReportExportContext",
     "ReportExportRequest",
-    "discover_export_plugins",
-    "bundled_export_plugin_root",
-    "create_bundled_export_plugin_registry",
-    "create_export_plugin_registry",
-    "default_external_export_plugin_roots",
-    "discover_bundled_export_plugins",
     "parse_export_plugin_manifest",
+    "strip_report_markers",
 ]

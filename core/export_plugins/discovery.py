@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from core.export_plugins.contract import (
+    EXPORT_PLUGIN_API_VERSION,
     ExportCapability,
     ExportDataRequirement,
     ExportPluginDescriptor,
@@ -18,6 +19,7 @@ from core.export_plugins.contract import (
     PluginText,
     PluginValue,
 )
+from core.version import APP_VERSION
 
 
 _PLUGIN_ID_RE = re.compile(r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
@@ -25,7 +27,12 @@ _VISUAL_HINT_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 _LOADER_RE = re.compile(
     r"^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*:[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$"
 )
+_SEMANTIC_VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+_LOCALE_RE = re.compile(r"^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$")
 _MANIFEST_KEYS = {
+    "api_version",
+    "plugin_version",
+    "minimum_host_version",
     "plugin_id",
     "display_name",
     "description",
@@ -37,8 +44,12 @@ _MANIFEST_KEYS = {
     "configuration_fields",
     "execution_fields",
     "loader",
+    "translations",
 }
 _REQUIRED_MANIFEST_KEYS = {
+    "api_version",
+    "plugin_version",
+    "minimum_host_version",
     "plugin_id",
     "display_name",
     "description",
@@ -74,7 +85,11 @@ def _plain_object(value: object, field_name: str) -> Mapping[str, Any]:
     return value
 
 
-def _text(value: object, field_name: str) -> PluginText:
+def _text(
+    value: object,
+    field_name: str,
+    catalogs: Mapping[str, Mapping[str, str]],
+) -> PluginText:
     raw = _plain_object(value, field_name)
     unknown = set(raw) - _TEXT_KEYS
     missing = _TEXT_KEYS - set(raw)
@@ -89,7 +104,13 @@ def _text(value: object, field_name: str) -> PluginText:
         raise PluginManifestError(f"{field_name}.translation_key must be a non-empty string.")
     if not isinstance(fallback, str) or not fallback.strip():
         raise PluginManifestError(f"{field_name}.fallback must be a non-empty string.")
-    return PluginText(translation_key.strip(), fallback.strip())
+    clean_key = translation_key.strip()
+    translations = {
+        locale: catalog[clean_key]
+        for locale, catalog in catalogs.items()
+        if clean_key in catalog
+    }
+    return PluginText(clean_key, fallback.strip(), translations)
 
 
 def _plugin_value(value: object, field_name: str) -> PluginValue:
@@ -98,7 +119,11 @@ def _plugin_value(value: object, field_name: str) -> PluginValue:
     raise PluginManifestError(f"{field_name} must be a string or boolean.")
 
 
-def _fields(value: object, field_name: str) -> tuple[PluginField, ...]:
+def _fields(
+    value: object,
+    field_name: str,
+    catalogs: Mapping[str, Mapping[str, str]],
+) -> tuple[PluginField, ...]:
     if value is None:
         return ()
     if not isinstance(value, list):
@@ -135,7 +160,7 @@ def _fields(value: object, field_name: str) -> tuple[PluginField, ...]:
         fields.append(
             PluginField(
                 key=key,
-                label=_text(raw["label"], f"{prefix}.label"),
+                label=_text(raw["label"], f"{prefix}.label", catalogs),
                 kind=kind,
                 required=required,
                 default=default,
@@ -155,7 +180,46 @@ def _enum_set(value: object, enum_type: type, field_name: str) -> frozenset[Any]
         raise PluginManifestError(f"{field_name} contains unsupported value: {exc}.") from exc
 
 
-def parse_export_plugin_manifest(raw_manifest: object) -> ExportPluginDescriptor:
+def _semantic_version(value: object, field_name: str) -> tuple[int, int, int]:
+    if not isinstance(value, str):
+        raise PluginManifestError(f"{field_name} must be a semantic version string.")
+    match = _SEMANTIC_VERSION_RE.fullmatch(value.strip())
+    if match is None:
+        raise PluginManifestError(f"{field_name} must use MAJOR.MINOR.PATCH.")
+    return tuple(int(part) for part in match.groups())  # type: ignore[return-value]
+
+
+def _translation_catalogs(value: object) -> dict[str, dict[str, str]]:
+    if value is None:
+        return {}
+    raw_catalogs = _plain_object(value, "translations")
+    catalogs: dict[str, dict[str, str]] = {}
+    for raw_locale, raw_catalog in raw_catalogs.items():
+        locale = raw_locale.strip().lower().replace("_", "-")
+        if locale != raw_locale or not _LOCALE_RE.fullmatch(locale):
+            raise PluginManifestError(
+                "translation locale keys must be normalized BCP-47 language tags."
+            )
+        catalog = _plain_object(raw_catalog, f"translations.{locale}")
+        if not all(
+            isinstance(key, str)
+            and key.strip()
+            and isinstance(text, str)
+            and text.strip()
+            for key, text in catalog.items()
+        ):
+            raise PluginManifestError(
+                f"translations.{locale} must contain non-empty string keys and values."
+            )
+        catalogs[locale] = {str(key): str(text).strip() for key, text in catalog.items()}
+    return catalogs
+
+
+def parse_export_plugin_manifest(
+    raw_manifest: object,
+    *,
+    host_version: str = APP_VERSION,
+) -> ExportPluginDescriptor:
     raw = _plain_object(raw_manifest, "manifest")
     unknown = set(raw) - _MANIFEST_KEYS
     missing = _REQUIRED_MANIFEST_KEYS - set(raw)
@@ -163,6 +227,26 @@ def parse_export_plugin_manifest(raw_manifest: object) -> ExportPluginDescriptor
         raise PluginManifestError(f"Manifest contains unknown fields: {sorted(unknown)}.")
     if missing:
         raise PluginManifestError(f"Manifest is missing fields: {sorted(missing)}.")
+
+    api_version = raw["api_version"]
+    if isinstance(api_version, bool) or not isinstance(api_version, int):
+        raise PluginManifestError("api_version must be an integer.")
+    if api_version != EXPORT_PLUGIN_API_VERSION:
+        raise PluginManifestError(
+            f"Unsupported export-plugin API version {api_version}; "
+            f"this host supports {EXPORT_PLUGIN_API_VERSION}."
+        )
+    plugin_version = str(raw["plugin_version"]).strip()
+    minimum_host_version = str(raw["minimum_host_version"]).strip()
+    _semantic_version(raw["plugin_version"], "plugin_version")
+    required_host = _semantic_version(raw["minimum_host_version"], "minimum_host_version")
+    current_host = _semantic_version(host_version, "host_version")
+    if required_host > current_host:
+        raise PluginManifestError(
+            f"Plugin requires SpectreHUD {minimum_host_version} or newer; "
+            f"current host is {host_version}."
+        )
+    catalogs = _translation_catalogs(raw.get("translations"))
 
     plugin_id = raw["plugin_id"]
     if not isinstance(plugin_id, str) or not _PLUGIN_ID_RE.fullmatch(plugin_id):
@@ -190,16 +274,39 @@ def parse_export_plugin_manifest(raw_manifest: object) -> ExportPluginDescriptor
         ExportDataRequirement,
         "report_data_requirements",
     )
+    display_name = _text(raw["display_name"], "display_name", catalogs)
+    description = _text(raw["description"], "description", catalogs)
+    configuration_fields = _fields(
+        raw.get("configuration_fields"), "configuration_fields", catalogs
+    )
+    execution_fields = _fields(raw.get("execution_fields"), "execution_fields", catalogs)
+    used_translation_keys = {
+        display_name.translation_key,
+        description.translation_key,
+        *(field.label.translation_key for field in configuration_fields),
+        *(field.label.translation_key for field in execution_fields),
+    }
+    unknown_translation_keys = {
+        key for catalog in catalogs.values() for key in catalog if key not in used_translation_keys
+    }
+    if unknown_translation_keys:
+        raise PluginManifestError(
+            f"translations contain unknown translation keys: {sorted(unknown_translation_keys)}."
+        )
+
     metadata = ExportPluginMetadata(
+        api_version=api_version,
+        plugin_version=plugin_version,
+        minimum_host_version=minimum_host_version,
         plugin_id=plugin_id,
-        display_name=_text(raw["display_name"], "display_name"),
-        description=_text(raw["description"], "description"),
+        display_name=display_name,
+        description=description,
         badge=badge.strip(),
         icon_name=icon_name.strip(),
         capabilities=capabilities,
         report_data_requirements=requirements,
-        configuration_fields=_fields(raw.get("configuration_fields"), "configuration_fields"),
-        execution_fields=_fields(raw.get("execution_fields"), "execution_fields"),
+        configuration_fields=configuration_fields,
+        execution_fields=execution_fields,
         accent=accent.strip() if isinstance(accent, str) else None,
     )
     return ExportPluginDescriptor(metadata=metadata, loader_reference=loader)
@@ -229,7 +336,11 @@ def _manifest_paths(roots: Iterable[Path | str]) -> tuple[Path, ...]:
     return tuple(paths)
 
 
-def discover_export_plugins(roots: Iterable[Path | str]) -> PluginDiscoveryResult:
+def discover_export_plugins(
+    roots: Iterable[Path | str],
+    *,
+    host_version: str = APP_VERSION,
+) -> PluginDiscoveryResult:
     descriptors: list[ExportPluginDescriptor] = []
     issues: list[PluginDiscoveryIssue] = []
     seen: set[str] = set()
@@ -237,7 +348,7 @@ def discover_export_plugins(roots: Iterable[Path | str]) -> PluginDiscoveryResul
         try:
             raw = json.loads(manifest_path.read_text(encoding="utf-8"))
             descriptor = replace(
-                parse_export_plugin_manifest(raw),
+                parse_export_plugin_manifest(raw, host_version=host_version),
                 source_root=manifest_path.parent,
             )
             plugin_id = descriptor.metadata.plugin_id

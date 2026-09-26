@@ -99,6 +99,8 @@ It is not designed as a network service or as a hostile local-file processing en
 More details:
 
 - [Architecture guide](docs/architecture.md)
+- [Export Plugin API V1](docs/export_plugin_api_v1.md)
+- [DOCX reference plugin](plugins-src/spectrehud-docx)
 - [Desktop threat model and test scope](docs/threat_model.md)
 - [v2.2.2 release notes](docs/release_notes_v2.2.2.md)
 - [Pentest Mode](docs/pentest_mode.md)

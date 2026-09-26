@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
@@ -12,6 +12,7 @@ from core.reporting import ExportResult
 
 
 PluginValue: TypeAlias = str | bool
+EXPORT_PLUGIN_API_VERSION = 1
 
 
 class ExportCapability(str, Enum):
@@ -42,6 +43,20 @@ class PluginAvailabilityCode(str, Enum):
 class PluginText:
     translation_key: str
     fallback: str
+    translations: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        normalized = {
+            str(locale).strip().lower().replace("_", "-"): str(value)
+            for locale, value in self.translations.items()
+        }
+        object.__setattr__(self, "translations", MappingProxyType(normalized))
+
+    def localized(self, locale: str) -> str | None:
+        normalized = str(locale).strip().lower().replace("_", "-")
+        return self.translations.get(normalized) or self.translations.get(
+            normalized.split("-", 1)[0]
+        )
 
 
 @dataclass(frozen=True)
@@ -55,6 +70,9 @@ class PluginField:
 
 @dataclass(frozen=True)
 class ExportPluginMetadata:
+    api_version: int
+    plugin_version: str
+    minimum_host_version: str
     plugin_id: str
     display_name: PluginText
     description: PluginText
@@ -172,6 +190,7 @@ class PluginLoadResult:
 
 
 __all__ = [
+    "EXPORT_PLUGIN_API_VERSION",
     "ExportCapability",
     "ExportDataRequirement",
     "ExportPlugin",

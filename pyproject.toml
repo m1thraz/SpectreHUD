@@ -48,7 +48,7 @@ py-modules = ["main", "spectrehud_launcher", "create_desktop_shortcut"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "ui*", "data*", "resources*"]
+include = ["core*", "ui*", "data*", "resources*", "spectrehud_plugin_api*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.png", "*.qss", "*.md", "*.svg", "*.ico", "*.desktop"]

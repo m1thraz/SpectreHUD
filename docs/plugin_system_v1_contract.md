@@ -1,7 +1,8 @@
 # Minimal Export Plugin Contract (V1)
 
-Status: implemented internal V1 contract, validated by the bundled Obsidian and CherryTree
-plugins. It remains provisional until a third exporter validates the abstraction in Phase 6.
+Status: stable public V1 export contract, validated by bundled Obsidian and CherryTree plugins
+and the separately distributed DOCX reference plugin. The author-facing API is documented in
+`export_plugin_api_v1.md`.
 
 ## Scope decision
 
@@ -21,8 +22,8 @@ Report Export [required]
     └── no Loot Append
 ```
 
-The contract is internal and intentionally provisional until Obsidian, CherryTree, and the
-third exporter have validated it. Public compatibility/versioning belongs to Phase 8.
+External implementations import the stable `spectrehud_plugin_api` facade. Application-internal
+`core.*` and `ui.*` modules are not part of the compatibility promise.
 
 ## Architectural direction
 
@@ -91,6 +92,9 @@ class PluginField:
 
 @dataclass(frozen=True)
 class ExportPluginMetadata:
+    api_version: int
+    plugin_version: str
+    minimum_host_version: str
     plugin_id: str
     display_name: PluginText
     description: PluginText
@@ -175,8 +179,7 @@ class ExportPlugin(Protocol):
     ) -> PluginAvailability: ...
 ```
 
-`ExportResult` is the UI-free result model from
-`core.reporting.export_result`. Plugins use its generic `status`, `artifacts`, `warnings`,
+`ExportResult` is exposed through `spectrehud_plugin_api`. Plugins use its generic `status`, `artifacts`, `warnings`,
 `error`, `skipped_entry_ids`, and `metadata` fields. Phase 5 removed the former positional
 constructor and the `note_path`, `attachment_paths`, and `obsidian_uri` compatibility aliases;
 callers use artifacts and explicitly defined generic metadata instead.
@@ -189,6 +192,9 @@ Required fields have current uses:
 
 | Field | Existing need |
 | --- | --- |
+| `api_version` | Fail-closed compatibility before executable plugin code loads |
+| `plugin_version` | Identify independently released plugin bundles |
+| `minimum_host_version` | Declare reliance on a compatible SpectreHUD host baseline |
 | `plugin_id` | Stable host storage and selection without comparing display names |
 | `display_name` | Existing localized Obsidian and CherryTree labels |
 | `description` | Existing localized export-card explanations |
@@ -206,10 +212,10 @@ identifier for an opaque visual hint: the host may ignore, reject, or replace it
 presentation. It is not a style object, theme token API, stylesheet fragment, arbitrary style
 string, or UI-injection capability.
 
-`PluginText` reuses SpectreHUD's existing translation lookup and fallback behavior. It is needed
-to preserve the current English and German exporter labels without a plugin-ID branch. V1 does
-not define separate plugin translation catalogs, dynamic locale bundles, or a public
-localization package format.
+`PluginText` reuses SpectreHUD's existing translation lookup and fallback behavior. External
+plugins may provide passive inline locale catalogs keyed by their declared translation keys.
+Exact locale and base-language lookup occur before the normal host fallback. Dynamic locale
+code and executable formatting hooks remain excluded.
 
 ## Capabilities
 
@@ -314,7 +320,7 @@ class PluginAvailability:
 Every code is required by a current roadmap constraint:
 
 - `AVAILABLE`: normal Obsidian and CherryTree operation.
-- `MISSING_DEPENDENCY`: Phase 7 must prove optional dependencies do not damage SpectreHUD.
+- `MISSING_DEPENDENCY`: packaged-runtime tests prove optional dependencies do not damage SpectreHUD.
 - `LOAD_FAILED`: a broken plugin must not terminate startup or the export UI.
 - `INVALID_CONFIGURATION`: Obsidian already distinguishes missing or unsafe configuration from
   execution failure.
@@ -403,7 +409,7 @@ host messages; optional post-export opening uses only `suggested_open_uri`.
 | Project mutation | Both integrations are one-way exports |
 | Full project state | Existing exporters need only network fields, Loot, and local assets |
 | Arbitrary post-export callback | Current URI opening can remain host-mediated |
-| API version negotiation | Contract remains internal until third-exporter validation |
+| API version ranges | V1 uses one exact major plus a minimum host version |
 | Dependency installation | V1 only isolates and reports missing dependencies |
 
 ## Contract traceability
@@ -433,7 +439,7 @@ Every V1 element has a current reference implementation or a mandatory isolation
 Nothing in the contract exists solely for DOCX, PDF, Jira, import, external authentication, or
 feature plugins.
 
-## Review gates before Phase 2
+## Historical review gates before Phase 2
 
 Phase 2 must not begin until review confirms:
 

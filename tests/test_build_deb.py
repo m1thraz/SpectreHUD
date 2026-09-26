@@ -34,6 +34,7 @@ def test_linux_bundle_includes_dynamic_xorg_backends(tmp_path):
         "pynput.mouse._xorg",
         "core.export_plugins.bundled.obsidian.plugin",
         "core.export_plugins.bundled.cherrytree.plugin",
+        "spectrehud_plugin_api",
     } <= hidden_imports
     assert not any(name.endswith("._win32") for name in hidden_imports)
     added_data = {cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--add-data"}

@@ -33,8 +33,8 @@ The DOCX implementation depends on `python-docx`; SpectreHUD itself does not. Pa
 validation, including missing and incompatible native dependency cases, is specified in
 `plugin_system_phase7.md`.
 
-## Deferred public-API concern
+## Resolved public-API concern
 
-External plugin metadata currently has one fallback string plus a host translation key. A plugin
-cannot yet ship its own locale catalog, so unknown keys use their fallback. Localization packaging
-belongs to the Phase 8 public-API review rather than a DOCX-specific host exception.
+Phase 8 added passive inline locale catalogs and the stable `spectrehud_plugin_api` facade. The
+DOCX reference plugin now carries its German display metadata without a host-side plugin-ID
+exception.

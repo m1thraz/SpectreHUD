@@ -235,6 +235,8 @@ def build_pyinstaller_bundle(project_dir: Path, output_bundle_dir: Path) -> bool
         "core.export_plugins.bundled.obsidian.plugin",
         "--hidden-import",
         "core.export_plugins.bundled.cherrytree.plugin",
+        "--hidden-import",
+        "spectrehud_plugin_api",
         str(project_dir / "main.py"),
     ]
 
