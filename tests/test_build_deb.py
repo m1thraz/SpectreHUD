@@ -29,8 +29,28 @@ def test_linux_bundle_includes_dynamic_xorg_backends(tmp_path):
 
     cmd = run.call_args.args[0]
     hidden_imports = {cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--hidden-import"}
-    assert {"pynput.keyboard._xorg", "pynput.mouse._xorg"} <= hidden_imports
+    assert {
+        "pynput.keyboard._xorg",
+        "pynput.mouse._xorg",
+        "core.export_plugins.bundled.obsidian.plugin",
+        "core.export_plugins.bundled.cherrytree.plugin",
+    } <= hidden_imports
     assert not any(name.endswith("._win32") for name in hidden_imports)
+    added_data = {cmd[index + 1] for index, arg in enumerate(cmd) if arg == "--add-data"}
+    assert any(
+        value.replace("\\", "/").endswith(
+            "core/export_plugins/bundled/obsidian/plugin.json:"
+            "core/export_plugins/bundled/obsidian"
+        )
+        for value in added_data
+    )
+    assert any(
+        value.replace("\\", "/").endswith(
+            "core/export_plugins/bundled/cherrytree/plugin.json:"
+            "core/export_plugins/bundled/cherrytree"
+        )
+        for value in added_data
+    )
 
 
 def test_generate_control_file():
@@ -68,6 +88,7 @@ def test_prepare_deb_staging_tree(tmp_path):
     assert (staging_dir / "usr" / "bin" / "spectrehud").exists()
     assert (staging_dir / "usr" / "share" / "applications" / "spectrehud.desktop").exists()
     assert (staging_dir / "opt" / "spectrehud").exists()
+    assert (staging_dir / "usr" / "lib" / "spectrehud" / "plugins").is_dir()
 
 
 def test_build_deb_package_mocked(tmp_path):

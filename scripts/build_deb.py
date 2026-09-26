@@ -121,6 +121,7 @@ def prepare_deb_staging_tree(project_dir: Path, staging_dir: Path, version: str)
     bin_dir = staging_dir / "usr" / "bin"
     apps_dir = staging_dir / "usr" / "share" / "applications"
     icons_base = staging_dir / "usr" / "share" / "icons" / "hicolor"
+    plugins_dir = staging_dir / "usr" / "lib" / "spectrehud" / "plugins"
 
     # Clean & recreate
     if staging_dir.exists():
@@ -130,6 +131,7 @@ def prepare_deb_staging_tree(project_dir: Path, staging_dir: Path, version: str)
     opt_dir.mkdir(parents=True, exist_ok=True)
     bin_dir.mkdir(parents=True, exist_ok=True)
     apps_dir.mkdir(parents=True, exist_ok=True)
+    plugins_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. DEBIAN/control
     control_content = generate_control_file(version=version)
@@ -189,6 +191,8 @@ def build_pyinstaller_bundle(project_dir: Path, output_bundle_dir: Path) -> bool
         f"{data_dir / 'report_templates'}:data/report_templates",
         f"{data_dir / 'themes'}:data/themes",
         f"{data_dir / 'icon.svg'}:data",
+        f"{project_dir / 'core' / 'export_plugins' / 'bundled' / 'obsidian' / 'plugin.json'}:core/export_plugins/bundled/obsidian",
+        f"{project_dir / 'core' / 'export_plugins' / 'bundled' / 'cherrytree' / 'plugin.json'}:core/export_plugins/bundled/cherrytree",
     ]
 
     datas_args = []
@@ -227,6 +231,10 @@ def build_pyinstaller_bundle(project_dir: Path, output_bundle_dir: Path) -> bool
         "pyperclip",
         "--hidden-import",
         "cryptography",
+        "--hidden-import",
+        "core.export_plugins.bundled.obsidian.plugin",
+        "--hidden-import",
+        "core.export_plugins.bundled.cherrytree.plugin",
         str(project_dir / "main.py"),
     ]
 

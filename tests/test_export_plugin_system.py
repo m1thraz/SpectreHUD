@@ -509,6 +509,41 @@ def test_broken_plugin_does_not_prevent_another_plugin_from_loading(
     assert good.plugin is not None
 
 
+@pytest.mark.parametrize(
+    ("exception", "details"),
+    [
+        ("ImportError('DLL load failed while importing etree')", "ImportError"),
+        ("OSError('native dependency has an incompatible architecture')", "OSError"),
+    ],
+)
+def test_incompatible_native_dependency_is_a_controlled_load_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    exception: str,
+    details: str,
+) -> None:
+    module_name = "incompatible_native_export_plugin"
+    (tmp_path / f"{module_name}.py").write_text(
+        f"raise {exception}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    _write_manifest(
+        tmp_path,
+        "incompatible",
+        _manifest("sample.incompatible", f"{module_name}:create_plugin"),
+    )
+    registry = ExportPluginRegistry(discover_export_plugins([tmp_path]).descriptors)
+
+    loaded = registry.load("sample.incompatible")
+
+    assert loaded is not None
+    assert loaded.plugin is None
+    assert loaded.availability.code is PluginAvailabilityCode.LOAD_FAILED
+    assert loaded.availability.details is not None
+    assert details in loaded.availability.details
+
+
 def test_manifest_rejects_import_and_undocumented_capabilities(tmp_path: Path) -> None:
     import_manifest = _manifest(
         "sample.import",

@@ -29,3 +29,7 @@ plugins/spectrehud-docx/plugin.json
 
 /usr/lib/spectrehud/plugins/spectrehud-docx/plugin.json
 ```
+
+Use the bundle matching the operating system and CPU architecture. Its `vendor` directory is part
+of the plugin and must be copied with it; installing `python-docx` into SpectreHUD itself is not
+required.

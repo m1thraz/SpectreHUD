@@ -147,7 +147,8 @@ def test_release_workflow_publishes_platform_docx_plugin_bundles():
 
     assert plugin_project["project"]["dependencies"] == ["python-docx>=1.1,<2"]
     assert release_workflow.count("plugins-src/spectrehud-docx/build_bundle.py") == 2
-    assert release_workflow.count("dist/spectrehud-docx-*.zip") == 2
+    assert release_workflow.count("scripts/smoke_test_plugin_bundle.py") == 2
+    assert release_workflow.count("dist/spectrehud-docx-*.zip") == 4
     assert "dist/plugins/spectrehud-docx-*.zip" not in release_workflow
     assert "sha256sum SpectreHUD.exe spectrehud_*_amd64.deb *.whl " \
         "spectrehud-docx-*.zip" in release_workflow

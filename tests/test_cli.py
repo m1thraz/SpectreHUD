@@ -54,6 +54,28 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(res.returncode, 0)
         self.assertEqual(res.stdout.strip(), f"SpectreHUD {APP_VERSION}")
 
+    def test_plugin_smoke_switch_exits_before_gui_bootstrap(self):
+        with patch("core.plugin_smoke.run_export_plugin_smoke", return_value=0) as smoke:
+            with self.assertRaises(SystemExit) as raised:
+                main._exit_for_cli_argument(
+                    [
+                        "SpectreHUD",
+                        "--smoke-test-export-plugin",
+                        "plugins",
+                        "spectrehud.docx",
+                        "output",
+                        "result.json",
+                    ]
+                )
+
+        self.assertEqual(raised.exception.code, 0)
+        smoke.assert_called_once_with(
+            plugin_root=Path("plugins"),
+            plugin_id="spectrehud.docx",
+            output_dir=Path("output"),
+            result_file=Path("result.json"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

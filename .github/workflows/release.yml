@@ -73,6 +73,15 @@ jobs:
         run: |
           python plugins-src/spectrehud-docx/build_bundle.py
 
+      - name: Smoke-test Windows DOCX Plugin Bundle
+        shell: pwsh
+        run: |
+          $bundle = Get-ChildItem -Path dist/spectrehud-docx-*.zip | Select-Object -First 1
+          python scripts/smoke_test_plugin_bundle.py `
+            --executable dist/SpectreHUD.exe `
+            --bundle $bundle.FullName `
+            --work-dir build/plugin-smoke-windows
+
       - name: Upload Windows Executable Artifact
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
         with:
@@ -125,6 +134,16 @@ jobs:
       - name: Build Linux DOCX Plugin Bundle
         run: |
           python3 plugins-src/spectrehud-docx/build_bundle.py
+
+      - name: Smoke-test Debian DOCX Plugin Bundle
+        run: |
+          DEB_FILE=$(ls dist/spectrehud_*_amd64.deb | head -n 1)
+          mkdir -p build/plugin-smoke-deb-root
+          dpkg-deb -x "${DEB_FILE}" build/plugin-smoke-deb-root
+          python3 scripts/smoke_test_plugin_bundle.py \
+            --executable build/plugin-smoke-deb-root/opt/spectrehud/spectrehud \
+            --bundle dist/spectrehud-docx-*.zip \
+            --work-dir build/plugin-smoke-linux
 
       - name: Upload Debian Package Artifact
         uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1

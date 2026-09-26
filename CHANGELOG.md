@@ -19,6 +19,7 @@ semantic versioning.
 
 ### Fixed
 
+* Ensure bundled and optional export plugins are packaged and runtime-validated for portable Windows and Debian releases.
 * Replaced the ambiguous REC header button with a themed Clipboard icon and a fixed Clip label while keeping its active warning highlight.
 * Persist all Target, authentication, scope, wordlist, URL, subnet, DNS, and hash variables across project switches and application restarts.
 * Prevent unreadable or oversized existing reports from being treated as empty documents, blocking editor writes, autosave, note appends, and report mutations until the read problem is resolved.

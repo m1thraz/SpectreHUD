@@ -29,9 +29,9 @@ provenance owned by the host descriptor, not a plugin-authored manifest field or
 - Bundled IDs take precedence over duplicate external IDs.
 - Discovery remains passive; plugin and dependency imports occur only when explicitly loaded.
 
-The DOCX implementation depends on `python-docx`; SpectreHUD itself does not. Phase 7 must still
-validate the produced vendored bundle against the frozen Windows executable and Debian package,
-including missing-dependency and incompatible-native-dependency failure paths.
+The DOCX implementation depends on `python-docx`; SpectreHUD itself does not. Packaged-runtime
+validation, including missing and incompatible native dependency cases, is specified in
+`plugin_system_phase7.md`.
 
 ## Deferred public-API concern
 

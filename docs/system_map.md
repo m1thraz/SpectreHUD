@@ -39,6 +39,10 @@ This map covers only contracts and pitfalls that become apparent at the boundari
 - The optional DOCX exporter is the first separately distributed reference plugin. It lives in
   `plugins-src`, is excluded from the main wheel/executable, uses only the existing Report Export
   capability, and is released as separate Windows and Linux bundles with its own dependencies.
+- Release builds exercise external bundles through the packaged executable before publication.
+  The headless smoke path exits before Qt imports, executes only the existing Report Export
+  capability, and verifies successful export plus contained missing/native-dependency failures;
+  it is diagnostics rather than an additional plugin extension point.
 
 ## First Run
 - `ConfigManager` enables Getting Started and the Report editing-view hint only when no config resource exists yet. Existing and unreadable configs do not acquire first-run prompts merely because these keys are missing; dismissals are persisted separately.
