@@ -9,6 +9,7 @@ import re
 @dataclass(frozen=True)
 class PrintLayoutPolicy:
     page_start: bool = False
+    page_end: bool = False
     keep_together: bool = False
     keep_with_next: bool = False
     breakable: bool = False
@@ -21,6 +22,8 @@ class PrintLayoutPolicy:
         directives = []
         if self.page_start:
             directives.append("page-start")
+        if self.page_end:
+            directives.append("page-end")
         if self.keep_together:
             directives.append("keep-together")
         if self.keep_with_next:
@@ -33,11 +36,14 @@ class PrintLayoutPolicy:
 
 
 PRINT_PAGE_START = PrintLayoutPolicy(page_start=True)
+PRINT_PAGE_END = PrintLayoutPolicy(page_end=True)
 PRINT_KEEP_TOGETHER = PrintLayoutPolicy(keep_together=True)
 PRINT_KEEP_WITH_NEXT = PrintLayoutPolicy(keep_with_next=True)
 PRINT_BREAKABLE = PrintLayoutPolicy(breakable=True)
 
 SECTION_PRINT_LAYOUT_POLICIES = {
+    "executive_summary": PRINT_PAGE_END,
+    "finding_section": PRINT_PAGE_START,
     "appendix": PRINT_PAGE_START,
 }
 

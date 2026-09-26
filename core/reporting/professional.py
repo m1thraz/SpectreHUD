@@ -446,18 +446,21 @@ def synchronize_professional_findings_matrix(
         ),
         None,
     )
+    document_positions = {id(finding): position for position, finding in enumerate(findings, 1)}
     labels = STATUS_LABELS_DE if language.lower().startswith("de") else STATUS_LABELS_EN
     for position, (index, match) in enumerate(rows):
         status = match.group(5).strip()
+        finding_number = position + 1
         if matching is not None:
             finding = matching[position]
             status = labels.get((finding.status or "open").lower(), labels["open"])
+            finding_number = document_positions[id(finding)]
         phase = phase_display_name(match.group(4), language).replace("|", "\\|")
         line_ending = "\r\n" if lines[index].endswith("\r\n") else "\n"
         if not lines[index].endswith(("\r\n", "\n")):
             line_ending = ""
         lines[index] = (
-            f"| {match.group(1).strip()} | {match.group(2).strip()} | "
+            f"| F-{finding_number:03d} | {match.group(2).strip()} | "
             f"{match.group(3).upper()} | {phase} | {status} |{line_ending}"
         )
     return "".join(lines)

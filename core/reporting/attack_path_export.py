@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import re
+from collections.abc import Mapping
 
 from core.reporting.markdown import convert_markdown_to_html, format_inline
 from core.reporting.print_layout import PRINT_KEEP_TOGETHER
@@ -22,10 +23,17 @@ _FINDING_RE = re.compile(
     r"[-*]\s*[*_]*(?:Finding|Schwachstelle)[:*_ \t]*\s*(.*)$",
     re.IGNORECASE,
 )
-_FINDING_MARKER_RE = re.compile(r"\s*<!--\s*finding:.*?\s*-->\s*$", re.IGNORECASE)
+_FINDING_MARKER_RE = re.compile(
+    r"\s*<!--\s*finding:(?P<source_id>.*?)\s*-->\s*$", re.IGNORECASE
+)
 
 
-def _step_html(number: int, body: str, language: str) -> str:
+def _step_html(
+    number: int,
+    body: str,
+    language: str,
+    finding_ids: Mapping[str, str],
+) -> str:
     lines = body.strip().splitlines()
     first_line = lines[0].strip()
     phase_match = _PHASE_RE.match(first_line)
@@ -38,6 +46,7 @@ def _step_html(number: int, body: str, language: str) -> str:
 
     description = ""
     finding = ""
+    finding_id = ""
     for line in lines[1:]:
         stripped = line.strip()
         description_match = _DESCRIPTION_RE.search(stripped)
@@ -45,17 +54,27 @@ def _step_html(number: int, body: str, language: str) -> str:
             description = description_match.group(1).strip().strip("*_").strip()
         finding_match = _FINDING_RE.search(stripped)
         if finding_match:
-            finding = _FINDING_MARKER_RE.sub("", finding_match.group(1)).strip().strip("*_")
+            raw_finding = finding_match.group(1)
+            marker = _FINDING_MARKER_RE.search(raw_finding)
+            if marker:
+                finding_id = finding_ids.get(marker.group("source_id").strip(), "")
+            finding = _FINDING_MARKER_RE.sub("", raw_finding).strip().strip("*_")
 
     details = ""
     if description:
         details += f'<p class="attack-path-description">{format_inline(description)}</p>'
     if finding:
         finding_label = "Schwachstelle" if language.lower().startswith("de") else "Finding"
+        finding_html = format_inline(finding)
+        if finding_id:
+            finding_html = (
+                f'<a class="finding-reference" href="#finding-{finding_id.lower()}">'
+                f'<span class="finding-id">{finding_id}</span> · {finding_html}</a>'
+            )
         details += (
             '<p class="attack-path-finding">'
             f'<span class="attack-path-finding-label">{finding_label}</span>'
-            f"{format_inline(finding)}</p>"
+            f"{finding_html}</p>"
         )
 
     return (
@@ -69,7 +88,11 @@ def _step_html(number: int, body: str, language: str) -> str:
     )
 
 
-def render_professional_attack_path(markdown: str, language: str) -> str:
+def render_professional_attack_path(
+    markdown: str,
+    language: str,
+    finding_ids: Mapping[str, str] | None = None,
+) -> str:
     """Render numbered attack steps as a print-safe vertical timeline."""
     matches = list(_STEP_RE.finditer(markdown))
     if not matches:
@@ -92,7 +115,9 @@ def render_professional_attack_path(markdown: str, language: str) -> str:
         if gap:
             flush_timeline()
             parts.append(convert_markdown_to_html(gap))
-        pending_steps.append(_step_html(position, match.group(2), language))
+        pending_steps.append(
+            _step_html(position, match.group(2), language, finding_ids or {})
+        )
         cursor = match.end()
 
     flush_timeline()

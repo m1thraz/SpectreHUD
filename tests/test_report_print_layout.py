@@ -4,6 +4,7 @@ from core.reporting import (
     PRINT_BREAKABLE,
     PRINT_KEEP_TOGETHER,
     PRINT_KEEP_WITH_NEXT,
+    PRINT_PAGE_END,
     PRINT_PAGE_START,
     HtmlReportExporter,
     ReportExportProfile,
@@ -15,14 +16,16 @@ from core.reporting import (
 def test_print_layout_policy_serializes_composable_directives():
     policy = PrintLayoutPolicy(
         page_start=True,
+        page_end=True,
         keep_together=True,
         keep_with_next=True,
     )
 
     assert policy.html_attribute() == (
-        'data-print-layout="page-start keep-together keep-with-next"'
+        'data-print-layout="page-start page-end keep-together keep-with-next"'
     )
     assert PRINT_PAGE_START.html_attribute() == 'data-print-layout="page-start"'
+    assert PRINT_PAGE_END.html_attribute() == 'data-print-layout="page-end"'
     assert PRINT_KEEP_TOGETHER.html_attribute() == 'data-print-layout="keep-together"'
     assert PRINT_KEEP_WITH_NEXT.html_attribute() == 'data-print-layout="keep-with-next"'
     assert PRINT_BREAKABLE.html_attribute() == 'data-print-layout="breakable"'
@@ -67,7 +70,12 @@ short evidence
 def test_professional_sections_and_components_emit_semantic_print_directives():
     markdown = (
         wrap_section_markdown(
-            """## 1. Attack Path
+            "## 1. Executive Summary\n\nManagement overview.",
+            "executive_summary",
+        )
+        + "\n\n"
+        + wrap_section_markdown(
+            """## 2. Attack Path
 
 ### Attack Chain
 
@@ -79,7 +87,7 @@ def test_professional_sections_and_components_emit_semantic_print_directives():
         )
         + "\n\n"
         + wrap_section_markdown(
-            """## 2. Findings
+            """## 3. Findings
 
 <!-- spectre:finding:start:demo -->
 ### Example Finding
@@ -95,7 +103,12 @@ Demonstration finding.
             "finding_section",
         )
         + "\n\n"
-        + wrap_section_markdown("## 3. Appendix\n\nEvidence.", "appendix")
+        + wrap_section_markdown(
+            "## 4. Remediation\n\n| Priority | Action |\n|---|---|\n| P1 | Fix it |",
+            "remediation_table",
+        )
+        + "\n\n"
+        + wrap_section_markdown("## 5. Appendix\n\nEvidence.", "appendix")
     )
 
     html = HtmlReportExporter.build_full_html(
@@ -104,12 +117,26 @@ Demonstration finding.
     )
 
     assert '<article data-print-layout="keep-together" class="attack-path-step">' in html
+    assert (
+        '<section data-print-layout="page-end" '
+        'class="report-section report-executive" id="executive-summary">'
+    ) in html
+    assert (
+        '<section data-print-layout="page-start" '
+        'class="report-section report-findings" id="technical-findings">'
+    ) in html
     assert '<div data-print-layout="keep-with-next" class="finding-lead">' in html
     assert '<header class="finding-header">' in html
     assert '<div class="finding-meta">' in html
     assert (
         '<section data-print-layout="page-start" '
-        'class="report-section report-appendix">'
+        'class="report-section report-appendix" id="appendix">'
+    ) in html
+    assert (
+        '<section class="report-section report-attack-path" id="attack-path">'
+    ) in html
+    assert (
+        '<section class="report-section report-remediation" id="remediation">'
     ) in html
 
 
@@ -136,6 +163,7 @@ def test_print_directive_css_is_shared_by_print_profiles():
     assert (
         '[data-print-layout~="page-start"]' in html
     )
+    assert '[data-print-layout~="page-end"]' in html
     assert (
         '[data-print-layout~="keep-together"]' in html
     )

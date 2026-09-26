@@ -131,8 +131,8 @@ def test_export_profiles_default_to_interactive_and_professional_wraps_semantics
     )
 
     assert default_html == interactive_html
-    assert '<section class="report-section report-executive">' in professional_html
-    assert '<section class="report-section report-phase" data-phase="recon">' in professional_html
+    assert 'class="report-section report-executive" id="executive-summary"' in professional_html
+    assert 'class="report-section report-phase" data-phase="recon" id="phase-recon"' in professional_html
     assert 'data-report-profile="interactive"' in default_html
     assert 'data-report-profile="professional_print"' in professional_html
     assert "spectre:section" not in default_html
@@ -252,8 +252,8 @@ def test_both_profiles_render_generated_findings_semantically_but_not_legacy_blo
 
     for rendered in (interactive, professional):
         assert rendered.count('<article class="report-finding') == 2
-        assert '<article class="report-finding severity-high">' in rendered
-        assert '<article class="report-finding severity-medium">' in rendered
+        assert '<article class="report-finding severity-high"' in rendered
+        assert '<article class="report-finding severity-medium"' in rendered
         assert '<div class="finding-meta">' in rendered
         assert '<section class="finding-description"><h4>Description</h4>' in rendered
         assert '<section class="finding-recommendation"><h4>Recommendation</h4>' in rendered
@@ -261,6 +261,8 @@ def test_both_profiles_render_generated_findings_semantically_but_not_legacy_blo
         assert '<code class="language-bash">curl --request POST' in rendered
         assert "spectre:finding" not in rendered
         assert "spectre:loot" not in rendered
+    assert 'class="report-finding severity-high"' in professional
+    assert 'id="finding-f-001"' in professional
     assert '<article class="report-finding' not in legacy
     assert "Legacy finding" in legacy
 
@@ -544,7 +546,7 @@ def test_executive_priority_actions_use_only_real_recommendations(tmp_path):
     professional = HtmlReportExporter.build_full_html(
         markdown, profile=ReportExportProfile.PROFESSIONAL_PRINT
     )
-    action_plan = professional.split('<section class="report-section report-remediation">', 1)[
+    action_plan = professional.split('class="report-section report-remediation"', 1)[
         1
     ].split("</section>", 1)[0]
 
@@ -804,6 +806,7 @@ def test_professional_tables_receive_stable_layout_roles():
     assert '<table class="findings-matrix" data-print-layout="breakable">' in professional
     assert '<table class="action-plan" data-print-layout="breakable">' in professional
     assert ".findings-matrix th:nth-child(2)" in professional
+    assert "white-space: nowrap;" in professional
     assert ".action-plan th:nth-child(2)" in professional
     assert ".action-plan td:nth-child(2) { width: 72%; }" in professional
     assert "display: table-header-group;" in professional
@@ -840,6 +843,8 @@ def test_professional_findings_matrix_uses_the_shared_severity_badges():
     assert "<td>HIGH</td>" not in professional
     assert "<td>CRITICAL</td>" in interactive
     assert "<td>HIGH</td>" in interactive
+    assert "<td>F-001</td>" in professional
+    assert "<td>1</td>" in interactive
 
 
 def test_professional_four_column_remediation_table_enhanced():

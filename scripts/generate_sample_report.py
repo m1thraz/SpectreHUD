@@ -194,7 +194,7 @@ def generate_sample_report(
         _render_pdf(browser, html_path, staged_pdf, temp_dir=temp_dir)
         report = preflight_pdf(
             staged_pdf,
-            expected_page_count=9,
+            expected_page_count=10,
             expected_page_size=(595.28, 841.89),
             required_phrases=SAMPLE_REQUIRED_PHRASES,
         )

@@ -17,6 +17,7 @@ semantic versioning.
 ### Changed
 
 * Migrated the bundled Obsidian and CherryTree exports to the new isolated export-plugin boundary while preserving their existing report, Loot, and package workflows.
+* Polished Professional Print pagination and added stable internal links between the contents, findings matrix, attack path, technical findings, and remediation plan.
 
 ### Fixed
 

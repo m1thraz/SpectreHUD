@@ -39,6 +39,7 @@ from core.reporting.professional import (
     synchronize_professional_findings_matrix,
 )
 from core.reporting.findings import (
+    FINDING_END_RE,
     FINDING_START_RE,
     convert_markdown_with_findings,
 )
@@ -55,6 +56,26 @@ class HtmlReportExporter:
     """Exports markdown reports to standalone, professionally styled HTML with base64 embedded images."""
 
     MAX_EMBED_IMAGE_FILE_SIZE = MAX_EMBED_IMAGE_FILE_SIZE
+
+    @staticmethod
+    def _finding_reference_ids(markdown: str) -> dict[str, str]:
+        """Map valid source finding identities to their client-facing document IDs."""
+        references: dict[str, str] = {}
+        starts = list(FINDING_START_RE.finditer(markdown))
+
+        for index, start in enumerate(starts, start=1):
+            next_start = starts[index] if index < len(starts) else None
+            end = next(
+                (
+                    candidate
+                    for candidate in FINDING_END_RE.finditer(markdown, start.end())
+                    if candidate.group(1) == start.group(1)
+                ),
+                None,
+            )
+            if end is not None and (next_start is None or end.start() < next_start.start()):
+                references[start.group(1)] = f"F-{index:03d}"
+        return references
 
     @classmethod
     def _professional_body_html(
@@ -85,6 +106,7 @@ class HtmlReportExporter:
         )
         visible_number = 0
         finding_counter = 1
+        finding_reference_ids = cls._finding_reference_ids(markdown_content)
         for segment in segments:
             if segment.is_structured and not professional_section_has_meaningful_content(
                 segment.section_type, segment.markdown
@@ -104,7 +126,11 @@ class HtmlReportExporter:
                     segment_markdown = renumbered
             clean_segment_markdown = strip_section_markers(segment_markdown)
             if segment.section_type == "attack_path":
-                body = render_professional_attack_path(clean_segment_markdown, language)
+                body = render_professional_attack_path(
+                    clean_segment_markdown,
+                    language,
+                    finding_reference_ids,
+                )
             else:
                 body = convert_markdown_with_findings(
                     clean_segment_markdown,
@@ -169,11 +195,13 @@ class HtmlReportExporter:
         body_html = annotate_table_print_layout(body_html)
         if active_profile is ReportExportProfile.PROFESSIONAL_PRINT:
             body_html = plan_professional_pagination(body_html)
-            toc_html = ""
-            if include_toc:
-                toc_result = build_professional_table_of_contents(body_html, language)
-                body_html = toc_result.body_html
-                toc_html = toc_result.toc_html
+            toc_result = build_professional_table_of_contents(
+                body_html,
+                language,
+                include_toc=include_toc,
+            )
+            body_html = toc_result.body_html
+            toc_html = toc_result.toc_html
         title_from_md = extract_report_title(markdown_content)
         pname = (
             project_name
