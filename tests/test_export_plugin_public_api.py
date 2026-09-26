@@ -7,6 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib  # type: ignore[no-redef]
+
 import pytest
 
 from core.export_plugins import discover_export_plugins, parse_export_plugin_manifest
@@ -123,3 +128,12 @@ def test_plugin_text_localization_has_language_and_fallback_boundaries() -> None
     assert text.localized("de-DE") == "Beispielexport"
     assert text.localized("pt-BR") == "Exportação de exemplo"
     assert text.localized("fr") is None
+
+
+def test_docx_reference_manifest_version_matches_its_package_metadata() -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    plugin_root = project_root / "plugins-src" / "spectrehud-docx"
+    manifest = json.loads((plugin_root / "plugin.json").read_text(encoding="utf-8"))
+    project = tomllib.loads((plugin_root / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert manifest["plugin_version"] == project["project"]["version"]

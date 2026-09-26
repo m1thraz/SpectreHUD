@@ -7,10 +7,17 @@ from pathlib import Path
 
 import pytest
 
-from scripts.smoke_test_plugin_bundle import _extract_bundle
+from scripts.smoke_test_plugin_bundle import (
+    PACKAGED_RUNTIME_TIMEOUT_SECONDS,
+    _extract_bundle,
+)
 
 
 pytestmark = pytest.mark.release
+
+
+def test_packaged_runtime_timeout_allows_cold_native_dependency_scan() -> None:
+    assert PACKAGED_RUNTIME_TIMEOUT_SECONDS >= 120
 
 
 def test_bundle_extraction_rejects_parent_traversal(tmp_path: Path) -> None:

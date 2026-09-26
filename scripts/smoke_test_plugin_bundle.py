@@ -13,6 +13,7 @@ from typing import Any
 
 
 SMOKE_FLAG = "--smoke-test-export-plugin"
+PACKAGED_RUNTIME_TIMEOUT_SECONDS = 120
 
 
 def _extract_bundle(archive: Path, destination: Path) -> None:
@@ -60,7 +61,10 @@ def _run_case(
         capture_output=True,
         text=True,
         check=False,
-        timeout=60,
+        # A freshly extracted native dependency can trigger a one-time Windows
+        # Defender scan. Keep the release check bounded without making that
+        # cold-start cost a flaky plugin failure.
+        timeout=PACKAGED_RUNTIME_TIMEOUT_SECONDS,
     )
     if not result_file.is_file():
         raise RuntimeError(

@@ -51,6 +51,20 @@ dependencies require separate bundles for each operating system and architecture
   "plugin_version": "1.0.0",
   "minimum_host_version": "2.2.2",
   "plugin_id": "example.my-exporter",
+  "display_name": {
+    "translation_key": "plugins.example.name",
+    "fallback": "Example Export"
+  },
+  "description": {
+    "translation_key": "plugins.example.description",
+    "fallback": "Create an example report package."
+  },
+  "badge": "EXAMPLE",
+  "icon_name": "fa5s.file-export",
+  "capabilities": ["report_export"],
+  "report_data_requirements": [],
+  "configuration_fields": [],
+  "execution_fields": [],
   "loader": "my_exporter.plugin:create_plugin"
 }
 ```
