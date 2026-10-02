@@ -42,7 +42,7 @@ coverage==7.16.2
 execnet==2.1.2
 iniconfig==2.3.0
 pluggy==1.6.0
-ruff==0.16.6
+ruff==0.16.9
 mypy==2.3.1
 import-linter==2.15
 grimp==3.17
