@@ -34,7 +34,7 @@ pywin32-ctypes==0.2.3; sys_platform == 'win32'
 packaging==26.3
 
 # --- Test Suite & Verification Tooling (Release Gate) ---
-pytest==9.1.1
+pytest==9.2.0
 pytest-timeout==2.4.0
 pytest-xdist==3.8.0
 pytest-cov==7.1.0
