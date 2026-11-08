@@ -41,7 +41,7 @@ pytest-cov==7.1.0
 coverage==7.16.2
 execnet==2.1.2
 iniconfig==2.3.0
-pluggy==1.6.0
+pluggy==1.7.0
 ruff==0.16.9
 mypy==2.3.1
 import-linter==2.15
